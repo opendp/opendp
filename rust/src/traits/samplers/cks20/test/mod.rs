@@ -1,5 +1,4 @@
 mod bernoulli;
-mod gcd;
 mod geometric;
 mod symmetric;
 

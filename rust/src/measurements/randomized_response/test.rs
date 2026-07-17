@@ -35,7 +35,7 @@ fn test_cat() -> Fallible<()> {
 fn test_cat_extremes() -> Fallible<()> {
     let categories = HashSet::from([2, 3, 5, 7, 8]);
     let m_rr = make_randomized_response(categories.clone(), 1. / 5.)?;
-    assert_eq!(m_rr.map(&1)?, 2.220446049250313e-16);
+    assert_eq!(m_rr.map(&1)?, 4.4408920985006257e-16);
 
     let m_rr = make_randomized_response(categories, 1.)?;
     assert_eq!(m_rr.map(&1)?, f64::INFINITY);

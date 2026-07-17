@@ -5,14 +5,43 @@ use crate::{
     traits::{ExactIntCast, InfCast},
 };
 use dashu::{
-    base::{EstimatedLog2, SquareRoot},
+    base::EstimatedLog2,
     float::{
         FBig,
-        round::mode::{Down, Up},
+        round::{
+            Round,
+            mode::{Down, Up},
+        },
     },
     integer::IBig,
 };
 use std::panic;
+
+#[cfg(test)]
+mod test;
+
+/// Convert a float into an `FBig` with rounding mode `R`.
+///
+/// The conversion itself is exact; precision is then limited to the mantissa
+/// size of `Self` because exact conversions of some values (e.g. zero) carry
+/// unlimited precision, which dashu's transcendentals reject since v0.5.0.
+trait ToFBig: Sized {
+    const MANTISSA_DIGITS: usize;
+    fn to_fbig<R: Round>(self) -> Fallible<FBig<R>>
+    where
+        FBig<R>: InfCast<Self>,
+    {
+        Ok(FBig::inf_cast(self)?
+            .with_precision(Self::MANTISSA_DIGITS)
+            .value())
+    }
+}
+impl ToFBig for f64 {
+    const MANTISSA_DIGITS: usize = f64::MANTISSA_DIGITS as usize;
+}
+impl ToFBig for f32 {
+    const MANTISSA_DIGITS: usize = f32::MANTISSA_DIGITS as usize;
+}
 
 // for context on why this is used, see conversation on https://github.com/cmpute/dashu/issues/29
 fn catch_unwind_silent<R>(f: impl FnOnce() -> R + panic::UnwindSafe) -> std::thread::Result<R> {
@@ -500,7 +529,7 @@ macro_rules! impl_float_inf_uni {
                 if !self.$op().is_finite() {
                     return Err(not_finite());
                 }
-                let lhs = FBig::<Up>::inf_cast(self)?.with_precision(<$ty>::MANTISSA_DIGITS as usize).value();
+                let lhs = self.to_fbig::<Up>()?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
                     return Err(not_finite())
                 };
@@ -515,7 +544,7 @@ macro_rules! impl_float_inf_uni {
                 if !self.$op().is_finite() {
                     return Err(not_finite());
                 }
-                let lhs = FBig::<Down>::inf_cast(self)?;
+                let lhs = self.to_fbig::<Down>()?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
                     return Err(not_finite())
                 };
@@ -528,33 +557,45 @@ macro_rules! impl_float_inf_uni {
 impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln);
 impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2);
 impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
-impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
 
-// these implementations are expanded to catch errors in underflow.
-// when the input is very negative, resulting in an underflow, the output is min subnormal
+// exp and exp_m1 are written out plainly (not via the macro above) because they
+// need per-type guards for very negative arguments: dashu saturates
+// astronomically negative arguments (exp to zero, exp_m1 to exactly -1),
+// which would under-report an upper bound, and dashu's cost grows with the
+// argument's magnitude. Below the guard threshold the true result is closer
+// to the saturation point than one ulp, so the neighboring representable
+// value is a sound directed bound.
+
+/// For x below this threshold, exp(x) lies in (0, f64 min subnormal):
+/// ln(2^-1074) ≈ -744.44.
+const NEG_EXP_DASHU_GUARD_THRESHOLD_F64: f64 = -745.0;
+/// For x below this threshold, exp(x) lies in (0, f32 min subnormal):
+/// ln(2^-149) ≈ -103.28.
+const NEG_EXP_DASHU_GUARD_THRESHOLD_F32: f32 = -104.0;
+/// For x below this threshold, exp_m1(x) lies in (-1, -1 + one ulp of 1):
+/// ln(2^-53) ≈ -36.74.
+const NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F64: f64 = -37.0;
+/// For x below this threshold, exp_m1(x) lies in (-1, -1 + one ulp of 1):
+/// ln(2^-24) ≈ -16.64.
+const NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F32: f32 = -17.0;
+
 impl InfExp for f64 {
     fn inf_exp(self) -> Fallible<Self> {
         let not_finite = || {
             err!(
                 Overflow,
-                "({}).inf_exp() is not finite. Consider tightening your parameters.",
-                self
+                "({self}).inf_exp() is not finite. Consider tightening your parameters."
             )
         };
         if !self.exp().is_finite() {
             return Err(not_finite());
         }
-        let lhs = FBig::<Up>::inf_cast(self)?
-            .with_precision(<f64>::MANTISSA_DIGITS as usize)
-            .value();
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(f64::from_bits(1));
-            }
-            return Err(not_finite());
-        };
-        let output = Self::inf_cast(output)?;
+        if self <= NEG_EXP_DASHU_GUARD_THRESHOLD_F64 {
+            return Ok(f64::from_bits(1));
+        }
+        let lhs = self.to_fbig::<Up>()?;
+        let output = Self::inf_cast(lhs.exp())?;
         output.is_finite().then(|| output).ok_or_else(not_finite)
     }
 
@@ -562,21 +603,17 @@ impl InfExp for f64 {
         let not_finite = || {
             err!(
                 Overflow,
-                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
-                self
+                "({self}).neg_inf_exp() is not finite. Consider tightening your parameters."
             )
         };
         if !self.exp().is_finite() {
             return Err(not_finite());
         }
-        let lhs = FBig::<Down>::inf_cast(self)?;
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(0.0);
-            }
-            return Err(not_finite());
-        };
-        let output = Self::neg_inf_cast(output)?;
+        if self <= NEG_EXP_DASHU_GUARD_THRESHOLD_F64 {
+            return Ok(0.0);
+        }
+        let lhs = self.to_fbig::<Down>()?;
+        let output = Self::neg_inf_cast(lhs.exp())?;
         output.is_finite().then(|| output).ok_or_else(not_finite)
     }
 }
@@ -586,44 +623,111 @@ impl InfExp for f32 {
         let not_finite = || {
             err!(
                 Overflow,
-                "({}).inf_exp() is not finite. Consider tightening your parameters.",
-                self
+                "({self}).inf_exp() is not finite. Consider tightening your parameters."
             )
         };
         if !self.exp().is_finite() {
             return Err(not_finite());
         }
-        let lhs = FBig::<Up>::inf_cast(self)?
-            .with_precision(<f32>::MANTISSA_DIGITS as usize)
-            .value();
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(f32::from_bits(1));
-            }
-            return Err(not_finite());
-        };
-        let output = Self::inf_cast(output)?;
+        if self <= NEG_EXP_DASHU_GUARD_THRESHOLD_F32 {
+            return Ok(f32::from_bits(1));
+        }
+        let lhs = self.to_fbig::<Up>()?;
+        let output = Self::inf_cast(lhs.exp())?;
         output.is_finite().then(|| output).ok_or_else(not_finite)
     }
+
     fn neg_inf_exp(self) -> Fallible<Self> {
         let not_finite = || {
             err!(
                 Overflow,
-                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
-                self
+                "({self}).neg_inf_exp() is not finite. Consider tightening your parameters."
             )
         };
         if !self.exp().is_finite() {
             return Err(not_finite());
         }
-        let lhs = FBig::<Down>::inf_cast(self)?;
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(0.0);
-            }
-            return Err(not_finite());
+        if self <= NEG_EXP_DASHU_GUARD_THRESHOLD_F32 {
+            return Ok(0.0);
+        }
+        let lhs = self.to_fbig::<Down>()?;
+        let output = Self::neg_inf_cast(lhs.exp())?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+}
+
+impl InfExpM1 for f64 {
+    fn inf_exp_m1(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                "({self}).inf_exp_m1() is not finite. Consider tightening your parameters."
+            )
         };
-        let output = Self::neg_inf_cast(output)?;
+        if !self.exp_m1().is_finite() {
+            return Err(not_finite());
+        }
+        if self <= NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F64 {
+            return Ok((-1.0f64).next_up());
+        }
+        let lhs = self.to_fbig::<Up>()?;
+        let output = Self::inf_cast(lhs.exp_m1())?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+
+    fn neg_inf_exp_m1(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                "({self}).neg_inf_exp_m1() is not finite. Consider tightening your parameters."
+            )
+        };
+        if !self.exp_m1().is_finite() {
+            return Err(not_finite());
+        }
+        if self <= NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F64 {
+            return Ok(-1.0);
+        }
+        let lhs = self.to_fbig::<Down>()?;
+        let output = Self::neg_inf_cast(lhs.exp_m1())?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+}
+
+impl InfExpM1 for f32 {
+    fn inf_exp_m1(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                "({self}).inf_exp_m1() is not finite. Consider tightening your parameters."
+            )
+        };
+        if !self.exp_m1().is_finite() {
+            return Err(not_finite());
+        }
+        if self <= NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F32 {
+            return Ok((-1.0f32).next_up());
+        }
+        let lhs = self.to_fbig::<Up>()?;
+        let output = Self::inf_cast(lhs.exp_m1())?;
+        output.is_finite().then(|| output).ok_or_else(not_finite)
+    }
+
+    fn neg_inf_exp_m1(self) -> Fallible<Self> {
+        let not_finite = || {
+            err!(
+                Overflow,
+                "({self}).neg_inf_exp_m1() is not finite. Consider tightening your parameters."
+            )
+        };
+        if !self.exp_m1().is_finite() {
+            return Err(not_finite());
+        }
+        if self <= NEG_EXP_M1_DASHU_GUARD_THRESHOLD_F32 {
+            return Ok(-1.0);
+        }
+        let lhs = self.to_fbig::<Down>()?;
+        let output = Self::neg_inf_cast(lhs.exp_m1())?;
         output.is_finite().then(|| output).ok_or_else(not_finite)
     }
 }
@@ -717,11 +821,17 @@ macro_rules! impl_float_inf_bi_ibig {
                 if !self.is_finite() {
                     return Err(not_finite());
                 }
-                let lhs = FBig::<Up>::try_from(*self)?;
+                let lhs = self.to_fbig::<Up>()?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
                     return Err(not_finite())
                 };
                 let output = Self::inf_cast(output)?;
+                // dashu saturates very small results to signed zero;
+                // for a nonzero base the true result is nonzero
+                // this means a positive zero would under-report this upper bound
+                if output == 0.0 && output.is_sign_positive() && *self != 0.0 {
+                    return Ok(<$ty>::from_bits(1));
+                }
                 output.is_finite().then(|| output).ok_or_else(not_finite)
             }
             fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
@@ -732,11 +842,16 @@ macro_rules! impl_float_inf_bi_ibig {
                 if !self.is_finite() {
                     return Err(not_finite());
                 }
-                let lhs = FBig::<Down>::try_from(*self)?;
+                let lhs = self.to_fbig::<Down>()?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
                     return Err(not_finite())
                 };
                 let output = Self::neg_inf_cast(output)?;
+                // mirror of the inf-side correction: a negative zero would
+                // over-report this lower bound when the true result is negative
+                if output == 0.0 && output.is_sign_negative() && *self != 0.0 {
+                    return Ok(-<$ty>::from_bits(1));
+                }
                 output.is_finite().then(|| output).ok_or_else(not_finite)
             }
         })+
