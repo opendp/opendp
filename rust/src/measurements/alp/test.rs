@@ -183,6 +183,48 @@ fn test_construct_and_post_process() -> Fallible<()> {
     Ok(())
 }
 
+/// The internal quotient scale/alpha must round DOWN: an over-estimate would
+/// set more projection bits per unit of sensitivity than the privacy map charges
+/// for. The quotient is unobservable, so the chain mirrors `scale_and_round`.
+#[test]
+fn test_alp_scale_and_round_rounding_direction() -> Fallible<()> {
+    use dashu::{rational::RBig, rbig};
+
+    let mut scale = FBig::<Down>::neg_inf_cast(1.0)?;
+    scale /= FBig::<Down>::inf_cast(10.0)?;
+
+    let exp = scale.repr().exponent() + scale.repr().digits() as isize;
+    let prec = (f64::MANTISSA_DIGITS as isize - exp).max(1) as usize;
+    // 1/10 lies in [2^-4, 2^-3): exp = -3, matching MPFR's 53 - get_exp = 56
+    assert_eq!(prec, 56);
+    let scale_impl = scale.with_precision(prec).value();
+
+    // below the exact quotient 1/10, but within one 53-bit division ulp, 2^-56
+    let truth = rbig!(1 / 10);
+    let impl_q = RBig::try_from(scale_impl)?;
+    assert!(impl_q < truth);
+    assert!((truth.clone() - impl_q.clone()) * RBig::from(1u64 << 56) < RBig::ONE);
+
+    // the direction-MIRRORED chain: cast UP, divide UP, truncate UP
+    let mut scale_bad = FBig::<Up>::inf_cast(1.0)?;
+    scale_bad /= FBig::<Up>::neg_inf_cast(10.0)?;
+    let scale_bad = scale_bad.with_precision(prec).value();
+    assert!(RBig::try_from(scale_bad.clone())? > truth);
+    assert!(impl_q < RBig::try_from(scale_bad)?);
+
+    // scale/alpha = 7 exercises positive exponents: MSB position 3 gives
+    // precision 50, keeping the 3-bit value 7 exact. (The pre-fix code
+    // computed e^7 here, clamping precision to a single bit: 7 became 4.)
+    let mut scale7 = FBig::<Down>::neg_inf_cast(7.0)?;
+    scale7 /= FBig::<Down>::inf_cast(1.0)?;
+    let exp7 = scale7.repr().exponent() + scale7.repr().digits() as isize;
+    let prec7 = (f64::MANTISSA_DIGITS as isize - exp7).max(1) as usize;
+    assert_eq!(prec7, 50);
+    let scale7 = scale7.with_precision(prec7).value();
+    assert_eq!(RBig::try_from(scale7)?, RBig::from(7));
+    Ok(())
+}
+
 #[test]
 fn test_post_process_measurement() -> Fallible<()> {
     let mut x = HashMap::new();
