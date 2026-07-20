@@ -135,7 +135,7 @@ where
         output_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>> {
-        if match_shim::<DPFrameLenShim, 1>(&self)?.is_some() {
+        if match_shim::<DPFrameLenShim, 2>(&self)?.is_some() {
             return expr_dp_frame_len::make_expr_dp_frame_len(
                 input_domain,
                 input_metric,
@@ -158,7 +158,16 @@ where
             };
         }
 
-        counting_query!(DPLenShim, make_expr_dp_len);
+        if match_shim::<DPLenShim, 3>(&self)?.is_some() {
+            return expr_dp_counting_query::make_expr_dp_len(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
         counting_query!(DPCountShim, make_expr_dp_count);
         counting_query!(DPNullCountShim, make_expr_dp_null_count);
         counting_query!(DPNUniqueShim, make_expr_dp_n_unique);
@@ -247,12 +256,14 @@ where
                 expr_literal::make_expr_private_lit(input_domain, input_metric, self)
             }
 
-            expr => fallible!(
-                MakeMeasurement,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            expr => {
+                fallible!(
+                    MakeMeasurement,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }

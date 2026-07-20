@@ -27,6 +27,9 @@ mod expr_boolean_function;
 mod expr_cast;
 
 #[cfg(feature = "contrib")]
+mod expr_cast_aggregation;
+
+#[cfg(feature = "contrib")]
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
@@ -259,12 +262,21 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
+            #[cfg(feature = "contrib")]
+            Cast { .. } => expr_cast_aggregation::make_cast_aggregation::<MI, P>(
+                input_domain,
+                input_metric,
+                self,
             ),
+
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
@@ -293,12 +305,14 @@ where
             );
         }
         match self {
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
