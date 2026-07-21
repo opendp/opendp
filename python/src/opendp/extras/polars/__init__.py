@@ -714,8 +714,8 @@ class LazyFrameQuery:
             ... )
 
             >>> lf_query = context.query()
-            >>> lf_query.collect_schema()
-            Schema([('active', Int32)])
+            >>> dict(lf_query.collect_schema())
+            {'active': Int32}
 
     Added and modified methods are listed below.
     """
