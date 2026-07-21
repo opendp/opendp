@@ -20,9 +20,8 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-We will use `sample
-data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
-from the Labour Force Survey in France.
+To get started, we’ll load data and recreate the Context from the `tabular data
+introduction <index.rst>`__.
 
 .. tab-set::
 
@@ -35,18 +34,6 @@ from the Labour Force Survey in France.
             >>> import opendp.prelude as dp
 
             >>> dp.enable_features("contrib")
-
-
-To get started, we’ll load data and recreate the Context from the `tabular data
-introduction <index.rst>`__.
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
             >>> lazyframe = pl.scan_csv(
             ...     dp.examples.get_france_lfs_path(),
             ... )
@@ -56,23 +43,6 @@ introduction <index.rst>`__.
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
             ... )
-
-.. note::
-
-    Loading data is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
-    CSV schema inference is data-dependent:
-    private values can affect both the inferred types and whether parsing succeeds. 
-    In a trusted environment, however, a parsing error can be useful,
-    since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
-
-    If loading success or failure may be observed outside the trusted environment, 
-    prefer a schema-bearing source such as Parquet or a database table, 
-    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    ``ignore_errors=True`` avoids some parsing failures, 
-    but may silently change the loaded data and reduce utility, 
-    so it should be used deliberately rather than by default. 
-    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
-    for the available schema and error-handling options.
 
 Count
 -----

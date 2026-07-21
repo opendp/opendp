@@ -90,6 +90,41 @@ Our examples will use just a few. (Descriptions are copied from the User Guide.)
 While the dataset does not contain a unique identifier for individuals,
 we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
 
+Loading data
+------------
+
+Data for this tutorial is available under ``dp.examples``.
+In practice you will load from a local CSV, or preferably use
+`scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_.
+
+.. tab-set::
+
+  .. tab-item:: Python
+
+    .. code:: pycon
+
+      >>> import polars as pl
+      >>> lazyframe = pl.scan_csv(
+      ...     dp.examples.get_france_lfs_path(),
+      ... )
+
+.. note::
+
+    Loading data is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
+    CSV schema inference is data-dependent:
+    private values can affect both the inferred types and whether parsing succeeds. 
+    In a trusted environment, however, a parsing error can be useful,
+    since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
+
+    If loading success or failure may be observed outside the trusted environment, 
+    prefer a schema-bearing source such as Parquet or a database table, 
+    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
+    ``ignore_errors=True`` avoids some parsing failures, 
+    but may silently change the loaded data and reduce utility, 
+    so it should be used deliberately rather than by default. 
+    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
+    for the available schema and error-handling options.
+
 
 Mediate access with ``Context``
 -------------------------------
@@ -104,11 +139,8 @@ ensuring that queries you would like to release satisfy necessary privacy proper
 
     .. code:: pycon
 
-      >>> import polars as pl
-      >>> df = pl.LazyFrame()
-
       >>> context = dp.Context.compositor(
-      ...     data=df,
+      ...     data=lazyframe,
       ...     privacy_unit=dp.unit_of(contributions=36),
       ...     privacy_loss=dp.loss_of(epsilon=1.0),
       ...     split_evenly_over=10,
@@ -117,7 +149,7 @@ ensuring that queries you would like to release satisfy necessary privacy proper
       >>> # Once you construct the context, you should abstain from
       >>> # directly accessing your data again.
       >>> # In fact, it is good practice to delete it!
-      >>> del df
+      >>> del lazyframe
 
 
 A number of parameters define the ``Context``:
