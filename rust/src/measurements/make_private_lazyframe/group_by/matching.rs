@@ -210,6 +210,14 @@ pub(super) fn find_len_expr(
 fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
     let output_name = expr_output_name(expr).ok()?;
 
+    // If it is a cast, unwrap to get the len expr.
+    //
+    //match expr {Expr::Cast {inner_expr, ..} => {
+    //    let expr = inner_expr;
+    //}
+    //    _ => {}
+    //}
+
     // check if the expression matches the expected name
     if let Some(name) = name {
         if name != output_name.as_str() {

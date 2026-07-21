@@ -159,3 +159,48 @@ fn test_explicit_keys() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_find_len_expr() -> Fallible<()> {
+    // len expressions supported
+    let supported = vec![
+        (len(), None),
+        (len().alias("new_col"), Some("new_col")),
+        (len().cast(DataType::Int64), None),
+        (
+            len().cast(DataType::Int64).alias("new_col"),
+            Some("new_col"),
+        ),
+    ];
+
+    // Supported test cases.
+    for (supported_expr, name) in &supported {
+        let result = find_len_expr(&vec![supported_expr.clone()], *name);
+        assert!(
+            result.is_ok(),
+            "Supported len expression incorrectly not identified {:?}",
+            result.err()
+        )
+    }
+
+    // expressions not supported
+    let unsupported = vec![
+        (max("fake_col"), None),
+        (max("fake_col").alias("new_col"), Some("new_col")),
+        (max("fake_col").cast(DataType::Int64), None),
+        (
+            max("fake_col").cast(DataType::Int64).alias("new_col"),
+            Some("new_col"),
+        ),
+    ];
+
+    // Not supported test cases
+    for (unsupported_expr, name) in &unsupported {
+        let result = find_len_expr(&vec![unsupported_expr.clone()], *name);
+        assert!(
+            result.is_err(),
+            "Expected an error given then is not a length expr."
+        )
+    }
+    Ok(())
+}
