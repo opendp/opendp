@@ -211,12 +211,11 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)>
     let output_name = expr_output_name(expr).ok()?;
 
     // If it is a cast, unwrap to get the len expr.
-    //
-    //match expr {Expr::Cast {inner_expr, ..} => {
-    //    let expr = inner_expr;
-    //}
-    //    _ => {}
-    //}
+
+    let expr = match expr {
+        Expr::Cast { expr, .. } => expr.as_ref(),
+        x => x,
+    };
 
     // check if the expression matches the expected name
     if let Some(name) = name {

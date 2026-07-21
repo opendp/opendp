@@ -3,7 +3,7 @@ use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
-use crate::polars::PrivacyNamespace;
+use crate::polars::{PrivacyNamespace, dp_len};
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
@@ -164,24 +164,31 @@ fn test_explicit_keys() -> Fallible<()> {
 fn test_find_len_expr() -> Fallible<()> {
     // len expressions supported
     let supported = vec![
-        (len(), None),
-        (len().alias("new_col"), Some("new_col")),
-        (len().cast(DataType::Int64), None),
+        (dp_len(Some(0.0), false), None),
+        (dp_len(Some(0.0), false).alias("new_col"), Some("new_col")),
+        (dp_len(Some(0.0), false).cast(DataType::Int64), None),
         (
-            len().cast(DataType::Int64).alias("new_col"),
+            dp_len(Some(0.0), false)
+                .cast(DataType::Int64)
+                .alias("new_col"),
             Some("new_col"),
         ),
     ];
+    println!("Started Testing");
 
     // Supported test cases.
     for (supported_expr, name) in &supported {
         let result = find_len_expr(&vec![supported_expr.clone()], *name);
+        println!("Ran expr: {:?}", supported_expr);
+        println!("Result: {:?}", result);
         assert!(
             result.is_ok(),
-            "Supported len expression incorrectly not identified {:?}",
-            result.err()
-        )
+            "Supported len expression incorrectly not identified {:?}: {:?}",
+            name,
+            supported_expr,
+        );
     }
+    println!("Supported Cases Ran");
 
     // expressions not supported
     let unsupported = vec![
@@ -199,8 +206,10 @@ fn test_find_len_expr() -> Fallible<()> {
         let result = find_len_expr(&vec![unsupported_expr.clone()], *name);
         assert!(
             result.is_err(),
-            "Expected an error given then is not a length expr."
-        )
+            "Expected an error given then is not a length expr. {:?}, {:?}",
+            unsupported_expr,
+            name,
+        );
     }
     Ok(())
 }
