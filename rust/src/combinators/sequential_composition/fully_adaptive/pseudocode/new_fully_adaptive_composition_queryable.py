@@ -74,21 +74,7 @@ def new_fully_adaptive_composition_queryable(
 
             # evaluate external privacy loss query
             case Query.External(OdometerQuery.PrivacyLoss(d_in)):
-                # evaluate each distinct privacy map once, reusing the distance
-                # for repeats, so that composition can recognize repeated
-                # queries by allocation
-                distinct = []  # Vec<(PrivacyMap<MI, MO>, MO_Distance)>
-                d_mids = []
-                for map in privacy_maps:  # `\label{distinct-maps}`
-                    d_mid = next(
-                        (d_mid for m, d_mid in distinct if Arc.ptr_eq(m, map)),
-                        None,
-                    )
-                    if d_mid is None:
-                        d_mid = map.eval(d_in)
-                        distinct.push((map, d_mid))
-                    d_mids.push(d_mid)
-
+                d_mids = [m.eval(d_in) for m in privacy_maps]
                 d_out = output_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))
 
