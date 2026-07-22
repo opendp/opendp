@@ -33,14 +33,8 @@ None
 \end{theorem}
 
 \begin{proof}
-  Since curves that share an allocation are the same function,
-  the grouping on line \ref{line:groups} only changes the representation of \texttt{d\_mids}:
-  a curve appearing \texttt{k} times is stored once with multiplicity \texttt{k}, in first-occurrence order.
-  The new curve constructed on line \ref{line:curve} composes all epsilon parameters at a given fixed \texttt{alpha},
-  evaluating each distinct curve once.
-  By the postcondition of \rustdoc{traits/trait}{InfMul} on line \ref{line:inf-mul},
-  $\texttt{k} \cdot \texttt{d\_mid}(\texttt{alpha}) \le \texttt{d\_mid}(\texttt{alpha}).\texttt{inf\_mul}(\texttt{k})$.
-  Then by the postcondition of \rustdoc{traits/trait}{InfAdd} we have that for any choice of \texttt{alpha}, $\sum_i \texttt{d\_mid}_i(\texttt{alpha}) \le \texttt{compose(d\_mids)}(\alpha)$.
+  The new curve constructed on line \ref{line:curve} composes all epsilon parameters at a given fixed \texttt{alpha}.
+  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that for any choice of \texttt{alpha}, $\sum_i \texttt{d\_mid}_i(\texttt{alpha}) \le \texttt{compose(d\_mids)}(\alpha)$.
 
   \begin{center}
     \begin{tabular}{ r | l l }
