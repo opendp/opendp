@@ -3,10 +3,9 @@ use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
-use crate::polars::{PrivacyNamespace, dp_len};
+use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
-
 use crate::metrics::SymmetricDistance;
 
 use super::*;
@@ -164,15 +163,10 @@ fn test_explicit_keys() -> Fallible<()> {
 fn test_find_len_expr() -> Fallible<()> {
     // len expressions supported
     let supported = vec![
-        (dp_len(Some(0.0), false), None),
-        (dp_len(Some(0.0), false).alias("new_col"), Some("new_col")),
-        (dp_len(Some(0.0), false).cast(DataType::Int64), None),
-        (
-            dp_len(Some(0.0), false)
-                .cast(DataType::Int64)
-                .alias("new_col"),
-            Some("new_col"),
-        ),
+        (len().dp().noise(None), None),
+        (len().cast(DataType::Int64).dp().noise(None), None),
+        (len().alias("new_col").dp().noise(None), None),
+        (len().alias("new_col").cast(DataType::Int64).dp().noise(None), None),
     ];
     println!("Started Testing");
 
@@ -192,13 +186,10 @@ fn test_find_len_expr() -> Fallible<()> {
 
     // expressions not supported
     let unsupported = vec![
-        (max("fake_col"), None),
-        (max("fake_col").alias("new_col"), Some("new_col")),
-        (max("fake_col").cast(DataType::Int64), None),
-        (
-            max("fake_col").cast(DataType::Int64).alias("new_col"),
-            Some("new_col"),
-        ),
+        (max("fake_col").dp().noise(None), None),
+        (max("fake_col").cast(DataType::Int64).dp().noise(None), None),
+        (max("fake_col").alias("new_col").dp().noise(None), None),
+        (max("fake_col").alias("new_col").cast(DataType::Int64).dp().noise(None), None),
     ];
 
     // Not supported test cases
