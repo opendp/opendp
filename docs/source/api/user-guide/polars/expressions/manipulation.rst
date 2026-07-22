@@ -402,6 +402,8 @@ Just like ``.fill_nan``, even if you are in an aggregation context like
 ``.select`` or ``.agg``, OpenDP enforces that inputs to ``.fill_nan``
 are row-by-row.
 
+.. _polars-filter-null-handling:
+
 Filter
 ------
 
