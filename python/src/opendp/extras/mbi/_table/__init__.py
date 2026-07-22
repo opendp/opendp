@@ -422,6 +422,7 @@ def _make_oneway_marginals(
     keys: dict[str, Any],
     plan: Any,
     unknown_only: bool,
+    signed: bool = False
 ) -> tuple[Measurement, float, Optional[int]]:
     """Returns a measurement that releases keys and counts for one-way marginals,
     as well as the discovered scale and threshold."""
@@ -431,11 +432,11 @@ def _make_oneway_marginals(
     from mbi.estimation import minimum_variance_unbiased_total  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
 
-    def group_by_agg(plan: pl.LazyFrame, name: str) -> pl.LazyFrame:
+    def group_by_agg(plan: pl.LazyFrame, name: str, signed: bool = False) -> pl.LazyFrame:
         """Aggregate the compute plan"""
         keyset = keys.get(name)
         if keyset is None:
-            return plan.group_by(name).agg(dp_len())
+            return plan.group_by(name).agg(dp_len(signed=signed))
 
         # fold all unknown values into null
         if isinstance(keyset.dtype, pl.Categorical):  # pragma: no cover
@@ -443,13 +444,13 @@ def _make_oneway_marginals(
         replace = pl.col(name).replace_strict(keys[name], keyset, default=None)
 
         return pl.LazyFrame([keyset]).join(
-            plan.select(replace).group_by(name).agg(dp_len()),
+            plan.select(replace).group_by(name).agg(dp_len(signed=signed)),
             on=[name],
             how="left",
             nulls_equal=True,
         )
 
-    def _make(scale: float, threshold: Optional[int] = None) -> Measurement:
+    def _make(scale: float, threshold: Optional[int] = None, signed: bool = False) -> Measurement:
         std = get_std(output_measure, scale)
 
         # all columns that should be estimated
@@ -466,7 +467,7 @@ def _make_oneway_marginals(
                 input_domain,
                 input_metric,
                 output_measure,
-                group_by_agg(plan, name),
+                group_by_agg(plan, name, signed=signed),
                 global_scale=scale,
                 threshold=threshold,
             )
@@ -478,7 +479,7 @@ def _make_oneway_marginals(
                 input_domain,
                 input_metric,
                 output_measure,
-                plan.select(dp_len()),
+                plan.select(dp_len(signed=signed)),
                 global_scale=scale,
             ) >> _new_pure_function(lambda x: x.collect())
             one_way_measurements.append(m_total)
@@ -518,21 +519,21 @@ def _make_oneway_marginals(
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
     if isinstance(output_measure, ApproximateDivergence):
-        compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
+        compare_s = lambda s: _make(s, threshold=2**32 - 1, signed=signed).map(d_in)[0] < d_out[0]  # type: ignore[index]
         scale = binary_search(compare_s, T=float)
 
         try:
-            _make(scale, threshold=None)
+            _make(scale, threshold=None, signed=signed)
             threshold: Optional[int] = None  # pragma: no cover
         except OpenDPException:
-            compare_t = lambda t: _make(scale, t).map(d_in)[1] < d_out[1]  # type: ignore[index,arg-type]
+            compare_t = lambda t: _make(scale, t, signed=signed).map(d_in)[1] < d_out[1]  # type: ignore[index,arg-type]
             threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]
 
     else:
-        scale = binary_search_param(_make, d_in, d_out, T=float)
+        scale = binary_search_param(_make, d_in, d_out, T=float)  # TODO: Does this need signed?
         threshold = None
 
-    return _make(scale, threshold), scale, threshold
+    return _make(scale, threshold, signed=signed), scale, threshold
 
 
 def _deindex(indices, keys, cuts=None):

@@ -157,7 +157,7 @@ class DPExpr(object):
         return self.noise(scale=scale)
 
     def len(self, scale: float | None = None):
-        """Compute a differentially private estimate of the number of elements in `self`, including null values.
+        """Compute a differentially private estimate of the number of elements in ``self``, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
@@ -200,7 +200,7 @@ class DPExpr(object):
         )
 
     def count(self, scale: float | None = None):
-        """Compute a differentially private estimate of the number of elements in `self`, not including null values.
+        """Compute a differentially private estimate of the number of elements in ``self``, not including null values.
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
 
@@ -242,7 +242,7 @@ class DPExpr(object):
         )
 
     def null_count(self, scale: float | None = None):
-        """Compute a differentially private estimate of the number of null elements in `self`.
+        """Compute a differentially private estimate of the number of null elements in ``self``.
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
 
@@ -288,7 +288,7 @@ class DPExpr(object):
         )
 
     def n_unique(self, scale: float | None = None):
-        """Compute a differentially private estimate of the number of unique elements in `self`.
+        """Compute a differentially private estimate of the number of unique elements in ``self``.
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
 
