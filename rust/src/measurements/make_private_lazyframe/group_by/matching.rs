@@ -207,7 +207,7 @@ pub(super) fn find_len_expr(
         })
 }
 
-fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
+pub(super) fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
     let output_name = expr_output_name(expr).ok()?;
 
     // check if the expression matches the expected name

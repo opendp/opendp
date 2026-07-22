@@ -1,12 +1,12 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
-use crate::measurements::make_private_lazyframe;
+use crate::measurements::{make_private_expr, make_private_lazyframe};
 use crate::measures::MaxDivergence;
+use crate::metrics::{L0PInfDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
-use crate::metrics::SymmetricDistance;
 
 use super::*;
 
@@ -159,26 +159,48 @@ fn test_explicit_keys() -> Fallible<()> {
     Ok(())
 }
 
+fn process_expr(expr: Expr) -> Fallible<Expr> {
+    Ok(make_private_expr(
+        WildExprDomain {
+            columns: vec![],
+            context: Context::Aggregation {
+                margin: Margin::select(),
+            },
+        },
+        L0PInfDistance(SymmetricDistance),
+        MaxDivergence,
+        expr,
+        Some(1.0),
+    )?
+    .invoke(&df!["A" => [1, 2]]?.lazy().logical_plan)?
+    .expr)
+}
+
 #[test]
 fn test_find_len_expr() -> Fallible<()> {
     // len expressions supported
     let supported = vec![
-        (len().dp().noise(None), None),
-        (len().cast(DataType::Int64).dp().noise(None), None),
-        (len().alias("new_col").dp().noise(None), None),
-        (len().alias("new_col").cast(DataType::Int64).dp().noise(None), None),
+        len().dp().noise(None),
+        len().cast(DataType::Int64).dp().noise(None),
+        len().alias("new_col").dp().noise(None),
+        len()
+            .alias("new_col")
+            .cast(DataType::Int64)
+            .dp()
+            .noise(None),
     ];
     println!("Started Testing");
 
     // Supported test cases.
-    for (supported_expr, name) in &supported {
-        let result = find_len_expr(&vec![supported_expr.clone()], *name);
+    for supported_expr in &supported {
+        let dp_expr = process_expr(supported_expr.clone())?;
+        // println!("is len expr: {:?}", is_len_expr(supported_expr));
+        let result = find_len_expr(&vec![dp_expr.clone()], None);
         println!("Ran expr: {:?}", supported_expr);
         println!("Result: {:?}", result);
         assert!(
             result.is_ok(),
-            "Supported len expression incorrectly not identified {:?}: {:?}",
-            name,
+            "Supported len expression incorrectly not identified: {:?}",
             supported_expr,
         );
     }
@@ -186,20 +208,24 @@ fn test_find_len_expr() -> Fallible<()> {
 
     // expressions not supported
     let unsupported = vec![
-        (max("fake_col").dp().noise(None), None),
-        (max("fake_col").cast(DataType::Int64).dp().noise(None), None),
-        (max("fake_col").alias("new_col").dp().noise(None), None),
-        (max("fake_col").alias("new_col").cast(DataType::Int64).dp().noise(None), None),
+        max("fake_col").dp().noise(None),
+        max("fake_col").cast(DataType::Int64).dp().noise(None),
+        max("fake_col").alias("new_col").dp().noise(None),
+        max("fake_col")
+            .alias("new_col")
+            .cast(DataType::Int64)
+            .dp()
+            .noise(None),
     ];
 
     // Not supported test cases
-    for (unsupported_expr, name) in &unsupported {
-        let result = find_len_expr(&vec![unsupported_expr.clone()], *name);
+    for unsupported_expr in &unsupported {
+        let dp_expr = process_expr(unsupported_expr.clone())?;
+        let result = find_len_expr(&vec![dp_expr], None);
         assert!(
             result.is_err(),
-            "Expected an error given then is not a length expr. {:?}, {:?}",
+            "Expected an error given then is not a length expr. {:?}",
             unsupported_expr,
-            name,
         );
     }
     Ok(())
