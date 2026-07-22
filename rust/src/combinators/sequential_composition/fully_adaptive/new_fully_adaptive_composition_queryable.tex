@@ -59,7 +59,11 @@ Types matching those in the pseudocode.
         child queryables ($\mathcal{M}_k$ and $s_k$) can be removed from the odometer state,
         and the handling of child update queries $m = (j, q)$ can be removed while preserving equivalency with Algorithm~6.
         This equivalently reduces the odometer state to $(s, [d_1, ... d_k])$.
-        \item In addition to storing the dataset $x$, 
+        \item When the privacy loss is requested, each distinct privacy map is evaluated once,
+        and the resulting distance is reused for repeated maps (on line \ref{distinct-maps}).
+        Since privacy maps are deterministic functions,
+        the \texttt{d\_mids} passed to \texttt{compose} are the same as if each map were evaluated individually.
+        \item In addition to storing the dataset $x$,
         the state also contains the input domain, input metric and privacy measure.
         Each incoming mechanism must share these same supporting elements.
         This is an implicit requirement of the paper made explicit in the implementation.
