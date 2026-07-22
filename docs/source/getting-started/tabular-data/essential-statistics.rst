@@ -292,6 +292,43 @@ of weekly work hours in France. Your choice of imputation value will
 vary depending on how you want to use the statistic.
 
 .. note::
+   Looking at the query above, you might expect ``.fill_null(35)`` to be
+   the step that imputes the survey's "blank" / no-answer ``HWUSUAL``
+   responses (see the codebook above) with 35 hours. It isn't: the
+   preceding ``.filter(pl.col("HWUSUAL") != 99.0)`` already removes those
+   rows. Polars comparisons against a null value themselves evaluate to
+   null rather than ``False``, and ``.filter`` drops any row whose
+   predicate is null, so the blank responses are filtered out right
+   alongside the ``99`` ("not applicable") ones, before ``.fill_null``
+   ever runs. In this particular query, ``.fill_null(35)`` doesn't
+   actually impute anything at runtime.
+
+   ``.fill_null`` is still required here regardless, because OpenDP
+   doesn't infer non-null guarantees from filtering criteria, so it has
+   no way to know that this data happens to already be null-free by this
+   point in the query. See :ref:`polars-filter-null-handling` for more on
+   this distinction. If you instead want ``.fill_null`` to impute the
+   blank responses rather than have the filter silently discard them,
+   adjust the filter condition to retain nulls, for example with
+   ``(pl.col("HWUSUAL") != 99.0) | pl.col("HWUSUAL").is_null()``.
+
+   You can see the underlying Polars behavior directly, independent of
+   OpenDP, on a small sample frame with a mix of ``99``, a blank
+   (``None``), and an ordinary response:
+
+   .. tab-set::
+
+       .. tab-item:: Python
+           :sync: python
+
+           .. code:: pycon
+
+               >>> pl.LazyFrame({"HWUSUAL": [40.0, 99.0, None]}).filter(
+               ...     pl.col("HWUSUAL") != 99.0
+               ... ).collect()["HWUSUAL"].null_count()
+               0
+
+.. note::
    Do not use private data to calculate imputed values or bounds: This
    could leak private information, reducing the integrity of the privacy
    guarantee. Instead, choose bounds and imputed values based on prior
