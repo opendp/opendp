@@ -12,8 +12,8 @@ pub use adaptive::*;
 mod fully_adaptive;
 #[cfg(feature = "contrib")]
 pub use fully_adaptive::*;
-
 use opendp_derive::proven;
+use std::sync::Arc;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -119,102 +119,22 @@ impl CompositionMeasure for RenyiDivergence {
     }
 
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        // curves sharing an allocation are grouped as one (curve, k) pair, in first-occurrence order,
+        // so that each distinct curve is evaluated once, not once per copy
+        let mut groups: Vec<(Self::Distance, u32)> = Vec::new();
+        for d_mid in d_mids {
+            let group = (groups.iter_mut())
+                .find(|(curve, _)| Arc::ptr_eq(&curve.function, &d_mid.function));
+            match group {
+                Some((_, k)) => *k += 1,
+                None => groups.push((d_mid, 1)),
+            }
+        }
         Ok(Function::new_fallible(move |alpha| {
-            d_mids
+            groups
                 .iter()
-                .map(|f| f.eval(alpha))
+                .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
-    }
-}
-
-pub trait ComposeK: CompositionMeasure {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance>
-    where
-        Self::Distance: Clone,
-    {
-        self.compose(vec![d_mid; k as usize])
-    }
-}
-
-impl ComposeK for MaxDivergence {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
-        d_mid.inf_mul(&f64::from(k))
-    }
-}
-
-impl ComposeK for ZeroConcentratedDivergence {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
-        d_mid.inf_mul(&f64::from(k))
-    }
-}
-
-impl ComposeK for Approximate<MaxDivergence> {
-    fn compose_k(&self, (eps, del): Self::Distance, k: u32) -> Fallible<Self::Distance> {
-        Ok((eps.inf_mul(&f64::from(k))?, del.inf_mul(&f64::from(k))?))
-    }
-}
-
-impl ComposeK for Approximate<ZeroConcentratedDivergence> {
-    fn compose_k(&self, (rho, del): Self::Distance, k: u32) -> Fallible<Self::Distance> {
-        Ok((rho.inf_mul(&f64::from(k))?, del.inf_mul(&f64::from(k))?))
-    }
-}
-
-impl ComposeK for RenyiDivergence {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
-        let k = f64::from(k);
-        Ok(Function::new_fallible(move |alpha| {
-            // the shared curve is evaluated once, then charged k times
-            d_mid.eval(alpha)?.inf_mul(&k)
-        }))
-    }
-}
-
-#[cfg(test)]
-mod test_compose_k {
-    use super::*;
-
-    /// `via_mul` must not be less than the exact sum, and should agree with the
-    /// `inf_add` fold up to rounding.
-    fn assert_bounds_fold(via_mul: f64, via_fold: f64, eps: f64, k: u32) {
-        // rounded-to-nearest product is a lower bound on the round-up product
-        assert!(via_mul >= (k as f64) * eps);
-        assert!((via_mul - via_fold).abs() <= 1e-9 * via_fold.abs().max(f64::MIN_POSITIVE));
-    }
-
-    #[test]
-    fn test_compose_k_bounds_composing_k_copies() -> Fallible<()> {
-        for (eps, k) in [(0.3, 7), (1e-9, 1000), (0.5, 1), (0.1, 0)] {
-            let via_mul = MaxDivergence.compose_k(eps, k)?;
-            let via_fold = MaxDivergence.compose(vec![eps; k as usize])?;
-            assert_bounds_fold(via_mul, via_fold, eps, k);
-
-            let via_mul = ZeroConcentratedDivergence.compose_k(eps, k)?;
-            let via_fold = ZeroConcentratedDivergence.compose(vec![eps; k as usize])?;
-            assert_bounds_fold(via_mul, via_fold, eps, k);
-
-            let curve = Function::new(move |_alpha: &f64| eps);
-            let via_mul = RenyiDivergence.compose_k(curve.clone(), k)?;
-            let via_fold = RenyiDivergence.compose(vec![curve; k as usize])?;
-            assert_bounds_fold(via_mul.eval(&2.0)?, via_fold.eval(&2.0)?, eps, k);
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_compose_k_approximate() -> Fallible<()> {
-        let (eps, del, k) = (0.3, 1e-9, 7);
-        let via_mul = Approximate(MaxDivergence).compose_k((eps, del), k)?;
-        let via_fold = Approximate(MaxDivergence).compose(vec![(eps, del); k as usize])?;
-        assert_bounds_fold(via_mul.0, via_fold.0, eps, k);
-        assert_bounds_fold(via_mul.1, via_fold.1, del, k);
-
-        let via_mul = Approximate(ZeroConcentratedDivergence).compose_k((eps, del), k)?;
-        let via_fold =
-            Approximate(ZeroConcentratedDivergence).compose(vec![(eps, del); k as usize])?;
-        assert_bounds_fold(via_mul.0, via_fold.0, eps, k);
-        assert_bounds_fold(via_mul.1, via_fold.1, del, k);
-        Ok(())
     }
 }

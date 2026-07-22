@@ -5,7 +5,7 @@ use crate::{
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
 };
 
-use super::{Adaptivity, ComposeK, CompositionMeasure};
+use super::{Adaptivity, CompositionMeasure};
 
 impl CompositionMeasure for AnyMeasure {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
@@ -42,29 +42,5 @@ impl CompositionMeasure for AnyMeasure {
         dispatch!(monomorphize, [
             (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
-    }
-}
-
-impl ComposeK for AnyMeasure {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance>
-    where
-        Self::Distance: Clone,
-    {
-        fn monomorphize<M: 'static + ComposeK>(
-            self_: &AnyMeasure,
-            d_mid: AnyObject,
-            k: u32,
-        ) -> Fallible<AnyObject>
-        where
-            M::Distance: Clone,
-        {
-            self_
-                .downcast_ref::<M>()?
-                .compose_k(d_mid.downcast_ref::<M::Distance>()?.clone(), k)
-                .map(AnyObject::new)
-        }
-        dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
-        ], (self, d_mid, k))
     }
 }

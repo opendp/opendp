@@ -69,6 +69,29 @@ fn test_rdp_composition() -> Fallible<()> {
 }
 
 #[test]
+fn test_rdp_composition_shared_curves_evaluated_once() -> Fallible<()> {
+    use std::{cell::RefCell, rc::Rc};
+
+    let count = Rc::new(RefCell::new(0));
+    let curve = Function::new(enclose!(count, move |alpha: &f64| {
+        *count.borrow_mut() += 1;
+        alpha * 0.5
+    }));
+
+    // curves sharing an allocation are charged k-fold, but evaluated once
+    let composed = RenyiDivergence.compose(vec![curve.clone(), curve.clone(), curve])?;
+    assert_eq!(composed.eval(&2.0)?, 3.0);
+    assert_eq!(*count.borrow(), 1);
+
+    // the loss matches composing curves with separate allocations, which are not grouped
+    let separate = (0..3)
+        .map(|_| Function::new(|alpha: &f64| alpha * 0.5))
+        .collect();
+    assert_eq!(RenyiDivergence.compose(separate)?.eval(&2.0)?, 3.0);
+    Ok(())
+}
+
+#[test]
 fn test_interactive_postprocessing() -> Fallible<()> {
     let m1 = (Measurement::new(
         AtomDomain::<bool>::default(),
