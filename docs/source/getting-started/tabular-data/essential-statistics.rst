@@ -65,14 +65,15 @@ introduction <index.rst>`__.
     In a trusted environment, however, a parsing error can be useful,
     since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
 
-    If loading success or failure may be observed outside the trusted environment, 
-    prefer a schema-bearing source such as Parquet or a database table, 
+    If the success or failure of ``scan_csv`` has effects outside a trusted environment,
+    this information leak may violate differential privacy.
+    Instead, use a schema-bearing source such as Parquet or a database table, 
     or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    ``ignore_errors=True`` avoids some parsing failures, 
-    but may silently change the loaded data and reduce utility, 
+    Using ``ignore_errors=True`` avoids some parsing failures, 
+    but it may silently change the loaded data and reduce utility, 
     so it should be used deliberately rather than by default. 
     See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
-    for the available schema and error-handling options.
+    for more schema and error-handling options.
 
 Count
 -----
