@@ -103,7 +103,8 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
@@ -1064,8 +1065,8 @@ def test_explicit_grouping_keys_context():
 
 def test_large_keys_warns(monkeypatch):
     pl = pytest.importorskip("polars")
-    local_limit = .001
-    local_scale_factor = int(local_limit * 1000 ** 2)  # for mb comparison
+    local_limit = 0.001
+    local_scale_factor = int(local_limit * 1000**2)  # for mb comparison
     monkeypatch.setattr("opendp.extras.polars._KEY_SIZE_THRESHOLD_MB", local_limit)
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
@@ -1082,13 +1083,20 @@ def test_large_keys_warns(monkeypatch):
     keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
 
-    keys_large = pl.DataFrame([pl.Series(str(x), [2, 3, 4, 5, 6], dtype=pl.Int32) for x in range(local_scale_factor)])
+    keys_large = pl.DataFrame(
+        [
+            pl.Series(str(x), [2, 3, 4, 5, 6], dtype=pl.Int32)
+            for x in range(local_scale_factor)
+        ]
+    )
     with pytest.warns(
         UserWarning,
         match=rf"Large key-set \(~[\d.]+MB > {local_limit}MB\) loaded into memory\. "
         r"Consider writing it to disk for the plan to read it in via scan_parquet\.",
     ):
-        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
+        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(
+            keys_large
+        )
 
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
@@ -1380,6 +1388,6 @@ def test_unbiased_groupby_len():
         .release()
         .collect()
     )
-    assert (
-        len(result.filter(pl.col("len") < 0)) > 0
-    ), "dp.len result didn't have any negative values."
+    assert len(result.filter(pl.col("len") < 0)) > 0, (
+        "dp.len result didn't have any negative values."
+    )

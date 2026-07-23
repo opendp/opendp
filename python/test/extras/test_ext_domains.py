@@ -23,7 +23,7 @@ def test_array2_domain():
     # origin array dtype must be numeric
     with pytest.raises(ValueError):
         dp.numpy.array2_domain(norm=1, p=2, origin=np.array([True, False]))
-    
+
     with pytest.raises(ValueError):
         dp.numpy.array2_domain(norm=1, p=2, T="AnyTransformation")
 
@@ -44,7 +44,9 @@ def test_array2_domain():
 def test_array2_domain_member():
     np = pytest.importorskip("numpy")
     # missing norm
-    domain = dp.numpy.array2_domain(norm=1, p=1, nan=False, size=2, num_columns=2, T=float)
+    domain = dp.numpy.array2_domain(
+        norm=1, p=1, nan=False, size=2, num_columns=2, T=float
+    )
 
     with pytest.warns(match="must be a numpy ndarray"):
         domain.member([1, 2, 3])
@@ -73,18 +75,25 @@ def test_array2_domain_cardinalities():
         dp.numpy.array2_domain(cardinalities=[-1], T=int)
     with pytest.raises(ValueError, match="cardinalities length"):
         dp.numpy.array2_domain(cardinalities=[1, 2], num_columns=1, T=int)
-    with pytest.raises(ValueError, match="cardinalities must be a list, ndarray or None"):
-        dp.numpy.array2_domain(cardinalities=True, num_columns=1, T=int) # type: ignore[arg-type]
+    with pytest.raises(
+        ValueError, match="cardinalities must be a list, ndarray or None"
+    ):
+        dp.numpy.array2_domain(cardinalities=True, num_columns=1, T=int)  # type: ignore[arg-type]
 
     domain = dp.numpy.array2_domain(cardinalities=[1, 2, 3], T=int)
 
-    with pytest.warns(match=re.escape("unique values in data ([2 1 1]) must not exceed cardinalities ([1 2 3])")):
+    with pytest.warns(
+        match=re.escape(
+            "unique values in data ([2 1 1]) must not exceed cardinalities ([1 2 3])"
+        )
+    ):
         domain.member(np.array([[1, 1, 1], [2, 1, 1]], dtype=np.int32))
     assert domain.member(np.array([[1, 1, 1], [1, 1, 1]], dtype=np.int32))
 
+
 def test_sscp_domain():
     np = pytest.importorskip("numpy")
-    
+
     with pytest.raises(ValueError):
         _sscp_domain(T=bool)
 
@@ -112,7 +121,7 @@ def test_arrayd_domain():
     np = pytest.importorskip("numpy")
 
     with pytest.raises(ValueError, match="must be a tuple"):
-        arrayd_domain(shape=None, T=bool) # type: ignore[arg-type]
+        arrayd_domain(shape=None, T=bool)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="must be a tuple of positive integers"):
         arrayd_domain(shape=(-1, 2), T=bool)
     with pytest.raises(ValueError, match="must be a primitive type"):

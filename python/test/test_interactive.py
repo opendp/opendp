@@ -24,11 +24,7 @@ def test_sequential_composition():
 
     print("sc_qbl(sum_query)", sc_qbl(sum_query))
 
-    exact_sum = (
-        sc_meas.input_space
-        >> dp.t.then_clamp((0, 10))
-        >> dp.t.then_sum()
-    )
+    exact_sum = sc_meas.input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
     print("exact sum:", exact_sum)
     exact_sum_sc_qbl = sc_qbl(
         exact_sum
@@ -75,6 +71,7 @@ def test_plugin_queryable_int():
     def transition(query):
         assert query == 2
         return query + 1
+
     qbl = dp.new_queryable(transition, int, int)
     assert qbl(2) == 3
 
@@ -83,6 +80,7 @@ def test_plugin_queryable_list():
     def transition(query, _is_internal):
         assert query == [2, 3]
         return query[-1]
+
     qbl = dp.new_queryable(transition, "Vec<i32>", int)
     assert qbl([2, 3]) == 3
 
@@ -90,6 +88,7 @@ def test_plugin_queryable_list():
 def test_plugin_queryable_error():
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")
+
     qbl = dp.new_queryable(transition, "Vec<i32>", int)
 
     with pytest.raises(dp.OpenDPException):
@@ -105,35 +104,40 @@ def test_fully_adaptive_composition():
     o_comp = space >> dp.c.then_fully_adaptive_composition(dp.max_divergence())
     assert space == o_comp.input_space
 
-    assert str(o_comp) == """Odometer(
+    assert (
+        str(o_comp)
+        == """Odometer(
     input_domain   = VectorDomain(AtomDomain(T=i32)),
     input_metric   = SymmetricDistance(),
     output_measure = MaxDivergence)"""
+    )
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
     assert qbl_comp.privacy_loss(max_influence) == 0.0
 
     assert str(qbl_comp) == "OdometerQueryable(Q=AnyMeasurement, QB=u32)"
-    m_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
+    m_sum = (
+        space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.0)
+    )
 
     # evaluating
     assert isinstance(qbl_comp(m_sum), int)
     assert qbl_comp.privacy_loss(max_influence) == m_sum.map(max_influence)
 
-    m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
+    m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.0)
     t_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
     m_sum_compositor = t_sum >> dp.c.then_adaptive_composition(
         output_measure=dp.max_divergence(),
         d_in=t_sum.map(max_influence),
-        d_mids=[0.2, 0.09]
+        d_mids=[0.2, 0.09],
     )
     qbl_summed = qbl_comp.invoke(m_sum_compositor)
     # it's slightly larger, checking greater than will do
     assert qbl_comp.privacy_loss(max_influence) > m_sum.map(max_influence) + 0.2 + 0.09
 
-    assert isinstance(qbl_summed(m_lap), int) # child release
-    assert isinstance(qbl_summed(m_lap), int) # child release
-    assert isinstance(qbl_comp(m_sum), int) # root release
+    assert isinstance(qbl_summed(m_lap), int)  # child release
+    assert isinstance(qbl_summed(m_lap), int)  # child release
+    assert isinstance(qbl_comp(m_sum), int)  # root release
 
     # it's slightly larger, checking greater than will do
     assert qbl_comp.privacy_loss(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
@@ -150,7 +154,10 @@ def test_odometer_supporting_elements():
     assert o_ac.input_domain == dp.vector_domain(dp.atom_domain(T=int))
     assert o_ac.input_metric == dp.symmetric_distance()
     assert o_ac.output_measure == dp.max_divergence()
-    assert o_ac.input_space == (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert o_ac.input_space == (
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+    )
     assert o_ac.input_distance_type == dp.u32
     assert o_ac.output_distance_type == dp.f64
     assert o_ac.input_carrier_type == dp.Vec[dp.i32]
@@ -164,7 +171,7 @@ def test_privacy_filter():
             output_measure=dp.max_divergence(),
         ),
         d_in=1,
-        d_out=2.0
+        d_out=2.0,
     )
 
     qbl_filter = m_filter([1, 2, 3, 4, 5])
