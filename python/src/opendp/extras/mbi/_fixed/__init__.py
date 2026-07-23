@@ -13,7 +13,7 @@ from opendp.extras.mbi._utilities import (
     Algorithm,
     Count,
     OnewayType,
-    ONEWAY_UNKEYED
+    ONEWAY_UNKEYED,
 )
 from opendp.mod import (
     FrameDistance,
@@ -85,10 +85,11 @@ class Fixed(Algorithm):
 
         def make(scale: float) -> Measurement:
             return make_stable_marginals(
-                input_domain, input_metric, lp_metric, cliques  # type: ignore[arg-type]
-            ) >> then_noise_marginals(
-                output_measure, cliques, scale, weights
-            )  # type: ignore[return-type]
+                input_domain,
+                input_metric,
+                lp_metric,
+                cliques,  # type: ignore[arg-type]
+            ) >> then_noise_marginals(output_measure, cliques, scale, weights)  # type: ignore[return-type]
 
         m_marginals = binary_search_chain(make, d_in, d_out, T=float)
 
