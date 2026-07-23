@@ -23,7 +23,6 @@ Documentation <https://docs.pola.rs/api/python/dev/reference/lazyframe/modify_se
             ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
             ...     data=pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),

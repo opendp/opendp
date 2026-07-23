@@ -24,7 +24,6 @@ useful in predicates and grouping functions.
             >>> lf_dates = (
             ...     pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     )
             ...     # prepare the data with some expressions that are not yet supported in OpenDP
             ...     .select(

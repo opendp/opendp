@@ -26,7 +26,6 @@ microdata (column addition and filtering).
             ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
             ...     data=pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
@@ -250,7 +249,6 @@ the context doesn’t know that all records from a user share the same
             >>> context_pident = dp.Context.compositor(
             ...     data=pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     ),
             ...     privacy_unit=dp.unit_of(
             ...         contributions=[
