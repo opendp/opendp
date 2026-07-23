@@ -435,7 +435,7 @@ def _make_oneway_marginals(
         """Aggregate the compute plan"""
         keyset = keys.get(name)
         if keyset is None:
-            return plan.group_by(name).agg(dp_len())
+            return plan.group_by(name).agg(dp_len(signed=True))
 
         # fold all unknown values into null
         if isinstance(keyset.dtype, pl.Categorical):  # pragma: no cover
@@ -443,7 +443,7 @@ def _make_oneway_marginals(
         replace = pl.col(name).replace_strict(keys[name], keyset, default=None)
 
         return pl.LazyFrame([keyset]).join(
-            plan.select(replace).group_by(name).agg(dp_len()),
+            plan.select(replace).group_by(name).agg(dp_len(signed=True)),
             on=[name],
             how="left",
             nulls_equal=True,
@@ -478,7 +478,7 @@ def _make_oneway_marginals(
                 input_domain,
                 input_metric,
                 output_measure,
-                plan.select(dp_len()),
+                plan.select(dp_len(signed=True)),
                 global_scale=scale,
             ) >> _new_pure_function(lambda x: x.collect())
             one_way_measurements.append(m_total)
@@ -510,7 +510,7 @@ def _make_oneway_marginals(
                     new_keys[name] = pl.Series(name, lookup.keys(), dtype=dtype)
                     values_iter = lookup.values()  # type: ignore[assignment]
 
-                values = np.fromiter(values_iter, dtype=np.uint32)
+                values = np.fromiter(values_iter, dtype=np.int64)
                 lm_counts.append(LinearMeasurement(values, clique=[name], stddev=std))
 
             return new_keys, lm_counts
