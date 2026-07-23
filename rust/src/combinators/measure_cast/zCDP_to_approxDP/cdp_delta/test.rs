@@ -119,3 +119,77 @@ fn test_edge_cases() -> Fallible<()> {
 
     Ok(())
 }
+
+/// delta must round UP at the chosen alpha; the alpha search itself needs no
+/// directed rounding, since a suboptimal alpha only loosens the upper bound.
+fn check_cdp_delta_rounding_direction(rho: f64, eps: f64) -> Fallible<f64> {
+    use crate::test_rounding::{Interval, assert_rounds_up};
+    use dashu::rational::RBig;
+    use std::ops::Neg;
+
+    // the implementation's binary search for alpha, verbatim
+    let mut a_max = eps
+        .inf_add(&1.0)?
+        .inf_div(&(2.0).neg_inf_mul(&rho)?)?
+        .inf_add(&2.0)?;
+    let mut a_min = 1.01f64;
+    loop {
+        let diff = a_max - a_min;
+        let a_mid = a_min + diff / 2.0;
+        if a_mid == a_max || a_mid == a_min {
+            break;
+        }
+        let deriv = (2.0 * a_mid - 1.0) * rho - eps + a_mid.recip().neg().ln_1p();
+        if deriv.is_sign_negative() {
+            a_min = a_mid;
+        } else {
+            a_max = a_mid;
+        }
+    }
+    let a = a_max;
+
+    // a-1 in rationals: the f64 a - 1.0 is inexact for a >= 2^53
+    let ra = RBig::try_from(a)?;
+    let ra_1 = ra.clone() - RBig::ONE;
+    let i_a = Interval::from_rational(&ra);
+    let i_a_1 = Interval::from_rational(&ra_1);
+
+    // t1 = (a-1)(a rho - eps), exact; t2 = a ln((a-1)/a)
+    let t1 = ra_1.clone() * (ra.clone() * RBig::try_from(rho)? - RBig::try_from(eps)?);
+    let t2 = i_a_1.div(&i_a).ln().mul(&i_a);
+    let truth = Interval::from_rational(&t1).add(&t2).exp().div(&i_a_1);
+
+    let delta = cdp_delta(rho, eps)?;
+
+    // direction-mirrored assembly at the same alpha; ar_e < 0 in both
+    // parameterizations, so the mirror of the (a-1) rounding is inf_sub
+    let ar_e = a.neg_inf_mul(&rho)?.neg_inf_sub(&eps)?;
+    assert!(ar_e.is_sign_negative());
+    let a_1_bad = a.inf_sub(&1.0)?;
+    let t1_bad = a_1_bad.neg_inf_mul(&ar_e)?;
+    let t2_bad = a.neg_inf_mul(&(1.0).inf_div(&a)?.neg().neg_inf_ln_1p()?)?;
+    let delta_bad = t1_bad
+        .neg_inf_add(&t2_bad)?
+        .neg_inf_exp()?
+        .neg_inf_div(&a_1_bad)?;
+
+    assert_rounds_up(delta, delta_bad, &truth);
+    Ok(a)
+}
+
+#[test]
+fn test_cdp_delta_rounding_direction() -> Fallible<()> {
+    let a = check_cdp_delta_rounding_direction(0.05, 1.0)?;
+    // a-1 is exact in this regime
+    assert!(a < 2f64.powi(53));
+    Ok(())
+}
+
+/// Tiny rho pushes alpha above 2^53, where a - 1.0 itself rounds. Ulp-slack can
+/// absorb a wrong (a-1) here, so this pins the regime, not the direction.
+#[test]
+fn test_cdp_delta_rounding_direction_extreme_alpha() -> Fallible<()> {
+    let a = check_cdp_delta_rounding_direction(5e-30, 1e-13)?;
+    assert!(a >= 2f64.powi(53));
+    Ok(())
+}

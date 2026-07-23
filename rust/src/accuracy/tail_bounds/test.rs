@@ -14,6 +14,7 @@ use crate::{
 };
 
 use super::*;
+use crate::test_rounding::{Interval, assert_rounds_up};
 
 fn test_laplace_tail(tail: UBig, theoretical_alpha: f64, label: &str) -> Fallible<()> {
     let tail = i8::try_from(tail)?;
@@ -185,11 +186,7 @@ fn test_tail_bounds_reject_invalid_arguments() {
 ///                              49923
 #[test]
 fn test_continuous_laplace_tail_rounding_direction() -> Fallible<()> {
-    use crate::traits::{InfDiv, ToFloatRounded};
-    use dashu::float::{
-        FBig,
-        round::mode::{Down, Up},
-    };
+    use crate::traits::InfDiv;
 
     let (scale, tail) = (rbig!(10), rbig!(5121));
 
@@ -201,35 +198,52 @@ fn test_continuous_laplace_tail_rounding_direction() -> Fallible<()> {
     // the FIXED function: exponent rounded UP before exp
     let alpha_new = conservative_continuous_laplacian_tail_to_alpha(scale, tail)?;
 
-    // an over precise lower for comparison
-    let true_lower: f64 = (FBig::<Down>::try_from(-5121.0)?.with_precision(150).value()
-        / FBig::<Down>::try_from(10.0)?)
-    .exp()
-    .to_f64_rounded()
-    .neg_inf_div(&2.0)?;
+    // certified bracket of exp(-5121/10) / 2
+    let truth = Interval::from_f64(-5121.0)
+        .div(&Interval::from_f64(10.0))
+        .exp()
+        .div(&Interval::from_f64(2.0));
+    assert_rounds_up(alpha_new, alpha_old, &truth);
+    Ok(())
+}
 
-    // an over precise upper for comparison
-    let true_upper: f64 = (FBig::<Up>::try_from(-5121.0)?.with_precision(150).value()
-        / FBig::<Up>::try_from(10.0)?)
-    .exp()
-    .to_f64_rounded()
-    .inf_div(&2.0)?;
-    assert!(true_lower <= true_upper);
+/// alpha = exp(-t/s) / (exp(1/s) + 1) must be over-estimated:
+/// numerator rounds UP, denominator DOWN. t/s = 512.1 is inexact in f64.
+#[test]
+fn test_discrete_laplace_tail_rounding_direction() -> Fallible<()> {
+    use crate::traits::{InfAdd, InfDiv};
 
-    // alpha must be >= the true value
-    assert!(
-        alpha_new >= true_upper,
-        "fixed alpha ({alpha_new:e}) must be >= the true value (<= {true_upper:e})"
-    );
+    let (scale, tail) = (rbig!(10), ubig!(5121));
 
-    // previously was below the true value
-    assert!(
-        alpha_old < true_lower,
-        "old-direction alpha ({alpha_old:e}) should under-estimate the true value (>= {true_lower:e}); \
-         if this fails, more precision may be needed"
-    );
+    // the same chain with every rounding direction mirrored
+    let numer_bad = f64::neg_inf_cast(-RBig::from(tail.clone()) / scale.clone())?.neg_inf_exp()?;
+    let denom_bad = f64::inf_cast(RBig::ONE / scale.clone())?
+        .inf_exp()?
+        .inf_add(&1.)?;
+    let alpha_bad = numer_bad.neg_inf_div(&denom_bad)?;
 
-    // The final solution's alpha is larger than the previous solution
-    assert!(alpha_old < alpha_new);
+    let alpha_impl = conservative_discrete_laplacian_tail_to_alpha(scale, tail)?;
+
+    // certified bracket of exp(-5121/10) / (exp(1/10) + 1)
+    let one = Interval::from_f64(1.0);
+    let ten = Interval::from_f64(10.0);
+    let truth = Interval::from_f64(-5121.0)
+        .div(&ten)
+        .exp()
+        .div(&one.div(&ten).exp().add(&one));
+    assert_rounds_up(alpha_impl, alpha_bad, &truth);
+    Ok(())
+}
+
+// TODO: a rounding-direction test for the gaussian tail bounds needs an erfc reference bracket
+
+/// The discrete gaussian tail delegates to the continuous bound (CKS20 Prop 25).
+#[test]
+fn test_discrete_gaussian_tail_delegation() -> Fallible<()> {
+    let (scale, tail) = (rbig!(10), ubig!(13));
+
+    let alpha_disc = conservative_discrete_gaussian_tail_to_alpha(scale.clone(), tail.clone())?;
+    let alpha_cont = conservative_continuous_gaussian_tail_to_alpha(scale, RBig::from(tail))?;
+    assert_eq!(alpha_disc, alpha_cont);
     Ok(())
 }
