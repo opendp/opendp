@@ -7,8 +7,7 @@ def new_fully_adaptive_composition_queryable(
 ) -> OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance]:
 
     require_sequentiality = matches(
-        output_measure.composability(Adaptivity.FullyAdaptive),
-        Composability.Sequential
+        output_measure.composability(Adaptivity.FullyAdaptive), Composability.Sequential
     )
 
     privacy_maps = []  # Vec<PrivacyMap<MI, MO>> `\label{mutable-state}`
@@ -65,7 +64,7 @@ def new_fully_adaptive_composition_queryable(
                 answer = meas.invoke_wrap(data, seq_wrapper)  # `\label{invoke}`
 
                 enforce_sequentiality = True
-                
+
                 # We've now increased our privacy spend.
                 # This is our only state modification
                 privacy_maps.push(meas.privacy_map)  # `\label{child-privacy-map}`

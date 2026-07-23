@@ -3,7 +3,8 @@ class IntExpFamily:
     def make_noise_threshold(
         self,
         input_space: tuple[
-            MapDomain[AtomDomain[TK], AtomDomain[TV]], L0PInfDistance[P, AbsoluteDistance[QI]]
+            MapDomain[AtomDomain[TK], AtomDomain[TV]],
+            L0PInfDistance[P, AbsoluteDistance[QI]],
         ],
         threshold: TV,
     ) -> Measurement[
