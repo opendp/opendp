@@ -6,7 +6,7 @@ use crate::{
     measurements::make_randomized_response_bool,
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
-    traits::InfAdd,
+    traits::{InfAdd, InfMul},
 };
 
 use super::*;
@@ -184,10 +184,10 @@ fn test_uniform_run_matches_ungrouped_composition_exactly() -> Fallible<()> {
         qbl.invoke(m.clone())?;
     }
 
-    // reference: compose 100 curves with separate allocations, which are not grouped
+    // reference: compose 100 curves with separate allocations, which are not merged
     let reference = RenyiDivergence.compose(
         (0..100)
-            .map(|_| Function::new(|alpha: &f64| 0.5 * alpha))
+            .map(|_| (Function::new(|alpha: &f64| 0.5 * alpha), 1))
             .collect(),
     )?;
     assert_eq!(qbl.privacy_loss(1)?.eval(&2.0)?, reference.eval(&2.0)?);
@@ -195,7 +195,7 @@ fn test_uniform_run_matches_ungrouped_composition_exactly() -> Fallible<()> {
 }
 
 #[test]
-fn test_interleaved_queries_match_per_query_accounting() -> Fallible<()> {
+fn test_interleaved_queries_group_by_distinct_map() -> Fallible<()> {
     let m1 = make_randomized_response_bool(0.75, false)?;
     let m2 = make_randomized_response_bool(0.6, false)?;
     let sequence = [&m1, &m1, &m2, &m1];
@@ -210,11 +210,15 @@ fn test_interleaved_queries_match_per_query_accounting() -> Fallible<()> {
         qbl.invoke(m.clone())?;
     }
 
-    // scalar distances compose exactly as if each query were charged individually
+    // grouped: compose([(e1, 3), (e2, 1)])
     let e1 = m1.map(&1)?;
     let e2 = m2.map(&1)?;
-    let expected = e1.inf_add(&e1)?.inf_add(&e2)?.inf_add(&e1)?;
+    let expected = e1.inf_mul(&3.0)?.inf_add(&e2)?;
     assert_eq!(qbl.privacy_loss(1)?, expected);
+
+    // agrees with per-query (submission-order) accounting up to inf rounding
+    let sequential = e1.inf_add(&e1)?.inf_add(&e2)?.inf_add(&e1)?;
+    assert!((qbl.privacy_loss(1)? - sequential).abs() < 1e-12);
     Ok(())
 }
 
