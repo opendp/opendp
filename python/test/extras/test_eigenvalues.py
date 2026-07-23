@@ -4,20 +4,19 @@ import pytest
 from ..helpers import optional_dependency
 
 
-
 def test_eigenvalues():
     from opendp.extras.sklearn._make_eigenvalues import (
         then_eigenvalues,
         then_private_eigenvalues,
     )
 
-    with optional_dependency('numpy'):
+    with optional_dependency("numpy"):
         space = (
             _sscp_domain(num_features=4, norm=1.0, p=2, size=1000, T=float),
             dp.symmetric_distance(),
         )
     trans = space >> then_eigenvalues()
-    np = pytest.importorskip('numpy')
+    np = pytest.importorskip("numpy")
     data = np.random.normal(size=(4, 4))
     data += data.T
     assert np.array_equal(trans(data), np.linalg.eigvalsh(data))

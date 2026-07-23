@@ -70,6 +70,7 @@ def test_user_metric_total_cmp_native_distance():
     with pytest.raises(dp.OpenDPException, match="not comparable"):
         m_comp.map(float("nan"))
 
+
 def test_user_metric_total_cmp_custom_distance():
     class Dist:
         def __lt__(self, other):
