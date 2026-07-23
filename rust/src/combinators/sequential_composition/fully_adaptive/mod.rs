@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
@@ -33,9 +32,9 @@ mod ffi;
 ///
 /// # Runtime
 /// Constructing the odometer is `O(1)`.
-/// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement,
-/// while a privacy-loss query over `m` prior invocations costs `O(m)`,
-/// evaluating each distinct privacy map once, not once per invocation.
+/// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement.
+/// Queries sharing a privacy map are tracked as one `(map, k)` group in first-submission order,
+/// so a privacy-loss query evaluates each distinct privacy map once, not once per invocation.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
@@ -53,7 +52,6 @@ pub fn make_fully_adaptive_composition<
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
@@ -89,7 +87,6 @@ fn new_fully_adaptive_composition_queryable<
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
 where
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
@@ -97,7 +94,11 @@ where
         Composability::Sequential
     );
 
-    let mut privacy_maps: Vec<PrivacyMap<MI, MO>> = vec![];
+    // queries sharing a privacy map are stored as one (map, k) group, in first-submission order
+    let mut privacy_maps: Vec<(PrivacyMap<MI, MO>, u32)> = vec![];
+
+    // the number of successfully answered invoke queries,
+    let mut num_queries: usize = 0;
 
     Queryable::new(
         move |self_: &OdometerQueryable<
@@ -122,7 +123,7 @@ where
 
                     let seq_wrapper = require_sequentiality.then(|| {
                         // Wrap any spawned queryables with a check that no new queries have been asked.
-                        let child_id = privacy_maps.len();
+                        let child_id = num_queries;
                         let mut self_ = self_.clone();
 
                         Wrapper::new_recursive_pre_hook(enclose!(
@@ -146,29 +147,22 @@ where
                     *enforce_sequentiality.borrow_mut() = true;
 
                     // we've now increased our privacy spend. This is our only state modification
-                    privacy_maps.push(meas.privacy_map.clone());
+                    num_queries += 1;
+                    // each query joins the group of queries sharing its privacy map
+                    match (privacy_maps.iter_mut()).find(|(map, _)| map == &meas.privacy_map) {
+                        Some((_, k)) => *k += 1,
+                        None => privacy_maps.push((meas.privacy_map.clone(), 1)),
+                    }
 
                     // done!
                     Answer::External(OdometerAnswer::Invoke(answer))
                 }
                 // evaluate external map query
                 Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
-                    // evaluate each distinct privacy map once, reusing the distance for repeats,
-                    // so that composition can recognize repeated queries by allocation
-                    let mut distinct: Vec<(&PrivacyMap<MI, MO>, MO::Distance)> = vec![];
-                    let mut d_mids = Vec::with_capacity(privacy_maps.len());
-                    for map in privacy_maps.iter() {
-                        let evaluated = (distinct.iter()).find(|(m, _)| Arc::ptr_eq(&m.0, &map.0));
-                        let d_mid = match evaluated {
-                            Some((_, d_mid)) => d_mid.clone(),
-                            None => {
-                                let d_mid = map.eval(d_in)?;
-                                distinct.push((map, d_mid.clone()));
-                                d_mid
-                            }
-                        };
-                        d_mids.push(d_mid);
-                    }
+                    // evaluate each distinct privacy map once, keeping the counts
+                    let d_mids = (privacy_maps.iter())
+                        .map(|(map, k)| Ok((map.eval(d_in)?, *k)))
+                        .collect::<Fallible<_>>()?;
 
                     let d_out = output_measure.compose(d_mids)?;
                     Answer::External(OdometerAnswer::PrivacyLoss(d_out))
@@ -177,7 +171,7 @@ where
                     // check if the query is from a child queryable who is asking for permission to execute
                     if let Some(AskPermission(id)) = query.downcast_ref() {
                         // deny permission if the sequential odometer has moved on
-                        if *id + 1 != privacy_maps.len() {
+                        if *id + 1 != num_queries {
                             return fallible!(
                                 FailedFunction,
                                 "sequential odometer has received a new query"

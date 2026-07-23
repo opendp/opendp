@@ -78,16 +78,17 @@ fn test_rdp_composition_shared_curves_evaluated_once() -> Fallible<()> {
         alpha * 0.5
     }));
 
-    // curves sharing an allocation are charged k-fold, but evaluated once
-    let composed = RenyiDivergence.compose(vec![curve.clone(), curve.clone(), curve])?;
-    assert_eq!(composed.eval(&2.0)?, 3.0);
+    // equal curves are merged and evaluated once, but charged k-fold
+    let composed =
+        RenyiDivergence.compose(vec![(curve.clone(), 1), (curve.clone(), 2), (curve, 1)])?;
+    assert_eq!(composed.eval(&2.0)?, 4.0);
     assert_eq!(*count.borrow(), 1);
 
-    // the loss matches composing curves with separate allocations, which are not grouped
-    let separate = (0..3)
-        .map(|_| Function::new(|alpha: &f64| alpha * 0.5))
+    // the loss matches composing curves with separate allocations, which are not merged
+    let separate = (0..4)
+        .map(|_| (Function::new(|alpha: &f64| alpha * 0.5), 1))
         .collect();
-    assert_eq!(RenyiDivergence.compose(separate)?.eval(&2.0)?, 3.0);
+    assert_eq!(RenyiDivergence.compose(separate)?.eval(&2.0)?, 4.0);
     Ok(())
 }
 
