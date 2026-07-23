@@ -34,8 +34,13 @@ def cdp_delta(rho: float, eps: float) -> float:
             a_max = a_mid
 
     # calculate delta
-    a_1 = a_max.inf_sub(1.0)
     ar_e = a_max.inf_mul(rho).inf_sub(eps)
+
+    # the conservative rounding direction of (α-1) follows the sign of its cofactor ar_e
+    if ar_e.is_sign_negative():
+        a_1 = a_max.neg_inf_sub(1.0)
+    else:
+        a_1 = a_max.inf_sub(1.0)
 
     try:
         t1 = a_1.inf_mul(ar_e)
@@ -49,9 +54,10 @@ def cdp_delta(rho: float, eps: float) -> float:
         else:
             raise
 
-    t2 = a_max.inf_mul(a_max.recip().neg().inf_ln_1p())
+    t2 = a_max.inf_mul((1.0).neg_inf_div(a_max).neg().inf_ln_1p())
 
-    delta = t1.inf_add(t2).inf_exp().inf_div((a_max.inf_sub(1.0)))
+    # divisor rounded down
+    delta = t1.inf_add(t2).inf_exp().inf_div((a_max.neg_inf_sub(1.0)))
 
     # delta is always <= 1
     delta.min(1.0)
