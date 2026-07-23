@@ -20,6 +20,7 @@ def test_atom_domain_bounds():
     assert atom_domain != str(atom_domain)
     assert not atom_domain.nan
 
+
 def test_atom_domain_nullable():
     atom_domain = dp.atom_domain(T=float, nan=True)
     assert atom_domain.carrier_type == dp.f64
@@ -58,12 +59,7 @@ def test_lazyframe_domain_margins():
     series_domain_b = dp.series_domain("B", atom_domain)
     frame_domain = dp.with_margin(
         dp.lazyframe_domain([series_domain_a, series_domain_b]),
-        dp.polars.Margin(
-            by=["A"],
-            max_groups=20,
-            max_length=1000,
-            invariant="keys"
-        ),
+        dp.polars.Margin(by=["A"], max_groups=20, max_length=1000, invariant="keys"),
     )
     assert frame_domain.get_series_domain("A") == series_domain_a
 
@@ -89,25 +85,22 @@ def test_lazyframe_domain_margins():
     # now add a margin for column B
     frame_domain = dp.with_margin(
         frame_domain,
-        Margin(
-            by=["B"],
-            max_groups=20,
-            max_length=500,
-            invariant="keys"
-        ),
+        Margin(by=["B"], max_groups=20, max_length=500, invariant="keys"),
     )
 
     assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
         by=["A", "B"],
         max_length=500,  # from B
-        max_groups=400, # 20 * 20
+        max_groups=400,  # 20 * 20
     )
 
-    with pytest.raises(ValueError, match="must be a sequence type; Did you mean [\"A\"]?"):
+    with pytest.raises(
+        ValueError, match='must be a sequence type; Did you mean ["A"]?'
+    ):
         frame_domain.get_margin("A")
 
     with pytest.raises(ValueError, match="must be a sequence type"):
-        frame_domain.get_margin(2) # type: ignore[arg-type]
+        frame_domain.get_margin(2)  # type: ignore[arg-type]
 
 
 def test_vector_domain():

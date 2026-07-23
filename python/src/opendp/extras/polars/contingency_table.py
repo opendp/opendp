@@ -29,7 +29,7 @@ class ContingencyTableQuery(Query):
         *,
         oneway_scale: Optional[float],
         oneway_threshold: Optional[int],
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.oneway_scale = oneway_scale

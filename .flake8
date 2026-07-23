@@ -4,6 +4,8 @@
 
 [flake8]
 exclude =
+    .git
+    .venv-dev-3.11
     # old
     venv
     .venv
