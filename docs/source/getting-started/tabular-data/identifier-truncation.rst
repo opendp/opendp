@@ -44,7 +44,6 @@ We'll use this new ``privacy_unit`` to create a context as we have previously:
             >>> context = dp.Context.compositor(
             ...     data=pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     ),
             ...     privacy_unit=privacy_unit,
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),

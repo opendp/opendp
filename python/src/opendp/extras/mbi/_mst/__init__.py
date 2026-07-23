@@ -56,7 +56,7 @@ class MST(Algorithm):
         >>> dp.enable_features("contrib")
 
         >>> context = dp.Context.compositor(
-        ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+        ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
         ...     privacy_unit=dp.unit_of(contributions=36),
         ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
         ... )

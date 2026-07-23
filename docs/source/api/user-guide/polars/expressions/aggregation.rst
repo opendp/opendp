@@ -38,7 +38,6 @@ To get started, we’ll recreate the ``Context`` from :ref:`tabular-data`.
             >>> context = dp.Context.compositor(
             ...     data=pl.scan_csv(
             ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
             ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
