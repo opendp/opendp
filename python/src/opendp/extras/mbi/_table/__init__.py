@@ -510,7 +510,7 @@ def _make_oneway_marginals(
                     new_keys[name] = pl.Series(name, lookup.keys(), dtype=dtype)
                     values_iter = lookup.values()  # type: ignore[assignment]
 
-                values = np.fromiter(values_iter, dtype=np.uint32)
+                values = np.fromiter(values_iter, dtype=np.int64)
                 lm_counts.append(LinearMeasurement(values, clique=[name], stddev=std))
 
             return new_keys, lm_counts

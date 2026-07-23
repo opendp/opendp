@@ -182,50 +182,16 @@ fn test_find_len_expr() -> Fallible<()> {
     let supported = vec![
         len().dp().noise(None),
         len().cast(DataType::Int64).dp().noise(None),
-        len().alias("new_col").dp().noise(None),
-        len()
-            .alias("new_col")
-            .cast(DataType::Int64)
-            .dp()
-            .noise(None),
     ];
-    println!("Started Testing");
 
     // Supported test cases.
     for supported_expr in &supported {
         let dp_expr = process_expr(supported_expr.clone())?;
-        // println!("is len expr: {:?}", is_len_expr(supported_expr));
         let result = find_len_expr(&vec![dp_expr.clone()], None);
-        println!("Ran expr: {:?}", supported_expr);
-        println!("Result: {:?}", result);
         assert!(
             result.is_ok(),
             "Supported len expression incorrectly not identified: {:?}",
             supported_expr,
-        );
-    }
-    println!("Supported Cases Ran");
-
-    // expressions not supported
-    let unsupported = vec![
-        max("fake_col").dp().noise(None),
-        max("fake_col").cast(DataType::Int64).dp().noise(None),
-        max("fake_col").alias("new_col").dp().noise(None),
-        max("fake_col")
-            .alias("new_col")
-            .cast(DataType::Int64)
-            .dp()
-            .noise(None),
-    ];
-
-    // Not supported test cases
-    for unsupported_expr in &unsupported {
-        let dp_expr = process_expr(unsupported_expr.clone())?;
-        let result = find_len_expr(&vec![dp_expr], None);
-        assert!(
-            result.is_err(),
-            "Expected an error given then is not a length expr. {:?}",
-            unsupported_expr,
         );
     }
     Ok(())

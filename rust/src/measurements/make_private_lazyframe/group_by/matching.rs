@@ -221,19 +221,15 @@ pub(super) fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, No
 
     let (inputs, args) = match_trusted_plugin::<NoisePlugin>(&expr).ok().flatten()?;
 
-    println!("Failed before new logic.");
     // If it is a cast, unwrap to get the len expr.
     let input = match &inputs[0] {
-        Expr::Cast { expr, .. } => {
-            expr.as_ref()},
+        Expr::Cast { expr, .. } => expr.as_ref(),
         x => x,
     };
 
     if let Expr::Len = input {
-        println!("is len expr!");
         Some((output_name.to_string(), args))
     } else {
-        println!("is not len expr!");
         None
     }
 }
