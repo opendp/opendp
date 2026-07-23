@@ -9,12 +9,12 @@ import importlib
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
-    'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
-    'f64': ['f32', 'f64'],
-    'bool': ['bool'],
-    'AnyMeasurementPtr': ['AnyMeasurementPtr', 'AnyMeasurement'],
-    'AnyTransformationPtr': ['AnyTransformationPtr'],
-    'ExtrinsicObject': ['ExtrinsicObject']
+    "i32": ["u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "usize"],
+    "f64": ["f32", "f64"],
+    "bool": ["bool"],
+    "AnyMeasurementPtr": ["AnyMeasurementPtr", "AnyMeasurement"],
+    "AnyTransformationPtr": ["AnyTransformationPtr"],
+    "ExtrinsicObject": ["ExtrinsicObject"],
 }
 
 
@@ -24,38 +24,48 @@ def _load_library():
     lib_dir = Path(os.environ.get(lib_envvar, default_lib_dir))
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
-        build_dir = 'release' if os.environ.get('OPENDP_TEST_RELEASE') else 'debug'
-        lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
+        build_dir = "release" if os.environ.get("OPENDP_TEST_RELEASE") else "debug"
+        lib_dir = (
+            Path(__file__).parent / ".." / ".." / ".." / "rust" / "target" / build_dir
+        )  # pragma: no cover
 
     if lib_dir.exists():
         from importlib.machinery import EXTENSION_SUFFIXES
+
         suffixes = EXTENSION_SUFFIXES + [".dylib"]
 
         lib_dir_file_names = [
-            str(p.name) for p in lib_dir.iterdir() 
-            if "opendp" in p.name and "derive" not in p.name
+            str(p.name)
+            for p in lib_dir.iterdir()
+            if "opendp" in p.name
+            and "derive" not in p.name
             and any(p.name.endswith(suffix) for suffix in suffixes)
         ]
-        
+
         if len(lib_dir_file_names) != 1:  # pragma: no cover
             value = os.environ.get(lib_envvar)
             envvar_info = f" ({lib_envvar}='{value}')" if value is not None else ""
-            raise Exception(f"Expected exactly one binary to be present in '{lib_dir}'{envvar_info}. Got: {lib_dir_file_names}")
-        
+            raise Exception(
+                f"Expected exactly one binary to be present in '{lib_dir}'{envvar_info}. Got: {lib_dir_file_names}"
+            )
+
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
             return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
-        except Exception as e: # pragma: no cover
+        except Exception as e:  # pragma: no cover
             raise Exception("Unable to load OpenDP shared library", lib_path, e)
 
-    elif os.environ.get('OPENDP_HEADLESS', "false") != "false":
+    elif os.environ.get("OPENDP_HEADLESS", "false") != "false":
         return None, None
 
     else:
-        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")  # pragma: no cover
-    
+        raise ValueError(
+            "Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory."
+        )  # pragma: no cover
+
 
 lib, lib_path = _load_library()
+
 
 def _total_cmp(left, right):
     try:
@@ -68,26 +78,34 @@ def _total_cmp(left, right):
             cmp = 1
         else:
             raise ValueError("left and right are not comparable")
-        
+
         lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
         lib.ffiresult_ok.restype = ctypes.c_void_p
-        
+
         from opendp._convert import py_to_c
+
         c_out = py_to_c(cmp, c_type=AnyObjectPtr, type_name="i8")
         # don't free c_out, because we are giving ownership to Rust
         c_out.__class__ = ctypes.POINTER(AnyObject)
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
-    
+
     except Exception:
         import traceback
+
         lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(
+                "Continued stack trace from Exception in user-defined function".encode()
+            ),
             ctypes.c_char_p(traceback.format_exc().encode()),
         )
 
-_TOTAL_CMP = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.py_object)(_total_cmp)
+
+_TOTAL_CMP = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.py_object)(
+    _total_cmp
+)
+
 
 def _ref_count(ptr, increment):
     try:
@@ -95,11 +113,14 @@ def _ref_count(ptr, increment):
             ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
         else:
             ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except Exception: # pragma: no cover
+    except Exception:  # pragma: no cover
         return False
     return True
 
-_REF_COUNT = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_ref_count)
+
+_REF_COUNT = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(
+    _ref_count
+)
 
 
 if lib:
@@ -110,36 +131,40 @@ if lib:
 # Value: The opendp extra that provides this module,
 #        with the appropriate version pin, if needed
 install_names = {
-    'sklearn': 'scikit-learn',
-    'randomgen': 'numpy',
-    'scipy': 'scikit-learn',
+    "sklearn": "scikit-learn",
+    "randomgen": "numpy",
+    "scipy": "scikit-learn",
 }
 
 
 def import_optional_dependency(name, raise_error=True):
-    '''
+    """
     Imports optional dependency, or explains that it is required.
-    '''
+    """
     try:
         return importlib.import_module(name)
-    except ImportError: # pragma: no cover
+    except ImportError:  # pragma: no cover
         if raise_error:
             root_name = name.split(".")[0]
             install_name = install_names.get(root_name) or root_name
-            raise ImportError(f'The optional install {install_name} is required for this functionality')
+            raise ImportError(
+                f"The optional install {install_name} is required for this functionality"
+            )
         return None
 
 
 _np_csprng: Any = None
-_buffer_pos = 0 # TODO: Make this into a class rather than using ad-hoc globals.
+_buffer_pos = 0  # TODO: Make this into a class rather than using ad-hoc globals.
+
+
 def get_np_csprng():
     global _np_csprng
     global _buffer_pos
     if _np_csprng is not None:
         return _np_csprng
 
-    randomgen = import_optional_dependency('randomgen')
-    np = import_optional_dependency('numpy')
+    randomgen = import_optional_dependency("randomgen")
+    np = import_optional_dependency("numpy")
 
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
@@ -152,8 +177,9 @@ def get_np_csprng():
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
-            if not fill_bytes(buffer_ptr, buffer_len * 8): # pragma: no cover
+            if not fill_bytes(buffer_ptr, buffer_len * 8):  # pragma: no cover
                 from opendp.mod import OpenDPException
+
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
             _buffer_pos = 0
 
@@ -161,7 +187,7 @@ def get_np_csprng():
         _buffer_pos += 1
         return int(out)
 
-    _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw)) # type:ignore
+    _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw))  # type:ignore
     return _np_csprng
 
 
@@ -210,18 +236,19 @@ class AnyFunction(ctypes.Structure):
     pass  # Opaque struct
 
 
-class BoolPtr(ctypes.POINTER(ctypes.c_bool)): # type: ignore[misc]
+class BoolPtr(ctypes.POINTER(ctypes.c_bool)):  # type: ignore[misc]
     _type_ = ctypes.c_bool
 
 
-class AnyObjectPtr(ctypes.POINTER(AnyObject)): # type: ignore[misc]
+class AnyObjectPtr(ctypes.POINTER(AnyObject)):  # type: ignore[misc]
     _type_ = AnyObject
 
     def __del__(self):
         try:
             from opendp._data import object_free
+
             object_free(self)
-        except (ImportError, TypeError): # pragma: no cover
+        except (ImportError, TypeError):  # pragma: no cover
             # ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
@@ -230,7 +257,7 @@ class AnyQueryable(ctypes.Structure):
     pass  # Opaque struct
 
 
-class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
+class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
     _type_ = FfiSlice
     _dependencies: MutableMapping = {}  # TODO: Tighten this
 
@@ -271,14 +298,15 @@ class ExtrinsicObject(ctypes.Structure):
     ]
 
 
-class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
+class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)):  # type: ignore[misc]
     _type_ = ExtrinsicObject
 
     def __del__(self):
         try:
             from opendp._data import extrinsic_object_free
+
             extrinsic_object_free(self)
-        except (ImportError, TypeError): # pragma: no cover
+        except (ImportError, TypeError):  # pragma: no cover
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
@@ -289,23 +317,23 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 #                                 (output         , input       , userdata        )
 CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.py_object)
 
-class CallbackFn(ctypes.Structure):
-    _fields_ = [
-        ("callback", CallbackFnValue),
-        ("userdata", ExtrinsicObject)
-    ]
 
-class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]
+class CallbackFn(ctypes.Structure):
+    _fields_ = [("callback", CallbackFnValue), ("userdata", ExtrinsicObject)]
+
+
+class CallbackFnPtr(ctypes.POINTER(CallbackFn)):  # type: ignore[misc]
     _type_ = CallbackFn
+
 
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
-    ''''''
+    """"""
     if s is not None:
         return s.decode("utf-8")
     # TODO: Unused: would it indicate a problem if we did start hitting this?
-    return None # pragma: no cover
+    return None  # pragma: no cover
 
 
 def unwrap(result, type_) -> Any:
@@ -314,7 +342,7 @@ def unwrap(result, type_) -> Any:
 
     if not isinstance(result, FfiResult):
         # TODO: Unused: would it indicate a problem if we did start hitting this?
-        return result # pragma: no cover
+        return result  # pragma: no cover
 
     if result.tag == 0:
         return ctypes.cast(result.payload.Ok, type_)
@@ -329,11 +357,15 @@ def unwrap(result, type_) -> Any:
         raise OpenDPException("Failed to free error.")  # pragma: no cover
 
     # Rust stack traces follow from here:
-    pl = import_optional_dependency('polars', raise_error=False)
+    pl = import_optional_dependency("polars", raise_error=False)
     if pl is not None:
         from opendp.mod import _EXPECTED_POLARS_VERSION
-        if 'polars' in str(message).lower() and pl.__version__ != _EXPECTED_POLARS_VERSION:
-            message = f'Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}' # pragma: no cover
+
+        if (
+            "polars" in str(message).lower()
+            and pl.__version__ != _EXPECTED_POLARS_VERSION
+        ):
+            message = f"Installed python polars version ({pl.__version__}) != expected version ({_EXPECTED_POLARS_VERSION}). {message}"  # pragma: no cover
     raise OpenDPException(variant, message, backtrace)
 
 
@@ -388,7 +420,7 @@ def make_proof_link(
     # link from sphinx and rustdoc to latex
     sphinx_port = os.environ.get("OPENDP_SPHINX_PORT", None)
     if sphinx_port is not None:
-        proof_uri = f"http://localhost:{sphinx_port}" # pragma: no cover
+        proof_uri = f"http://localhost:{sphinx_port}"  # pragma: no cover
 
     else:
         # find the docs uri
@@ -408,16 +440,16 @@ def get_opendp_version():
 
     try:
         return unmangle_py_version(importlib.metadata.version("opendp"))
-    except importlib.metadata.PackageNotFoundError: # pragma: no cover
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover
         return get_opendp_version_from_file()
 
 
 def unmangle_py_version(py_version):
-    '''
+    """
     Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
     the original format, so we need to unmangle for links to work.
     There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
-    
+
     >>> unmangle_py_version('0.9.0')
     '0.9.0'
     >>> unmangle_py_version('0.9.0.dev0')
@@ -428,7 +460,7 @@ def unmangle_py_version(py_version):
     '0.9.0-beta.11111111.1'
     >>> unmangle_py_version('other')
     'other'
-    '''
+    """
     if py_version.endswith(".dev0"):
         return f"{py_version[:-5]}-dev"
     match = re.match(r"^(\d+\.\d+\.\d+)(?:([ab])(\d{8})(\d{3}))?$", py_version)
@@ -445,19 +477,19 @@ def unmangle_py_version(py_version):
 
 
 def get_opendp_version_from_file():
-    '''
+    """
     If the package isn't installed (eg when we're building docs), we can't get the version from metadata,
     so fall back to the version file.
 
     >>> import re
     >>> assert re.match(r'\\d+\\.\\d+\\.\\d+', get_opendp_version_from_file())
-    '''
-    version_path = Path(__file__).parent.parent.parent.parent / 'VERSION'
+    """
+    version_path = Path(__file__).parent.parent.parent.parent / "VERSION"
     return version_path.read_text().strip()
 
 
 def get_docs_ref(version):
-    '''
+    """
     >>> get_docs_ref('0.0.0')
     'v0.0.0'
     >>> get_docs_ref('0.0.0-dev')
@@ -466,7 +498,7 @@ def get_docs_ref(version):
     'nightly'
     >>> get_docs_ref('0.0.0-surprise')
     'unknown'
-    '''
+    """
     channel = get_channel(version)
     if channel == "stable":
         return f"v{version}"  # For stable, we have tags.
@@ -483,17 +515,18 @@ def get_channel(version):
         return channel or "stable"
     return "unknown"
 
+
 def indent(text):
-    '''
+    """
     Indents the lines after the first line of a multiline string.
     Used for nested reprs.
 
     >>> print(indent('object(\\nfield = 123)'))
     object(
         field = 123)
-    '''
-    lines = text.split('\n')
+    """
+    lines = text.split("\n")
     first, rest = lines[0], lines[1:]
-    spaces = ' ' * 4
-    indented_rest = [f'\n{spaces}{line}' for line in rest]
-    return first + ''.join(indented_rest)
+    spaces = " " * 4
+    indented_rest = [f"\n{spaces}{line}" for line in rest]
+    return first + "".join(indented_rest)
