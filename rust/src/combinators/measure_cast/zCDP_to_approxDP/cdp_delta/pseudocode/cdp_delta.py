@@ -41,7 +41,6 @@ def cdp_delta(rho: float, eps: float) -> float:
         t1 = a_1.inf_mul(ar_e)
 
     except OpenDPException:
-
         # if t1 is negative, then handle negative overflow by making t1 larger: the most negative finite float
         # making t1 larger makes delta larger, so it's still a valid upper bound
         if a_1.is_sign_negative() != ar_e.is_sign_negative():

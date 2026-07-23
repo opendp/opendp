@@ -29,7 +29,6 @@ def match_num_groups_predicate(
     if isinstance(input_item, Expr.Function) and isinstance(
         input_item.function, FunctionExpr.AsStruct
     ):  # |\label{line:extract_grouping_columns}|
-
         # If the first field is a hash of the second field,
         # then interpret the grouping columns as the hash input.
         # The second field disambiguates hash collisions when ranking.
