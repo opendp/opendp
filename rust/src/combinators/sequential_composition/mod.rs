@@ -21,7 +21,7 @@ use crate::{
     core::{Function, Measure},
     error::Fallible,
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
-    traits::InfAdd,
+    traits::{InfAdd, InfMul},
 };
 
 #[derive(Debug)]
@@ -45,12 +45,13 @@ pub enum Composability {
 }
 
 /// # Proof Definition
-/// `composability` returns `Ok(out)` if the composition of a vector of privacy parameters `d_mids`
+/// `composability` returns `Ok(out)` if the composition of a vector of privacy parameters `d_mids`,
+/// where each parameter `d_mid_i` is charged with multiplicity `k_i`,
 /// is bounded above by `self.compose(d_mids)` under `adaptivity` adaptivity and `out`-composability.
 /// Otherwise returns an error.
 pub trait CompositionMeasure: Measure {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance>;
 }
 
 #[proven(
@@ -60,8 +61,10 @@ impl CompositionMeasure for MaxDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+        (d_mids.iter()).try_fold(0.0, |sum, (d_i, k_i)| {
+            sum.inf_add(&d_i.inf_mul(&f64::from(*k_i))?)
+        })
     }
 }
 
@@ -72,8 +75,10 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+        (d_mids.iter()).try_fold(0.0, |sum, (d_i, k_i)| {
+            sum.inf_add(&d_i.inf_mul(&f64::from(*k_i))?)
+        })
     }
 }
 
@@ -84,12 +89,14 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids
-            .iter()
-            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
-                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
-            })
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+        (d_mids.iter()).try_fold((0.0, 0.0), |(eps_g, del_g), ((eps_i, del_i), k_i)| {
+            let k_i = f64::from(*k_i);
+            Ok((
+                eps_g.inf_add(&eps_i.inf_mul(&k_i)?)?,
+                del_g.inf_add(&del_i.inf_mul(&k_i)?)?,
+            ))
+        })
     }
 }
 
@@ -100,12 +107,14 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Sequential)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids
-            .iter()
-            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
-                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
-            })
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+        (d_mids.iter()).try_fold((0.0, 0.0), |(eps_g, del_g), ((eps_i, del_i), k_i)| {
+            let k_i = f64::from(*k_i);
+            Ok((
+                eps_g.inf_add(&eps_i.inf_mul(&k_i)?)?,
+                del_g.inf_add(&del_i.inf_mul(&k_i)?)?,
+            ))
+        })
     }
 }
 
@@ -117,11 +126,20 @@ impl CompositionMeasure for RenyiDivergence {
         Ok(Composability::Concurrent)
     }
 
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+        // equal curves are merged into a single group, in first-occurrence order,
+        // so that each distinct curve is evaluated once, not once per copy
+        let mut groups: Vec<(Self::Distance, u32)> = Vec::new();
+        for (d_mid, k_i) in d_mids {
+            match (groups.iter_mut()).find(|(curve, _)| curve == &d_mid) {
+                Some((_, k)) => *k += k_i,
+                None => groups.push((d_mid, k_i)),
+            }
+        }
         Ok(Function::new_fallible(move |alpha| {
-            d_mids
+            groups
                 .iter()
-                .map(|f| f.eval(alpha))
+                .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
     }
