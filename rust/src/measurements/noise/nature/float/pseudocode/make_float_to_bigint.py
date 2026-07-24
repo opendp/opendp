@@ -12,7 +12,9 @@ def make_float_to_bigint(
         raise "input_domain may not contain NaN elements"
 
     size = input_domain.size
-    rounding_distance = get_rounding_distance(k, size, T) # |\label{line:rounding-distance}|
+    rounding_distance = get_rounding_distance(
+        k, size, T
+    )  # |\label{line:rounding-distance}|
 
     def elementwise_function(x_i):  # |\label{line:elementwise-function}|
         x_i = RBig.try_from(x_i).unwrap_or(RBig.ZERO)  # |\label{line:try-from}|

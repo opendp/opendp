@@ -20,7 +20,9 @@ def make_expr_count(
             raise ValueError("expected count, null_count, len, or n_unique expression")
 
     # check if input is row-by-row
-    is_row_by_row = input.make_stable(input_domain.as_row_by_row(), input_metric).is_ok()  # `\label{is-row-by-row}`
+    is_row_by_row = input.make_stable(
+        input_domain.as_row_by_row(), input_metric
+    ).is_ok()  # `\label{is-row-by-row}`
 
     # construct prior transformation
     t_prior = input.make_stable(input_domain, input_metric)  # `\label{t-prior}`
@@ -42,7 +44,7 @@ def make_expr_count(
                 max_influenced_partitions=margin.max_influenced_partitions,
                 public_info=margin.public_info,
             ),
-        )
+        ),
     )
 
     match strategy:  # `\label{will-count-all}`
@@ -53,8 +55,10 @@ def make_expr_count(
         case _:
             will_count_all = False
 
-    public_info = margin.public_info if will_count_all else None  # `\label{public-info}`
-    
+    public_info = (
+        margin.public_info if will_count_all else None
+    )  # `\label{public-info}`
+
     def function(e: Expr) -> Expr:  # `\label{function}`
         match strategy:
             case Strategy.Count:

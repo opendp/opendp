@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 
 
-
 def test_count_by_categories():
     """Compute histogram with known category set"""
     preprocess = (
@@ -37,7 +36,7 @@ def test_count_by_categories_float():
         >> dp.t.then_count_by_categories(cats, MO=dp.L1Distance[float], TOA=float)
         >> dp.m.then_laplace(0.0)
     )(data) == [5.0, 20.0, 10.0, 5.0]
-    
+
     assert (
         load
         >> dp.t.then_count_by_categories(cats, MO=dp.L2Distance[float], TOA=float)
@@ -55,10 +54,16 @@ def test_count_by_threshold():
     budget = (1.0, 1e-8)
 
     scale = dp.binary_search(
-        lambda s: (pre >> dp.m.then_laplace_threshold(scale=s, threshold=100_000)).map(1)[0] <= budget[0]
+        lambda s: (
+            (pre >> dp.m.then_laplace_threshold(scale=s, threshold=100_000)).map(1)[0]
+            <= budget[0]
+        )
     )
     threshold = dp.binary_search(
-        lambda t: (pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t)).map(1)[1] <= budget[1],
+        lambda t: (
+            (pre >> dp.m.then_laplace_threshold(scale=scale, threshold=t)).map(1)[1]
+            <= budget[1]
+        ),
     )
 
     laplace_histogram_from_dataframe = pre >> dp.m.then_laplace_threshold(
@@ -74,6 +79,6 @@ def test_count_by_threshold():
     assert scale == 1.0
     assert threshold == 19
 
-    assert (
-        pre >> dp.m.then_laplace_threshold(scale=0.0, threshold=threshold)
-    ).map(1) == (float("inf"), 1.0)
+    assert (pre >> dp.m.then_laplace_threshold(scale=0.0, threshold=threshold)).map(
+        1
+    ) == (float("inf"), 1.0)

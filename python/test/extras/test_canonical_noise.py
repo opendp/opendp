@@ -100,13 +100,16 @@ def test__tulap_cdf_array_input():
     t_values = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
 
     ptulap_results = _cnd_cdf(t_values, shift=0.0, d_in=1.0, d_out=(0.5, 1e-7))
-    assert np.allclose(ptulap_results, [
-        0.30326526920325075,
-        0.37754063104407853,
-        0.5,
-        0.6224593689559215,
-        0.6967347307967493,
-    ])
+    assert np.allclose(
+        ptulap_results,
+        [
+            0.30326526920325075,
+            0.37754063104407853,
+            0.5,
+            0.6224593689559215,
+            0.6967347307967493,
+        ],
+    )
 
 
 def test__tulap_cdf_inf_handling():
@@ -151,7 +154,9 @@ def test_confidence_interval():
 def test_oneside_pvalue():
     pytest.importorskip("scipy")
     tulap = BinomialCND(5.0, d_in=1.0, d_out=(0.1, 1e-6), size=10)
-    assert str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
+    assert (
+        str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
+    )
 
     assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.5)
     assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.5)
@@ -189,7 +194,7 @@ def test_canonical_context_no_transformation():
         privacy_unit=dp.unit_of(absolute=1.0),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
-        domain=dp.atom_domain(nan=False, T=float)
+        domain=dp.atom_domain(nan=False, T=float),
     )
 
     assert isinstance(context.query().canonical_noise().release(), float)
@@ -221,6 +226,7 @@ def test_canonical_context_with_partial_transformation():
     )
 
     with pytest.raises(
-        ValueError, match="Canonical noise requires all arguments in the input query to be specified."
+        ValueError,
+        match="Canonical noise requires all arguments in the input query to be specified.",
     ):
         context.query().resize(constant=1.0).clamp((0.0, 1.0)).sum().canonical_noise()

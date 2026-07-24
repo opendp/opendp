@@ -98,7 +98,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     def test_cov(clique):
         idx = {"A": 0, "B": 1, "C": 2}
         i, j = idx[clique[0]], idx[clique[-1]]
-        
+
         assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
             f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
         )
@@ -108,6 +108,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     test_cov(("A", "B"))
     for clique in (cl for cl in table.marginals if len(cl) <= 2):
         test_cov(clique)
+
 
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
@@ -294,7 +295,9 @@ def test_contingency_table_delta():
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
 
-    message = "delta (None) must be nonzero because keys and cuts don't span all columns"
+    message = (
+        "delta (None) must be nonzero because keys and cuts don't span all columns"
+    )
     with pytest.raises(ValueError, match=re.escape(message)):
         context.query(epsilon=1.0).contingency_table()
 
@@ -367,7 +370,9 @@ def test_with_null():
     from polars.testing import assert_series_equal
 
     assert_series_equal(_with_null(pl.Series(["a", "b"])), pl.Series(["a", "b", None]))
-    assert_series_equal(_with_null(pl.Series(["a", None, "b"])), pl.Series(["a", None, "b"]))
+    assert_series_equal(
+        _with_null(pl.Series(["a", None, "b"])), pl.Series(["a", None, "b"])
+    )
 
 
 def test_get_null_index():
