@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 tests = {
-    # "cd .." because we want to lint the build tools as well.
-    "flake8 linting": "cd .. && flake8 . --count --show-source --statistics",
+    # ".." because we want to lint the build tools as well.
+    "ruff style check": "ruff check ..",
     # Had non-reproducible errors between local runs, so disable caching.
     "mypy type checking": "mypy . --cache-dir=/dev/null",
     # Looking for cases where first character is not `'`, `"`, or `f`
