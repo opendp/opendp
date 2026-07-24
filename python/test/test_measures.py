@@ -1,5 +1,5 @@
-from opendp.mod import ApproximateDivergence
 import opendp.prelude as dp
+from opendp.mod import ApproximateDivergence
 
 
 def test_approx_divergence():

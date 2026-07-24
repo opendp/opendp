@@ -1,6 +1,7 @@
 import opendp.prelude as dp
-from opendp.extras.numpy import _sscp_domain
 import pytest
+from opendp.extras.numpy import _sscp_domain
+
 from ..helpers import optional_dependency
 
 

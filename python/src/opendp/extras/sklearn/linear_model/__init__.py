@@ -14,11 +14,12 @@ If you're interested in the underlying algorithm, we've also
 `implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.
 """
 
-from typing import Iterable
+from collections.abc import Iterable
+
+from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
-)  # noqa: F401
-from opendp._lib import import_optional_dependency
+)
 from opendp.mod import Measure
 
 __all__ = ["LinearRegression"]

@@ -1,9 +1,10 @@
-from typing import Callable, Union
-from opendp.mod import Domain, Metric, _PartialConstructor, Measurement, Transformation
 import inspect
+from collections.abc import Callable
+
+from opendp.mod import Domain, Measurement, Metric, Transformation, _PartialConstructor
 
 
-def supports_partial(constructor: Callable[..., Union[Transformation, Measurement]]) -> bool:
+def supports_partial(constructor: Callable[..., Transformation | Measurement]) -> bool:
     """Check if the constructor can be written as a then_ (partial application) function.
 
     This is true if the first two arguments are input_domain and input_metric.
@@ -39,9 +40,9 @@ def to_then(constructor) -> Callable[..., _PartialConstructor]:
 
 def with_privacy(
     t_constructor: Callable[[Domain, Metric], Transformation],
-) -> Callable[..., Union[Transformation, Measurement]]:
-    from opendp.mod import assert_features
+) -> Callable[..., Transformation | Measurement]:
     from opendp.measurements import then_gaussian, then_laplace
+    from opendp.mod import assert_features
 
     def private_constructor(input_domain, input_metric, privacy_measure, scale,
                             *args, **kwargs):

@@ -1,12 +1,11 @@
 import io
 import os
-import pytest
 import re
 import warnings
-
-from datetime import date, time, datetime
+from datetime import date, datetime, time
 
 import opendp.prelude as dp
+import pytest
 from opendp.extras.polars import Margin
 
 from .helpers import ids
@@ -696,11 +695,14 @@ def test_replace_binary_path():
 def test_pickle_bomb():
     pl = pytest.importorskip("polars")
 
-    from polars._utils.parse import parse_into_list_of_expressions  # type: ignore[import-not-found]
-    from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
-    from opendp._lib import lib_path
     import io
     import pickle
+
+    from opendp._lib import lib_path
+    from polars._utils.parse import (
+        parse_into_list_of_expressions,  # type: ignore[import-not-found]
+    )
+    from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
 
     # modified from https://intoli.com/blog/dangerous-pickles/
     poison_binary = b"c__builtin__\neval\n(V1 / 0\ntR."

@@ -1,14 +1,15 @@
-from opendp.extras.mbi import (
-    Fixed,
-    mirror_descent,
-    Count,
-    AIM,
-    MST,
-    Sequential,
-)
+import re
+
 import opendp.prelude as dp
 import pytest
-import re
+from opendp.extras.mbi import (
+    AIM,
+    MST,
+    Count,
+    Fixed,
+    Sequential,
+    mirror_descent,
+)
 
 from ..helpers import ids
 

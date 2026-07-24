@@ -1,5 +1,5 @@
-from opendp.mod import enable_features
 import opendp.prelude as dp
+from opendp.mod import enable_features
 
 enable_features("idealized-numerics", "contrib")
 

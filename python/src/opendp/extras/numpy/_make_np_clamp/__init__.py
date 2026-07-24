@@ -1,10 +1,10 @@
 from dataclasses import asdict
 
+from opendp._internal import _make_transformation
+from opendp._lib import import_optional_dependency
+from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.mod import Domain, Metric, Transformation
-from opendp.context import register
-from opendp._lib import import_optional_dependency
-from opendp._internal import _make_transformation
 
 
 def make_np_clamp(

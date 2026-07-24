@@ -1,9 +1,5 @@
 import pytest
-
-from opendp.typing import *
 from opendp._convert import (
-    py_to_c,
-    c_to_py,
     _check_and_cast_scalar,
     _hashmap_to_slice,
     _numpy_dtype_for_rust_type,
@@ -15,8 +11,11 @@ from opendp._convert import (
     _slice_to_scalar,
     _slice_to_vector,
     _vector_to_slice,
+    c_to_py,
+    py_to_c,
 )
-from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
+from opendp._lib import AnyObjectPtr, FfiSlice, FfiSlicePtr, ctypes
+from opendp.typing import *
 
 
 @pytest.mark.parametrize(

@@ -23,8 +23,8 @@ def _http_get(url: str) -> bytes: # pragma: no cover
     - url queries
     - explicit port numbers
     '''
-    from urllib.parse import urlparse
     import http.client
+    from urllib.parse import urlparse
     parsed = urlparse(url)
     assert parsed.hostname is not None
     conn = http.client.HTTPSConnection(parsed.hostname)

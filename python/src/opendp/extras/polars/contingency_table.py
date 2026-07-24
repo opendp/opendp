@@ -11,7 +11,7 @@ We suggest importing under the conventional name ``dp``:
 The members of this module will then be accessible at ``dp.polars.contingency_table``.
 """
 
-from typing import Optional, Type, Union
+
 from opendp.context import Query
 from opendp.extras.mbi._table import ContingencyTable
 
@@ -27,8 +27,8 @@ class ContingencyTableQuery(Query):
     def __init__(
         self,
         *,
-        oneway_scale: Optional[float],
-        oneway_threshold: Optional[int],
+        oneway_scale: float | None,
+        oneway_threshold: int | None,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -38,8 +38,8 @@ class ContingencyTableQuery(Query):
     def release(
         self,
         data=None,
-        bounds: Optional[tuple[float, float]] = None,
-        T: Optional[Union[Type[float], Type[int]]] = None,
+        bounds: tuple[float, float] | None = None,
+        T: type[float] | type[int] | None = None,
     ) -> ContingencyTable:
         """Release the ContingencyTable."""
         return super().release(data, bounds, T)

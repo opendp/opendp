@@ -1,6 +1,7 @@
 import opendp.prelude as dp
-from opendp.extras.numpy import then_np_clamp
 import pytest
+from opendp.extras.numpy import then_np_clamp
+
 from ..helpers import optional_dependency
 
 

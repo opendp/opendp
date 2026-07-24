@@ -1,8 +1,8 @@
-import opendp.prelude as dp
-from opendp.mod import enable_features
-
 import re
+
+import opendp.prelude as dp
 import pytest
+from opendp.mod import enable_features
 
 enable_features("contrib")
 
@@ -91,9 +91,9 @@ def test_str_identity():
 
 
 def test_is_equal():
-    from opendp.transformations import make_is_equal
-    from opendp.domains import vector_domain, atom_domain
+    from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
+    from opendp.transformations import make_is_equal
 
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()
@@ -152,10 +152,10 @@ def test_inherent_cast__impute_uniform():
 
 def test_dataframe_pipeline():
     from opendp.transformations import (
-        make_split_lines,
-        make_split_records,
         make_create_dataframe,
         make_select_column,
+        make_split_lines,
+        make_split_records,
     )
 
     query = (
@@ -169,7 +169,7 @@ def test_dataframe_pipeline():
 
 
 def test_split_dataframe():
-    from opendp.transformations import make_split_dataframe, make_select_column
+    from opendp.transformations import make_select_column, make_split_dataframe
 
     query = make_split_dataframe(
         separator=",", col_names=["23", "17"]
@@ -179,9 +179,9 @@ def test_split_dataframe():
 
 
 def test_clamp():
-    from opendp.transformations import then_clamp, make_clamp
-    from opendp.domains import vector_domain, atom_domain
+    from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
+    from opendp.transformations import make_clamp, then_clamp
 
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()

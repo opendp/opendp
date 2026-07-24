@@ -1,8 +1,8 @@
-import sys
 import re
+import sys
 from contextlib import contextmanager
-import pytest
 
+import pytest
 from opendp._lib import install_names
 
 

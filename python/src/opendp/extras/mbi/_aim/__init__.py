@@ -1,9 +1,12 @@
 """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from itertools import combinations, chain
-from math import pi, sqrt, prod
+from itertools import chain, combinations
+from math import pi, prod, sqrt
+from typing import TYPE_CHECKING, Any, Optional, TypeAlias, cast
 
+from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.combinators import (
     make_adaptive_composition,
@@ -12,14 +15,14 @@ from opendp.combinators import (
 )
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
+    Algorithm,
+    Count,
     TypedDictDomain,
     get_associated_metric,
     make_noise_marginal,
     make_stable_marginals,
     prior,
     weight_marginals,
-    Count,
-    Algorithm,
 )
 from opendp.measurements import then_noisy_max
 from opendp.measures import max_divergence, zero_concentrated_divergence
@@ -36,9 +39,6 @@ from opendp.mod import (
     Transformation,
     binary_search_chain,
 )
-from opendp._internal import _make_transformation, _new_pure_function
-
-from typing import Any, Optional, Sequence, TypeAlias, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
@@ -120,7 +120,7 @@ class AIM(Algorithm):
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
     """Maximum memory constraint in MB for the marginal selection."""
-    rounds: Optional[int] = None
+    rounds: int | None = None
     """Maximum number of rounds to run the algorithm."""
 
     def __post_init__(self):
@@ -160,7 +160,9 @@ class AIM(Algorithm):
         :param model: warm-start fit of MarkovRandomField
         """
         import_optional_dependency("mbi")
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
@@ -237,10 +239,14 @@ def _make_aim_marginal(
     model,  # MarkovRandomField
     max_size: float,
     algorithm: AIM,
-) -> Optional[Measurement]:
+) -> Measurement | None:
     """Create an interactive measurement that computes one step of the AIM algorithm."""
     import numpy as np  # type: ignore[import-not-found]
-    from mbi import MarkovRandomField, LinearMeasurement  # type: ignore[import-not-found]
+    from mbi import (  # type: ignore[import-not-found]
+        LinearMeasurement,
+        MarkovRandomField,
+    )
+
     from opendp.extras.numpy import NPArrayDDomain
 
     model = cast(MarkovRandomField, model)
@@ -336,7 +342,7 @@ def _make_aim_select(
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
-) -> Optional[Measurement]:
+) -> Measurement | None:
     """Make a measurement that selects a set of marginal query that will minimize error."""
     import mbi
 
@@ -383,9 +389,10 @@ def _make_aim_scores(
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
-    from opendp.extras.numpy import NPArrayDDomain
     import numpy as np
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
+
+    from opendp.extras.numpy import NPArrayDDomain
 
     model = cast(MarkovRandomField, model)
 

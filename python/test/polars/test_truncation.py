@@ -1,6 +1,7 @@
+import re
+
 import opendp.prelude as dp
 import pytest
-import re
 
 
 def test_lazyframe_bounded_dp_truncation():

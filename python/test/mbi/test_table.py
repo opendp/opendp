@@ -1,10 +1,11 @@
 import re
-from opendp.extras.mbi import Fixed, AIM, MST, ContingencyTable, Count, Sequential
+import warnings
+
+import opendp.prelude as dp
+import pytest
+from opendp.extras.mbi import AIM, MST, ContingencyTable, Count, Fixed, Sequential
 from opendp.extras.mbi._table import _get_null_index, _increasing, _unique, _with_null
 from opendp.extras.mbi._utilities import mirror_descent
-import pytest
-import opendp.prelude as dp
-import warnings
 
 
 @pytest.mark.parametrize(
@@ -112,9 +113,12 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
 
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
+    from mbi import (  # type: ignore[import-untyped,import-not-found]
+        Domain,
+        LinearMeasurement,
+    )
 
     exact = np.array([100, 200, 400, 300, 200])
 
@@ -139,9 +143,9 @@ def test_contingency_table_int_cuts():
 
 def test_contingency_table_project():
     pytest.importorskip("mbi")
-    from mbi import LinearMeasurement, Domain  # type: ignore[import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
+    from mbi import Domain, LinearMeasurement  # type: ignore[import-not-found]
     from polars.testing import assert_frame_equal  # type: ignore[import-not-found]
 
     A_exact = np.array([3, 5])
@@ -233,7 +237,11 @@ def test_make_contingency_table_invalid_d_out():
 
 
 def get_model(domain: dict[str, int]):
-    from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
+    from mbi import (  # type: ignore[import-not-found]
+        CliqueVector,
+        Domain,
+        MarkovRandomField,
+    )
 
     clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], arrays={})
     return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)

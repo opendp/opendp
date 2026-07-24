@@ -1,10 +1,11 @@
 from __future__ import annotations
-from opendp.extras.numpy import make_np_clamp
-from opendp.extras._utilities import to_then
-from opendp.extras.numpy._make_np_sum import make_private_np_sum
-from opendp.mod import Domain, Metric, Measurement
-from opendp._lib import import_optional_dependency
+
 from opendp._internal import _new_pure_function
+from opendp._lib import import_optional_dependency
+from opendp.extras._utilities import to_then
+from opendp.extras.numpy import make_np_clamp
+from opendp.extras.numpy._make_np_sum import make_private_np_sum
+from opendp.mod import Domain, Measurement, Metric
 
 # planning to make this public, but may make more API changes
 

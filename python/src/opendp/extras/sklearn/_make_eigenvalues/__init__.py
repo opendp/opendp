@@ -1,7 +1,7 @@
+from opendp._internal import _make_transformation
+from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
-from opendp._lib import import_optional_dependency
-from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 
