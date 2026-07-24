@@ -1,7 +1,7 @@
-from pathlib import Path
+import os
 import subprocess
 import sys
-import os
+from pathlib import Path
 
 
 def for_each(glob, template):

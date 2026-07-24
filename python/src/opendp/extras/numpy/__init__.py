@@ -19,7 +19,7 @@ from typing import Literal, Optional
 
 from opendp._internal import _extrinsic_domain
 from opendp._lib import import_optional_dependency
-from opendp.extras.numpy._make_np_clamp import (  # noqa: F401
+from opendp.extras.numpy._make_np_clamp import (
     make_np_clamp,
     then_np_clamp,
 )

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
-import sys
 import os
+import sys
 from datetime import datetime
-import semver
+
 import pypandoc
+import semver
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version

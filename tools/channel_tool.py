@@ -1,14 +1,13 @@
 import argparse
-import configupdater
 import datetime
 import re
 import zoneinfo
 from os import chdir
 from pathlib import Path
 
+import configupdater
 import tomlkit
 from debmutate.control import ControlEditor
-
 from utils import (
     get_current_branch,
     get_python_version,

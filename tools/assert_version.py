@@ -1,8 +1,8 @@
 import configparser
+
 import tomlkit
 from debmutate.control import ControlEditor
-
-from utils import get_version, get_python_version, get_r_version
+from utils import get_python_version, get_r_version, get_version
 
 # all version numbers should be:
 version = get_version()

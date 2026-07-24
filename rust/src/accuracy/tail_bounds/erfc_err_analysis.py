@@ -7,8 +7,8 @@
 # To use all CPUs, floats are sharded modulo the number of CPUs (less two).
 # It may be necessary to restart this program at a later float to free memory.
 
-import struct
 import multiprocessing
+import struct
 
 # pip install gmpy2
 import gmpy2
