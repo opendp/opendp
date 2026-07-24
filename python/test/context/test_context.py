@@ -1,7 +1,8 @@
-import re
-import pytest
 import logging
+import re
+
 import opendp.prelude as dp
+import pytest
 from opendp._internal import _make_measurement
 
 
@@ -64,7 +65,7 @@ def test_loss_of_logging(caplog):
         assert caplog.record_tuples == [
             (
                 "opendp.context",
-                logging.WARN,
+                logging.WARNING,
                 "epsilon should be less than or equal to 5, and is typically less than or equal to 1",
             )
         ]
@@ -79,7 +80,7 @@ def test_loss_of_logging(caplog):
             ),
             (
                 "opendp.context",
-                logging.WARN,
+                logging.WARNING,
                 "delta should be less than or equal to 1e-06",
             ),
         ]

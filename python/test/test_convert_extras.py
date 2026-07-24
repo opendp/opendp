@@ -1,9 +1,7 @@
 import pytest
-
-from opendp.extras.polars import Bound, Margin
-
-from opendp._convert import py_to_c, c_to_py
+from opendp._convert import c_to_py, py_to_c
 from opendp._lib import AnyObjectPtr
+from opendp.extras.polars import Bound, Margin
 
 
 @pytest.mark.parametrize(

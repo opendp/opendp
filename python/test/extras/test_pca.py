@@ -1,6 +1,7 @@
-import pytest
 import opendp.prelude as dp
+import pytest
 from opendp._lib import import_optional_dependency
+
 from ..helpers import optional_dependency
 
 

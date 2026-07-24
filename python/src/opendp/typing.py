@@ -14,15 +14,27 @@ We suggest importing under the conventional name ``dp``:
     >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
-import typing
-from collections.abc import Hashable
-from typing import Optional, TypeAlias, Union, Any, Type, Sequence, _GenericAlias # type: ignore[attr-defined]
-from types import GenericAlias
+
 import re
+import typing
+from collections.abc import Hashable, Sequence
+from types import GenericAlias
+from typing import (  # type: ignore[attr-defined]
+    Any,
+    TypeAlias,
+    Union,
+    _GenericAlias,
+)
 
-from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
-
+from opendp.mod import (
+    Domain,
+    Measure,
+    Measurement,
+    Metric,
+    Transformation,
+    UnknownTypeException,
+)
 
 _ELEMENTARY_TYPES: dict[Any, str] = {
     int: 'i32',
@@ -68,7 +80,7 @@ _PRIMITIVE_TYPES = _NUMERIC_TYPES | {"bool", "String"}
 RuntimeTypeDescriptor: TypeAlias = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
-    Type[Union[Sequence[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
+    type[Sequence[Any] | tuple[Any, Any] | float | str | bool],  # using the Python type class itself -- int, float
     tuple["RuntimeTypeDescriptor", ...],  # shorthand for tuples -- (float, "f64"); (ChangeOneDistance, Sequence[int])
     _GenericAlias, # a Python type hint from the std typing module -- Sequence[int]
     GenericAlias, # a Python type hint from the std types module -- Sequence[int]
@@ -112,11 +124,11 @@ def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
     _ELEMENTARY_TYPES[float] = T # type: ignore[assignment]
 
 
-class RuntimeType(object):
+class RuntimeType:
     """Utility for validating, manipulating, inferring and parsing/normalizing type information.
     """
     origin: str
-    args: Sequence[Union["RuntimeType", str]]
+    args: Sequence[RuntimeType | str]
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
@@ -143,7 +155,7 @@ class RuntimeType(object):
         return hash(str(self))
 
     @classmethod
-    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Optional[Sequence[str]] = None) -> Union["RuntimeType", str]:
+    def parse(cls, type_name: RuntimeTypeDescriptor, generics: Sequence[str] | None = None) -> RuntimeType | str:
         """Parse type descriptor into a normalized Rust type.
 
         Type descriptor may be expressed as:
@@ -241,11 +253,11 @@ class RuntimeType(object):
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
     @classmethod
-    def _parse_args(cls, args, generics: Optional[Sequence[str]] = None):
+    def _parse_args(cls, args, generics: Sequence[str] | None = None):
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
-    def infer(cls, public_example: Any, py_object=False) -> Union["RuntimeType", str]:
+    def infer(cls, public_example: Any, py_object=False) -> RuntimeType | str:
         """Infer the normalized type from a public example.
 
         :param public_example: data used to infer the type
@@ -339,8 +351,8 @@ class RuntimeType(object):
             cls,
             type_name: RuntimeTypeDescriptor | None = None,
             public_example: Any = None,
-            generics: Optional[Sequence[str]] = None
-    ) -> Union["RuntimeType", str]:
+            generics: Sequence[str] | None = None
+    ) -> RuntimeType | str:
         """If type_name is supplied, normalize it. Otherwise, infer the normalized type from a public example.
 
         :param type_name: type specifier. See RuntimeType.parse for documentation on valid inputs
@@ -358,7 +370,7 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
-def _substitute(value: Union["RuntimeType", str], **kwargs):
+def _substitute(value: RuntimeType | str, **kwargs):
     '''
     Substitutes any generic type parameters according to the passed keyword arguments
     
@@ -450,7 +462,7 @@ def get_atom(type_name):
     return type_name
 
 
-def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
+def get_atom_or_infer(type_name: RuntimeType | str, example):
     '''Parse type name and return the contained atomic type,
     or infer from example.
     
@@ -470,7 +482,7 @@ def get_first(value):
         return None
     return next(iter(value))
 
-def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
+def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> RuntimeType | str:
     '''
     Given a ``RuntimeTypeDescriptor``, returns a ``RuntimeType`` or ``str``.
 
@@ -487,7 +499,7 @@ def pass_through(value: Any) -> Any:
     '''
     return value
 
-def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
+def get_carrier_type(domain: Domain) -> RuntimeType | str:
     '''
     Returns the carrier type for a domain.
 
@@ -495,7 +507,7 @@ def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''
     return domain.carrier_type
 
-def get_type(element: Union[Domain, Metric, Measure]):
+def get_type(element: Domain | Metric | Measure):
     '''
     Returns the type for a supporting element.
 
@@ -511,7 +523,7 @@ def get_value_type(type_descriptor: RuntimeTypeDescriptor):
     '''
     return RuntimeType.parse(type_descriptor).args[1] # type: ignore[union-attr]
 
-def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
+def get_distance_type(value: Metric | Measure) -> RuntimeType | str:
     '''
     Returns the distance type for a metric or measure.
 

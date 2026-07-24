@@ -1,22 +1,22 @@
 """MST mechanism from `MMS21 <https://arxiv.org/abs/2108.04978>`_."""
 
-from dataclasses import dataclass
 import itertools
-from typing import Any, Optional, cast, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.combinators import then_adaptive_composition
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
+    Algorithm,
     TypedDictDistance,
     TypedDictDomain,
     get_associated_metric,
     make_noise_marginals,
-    prior,
     make_stable_marginals,
+    prior,
     weight_marginals,
-    Algorithm,
 )
 from opendp.measurements import make_noisy_max
 from opendp.metrics import linf_distance
@@ -98,7 +98,7 @@ class MST(Algorithm):
     """Remaining proportion of budget to allocate to measuring marginals.
     
     The complement is spent on selecting marginals."""
-    num_selections: Optional[int] = None
+    num_selections: int | None = None
     """Number of second-order marginals to estimate.
     
     Defaults to one fewer than the number of columns in the data."""
@@ -134,7 +134,9 @@ class MST(Algorithm):
         :param model: warm-start fit of MarkovRandomField
         """
         import_optional_dependency("mbi")
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
@@ -207,11 +209,13 @@ def _make_mst_select(
     d_out,
     edges: list[tuple[str, str]],
     model,  # MarkovRandomField
-    num_selections: Optional[int] = None,
+    num_selections: int | None = None,
 ) -> Measurement:
     """Make a measurement that selects a set of cliques that will minimize error."""
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
-    from scipy.cluster.hierarchy import DisjointSet  # type: ignore[import-untyped,import-not-found]
+    from scipy.cluster.hierarchy import (
+        DisjointSet,  # type: ignore[import-untyped,import-not-found]
+    )
 
     model = cast(MarkovRandomField, model)
 
@@ -273,9 +277,10 @@ def _make_mst_scores(
     model,  # MarkovRandomField
 ):
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
-    from opendp.extras.numpy import NPArrayDDomain
     import numpy as np  # type: ignore[import-not-found]
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
+
+    from opendp.extras.numpy import NPArrayDDomain
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)

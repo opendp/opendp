@@ -7,57 +7,77 @@ The classes here correspond to other top-level modules: For example,
 instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for functions in :py:mod:`opendp.domains`.
 '''
 from __future__ import annotations
+
+import builtins
 import ctypes
-from dataclasses import asdict
-from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
 import warnings
+from collections.abc import Callable, Sequence
+from dataclasses import asdict
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
-
+from opendp._lib import (
+    AnyDomain,
+    AnyFunction,
+    AnyMeasure,
+    AnyMeasurement,
+    AnyMetric,
+    AnyOdometer,
+    AnyTransformation,
+    get_opendp_version,
+    import_optional_dependency,
+)
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
-    from opendp.typing import RuntimeType # pragma: no cover
+    from opendp.typing import RuntimeType  # pragma: no cover
 
 
 __all__ = [
-    'Measurement',
-    'Transformation',
-    'Odometer',
-    'Queryable',
-    'OdometerQueryable',
-    'Function',
-    'Domain',
-    'AtomDomain',
-    'OptionDomain',
-    'VectorDomain',
-    'SeriesDomain',
-    'LazyFrameDomain',
-    'ExtrinsicDomain',
-    'Metric',
-    'SymmetricIdDistance',
-    'ChangeOneIdDistance',
-    'FrameDistance',
-    'Measure',
-    'ExtrinsicDivergence',
-    'ApproximateDivergence',
-    'PrivacyProfile',
-    '_PartialConstructor',
-    'UnknownTypeException',
-    'OpenDPException',
     'GLOBAL_FEATURES',
-    'enable_features',
-    'disable_features',
+    'ApproximateDivergence',
+    'AtomDomain',
+    'ChangeOneIdDistance',
+    'Domain',
+    'ExtrinsicDivergence',
+    'ExtrinsicDomain',
+    'FrameDistance',
+    'Function',
+    'LazyFrameDomain',
+    'Measure',
+    'Measurement',
+    'Metric',
+    'Odometer',
+    'OdometerQueryable',
+    'OpenDPException',
+    'OptionDomain',
+    'PrivacyProfile',
+    'Queryable',
+    'SeriesDomain',
+    'SymmetricIdDistance',
+    'Transformation',
+    'UnknownTypeException',
+    'VectorDomain',
+    '_PartialConstructor',
+    '__version__',
     'assert_features',
+    'binary_search',
     'binary_search_chain',
     'binary_search_param',
-    'binary_search',
+    'deserialize',
+    'disable_features',
+    'enable_features',
     'exponential_bounds_search',
     'serialize',
-    'deserialize',
-    '__version__',
 ]
 
 class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
@@ -159,7 +179,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
                 return False # pragma: no cover
             raise
 
-    def __rshift__(self, other: Union["Function", "Transformation", Callable]) -> "Measurement":
+    def __rshift__(self, other: Function | Transformation | Callable) -> Measurement:
         if isinstance(other, Transformation):
             other = other.function
 
@@ -173,7 +193,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return make_chain_pm(other, self)
 
     @property
-    def input_domain(self) -> "Domain":
+    def input_domain(self) -> Domain:
         '''
         Input domain of measurement
         '''
@@ -181,7 +201,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_input_domain(self)
     
     @property
-    def input_metric(self) -> "Metric":
+    def input_metric(self) -> Metric:
         '''
         Input metric of measurement
         '''
@@ -189,14 +209,14 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_input_metric(self)
 
     @property
-    def input_space(self) -> tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple[Domain, Metric]:
         '''
         Input space of measurement
         '''
         return self.input_domain, self.input_metric
     
     @property
-    def output_measure(self) -> "Measure":
+    def output_measure(self) -> Measure:
         '''
         Output measure of measurement
         '''
@@ -204,7 +224,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_output_measure(self)
     
     @property
-    def function(self) -> "Function":
+    def function(self) -> Function:
         '''
         Function of measurement
         '''
@@ -212,7 +232,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_function(self)
     
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:
+    def input_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
         
@@ -223,7 +243,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return RuntimeType.parse(measurement_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:
+    def output_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
         
@@ -234,7 +254,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return RuntimeType.parse(measurement_output_distance_type(self))
 
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:
+    def input_carrier_type(self) -> RuntimeType | str:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
         
@@ -321,7 +341,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return odometer_invoke(self, arg)
 
     @property
-    def input_domain(self) -> "Domain":
+    def input_domain(self) -> Domain:
         '''
         Input domain of odometer
         '''
@@ -329,7 +349,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return odometer_input_domain(self)
     
     @property
-    def input_metric(self) -> "Metric":
+    def input_metric(self) -> Metric:
         '''
         Input metric of odometer
         '''
@@ -337,14 +357,14 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return odometer_input_metric(self)
     
     @property
-    def input_space(self) -> tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple[Domain, Metric]:
         '''
         Input domain and metric of odometer
         '''
         return self.input_domain, self.input_metric
     
     @property
-    def output_measure(self) -> "Measure":
+    def output_measure(self) -> Measure:
         '''
         Output measure of odometer
         '''
@@ -352,7 +372,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return odometer_output_measure(self)
     
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:
+    def input_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
         
@@ -361,7 +381,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return self.input_metric.distance_type
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:
+    def output_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
         
@@ -370,7 +390,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return self.output_measure.distance_type
 
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:
+    def input_carrier_type(self) -> RuntimeType | str:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
         
@@ -498,19 +518,19 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             raise
 
     @overload
-    def __rshift__(self, other: "Transformation") -> "Transformation":
+    def __rshift__(self, other: Transformation) -> Transformation:
         ...
 
     @overload
-    def __rshift__(self, other: "Measurement") -> "Measurement":
+    def __rshift__(self, other: Measurement) -> Measurement:
         ...
 
     @overload
-    def __rshift__(self, other: "Odometer") -> "Odometer":
+    def __rshift__(self, other: Odometer) -> Odometer:
         ...
 
     @overload
-    def __rshift__(self, other: "_PartialConstructor") -> Union["Transformation", "Measurement", "Odometer"]:
+    def __rshift__(self, other: _PartialConstructor) -> Transformation | Measurement | Odometer:
         ...
 
     def __rshift__(self, other: Union["Measurement", "Transformation", "_PartialConstructor"]) -> Union["Measurement", "Transformation", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
@@ -533,7 +553,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
 
     @property
-    def input_domain(self) -> "Domain":
+    def input_domain(self) -> Domain:
         '''
         Input domain of transformation
         '''
@@ -542,7 +562,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
 
     @property
-    def output_domain(self) -> "Domain":
+    def output_domain(self) -> Domain:
         '''
         Output domain of transformation
         '''
@@ -551,7 +571,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     
 
     @property
-    def input_metric(self) -> "Metric":
+    def input_metric(self) -> Metric:
         '''
         Input metric of transformation
         '''
@@ -559,7 +579,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_input_metric(self)
     
     @property
-    def output_metric(self) -> "Metric":
+    def output_metric(self) -> Metric:
         '''
         Ouput metric of transformation
         '''
@@ -567,21 +587,21 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_output_metric(self)
     
     @property
-    def input_space(self) -> tuple["Domain", "Metric"]:
+    def input_space(self) -> tuple[Domain, Metric]:
         '''
         Input space of transformation
         '''
         return self.input_domain, self.input_metric
     
     @property
-    def output_space(self) -> tuple["Domain", "Metric"]:
+    def output_space(self) -> tuple[Domain, Metric]:
         '''
         Output space of transformation
         '''
         return self.output_domain, self.output_metric
     
     @property
-    def function(self) -> "Function":
+    def function(self) -> Function:
         '''
         Function of transformation
         '''
@@ -589,7 +609,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_function(self)
 
     @property
-    def input_distance_type(self) -> Union["RuntimeType", str]:
+    def input_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -600,7 +620,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return RuntimeType.parse(transformation_input_distance_type(self))
 
     @property
-    def output_distance_type(self) -> Union["RuntimeType", str]:
+    def output_distance_type(self) -> RuntimeType | str:
         """Retrieve the distance type of the output metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
 
@@ -611,7 +631,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return RuntimeType.parse(transformation_output_distance_type(self))
     
     @property
-    def input_carrier_type(self) -> Union["RuntimeType", str]:
+    def input_carrier_type(self) -> RuntimeType | str:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
 
@@ -641,7 +661,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         raise ValueError("Transformation does not support iteration")
 
 
-Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
+Transformation = cast(type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable:
     '''
@@ -683,7 +703,10 @@ class OdometerQueryable:
         return odometer_queryable_privacy_loss(self.value, d_in)
 
     def __repr__(self) -> str:
-        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
+        from opendp.core import (
+            odometer_queryable_invoke_type,
+            odometer_queryable_privacy_loss_type,
+        )
         from opendp.typing import RuntimeType
         Q = RuntimeType.parse(odometer_queryable_invoke_type(self.value))
         QB = RuntimeType.parse(odometer_queryable_privacy_loss_type(self.value))
@@ -743,7 +766,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
 
     @property
-    def type(self) -> Union["RuntimeType", str]:
+    def type(self) -> RuntimeType | str:
         '''
         Type of domain
         '''
@@ -752,7 +775,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         return RuntimeType.parse(domain_type(self))
     
     @property
-    def carrier_type(self) -> Union["RuntimeType", str]:
+    def carrier_type(self) -> RuntimeType | str:
         '''
         Carrier type of domain
         '''
@@ -787,7 +810,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
     
-    def cast(self, type_: Type[D]) -> D:
+    def cast(self, type_: builtins.type[D]) -> D:
         """Retrieve the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDomain)
@@ -856,7 +879,7 @@ class VectorDomain(Domain):
         return _vector_domain_get_element_domain(self)
     
     @property
-    def size(self) -> Optional[int]:
+    def size(self) -> int | None:
         '''Size of vectors in the domain, if it is fixed'''
         from opendp.domains import _vector_domain_get_size
         return _vector_domain_get_size(self)
@@ -907,8 +930,8 @@ class LazyFrameDomain(Domain):
     
     def get_margin(self, by: Sequence[Any]):
         '''Get the margin descriptor of the frame when grouped by the given columns'''
-        from opendp.domains import _lazyframe_domain_get_margin
         from opendp._convert import _check_polars_by
+        from opendp.domains import _lazyframe_domain_get_margin
         _check_polars_by(by)
 
         return _lazyframe_domain_get_margin(self, by)
@@ -938,7 +961,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     _type_ = AnyMetric
 
     @property
-    def type(self) -> Union["RuntimeType", str]:
+    def type(self) -> RuntimeType | str:
         '''
         Type of metric
         '''
@@ -947,7 +970,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         return RuntimeType.parse(metric_type(self))
     
     @property
-    def distance_type(self) -> Union["RuntimeType", str]:
+    def distance_type(self) -> RuntimeType | str:
         '''
         Distance type of metric
         '''
@@ -982,7 +1005,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
     
-    def cast(self, type_: Type[D]) -> D:
+    def cast(self, type_: builtins.type[D]) -> D:
         """Retrieve the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDistance)
@@ -1063,7 +1086,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     _type_ = AnyMeasure
 
     @property
-    def type(self) -> Union["RuntimeType", str]:
+    def type(self) -> RuntimeType | str:
         '''
         Type of measure
         '''
@@ -1072,7 +1095,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         return RuntimeType.parse(measure_type(self))
     
     @property
-    def distance_type(self) -> Union["RuntimeType", str]:
+    def distance_type(self) -> RuntimeType | str:
         '''
         Distance type of measure
         '''
@@ -1107,7 +1130,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
-    def cast(self, type_: Type[D]) -> D:
+    def cast(self, type_: builtins.type[D]) -> D:
         """Retrieve the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDivergence)
@@ -1145,7 +1168,7 @@ class ApproximateDivergence(Measure):
         return _approximate_divergence_get_inner_measure(self)
     
 
-class PrivacyProfile(object):
+class PrivacyProfile:
     '''
     Given a profile function provided by the user,
     gives the epsilon corresponding to a given delta, and vice versa.
@@ -1175,7 +1198,7 @@ class PrivacyProfile(object):
         return privacy_profile_epsilon(self.curve, delta)
     
 
-class _PartialConstructor(object):
+class _PartialConstructor:
     '''
 
     '''
@@ -1211,9 +1234,9 @@ class OpenDPException(Exception):
 
     Run ``dp.enable_features('rust-stack-trace')`` to see wrapped Rust stack traces.
     """
-    raw_traceback: Optional[str]
+    raw_traceback: str | None
 
-    def __init__(self, variant: str, message: Optional[str] = None, raw_traceback: Optional[str] = None):
+    def __init__(self, variant: str, message: str | None = None, raw_traceback: str | None = None):
         self.variant = variant
         self.message = message
         self.raw_traceback = raw_traceback
@@ -1377,7 +1400,7 @@ def binary_search_chain(
 
 
 def binary_search_param(
-        make_chain: Callable[[float], Union[Transformation, Measurement]],
+        make_chain: Callable[[float], Transformation | Measurement],
         d_in: Any, d_out: Any,
         bounds: tuple[float, float] | None = None,
         T=None) -> float:
@@ -1446,7 +1469,7 @@ def binary_search_param(
 
 def _call_rust_search(
     predicate: Callable[[float], bool],
-    T: "RuntimeType | str",
+    T: RuntimeType | str,
     search: Callable[[Callable[[float], bool]], Any],
     bounds: tuple[float, float] | None = None,
 ) -> Any:
@@ -1489,7 +1512,7 @@ def _call_rust_search(
 def binary_search(
         predicate: Callable[[float], bool],
         bounds: tuple[float, float] | None = ...,
-        T: Type[float] | None = ...,
+        T: type[float] | None = ...,
         return_sign: Literal[False] = False) -> float:
     ...
 
@@ -1499,7 +1522,7 @@ def binary_search(
 def binary_search(
         predicate: Callable[[float], bool],
         bounds: tuple[float, float] | None = ...,
-        T: Type[float] | None = ...,
+        T: type[float] | None = ...,
         *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
         return_sign: Literal[True]) -> tuple[float, int]:
     ...
@@ -1509,7 +1532,7 @@ def binary_search(
 def binary_search(
         predicate: Callable[[float], bool],
         bounds: tuple[float, float] | None,
-        T: Type[float] | None,
+        T: type[float] | None,
         return_sign: Literal[True]) -> tuple[float, int]:
     ...
 
@@ -1517,7 +1540,7 @@ def binary_search(
 def binary_search(
         predicate: Callable[[float], bool],
         bounds: tuple[float, float] | None = None,
-        T: Type[float] | None = None,
+        T: type[float] | None = None,
         return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
@@ -1585,8 +1608,8 @@ def binary_search(
     )
 
 def exponential_bounds_search(
-    predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
-) -> Optional[tuple[float, float]]:
+    predicate: Callable[[float], bool], T: type[float | int] | None
+) -> tuple[float, float] | None:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
@@ -1599,8 +1622,8 @@ def exponential_bounds_search(
     :raises TypeError: if the type is not inferrable (pass T)
     :raises ValueError: if the predicate function is constant
     """
-    from opendp.typing import RuntimeType
     from opendp._internal import _exponential_bounds_search
+    from opendp.typing import RuntimeType
 
     runtime_T = RuntimeType.parse(T or _infer_type(predicate))
 
@@ -1611,7 +1634,7 @@ def exponential_bounds_search(
     )
 
 
-def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[int]]:
+def _infer_type(predicate: Callable[[float], bool]) -> type[float | int]:
     def _is_type_error(e):
         return isinstance(e, TypeError) or (
             isinstance(e, OpenDPException) and e.variant == "Type"

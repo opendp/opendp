@@ -1,19 +1,19 @@
 """Releases all queries in a fixed workload."""
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.extras.mbi._utilities import (
-    get_associated_metric,
-    then_noise_marginals,
-    weight_marginals,
-    make_stable_marginals,
+    ONEWAY_UNKEYED,
     Algorithm,
     Count,
     OnewayType,
-    ONEWAY_UNKEYED
+    get_associated_metric,
+    make_stable_marginals,
+    then_noise_marginals,
+    weight_marginals,
 )
 from opendp.mod import (
     FrameDistance,
@@ -74,7 +74,9 @@ class Fixed(Algorithm):
         :param model: warm-start fit of MarkovRandomField
         """
         import_optional_dependency("mbi")
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")

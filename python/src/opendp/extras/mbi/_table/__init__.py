@@ -1,19 +1,18 @@
 """High-level mechanism for applying mbi mechanisms to dataframes with mixed types."""
 
-from math import sqrt
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from math import sqrt
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Iterator,
     Literal,
-    Mapping,
     Optional,
-    Sequence,
     TypeAlias,
     Union,
     cast,
-    TYPE_CHECKING,
 )
+
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.combinators import (
@@ -21,14 +20,15 @@ from opendp.combinators import (
     make_approximate,
     make_composition,
 )
+from opendp.domains import _lazyframe_from_domain
 from opendp.extras.mbi._aim import AIM
 from opendp.extras.mbi._utilities import (
-    prior,
+    ONEWAY_UNKEYED,
+    Algorithm,
     get_std,
+    prior,
     row_major_order,
     weight_marginals,
-    Algorithm,
-    ONEWAY_UNKEYED,
 )
 from opendp.measurements import make_private_lazyframe
 from opendp.mod import (
@@ -42,10 +42,8 @@ from opendp.mod import (
     binary_search,
     binary_search_param,
 )
-from opendp.domains import _lazyframe_from_domain
 from opendp.transformations import make_stable_lazyframe
 from opendp.typing import RuntimeType
-
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
@@ -68,8 +66,11 @@ class ContingencyTable:
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):
-        from mbi import MarkovRandomField, Domain  # type: ignore[import-untyped,import-not-found]
         import polars as pl  # type: ignore[import-not-found]
+        from mbi import (  # type: ignore[import-untyped,import-not-found]
+            Domain,
+            MarkovRandomField,
+        )
 
         if not isinstance(self.model, MarkovRandomField):  # pragma: no cover
             raise ValueError("model must be a MarkovRandomField")
@@ -95,7 +96,7 @@ class ContingencyTable:
                 raise ValueError(msg)
 
     def synthesize(
-        self, rows: Optional[int] = None, method: Literal["round", "sample"] = "round"
+        self, rows: int | None = None, method: Literal["round", "sample"] = "round"
     ):
         """Generate synthetic data that is consistent with the contingency table.
 
@@ -103,7 +104,9 @@ class ContingencyTable:
         :param method: "round" rounds to projection, "sample" samples from densities
         """
         import polars as pl  # type: ignore[import-not-found]
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         model = cast(MarkovRandomField, self.model)
 
@@ -119,7 +122,9 @@ class ContingencyTable:
 
         :param attrs: attributes to preserve. All other attributes are marginalized.
         """
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         model = cast(MarkovRandomField, self.model)
         return model.project(attrs).values
@@ -129,8 +134,8 @@ class ContingencyTable:
 
         :param attrs: attributes to preserve. All other attributes are marginalized.
         """
-        import polars as pl
         import numpy as np
+        import polars as pl
 
         attrs = [attrs] if isinstance(attrs, str) else list(attrs)
 
@@ -158,7 +163,9 @@ class ContingencyTable:
 
         :param attrs: attributes to preserve in uncertainty estimate
         """
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         model = cast(MarkovRandomField, self.model)
 
@@ -190,12 +197,12 @@ def make_contingency_table(
     input_metric: FrameDistance,
     output_measure: Measure,
     d_in: list["Bound"],
-    d_out: Union[float, tuple[float, float]],
-    keys: Optional[Mapping[str, Sequence]] = None,
-    cuts: Optional[Mapping[str, Sequence[float]]] = None,
-    table: Optional[ContingencyTable] = None,
+    d_out: float | tuple[float, float],
+    keys: Mapping[str, Sequence] | None = None,
+    cuts: Mapping[str, Sequence[float]] | None = None,
+    table: ContingencyTable | None = None,
     algorithm: Algorithm = AIM(),
-) -> tuple[Measurement, Optional[float], Optional[int]]:
+) -> tuple[Measurement, float | None, int | None]:
     """Return a measurement that releases a :class:`.ContingencyTable`,
     as well as the noise scale and optional threshold for one-way marginals.
 
@@ -210,8 +217,8 @@ def make_contingency_table(
     :param algorithm: configuration for internal estimation algorithm
     """
     import_optional_dependency("mbi")
-    import polars as pl
     import mbi
+    import polars as pl
 
     plan = _lazyframe_from_domain(input_domain)
     schema = plan.collect_schema()
@@ -263,7 +270,7 @@ def make_contingency_table(
         raise ValueError(message)
 
     if algorithm.oneway == ONEWAY_UNKEYED and all_keys_known:
-        d_multiway: Union[float | tuple[float, float]] = d_out
+        d_multiway: float | tuple[float, float] = d_out
         d_mids = [d_multiway if delta is None else (d_multiway, 0.0)]
         m_oneway = None
         scale, threshold = None, None
@@ -407,7 +414,7 @@ def _with_null(series):
     )
 
 
-def _get_null_index(series, default=None) -> Optional[int]:
+def _get_null_index(series, default=None) -> int | None:
     """returns the index of null in a polars `series`, else `default`"""
     null_indices = series.is_null().arg_true()
     return null_indices.item() if null_indices.len() else default
@@ -422,14 +429,17 @@ def _make_oneway_marginals(
     keys: dict[str, Any],
     plan: Any,
     unknown_only: bool,
-) -> tuple[Measurement, float, Optional[int]]:
+) -> tuple[Measurement, float, int | None]:
     """Returns a measurement that releases keys and counts for one-way marginals,
     as well as the discovered scale and threshold."""
-    from opendp.extras.polars import dp_len
+    import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-not-found]
-    from mbi.estimation import minimum_variance_unbiased_total  # type: ignore[import-untyped,import-not-found]
-    import numpy as np  # type: ignore[import-not-found]
+    from mbi.estimation import (
+        minimum_variance_unbiased_total,  # type: ignore[import-untyped,import-not-found]
+    )
+
+    from opendp.extras.polars import dp_len
 
     def group_by_agg(plan: pl.LazyFrame, name: str) -> pl.LazyFrame:
         """Aggregate the compute plan"""
@@ -449,7 +459,7 @@ def _make_oneway_marginals(
             nulls_equal=True,
         )
 
-    def _make(scale: float, threshold: Optional[int] = None) -> Measurement:
+    def _make(scale: float, threshold: int | None = None) -> Measurement:
         std = get_std(output_measure, scale)
 
         # all columns that should be estimated
@@ -523,7 +533,7 @@ def _make_oneway_marginals(
 
         try:
             _make(scale, threshold=None)
-            threshold: Optional[int] = None  # pragma: no cover
+            threshold: int | None = None  # pragma: no cover
         except OpenDPException:
             compare_t = lambda t: _make(scale, t).map(d_in)[1] < d_out[1]  # type: ignore[index,arg-type]
             threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]

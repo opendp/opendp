@@ -1,6 +1,7 @@
 import re
-import pytest
+
 import opendp.prelude as dp
+import pytest
 
 from .helpers import ids
 

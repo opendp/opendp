@@ -1,13 +1,14 @@
-import opendp.prelude as dp
+import math
+
 import numpy as np  # type: ignore[import]
+import opendp.prelude as dp
+import pytest
 from opendp.extras.numpy.canonical import (
     BinomialCND,
     _cnd_cdf,
     one_sided_pvalue,
     one_sided_uniformly_most_powerful_tests,
 )
-import math
-import pytest
 
 
 def approx_trials(n, prob=1, alpha=0):

@@ -34,18 +34,15 @@ For example:
     >>> type(dp.c.make_composition)
     <class 'function'>
 '''
-from opendp.mod import *
-from opendp.extras import sklearn, numpy, polars, examples, mbi
-from opendp.extras.polars import dp_len as len
-import opendp.transformations as t
-import opendp.measurements as m
 import opendp.combinators as c
-from opendp.domains import *
-from opendp.metrics import *
-from opendp.measures import *
-from opendp.typing import *
+import opendp.measurements as m
+import opendp.transformations as t
 from opendp.accuracy import *
-from opendp.core import as_array, new_function, new_queryable
 from opendp.context import *
+from opendp.domains import *
+from opendp.measures import *
+from opendp.metrics import *
+from opendp.mod import *
+from opendp.typing import *
 
-__all__ = ["t", "m", "c"]
+__all__ = ["c", "m", "t"]

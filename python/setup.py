@@ -1,9 +1,10 @@
-from setuptools import setup  # type: ignore
 import os
+
+from setuptools import setup  # type: ignore
 
 if not os.path.isdir("src/opendp/lib") and os.path.isdir("src/opendp/rust"):
     try:
-        from setuptools_rust import RustExtension, Binding  # type: ignore[import]
+        from setuptools_rust import Binding, RustExtension  # type: ignore[import]
     except ImportError:
         raise ImportError(
             "A binary wheel is not available for your platform. Attempting to build from source instead, but setuptools-rust is not installed. Please run `pip install setuptools-rust` first."

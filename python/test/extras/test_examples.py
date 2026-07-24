@@ -1,9 +1,8 @@
-from pathlib import Path
 import re
-
-import pytest
+from pathlib import Path
 
 import opendp.prelude as dp
+import pytest
 
 
 @pytest.mark.parametrize("ext", ["ipynb", "rst"])

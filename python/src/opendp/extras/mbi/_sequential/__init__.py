@@ -1,7 +1,7 @@
 """Release multiple algorithms sequentially."""
 
 from dataclasses import dataclass
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
@@ -33,7 +33,7 @@ class Sequential(Algorithm):
 
     algorithms: list[Algorithm]
     """Sequence of algorithms."""
-    weights: Optional[list[float]] = None
+    weights: list[float] | None = None
     """Budget allocation amongst algorithms.
     
     Defaults to equal budget for each algorithm."""
@@ -79,8 +79,10 @@ class Sequential(Algorithm):
         :param model: warm-start fit of MarkovRandomField
         """
         import_optional_dependency("mbi")
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
         import numpy as np  # type: ignore[import-not-found]
+        from mbi import (
+            MarkovRandomField,  # type: ignore[import-untyped,import-not-found]
+        )
 
         get_cardinalities(input_domain)
         if input_metric != frame_distance(symmetric_distance()):

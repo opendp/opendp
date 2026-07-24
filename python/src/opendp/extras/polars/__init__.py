@@ -16,13 +16,14 @@ The members of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 
 import os
-
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
-from deprecated import deprecated
-from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, cast
 from warnings import warn
 
-from opendp._lib import lib_path, import_optional_dependency
+from deprecated import deprecated
+
+from opendp._lib import import_optional_dependency, lib_path
 from opendp.domains import (
     array_domain,
     atom_domain,
@@ -33,11 +34,9 @@ from opendp.domains import (
     option_domain,
     series_domain,
 )
-from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
+from opendp.extras.mbi import AIM, Algorithm, ContingencyTable, make_contingency_table
 from opendp.measurements import make_private_lazyframe
 from opendp.mod import (
-    binary_search,
-    binary_search_chain,
     ChangeOneIdDistance,
     Domain,
     FrameDistance,
@@ -45,6 +44,8 @@ from opendp.mod import (
     Metric,
     OpenDPException,
     SymmetricIdDistance,
+    binary_search,
+    binary_search_chain,
 )
 from opendp.transformations import make_stable_lazyframe
 
@@ -71,7 +72,7 @@ def _size_warning(keys):
             stacklevel=3,
         )
 
-class DPExpr(object):
+class DPExpr:
     """
     If both ``opendp`` and ``polars`` have been imported,
     the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
@@ -127,7 +128,9 @@ class DPExpr(object):
         │ ... │
         └─────┘
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -190,7 +193,9 @@ class DPExpr(object):
         It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,
         like filtering.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -232,7 +237,9 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -278,7 +285,9 @@ class DPExpr(object):
         consider combining the queries by constructing a boolean nullity column to group on,
         grouping by this column, and then using ``dp.len()``.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -320,7 +329,9 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -366,8 +377,10 @@ class DPExpr(object):
 
         Output is noise added to two due to each value being clipped to (0, 1).
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -414,8 +427,10 @@ class DPExpr(object):
 
         Privately estimates the numerator and denominator separately, and then returns their ratio.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         if isinstance(scale, tuple):  # pragma: no cover
             raise ValueError("OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
@@ -466,8 +481,10 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import lit, Series # type: ignore[import-not-found]
+        from polars import Series, lit  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -511,8 +528,10 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the median.
         """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import lit, Series  # type: ignore[import-not-found]
+        from polars import Series, lit  # type: ignore[import-not-found]
+        from polars.plugins import (
+            register_plugin_function,  # type: ignore[import-not-found]
+        )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -559,7 +578,9 @@ def dp_len(scale: float | None = None, signed: bool = False):
     │ ... │
     └─────┘
     """
-    from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+    from polars.plugins import (
+        register_plugin_function,  # type: ignore[import-not-found]
+    )
 
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
@@ -569,7 +590,7 @@ def dp_len(scale: float | None = None, signed: bool = False):
     )
 
 
-class OnceFrame(object):
+class OnceFrame:
     """OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.
 
     The APIs on this class mimic those that can be found in Polars.
@@ -756,7 +777,6 @@ class LazyFrameQuery:
         multithreaded: bool = True,
     ) -> LazyFrameQuery:
         """Sort the ``LazyFrame`` by the given columns."""
-        ...
 
     def filter(  # type: ignore[empty-body]
         self,
@@ -768,7 +788,6 @@ class LazyFrameQuery:
 
         OpenDP discards relevant margin descriptors in the domain when filtering.
         """
-        ...
 
     def select(  # type: ignore[empty-body]
         self, *exprs, **named_exprs
@@ -778,7 +797,6 @@ class LazyFrameQuery:
 
         OpenDP expects expressions in select statements that don't aggregate to be row-by-row.
         """
-        ...
 
     def select_seq(  # type: ignore[empty-body]
         self, *exprs, **named_exprs
@@ -788,7 +806,6 @@ class LazyFrameQuery:
 
         OpenDP allows expressions in select statements that aggregate to not be row-by-row.
         """
-        ...
 
     def group_by(  # type: ignore[empty-body]
         self,
@@ -801,7 +818,6 @@ class LazyFrameQuery:
 
         OpenDP currently requires that grouping keys be simple column expressions.
         """
-        ...
 
     def with_columns(  # type: ignore[empty-body]
         self,
@@ -814,7 +830,6 @@ class LazyFrameQuery:
         OpenDP requires that expressions in with_columns are row-by-row:
         expressions may not change the number or order of records
         """
-        ...
 
     def with_columns_seq(  # type: ignore[empty-body]
         self,
@@ -827,7 +842,6 @@ class LazyFrameQuery:
         OpenDP requires that expressions in with_columns are row-by-row:
         expressions may not change the number or order of records
         """
-        ...
 
     def join(  # type: ignore[empty-body]
         self,
@@ -847,7 +861,6 @@ class LazyFrameQuery:
         """
         Add a join operation to the Logical Plan.
         """
-        ...
 
     def with_keys(
         self,
@@ -1085,11 +1098,11 @@ class LazyFrameQuery:
     def contingency_table(
         self,
         *,
-        keys: Optional[Mapping[str, Sequence]] = None,
-        cuts: Optional[Mapping[str, Sequence[float]]] = None,
-        table: Optional[ContingencyTable] = None,
-        algorithm: Union[Algorithm] = AIM(),
-    ) -> "ContingencyTableQuery":
+        keys: Mapping[str, Sequence] | None = None,
+        cuts: Mapping[str, Sequence[float]] | None = None,
+        table: ContingencyTable | None = None,
+        algorithm: Algorithm = AIM(),
+    ) -> ContingencyTableQuery:
         """Release an approximation to a contingency table across all columns.
 
         :param keys: dictionary of column names and unique categories
@@ -1185,7 +1198,7 @@ class Margin:
     max_groups: int | None = None
     """An upper bound on the number of distinct groups."""
 
-    invariant: Literal["keys"] | Literal["lengths"] | None = None
+    invariant: Literal["keys", "lengths"] | None = None
     """Identifies properties of grouped data that are considered invariant.
     
     * ``"keys"`` designates that keys are not protected
@@ -1282,7 +1295,7 @@ class Margin:
 
 
 @dataclass
-class Bound(object):
+class Bound:
     """
     The ``Bound`` class is used to describe bounds on the number of
     contributed rows per-group and the number of contributed groups.

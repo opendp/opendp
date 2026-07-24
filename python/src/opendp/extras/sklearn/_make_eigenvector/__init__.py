@@ -1,11 +1,11 @@
-from typing import Sequence
+from collections.abc import Sequence
 from dataclasses import asdict
 
-from opendp.extras.numpy import _sscp_domain
-from opendp.extras._utilities import to_then
-from opendp._lib import get_np_csprng, import_optional_dependency
-from opendp.mod import Domain, Metric, Transformation, Measurement
 from opendp._internal import _make_measurement, _make_transformation
+from opendp._lib import get_np_csprng, import_optional_dependency
+from opendp.extras._utilities import to_then
+from opendp.extras.numpy import _sscp_domain
+from opendp.mod import Domain, Measurement, Metric, Transformation
 
 # planning to make this public, but may make more API changes
 

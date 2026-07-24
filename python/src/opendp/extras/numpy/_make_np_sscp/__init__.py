@@ -1,7 +1,7 @@
+from opendp._internal import _make_transformation
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy import _sscp_domain
 from opendp.mod import Domain, Metric, Transformation
-from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 

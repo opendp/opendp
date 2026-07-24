@@ -1,8 +1,8 @@
 import opendp  # So we can access the private _PRIMITIVE_TYPES
-from opendp._lib import import_optional_dependency
-from opendp.extras.polars import Margin
 import opendp.prelude as dp
 import pytest
+from opendp._lib import import_optional_dependency
+from opendp.extras.polars import Margin
 
 
 @pytest.mark.parametrize("ty", opendp.typing._PRIMITIVE_TYPES)

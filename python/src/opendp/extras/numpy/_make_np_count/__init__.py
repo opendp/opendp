@@ -1,7 +1,7 @@
-from opendp.mod import Domain, Metric, Transformation
 import opendp.prelude as dp
-from opendp.extras._utilities import to_then, with_privacy
 from opendp._internal import _make_transformation
+from opendp.extras._utilities import to_then, with_privacy
+from opendp.mod import Domain, Metric, Transformation
 
 # planning to make this public, but may make more API changes
 

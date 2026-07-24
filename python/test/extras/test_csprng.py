@@ -1,5 +1,6 @@
-from opendp._lib import get_np_csprng
 import pytest
+from opendp._lib import get_np_csprng
+
 from ..helpers import optional_dependency
 
 try:

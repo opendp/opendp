@@ -1,8 +1,7 @@
-from doctest import run_docstring_examples, OPTIONFLAGS_BY_NAME
-
-import pytest
+from doctest import OPTIONFLAGS_BY_NAME, run_docstring_examples
 
 import opendp.prelude as dp
+import pytest
 
 
 def test_number_of_tests_found(request):
