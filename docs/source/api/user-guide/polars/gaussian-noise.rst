@@ -37,10 +37,7 @@ of Laplace noise perturbation.
             >>> dp.enable_features("contrib")
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(rho=0.1),
             ...     split_evenly_over=5,
@@ -115,10 +112,7 @@ privacy loss under zCDP becomes much smaller.
         .. code:: pycon
 
             >>> context_margin = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     # tells OpenDP that individuals contribute...
             ...     privacy_unit=dp.unit_of(
             ...         contributions=[
@@ -161,10 +155,7 @@ aware of this data descriptor.
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
             ...     split_evenly_over=5,
