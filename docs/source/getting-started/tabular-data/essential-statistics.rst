@@ -47,9 +47,7 @@ introduction <index.rst>`__.
 
         .. code:: pycon
 
-            >>> lazyframe = pl.scan_csv(
-            ...     dp.examples.get_france_lfs_path(),
-            ... )
+            >>> lazyframe = pl.scan_csv(dp.examples.get_france_lfs_path())
             >>> context = dp.Context.compositor(
             ...     data=lazyframe,
             ...     privacy_unit=dp.unit_of(contributions=36),
@@ -218,9 +216,7 @@ know about the data.
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
@@ -424,9 +420,7 @@ data invariant in the margin: ``invariant="lengths"``.
 
             >>> # apply some preprocessing outside of OpenDP (see note below)
             >>> # drops "Not applicable" values
-            >>> data = pl.scan_csv(
-            ...     dp.examples.get_france_lfs_path(),
-            ... ).filter(pl.col.HWUSUAL != 99)
+            >>> data = pl.scan_csv(dp.examples.get_france_lfs_path()).filter(pl.col.HWUSUAL != 99)
 
             >>> # apply domain descriptors (margins) to preprocessed data
             >>> context_bounded_dp = dp.Context.compositor(

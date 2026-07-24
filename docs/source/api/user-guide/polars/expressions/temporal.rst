@@ -22,9 +22,7 @@ useful in predicates and grouping functions.
             >>> dp.enable_features("contrib")
 
             >>> lf_dates = (
-            ...     pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...     )
+            ...     pl.scan_csv(dp.examples.get_france_lfs_path())
             ...     # prepare the data with some expressions that are not yet supported in OpenDP
             ...     .select(
             ...         DATE=pl.concat_str(

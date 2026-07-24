@@ -57,9 +57,7 @@ Let's get started by setting up the context for the Labor Force dataset.
             >>> dp.enable_features("contrib")
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(rho=0.2, delta=1e-7),
             ... )
