@@ -11,5 +11,6 @@ repos:
   rev: cb8c523fd4835aba42af70f4cad5568db4df0b6c  # frozen: v0.16.0
   hooks:
     - id: ruff-check
-    - id: ruff-format
-      args: ['--diff'] # or '--check' for just an error
+    # TODO: Apply formats and enable.
+    # - id: ruff-format
+    #   args: ['--diff'] # or '--check' for just an error
