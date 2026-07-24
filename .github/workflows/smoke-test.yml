@@ -35,6 +35,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      ### Quick Rust checks:
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
@@ -46,6 +48,22 @@ jobs:
       - name: Check Format
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
+
+      ### Quick Python checks:
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install minimal dependencies
+        run: pip install ruff pre-commit
+
+      - name: Run pre-commit checks
+        run: |
+          cd python
+          pre-commit run --all-files
+
+      ### Quick checks good? Then slow checks:
 
         # Add rust caching following example:
         #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
