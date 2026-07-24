@@ -54,7 +54,7 @@ class LinearRegression:
         if len(x_bounds) != 1:
             msg = f"For now, the x_bounds array must consist of a single tuple, not {x_bounds}"
             raise Exception(msg)
-        
+
         self.measurement = _make_private_theil_sen(
             output_measure=output_measure,
             x_bounds=x_bounds[0],
