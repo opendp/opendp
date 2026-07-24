@@ -420,7 +420,9 @@ data invariant in the margin: ``invariant="lengths"``.
 
             >>> # apply some preprocessing outside of OpenDP (see note below)
             >>> # drops "Not applicable" values
-            >>> data = pl.scan_csv(dp.examples.get_france_lfs_path()).filter(pl.col.HWUSUAL != 99)
+            >>> data = pl.scan_csv(
+            ...     dp.examples.get_france_lfs_path()
+            ... ).filter(pl.col.HWUSUAL != 99)
 
             >>> # apply domain descriptors (margins) to preprocessed data
             >>> context_bounded_dp = dp.Context.compositor(
