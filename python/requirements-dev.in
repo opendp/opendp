@@ -10,6 +10,7 @@
 # ("pip install -r requirements-dev.txt"), which evaluates the markers.
 # #
 
+pre-commit
 ruff
 pytest
 wheel
