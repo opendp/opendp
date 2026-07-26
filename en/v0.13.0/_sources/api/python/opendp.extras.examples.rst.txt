@@ -1,0 +1,10 @@
+opendp.extras.examples package
+==============================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.examples
+   :members:
+   :undoc-members:
+   :show-inheritance:

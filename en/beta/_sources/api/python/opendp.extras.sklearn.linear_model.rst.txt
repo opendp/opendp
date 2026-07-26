@@ -1,0 +1,10 @@
+opendp.extras.sklearn.linear\_model package
+===========================================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.sklearn.linear_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,504 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Aggregation\n",
+    "\n",
+    "[[Polars Documentation](https://docs.pola.rs/api/python/stable/reference/expressions/aggregation.html)]\n",
+    "\n",
+    "The most common aggregators like length, sum, mean, median and quantile are covered in [essential statistics](../../../../getting-started/tabular-data/essential-statistics.ipynb).\n",
+    "\n",
+    "In addition to these aggregators, OpenDP also supports other variations of counting queries.\n",
+    "A counting query tells you how many rows in a dataset meet a given condition."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:17.248304Z",
+     "iopub.status.busy": "2025-06-04T18:18:17.247877Z",
+     "iopub.status.idle": "2025-06-04T18:18:17.916255Z",
+     "shell.execute_reply": "2025-06-04T18:18:17.915992Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import polars as pl \n",
+    "import opendp.prelude as dp\n",
+    "\n",
+    "dp.enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To get started, we'll recreate the Context from the [tabular data introduction](../index.rst)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:17.917815Z",
+     "iopub.status.busy": "2025-06-04T18:18:17.917661Z",
+     "iopub.status.idle": "2025-06-04T18:18:17.941409Z",
+     "shell.execute_reply": "2025-06-04T18:18:17.941150Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "context = dp.Context.compositor(\n",
+    "    data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),\n",
+    "    privacy_unit=dp.unit_of(contributions=36),\n",
+    "    privacy_loss=dp.loss_of(epsilon=1.0),\n",
+    "    split_evenly_over=5,\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Frame Length vs Expression Length\n",
+    "\n",
+    "[Frame length](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html)\n",
+    "is not the same as [expression length](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html). \n",
+    "These quantities can differ if the expression changes the number of rows."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:17.942833Z",
+     "iopub.status.busy": "2025-06-04T18:18:17.942747Z",
+     "iopub.status.idle": "2025-06-04T18:18:18.572435Z",
+     "shell.execute_reply": "2025-06-04T18:18:18.572175Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td></tr><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 4)\n",
+       "┌─────────┬──────────────┬─────────────────┬───────┐\n",
+       "│ column  ┆ aggregate    ┆ distribution    ┆ scale │\n",
+       "│ ---     ┆ ---          ┆ ---             ┆ ---   │\n",
+       "│ str     ┆ str          ┆ str             ┆ f64   │\n",
+       "╞═════════╪══════════════╪═════════════════╪═══════╡\n",
+       "│ len     ┆ Frame Length ┆ Integer Laplace ┆ 360.0 │\n",
+       "│ HWUSUAL ┆ Length       ┆ Integer Laplace ┆ 360.0 │\n",
+       "└─────────┴──────────────┴─────────────────┴───────┘"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_len_variations = (\n",
+    "    context.query()\n",
+    "    .group_by(\"SEX\")\n",
+    "    .agg([\n",
+    "        # total number of rows in the frame, including nulls\n",
+    "        dp.len(),\n",
+    "        # total number of rows in the HWUSUAL column (including nulls)\n",
+    "        pl.col.HWUSUAL.dp.len(),\n",
+    "    ])\n",
+    "    # explicitly specifying keys makes the query satisfy pure-DP\n",
+    "    .with_keys(pl.LazyFrame({\"SEX\": [1, 2]}))\n",
+    ")\n",
+    "query_len_variations.summarize()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "These two statistics are equivalent, \n",
+    "but the frame length (the first) can be used to release stable grouping keys, \n",
+    "while the column length (the second) can be preprocessed with filtering.\n",
+    "\n",
+    "The OpenDP Library will still use margin descriptors that may reduce the sensitivity of the column length\n",
+    "if it detects that the column has not been transformed in a way that changes the number of rows."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:18.590997Z",
+     "iopub.status.busy": "2025-06-04T18:18:18.590867Z",
+     "iopub.status.idle": "2025-06-04T18:18:20.417021Z",
+     "shell.execute_reply": "2025-06-04T18:18:20.416744Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 3)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>SEX</th><th>len</th><th>HWUSUAL</th></tr><tr><td>i64</td><td>u32</td><td>u32</td></tr></thead><tbody><tr><td>2</td><td>1983091</td><td>1982182</td></tr><tr><td>1</td><td>1829720</td><td>1827929</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 3)\n",
+       "┌─────┬─────────┬─────────┐\n",
+       "│ SEX ┆ len     ┆ HWUSUAL │\n",
+       "│ --- ┆ ---     ┆ ---     │\n",
+       "│ i64 ┆ u32     ┆ u32     │\n",
+       "╞═════╪═════════╪═════════╡\n",
+       "│ 2   ┆ 1983091 ┆ 1982182 │\n",
+       "│ 1   ┆ 1829720 ┆ 1827929 │\n",
+       "└─────┴─────────┴─────────┘"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_len_variations.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Unique Counts\n",
+    "A count of the number of unique values in a column is as sensitive as the frame or column length when protecting user contributions.\n",
+    "However, unlike the frame length, the sensitivity does not reduce to zero when protecting changed records, \n",
+    "as a change in an individual's answer may result in one more, or one less, unique value."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:20.418373Z",
+     "iopub.status.busy": "2025-06-04T18:18:20.418272Z",
+     "iopub.status.idle": "2025-06-04T18:18:20.730642Z",
+     "shell.execute_reply": "2025-06-04T18:18:20.730424Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;N Unique&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬─────────────────┬───────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---   │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64   │\n",
+       "╞═════════╪═══════════╪═════════════════╪═══════╡\n",
+       "│ HWUSUAL ┆ N Unique  ┆ Integer Laplace ┆ 180.0 │\n",
+       "└─────────┴───────────┴─────────────────┴───────┘"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_n_unique = context.query().select([\n",
+    "    # total number of unique elements in the HWUSUAL column (including null)\n",
+    "    pl.col.HWUSUAL.dp.n_unique(),\n",
+    "])\n",
+    "query_n_unique.summarize()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:20.731853Z",
+     "iopub.status.busy": "2025-06-04T18:18:20.731768Z",
+     "iopub.status.idle": "2025-06-04T18:18:22.450053Z",
+     "shell.execute_reply": "2025-06-04T18:18:22.449823Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 1)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th></tr><tr><td>u32</td></tr></thead><tbody><tr><td>18</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 1)\n",
+       "┌─────────┐\n",
+       "│ HWUSUAL │\n",
+       "│ ---     │\n",
+       "│ u32     │\n",
+       "╞═════════╡\n",
+       "│ 18      │\n",
+       "└─────────┘"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_n_unique.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Noise added to a count can make the count go negative, \n",
+    "but since the output data type is an unsigned integer, the library may return zero. \n",
+    "This is more likely to happen with the true value is small.\n",
+    "\n",
+    "This release tells us that the number of null values is relatively small."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Null and Non-Null Counts\n",
+    "You can release a count of the number of null or non-null records, respectively, as follows:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:22.451394Z",
+     "iopub.status.busy": "2025-06-04T18:18:22.451318Z",
+     "iopub.status.idle": "2025-06-04T18:18:22.833589Z",
+     "shell.execute_reply": "2025-06-04T18:18:22.833355Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Count&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td></tr><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Null Count&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 4)\n",
+       "┌─────────┬────────────┬─────────────────┬───────┐\n",
+       "│ column  ┆ aggregate  ┆ distribution    ┆ scale │\n",
+       "│ ---     ┆ ---        ┆ ---             ┆ ---   │\n",
+       "│ str     ┆ str        ┆ str             ┆ f64   │\n",
+       "╞═════════╪════════════╪═════════════════╪═══════╡\n",
+       "│ HWUSUAL ┆ Count      ┆ Integer Laplace ┆ 360.0 │\n",
+       "│ HWUSUAL ┆ Null Count ┆ Integer Laplace ┆ 360.0 │\n",
+       "└─────────┴────────────┴─────────────────┴───────┘"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_counts = context.query().select([\n",
+    "    # total number of non-null elements in the HWUSUAL column\n",
+    "    pl.col.HWUSUAL.dp.count(),\n",
+    "    # total number of null elements in the HWUSUAL column\n",
+    "    pl.col.HWUSUAL.dp.null_count(),\n",
+    "])\n",
+    "query_counts.summarize()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that the ``count`` and ``null_count`` are complementary:\n",
+    "you could instead release ``len`` for ``HWUSUAL`` grouped by whether the value is null.\n",
+    "\n",
+    "You can take advantage of this to estimate both statistics with the same privacy loss, but with half as much noise."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:22.834800Z",
+     "iopub.status.busy": "2025-06-04T18:18:22.834716Z",
+     "iopub.status.idle": "2025-06-04T18:18:23.362244Z",
+     "shell.execute_reply": "2025-06-04T18:18:23.361995Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌────────┬──────────────┬─────────────────┬───────┐\n",
+       "│ column ┆ aggregate    ┆ distribution    ┆ scale │\n",
+       "│ ---    ┆ ---          ┆ ---             ┆ ---   │\n",
+       "│ str    ┆ str          ┆ str             ┆ f64   │\n",
+       "╞════════╪══════════════╪═════════════════╪═══════╡\n",
+       "│ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 │\n",
+       "└────────┴──────────────┴─────────────────┴───────┘"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_counts_via_grouping = (\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col(\"HWUSUAL\").is_null().alias(\"HWUSUAL_is_null\"))\n",
+    "    .group_by(\"HWUSUAL_is_null\")\n",
+    "    .agg(dp.len())\n",
+    "    # we're grouping on a bool column, so the groups are:\n",
+    "    .with_keys(pl.LazyFrame({\"HWUSUAL_is_null\": [True, False]}))\n",
+    ")\n",
+    "query_counts_via_grouping.summarize()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The noise scale dropped from 360 to 180..."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-06-04T18:18:23.363507Z",
+     "iopub.status.busy": "2025-06-04T18:18:23.363429Z",
+     "iopub.status.idle": "2025-06-04T18:18:25.252504Z",
+     "shell.execute_reply": "2025-06-04T18:18:25.252246Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 2)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL_is_null</th><th>len</th></tr><tr><td>bool</td><td>u32</td></tr></thead><tbody><tr><td>true</td><td>20815</td></tr><tr><td>false</td><td>3791161</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 2)\n",
+       "┌─────────────────┬─────────┐\n",
+       "│ HWUSUAL_is_null ┆ len     │\n",
+       "│ ---             ┆ ---     │\n",
+       "│ bool            ┆ u32     │\n",
+       "╞═════════════════╪═════════╡\n",
+       "│ true            ┆ 20815   │\n",
+       "│ false           ┆ 3791161 │\n",
+       "└─────────────────┴─────────┘"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_counts_via_grouping.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "...but we still get answers to all of the same queries!"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": ".venv",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.1"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

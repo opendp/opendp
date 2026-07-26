@@ -1,0 +1,890 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Manipulation\n",
+    "[[Polars Documentation](https://docs.pola.rs/api/python/dev/reference/lazyframe/modify_select.html)]\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import polars as pl\n",
+    "import opendp.prelude as dp\n",
+    "\n",
+    "dp.enable_features(\"contrib\")\n",
+    "\n",
+    "context = dp.Context.compositor(\n",
+    "    # Many columns contain mixtures of strings and numbers and cannot be parsed as floats,\n",
+    "    # so we'll set `ignore_errors` to true to avoid conversion errors.\n",
+    "    data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),\n",
+    "    privacy_unit=dp.unit_of(contributions=36),\n",
+    "    privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),\n",
+    "    split_evenly_over=4,\n",
+    "    margins=[dp.polars.Margin(max_partition_length=60_000_000 * 36)]\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "\n",
+    "## Cast\n",
+    "When a Polars LazyFrame is passed to the Context API, the data schema is read off of the dataframe.\n",
+    "This means that in common usage, the OpenDP Library considers the data schema to be public information,\n",
+    "and that the columns are already correctly typed.\n",
+    "\n",
+    "While the OpenDP Library supports cast expressions, \n",
+    "a drawback to their usage is that cast expressions on grouping columns will void any margin descriptors for those columns.\n",
+    "\n",
+    "One setting where you may find cast expressions useful is when computing a float sum on a large dataset.\n",
+    "OpenDP accounts for inexact floating-point arithmetic when computing the float sum,\n",
+    "and on data with large bounds and hundreds of thousands of records, this term can dominate the sensitivity."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>843177.046991</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬───────────────┬───────────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution  ┆ scale         │\n",
+       "│ ---     ┆ ---       ┆ ---           ┆ ---           │\n",
+       "│ str     ┆ str       ┆ str           ┆ f64           │\n",
+       "╞═════════╪═══════════╪═══════════════╪═══════════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 843177.046991 │\n",
+       "└─────────┴───────────┴───────────────┴───────────────┘"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .select(pl.col.HWUSUAL.fill_null(0.0).fill_nan(0.0).dp.sum((0, 100)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Casting to integers avoids this term, resulting in a much smaller noise scale to satisfy the same level of privacy. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬─────────────────┬─────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale   │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---     │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64     │\n",
+       "╞═════════╪═══════════╪═════════════════╪═════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │\n",
+       "└─────────┴───────────┴─────────────────┴─────────┘"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "context.query().select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.sum((0, 100))).summarize()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The OpenDP Library forces that failed casts do not throw a (data-dependent) exception,\n",
+    "instead returning a null.\n",
+    "Therefore using this cast operation updates the output domain \n",
+    "to indicate that there may potentially be nulls.\n",
+    "You'll probably need to apply `.fill_null` before computing statistics with casted data."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "\n",
+    "## Clip\n",
+    "\n",
+    "Computing the sum and mean privately requires input data to be restricted between some lower and upper bound.\n",
+    "DP expressions like `.dp.sum` and `.dp.mean` automatically insert a `.clip` expression based on given data bounds.\n",
+    "However, a `.clip` transformation may be used anywhere, and it will establish a domain descriptor for the column being clipped.\n",
+    "When an aggregation is conducted, the library will check for the presence of this descriptor \n",
+    "if it is necessary to bound the sensitivity of the query.\n",
+    "\n",
+    "This is demonstrated in the following query, where the preprocessing is broken apart into different data processing phases."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬─────────────────┬─────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale   │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---     │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64     │\n",
+       "╞═════════╪═══════════╪═════════════════╪═════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │\n",
+       "└─────────┴───────────┴─────────────────┴─────────┘"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.cast(int).fill_null(0).clip(0, 100))\n",
+    "    .select(pl.col.HWUSUAL.sum().dp.noise())\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "## Cut\n",
+    "\n",
+    "Cut is a transformation that bins numerical data according to a list of breaks. \n",
+    "The following example releases counts of the number of individuals working each hour range."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (4, 2)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(0, 20]&quot;</td><td>6312</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>54002</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>15422</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>119883</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (4, 2)\n",
+       "┌───────────┬────────┐\n",
+       "│ HWUSUAL   ┆ len    │\n",
+       "│ ---       ┆ ---    │\n",
+       "│ cat       ┆ u32    │\n",
+       "╞═══════════╪════════╡\n",
+       "│ (0, 20]   ┆ 6312   │\n",
+       "│ (20, 40]  ┆ 54002  │\n",
+       "│ (40, 60]  ┆ 15422  │\n",
+       "│ (98, inf] ┆ 119883 │\n",
+       "└───────────┴────────┘"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "breaks = [0, 20, 40, 60, 80, 98]\n",
+    "\n",
+    "query = (\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))\n",
+    "    .group_by(\"HWUSUAL\")\n",
+    "    .agg(dp.len())\n",
+    ")\n",
+    "query.release().collect().sort(\"HWUSUAL\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this setting it is not necessary to spend an additional $\\delta$ parameter to privately release the keys.\n",
+    "Instead we can construct an explicit key set based on the bin labels from grouping:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌────────┬──────────────┬─────────────────┬───────┐\n",
+       "│ column ┆ aggregate    ┆ distribution    ┆ scale │\n",
+       "│ ---    ┆ ---          ┆ ---             ┆ ---   │\n",
+       "│ str    ┆ str          ┆ str             ┆ f64   │\n",
+       "╞════════╪══════════════╪═════════════════╪═══════╡\n",
+       "│ len    ┆ Frame Length ┆ Integer Laplace ┆ 144.0 │\n",
+       "└────────┴──────────────┴─────────────────┴───────┘"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "def cut_labels(breaks, left_closed=False):\n",
+    "    edges = [\"-inf\", *breaks, \"inf\"]\n",
+    "    bl, br = (\"[\", \")\") if left_closed else (\"(\", \"]\")\n",
+    "    return [f\"{bl}{l}, {r}{br}\" for l, r in zip(edges[:-1], edges[1:])]\n",
+    "\n",
+    "labels = pl.Series(\"HWUSUAL\", cut_labels(breaks), dtype=pl.Categorical)\n",
+    "\n",
+    "query = (\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))\n",
+    "    .group_by(\"HWUSUAL\")\n",
+    "    .agg(dp.len())\n",
+    "    .with_keys(pl.LazyFrame([labels]))\n",
+    ")\n",
+    "query.summarize()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (7, 2)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(-inf, 0]&quot;</td><td>146</td></tr><tr><td>&quot;(0, 20]&quot;</td><td>6264</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>54011</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>15502</td></tr><tr><td>&quot;(60, 80]&quot;</td><td>2282</td></tr><tr><td>&quot;(80, 98]&quot;</td><td>334</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>120315</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (7, 2)\n",
+       "┌───────────┬────────┐\n",
+       "│ HWUSUAL   ┆ len    │\n",
+       "│ ---       ┆ ---    │\n",
+       "│ cat       ┆ u32    │\n",
+       "╞═══════════╪════════╡\n",
+       "│ (-inf, 0] ┆ 146    │\n",
+       "│ (0, 20]   ┆ 6264   │\n",
+       "│ (20, 40]  ┆ 54011  │\n",
+       "│ (40, 60]  ┆ 15502  │\n",
+       "│ (60, 80]  ┆ 2282   │\n",
+       "│ (80, 98]  ┆ 334    │\n",
+       "│ (98, inf] ┆ 120315 │\n",
+       "└───────────┴────────┘"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query.release().collect().sort(\"HWUSUAL\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The output type is categorical, but with a data-independent encoding, meaning OpenDP allows grouping by these keys."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Drop NaNs\n",
+    "`.drop_nans` removes NaN float values from the data. Not to be confused with `.drop_nulls`. \n",
+    "While this guarantees that the data does not have NaNs, it also drops data invariants on dataset size.\n",
+    "This expression may not be used in a row-by-row context.\n",
+    "\n",
+    "See `.drop_nulls` for a usage example.\n",
+    "\n",
+    "## Drop Nulls\n",
+    "`.drop_nulls` removes null values from the data. Not to be confused with `.drop_nans` for float data. \n",
+    "While this guarantees that the data does not have nulls, it also drops data invariants on dataset size.\n",
+    "This expression may not be used in a row-by-row context.\n",
+    "\n",
+    "In the following example, all nans and nulls are dropped from the `HWUSUAL` column."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .select(pl.col.HWUSUAL.drop_nans().drop_nulls().dp.sum((0, 100)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "## Fill NaN\n",
+    "`.fill_nan` replaces NaN float values. Not to be confused with `.fill_null`.\n",
+    "The output data is only considered non-nan if the fill expression is both non-null and non-nan.\n",
+    "\n",
+    "In common use throughout the documentation, the fill value has been simply a single scalar,\n",
+    "but more complicated expressions are valid:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>843177.046991</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬───────────────┬───────────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution  ┆ scale         │\n",
+       "│ ---     ┆ ---       ┆ ---           ┆ ---           │\n",
+       "│ str     ┆ str       ┆ str           ┆ f64           │\n",
+       "╞═════════╪═══════════╪═══════════════╪═══════════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 843177.046991 │\n",
+       "└─────────┴───────────┴───────────────┴───────────────┘"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    # prepare actual work hours as a valid fill column\n",
+    "    .with_columns(pl.col.HWACTUAL.fill_nan(0.0).fill_null(0.0))\n",
+    "    # prepare usual work hours with actual work hours as a fill\n",
+    "    .with_columns(pl.col.HWUSUAL.fill_nan(pl.col.HWACTUAL).fill_null(pl.col.HWACTUAL))\n",
+    "    # compute the dp sum\n",
+    "    .select(pl.col.HWUSUAL.dp.sum((0, 100)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If the fill expression is not a scalar literal, \n",
+    "then the input expression and fill expression must both by row-by-row. \n",
+    "This is to prevent a mismatch in lengths that results in data-dependent errors.\n",
+    "\n",
+    "At this time `.fill_nan` always drops data bounds, so make sure your data is non-nan before running `.clip`.\n",
+    "\n",
+    "Even if you are in an aggregation context like `.select` or `.agg`,\n",
+    "OpenDP enforces that inputs to `.fill_nan` are row-by-row.\n",
+    "This is to ensure that the left and right arguments of binary operators have meaningful row alignment,\n",
+    "and that inputs share the same number of records, to avoid data-dependent errors that would violate the privacy guarantee."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "\n",
+    "## Fill Null\n",
+    "`.fill_null` replaces null values. Not to be confused with `.fill_nan`.\n",
+    "All data types in Polars may be null.\n",
+    "The output data is only considered non-null if the fill expression is non-null.\n",
+    "\n",
+    "In common use throughout the documentation, the fill value has been simply a single scalar,\n",
+    "but more complicated expressions are valid:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬─────────────────┬─────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale   │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---     │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64     │\n",
+       "╞═════════╪═══════════╪═════════════════╪═════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │\n",
+       "└─────────┴───────────┴─────────────────┴─────────┘"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    # prepare actual work hours as a valid fill column\n",
+    "    .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0.0))\n",
+    "    # prepare usual work hours with actual work hours as a fill\n",
+    "    .with_columns(pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL))\n",
+    "    # compute the dp sum\n",
+    "    .select(pl.col.HWUSUAL.dp.sum((0, 100)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If the fill expression is not a scalar literal, \n",
+    "then the input expression and fill expression must both by row-by-row. \n",
+    "This is to prevent a mismatch in lengths that results in data-dependent errors.\n",
+    "\n",
+    "At this time `.fill_null` always drops data bounds, so make sure your data is non-null before running `.clip`.\n",
+    "\n",
+    "Just like `.fill_nan`, even if you are in an aggregation context like `.select` or `.agg`,\n",
+    "OpenDP enforces that inputs to `.fill_nan` are row-by-row."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Filter\n",
+    "In addition to the full-dataframe filter, you can also filter expressions in contexts with aggregators.\n",
+    "The filter is not row-by-row, but it requires that its inputs are row-by-row;\n",
+    "this is to ensure the data and predicate match.\n",
+    "\n",
+    "The following query counts the number of respondents over retirement age:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.fill_nan(0).fill_null(0))\n",
+    "    # compute the dp sum of individuals over 64 years old\n",
+    "    .select(pl.col.HWUSUAL.filter(pl.col.AGE > 64).dp.sum((0, 100)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This is a setting where the query can be answered via a group by instead, \n",
+    "with the benefit of also getting a count of the number of individuals less than 65:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .group_by(pl.col.AGE > 64)\n",
+    "    .agg(dp.len())\n",
+    "    .with_keys(pl.LazyFrame({\"AGE\": [True, False]}))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "OpenDP doesn't infer descriptors from the filtering criteria, \n",
+    "so the filtered data is not considered non-null (or non-NaN) even if you filter nulls (or NaNs).\n",
+    "Either use a no-op `.fill_null` (respectively `.fill_nan`) after filtering,\n",
+    "or `.drop_nulls` (respectively `.drop_nans`)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.fill_nan(0))\n",
+    "    # compute the dp sum of individuals over 64 years old\n",
+    "    .select(pl.col.HWUSUAL.filter(pl.col.HWUSUAL.is_not_null()).fill_null(0).dp.sum((0, 98)))\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "In this query, `.fill_null` has a broadcast-able filler, so it doesn't require its input to be row-by-row.\n",
+    "Since the input does not need to be row-by-row, OpenDP accepts the filter."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Replace\n",
+    "\n",
+    "`replace` replaces all `old` values with the respective `new` values.\n",
+    "Useful for recoding, in cases where you want to preserve the same data type. \n",
+    "The following recodes `99` and null in the `HWUSUAL` column to `0`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;ILOSTAT&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14112.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 4)\n",
+       "┌─────────┬───────────┬─────────────────┬─────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale   │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---     │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64     │\n",
+       "╞═════════╪═══════════╪═════════════════╪═════════╡\n",
+       "│ ILOSTAT ┆ Sum       ┆ Integer Laplace ┆ 14112.0 │\n",
+       "└─────────┴───────────┴─────────────────┴─────────┘"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "(\n",
+    "    context.query()\n",
+    "    .select(\n",
+    "        pl.col.ILOSTAT.cast(int)\n",
+    "        .replace(old=[99, None], new=0) # replace 99 and None with 0\n",
+    "        .dp.sum((0, 98))\n",
+    "    )\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When passed `old` and `new` arguments, \n",
+    "`new` can either match the length of `old`, or be a single value that is then broadcast.\n",
+    "\n",
+    "Alternatively, `replace` can be passed a dictionary, where the keys are `old` and values are `new`.\n",
+    "An example of this is shown for `replace_strict`, which has a very similar API.\n",
+    "\n",
+    "If `old` contains null, and `new` doesn't,\n",
+    "then this expression considers the output domain to not contain nulls."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Replace cannot be used on categorical data because Polars raises a data-dependent [categorical remapping warning](https://docs.pola.rs/api/python/stable/reference/api/polars.exceptions.CategoricalRemappingWarning.html).\n",
+    "OpenDP is also \"pickier\" about the data type of the input than Polars is:\n",
+    "OpenDP will reject the query if fallible casting of old or new values is necessary."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Replace Strict\n",
+    "\n",
+    "Unlike `replace`, which just replaces the specified `old` values,\n",
+    "`replace_strict` replaces all values in a column.\n",
+    "Since `replace_strict` replaces all values, \n",
+    "the data type of the output may differ from that of the input."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>threshold</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>u32</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td><td>2973</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 5)\n",
+       "┌────────┬──────────────┬─────────────────┬───────┬───────────┐\n",
+       "│ column ┆ aggregate    ┆ distribution    ┆ scale ┆ threshold │\n",
+       "│ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---       │\n",
+       "│ str    ┆ str          ┆ str             ┆ f64   ┆ u32       │\n",
+       "╞════════╪══════════════╪═════════════════╪═══════╪═══════════╡\n",
+       "│ len    ┆ Frame Length ┆ Integer Laplace ┆ 144.0 ┆ 2973      │\n",
+       "└────────┴──────────────┴─────────────────┴───────┴───────────┘"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "ilostat_labels = {\n",
+    "    1: \"Working for pay or profit\",\n",
+    "    2: \"Employed but not working\",\n",
+    "    3: \"Unemployed\",\n",
+    "    9: \"Not in labor force\",\n",
+    "}\n",
+    "\n",
+    "(\n",
+    "    context.query()\n",
+    "    .group_by(pl.col.ILOSTAT.replace_strict(ilostat_labels))\n",
+    "    .agg(dp.len())\n",
+    "    .summarize()\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "Values that are not in `old` are filled with `default`.\n",
+    "If a value is not in `old` and `default` is not specified,\n",
+    "Polars raises a data-dependent error.\n",
+    "To protect against this, OpenDP changes `default` to null if `default` is not specified.\n",
+    "\n",
+    "If the new values don't contain null, and a non-null default value is supplied, \n",
+    "then OpenDP considers the output to be non-null."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "## To Physical\n",
+    "\n",
+    "`.to_physical` returns the underlying representation of categorical (`pl.Categorical`, `pl.Enum`) or temporal (`pl.Date`, `pl.Time`, `pl.Datetime`) data.\n",
+    "For example, you can use the `.to_physical` expression to retrieve the bin indices of the `.cut` expression."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (7, 2)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>u32</td><td>u32</td></tr></thead><tbody><tr><td>0</td><td>545</td></tr><tr><td>1</td><td>5984</td></tr><tr><td>2</td><td>53939</td></tr><tr><td>3</td><td>15527</td></tr><tr><td>4</td><td>2750</td></tr><tr><td>5</td><td>0</td></tr><tr><td>6</td><td>120155</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (7, 2)\n",
+       "┌─────────┬────────┐\n",
+       "│ HWUSUAL ┆ len    │\n",
+       "│ ---     ┆ ---    │\n",
+       "│ u32     ┆ u32    │\n",
+       "╞═════════╪════════╡\n",
+       "│ 0       ┆ 545    │\n",
+       "│ 1       ┆ 5984   │\n",
+       "│ 2       ┆ 53939  │\n",
+       "│ 3       ┆ 15527  │\n",
+       "│ 4       ┆ 2750   │\n",
+       "│ 5       ┆ 0      │\n",
+       "│ 6       ┆ 120155 │\n",
+       "└─────────┴────────┘"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "breaks = [0, 20, 40, 60, 80, 98]\n",
+    "labels = pl.Series(\"HWUSUAL\", list(range(len(breaks) + 1)), dtype=pl.UInt32)\n",
+    "\n",
+    "query = (\n",
+    "    context.query()\n",
+    "    .with_columns(pl.col.HWUSUAL.cut(breaks=breaks).to_physical())\n",
+    "    .group_by(\"HWUSUAL\")\n",
+    "    .agg(dp.len())\n",
+    "    .with_keys(pl.LazyFrame([labels]))\n",
+    ")\n",
+    "query.release().collect().sort(\"HWUSUAL\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In the case of categorical data types, \n",
+    "OpenDP only allows this expression if the encoding is data-independent.\n",
+    "More information can be found in [Data Types](../data-types.ipynb)."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": ".venv",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
