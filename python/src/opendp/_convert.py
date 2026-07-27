@@ -1,6 +1,6 @@
 from collections.abc import MutableMapping, Sequence
 from inspect import signature
-from typing import Any, cast
+from typing import Any, cast, Optional
 
 from opendp._lib import *
 from opendp.mod import (
