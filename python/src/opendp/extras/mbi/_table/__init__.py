@@ -504,7 +504,7 @@ def _make_oneway_marginals(
                     values_iter: Iterator[int] = (lookup[k] for k in keys[name])
                 else:
                     lookup.setdefault(None, 0)
-                    lookup[None] += max(total - count["len"].sum(), 0)
+                    lookup[None] += total - count["len"].sum()
                     dtype = count[name].dtype
 
                     new_keys[name] = pl.Series(name, lookup.keys(), dtype=dtype)
