@@ -1,9 +1,8 @@
 import argparse
-import subprocess
 import re
+import subprocess
 from collections import defaultdict
 from pathlib import Path
-
 
 changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
 

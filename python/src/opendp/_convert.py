@@ -1,29 +1,30 @@
-from typing import Any, Sequence, Union, cast, MutableMapping
+from collections.abc import MutableMapping, Sequence
 from inspect import signature
+from typing import Any, cast, Optional
 
 from opendp._lib import *
 from opendp.mod import (
     ApproximateDivergence,
+    AtomDomain,
     ChangeOneIdDistance,
     Domain,
     ExtrinsicDistance,
     ExtrinsicDivergence,
     ExtrinsicDomain,
+    FrameDistance,
+    Function,
     LazyFrameDomain,
     Measure,
-    Metric,
-    FrameDistance,
-    SeriesDomain,
-    SymmetricIdDistance,
-    UnknownTypeException,
-    Transformation,
     Measurement,
+    Metric,
+    OdometerQueryable,
+    OptionDomain,
     PrivacyProfile,
     Queryable,
-    OdometerQueryable,
-    Function,
-    AtomDomain,
-    OptionDomain,
+    SeriesDomain,
+    SymmetricIdDistance,
+    Transformation,
+    UnknownTypeException,
     VectorDomain,
 )
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor
@@ -180,7 +181,7 @@ def c_to_py(value: Any) -> Any:
     :return: copy of data in Python representation
     """
     if isinstance(value, ctypes.POINTER(AnyObject)):
-        from opendp._data import object_type, object_as_slice, slice_free
+        from opendp._data import object_as_slice, object_type, slice_free
 
         obj_type = object_type(value)
 
@@ -280,7 +281,7 @@ def c_to_py(value: Any) -> Any:
     return value
 
 
-def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
+def _slice_to_py(raw: FfiSlicePtr, type_name: RuntimeType | str) -> Any:
     """Convert from `raw` FfiSlicePtr to Python type.
     This is the postprocessing step after _object_to_slice that unloads data from a ctypes representation.
     External checks allow this function to assume that `raw` is compatible with the type_name type.
@@ -357,7 +358,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     raise UnknownTypeException(type_name)  # pragma: no cover
 
 
-def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _py_to_slice(value: Any, type_name: RuntimeType | str) -> FfiSlicePtr:
     """Convert from Python `value` to FfiSlicePtr.
     The initial preprocessing step for _slice_to_object that loads data into a ctypes representation.
     External checks allow this function to assume that `value` is compatible with the type_name type.
@@ -606,7 +607,7 @@ def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
     return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
 
 
-def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _tuple_to_slice(val: tuple[Any, ...], type_name: RuntimeType | str) -> FfiSlicePtr:
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
@@ -877,7 +878,7 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array, arrow_array_free
+    from opendp._data import arrow_array_free, new_arrow_array
 
     pl = import_optional_dependency('polars')
     if not isinstance(val, pl.Series):
@@ -893,7 +894,7 @@ def _series_to_slice(val) -> FfiSlicePtr:
     val.to_arrow()._export_to_c(array_ptr, schema_ptr)
 
     # when freeing the slice, also free up the memory of what's left behind the slice
-    class ArrowArrayFFIBuffer(object):
+    class ArrowArrayFFIBuffer:
         def __init__(self, ptr) -> None:
             self.ptr = ptr
 
@@ -966,7 +967,7 @@ def _invoke_py_callback(c_arg, userdata):
         lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(b"Continued stack trace from Exception in user-defined function"),
             ctypes.c_char_p(traceback.format_exc().encode()),
         )
 
@@ -1026,7 +1027,7 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(b"Continued stack trace from Exception in user-defined function"),
             ctypes.c_char_p(traceback.format_exc().encode()),
         )
 

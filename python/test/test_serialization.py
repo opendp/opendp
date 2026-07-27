@@ -1,11 +1,10 @@
 import json
 import re
 
-from opendp.extras.polars import Margin
-import pytest
-
 import opendp.prelude as dp
+import pytest
 from opendp._lib import import_optional_dependency
+from opendp.extras.polars import Margin
 
 atom = dp.atom_domain(bounds=(0.0, 10.0), nan=False)
 input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()

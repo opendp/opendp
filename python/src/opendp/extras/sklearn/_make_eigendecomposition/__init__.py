@@ -1,13 +1,13 @@
 from __future__ import annotations
-from typing import Sequence
+
+from collections.abc import Sequence
 
 from opendp.context import register
-from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
-from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
-from opendp.extras.numpy._make_np_sscp import make_np_sscp
-
 from opendp.extras._utilities import to_then
-from opendp.mod import Domain, Metric, Measurement
+from opendp.extras.numpy._make_np_sscp import make_np_sscp
+from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
+from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
+from opendp.mod import Domain, Measurement, Metric
 
 
 def make_private_np_eigendecomposition(

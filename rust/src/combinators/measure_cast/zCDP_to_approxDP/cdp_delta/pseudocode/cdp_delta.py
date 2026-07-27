@@ -50,7 +50,7 @@ def cdp_delta(rho: float, eps: float) -> float:
 
     t2 = a_max.inf_mul(a_max.recip().neg().inf_ln_1p())
 
-    delta = t1.inf_add(t2).inf_exp().inf_div((a_max.inf_sub(1.0)))
+    delta = t1.inf_add(t2).inf_exp().inf_div(a_max.inf_sub(1.0))
 
     # delta is always <= 1
     delta.min(1.0)

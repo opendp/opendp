@@ -1,7 +1,7 @@
 import argparse
+import re
 import subprocess
 from pathlib import Path
-import re
 
 
 def get_rst(nb_path):
@@ -34,7 +34,7 @@ def convert_block(match):
     return a python code block containing a doctest.
     """
     input = unindent(match.group(1))
-    output = unindent((match.group(2) or ""))
+    output = unindent(match.group(2) or "")
     indent_input = reindent(reindent(reindent(doctest(input))))
     indent_output = reindent(reindent(reindent(output)))
     return f""".. tab-set::

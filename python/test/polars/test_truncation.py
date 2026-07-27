@@ -1,6 +1,7 @@
+import re
+
 import opendp.prelude as dp
 import pytest
-import re
 
 
 def test_lazyframe_bounded_dp_truncation():
@@ -194,7 +195,7 @@ def test_truncation_contingency():
     pl = pytest.importorskip("polars")
     synth_context = dp.Context.compositor(
         data=pl.scan_csv(
-            dp.examples.get_france_lfs_path(), encoding="utf8-lossy", ignore_errors=True
+            dp.examples.get_france_lfs_path(), encoding="utf8-lossy"
         ),
         privacy_unit=dp.unit_of(contributions=1, identifier="PIDENT"),
         privacy_loss=dp.loss_of(epsilon=1),

@@ -1,7 +1,8 @@
-from opendp.extras.numpy import _sscp_domain, arrayd_domain
+import re
+
 import opendp.prelude as dp
 import pytest
-import re
+from opendp.extras.numpy import _sscp_domain, arrayd_domain
 
 
 def test_array2_domain():

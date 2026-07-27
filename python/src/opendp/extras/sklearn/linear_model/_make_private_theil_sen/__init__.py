@@ -1,7 +1,7 @@
-from opendp.mod import Measure
 import opendp.prelude as dp
-from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
+from opendp._lib import import_optional_dependency
+from opendp.mod import Measure
 
 
 def pairwise_predict(data, x_cuts):

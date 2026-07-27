@@ -7,7 +7,7 @@ def permute_and_flip(x: list[RBig], scale: RBig, replacement: bool):
     x_max = max(x)
     permutation = list(range(x.len()))
 
-    sequence = range(0, len(x)) if replacement else repeat(0)
+    sequence = range(len(x)) if replacement else repeat(0)
 
     for left in sequence:
         right = left + sample_uniform_uint_below(x.len() - left)

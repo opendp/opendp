@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import math
 from typing import Literal
+
 from opendp._lib import import_optional_dependency
 from opendp.mod import binary_search
 
@@ -115,7 +116,7 @@ def _cnd_cdf(t, shift, d_in: float, d_out: tuple[float, float]):
     rcut = q / 2
     r = np.rint(t)
     g = -math.log(b)
-    l = math.log(1 + b)  # noqa
+    l = math.log(1 + b)
     k = 1 - b
     
     with np.errstate(over="ignore"):

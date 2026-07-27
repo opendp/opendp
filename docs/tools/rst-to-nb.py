@@ -4,12 +4,11 @@
 # and Pandoc can be used for the heavy lifting.
 
 import argparse
-from pathlib import Path
+import re
 import subprocess
 import tempfile
-import re
 from contextlib import contextmanager
-
+from pathlib import Path
 
 # Utility functions:
 

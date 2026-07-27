@@ -1,8 +1,17 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, cast, get_args, TYPE_CHECKING
 from functools import reduce
 from math import sqrt
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Optional,
+    cast,
+    get_args,
+)
+
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -10,6 +19,7 @@ from opendp._internal import (
     _new_pure_function,
 )
 from opendp.combinators import make_composition
+from opendp.core import as_array
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras._utilities import to_then
 from opendp.measurements import then_noise
@@ -21,7 +31,6 @@ from opendp.metrics import (
     l2_distance,
     symmetric_distance,
 )
-from opendp.core import as_array
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -35,6 +44,7 @@ from opendp.mod import (
     Metric,
     Transformation,
 )
+
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
@@ -88,7 +98,7 @@ class Algorithm(ABC):
     """
     oneway: OnewayType = ONEWAY_ALL
     """Fit one-way marginals for all columns, or only unkeyed columns."""
-    oneway_split: Optional[float] = None
+    oneway_split: float | None = None
     """Proportion of budget to use for oneway release.
     
     When ``oneway_split`` is not set, defaults to half of the budget.
@@ -129,7 +139,7 @@ def typed_dict_domain(domains: dict[Any, Domain]) -> ExtrinsicDomain:
             raise ValueError("data must share key-set with domain")
         return all(domains[k].member(x[k]) for k in domains)
 
-    ident = ", ".join(f"{k}: {str(d)}" for k, d in domains.items())
+    ident = ", ".join(f"{k}: {d!s}" for k, d in domains.items())
     return _extrinsic_domain(
         identifier=f"TypedDictDomain({ident})",
         member=_member,
@@ -216,10 +226,11 @@ def make_stable_marginals(
     cliques: list[tuple[str, ...]],
 ) -> Transformation:
     """Return a transformation that computes all marginals in a workload."""
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
     from opendp.extras.numpy import arrayd_domain
     from opendp.extras.polars import Bound
-    import polars as pl  # type: ignore[import-not-found]
-    import numpy as np  # type: ignore[import-not-found]
 
     if input_metric != frame_distance(symmetric_distance()):
         message = f"input_metric ({input_metric}) must be frame_distance(symmetric_distance())"
@@ -274,7 +285,7 @@ def make_noise_marginals(
     output_measure: Measure,
     cliques: list[tuple[str, ...]],
     scale: float,
-    weights: Optional[list[float]] = None,
+    weights: list[float] | None = None,
 ) -> Measurement:
     """Make a measurement that releases multiple DP marginals"""
     measurements = [
@@ -300,6 +311,7 @@ def make_noise_marginal(
     # use jax arrays because lms will be used in optimization
     import jax.numpy as np  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+
     from opendp.extras.numpy import NPArrayDDomain
 
     clique_domain = input_domain.cast(TypedDictDomain)[clique]
@@ -354,7 +366,7 @@ def weight_marginals(
             raise ValueError("each new marginal must be of type LinearMeasurement")
 
         clique = new_marginal.clique
-        old_marginal = cast(Optional[LinearMeasurement], marginals.get(clique))
+        old_marginal = cast(LinearMeasurement | None, marginals.get(clique))
 
         if old_marginal is None:
             marginals[clique] = new_marginal

@@ -44,9 +44,9 @@ Either Docsig and Pydoclint could be used as a flake8 plugin.
 - but it does have a good survey of the other tools!
 """
 
-from pathlib import Path
 import ast
 import re
+from pathlib import Path
 from typing import NamedTuple
 
 import pytest

@@ -1,8 +1,8 @@
-import pytest
 import doctest
 import re
 
 import opendp.prelude as dp
+import pytest
 
 
 @pytest.fixture(autouse=True)

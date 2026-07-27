@@ -14,19 +14,24 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING, Sequence
-from dataclasses import dataclass, asdict, astuple
-from opendp.extras.numpy import then_np_clamp
+
+from collections.abc import Sequence
+from dataclasses import asdict, astuple, dataclass
+from typing import TYPE_CHECKING, Optional
+
+from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
+from opendp._lib import import_optional_dependency
 from opendp.context import register
 from opendp.extras._utilities import to_then
+from opendp.extras.numpy import then_np_clamp
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
-from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
+from opendp.extras.sklearn._make_eigendecomposition import (
+    then_private_np_eigendecomposition,
+)
 from opendp.mod import Domain, Measurement, Metric
-from opendp._lib import import_optional_dependency
-from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 
 if TYPE_CHECKING: # pragma: no cover
-    import numpy # type: ignore[import-not-found]
+    import numpy  # type: ignore[import-not-found]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -38,7 +43,7 @@ class PCAEpsilons:
     '''ε-expenditure to estimate the eigenvalues'''
     eigvecs: Sequence[float]
     '''ε-expenditure to estimate the eigenvectors'''
-    mean: Optional[float]
+    mean: float | None
     """ε-expenditure to estimate the mean.
 
 A portion of the budget is used to estimate the mean because the OpenDP PCA algorithm 
@@ -195,7 +200,7 @@ class PCA:
         row_norm: float,
         n_samples: int,
         n_features: int,
-        n_components: int | float | str | None = None,
+        n_components: float | str | None = None,
         n_changes: int = 1,
         whiten: bool = False,
     ) -> None:  # pragma: no cover
@@ -214,7 +219,6 @@ class PCA:
         '''
         Number of features
         '''
-        ...
 
     def fit(self, X, y=None):
         '''
@@ -223,7 +227,6 @@ class PCA:
         :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
         :param y: Ignored
         '''
-        ...
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
     def _fit(self, X):
@@ -232,15 +235,12 @@ class PCA:
     def _prepare_fitter(self) -> Measurement:  # type: ignore[empty-body]
         """Returns a measurement that computes the mean and eigendecomposition,
         and then apply those releases to self."""
-        ...
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
-        ...
 
     def measurement(self) -> Measurement:  # type: ignore[empty-body]
         """Return a measurement that releases a fitted model."""
-        ...
 
     def _validate_params(*args, **kwargs):
         ...
@@ -248,7 +248,7 @@ class PCA:
 
 _decomposition = import_optional_dependency('sklearn.decomposition', False)
 if _decomposition is not None:
-    class PCA(_decomposition.PCA):  # type: ignore  # noqa: F811
+    class PCA(_decomposition.PCA):  # type: ignore
         def __init__(
             self,
             *,
@@ -256,7 +256,7 @@ if _decomposition is not None:
             row_norm: float,
             n_samples: int,
             n_features: int,
-            n_components: int | float | str | None = None,
+            n_components: float | str | None = None,
             n_changes: int = 1,
             whiten: bool = False,
         ) -> None:
@@ -323,8 +323,10 @@ if _decomposition is not None:
         def _postprocess(self, values):
             """A function that applies a release of the mean and eigendecomposition to self"""
             np = import_optional_dependency('numpy')
-            from sklearn.utils.extmath import svd_flip # type: ignore[import]
-            from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
+            from sklearn.decomposition._pca import (
+                _infer_dimension,  # type: ignore[import]
+            )
+            from sklearn.utils.extmath import svd_flip  # type: ignore[import]
 
             self.mean_, S, Vt = astuple(values)
             U = Vt.T

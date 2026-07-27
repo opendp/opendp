@@ -1,11 +1,10 @@
 import ctypes
-from typing import MutableMapping, Sequence
-import os
-from pathlib import Path
-import re
-from typing import Optional, Any
 import importlib
-
+import os
+import re
+from collections.abc import MutableMapping, Sequence
+from pathlib import Path
+from typing import Any
 
 # list all acceptable alternative types for each default type
 ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
@@ -83,7 +82,7 @@ def _total_cmp(left, right):
         lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(b"Continued stack trace from Exception in user-defined function"),
             ctypes.c_char_p(traceback.format_exc().encode()),
         )
 
@@ -300,7 +299,7 @@ class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]
 
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
-def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
+def _c_char_p_to_str(s: bytes | None) -> str | None:
     ''''''
     if s is not None:
         return s.decode("utf-8")

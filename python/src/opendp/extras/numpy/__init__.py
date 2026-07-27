@@ -12,19 +12,27 @@ The members of this module will then be accessible at ``dp.numpy``.
 '''
 
 from __future__ import annotations
-from typing import Literal, Optional
-from dataclasses import dataclass, asdict
 
-from opendp.mod import Domain
-from opendp.typing import RuntimeType, RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
-from opendp._lib import import_optional_dependency
-from opendp._internal import _extrinsic_domain
 import typing
-from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
+from dataclasses import asdict, dataclass
+from typing import Literal, Optional
 
+from opendp._internal import _extrinsic_domain
+from opendp._lib import import_optional_dependency
+from opendp.extras.numpy._make_np_clamp import (
+    make_np_clamp,
+    then_np_clamp,
+)
+from opendp.mod import Domain
+from opendp.typing import (
+    _ELEMENTARY_TYPES,
+    _PRIMITIVE_TYPES,
+    RuntimeType,
+    RuntimeTypeDescriptor,
+)
 
 if typing.TYPE_CHECKING: # pragma: no cover
-    import numpy # type: ignore[import-not-found]
+    import numpy  # type: ignore[import-not-found]
 
 def _check_norm_and_p(norm: float | None, p: int | None):
     """Checks that a scalar L`p` `norm` is well-defined"""
@@ -62,7 +70,7 @@ def array2_domain(
     origin=None,
     size: int | None = None,
     num_columns: int | None = None,
-    nan: Optional[bool] = None,
+    nan: bool | None = None,
     cardinalities: list[int] | numpy.ndarray | None = None,
     T: RuntimeTypeDescriptor | None = None,
 ) -> Domain:

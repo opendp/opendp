@@ -19,17 +19,17 @@ from ._aim import AIM
 from ._fixed import Fixed
 from ._mst import MST
 from ._sequential import Sequential
-from ._table import make_contingency_table, ContingencyTable
+from ._table import ContingencyTable, make_contingency_table
 from ._utilities import Algorithm, Count, mirror_descent
 
 __all__ = [
     "AIM",
-    "Fixed",
     "MST",
+    "Algorithm",
+    "ContingencyTable",
+    "Count",
+    "Fixed",
     "Sequential",
     "make_contingency_table",
-    "ContingencyTable",
-    "Algorithm",
-    "Count",
     "mirror_descent",
 ]

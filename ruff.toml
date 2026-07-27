@@ -19,15 +19,13 @@ lint.ignore = [
 "B015", # Pointless comparison. Did you mean to assign a value? Otherwise, prepend `assert` or remove it.
 "B016", # Cannot raise a literal. Did you intend to return it or raise an Exception?
 "B017", # Do not assert blind exception: `Exception`
-"B018", # Found useless attribute access. Either assign it to a variable or remove it.
-"B018", # Found useless expression. Either assign it to a variable or remove it.
-"B023", # Function definition does not bind loop variable
+"B018", # Found useless ... Either assign it to a variable or remove it.
+"B023", # Function definition does not bind loop variable `...`
 "BLE001", # Do not catch blind exception: `Exception`
 "C400", # Unnecessary generator (rewrite as a list comprehension)
 "C401", # Unnecessary generator (rewrite as a set comprehension)
 "C405", # Unnecessary list literal (rewrite as a set literal)
-"C408", # Unnecessary `dict()` call (rewrite as a literal)
-"C408", # Unnecessary `list()` call (rewrite as a literal)
+"C408", # Unnecessary `...()` call (rewrite as a literal)
 "C417", # Unnecessary `map()` usage (rewrite using a list comprehension)
 "D419", # Docstring is empty
 "DTZ001", # `datetime.datetime()` called without a `tzinfo` argument
@@ -36,74 +34,26 @@ lint.ignore = [
 "DTZ011", # `datetime.date.today()` used
 "EXE001", # Shebang is present but file is not executable
 "EXE002", # The file is executable but no shebang is present
-"F401", # imported but unused
-"F821", # Undefined name
+"F401", # `...` imported but unused
+"F821", # Undefined name `...`
 "FLY002", # Consider `f"{version_cmd}&&{sphinx_apidoc_cmd}"` instead of string join
-"I001", # Import block is un-sorted or un-formatted
-"LOG009", # Use of undocumented `logging.WARN` constant
 "N999", # Invalid module name: 'test_np_xTx'
-"PIE790", # Unnecessary `...` literal
-"PIE808", # Unnecessary `start` argument in `range`
 "PIE810", # Call `startswith` once with a `tuple`
-"PLR0402", # Use `from opendp import metrics` in lieu of alias
-"PLR0402", # Use `from opendp.extras.sklearn import decomposition` in lieu of alias
-"PLR0402", # Use `from opendp.extras.sklearn import linear_model` in lieu of alias
 "PLW1510", # `subprocess.run` without explicit `check` argument
 "PT031", # `pytest.warns()` block should contain a single simple statement
-"PYI030", # Multiple literal members in a union. Use a single literal, e.g. `Literal["keys", "lengths"]`
-"PYI041", # Use `float` instead of `int | float`
 "PYI061", # Use `Literal[...] | None` rather than `Literal[None, ...]`
-"RUF010", # Use explicit conversion flag
 "RUF012", # Mutable default value for class attribute
-"RUF022", # `__all__` is not sorted
 "RUF046", # Value being cast to `int` is already an integer
 "RUF059", # Unpacked variable `sources` is never used
-"RUF100", # Unused `noqa` directive (unused: `F401`)
-"RUF100", # Unused `noqa` directive (unused: `F811`)
-"RUF100", # Unused blanket `noqa` directive
 "S110", # `try`-`except`-`pass` detected, consider logging the exception
 "SIM102", # Use a single `if` statement instead of nested `if` statements
 "SIM115", # Use a context manager for opening files
 "SIM201", # Use `left != Bound(by=[pl.col.B], per_group=10)` instead of `not left == Bound(by=[pl.col.B], per_group=10)`
 "SIM201", # Use `left != str(right)` instead of `not left == str(right)`
 "SIM201", # Use `version_date != date.strftime("%Y%m%d")` instead of `not version_date == date.strftime("%Y%m%d")`
-"SIM905", # Consider using a list literal instead of `str.split`
 "TRY002", # Create your own exception
 "TRY004", # Prefer `TypeError` exception for invalid type
 "TRY201", # Use `raise` without specifying exception name
-"UP004", # Class `ArrowArrayFFIBuffer` inherits from `object`
-"UP004", # Class `Bound` inherits from `object`
-"UP004", # Class `Context` inherits from `object`
-"UP004", # Class `DPExpr` inherits from `object`
-"UP004", # Class `OnceFrame` inherits from `object`
-"UP004", # Class `PartialChain` inherits from `object`
-"UP004", # Class `PrivacyProfile` inherits from `object`
-"UP004", # Class `Query` inherits from `object`
-"UP004", # Class `RuntimeType` inherits from `object`
-"UP004", # Class `_PartialConstructor` inherits from `object`
-"UP006", # Use `list` instead of `List` for type annotation
-"UP006", # Use `tuple` instead of `Tuple` for type annotation
-"UP006", # Use `type` instead of `Type` for type annotation
-"UP007", # Use `X | Y` for type annotations
-"UP009", # UTF-8 encoding declaration is unnecessary
-"UP012", # Unnecessary call to `encode` as UTF-8
 "UP030", # Use implicit references for positional format fields
 "UP031", # Use format specifiers instead of percent format
-"UP033", # Use `@functools.cache` instead of `@functools.lru_cache(maxsize=None)`
-"UP034", # Avoid extraneous parentheses
-"UP035", # Import from `collections.abc` instead: `Callable`
-"UP035", # Import from `collections.abc` instead: `Callable`, `Iterator`
-"UP035", # Import from `collections.abc` instead: `Callable`, `Sequence`, `MutableMapping`
-"UP035", # Import from `collections.abc` instead: `Iterable`
-"UP035", # Import from `collections.abc` instead: `Iterator`, `Mapping`, `Sequence`
-"UP035", # Import from `collections.abc` instead: `Mapping`, `Sequence`
-"UP035", # Import from `collections.abc` instead: `MutableMapping`, `Sequence`
-"UP035", # Import from `collections.abc` instead: `Sequence`
-"UP035", # Import from `collections.abc` instead: `Sequence`, `Callable`
-"UP035", # Import from `collections.abc` instead: `Sequence`, `MutableMapping`
-"UP035", # `typing.List` is deprecated, use `list` instead
-"UP035", # `typing.Tuple` is deprecated, use `tuple` instead
-"UP035", # `typing.Type` is deprecated, use `type` instead
-"UP037", # Remove quotes from type annotation
-"UP045", # Use `X | None` for type annotations    
 ]

@@ -10,7 +10,7 @@ TAG_PATTERN = re.compile(r"v(\d+)\.(\d+)\.(\d+)$")
 
 
 def list_release_tags(repo_root: Path) -> list[str]:
-    args = "git tag --list v*".split()
+    args = ["git", "tag", "--list", "v*"]
     return subprocess.check_output(args, cwd=repo_root, text=True).splitlines()
 
 

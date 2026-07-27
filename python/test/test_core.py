@@ -1,10 +1,9 @@
-import pytest
-
 import opendp.prelude as dp
+import pytest
 from opendp._internal import (
-    _extrinsic_domain,
     _extrinsic_distance,
     _extrinsic_divergence,
+    _extrinsic_domain,
     _new_pure_function,
 )
 
@@ -102,9 +101,9 @@ def test_bisect_chain():
 
 
 def test_supporting_elements():
-    from opendp.transformations import make_clamp
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
+    from opendp.transformations import make_clamp
 
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()
@@ -121,8 +120,8 @@ def test_supporting_elements():
     assert str(clamper.output_metric) == "SymmetricDistance()"
     assert str(clamper.output_metric.distance_type) == "u32"
 
-    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
+    from opendp.measurements import make_laplace
     from opendp.metrics import absolute_distance
 
     mechanism = make_laplace(
@@ -137,8 +136,8 @@ def test_supporting_elements():
 
 
 def test_function():
-    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
+    from opendp.measurements import make_laplace
     from opendp.metrics import absolute_distance
     from opendp.transformations import make_identity
 
@@ -158,8 +157,9 @@ def test_function():
 
 
 def test_privacy_profile():
-    from opendp.measures import new_privacy_profile
     import math
+
+    from opendp.measures import new_privacy_profile
 
     profile = new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
@@ -187,8 +187,8 @@ def test_member():
     assert clamper.input_domain.member([1])
     assert not clamper.output_domain.member([4, 1])
 
-    from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
+    from opendp.measurements import make_laplace
     from opendp.metrics import absolute_distance
 
     mechanism = make_laplace(

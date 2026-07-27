@@ -1,9 +1,10 @@
-import pytest
-from opendp.extras.mbi import Count, AIM
-from math import sqrt
 import re
-from opendp._internal import _extrinsic_distance
+from math import sqrt
+
 import opendp.prelude as dp
+import pytest
+from opendp._internal import _extrinsic_distance
+from opendp.extras.mbi import AIM, Count
 from opendp.extras.mbi._utilities import (
     get_cardinalities,
     get_std,

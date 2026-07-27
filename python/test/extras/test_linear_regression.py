@@ -1,11 +1,10 @@
 import re
 
+import opendp.prelude as dp
 import pytest
-
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
 )
-import opendp.prelude as dp
 
 
 def test_private_theil_sen():
