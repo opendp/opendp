@@ -29,16 +29,21 @@ def test_unit_of():
     with pytest.raises(ValueError):
         dp.unit_of(l2=2.0, ordered=True)
 
+
 def test_unit_of_identifier():
     pytest.importorskip("polars")
     with pytest.raises(ValueError, match="Must specify exactly one distance."):
         dp.unit_of(identifier="A")
-    assert dp.unit_of(identifier="A", contributions=3) == (dp.symmetric_id_distance("A"), 3)
+    assert dp.unit_of(identifier="A", contributions=3) == (
+        dp.symmetric_id_distance("A"),
+        3,
+    )
 
     with pytest.raises(ValueError):
         dp.unit_of(identifier="A", contributions=3, ordered=True)
 
     assert dp.unit_of(identifier="A", changes=3) == (dp.change_one_id_distance("A"), 3)
+
 
 def test_privacy_loss_of():
     assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
@@ -55,76 +60,101 @@ def test_privacy_loss_of():
 
 def test_loss_of_logging(caplog):
     with caplog.at_level(logging.INFO):
-        dp.loss_of(epsilon=100.)
+        dp.loss_of(epsilon=100.0)
         assert caplog.record_tuples == [
-            ('opendp.context', logging.WARN, 'epsilon should be less than or equal to 5, and is typically less than or equal to 1')
+            (
+                "opendp.context",
+                logging.WARN,
+                "epsilon should be less than or equal to 5, and is typically less than or equal to 1",
+            )
         ]
         caplog.clear()
 
-        dp.loss_of(epsilon=2., delta=1e-5)
+        dp.loss_of(epsilon=2.0, delta=1e-5)
         assert caplog.record_tuples == [
-            ('opendp.context', logging.INFO, 'epsilon is typically less than or equal to 1'),
-            ('opendp.context', logging.WARN, 'delta should be less than or equal to 1e-06')
+            (
+                "opendp.context",
+                logging.INFO,
+                "epsilon is typically less than or equal to 1",
+            ),
+            (
+                "opendp.context",
+                logging.WARN,
+                "delta should be less than or equal to 1e-06",
+            ),
         ]
         caplog.clear()
 
         dp.loss_of(rho=0.3)
         assert caplog.record_tuples == [
-            ('opendp.context', logging.INFO, 'rho is typically less than or equal to 0.25')
+            (
+                "opendp.context",
+                logging.INFO,
+                "rho is typically less than or equal to 0.25",
+            )
         ]
 
 
 def test_option_domain():
-    domain = dp.domain_of('Option<int>')
-    assert str(domain) == 'OptionDomain(AtomDomain(T=i32))'
+    domain = dp.domain_of("Option<int>")
+    assert str(domain) == "OptionDomain(AtomDomain(T=i32))"
 
 
 def test_context_repr():
-    assert repr(
-        dp.Context.compositor(
-            data=[1, 2, 3],
-            privacy_unit=dp.unit_of(contributions=3),
-            privacy_loss=dp.loss_of(epsilon=3.0),
-            split_evenly_over=1,
+    assert (
+        repr(
+            dp.Context.compositor(
+                data=[1, 2, 3],
+                privacy_unit=dp.unit_of(contributions=3),
+                privacy_loss=dp.loss_of(epsilon=3.0),
+                split_evenly_over=1,
+            )
         )
-    ) == '''Context(
+        == """Context(
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0],
-    d_out      = None)'''
+    d_out      = None)"""
+    )
 
-    assert repr(
-        dp.Context.compositor(
-            data=[1, 2, 3],
-            privacy_unit=dp.unit_of(contributions=3),
-            privacy_loss=dp.loss_of(epsilon=3.0),
+    assert (
+        repr(
+            dp.Context.compositor(
+                data=[1, 2, 3],
+                privacy_unit=dp.unit_of(contributions=3),
+                privacy_loss=dp.loss_of(epsilon=3.0),
+            )
         )
-    ) == '''Context(
+        == """Context(
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
-    d_out      = 3.0)'''
+    d_out      = 3.0)"""
+    )
 
-    assert repr(
-        dp.Context.compositor(
-            data=[1, 2, 3],
-            privacy_unit=dp.unit_of(contributions=3),
-            privacy_loss=dp.loss_of(epsilon=float("inf")),
+    assert (
+        repr(
+            dp.Context.compositor(
+                data=[1, 2, 3],
+                privacy_unit=dp.unit_of(contributions=3),
+                privacy_loss=dp.loss_of(epsilon=float("inf")),
+            )
         )
-    ) == '''Context(
+        == """Context(
     accountant = Odometer(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
-    d_out      = None)'''
+    d_out      = None)"""
+    )
 
 
 def test_context_init_split_by_weights():
@@ -139,7 +169,9 @@ def test_context_init_split_by_weights():
     context.remaining_privacy_loss() == [1.0, 1.0, 1.0]
     context.current_privacy_loss() == []
 
-    with pytest.raises(ValueError, match="Cannot specify data when the query is part of a context."):
+    with pytest.raises(
+        ValueError, match="Cannot specify data when the query is part of a context."
+    ):
         context.query().count().laplace().release(data=[1, 2, 3])
 
 
@@ -156,10 +188,12 @@ def test_context_init_split_evenly_over():
     print("dp_sum.release()", dp_sum.release())
 
     # this time the scale parameter is omitted, but it is resolved from the context
-    print("context.query().clamp((1, 10)).sum().laplace().release()", context.query().clamp((1, 10)).sum().laplace().release())  # type: ignore
+    print(
+        "context.query().clamp((1, 10)).sum().laplace().release()",
+        context.query().clamp((1, 10)).sum().laplace().release(),
+    )  # type: ignore
     # where we're headed:
     # print("context.query().dp_sum((1, 10)).release()", context.query().dp_sum((1, 10)).release())
-
 
 
 def test_context_zCDP():
@@ -185,11 +219,18 @@ def test_middle_param():
         split_evenly_over=1,
     )
 
-    dp_sum = context.query().resize(constant=2.0).impute_constant(0.0).clamp((1.0, 10.0)).mean().laplace(1.0)
+    dp_sum = (
+        context.query()
+        .resize(constant=2.0)
+        .impute_constant(0.0)
+        .clamp((1.0, 10.0))
+        .mean()
+        .laplace(1.0)
+    )
     # scale = (U - L) / n / ε
     # 1     = (10- 1) / n / 3
     # n     = 9 / 3
-    # Due to float rounding, n = 3 results in slightly higher sensitivity, 
+    # Due to float rounding, n = 3 results in slightly higher sensitivity,
     # so the lib picks n=4, which is large enough for the sensitivity to be small enough
     # for the query to satisfy ε=3
     dp_sum.param() == 4
@@ -197,23 +238,29 @@ def test_middle_param():
     # a sample from Laplace(loc=6 / n, scale=1)
     assert isinstance(dp_sum.release(), float)
 
+
 def test_query():
     space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     query = dp.Query(space, dp.max_divergence(), d_in=1, d_out=1.0).laplace()
 
-    with pytest.raises(ValueError, match="Cannot release query without data or context."):
+    with pytest.raises(
+        ValueError, match="Cannot release query without data or context."
+    ):
         query.release()
-    
+
     assert isinstance(query.release(10), int)
+
 
 def test_query_repr():
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.),
-        split_evenly_over=1
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
     )
-    assert repr(context.query()) == '''Query(
+    assert (
+        repr(context.query())
+        == """Query(
     chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
     output_measure = MaxDivergence,
     d_in           = 1,
@@ -225,7 +272,8 @@ def test_query_repr():
             output_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0],
-        d_out      = None))'''
+        d_out      = None))"""
+    )
 
 
 def test_subcontext_changes_metric():
@@ -236,7 +284,9 @@ def test_subcontext_changes_metric():
         split_evenly_over=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
-    subcontext: dp.Context = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
+    subcontext: dp.Context = (
+        context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
+    )
 
     # This still corresponds to the top-level context:
     assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=int))
@@ -244,7 +294,7 @@ def test_subcontext_changes_metric():
     # TODO: Is there a good way to make this assertion through the public API?
     assert subcontext.query()._chain == (
         dp.atom_domain(T=dp.i32),
-        dp.absolute_distance(dp.i32)
+        dp.absolute_distance(dp.i32),
     )
 
 
@@ -256,7 +306,9 @@ def test_measure_cast():
         split_evenly_over=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
-    context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
+    context.query().compositor(
+        split_evenly_over=1
+    )  # TODO: Exercise different output_measure params
 
 
 def test_split_by_weights_ints():
@@ -289,15 +341,18 @@ def test_sc_query():
     )
 
     # build a child sequential compositor, and then use it to release a laplace sum
-    sub_context_1 = context.query().compositor(split_evenly_over=3).release() # type: ignore[attr-defined]
+    sub_context_1 = context.query().compositor(split_evenly_over=3).release()  # type: ignore[attr-defined]
     dp_sum_1 = sub_context_1.query().clamp((1, 10)).sum().laplace()
     print("laplace dp_sum", dp_sum_1.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
-        split_evenly_over=2, 
-        output_measure=dp.zero_concentrated_divergence()
-    ).release()
+    sub_context_2 = (
+        context.query()
+        .compositor(  # type: ignore[attr-defined]
+            split_evenly_over=2, output_measure=dp.zero_concentrated_divergence()
+        )
+        .release()
+    )
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
     # dp_sum = sub_context_2.query().dp_sum((1, 10))
@@ -339,17 +394,22 @@ def test_approx_to_approx_zCDP():
     )
 
     azcdp_measure = dp.approximate(dp.zero_concentrated_divergence())
-    context_azcdp = context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
+    context_azcdp = (
+        context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
+    )
 
     dom, met = context_azcdp.accountant.input_space
     # the important test is that the following is a valid query for an approx-zCDP compositor
-    release = context_azcdp(_make_measurement(
-        dom, met,
-        azcdp_measure,
-        lambda x: x,
-        # remaining rho, and catastrophic delta
-        lambda _: (.006, 1e-6 * .3 / 3)
-    ))
+    release = context_azcdp(
+        _make_measurement(
+            dom,
+            met,
+            azcdp_measure,
+            lambda x: x,
+            # remaining rho, and catastrophic delta
+            lambda _: (0.006, 1e-6 * 0.3 / 3),
+        )
+    )
 
     assert release == [1, 2, 3]
 
@@ -375,15 +435,16 @@ def test_rshift_multi_partial():
     with pytest.raises(ValueError, match="laplace is missing 1 parameter"):
         context.query().b_ary_tree(leaf_count=3).laplace()
 
+
 def test_transformation_release_error():
     privacy_unit = dp.unit_of(contributions=2)
     privacy_loss = dp.loss_of(epsilon=1.0)
     context = dp.Context.compositor(
-        data=[1., 2., 3.],
+        data=[1.0, 2.0, 3.0],
         privacy_unit=privacy_unit,
         privacy_loss=privacy_loss,
         domain=dp.vector_domain(dp.atom_domain(T=float, nan=False), size=3),
-        split_evenly_over=1
+        split_evenly_over=1,
     )
     clamped = context.query().impute_constant(0.0)
     with pytest.raises(ValueError, match=r"Query is not yet a measurement"):
@@ -398,25 +459,27 @@ def test_register():
             input_metric,
             dp.max_divergence(),
             lambda _: constant,
-            lambda _: 0.,
+            lambda _: 0.0,
         )
-    
+
     dp.register(make_constant)
     # now call the constructor through the context API
     context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1
+        split_evenly_over=1,
     )
     assert context.query().constant("z").release() == "z"
 
+
 def test_register_fail():
     with pytest.raises(ValueError, match="must start with 'make_',"):
-        dp.register(lambda: 0) # type: ignore[arg-type, return-value]
+        dp.register(lambda: 0)  # type: ignore[arg-type, return-value]
 
     with pytest.raises(ValueError, match="is already registered in the Context API"):
         dp.register(dp.t.make_sum)
+
 
 def test_local_DP():
     context = dp.Context.compositor(
@@ -440,6 +503,7 @@ def test_local_DP():
 
     assert query.param() == 0.6224593312018545
     assert isinstance(query.release(), str)
+
 
 def test_filter_pure_dp():
     context = dp.Context.compositor(
@@ -471,6 +535,7 @@ def test_filter_pure_dp():
     with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
         context.current_privacy_loss()
 
+
 def test_filter_approx_dp():
     context = dp.Context.compositor(
         data=[1, 2, 3],
@@ -490,6 +555,7 @@ def test_filter_approx_dp():
     assert context.current_privacy_loss() == (0.5, 0.0)
     assert context.remaining_privacy_loss() == (0.5, 1e-8)
 
+
 def test_odometer():
     context = dp.Context.compositor(
         data=[1, 2, 3],
@@ -507,7 +573,7 @@ def test_odometer():
     query = context.query().count().laplace(scale=2.0)
     assert isinstance(query.release(), int)
     assert context.current_privacy_loss() == 1.0
-    
+
     with pytest.raises(ValueError, match="The privacy loss is unbounded"):
         context.remaining_privacy_loss()
 

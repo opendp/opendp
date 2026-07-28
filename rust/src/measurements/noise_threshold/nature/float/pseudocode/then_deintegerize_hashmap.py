@@ -1,6 +1,6 @@
 # type: ignore
 def then_deintegerize_hashmap(k: i32) -> Function[HashMap[TK, IBig], HashMap[TK, TV]]:
-    if k == i32.MIN: # |\label{line:check-k}|
+    if k == i32.MIN:  # |\label{line:check-k}|
         raise ValueError("k must not be i32.MIN")
 
     def value_function(v_i):

@@ -14,7 +14,9 @@ def new_continuation_rule(d_in: MI_Distance, d_out: MO_Distance) -> Wrapper:
 
             answer = queryable.eval_query(query)
 
-            match queryable.eval_poly(OdometerQuery.PrivacyLoss(d_in.clone())):  # `\label{external}`
+            match queryable.eval_poly(
+                OdometerQuery.PrivacyLoss(d_in.clone())
+            ):  # `\label{external}`
                 case OdometerAnswer.PrivacyLoss(pending_d_out):
                     pass
                 case _:
@@ -24,8 +26,8 @@ def new_continuation_rule(d_in: MI_Distance, d_out: MO_Distance) -> Wrapper:
                 state.take()  # `\label{free}`
                 raise "filter is now exhausted"
 
-            return answer   # `\label{return}`
-            
+            return answer  # `\label{return}`
+
         return Queryable.new_raw(transition)
 
     return Wrapper.new(wrapper)  # `\label{wrapper}`

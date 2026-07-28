@@ -47,9 +47,7 @@ introduction <index.rst>`__.
 
         .. code:: pycon
 
-            >>> lazyframe = pl.scan_csv(
-            ...     dp.examples.get_france_lfs_path(),
-            ... )
+            >>> lazyframe = pl.scan_csv(dp.examples.get_france_lfs_path())
             >>> context = dp.Context.compositor(
             ...     data=lazyframe,
             ...     privacy_unit=dp.unit_of(contributions=36),
@@ -65,14 +63,15 @@ introduction <index.rst>`__.
     In a trusted environment, however, a parsing error can be useful,
     since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
 
-    If loading success or failure may be observed outside the trusted environment, 
-    prefer a schema-bearing source such as Parquet or a database table, 
+    If the success or failure of ``scan_csv`` has effects outside a trusted environment,
+    this information leak may violate differential privacy.
+    Instead, use a schema-bearing source such as Parquet or a database table, 
     or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    ``ignore_errors=True`` avoids some parsing failures, 
-    but may silently change the loaded data and reduce utility, 
+    Using ``ignore_errors=True`` avoids some parsing failures, 
+    but it may silently change the loaded data and reduce utility, 
     so it should be used deliberately rather than by default. 
     See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
-    for the available schema and error-handling options.
+    for more schema and error-handling options.
 
 Count
 -----
@@ -218,10 +217,7 @@ know about the data.
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
@@ -426,7 +422,7 @@ data invariant in the margin: ``invariant="lengths"``.
             >>> # apply some preprocessing outside of OpenDP (see note below)
             >>> # drops "Not applicable" values
             >>> data = pl.scan_csv(
-            ...     dp.examples.get_france_lfs_path(), ignore_errors=True
+            ...     dp.examples.get_france_lfs_path()
             ... ).filter(pl.col.HWUSUAL != 99)
 
             >>> # apply domain descriptors (margins) to preprocessed data

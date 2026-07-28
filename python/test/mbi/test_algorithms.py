@@ -155,7 +155,10 @@ def test_mst_init(kwargs, message):
     "kwargs,message",
     [
         (dict(algorithms=[]), "algorithms must contain at least one element"),
-        (dict(algorithms=[False]), "algorithms ([False]) must be instances of Algorithm"),
+        (
+            dict(algorithms=[False]),
+            "algorithms ([False]) must be instances of Algorithm",
+        ),
         (dict(algorithms=[MST()], weights=[]), "algorithms and weights must contain"),
         (dict(algorithms=[MST()], weights=[0]), "weights ([0]) must be positive"),
     ],

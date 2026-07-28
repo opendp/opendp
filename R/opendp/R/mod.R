@@ -18,14 +18,14 @@ normalize_features <- function(features) {
 assert_features <- function(...) {
   for (feature in normalize_features(list(...))) {
     if (!feature %in% getOption("opendp_features")) {
-      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")", call. = FALSE)
+      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://docs.opendp.org/en/stable/api/user-guide/#feature-listing, then call enable_features(\"", feature, "\")", call. = FALSE)
     }
   }
 }
 
 #' Enable features for the opendp package.
 #'
-#' See https://github.com/opendp/opendp/discussions/304 for available features.
+#' See https://docs.opendp.org/en/stable/api/user-guide/#feature-listing for available features.
 #'
 #' @concept mod
 #' @param ... features to enable

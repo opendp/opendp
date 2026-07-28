@@ -15,7 +15,7 @@ def test_quantile_score_candidates():
 
     assert quant_trans(list(range(100))) == [59, 33, 19, 1, 45, 100]
 
-    expo_meas = dp.m.then_noisy_max(dp.max_divergence(), 1., negate=True)
+    expo_meas = dp.m.then_noisy_max(dp.max_divergence(), 1.0, negate=True)
 
     quantile_meas = quant_trans >> expo_meas
     idx = quantile_meas(list(range(100)))
@@ -25,7 +25,7 @@ def test_quantile_score_candidates():
 
 def test_private_quantile():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-    
+
     m_median = input_space >> dp.m.then_private_quantile(
         output_measure=dp.max_divergence(),
         candidates=[0, 25, 50, 75, 100],
