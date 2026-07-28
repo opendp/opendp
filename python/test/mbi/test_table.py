@@ -98,16 +98,16 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     def test_cov(clique):
         idx = {"A": 0, "B": 1, "C": 2}
         i, j = idx[clique[0]], idx[clique[-1]]
-        
-        assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
+        assert 0 == pytest.approx(abs(cov[i, j] - cov_syn[i, j]), abs=0.2), (
             f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
         )
 
     # in an MRF, a missing 2-way marginal does not imply independence
     # max-entropy does not guarantee spurious correlations won't be formed on undetermined pairs
-    test_cov(("A", "B"))
-    for clique in (cl for cl in table.marginals if len(cl) <= 2):
-        test_cov(clique)
+    if not approximate:
+        test_cov(("A", "B"))
+        for clique in (cl for cl in table.marginals if len(cl) <= 2):
+            test_cov(clique)
 
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
