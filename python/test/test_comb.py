@@ -75,7 +75,7 @@ def test_make_composition():
 def test_deprecated_composition():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     m_lap = dp.m.make_laplace(*input_space, 1.0)
-    
+
     with pytest.deprecated_call():
         dp.c.make_basic_composition([m_lap] * 2)
 
@@ -122,12 +122,15 @@ def test_make_composition_approx():
 def test_cast_zcdp_approxdp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
-    base_gaussian = input_space >> dp.m.then_gaussian(10.0, MO=dp.ZeroConcentratedDivergence)
+    base_gaussian = input_space >> dp.m.then_gaussian(
+        10.0, MO=dp.ZeroConcentratedDivergence
+    )
     assert base_gaussian.map(1.0) == 0.005
 
     approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
     assert approx_gaussian.map(1.0).epsilon(1e-6) == 0.42994146883694934
-    
+
+
 def test_cast_azcdp_approxdp():
     m_azcdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool),
@@ -153,7 +156,7 @@ def test_renyidp():
         dp.absolute_distance(T=float),
         dp.renyi_divergence(),
         lambda x: x,
-        lambda d_in: (lambda alpha: d_in * alpha / 2.0),
+        lambda d_in: lambda alpha: d_in * alpha / 2.0,
     )
     rdp_curve = m_rdp.map(1.0)
     # this used to cause a use-after free,

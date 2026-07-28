@@ -17,16 +17,22 @@ def run_command(description, cmd, capture_output=False, shell=True):
     printed_cmd = " ".join(cmd) if isinstance(cmd, list) else cmd
     log(printed_cmd, command=True)
     stdout = subprocess.PIPE if capture_output else None
-    completed_process = subprocess.run(cmd, stdout=stdout, shell=shell, check=True, encoding="utf-8")
+    completed_process = subprocess.run(
+        cmd, stdout=stdout, shell=shell, check=True, encoding="utf-8"
+    )
     return completed_process.stdout.rstrip() if capture_output else None
 
 
-def run_command_with_retries(description, args, timeout, backoff, capture_output=False, shell=True):
+def run_command_with_retries(
+    description, args, timeout, backoff, capture_output=False, shell=True
+):
     start = time.time()
     wait = 1.0
     while True:
         try:
-            return run_command(description, args, capture_output=capture_output, shell=shell)
+            return run_command(
+                description, args, capture_output=capture_output, shell=shell
+            )
         except Exception as e:
             elapsed = time.time() - start
             if elapsed >= timeout:
@@ -39,7 +45,7 @@ def run_command_with_retries(description, args, timeout, backoff, capture_output
 
 def get_version(version_str=None):
     if not version_str:
-        version_str = (Path(__file__).parent.parent / 'VERSION').read_text().strip()
+        version_str = (Path(__file__).parent.parent / "VERSION").read_text().strip()
     return semver.Version.parse(version_str)
 
 
@@ -86,7 +92,7 @@ def get_python_version(version):
 
 
 def get_r_version(version):
-    # r versions cannot represent pre-releases. 
+    # r versions cannot represent pre-releases.
     # Can only use . or -, and both are treated interchangeably
     # This means a "prerelease" named like 0.1.0.202308141 is considered greater than 0.1.0
     # Therefore the pre-release designation is just removed completely
@@ -104,7 +110,9 @@ def infer_channel(version):
 
 
 def get_current_branch():
-    return run_command("Determining current branch", "git branch --show-current", capture_output=True)
+    return run_command(
+        "Determining current branch", "git branch --show-current", capture_output=True
+    )
 
 
 def main():

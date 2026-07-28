@@ -6,7 +6,7 @@ class ConstantTimeGeometric:
     ) -> Measurement[DI, DI_Carrier, MI, MO]:
         input_domain, input_metric = input_space
         scale, (lower, upper) = self.scale, self.bounds
-        if lower > upper: # |\label{line:check-bounds}|
+        if lower > upper:  # |\label{line:check-bounds}|
             raise "lower may not be greater than upper"
 
         distribution = ZExpFamily(scale=RBig.from_f64(scale))
@@ -16,7 +16,7 @@ class ConstantTimeGeometric:
             L1Distance.default(), output_measure
         )
 
-        p = (1.0).neg_inf_sub((-scale.recip()).inf_exp()) # |\label{line:prob-check}|
+        p = (1.0).neg_inf_sub((-scale.recip()).inf_exp())  # |\label{line:prob-check}|
         if not (0.0 < p <= 1.0):
             raise f"Probability of termination p ({p}) must be in (0, 1]. This is likely because the noise scale is so large that conservative arithmetic causes p to go negative"
 

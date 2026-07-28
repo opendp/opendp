@@ -1,25 +1,27 @@
 # type: ignore
 def make_select_private_candidate(
-    measurement: Measurement, 
-    stop_probability: float, 
+    measurement: Measurement,
+    stop_probability: float,
     threshold: float,
 ) -> Measurement:
-    if not 0 <= stop_probability < 1: # |\label{stop-prob}|
+    if not 0 <= stop_probability < 1:  # |\label{stop-prob}|
         raise "stop_probability must be in [0, 1)"
 
     if not threshold.is_finite():
         raise "threshold must be finite"
-    
+
     scale = None
     if stop_probability > 0.0:
         ln_cp = (1.0).neg_inf_sub(stop_probability).inf_ln()
-        scale = ln_cp.recip().neg().into_rational() # |\label{scale}|
+        scale = ln_cp.recip().neg().into_rational()  # |\label{scale}|
 
     def function(arg):
         remaining_iterations = None
         if scale is not None:
-            remaining_iterations = UBig.ONE + sample_geometric_exp_fast(scale) # |\label{sample-geometric}|
-        
+            remaining_iterations = UBig.ONE + sample_geometric_exp_fast(
+                scale
+            )  # |\label{sample-geometric}|
+
         while True:
             score, output = measurement(arg)
 

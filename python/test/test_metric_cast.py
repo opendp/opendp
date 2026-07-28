@@ -10,6 +10,7 @@ def test_ordering():
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
 
+
 def test_sized_ordering():
     data = [1, 2, 3]
     domain = dp.vector_domain(dp.atom_domain(T=dp.i32), 3)
@@ -19,6 +20,7 @@ def test_sized_ordering():
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
 
+
 def test_sized_bounded_ordering():
     data = [1, 2, 3]
     domain = dp.vector_domain(dp.atom_domain((0, 3)), 3)
@@ -27,6 +29,7 @@ def test_sized_bounded_ordering():
 
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
+
 
 def test_bounded():
     data = [1, 2, 3]

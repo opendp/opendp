@@ -48,7 +48,7 @@ def test_private_selection_threshold_plugin():
         dp.max_divergence(),
         lambda x: (np.random.normal(loc=x), x),
         lambda d_in: d_in,
-        TO="(f64, ExtrinsicObject)"
+        TO="(f64, ExtrinsicObject)",
     )
 
     assert m_plugin(20)[1] == 20
@@ -74,7 +74,7 @@ def test_private_selection_no_answer():
         dp.max_divergence(),
         lambda x: (np.random.normal(loc=x), x),
         lambda d_in: d_in,
-        TO="(f64, ExtrinsicObject)"
+        TO="(f64, ExtrinsicObject)",
     )
 
     assert m_plugin(20)[1] == 20
@@ -85,4 +85,3 @@ def test_private_selection_no_answer():
 
     assert m_private_selection(20) is None
     assert m_private_selection.map(1) == 2 * m_plugin.map(1)
-
