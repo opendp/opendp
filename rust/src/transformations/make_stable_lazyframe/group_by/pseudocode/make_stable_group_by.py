@@ -61,13 +61,15 @@ def make_stable_group_by(
 
         influenced_groups = option_min(contributed_rows, contributed_groups)
         if influenced_groups.is_none():
-            return "an upper bound on the number of contributed rows or groups is required"
+            return (
+                "an upper bound on the number of contributed rows or groups is required"
+            )
 
-        if per_group is not None: # |\label{line:double}|
+        if per_group is not None:  # |\label{line:double}|
             per_group = per_group.inf_mul(2)
 
         bound = Bound(by=set(), per_group=per_group, num_groups=None)
-        return Bounds([bound]) # |\label{line:bound}|
+        return Bounds([bound])  # |\label{line:bound}|
 
     t_group_agg = Transformation.new(
         middle_domain,

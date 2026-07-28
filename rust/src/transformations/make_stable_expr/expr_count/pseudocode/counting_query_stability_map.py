@@ -4,15 +4,15 @@ def counting_query_stability_map(
 ) -> StabilityMap[PartitionDistance[M], LpDistance[P, f64]]:
 
     if public_info == "Lengths":  # `\label{public-info}`
-        return StabilityMap.new(lambda _: 0.)
-        
+        return StabilityMap.new(lambda _: 0.0)
+
     def norm_map(d_in: f64) -> f64:  # `\label{norm-map}`
         if P == 1:
             return d_in
         if P == 2:
             return d_in.inf_sqrt()
         raise ValueError("unsupported Lp norm. Must be an L1 or L2 norm.")
-    
+
     def stability_map(d_in: tuple[u32, u32, u32]) -> f64:
         l0, l1, l_inf = d_in  # `\label{l01i}`
         l0_p = norm_map(f64.from_(l0))  # `\label{l0-p}`

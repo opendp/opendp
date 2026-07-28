@@ -4,9 +4,8 @@ from opendp._lib import import_optional_dependency
 from ..helpers import optional_dependency
 
 
-
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
 
     cov = cov or sample_covariance(num_columns)
     microdata = np.random.multivariate_normal(
@@ -17,7 +16,7 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 
 def sample_covariance(num_features):
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
 
     A = np.random.uniform(0, num_features, size=(num_features, num_features))
     return A.T @ A
@@ -28,26 +27,37 @@ def test_pca():
 
     num_columns = 4
     num_rows = 10_000
-    with optional_dependency('numpy'):
+    with optional_dependency("numpy"):
         space = (
-            dp.numpy.array2_domain(norm=1, p=2, origin=0, num_columns=num_columns, size=num_rows, nan=False, T=float),
+            dp.numpy.array2_domain(
+                norm=1,
+                p=2,
+                origin=0,
+                num_columns=num_columns,
+                size=num_rows,
+                nan=False,
+                T=float,
+            ),
             dp.symmetric_distance(),
         )
-    with optional_dependency('scipy.linalg'):
+    with optional_dependency("scipy.linalg"):
         m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
-    with optional_dependency('randomgen'):
-        print("m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))", m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
+    with optional_dependency("randomgen"):
+        print(
+            "m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))",
+            m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)),
+        )
     assert m_pca.check(2, 1.0)
 
 
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
-    with optional_dependency('numpy'):
+    with optional_dependency("numpy"):
         data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    with optional_dependency('sklearn'):
+    with optional_dependency("sklearn"):
         model = dp.sklearn.decomposition.PCA(
             epsilon=1.0,
             row_norm=1.0,
@@ -55,9 +65,12 @@ def test_pca_skl():
             n_features=4,
         )
 
-    with optional_dependency('randomgen'):
+    with optional_dependency("randomgen"):
         model.fit(data)
-    assert str(model) == 'PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)'
+    assert (
+        str(model)
+        == "PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)"
+    )
     print("PCA object", model)
     print("singular values", model.singular_values_)
     print("components", model.components_)
@@ -85,7 +98,7 @@ def test_pca_skl():
 
 
 def flip_row_signs(a, b):
-    np = pytest.importorskip('numpy')
+    np = pytest.importorskip("numpy")
     signs = np.equal(np.sign(a[:, 0]), np.sign(b[:, 0])) * 2 - 1
     return a, b * signs[:, None]
 
@@ -93,7 +106,7 @@ def flip_row_signs(a, b):
 def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
-    with optional_dependency('numpy'):
+    with optional_dependency("numpy"):
         data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
     with optional_dependency("sklearn"):
@@ -105,7 +118,7 @@ def flaky_assert_pca_compare_sklearn():
         )
     model_odp.fit(data)
 
-    sklearn = pytest.importorskip('sklearn')
+    sklearn = pytest.importorskip("sklearn")
     model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 
@@ -115,7 +128,7 @@ def flaky_assert_pca_compare_sklearn():
     print("sk-learn object", model_skl)
     print("sk-learn singular values", model_skl.singular_values_)
 
-    np = pytest.importorskip('numpy')
+    np = pytest.importorskip("numpy")
     assert np.allclose(
         model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
     )
@@ -134,7 +147,7 @@ def flaky_assert_pca_compare_sklearn():
 def test_pca_compare_sklearn():
     for _ in range(5):
         try:
-            with optional_dependency('randomgen'):
+            with optional_dependency("randomgen"):
                 flaky_assert_pca_compare_sklearn()
             break
         except AssertionError:
