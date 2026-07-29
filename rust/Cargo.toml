@@ -35,9 +35,10 @@ exclude = ["windows/*"]
 [dependencies]
 opendp_derive = { path = "opendp_derive", version = "0.15.1-dev" }
 rand = "0.7.3"
-num = "0.3.1"
+num = "0.4.0"
 thiserror = "1.0.24"
-statrs = "0.13.0"
+statrs = "0.17.1"
+errorfunctions = "0.2.0"
 
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 # TODO: Remove the pin to fix https://github.com/opendp/opendp/issues/2773

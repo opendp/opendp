@@ -150,14 +150,17 @@ pub trait ODPRound: Round {
     /// * Down::C = Up
     /// * Up::C = Down
     type C: ODPRound<C = Self>;
+    const IS_UP: bool;
 }
 
 impl ODPRound for Down {
     const UBIG: UBig = UBig::ZERO;
     type C = Up;
+    const IS_UP: bool = false;
 }
 
 impl ODPRound for Up {
     const UBIG: UBig = UBig::ONE;
     type C = Down;
+    const IS_UP: bool = true;
 }
