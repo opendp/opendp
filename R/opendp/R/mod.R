@@ -599,8 +599,10 @@ unbox2 <- function(x) {
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
-#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, either "float" or "int"
+#' @param bounds a two-element list of optional lower and upper bounds on the input
+#'   of `make_chain`; use `NULL` for either bound to infer it
+#' @param .T type of argument to `make_chain`, either "float" or "int"; when set,
+#'   takes precedence over the type inferred from `bounds`
 #' @return a Transformation or Measurement (chain) that is (`d_in`, `d_out`)-close.
 #' @export
 #' @examples
@@ -625,8 +627,10 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
-#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `make_chain`, either "float" or "int"
+#' @param bounds a two-element list of optional lower and upper bounds on the input
+#'   of `make_chain`; use `NULL` for either bound to infer it
+#' @param .T type of argument to `make_chain`, either "float" or "int"; when set,
+#'   takes precedence over the type inferred from `bounds`
 #' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
@@ -684,18 +688,21 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 }
 
 .infer_search_type <- function(predicate, .T = NULL, bounds = NULL) {
-  if (!is.null(bounds)) {
-    if (inherits(bounds, "integer")) {
-      return(rt_parse("int"))
-    }
-    if (inherits(bounds, "numeric")) {
-      return(rt_parse("float"))
-    }
-    stop("bounds must be either float or int", call. = FALSE)
-  }
-
   if (!is.null(.T)) {
     return(rt_parse(.T))
+  }
+
+  if (!is.null(bounds)) {
+    present_bounds <- Filter(Negate(is.null), as.list(bounds))
+    if (length(present_bounds) > 0) {
+      if (all(vapply(present_bounds, inherits, logical(1), "integer"))) {
+        return(rt_parse("int"))
+      } else if (all(vapply(present_bounds, inherits, logical(1), "numeric"))) {
+        return(rt_parse("float"))
+      } else {
+        stop("bounds must be either float or int", call. = FALSE)
+      }
+    }
   }
 
   check_type <- function(v) {
@@ -714,16 +721,34 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 
 #' Find the closest passing value to the decision boundary of `predicate`
 #'
-#' If bounds are not passed, conducts an exponential search.
+#' Missing bounds are inferred. Use `NULL` for either element of `bounds` to
+#' conduct a one-sided search, or omit `bounds` to conduct an exponential search.
 #'
 #' @concept mod
 #' @param predicate a monotonic unary function from a number to a boolean
-#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
-#' @param .T type of argument to `predicate`, one of float or int
+#' @param bounds a two-element list of optional lower and upper bounds on the input
+#'   of `predicate`; use `NULL` for either bound to infer it
+#' @param .T type of argument to `predicate`, one of float or int; when set,
+#'   takes precedence over the type inferred from `bounds`
 #' @param return_sign if True, also return the direction away from the decision boundary
 #' @return the discovered parameter within the bounds
 #' @export
+#' @examples
+#' binary_search(\(x) x <= -5L, bounds = list(-10L, NULL))
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
+  if (is.null(bounds)) {
+    lower <- NULL
+    upper <- NULL
+  } else {
+    if (length(bounds) != 2) {
+      stop(
+        "bounds must contain exactly two elements; use list(lower, NULL) or list(NULL, upper) for a one-sided search",
+        call. = FALSE
+      )
+    }
+    lower <- bounds[[1]]
+    upper <- bounds[[2]]
+  }
   .T <- .infer_search_type(predicate, .T, bounds)
 
   result <- .call_search_callback(
@@ -731,7 +756,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
     .T = .T,
     bounds = bounds,
     call_expr = function(wrapped) {
-      `_binary_search`(wrapped, bounds = bounds, .T = .T, return_sign = return_sign)
+      `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
     }
   )
 
