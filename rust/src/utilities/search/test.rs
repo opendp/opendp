@@ -105,3 +105,97 @@ fn test_binary_search_uses_search_error_variant() {
         Some("the decision boundary of the predicate is outside the bounds")
     );
 }
+
+#[test]
+fn test_scalar_optimization() {
+    let minimum = optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, None, |x| {
+        (x - 2.0).powi(2)
+    });
+    assert!((minimum.arg - 2.0).abs() <= 4.0 * f64::EPSILON);
+
+    let maximum = optimize_to_precision(SearchMode::Maximize, -10.0, 10.0, Some(33), |x| {
+        -(x + 3.0).powi(2)
+    });
+    assert!((maximum.arg + 3.0).abs() <= 8.0 * f64::EPSILON);
+}
+
+#[test]
+fn test_scalar_optimization_handles_boundaries_nonfinite_values_and_wide_ranges() {
+    let boundary = optimize_to_precision(SearchMode::Minimize, -2.0, 3.0, None, |x| x + 2.0);
+    assert_eq!(boundary.arg, -2.0);
+    assert_eq!(boundary.value, 0.0);
+
+    let with_nan = optimize_to_precision(SearchMode::Maximize, -2.0, 2.0, Some(17), |x| {
+        if x < 0.0 { f64::NAN } else { -(x - 1.0).abs() }
+    });
+    assert!((with_nan.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
+    assert_eq!(with_nan.value, 0.0);
+
+    let wide = optimize_to_precision(SearchMode::Minimize, -f64::MAX, f64::MAX, None, f64::abs);
+    assert!(wide.arg.is_finite());
+    assert!(wide.value < f64::MAX);
+}
+
+#[test]
+fn test_scalar_optimization_refines_multiple_local_extrema() {
+    let optimum = optimize_to_precision(SearchMode::Minimize, -4.0, 4.0, Some(65), |x| {
+        ((x + 2.05).powi(2) + 1.0).min((x - 1.1).powi(2))
+    });
+    assert!((optimum.arg - 1.1).abs() <= 8.0 * f64::EPSILON);
+    assert!(optimum.value <= f64::EPSILON);
+}
+
+#[test]
+fn test_scalar_optimization_does_not_refine_flat_grid() {
+    use std::cell::Cell;
+
+    let calls = Cell::new(0);
+    let optimum = optimize_to_precision(SearchMode::Maximize, -4.0, 4.0, Some(65), |_| {
+        calls.set(calls.get() + 1);
+        1.0
+    });
+
+    assert_eq!(optimum.value, 1.0);
+    // One initial evaluation plus the grid, with no golden searches.
+    assert_eq!(calls.get(), 66);
+}
+
+#[test]
+fn test_log_domain_optimization_and_sampling() {
+    let optimum =
+        optimize_log_domain_to_precision(SearchMode::Minimize, 1e-6, 1e6, None, |x| x.ln().powi(2));
+    assert!((optimum.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
+
+    let sampled = sample_log_domain(SearchMode::Maximize, 1e-3, 1e3, 7, |x| -x.ln().abs());
+    assert!((sampled.arg - 1.0).abs() <= f64::EPSILON);
+}
+
+#[test]
+fn test_log_domain_search_stays_within_extreme_bounds() {
+    let lo = 1e-200;
+    let hi = 1e-100;
+
+    let optimum = optimize_log_domain_to_precision(SearchMode::Minimize, lo, hi, None, |x| x);
+    assert!((lo..=hi).contains(&optimum.arg));
+    assert_eq!(optimum.value, optimum.arg);
+
+    let sampled = sample_log_domain(SearchMode::Minimize, lo, hi, 17, |x| x);
+    assert!((lo..=hi).contains(&sampled.arg));
+    assert_eq!(sampled.value, sampled.arg);
+}
+
+#[test]
+fn test_bracketed_optimization_invariants() {
+    let optimum = optimize_to_precision_bracket(SearchMode::Maximize, -10.0, 10.0, None, |x| {
+        -(x - 0.25).powi(2)
+    });
+    assert!(optimum.lo <= optimum.arg);
+    assert!(optimum.arg <= optimum.hi);
+    assert_eq!(optimum.value, -(optimum.arg - 0.25).powi(2));
+
+    let log_optimum =
+        optimize_log_domain_to_precision_bracket(SearchMode::Minimize, 1e-200, 1e-100, None, |x| x);
+    assert!(log_optimum.lo <= log_optimum.arg);
+    assert!(log_optimum.arg <= log_optimum.hi);
+    assert_eq!(log_optimum.value, log_optimum.arg);
+}
