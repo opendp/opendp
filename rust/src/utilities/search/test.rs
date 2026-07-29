@@ -1,3 +1,7 @@
+use std::cmp::Ordering;
+
+use dashu::{rational::RBig, rbig};
+
 use super::*;
 use crate::error::ErrorVariant;
 
@@ -298,5 +302,115 @@ fn test_fallible_binary_search_by_propagates_range_variants() -> Fallible<()> {
     assert_propagates!(NumericDomain);
     assert_propagates!(NumericIndeterminate);
     assert_propagates!(NumericBackend);
+    Ok(())
+}
+
+#[test]
+fn test_ordered_golden_search_preserves_a_rbig_minimizer() -> Fallible<()> {
+    let minimizer: f64 = 0.37;
+    let offset = rbig!(100000000000000000000);
+
+    assert_eq!(
+        1e20 + (0.1 - minimizer).powi(2),
+        1e20 + (0.9 - minimizer).powi(2)
+    );
+
+    let (lo, hi) = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |x| {
+            let distance = RBig::try_from(x)? - RBig::try_from(minimizer)?;
+            Ok(offset.clone() + distance.clone() * distance)
+        },
+        |left: &RBig, right: &RBig| Ok(left.cmp(right)),
+    )?;
+
+    assert!(lo <= minimizer && minimizer <= hi);
+    Ok(())
+}
+
+#[test]
+fn test_ordered_golden_search_propagates_errors() {
+    let callback_error = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |_| fallible!(FailedFunction, "objective failed"),
+        |_: &(), _: &()| Ok(Ordering::Equal),
+    )
+    .unwrap_err();
+    assert_eq!(callback_error.variant, ErrorVariant::FailedFunction);
+
+    let comparison_error = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |_| Ok(()),
+        |_: &(), _: &()| fallible!(FailedFunction, "comparison failed"),
+    )
+    .unwrap_err();
+    assert_eq!(comparison_error.variant, ErrorVariant::FailedFunction);
+}
+
+#[test]
+fn test_fallible_scalar_optimization() -> Fallible<()> {
+    let minimum = fallible_optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, |x| {
+        Ok((x - 2.0).powi(2))
+    })?;
+    assert!((minimum.arg - 2.0).abs() <= 4.0 * f64::EPSILON);
+
+    let maximum = fallible_optimize_to_precision(SearchMode::Maximize, -10.0, 10.0, |x| {
+        Ok(-(x + 3.0).powi(2))
+    })?;
+    assert!((maximum.arg + 3.0).abs() <= 8.0 * f64::EPSILON);
+
+    let boundary =
+        fallible_optimize_to_precision(SearchMode::Minimize, -2.0, 3.0, |x| Ok(x + 2.0))?;
+    assert_eq!(boundary.arg, -2.0);
+
+    let degenerate = fallible_optimize_to_precision(SearchMode::Minimize, 3.0, 3.0, |x| Ok(x * x))?;
+    assert_eq!(degenerate.arg, 3.0);
+    assert_eq!(degenerate.value, 9.0);
+    Ok(())
+}
+
+#[test]
+fn test_scalar_optimization_rejects_malformed_bounds_and_nan() {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error =
+            fallible_optimize_to_precision(SearchMode::Minimize, lo, hi, |_| Ok(0.0)).unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
+
+    let error = fallible_optimize_to_precision(SearchMode::Minimize, -1.0, 1.0, |_| Ok(f64::NAN))
+        .unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::Search);
+}
+
+#[test]
+fn test_ordered_golden_search_rejects_malformed_bounds_and_supports_degenerate() -> Fallible<()> {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error = fallible_golden_search_to_precision_ordered(
+            SearchMode::Minimize,
+            lo,
+            hi,
+            |_| Ok(()),
+            |_: &(), _: &()| Ok(Ordering::Equal),
+        )
+        .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
+
+    assert_eq!(
+        fallible_golden_search_to_precision_ordered(
+            SearchMode::Maximize,
+            3.0,
+            3.0,
+            |x| Ok(x),
+            |left, right| left.partial_cmp(right).ok_or_else(|| err!(Search, "NaN")),
+        )?,
+        (3.0, 3.0)
+    );
     Ok(())
 }
