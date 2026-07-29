@@ -1,3 +1,6 @@
+use dashu::{rational::RBig, rbig};
+use std::cmp::Ordering;
+
 use super::*;
 use crate::error::ErrorVariant;
 use std::cell::Cell;
@@ -447,4 +450,185 @@ fn test_initial_recovery_requires_opposing_boolean_observations() {
     )
     .unwrap_err();
     assert_eq!(error.variant, ErrorVariant::Search);
+}
+
+#[test]
+fn test_ordered_golden_search_preserves_a_rbig_minimizer() -> Fallible<()> {
+    let minimizer: f64 = 0.37;
+    let offset = rbig!(100000000000000000000);
+
+    assert_eq!(
+        1e20 + (0.1 - minimizer).powi(2),
+        1e20 + (0.9 - minimizer).powi(2)
+    );
+
+    let (lo, hi) = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |x| {
+            let distance = RBig::try_from(x)? - RBig::try_from(minimizer)?;
+            Ok(offset.clone() + distance.clone() * distance)
+        },
+        |left: &RBig, right: &RBig| Ok(left.cmp(right)),
+    )?;
+
+    assert!(lo <= minimizer && minimizer <= hi);
+    Ok(())
+}
+
+#[test]
+fn test_golden_coordinates_collapse_before_exclusion() -> Fallible<()> {
+    // In particular, a two-ULP interval has c == d strictly inside its bounds.
+    // Even exact comparisons at that single point cannot select a side.
+    for base in [0.0, 1.0, -1.0, f64::MIN_POSITIVE, -f64::MIN_POSITIVE] {
+        for steps in 1..=8 {
+            let mut hi = base;
+            for _ in 0..steps {
+                hi = hi.next_up();
+            }
+            let mut optimum = base;
+            for _ in 0..=steps {
+                for mode in [SearchMode::Minimize, SearchMode::Maximize] {
+                    let (lo_out, hi_out) = fallible_golden_search_to_precision_ordered(
+                        mode,
+                        base,
+                        hi,
+                        |x| {
+                            let distance = RBig::try_from(x)? - RBig::try_from(optimum)?;
+                            let square = distance.clone() * distance;
+                            Ok(if mode == SearchMode::Minimize {
+                                square
+                            } else {
+                                -square
+                            })
+                        },
+                        |left: &RBig, right: &RBig| Ok(left.cmp(right)),
+                    )?;
+                    // Exact quadratics establish strict unimodality and
+                    // reliable ordering, unlike arbitrary callbacks.
+                    assert!(
+                        lo_out <= optimum && optimum <= hi_out,
+                        "lost optimum {optimum:?} from [{base:?}, {hi:?}] -> [{lo_out:?}, {hi_out:?}]"
+                    );
+                }
+                optimum = optimum.next_up();
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_golden_extreme_intervals_and_flat_candidates() -> Fallible<()> {
+    for (lo, hi, optimum) in [
+        (-f64::MAX, f64::MAX, 0.0),
+        (-f64::MAX, 0.0, -f64::MAX),
+        (0.0, f64::MAX, f64::MAX),
+    ] {
+        let (left, right) = fallible_golden_search_to_precision_ordered(
+            SearchMode::Minimize,
+            lo,
+            hi,
+            |x| {
+                let distance = RBig::try_from(x)? - RBig::try_from(optimum)?;
+                Ok(distance.clone() * distance)
+            },
+            |left: &RBig, right: &RBig| Ok(left.cmp(right)),
+        )?;
+        assert!(left <= optimum && optimum <= right);
+    }
+    for (lo, hi) in [(-f64::MAX, f64::MAX), (1.0, 1.0_f64.next_up()), (0.0, 1.0)] {
+        for mode in [SearchMode::Minimize, SearchMode::Maximize] {
+            let candidate = fallible_optimize_to_precision(mode, lo, hi, |_| Ok(7.0))?;
+            assert!(lo <= candidate.arg && candidate.arg <= hi);
+            assert_eq!(candidate.value, 7.0);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_ordered_golden_search_propagates_errors() {
+    let callback_error = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |_| fallible!(FailedFunction, "objective failed"),
+        |_: &(), _: &()| Ok(Ordering::Equal),
+    )
+    .unwrap_err();
+    assert_eq!(callback_error.variant, ErrorVariant::FailedFunction);
+
+    let comparison_error = fallible_golden_search_to_precision_ordered(
+        SearchMode::Minimize,
+        0.0,
+        1.0,
+        |_| Ok(()),
+        |_: &(), _: &()| fallible!(FailedFunction, "comparison failed"),
+    )
+    .unwrap_err();
+    assert_eq!(comparison_error.variant, ErrorVariant::FailedFunction);
+}
+
+#[test]
+fn test_fallible_scalar_optimization() -> Fallible<()> {
+    let minimum = fallible_optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, |x| {
+        Ok((x - 2.0).powi(2))
+    })?;
+    assert!((minimum.arg - 2.0).abs() <= 4.0 * f64::EPSILON);
+
+    let maximum = fallible_optimize_to_precision(SearchMode::Maximize, -10.0, 10.0, |x| {
+        Ok(-(x + 3.0).powi(2))
+    })?;
+    assert!((maximum.arg + 3.0).abs() <= 8.0 * f64::EPSILON);
+
+    let boundary =
+        fallible_optimize_to_precision(SearchMode::Minimize, -2.0, 3.0, |x| Ok(x + 2.0))?;
+    assert_eq!(boundary.arg, -2.0);
+
+    let degenerate = fallible_optimize_to_precision(SearchMode::Minimize, 3.0, 3.0, |x| Ok(x * x))?;
+    assert_eq!(degenerate.arg, 3.0);
+    assert_eq!(degenerate.value, 9.0);
+    Ok(())
+}
+
+#[test]
+fn test_scalar_optimization_rejects_malformed_bounds_and_nan() {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error =
+            fallible_optimize_to_precision(SearchMode::Minimize, lo, hi, |_| Ok(0.0)).unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
+
+    let error = fallible_optimize_to_precision(SearchMode::Minimize, -1.0, 1.0, |_| Ok(f64::NAN))
+        .unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::NumericError);
+}
+
+#[test]
+fn test_ordered_golden_search_rejects_malformed_bounds_and_supports_degenerate() -> Fallible<()> {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error = fallible_golden_search_to_precision_ordered(
+            SearchMode::Minimize,
+            lo,
+            hi,
+            |_| Ok(()),
+            |_: &(), _: &()| Ok(Ordering::Equal),
+        )
+        .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
+
+    assert_eq!(
+        fallible_golden_search_to_precision_ordered(
+            SearchMode::Maximize,
+            3.0,
+            3.0,
+            |x| Ok(x),
+            |left, right| left.partial_cmp(right).ok_or_else(|| err!(Search, "NaN")),
+        )?,
+        (3.0, 3.0)
+    );
+    Ok(())
 }
