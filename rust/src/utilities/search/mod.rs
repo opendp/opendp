@@ -600,3 +600,461 @@ where
 
     Ok(None)
 }
+
+// These utilities are consumed by privacy-curve implementations in subsequent stack commits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SearchMode {
+    Minimize,
+    Maximize,
+}
+
+impl SearchMode {
+    #[inline]
+    pub(crate) fn bad_value(self) -> f64 {
+        match self {
+            SearchMode::Minimize => f64::INFINITY,
+            SearchMode::Maximize => f64::NEG_INFINITY,
+        }
+    }
+
+    #[inline]
+    pub(crate) fn sanitize(self, value: f64) -> f64 {
+        if value.is_nan() {
+            self.bad_value()
+        } else {
+            value
+        }
+    }
+
+    #[inline]
+    pub(crate) fn is_better(self, candidate: f64, incumbent: f64) -> bool {
+        match self {
+            SearchMode::Minimize => candidate < incumbent,
+            SearchMode::Maximize => candidate > incumbent,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Optimum {
+    pub(crate) arg: f64,
+    pub(crate) value: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct BracketedOptimum {
+    /// Best sampled/refined argument found by the search.
+    pub(crate) arg: f64,
+
+    /// Objective value at `arg`, sanitized according to the search mode.
+    pub(crate) value: f64,
+
+    /// Final search bracket containing `arg`.
+    ///
+    /// For a unimodal objective, this is the final golden-section bracket.
+    /// For grid-plus-local-refinement, this is the refined bracket for the
+    /// best local extremum found by the grid.
+    pub(crate) lo: f64,
+    pub(crate) hi: f64,
+}
+
+impl BracketedOptimum {
+    #[inline]
+    pub(crate) fn optimum(self) -> Optimum {
+        Optimum {
+            arg: self.arg,
+            value: self.value,
+        }
+    }
+}
+
+/// Optimize a scalar objective over `[lo, hi]` to floating-point precision.
+///
+/// When `local_grid` is `None` or less than 3, this assumes the objective is
+/// unimodal and performs one golden-section search. When `Some(n)`, it samples
+/// `n` grid points and refines every local extremum. This is useful for
+/// envelopes/minima that may have kinks.
+#[inline]
+pub(crate) fn optimize_to_precision<F>(
+    mode: SearchMode,
+    lo: f64,
+    hi: f64,
+    local_grid: Option<usize>,
+    f: F,
+) -> Optimum
+where
+    F: Fn(f64) -> f64,
+{
+    fallible_optimize_to_precision(mode, lo, hi, local_grid, |arg| Ok(f(arg)))
+        .expect("an infallible objective cannot return an error")
+}
+
+/// Fallible version of [`optimize_to_precision`].
+///
+/// Objective errors are returned immediately without evaluating another point.
+#[inline]
+pub(crate) fn fallible_optimize_to_precision<F>(
+    mode: SearchMode,
+    lo: f64,
+    hi: f64,
+    local_grid: Option<usize>,
+    f: F,
+) -> Fallible<Optimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    Ok(fallible_optimize_to_precision_bracket(mode, lo, hi, local_grid, f)?.optimum())
+}
+
+/// Like [`optimize_to_precision`], but also returns the final small bracket.
+#[inline]
+pub(crate) fn optimize_to_precision_bracket<F>(
+    mode: SearchMode,
+    lo: f64,
+    hi: f64,
+    local_grid: Option<usize>,
+    f: F,
+) -> BracketedOptimum
+where
+    F: Fn(f64) -> f64,
+{
+    fallible_optimize_to_precision_bracket(mode, lo, hi, local_grid, |arg| Ok(f(arg)))
+        .expect("an infallible objective cannot return an error")
+}
+
+/// Fallible version of [`optimize_to_precision_bracket`].
+///
+/// Objective errors are returned immediately without evaluating another point.
+#[inline]
+pub(crate) fn fallible_optimize_to_precision_bracket<F>(
+    mode: SearchMode,
+    lo: f64,
+    hi: f64,
+    local_grid: Option<usize>,
+    f: F,
+) -> Fallible<BracketedOptimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    if !(hi > lo) || !lo.is_finite() || !hi.is_finite() {
+        let value = mode.sanitize(f(lo)?);
+        return Ok(BracketedOptimum {
+            arg: lo,
+            value,
+            lo,
+            hi: lo,
+        });
+    }
+
+    let grid = local_grid.unwrap_or(0);
+
+    if grid < 3 {
+        return fallible_golden_search_to_precision(mode, lo, hi, &f);
+    }
+
+    let grid = grid.max(3);
+    let mut xs = Vec::with_capacity(grid);
+    let mut vals = Vec::with_capacity(grid);
+
+    let mut best = BracketedOptimum {
+        arg: lo,
+        value: mode.sanitize(f(lo)?),
+        lo,
+        hi: lo,
+    };
+
+    for i in 0..grid {
+        let t = i as f64 / (grid - 1) as f64;
+        let x = interpolate(lo, hi, t);
+        let value = mode.sanitize(f(x)?);
+
+        xs.push(x);
+        vals.push(value);
+
+        if mode.is_better(value, best.value) {
+            best = BracketedOptimum {
+                arg: x,
+                value,
+                lo: x,
+                hi: x,
+            };
+        }
+    }
+
+    for i in 0..grid {
+        let no_worse_than_neighbors = match mode {
+            SearchMode::Minimize => {
+                (i == 0 || vals[i] <= vals[i - 1]) && (i + 1 == grid || vals[i] <= vals[i + 1])
+            }
+            SearchMode::Maximize => {
+                (i == 0 || vals[i] >= vals[i - 1]) && (i + 1 == grid || vals[i] >= vals[i + 1])
+            }
+        };
+        let better_than_a_neighbor = match mode {
+            SearchMode::Minimize => {
+                (i > 0 && vals[i] < vals[i - 1]) || (i + 1 < grid && vals[i] < vals[i + 1])
+            }
+            SearchMode::Maximize => {
+                (i > 0 && vals[i] > vals[i - 1]) || (i + 1 < grid && vals[i] > vals[i + 1])
+            }
+        };
+
+        // Do not launch a full precision search from every point of a flat
+        // objective. A plateau adjacent to a worse value still has a strict
+        // edge and is refined once.
+        if !(no_worse_than_neighbors && better_than_a_neighbor) {
+            continue;
+        }
+
+        let left = if i == 0 { xs[i] } else { xs[i - 1] };
+        let right = if i + 1 == grid { xs[i] } else { xs[i + 1] };
+
+        if right > left {
+            let candidate = fallible_golden_search_to_precision(mode, left, right, &f)?;
+            if mode.is_better(candidate.value, best.value) {
+                best = candidate;
+            }
+        }
+    }
+
+    Ok(best)
+}
+
+/// Optimize an objective over positive arguments using `x = ln(arg)`.
+#[inline]
+pub(crate) fn optimize_log_domain_to_precision<F>(
+    mode: SearchMode,
+    arg_lo: f64,
+    arg_hi: f64,
+    local_grid: Option<usize>,
+    f_arg: F,
+) -> Optimum
+where
+    F: Fn(f64) -> f64,
+{
+    optimize_log_domain_to_precision_bracket(mode, arg_lo, arg_hi, local_grid, f_arg).optimum()
+}
+
+/// Fallible version of [`optimize_log_domain_to_precision`].
+///
+/// Objective errors are returned immediately without evaluating another point.
+#[inline]
+pub(crate) fn fallible_optimize_log_domain_to_precision<F>(
+    mode: SearchMode,
+    arg_lo: f64,
+    arg_hi: f64,
+    local_grid: Option<usize>,
+    f_arg: F,
+) -> Fallible<Optimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+        return Ok(Optimum {
+            arg: arg_lo,
+            value: mode.sanitize(f_arg(arg_lo)?),
+        });
+    }
+
+    let x_lo = arg_lo.ln();
+    let x_hi = arg_hi.ln();
+
+    let f_x = |x: f64| -> Fallible<f64> {
+        let arg = x.exp().clamp(arg_lo, arg_hi);
+        if !(arg > 0.0) || !arg.is_finite() {
+            return Ok(mode.bad_value());
+        }
+        Ok(mode.sanitize(f_arg(arg)?))
+    };
+
+    let optimum = fallible_optimize_to_precision(mode, x_lo, x_hi, local_grid, f_x)?;
+
+    Ok(Optimum {
+        arg: optimum.arg.exp().clamp(arg_lo, arg_hi),
+        value: optimum.value,
+    })
+}
+
+/// Like [`optimize_log_domain_to_precision`], but also returns a bracket in the
+/// original positive argument domain.
+#[inline]
+pub(crate) fn optimize_log_domain_to_precision_bracket<F>(
+    mode: SearchMode,
+    arg_lo: f64,
+    arg_hi: f64,
+    local_grid: Option<usize>,
+    f_arg: F,
+) -> BracketedOptimum
+where
+    F: Fn(f64) -> f64,
+{
+    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+        let value = mode.sanitize(f_arg(arg_lo));
+        return BracketedOptimum {
+            arg: arg_lo,
+            value,
+            lo: arg_lo,
+            hi: arg_lo,
+        };
+    }
+
+    let x_lo = arg_lo.ln();
+    let x_hi = arg_hi.ln();
+
+    let f_x = |x: f64| -> f64 {
+        let arg = x.exp().clamp(arg_lo, arg_hi);
+        if !(arg > 0.0) || !arg.is_finite() {
+            return mode.bad_value();
+        }
+        mode.sanitize(f_arg(arg))
+    };
+
+    let optimum = optimize_to_precision_bracket(mode, x_lo, x_hi, local_grid, f_x);
+
+    BracketedOptimum {
+        arg: optimum.arg.exp().clamp(arg_lo, arg_hi),
+        value: optimum.value,
+        lo: optimum.lo.exp().clamp(arg_lo, arg_hi),
+        hi: optimum.hi.exp().clamp(arg_lo, arg_hi),
+    }
+}
+
+/// Sample a positive interval on a log-spaced grid without refinement.
+///
+/// This is intended for cheap cap-finding passes where final tightness is not
+/// determined by the probe itself.
+#[inline]
+pub(crate) fn sample_log_domain<F>(
+    mode: SearchMode,
+    arg_lo: f64,
+    arg_hi: f64,
+    grid: usize,
+    f_arg: F,
+) -> Optimum
+where
+    F: Fn(f64) -> f64,
+{
+    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+        return Optimum {
+            arg: arg_lo,
+            value: mode.sanitize(f_arg(arg_lo)),
+        };
+    }
+
+    let grid = grid.max(2);
+    let x_lo = arg_lo.ln();
+    let x_hi = arg_hi.ln();
+
+    let mut best = Optimum {
+        arg: arg_lo,
+        value: mode.sanitize(f_arg(arg_lo)),
+    };
+
+    for i in 0..grid {
+        let t = i as f64 / (grid - 1) as f64;
+        let arg = interpolate(x_lo, x_hi, t).exp().clamp(arg_lo, arg_hi);
+        let value = mode.sanitize(f_arg(arg));
+
+        if mode.is_better(value, best.value) {
+            best = Optimum { arg, value };
+        }
+    }
+
+    best
+}
+
+fn fallible_golden_search_to_precision<F>(
+    mode: SearchMode,
+    mut lo: f64,
+    mut hi: f64,
+    f: &F,
+) -> Fallible<BracketedOptimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    const INV_PHI: f64 = 0.6180339887498949;
+    const INV_PHI2: f64 = 0.3819660112501051;
+
+    if !(hi > lo) {
+        let value = mode.sanitize(f(lo)?);
+        return Ok(BracketedOptimum {
+            arg: lo,
+            value,
+            lo,
+            hi: lo,
+        });
+    }
+
+    let mut c = interpolate(lo, hi, INV_PHI2);
+    let mut d = interpolate(lo, hi, INV_PHI);
+
+    let mut fc = mode.sanitize(f(c)?);
+    let mut fd = mode.sanitize(f(d)?);
+
+    loop {
+        let old_lo = lo;
+        let old_hi = hi;
+
+        let take_left = match mode {
+            SearchMode::Minimize => fc <= fd,
+            SearchMode::Maximize => fc >= fd,
+        };
+
+        if take_left {
+            hi = d;
+            d = c;
+            fd = fc;
+            c = interpolate(lo, hi, INV_PHI2);
+            fc = mode.sanitize(f(c)?);
+        } else {
+            lo = c;
+            c = d;
+            fc = fd;
+            d = interpolate(lo, hi, INV_PHI);
+            fd = mode.sanitize(f(d)?);
+        }
+
+        if lo == old_lo && hi == old_hi {
+            break;
+        }
+
+        if c == lo || c == hi || d == lo || d == hi {
+            break;
+        }
+    }
+
+    let mut best = BracketedOptimum {
+        arg: lo,
+        value: mode.sanitize(f(lo)?),
+        lo,
+        hi,
+    };
+
+    for candidate in [
+        Optimum {
+            arg: hi,
+            value: mode.sanitize(f(hi)?),
+        },
+        Optimum { arg: c, value: fc },
+        Optimum { arg: d, value: fd },
+    ] {
+        if mode.is_better(candidate.value, best.value) {
+            best.arg = candidate.arg;
+            best.value = candidate.value;
+        }
+    }
+
+    Ok(best)
+}
+
+/// Interpolate without overflowing when both finite endpoints have an infinite
+/// difference, as happens for intervals spanning most of the f64 range.
+#[inline]
+fn interpolate(lo: f64, hi: f64, t: f64) -> f64 {
+    let width = hi - lo;
+    if width.is_finite() {
+        lo + t * width
+    } else {
+        (1.0 - t) * lo + t * hi
+    }
+}
