@@ -79,6 +79,12 @@ where
 }
 
 /// Constructs a [`Transformation`] representing an arbitrary row-by-row transformation.
+///
+/// # Proof
+///
+/// Stability 1 for all [`EventLevelMetric`] implementations is machine-checked
+/// in `rust/opendp_verus/src/row_by_row.rs`. The proof models fallibility
+/// explicitly and applies to pairs of successful invocations.
 pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_domain: DI,
     input_metric: M,

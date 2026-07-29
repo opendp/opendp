@@ -402,6 +402,38 @@ After regeneration:
 
     cd rust/opendp_verified && lake build OpenDPVerified
 
+Verus Verification
+------------------
+
+OpenDP's Verus proof companions live in the standalone
+``rust/opendp_verus/`` Cargo workspace. Keeping this workspace separate prevents
+the Verus ``vstd`` dependency from affecting normal OpenDP Rust builds.
+
+Install Rust 1.96.0 and unpack Verus release
+``0.2026.06.14.4ea7d0f``. The verification script finds ``cargo-verus`` in a
+``verus*`` directory at the repository root or under ``out/``. For a checkout
+elsewhere, set ``VERUS_BIN_DIR`` to the unpacked release directory.
+
+.. code-block:: bash
+
+    rustup toolchain install 1.96.0
+    tools/verify_verus.sh
+
+The row-by-row proof in ``rust/opendp_verus/src/row_by_row.rs`` establishes
+stability 1 for successful invocations of
+``make_row_by_row_fallible`` under all four event-level metrics:
+``SymmetricDistance``, ``InsertDeleteDistance``, ``ChangeOneDistance``, and
+``HammingDistance``.
+
+The Alerus proof sources are tracked under ``rust/opendp_verus/alerus/`` and
+loaded into the pinned, gitignored Alerus checkout by
+``tools/setup_alerus.sh``. To build the local OpenDP bridge and verify the full
+Alerus crate, run:
+
+.. code-block:: bash
+
+    tools/verify_alerus.sh
+
 Release Process
 -----------------
 

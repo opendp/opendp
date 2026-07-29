@@ -22,6 +22,17 @@ fn test_bool_extremes() -> Fallible<()> {
 }
 
 #[test]
+fn test_bool_rejects_constant_time() {
+    let err = make_randomized_response_bool(0.75, true).unwrap_err();
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("constant-time sampling is not supported")
+    );
+}
+
+#[test]
 fn test_cat() -> Fallible<()> {
     let m_rr = make_randomized_response(HashSet::from([2, 3, 5, 6]), 0.75)?;
     assert!(m_rr.invoke(&3).is_ok());

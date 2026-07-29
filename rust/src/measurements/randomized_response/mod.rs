@@ -3,6 +3,7 @@ mod ffi;
 
 use std::collections::HashSet;
 
+use dashu::rational::RBig;
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, Measurement, PrivacyMap};
@@ -10,7 +11,7 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::sample_bernoulli_float;
+use crate::traits::samplers::{sample_bernoulli_float, sample_bernoulli_rational};
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -40,7 +41,12 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
-/// * `constant_time` - Set to true to enable constant time. Slower.
+/// * `constant_time` - Constant-time sampling is not supported by this constructor.
+///
+/// # Proof
+///
+/// The rational-sampler path and max-divergence bound are machine-checked in
+/// `rust/opendp_verus/alerus/randomized_response_bool.rs`.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
@@ -48,6 +54,12 @@ pub fn make_randomized_response_bool(
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
+    }
+    if constant_time {
+        return fallible!(
+            MakeMeasurement,
+            "constant-time sampling is not supported; set constant_time to false"
+        );
     }
 
     let privacy_constant = if prob == 1.0 {
@@ -58,13 +70,19 @@ pub fn make_randomized_response_bool(
         //       = min(d_in, 1) * ln(p / (1 - p))
         prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?.inf_ln()?
     };
+    // This conversion is exact: every finite f64 is a dyadic rational.
+    let rational_prob =
+        RBig::try_from(prob).map_err(|_| err!(MakeMeasurement, "probability must be finite"))?;
 
     Measurement::new(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
+            // This path corresponds directly to the Alerus proof in
+            // alerus/randomized_response_bool.rs.
+            let honest = sample_bernoulli_rational(rational_prob.clone())?;
+            Ok(arg ^ !honest)
         }),
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )

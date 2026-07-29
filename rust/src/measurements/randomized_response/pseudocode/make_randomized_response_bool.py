@@ -6,6 +6,10 @@ def make_randomized_response_bool(prob: f64, constant_time: bool):
     
     if (prob < 0.5 or prob > 1):  # |\label{line:range}|
         raise Exception("probability must be in [0.5, 1]")
+    if constant_time:
+        raise Exception("constant-time sampling is not supported")
+
+    rational_prob = RBig.try_from(prob)
 
     if prob == 1.0:
         c = float("inf")
@@ -19,7 +23,7 @@ def make_randomized_response_bool(prob: f64, constant_time: bool):
             return c
 
     def function(arg: bool) -> bool:  # |\label{line:fn}|
-        sample = not sample_bernoulli_float(prob, constant_time)
+        sample = not sample_bernoulli_rational(rational_prob)
 
         return arg ^ sample
     

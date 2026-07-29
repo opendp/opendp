@@ -9,3 +9,14 @@ index 6e8a3af..f472959 100644
 -opendp = { version = "0.14.1", features = ["contrib"] }
 +opendp = { path = "../../rust", features = ["contrib"] }
  dashu = "0.4.0"
+diff --git a/alerus/lib.rs b/alerus/lib.rs
+index 4474a8c..e01076b 100644
+--- a/alerus/lib.rs
++++ b/alerus/lib.rs
+@@ -19,4 +19,6 @@ pub mod fldr_helper;
+ pub mod alias;
+ pub mod alias_helper;
+ pub mod proph_paradox;
++#[path = "../../rust/opendp_verus/alerus/randomized_response_bool.rs"]
++pub mod randomized_response_bool;
+ // pub mod proph_paradox_mutref;

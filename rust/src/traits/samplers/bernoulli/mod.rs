@@ -1,4 +1,7 @@
-use dashu::{integer::Sign, rational::RBig};
+use dashu::{
+    integer::{Sign, UBig},
+    rational::RBig,
+};
 use num::{One, Zero};
 use opendp_derive::proven;
 
@@ -149,5 +152,13 @@ pub fn sample_bernoulli_rational(prob: RBig) -> Fallible<bool> {
     if numer > denom {
         return fallible!(FailedFunction, "prob must not be greater than one");
     }
+    sample_bernoulli_rational_parts(numer, denom)
+}
+
+/// Sample from Bernoulli(`numer / denom`) after the rational bounds have been validated.
+///
+/// This is separated from [`sample_bernoulli_rational`] so the probabilistic
+/// kernel corresponds directly to the Alerus expectation-preservation proof.
+pub(crate) fn sample_bernoulli_rational_parts(numer: UBig, denom: UBig) -> Fallible<bool> {
     sample_uniform_ubig_below(denom).map(|s| numer > s)
 }
