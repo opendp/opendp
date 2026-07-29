@@ -470,6 +470,15 @@ def get_first(value):
         return None
     return next(iter(value))
 
+
+def get_first_non_null(*values):
+    """Get the first non-null value."""
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     '''
     Given a ``RuntimeTypeDescriptor``, returns a ``RuntimeType`` or ``str``.

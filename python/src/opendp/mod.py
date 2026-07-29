@@ -1314,7 +1314,7 @@ M = TypeVar("M", Transformation, Measurement)
 def binary_search_chain(
         make_chain: Callable[[float], M],
         d_in: Any, d_out: Any,
-        bounds: tuple[float, float] | None = None,
+        bounds: tuple[float | None, float | None] | None = (None, None),
         T=None) -> M:
     """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
     
@@ -1327,7 +1327,7 @@ def binary_search_chain(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
+    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
@@ -1379,7 +1379,7 @@ def binary_search_chain(
 def binary_search_param(
         make_chain: Callable[[float], Union[Transformation, Measurement]],
         d_in: Any, d_out: Any,
-        bounds: tuple[float, float] | None = None,
+        bounds: tuple[float | None, float | None] | None = (None, None),
         T=None) -> float:
     """Solve for the ideal constructor argument to `make_chain`.
     
@@ -1389,7 +1389,7 @@ def binary_search_param(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
+    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -1448,7 +1448,7 @@ def _call_rust_search(
     predicate: Callable[[float], bool],
     T: "RuntimeType | str",
     search: Callable[[Callable[[float], bool]], Any],
-    bounds: tuple[float, float] | None = None,
+    bounds: tuple[float | None, float | None] | None = (None, None),
 ) -> Any:
     first_exception = None
     had_success = False
@@ -1470,7 +1470,7 @@ def _call_rust_search(
     except OpenDPException as err:
         if first_exception is not None:
             exc = first_exception
-            if bounds is None and not had_success and hasattr(exc, "add_note"):
+            if (bounds is None or bounds == (None, None)) and not had_success and hasattr(exc, "add_note"):
                 center = 0.0 if T in {"f32", "f64"} else 0
                 exc.add_note(
                     "Predicate in binary search always raises an exception. "
@@ -1488,7 +1488,7 @@ def _call_rust_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = ...,
+        bounds: tuple[float | None, float | None] | None = ...,
         T: Type[float] | None = ...,
         return_sign: Literal[False] = False) -> float:
     ...
@@ -1498,7 +1498,7 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = ...,
+        bounds: tuple[float | None, float | None] | None = ...,
         T: Type[float] | None = ...,
         *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
         return_sign: Literal[True]) -> tuple[float, int]:
@@ -1508,7 +1508,7 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None,
+        bounds: tuple[float | None, float | None] | None,
         T: Type[float] | None,
         return_sign: Literal[True]) -> tuple[float, int]:
     ...
@@ -1516,15 +1516,16 @@ def binary_search(
 
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = None,
+        bounds: tuple[float | None, float | None] | None = (None, None),
         T: Type[float] | None = None,
         return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
-    If bounds are not passed, conducts an exponential search.
+    Missing bounds are inferred. Pass `None` for either element of `bounds` to
+    conduct a one-sided search, or omit `bounds` to conduct an exponential search.
     
     :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
+    :param bounds: a 2-tuple of optional lower and upper bounds to the input of `predicate`; use `None` for either bound to infer it
     :param T: type of argument to `predicate`, one of {float, int}
     :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
@@ -1542,6 +1543,8 @@ def binary_search(
     6
     >>> dp.binary_search(lambda x: x < 5, T=int)
     4
+    >>> dp.binary_search(lambda x: x <= 5, bounds=(0, None))
+    5
 
     Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
@@ -1572,15 +1575,26 @@ def binary_search(
     from opendp._internal import _binary_search
     from opendp.typing import RuntimeType
 
-    if bounds is not None and len(set(map(type, bounds))) != 1:
-        raise TypeError("bounds must share the same type")  # pragma: no cover
+    if bounds is not None:
+        lower, upper = bounds
+        if lower is not None and upper is not None and type(lower) is not type(upper):
+            raise TypeError("bounds must share the same type")
+    else:
+        lower, upper = None, None
 
-    runtime_T = RuntimeType.infer(bounds[0]) if bounds is not None else RuntimeType.parse(T or _infer_type(predicate))
+    if T is not None:
+        runtime_T = RuntimeType.parse(T)
+    elif lower is not None:
+        runtime_T = RuntimeType.infer(lower)
+    elif upper is not None:
+        runtime_T = RuntimeType.infer(upper)
+    else:
+        runtime_T = RuntimeType.parse(_infer_type(predicate))
 
     return _call_rust_search(
         predicate,
         runtime_T,
-        lambda wrapped: _binary_search(wrapped, bounds=bounds, return_sign=return_sign, T=runtime_T),
+        lambda wrapped: _binary_search(wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T),
         bounds=bounds,
     )
 
