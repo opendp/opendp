@@ -1362,9 +1362,12 @@ class PrivacyProfile(object):
 class PrivacyGuarantee(object):
     """Conjunctive, independently certified privacy representations.
 
-    Supply an ``approx_dp=(epsilon, delta)`` certificate, a ``profile``, or both
-    for the same privacy relation. Source parameters are retained exactly; zero
-    delta certifies pure DP. Certificates are not eagerly converted to profiles.
+    Supply independently certified ``approx_dp=(epsilon, delta)``, ``profile``,
+    ``renyiDP``, ``zCDP``, and/or ``gaussianDP`` facts for the same privacy relation.
+    Source parameters are retained exactly; zero delta certifies pure DP.
+    Certificates are not eagerly converted to profiles. ``renyiDP_delta`` and
+    ``zCDP_delta`` belong only to their respective source representations.
+    Gaussian-DP queries require ``idealized-numerics``.
     Queries return the tightest bound and propagate representation errors.
 
     Beta and alpha report f-DP lower bounds derived from these representations;
@@ -1381,6 +1384,7 @@ class PrivacyGuarantee(object):
         renyiDP_delta: float = 0.0,
         zCDP: Optional[float] = None,
         zCDP_delta: float = 0.0,
+        gaussianDP: Optional[float] = None,
         _ptr: Any = None,
     ):
         if _ptr is not None:
@@ -1391,11 +1395,18 @@ class PrivacyGuarantee(object):
                 or renyiDP_delta != 0.0
                 or zCDP is not None
                 or zCDP_delta != 0.0
+                or gaussianDP is not None
             ):
                 raise TypeError("_ptr cannot be combined with guarantee constructors")
             self.guarantee = _ptr
             return
-        if approx_dp is None and profile is None and renyiDP is None and zCDP is None:
+        if (
+            approx_dp is None
+            and profile is None
+            and renyiDP is None
+            and zCDP is None
+            and gaussianDP is None
+        ):
             raise TypeError("expected at least one privacy representation")
         if zCDP is None and zCDP_delta != 0.0:
             raise TypeError("zCDP_delta requires zCDP")
@@ -1414,6 +1425,7 @@ class PrivacyGuarantee(object):
             _privacy_guarantee_with_profile,
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_zCDP,
+            _privacy_guarantee_with_gaussianDP,
         )
 
         guarantee = _new_privacy_guarantee()
@@ -1427,6 +1439,8 @@ class PrivacyGuarantee(object):
             )
         if zCDP is not None:
             guarantee = _privacy_guarantee_with_zCDP(guarantee, zCDP, zCDP_delta)
+        if gaussianDP is not None:
+            guarantee = _privacy_guarantee_with_gaussianDP(guarantee, gaussianDP)
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):

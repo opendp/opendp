@@ -924,3 +924,93 @@ fn test_renyi_nonzero_curve_exercises_all_queries() -> Fallible<()> {
     assert!(calls.load(Ordering::Relaxed) > 0);
     Ok(())
 }
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_gaussian_curve_queries() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new().with_gaussianDP(1.0)?;
+
+    let expected_delta = 0.12693673750664395;
+    let delta = curve.delta(1.0)?;
+    assert!(delta >= expected_delta);
+    assert!((delta - expected_delta).abs() < 3e-8);
+    assert!(curve.epsilon(delta)? <= 1.0);
+
+    for alpha in [0.1, 0.5, 0.9] {
+        assert!((0.0..=1.0).contains(&curve.beta(&[alpha])?[0]));
+    }
+    assert_eq!(curve.beta(&[0.0])?[0], 1.0);
+    assert_eq!(curve.beta(&[1.0])?[0], 0.0);
+    let beta = curve.beta(&[0.5])?[0];
+    let alpha = curve.alpha(&[beta])?[0];
+    assert!(alpha > 0.0 && alpha <= 0.5);
+    assert!(curve.beta(&[alpha])?[0] > beta);
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_gaussian_representation_joins_balanced_aggregate_queries() -> Fallible<()> {
+    let loose = PrivacyGuarantee::new().with_profile(PrivacyProfile::new(batch(|_| Ok(1.0))));
+    let gaussian = PrivacyGuarantee::new().with_gaussianDP(1.0)?;
+    let combined = loose.with_gaussianDP(1.0)?;
+
+    assert_eq!(combined.delta(1.0)?, gaussian.delta(1.0)?);
+    assert_eq!(combined.epsilon(0.1)?, gaussian.epsilon(0.1)?);
+    assert_eq!(combined.beta(&[0.5])?[0], gaussian.beta(&[0.5])?[0]);
+    assert_eq!(combined.alpha(&[0.5])?[0], gaussian.alpha(&[0.5])?[0]);
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_curve_uses_shared_profile_conversion() -> Fallible<()> {
+    let rho = 0.5;
+    let epsilon = 1.0;
+    let curve = PrivacyGuarantee::new().with_zCDP(rho, 0.0)?;
+    assert_eq!(
+        curve.delta(epsilon)?,
+        crate::measures::zcdp::zcdp_delta(rho, epsilon)?
+    );
+    assert!((0.0..=1.0).contains(&curve.beta(&[0.5])?[0]));
+    let alpha = curve.alpha(&[0.5])?[0];
+    assert!(alpha > 0.0);
+    assert!(curve.beta(&[alpha])?[0] > 0.5);
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_delta_is_representation_specific() -> Fallible<()> {
+    let rho = 0.5;
+    let exact = PrivacyGuarantee::new().with_zCDP(rho, 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_zCDP(rho, 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert!(approximate.epsilon(0.1f64.next_down())?.is_infinite());
+
+    let exact_delta = exact.delta(1.0)?;
+    let approximate_delta = approximate.delta(1.0)?;
+    assert!(approximate_delta >= exact_delta + 0.1);
+    assert!(approximate_delta <= (exact_delta + 0.1).next_up());
+
+    assert!(PrivacyGuarantee::new().with_zCDP(rho, -0.0).is_ok());
+    assert!(PrivacyGuarantee::new().with_zCDP(rho, f64::NAN).is_err());
+
+    let vacuous = PrivacyGuarantee::new().with_zCDP(rho, 1.0)?;
+    assert_eq!(vacuous.delta(f64::INFINITY)?, 1.0);
+    assert_eq!(vacuous.epsilon(1.0)?, 0.0);
+    assert!(vacuous.epsilon(1.0f64.next_down())?.is_infinite());
+    Ok(())
+}
+
+#[test]
+fn test_multiple_source_representations_keep_distinct_deltas() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new()
+        .with_zCDP(0.0, 0.2)?
+        .with_renyiDP_trusted(|_| Ok(0.0), 0.7)?;
+
+    // Independently certified source deltas remain representation-specific.
+    assert_eq!(curve.delta(f64::INFINITY)?, 0.2);
+    assert_eq!(curve.epsilon(0.2)?, 0.0);
+    Ok(())
+}

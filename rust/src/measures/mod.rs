@@ -102,6 +102,7 @@ pub(crate) struct PrivacyCapabilities {
     profile: Option<Purity>,
     renyi: Option<Purity>,
     zcdp: Option<Purity>,
+    gaussian: bool,
 }
 
 impl PrivacyCapabilities {
@@ -111,6 +112,7 @@ impl PrivacyCapabilities {
             profile,
             renyi: None,
             zcdp: None,
+            gaussian: false,
         }
     }
 
@@ -118,6 +120,14 @@ impl PrivacyCapabilities {
         self.renyi = Some(purity);
         self
     }
+    pub(crate) fn with_gaussian(mut self) -> Self {
+        self.gaussian = true;
+        self
+    }
+    pub(crate) fn gaussian(&self) -> bool {
+        self.gaussian
+    }
+
     pub(crate) fn with_zcdp(mut self, purity: Purity) -> Self {
         self.zcdp = Some(purity);
         self
@@ -153,6 +163,10 @@ pub struct MultiDP {
 impl MultiDP {
     pub(crate) fn new(capabilities: PrivacyCapabilities) -> Self {
         Self { capabilities }
+    }
+
+    pub(crate) fn with_gaussian() -> Self {
+        Self::new(PrivacyCapabilities::default().with_gaussian())
     }
 
     pub(crate) fn with_zcdp(purity: Purity) -> Self {
