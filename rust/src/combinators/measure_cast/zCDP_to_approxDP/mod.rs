@@ -1,18 +1,17 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
+    measures::{
+        Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
+        zcdp_epsilon, zcdp_log_delta,
+    },
 };
-
-use self::cdp_delta::cdp_delta;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[cfg(test)]
 mod test;
-
-mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
@@ -58,9 +57,10 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     type ApproxMeasure = SmoothedMaxDivergence;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
-        Ok(PrivacyProfile::new(move |epsilon: f64| {
-            cdp_delta(rho, epsilon)
-        }))
+        Ok(PrivacyProfile::new_log_with_epsilon(
+            move |epsilon| zcdp_log_delta(rho, epsilon),
+            move |delta| zcdp_epsilon(rho, delta),
+        ))
     }
 }
 
@@ -71,7 +71,10 @@ impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
         (rho, delta): Self::Distance,
     ) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         Ok((
-            PrivacyProfile::new(move |epsilon: f64| cdp_delta(rho, epsilon)),
+            PrivacyProfile::new_log_with_epsilon(
+                move |epsilon| zcdp_log_delta(rho, epsilon),
+                move |target_delta| zcdp_epsilon(rho, target_delta),
+            ),
             delta,
         ))
     }

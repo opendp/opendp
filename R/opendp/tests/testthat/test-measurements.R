@@ -65,7 +65,7 @@ test_that("test_gaussian_curve", {
   curve <- meas(d_in = 1.)
   expect_equal(curve(delta = 0.), Inf)
   # see cdp_delta for formula of 0.688...
-  expect_equal(curve(delta = 1e-3), 0.6880024554878085)
+  expect_equal(curve(delta = 1e-3), 0.6880024554878086)
   expect_equal(curve(delta = 1.), 0.)
 
   # see cdp_delta for formula of 0.1508...

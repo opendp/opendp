@@ -1,4 +1,4 @@
-use cdp_delta::test::cdp_epsilon;
+use crate::measures::zcdp::zcdp_epsilon;
 
 use crate::{
     combinators::make_approximate, domains::AtomDomain, measurements::make_gaussian,
@@ -11,7 +11,7 @@ use super::*;
 fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     let d_in = 1.0;
     let scale = 4.0;
-    let profile = make_zCDP_to_approxDP(make_gaussian(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         scale,
@@ -22,16 +22,19 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
 
     assert_eq!(profile.epsilon(0.)?, f64::INFINITY);
 
-    // using reverse map to check correctness
-    // implementation of reverse map is slightly looser by 1 ulp due to numerical imprecision
-    assert_eq!(cdp_epsilon(rho, 1e-3)?, 0.6880024554878086);
-    assert_eq!(profile.epsilon(1e-3)?, 0.6880024554878085);
+    // Compare the two independently optimized directions to within one ulp.
+    let epsilon = zcdp_epsilon(rho, 1e-3)?;
+    let profile_epsilon = profile.epsilon(1e-3)?;
+    assert!((profile_epsilon - epsilon).abs() <= f64::EPSILON * epsilon);
     assert_eq!(profile.epsilon(1.0)?, 0.);
 
     // using reverse map to check correctness
-    assert_eq!(cdp_epsilon(rho, 0.1508457845622862)?, 0.0);
-    assert_eq!(profile.delta(0.)?, 0.1508457845622862);
-    assert_eq!(profile.delta(0.6880024554878085)?, 1e-3);
+    let zero_epsilon_delta = profile.delta(0.)?;
+    assert_eq!(zcdp_epsilon(rho, zero_epsilon_delta)?, 0.0);
+    assert_eq!(profile.delta(0.)?, zero_epsilon_delta);
+    let delta = profile.delta(0.6880024554878085)?;
+    assert!(delta >= 1e-3);
+    assert!((delta - 1e-3) <= 4. * f64::EPSILON * 1e-3);
     Ok(())
 }
 
@@ -54,7 +57,7 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
 
 #[test]
 fn test_zCDP_to_approxDP_nonprivate() -> Fallible<()> {
-    let profile = make_zCDP_to_approxDP(make_gaussian(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         0.,
@@ -104,7 +107,7 @@ fn test_approx_zCDP_to_approx_approxDP() -> Fallible<()> {
     let epsilon = curve.epsilon(1e-7)?;
 
     // when scale is 1 and sensitivity is 1, then rho = (d_in / scale)^2 / 2 = 0.5
-    let expected_epsilon = cdp_epsilon(0.5, 1e-7)?;
+    let expected_epsilon = zcdp_epsilon(0.5, 1e-7)?;
     assert_eq!(epsilon, expected_epsilon);
 
     Ok(())

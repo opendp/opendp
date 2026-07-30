@@ -217,6 +217,11 @@ pub trait LnTo: Sized {
     fn ln_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>>;
 }
 
+pub trait Ln1pTo: Sized {
+    type Output<DOut: ODPRound>;
+    fn ln_1p_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>>;
+}
+
 pub trait SqrtTo: Sized {
     type Output<DOut: ODPRound>;
     fn sqrt_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>>;
@@ -426,6 +431,19 @@ where
     #[inline]
     fn ln_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>> {
         R::round_special::<DOut>(self.value.ln())
+    }
+}
+
+impl<D, R> Ln1pTo for N64<D, R>
+where
+    D: ODPRound,
+    R: NativeRegime + NativeSpecial,
+{
+    type Output<DOut: ODPRound> = N64<DOut, R>;
+
+    #[inline]
+    fn ln_1p_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>> {
+        R::round_special::<DOut>(self.value.ln_1p())
     }
 }
 
@@ -708,6 +726,18 @@ where
     }
 }
 
+impl<D> Ln1pTo for DBig<D>
+where
+    D: ODPRound,
+{
+    type Output<DOut: ODPRound> = DBig<DOut>;
+
+    #[inline]
+    fn ln_1p_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>> {
+        Ok(DBig::raw(self.value.with_rounding::<DOut>().ln_1p()))
+    }
+}
+
 impl<D> SqrtTo for DBig<D>
 where
     D: ODPRound,
@@ -933,6 +963,7 @@ pub trait IntervalExpBackend: IntervalBackend + Sized {
     fn exp_interval(x: Interval<Self>) -> Fallible<Interval<Self>>;
     fn exp_m1_interval(x: Interval<Self>) -> Fallible<Interval<Self>>;
     fn ln_interval(x: Interval<Self>) -> Fallible<Interval<Self>>;
+    fn ln_1p_interval(x: Interval<Self>) -> Fallible<Interval<Self>>;
     fn sqrt_interval(x: Interval<Self>) -> Fallible<Interval<Self>>;
 }
 
@@ -942,10 +973,12 @@ where
     T::Lo: ExpTo<Output<Down> = T::Lo>
         + ExpM1To<Output<Down> = T::Lo>
         + LnTo<Output<Down> = T::Lo>
+        + Ln1pTo<Output<Down> = T::Lo>
         + SqrtTo<Output<Down> = T::Lo>,
     T::Hi: ExpTo<Output<Up> = T::Hi>
         + ExpM1To<Output<Up> = T::Hi>
         + LnTo<Output<Up> = T::Hi>
+        + Ln1pTo<Output<Up> = T::Hi>
         + SqrtTo<Output<Up> = T::Hi>,
 {
     #[inline]
@@ -965,6 +998,17 @@ where
             return fallible!(FailedMap, "ln domain requires a positive interval");
         }
         Interval::new(x.lo.ln_to_::<Down>()?, x.hi.ln_to_::<Up>()?)
+    }
+
+    #[inline]
+    fn ln_1p_interval(x: Interval<Self>) -> Fallible<Interval<Self>> {
+        if x.lo.le_f64(-1.0)? {
+            return fallible!(
+                FailedMap,
+                "ln_1p domain requires an interval greater than -1"
+            );
+        }
+        Interval::new(x.lo.ln_1p_to_::<Down>()?, x.hi.ln_1p_to_::<Up>()?)
     }
 
     #[inline]
@@ -1188,6 +1232,51 @@ impl<Bk: IntervalExpBackend> Interval<Bk> {
     #[inline]
     pub fn ln(self) -> Fallible<Self> {
         Bk::ln_interval(self)
+    }
+
+    #[inline]
+    pub fn ln_1p(self) -> Fallible<Self> {
+        Bk::ln_1p_interval(self)
+    }
+
+    /// Stable enclosure of `ln(exp(x) - 1)` for intervals strictly above zero.
+    #[inline]
+    pub fn log_expm1(self) -> Fallible<Self>
+    where
+        Bk: IntervalArithmeticBackend,
+    {
+        if self.lower_f64()? <= 0.0 {
+            return fallible!(FailedMap, "log_expm1 domain requires a positive interval");
+        }
+        if self.upper_f64()? <= 1.0 {
+            return self.exp_m1()?.ln();
+        }
+        if self.lower_f64()? >= 50.0 {
+            return self.add(Self::between(-f64::EPSILON, 0.0)?);
+        }
+
+        let one = Self::point(1.0)?;
+        let correction = one.sub(self.clone().neg()?.exp()?)?.ln()?;
+        self.add(correction)
+    }
+
+    /// Stable enclosure of `ln(1 + exp(x))` without overflowing `exp(x)`.
+    #[inline]
+    pub fn softplus(self) -> Fallible<Self>
+    where
+        Bk: IntervalArithmeticBackend,
+    {
+        let lo = self.lower_f64()?;
+        let hi = self.upper_f64()?;
+        if hi <= 0.0 {
+            return self.exp()?.ln_1p();
+        }
+        if lo >= 0.0 {
+            return self.clone().neg()?.exp()?.ln_1p()?.add(self);
+        }
+
+        let max_x = Self::between(0.0, hi)?;
+        max_x.add(self.abs()?.neg()?.exp()?.ln_1p()?)
     }
 
     #[inline]

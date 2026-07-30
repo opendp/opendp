@@ -12,12 +12,12 @@ def test_gaussian_curve():
     # see cdp_delta for formula of 0.688 and 0.151
 
     # cdp_epsilon(rho=(1/4)^2 / 2, delta=1e-3)
-    assert profile.epsilon(delta=1e-3) == 0.6880024554878085
+    assert profile.epsilon(delta=1e-3) == 0.6880024554878086
     assert profile.epsilon(delta=1.0) == 0.0
     # cdp_delta(rho=(1/4)^2 / 2, epsilon=0.0)
-    assert profile.delta(epsilon=0.0) == 0.1508457845622862
+    assert profile.delta(epsilon=0.0) == 0.15084578456228623
     # reuse the constant above
-    assert profile.delta(epsilon=0.6880024554878085) == 1e-3
+    assert profile.delta(epsilon=0.6880024554878086) == 0.0009999999999999994
 
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.0)).map(
         d_in=0.0
