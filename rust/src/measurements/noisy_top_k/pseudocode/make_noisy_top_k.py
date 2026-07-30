@@ -14,7 +14,9 @@ def make_noisy_top_k(
         if k > input_domain.size:
             raise "k must not exceed the number of candidates"
 
-    if not scale.is_finite() or scale.is_sign_negative():  # |\label{check-non-negative-scale}|
+    if (
+        not scale.is_finite() or scale.is_sign_negative()
+    ):  # |\label{check-non-negative-scale}|
         raise "scale must be finite and non-negative"
 
     monotonic = input_metric.monotonic

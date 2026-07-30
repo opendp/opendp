@@ -2,9 +2,9 @@ import opendp.prelude as dp
 import pytest
 
 
-
 def make_duplicate(multiplicity, raises=False):
     """An example user-defined transformation from Python"""
+
     def function(arg):
         if raises:
             raise ValueError("test that error propagates")
@@ -19,8 +19,9 @@ def make_duplicate(multiplicity, raises=False):
         dp.vector_domain(dp.atom_domain(T=int)),
         dp.symmetric_distance(),
         function,
-        stability_map
+        stability_map,
     )
+
 
 def test_make_user_transformation():
     input_domain = dp.vector_domain(dp.atom_domain(T=str))
@@ -71,11 +72,12 @@ def test_numpy_user_transformation_roundtrip():
 
 def make_constant_mechanism(constant):
     """An example user-defined measurement from Python"""
+
     def function(_arg):
         return constant
 
     def privacy_map(_d_in):
-        return 0.
+        return 0.0
 
     return dp.m.make_user_measurement(
         dp.atom_domain(T=int),
@@ -86,22 +88,25 @@ def make_constant_mechanism(constant):
         TO=dp.RuntimeType.infer(constant),
     )
 
+
 def test_make_user_measurement():
     mech = make_constant_mechanism(23)
     assert mech(1) == 23
-    assert mech.map(200) == 0.
+    assert mech.map(200) == 0.0
 
 
 def make_postprocess_frac():
     """An example user-defined postprocessor from Python"""
+
     def function(arg):
         return arg[0] / arg[1]
 
     return dp.new_function(function, float)
 
+
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
-    assert mech([12., 100.]) == 0.12
+    assert mech([12.0, 100.0]) == 0.12
 
 
 def test_user_constructors():
@@ -113,7 +118,7 @@ def test_user_constructors():
         dp.vector_domain(dp.atom_domain((2, 10)), 10),
         dp.symmetric_distance(),
         lambda x: [x] * 10,
-        lambda d_in: d_in * 10
+        lambda d_in: d_in * 10,
     )
     assert trans(2) == [2] * 10
     assert np.array_equal(dp.as_array()(trans(2)), np.repeat(2, 10))
@@ -134,15 +139,16 @@ def test_user_constructors():
 
     assert (meas >> (lambda x: x[0]))(2) == 2
 
+
 def test_hash():
     def get_elements(mechanisms):
         # ensure that all mechanisms have homogeneous...
-        input_domain, = {m.input_domain for m in mechanisms} # ...input domain,
-        input_metric, = {m.input_metric for m in mechanisms} # ...input metric,
-        output_measure, = {m.output_measure for m in mechanisms} # ...and measure
+        (input_domain,) = {m.input_domain for m in mechanisms}  # ...input domain,
+        (input_metric,) = {m.input_metric for m in mechanisms}  # ...input metric,
+        (output_measure,) = {m.output_measure for m in mechanisms}  # ...and measure
 
         return input_domain, input_metric, output_measure
-    
+
     def make_mock_basic_composition(mechanisms):
         input_domain, input_metric, output_measure = get_elements(mechanisms)
 
@@ -150,16 +156,23 @@ def test_hash():
         assert output_measure == dp.max_divergence()
 
         return dp.m.make_user_measurement(
-            input_domain, input_metric, output_measure,
-            function=lambda arg: [M(arg) for M in mechanisms], 
-            privacy_map=lambda d_in: sum(M.map(d_in) for M in mechanisms))
-    
-    make_mock_basic_composition([
-        dp.m.make_randomized_response_bool(.75)
-    ] * 3)
+            input_domain,
+            input_metric,
+            output_measure,
+            function=lambda arg: [M(arg) for M in mechanisms],
+            privacy_map=lambda d_in: sum(M.map(d_in) for M in mechanisms),
+        )
+
+    make_mock_basic_composition([dp.m.make_randomized_response_bool(0.75)] * 3)
 
     with pytest.raises(ValueError):
-        make_mock_basic_composition([
-            dp.m.make_randomized_response_bool(.75),
-            dp.m.make_gaussian(dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float), 1.)
-        ])
+        make_mock_basic_composition(
+            [
+                dp.m.make_randomized_response_bool(0.75),
+                dp.m.make_gaussian(
+                    dp.atom_domain(T=float, nan=False),
+                    dp.absolute_distance(T=float),
+                    1.0,
+                ),
+            ]
+        )

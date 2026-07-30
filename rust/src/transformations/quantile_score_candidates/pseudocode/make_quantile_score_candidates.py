@@ -28,7 +28,7 @@ def make_quantile_score_candidates(
         function=function,
         input_metric=input_metric,
         output_metric=LInfDistance.default(T=u64),
-        stability_map=StabilityMap.new_fallible( # `\label{map}`
+        stability_map=StabilityMap.new_fallible(  # `\label{map}`
             score_candidates_map(
                 alpha_num,
                 alpha_den,

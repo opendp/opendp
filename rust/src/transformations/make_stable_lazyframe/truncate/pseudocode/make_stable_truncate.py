@@ -34,7 +34,7 @@ def make_stable_truncate(
             )
 
     output_domain = middle_domain.clone()
-    for truncation in truncations: # |\label{line:truncation}|
+    for truncation in truncations:  # |\label{line:truncation}|
         output_domain = truncate_domain(output_domain, truncation)
 
     def function(plan: DslPlan) -> DslPlan:
@@ -63,11 +63,13 @@ def make_stable_truncate(
 
         # each truncation is used to derive row bounds
         new_bounds = []
-        for truncation_bound in truncation_bounds: # |\label{line:truncation-bound}|
+        for truncation_bound in truncation_bounds:  # |\label{line:truncation-bound}|
             # each truncation is used to derive row bounds
             new_bounds.append(
-                truncate_id_bound( # |\label{line:truncate-id-bound}|
-                    id_bounds.get_bound(truncation_bound.by), # |\label{line:id-bound-by}|
+                truncate_id_bound(  # |\label{line:truncate-id-bound}|
+                    id_bounds.get_bound(
+                        truncation_bound.by
+                    ),  # |\label{line:id-bound-by}|
                     truncation_bound,
                     total_num_ids,
                 )

@@ -2,7 +2,7 @@
 def match_group_by_truncation(
     plan: DslPlan, identifier: Expr
 ) -> Optional[Tuple[DslPlan, Truncation, Bound]]:
-    if not isinstance(plan, DslPlan.GroupBy): # |\label{line:check_groupby}|
+    if not isinstance(plan, DslPlan.GroupBy):  # |\label{line:check_groupby}|
         return None
 
     input = plan.input
@@ -12,17 +12,19 @@ def match_group_by_truncation(
     options = plan.options
 
     if apply is not None or options != GroupbyOptions.default():
-        return None # |\label{line:check_apply}|
+        return None  # |\label{line:check_apply}|
 
-    ids, by = partition(lambda expr: expr == identifier, keys) # |\label{line:partition}|
+    ids, by = partition(
+        lambda expr: expr == identifier, keys
+    )  # |\label{line:partition}|
 
-    if not ids: # |\label{line:check_ids}|
+    if not ids:  # |\label{line:check_ids}|
         return None
 
     return (
         input,
         Truncation.GroupBy(keys, aggs),
-        Bound(by=by, per_group=1, num_groups=None), # |\label{line:bound}|
+        Bound(by=by, per_group=1, num_groups=None),  # |\label{line:bound}|
     )
 
 

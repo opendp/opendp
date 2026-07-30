@@ -10,7 +10,7 @@
 # ("pip install -r requirements-dev.txt"), which evaluates the markers.
 # #
 
-flake8
+ruff
 pytest
 wheel
 coverage

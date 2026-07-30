@@ -109,6 +109,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         for clique in (cl for cl in table.marginals if len(cl) <= 2):
             test_cov(clique)
 
+
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
     from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
@@ -294,7 +295,9 @@ def test_contingency_table_delta():
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
 
-    message = "delta (None) must be nonzero because keys and cuts don't span all columns"
+    message = (
+        "delta (None) must be nonzero because keys and cuts don't span all columns"
+    )
     with pytest.raises(ValueError, match=re.escape(message)):
         context.query(epsilon=1.0).contingency_table()
 
@@ -367,7 +370,9 @@ def test_with_null():
     from polars.testing import assert_series_equal
 
     assert_series_equal(_with_null(pl.Series(["a", "b"])), pl.Series(["a", "b", None]))
-    assert_series_equal(_with_null(pl.Series(["a", None, "b"])), pl.Series(["a", None, "b"]))
+    assert_series_equal(
+        _with_null(pl.Series(["a", None, "b"])), pl.Series(["a", None, "b"])
+    )
 
 
 def test_get_null_index():

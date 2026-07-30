@@ -22,12 +22,7 @@ microdata (column addition and filtering).
             >>> dp.enable_features("contrib")
 
             >>> context = dp.Context.compositor(
-            ...     # Many columns contain mixtures of strings and numbers and cannot be parsed as floats,
-            ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=4,
@@ -248,10 +243,7 @@ the context doesn’t know that all records from a user share the same
         .. code:: pycon
 
             >>> context_pident = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(
             ...         contributions=[
             ...             dp.polars.Bound(per_group=36),

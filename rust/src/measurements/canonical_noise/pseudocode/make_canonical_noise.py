@@ -5,8 +5,10 @@ def make_canonical_noise(
     d_in: f64,
     d_out: tuple[f64, f64],
 ):
-    assert not input_domain.nan(), "input data must be non-nan" # `\label{non-nan}`
-    assert not d_in.is_sign_negative() and d_in.is_finite() # `\label{sensitivity-check}`
+    assert not input_domain.nan(), "input data must be non-nan"  # `\label{non-nan}`
+    assert (
+        not d_in.is_sign_negative() and d_in.is_finite()
+    )  # `\label{sensitivity-check}`
 
     tradeoff, fixed_point = approximate_to_tradeoff(d_out)
     r_d_in = RBig.try_from(d_in)
@@ -16,7 +18,7 @@ def make_canonical_noise(
             arg = RBig.try_from(arg)
         except Exception:
             arg = RBig(0)
-        
+
         canonical_rv = CanonicalRV(  # `\label{canonical-rv}`
             shift=arg, scale=r_d_in, tradeoff=tradeoff, fixed_point=fixed_point
         )

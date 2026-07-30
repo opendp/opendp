@@ -20,18 +20,18 @@ Why OpenDP?
 
 * OpenDP is based on a `solid conceptual framework <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
 * OpenDP is built on a Rust core for memory and thread safety and performance.
-* OpenDP has a process for independent review of algorithms and implementations.
-* OpenDP has performed well in `independent security audits <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_.
+* OpenDP has a process for `independent review <https://opendp.org/proof-review-board/>`_ of algorithms and implementations.
+* OpenDP has performed well in independent security audits. (`2023 <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_, `2026 <https://arxiv.org/pdf/2602.17454>`_)
 * OpenDP supports a range of differential privacy algorithms.
 * OpenDP has bindings for Python and R, both built on the same Rust core for consistency and security.
-* OpenDP is a community effort and is not owned or directed by a single corporation.
+* OpenDP is a `community effort <https://opendp.org/what-we-do/>`_ and is not owned or directed by a single corporation.
 
 That said, OpenDP is not the best tool for every job.
 In particular, it is a fairly low-level interface:
-There are a number of other projects which try to make it easy to add
+There are other projects which try to make it easy to add
 differential privacy to existing SQL interfaces or ML frameworks.
-One such tool is `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_,
-which is built on the OpenDP library.
+Two other libraries hosted by the OpenDP Project are
+`Tumult Analytics and SmartNoise SDK <https://opendp.org/tools/>`_.
 
 Who is using OpenDP?
 --------------------
@@ -44,7 +44,7 @@ Some of the applications of OpenDP in healthcare, government, and tech include:
 * `OpenMined <https://openmined.org>`_ used OpenDP as part of PySyft deployments with Microsoft and DailyMotion, with pilots at multiple national statistical organizations.
 * Researchers at `Microsoft <https://microsoft.com>`_ used OpenDP to construct a `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
 * Researchers at `Harvard Business School <https://www.hbs.edu/>`_ and `Microsoft <https://microsoft.com>`_ used OpenDP to create `a detailed atlas of internet usage in the US <https://www.nber.org/papers/w32932>`_ and found substantial disparities between urban and rural areas, and even within cities.
-* `LiveRamp <https://liveramp.com>`_ used OpenDP to `support COVID research <https://liveramp.uk/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_.
+* `LiveRamp <https://liveramp.com>`_ used OpenDP to `support COVID research <https://www.linkedin.com/posts/keng-he_activity-6789741749498605568-Y3hW/>`_.
 * Researchers with the `Christchurch Call Initiative on Algorithmic Outcomes <https://www.christchurchcall.org/christchurch-call-initiative-on-algorithmic-outcomes/>`_ used OpenDP to `audit recommender algorithms <https://www.christchurchcall.org/content/files/2024/11/Christchurch-Call-AI-Transparency-in-Practice-Report-October-2024-1.pdf>`_.
 
 Let us know if you have an example to add!
