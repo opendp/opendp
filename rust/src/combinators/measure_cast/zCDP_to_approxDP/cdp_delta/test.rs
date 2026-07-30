@@ -102,6 +102,15 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 }
 
 #[test]
+fn test_cdp_delta_rounding_regression() -> Fallible<()> {
+    // previously rounded 1 ulp lower
+    assert_eq!(cdp_delta(0.05, 0.25)?, 8.17727531036956e-2);
+    // optimal alpha exceeds 2^53, to verify (α - 1) rounds
+    assert_eq!(cdp_delta(5e-30, 1e-13)?, 2.619676329730346e-234);
+    Ok(())
+}
+
+#[test]
 fn test_edge_cases() -> Fallible<()> {
     // negativity checks
     assert!(cdp_delta(-0., 0.).is_err());

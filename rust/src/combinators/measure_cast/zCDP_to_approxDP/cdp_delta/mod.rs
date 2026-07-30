@@ -125,8 +125,13 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
     }
 
     // calculate delta
-    let a_1 = a_max.inf_sub(&1.0)?;
     let ar_e = a_max.inf_mul(&rho)?.inf_sub(&eps)?;
+    // the conservative rounding direction of (α-1) follows the sign of its cofactor ar_e
+    let a_1 = if ar_e.is_sign_negative() {
+        a_max.neg_inf_sub(&1.0)?
+    } else {
+        a_max.inf_sub(&1.0)?
+    };
     //  t1 = (α-1) (αρ - ε)
     let t1 = match a_1.inf_mul(&ar_e) {
         // if t1 is negative, then handle negative overflow by making t1 larger: the most negative finite float
@@ -136,15 +141,15 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
         err => err?,
     };
 
-    //  t2 = α ln1p(-1/α)
-    let t2 = a_max.inf_mul(&a_max.recip().neg().inf_ln_1p()?)?;
+    //  t2 = α ln1p(-1/α): 1/α rounds down so the negative ln1p(-1/α) rounds up
+    let t2 = a_max.inf_mul(&(1.0).neg_inf_div(&a_max)?.neg().inf_ln_1p()?)?;
 
     //  delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
-    //        = exp(t1             + t2          ) / (α-1)
+    //        = exp(t1             + t2          ) / (α-1), divisor rounded down
     let delta = t1
         .inf_add(&t2)?
         .inf_exp()?
-        .inf_div(&(a_max.inf_sub(&1.0)?))?;
+        .inf_div(&(a_max.neg_inf_sub(&1.0)?))?;
 
     // delta is always <= 1
     Ok(delta.min(1.0))
