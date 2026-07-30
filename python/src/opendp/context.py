@@ -1164,6 +1164,9 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     if from_to == ("PrivacyCurveDP", "Approximate<PureDP>"):
         return make_fix_delta(chain, d_to[1])
 
+    if from_to == ("PrivacyCurveDP", "Approximate<MaxDivergence>"):
+        return make_fix_delta(chain, d_to[1])
+
     raise ValueError(
         f"Unable to cast measure from {from_to[0]} to {from_to[1]}"
     )  # pragma: no cover
