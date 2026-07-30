@@ -97,6 +97,7 @@ pub(crate) enum Purity {
 pub(crate) struct PrivacyCapabilities {
     profile: Option<Purity>,
     tradeoff: bool,
+    gaussian: bool,
     renyi: Option<Purity>,
     zcdp: Option<Purity>,
 }
@@ -106,6 +107,7 @@ impl PrivacyCapabilities {
         Self {
             profile: Some(purity),
             tradeoff: false,
+            gaussian: false,
             renyi: None,
             zcdp: None,
         }
@@ -122,6 +124,15 @@ impl PrivacyCapabilities {
 
     pub(crate) fn tradeoff(&self) -> bool {
         self.tradeoff
+    }
+
+    pub(crate) fn with_gaussian(mut self) -> Self {
+        self.gaussian = true;
+        self
+    }
+
+    pub(crate) fn gaussian(&self) -> bool {
+        self.gaussian
     }
 
     pub(crate) fn with_renyi(mut self, purity: Purity) -> Self {
@@ -169,6 +180,10 @@ impl MultiDP {
 
     pub(crate) fn with_renyi(purity: Purity) -> Self {
         Self::new(PrivacyCapabilities::default().with_renyi(purity))
+    }
+
+    pub(crate) fn with_gaussian() -> Self {
+        Self::new(PrivacyCapabilities::default().with_gaussian())
     }
 
     pub(crate) fn with_zcdp(purity: Purity) -> Self {

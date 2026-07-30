@@ -38,6 +38,7 @@ fn multidp_capabilities_are_inspectable() {
     let renyi_pure = MultiDP::with_renyi(Purity::Pure);
     let zcdp_approximate = MultiDP::with_zcdp(Purity::Approximate);
     let zcdp_pure = MultiDP::with_zcdp(Purity::Pure);
+    let gaussian = MultiDP::with_gaussian();
     assert_eq!(pure.capabilities().profile(), Some(Purity::Pure));
     assert_eq!(
         approximate.capabilities().profile(),
@@ -45,7 +46,10 @@ fn multidp_capabilities_are_inspectable() {
     );
     assert_eq!(empty.capabilities().profile(), None);
     assert!(!empty.capabilities().tradeoff());
+    assert!(!empty.capabilities().gaussian());
     assert!(tradeoff.capabilities().tradeoff());
+    assert!(gaussian.capabilities().gaussian());
+    assert!(!gaussian.capabilities().tradeoff());
     assert_eq!(empty.capabilities().renyi(), None);
     assert_eq!(
         renyi_approximate.capabilities().renyi(),
