@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L1Distance<RBig>, PrivacyCurveDP> for ZExpFamily<1>}}
+\author{\MichaelShoemateAuthor}
+\date{}
+
+\begin{document}
+\maketitle
+
+\contrib
+This proves the privacy-map implementation for the discrete Laplace mechanism
+when the output measure is \rustdoc{measures/struct}{PrivacyCurveDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{MI} is \rustdoc{metrics/type}{L1Distance<RBig>} and \texttt{MO} is
+\rustdoc{measures/struct}{PrivacyCurveDP}. The distribution scale is a
+non-negative rational.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily1_PrivacyCurveDP.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+For every input distance accepted by the returned privacy map, the map returns
+a \texttt{PrivacyCurve} that is a valid upper privacy certificate for adding an
+independent discrete Laplace sample to each coordinate.
+\end{theorem}
+
+\begin{proof}
+Lines \ref{line:neg-scale} and \ref{line:neg-sens} reject invalid
+parameters. With zero sensitivity, line \ref{line:zero-sens} returns the
+identity certificate. With positive sensitivity and zero scale, the mechanism
+has no finite certificate and line \ref{line:zero-scale} reports failure.
+
+For positive rational sensitivity $s$ and scale $b$, the discrete Laplace
+point-mass ratio calculation gives the pure-DP bound
+\[
+    \varepsilon = s/b.
+\]
+The conservative casts in the pseudocode make the floating-point
+\texttt{epsilon} an upper bound on this value, so the $(\varepsilon,0)$ point
+inserted into the curve is valid.
+
+The implementation also computes the Harrison--Manurangsi zCDP bound using
+directed interval arithmetic. Therefore the returned $\rho$ is no smaller
+than the exact zCDP bound. Finally, \texttt{rdp\_discrete\_laplace} evaluates
+the exact Rényi expression with directed intervals and falls back to the
+pure-DP bound if its numerics fail; either result is an upper bound at every
+order. Each representation is therefore a valid certificate, and querying or
+composing the resulting \texttt{PrivacyCurve} preserves conservativeness.
+\end{proof}
+
+\end{document}
