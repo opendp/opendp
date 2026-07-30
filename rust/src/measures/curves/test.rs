@@ -210,6 +210,37 @@ fn test_subnormal_log_to_delta_conversion() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_gaussian_curve_queries() -> Fallible<()> {
+    let curve = PrivacyCurve::new().with_gaussianDP(1.0)?;
+
+    let expected_delta = 0.12693673750664395;
+    let delta = curve.delta(1.0)?;
+    assert!(delta >= expected_delta);
+    assert!((delta - expected_delta).abs() < 3e-8);
+    assert!(curve.epsilon(delta)? <= 1.0);
+
+    for alpha in [0.1, 0.5, 0.9] {
+        assert!((0.0..=1.0).contains(&curve.beta(alpha)?));
+    }
+    assert_eq!(curve.beta(0.0)?, 1.0);
+    assert_eq!(curve.beta(1.0)?, 0.0);
+    let beta = curve.beta(0.5)?;
+    assert!(curve.alpha(beta)? <= 0.5);
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_gaussian_composition_rejects_overflow() -> Fallible<()> {
+    assert!(PrivacyCurve::new().with_gaussianDP(-0.0).is_err());
+    let first = PrivacyCurve::new().with_gaussianDP(f64::MAX)?;
+    let second = PrivacyCurve::new().with_gaussianDP(f64::MAX)?;
+    assert!(PrivacyCurve::compose(vec![first, second]).is_err());
+    Ok(())
+}
+
 #[test]
 fn test_zcdp_curve_uses_shared_profile_conversion() -> Fallible<()> {
     let rho = 0.5;

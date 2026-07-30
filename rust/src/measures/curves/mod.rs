@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::measures::curves::{
     approxdp::{beta_via_approxDP, delta_via_approxDP, epsilon_via_approxdp},
+    gaussiandp::{beta_via_gaussianDP, delta_via_gaussianDP},
     profile::{beta_via_profile, delta_via_profile},
     renyidp::{beta_via_renyiDP, beta_via_zCDP, delta_via_renyiDP, delta_via_zCDP},
     tradeoff::delta_via_tradeoff,
@@ -20,6 +21,7 @@ use crate::{
 };
 
 mod approxdp;
+mod gaussiandp;
 mod profile;
 mod renyidp;
 mod tradeoff;
@@ -39,6 +41,7 @@ pub struct PrivacyCurve {
     delta_slack: f64,
     // invariant: order increasing in epsilon, nonincreasing in delta
     approx_dp: Option<Arc<[ApproxDPPoint]>>,
+    gaussian_dp: Option<f64>,
     profile: Option<Profile>,
     tradeoff: Option<Tradeoff>,
     renyi_dp: Option<Arc<RenyiFn>>,
@@ -324,6 +327,19 @@ impl PrivacyCurve {
         Ok(self)
     }
 
+    /// Construct a privacy curve corresponding to Gaussian differential privacy with parameter `mu`.
+    ///
+    /// # Why idealized-numerics?
+    /// While the calculations have best-effort protections against Gaussian special-function error,
+    /// error bounds for these transcendental functions are not known and could be underestimated.
+    #[cfg(feature = "idealized-numerics")]
+    #[allow(non_snake_case)]
+    pub fn with_gaussianDP(mut self, mu: f64) -> Fallible<Self> {
+        check_mu(mu)?;
+        self.gaussian_dp = Some(mu);
+        Ok(self)
+    }
+
     /// Construct a privacy curve from a zero-concentrated differential privacy
     /// parameter `rho`.
     #[allow(non_snake_case)]
@@ -357,6 +373,8 @@ impl PrivacyCurve {
             delta_via_approxDP(points, epsilon)
         } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
             delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)
+        } else if let Some(mu) = &self.gaussian_dp {
+            delta_via_gaussianDP(*mu, epsilon)
         } else if let Some(rho) = &self.zcdp {
             delta_via_zCDP(*rho, epsilon)
         } else if let Some(curve) = &self.renyi_dp {
@@ -398,7 +416,9 @@ impl PrivacyCurve {
             return Ok(0.0);
         }
 
-        let beta = if let Some(Tradeoff { beta, .. }) = &self.tradeoff {
+        let beta = if let Some(mu) = &self.gaussian_dp {
+            beta_via_gaussianDP(*mu, alpha)?
+        } else if let Some(Tradeoff { beta, .. }) = &self.tradeoff {
             beta(alpha)?
         } else if let Some(Profile { log_delta, .. }) = &self.profile {
             beta_via_profile(log_delta.as_ref(), alpha)?
@@ -514,7 +534,9 @@ impl PrivacyCurve {
             return self.alpha_by_inverting_beta(beta);
         }
 
-        let alpha = if let Some(Tradeoff {
+        let alpha = if let Some(mu) = &self.gaussian_dp {
+            beta_via_gaussianDP(*mu, beta)?
+        } else if let Some(Tradeoff {
             beta: beta_fn,
             symmetric,
         }) = &self.tradeoff
@@ -568,7 +590,12 @@ impl PrivacyCurve {
 
         let mut composed_any_base_repr = false;
 
-        if curves.iter().any(|curve| curve.renyi_dp.is_some()) {
+        if curves.iter().any(|curve| curve.gaussian_dp.is_some()) {
+            if let Some(mu) = compose_gaussianDP(&curves)? {
+                out.gaussian_dp = Some(mu);
+                composed_any_base_repr = true;
+            }
+        } else if curves.iter().any(|curve| curve.renyi_dp.is_some()) {
             if let Some(renyi_dp) = compose_renyiDP_with_zCDP_normalization(&curves)? {
                 out.renyi_dp = Some(renyi_dp);
                 composed_any_base_repr = true;
@@ -601,11 +628,41 @@ impl PrivacyCurve {
 
     fn has_base_repr(&self) -> bool {
         self.approx_dp.is_some()
+            || self.gaussian_dp.is_some()
             || self.profile.is_some()
             || self.tradeoff.is_some()
             || self.renyi_dp.is_some()
             || self.zcdp.is_some()
     }
+}
+
+fn compose_gaussianDP(curves: &[PrivacyCurve]) -> Fallible<Option<f64>> {
+    let mut sum_mu2 = DInterval::point(0.0)?;
+    let mut saw_non_identity = false;
+
+    for curve in curves {
+        match curve.gaussian_dp {
+            Some(mu) => {
+                check_mu(mu)?;
+                let mu = DInterval::point(mu)?;
+                sum_mu2 = sum_mu2.add(mu.clone().mul(mu)?)?;
+                saw_non_identity = true;
+            }
+            None if !curve.has_base_repr() => {}
+            None => return Ok(None),
+        }
+    }
+
+    if !saw_non_identity {
+        return Ok(None);
+    }
+
+    let mu = sum_mu2.sqrt()?.upper_f64()?;
+    if !mu.is_finite() {
+        return fallible!(Overflow, "composed Gaussian DP parameter is not finite");
+    }
+    check_mu(mu)?;
+    Ok(Some(mu))
 }
 
 fn compose_zCDP(curves: &[PrivacyCurve]) -> Fallible<Option<f64>> {
@@ -792,6 +849,16 @@ fn checked_log_delta_output(log_delta: f64) -> Fallible<f64> {
         );
     }
     Ok(log_delta)
+}
+
+fn check_mu(mu: f64) -> Fallible<()> {
+    if mu.is_nan() {
+        return fallible!(FailedMap, "mu must not be NaN");
+    }
+    if !mu.is_finite() || mu.is_sign_negative() {
+        return fallible!(FailedMap, "mu ({mu}) must be a finite non-negative number");
+    }
+    Ok(())
 }
 
 fn check_rho(rho: f64) -> Fallible<()> {
