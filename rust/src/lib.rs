@@ -187,8 +187,6 @@ pub mod internal;
 pub mod measurements;
 pub mod measures;
 pub mod metrics;
-#[cfg(test)]
-pub(crate) mod test_rounding;
 pub mod traits;
 pub mod transformations;
 pub mod utilities;
