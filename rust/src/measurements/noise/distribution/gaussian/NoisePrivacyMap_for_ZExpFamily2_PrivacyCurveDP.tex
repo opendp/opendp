@@ -1,0 +1,74 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L2Distance<RBig>, PrivacyCurveDP> for ZExpFamily<2>}}
+\author{\MichaelShoemateAuthor}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of
+\rustdoc{measurements/noise/trait}{NoisePrivacyMap} for
+\texttt{ZExpFamily<2>} with output measure
+\rustdoc{measures/struct}{PrivacyCurveDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\texttt{NoisePrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI} is \rustdoc{metrics/type}{L2Distance<RBig>}.
+    \item \texttt{MO} is \rustdoc{measures/struct}{PrivacyCurveDP}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily2_PrivacyCurveDP.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+Given a distribution \texttt{self}, the implementation returns an error if
+\texttt{self} is invalid. Otherwise it returns a privacy map for the mechanism
+\texttt{function(x) = x + Z}, where the coordinates of $Z$ are independent
+discrete Gaussian samples represented by \texttt{self}, under
+\texttt{PrivacyCurveDP}.
+\end{theorem}
+
+\begin{proof}
+Line \ref{line:neg-scale} rejects a negative scale, which does not represent a
+valid discrete Gaussian distribution. Line \ref{line:neg-sens} rejects a
+negative distance bound.
+
+When \texttt{d\_in} is zero, adjacent inputs are identical and line
+\ref{line:zero-sens} returns the identity privacy curve. When the sensitivity
+is positive and the scale is zero, the mechanism has no finite privacy
+guarantee; line \ref{line:zero-scale} returns the non-private curve represented
+by $\rho = \infty$.
+
+It remains to consider positive rational sensitivity $s$ and scale $\sigma$.
+By Theorem 14 of \cite{CKS20}, the discrete Gaussian mechanism is
+$\rho$-zCDP for
+\[
+    \rho = \frac{1}{2}\left(\frac{s}{\sigma}\right)^2.
+\]
+Line \ref{line:rho} performs the arithmetic exactly over rationals and then
+casts toward positive infinity, so the returned floating-point value
+$\widehat{\rho}$ satisfies $\widehat{\rho} \geq \rho$.
+
+Line \ref{line:curve} constructs a \texttt{PrivacyCurve} from this zCDP
+guarantee. Its privacy-profile and tradeoff queries are conservative
+conversions of the same zCDP guarantee. Therefore it is a valid
+\texttt{PrivacyCurveDP} distance for the mechanism. Increasing the distance to
+any \texttt{d\_out} accepted by the measure ordering preserves the guarantee,
+which proves the privacy-map postcondition.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}
