@@ -33,7 +33,7 @@ use crate::ffi::any::{
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
-use crate::measures::PrivacyProfile;
+use crate::measures::PrivacyCurve;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
@@ -787,7 +787,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
 
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+        let (curve, delta) = obj.downcast_ref::<(PrivacyCurve, f64)>()?;
 
         Ok(FfiSlice::new(
             util::into_raw([
@@ -846,7 +846,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             match element_ids.len() {
                 // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
                 2 => {
-                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                    if types == vec![Type::of::<PrivacyCurve>(), Type::of::<f64>()] {
                         return tuple_curve_f64_to_raw(obj).into();
                     }
                     if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
@@ -877,7 +877,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             } else { fallible!(FFI, "unrecognized generic {:?}", name) }
         }
         // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
-        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
+        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, PrivacyCurve, AnyMeasurement, AnyQueryable])], (obj)) }
     }.into()
 }
 
@@ -1310,7 +1310,7 @@ pub extern "C" fn opendp_data__privacy_profile_delta(
     curve: *const AnyObject,
     epsilon: f64,
 ) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyCurve>())
         .delta(epsilon)
         .map(AnyObject::new)
         .into()
@@ -1333,7 +1333,7 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
     profile: *const AnyObject,
     delta: f64,
 ) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyCurve>())
         .epsilon(delta)
         .map(AnyObject::new)
         .into()

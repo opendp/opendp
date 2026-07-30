@@ -440,6 +440,13 @@ impl PrivacyCurve {
         if delta == 1.0 {
             return Ok(0.0);
         }
+        if delta == 0.0 && self.profile.is_some() && self.approx_dp.is_none() {
+            return Ok(if self.delta_base(0.0)? == 0.0 {
+                0.0
+            } else {
+                f64::INFINITY
+            });
+        }
 
         if delta < self.delta_slack {
             return Ok(f64::INFINITY);

@@ -184,7 +184,7 @@ def c_to_py(value: Any) -> Any:
 
         obj_type = object_type(value)
 
-        if obj_type == PrivacyProfile.__name__:
+        if obj_type in (PrivacyProfile.__name__, "PrivacyCurve"):
             return PrivacyProfile(value)
         
         if obj_type == "AnyOdometerQueryable":
@@ -650,7 +650,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['PrivacyProfile', 'f64']:
+    if inner_type_names in (['PrivacyProfile', 'f64'], ['PrivacyCurve', 'f64']):
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         return PrivacyProfile(curve), delta.contents.value

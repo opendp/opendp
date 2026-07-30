@@ -382,6 +382,18 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
         }
         UNPROTECT(1);
     }
+    else if (str_equal(c_origin, "PrivacyCurve"))
+    {
+        if (len == 1)
+            result = privacyprofileptr_to_sexp(((AnyObject **)input)[0], R_NilValue);
+        else
+        {
+            result = PROTECT(allocVector(VECSXP, len));
+            for (int i = 0; i < len; i++)
+                SET_VECTOR_ELT(result, i, privacyprofileptr_to_sexp(((AnyObject **)input)[i], R_NilValue));
+            UNPROTECT(1);
+        }
+    }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
         if (len == 1)
@@ -729,6 +741,12 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
             type_name = VECTOR_ELT(get_args(type_name), 0);
     }
 
+    if (str_equal(c_origin, "PrivacyCurve") || str_equal(c_origin, "PrivacyProfile"))
+    {
+        UNPROTECT(2);
+        return sexp_to_privacyprofileptr(data);
+    }
+
     const char *c_type_name = rt_to_string(type_name);
 
     FfiSlice slice = sexp_to_slice(data, type_name);
@@ -756,7 +774,7 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
-    if (str_equal(c_origin, "PrivacyProfile"))
+    if (str_equal(c_origin, "PrivacyCurve") || str_equal(c_origin, "PrivacyProfile"))
     {
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         UNPROTECT(1);

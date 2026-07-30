@@ -20,7 +20,10 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{
+        Approximate, MaxDivergence, PrivacyCurve, PrivacyCurveDP, RenyiDivergence,
+        ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
@@ -124,5 +127,18 @@ impl CompositionMeasure for RenyiDivergence {
                 .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
+    }
+}
+
+impl CompositionMeasure for PrivacyCurveDP {
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        // Conservative because PrivacyCurve can represent approximate-zCDP-like
+        // guarantees via delta_slack. If you later split exact PrivacyCurveDP from
+        // approximate PrivacyCurveDP, the exact measure could plausibly be Concurrent.
+        Ok(Composability::Sequential)
+    }
+
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        PrivacyCurve::compose(d_mids)
     }
 }

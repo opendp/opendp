@@ -1,4 +1,6 @@
-use crate::{core::Function, domains::AtomDomain, metrics::DiscreteDistance};
+use crate::{
+    core::Function, domains::AtomDomain, measures::PrivacyCurveDP, metrics::DiscreteDistance,
+};
 
 use super::*;
 
@@ -7,7 +9,7 @@ fn test_fix_delta_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        SmoothedMaxDivergence,
+        PrivacyCurveDP,
         Function::new(|&v| v),
         PrivacyMap::new(|_d_in| {
             PrivacyCurve::new()
@@ -30,7 +32,7 @@ fn test_fix_delta_approx_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(SmoothedMaxDivergence),
+        Approximate(PrivacyCurveDP),
         Function::new(|&v| v),
         PrivacyMap::new(|_d_in| {
             (
