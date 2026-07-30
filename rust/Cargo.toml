@@ -45,6 +45,7 @@ dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 dashu-float = "=0.4.4"
 
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
+errorfunctions = "0.2.0"
 
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.1-dev" }
 readonly = "0.2"

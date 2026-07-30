@@ -1,0 +1,31 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{Gaussian Differential Privacy Curve}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor}
+\begin{document}
+\maketitle
+
+\section*{Definition}
+For $\mu \geq 0$, the Gaussian differential privacy tradeoff curve is
+\[
+  \beta_\mu(\alpha) = \Phi\left(\Phi^{-1}(1-\alpha)-\mu\right).
+\]
+Its privacy profile is
+\[
+  \delta_\mu(\epsilon) =
+  \Phi\left(-\frac{\epsilon}{\mu}+\frac{\mu}{2}\right)
+  -e^\epsilon\Phi\left(-\frac{\epsilon}{\mu}-\frac{\mu}{2}\right),
+\]
+with the value at $\mu=0$ defined by continuity as zero.
+
+\section*{Composition}
+Independent Gaussian privacy losses compose by addition of their squared
+parameters. Thus, for curves with parameters $\mu_i$,
+\[
+  \mu_{\mathrm{comp}} = \sqrt{\sum_i \mu_i^2}.
+\]
+The implementation encloses each arithmetic operation with directed interval
+arithmetic and rejects a non-finite resulting parameter.
+
+\end{document}
