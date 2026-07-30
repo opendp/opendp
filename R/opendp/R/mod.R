@@ -496,12 +496,13 @@ new_privacy_guarantee_internal <- function(ptr) {
 #' @param renyiDP_delta Source delta for approximate RDP.
 #' @param zCDP zCDP parameter rho.
 #' @param zCDP_delta Source delta for approximate zCDP.
+#' @param gaussianDP Gaussian-DP parameter mu.
 #' Alpha and beta report f-DP lower bounds derived from these representations,
 #' accepting scalars or nondecreasing vectors (duplicates permitted).
 #' No tradeoff representation is stored.
 #' @export
-privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0) {
-  if (is.null(approx_dp) && is.null(profile) && is.null(renyiDP) && is.null(zCDP)) {
+privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0, gaussianDP = NULL) {
+  if (is.null(approx_dp) && is.null(profile) && is.null(renyiDP) && is.null(zCDP) && is.null(gaussianDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
@@ -528,6 +529,9 @@ privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, 
   }
   if (!is.null(zCDP)) {
     guarantee <- `_privacy_guarantee_with_zCDP`(guarantee, zCDP, zCDP_delta)
+  }
+  if (!is.null(gaussianDP)) {
+    guarantee <- `_privacy_guarantee_with_gaussianDP`(guarantee, gaussianDP)
   }
   guarantee
 }
