@@ -1,13 +1,12 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
-use crate::measurements::make_private_lazyframe;
+use crate::measurements::{make_private_expr, make_private_lazyframe};
 use crate::measures::MaxDivergence;
+use crate::metrics::{L0PInfDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
-
-use crate::metrics::SymmetricDistance;
 
 use super::*;
 
@@ -157,5 +156,43 @@ fn test_explicit_keys() -> Fallible<()> {
         &[N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;
 
+    Ok(())
+}
+
+fn process_expr(expr: Expr) -> Fallible<Expr> {
+    Ok(make_private_expr(
+        WildExprDomain {
+            columns: vec![],
+            context: Context::Aggregation {
+                margin: Margin::select(),
+            },
+        },
+        L0PInfDistance(SymmetricDistance),
+        MaxDivergence,
+        expr,
+        Some(1.0),
+    )?
+    .invoke(&df!["A" => [1, 2]]?.lazy().logical_plan)?
+    .expr)
+}
+
+#[test]
+fn test_find_len_expr() -> Fallible<()> {
+    // len expressions supported
+    let supported = vec![
+        len().dp().noise(None),
+        len().cast(DataType::Int64).dp().noise(None),
+    ];
+
+    // Supported test cases.
+    for supported_expr in &supported {
+        let dp_expr = process_expr(supported_expr.clone())?;
+        let result = find_len_expr(&vec![dp_expr.clone()], None);
+        assert!(
+            result.is_ok(),
+            "Supported len expression incorrectly not identified: {:?}",
+            supported_expr,
+        );
+    }
     Ok(())
 }

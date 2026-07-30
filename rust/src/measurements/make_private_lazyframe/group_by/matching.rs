@@ -207,7 +207,7 @@ pub(super) fn find_len_expr(
         })
 }
 
-fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
+pub(super) fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
     let output_name = expr_output_name(expr).ok()?;
 
     // check if the expression matches the expected name
@@ -221,7 +221,13 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)>
 
     let (inputs, args) = match_trusted_plugin::<NoisePlugin>(&expr).ok().flatten()?;
 
-    if let Expr::Len = &inputs[0] {
+    // If it is a cast, unwrap to get the len expr.
+    let input = match &inputs[0] {
+        Expr::Cast { expr, .. } => expr.as_ref(),
+        x => x,
+    };
+
+    if let Expr::Len = input {
         Some((output_name.to_string(), args))
     } else {
         None
