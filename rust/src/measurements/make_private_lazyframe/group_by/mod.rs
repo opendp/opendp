@@ -286,8 +286,8 @@ where
         if margin.invariant.is_some() || is_join {
             ()
         } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
-            if li >= *threshold_value {
-                return fallible!(FailedMap, "threshold must be greater than {:?}", li);
+            if threshold_value <= 0.0 {
+                return fallible!(FailedMap, "This algorithm requires a threshold greater than 0");
             }
 
             let d_instability = threshold_value.neg_inf_sub(&li)?;
