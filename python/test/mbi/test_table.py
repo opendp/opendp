@@ -29,7 +29,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     cuts = {"A": [-2, -1, 0, 1, 2]}
     keys: dict[str, list] = {"B": ["a", "b", "c", "d", "e", "f"]}
     if approximate:
-        privacy_loss["delta"] = 0.5
+        privacy_loss["delta"] = 1e-8
     else:
         keys["C"] = [0, 1, 2, 3, 4, 5, 6, 7]
 
