@@ -25,9 +25,11 @@ from opendp.extras.mbi._aim import AIM
 from opendp.extras.mbi._utilities import (
     prior,
     get_std,
+    identity_query_precision,
     row_major_order,
-    weight_marginals,
+    SelectPrefixQuery,
     Algorithm,
+    Marginals,
     ONEWAY_UNKEYED,
 )
 from opendp.measurements import make_private_lazyframe
@@ -59,8 +61,8 @@ class ContingencyTable:
     """Unique keys for each column"""
     cuts: dict[str, Any]  # dict[str, Series]
     """Cut points (left-open) for each numeric column"""
-    marginals: dict[tuple[str, ...], Any]  # dict[tuple[str, ...], LinearMeasurement]
-    """Mapping from clique name to LinearMeasurement used to fit the model"""
+    marginals: Marginals
+    """Measurements used to fit the model, keyed by clique"""
     model: Any  # MarkovRandomField
     """MarkovRandomField spanning the same columns as keys"""
     thresholds: dict[str, int] = field(default_factory=dict)
@@ -93,6 +95,12 @@ class ContingencyTable:
             if len(self.keys[col]) - 1 != len(cutset):
                 msg = f'"{col}" keyset length ({len(self.keys[col])}) must be one greater than the number of cuts ({len(cutset)})'
                 raise ValueError(msg)
+
+        if isinstance(self.marginals, dict):
+            self.marginals = Marginals({
+                tuple(clique): [measurement]
+                for clique, measurement in self.marginals.items()
+            })
 
     def synthesize(
         self, rows: Optional[int] = None, method: Literal["round", "sample"] = "round"
@@ -156,6 +164,10 @@ class ContingencyTable:
         use :py:func:`~opendp.accuracy.gaussian_scale_to_accuracy`
         to construct a confidence interval.
 
+        Marginals released via a partial (prefix) query, or the zero-way total,
+        don't contribute a per-cell precision, so this may raise
+        if ``attrs`` is only covered by such measurements.
+
         :param attrs: attributes to preserve in uncertainty estimate
         """
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -168,11 +180,17 @@ class ContingencyTable:
         attrs_clique = set(attrs)
         size = model.domain.size
 
-        inv_var_sum = sum(
-            1 / (lm.stddev**2 * size(clique) / size(attrs_clique))
-            for clique, lm in self.marginals.items()
-            if attrs_clique.issuperset(clique)
-        )
+        inv_var_sum = 0.0
+        for measurement in self.marginals.flatten():
+            clique = measurement.clique
+            if not attrs_clique.issuperset(clique):
+                continue
+            # a total constrains the sum of cells, not each cell directly
+            if clique == () and attrs_clique:
+                continue
+            inv_var_sum += identity_query_precision(measurement) / (
+                size(clique) / size(attrs_clique)
+            )
 
         if inv_var_sum == 0:
             raise ValueError(f"attrs ({attrs}) are not covered by the query set")
@@ -241,7 +259,7 @@ def make_contingency_table(
         thresholds = table.thresholds.copy()
     else:
         model = None
-        marginals = {}
+        marginals = Marginals()
         thresholds = {}
 
     if cuts_pl:
@@ -283,6 +301,10 @@ def make_contingency_table(
             d_oneway = d_oneway, delta  # type: ignore[assignment]
 
         d_mids = [d_oneway, d_multiway if delta is None else (d_multiway, 0.0)]  # type: ignore[has-type]
+        has_prior_total = any(
+            identity_query_precision(measurement) > 0
+            for measurement in marginals.flatten()
+        )
         m_oneway, scale, threshold = _make_oneway_marginals(
             input_domain,
             input_metric,
@@ -292,6 +314,7 @@ def make_contingency_table(
             keys=keys_pl,
             plan=plan,
             unknown_only=algorithm.oneway == ONEWAY_UNKEYED,
+            has_prior_total=has_prior_total
         )
         if threshold is not None:
             thresholds |= {
@@ -317,7 +340,7 @@ def make_contingency_table(
         if m_oneway:
             new_keys, oneway_releases = qbl(m_oneway)
             stable_keys |= new_keys
-            current_marginals = weight_marginals(current_marginals, *oneway_releases)
+            current_marginals = current_marginals.add(*oneway_releases)
 
         mbi_domain = mbi.Domain.fromdict({c: len(k) for c, k in stable_keys.items()})
 
@@ -325,11 +348,10 @@ def make_contingency_table(
         if isinstance(model, mbi.MarkovRandomField):
             import attr  # type: ignore[import-not-found]
 
-            potential_factor = attr.evolve(model.potentials, domain=mbi_domain)
-            potentials = potential_factor.expand(list(current_marginals.keys()))
+            potentials = attr.evolve(model.potentials, domain=mbi_domain)
 
         current_model = algorithm.estimator(
-            mbi_domain, list(current_marginals.values()), potentials=potentials
+            mbi_domain, current_marginals.flatten(), potentials=potentials
         )
 
         t_index = make_stable_lazyframe(
@@ -363,7 +385,7 @@ def make_contingency_table(
         if delta is not None:
             m_index_marginals = make_approximate(m_index_marginals)
 
-        T: TypeAlias = tuple[dict[tuple[str, ...], Any], mbi.MarkovRandomField]
+        T: TypeAlias = tuple[Marginals, mbi.MarkovRandomField]
         current_marginals, current_model = cast(T, qbl(m_index_marginals))
 
         ordered_keys = {c: stable_keys[c] for c in input_domain.columns}
@@ -422,13 +444,13 @@ def _make_oneway_marginals(
     keys: dict[str, Any],
     plan: Any,
     unknown_only: bool,
+    has_prior_total: bool,
 ) -> tuple[Measurement, float, Optional[int]]:
     """Returns a measurement that releases keys and counts for one-way marginals,
     as well as the discovered scale and threshold."""
     from opendp.extras.polars import dp_len
     import polars as pl  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-not-found]
-    from mbi.estimation import minimum_variance_unbiased_total  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
 
     def group_by_agg(plan: pl.LazyFrame, name: str) -> pl.LazyFrame:
@@ -458,8 +480,18 @@ def _make_oneway_marginals(
             for name in input_domain.columns
             if name not in keys or not unknown_only
         ]
-        # estimating the total is necessary if there are no keyed columns
-        should_total = all(name not in keys for name in input_domain.columns)
+
+        will_release_full_identity = any(
+            name in keys
+            for name in names
+        )
+
+        should_total = not (has_prior_total or will_release_full_identity)
+
+        # estimating the total from an identity marginal requires a queried
+        # column with known keys; when `unknown_only`, keyed columns are
+        # excluded from `names`, so no such marginal is ever available.
+        should_total = not any(name in keys for name in names)
 
         one_way_measurements = [
             make_private_lazyframe(
@@ -489,11 +521,10 @@ def _make_oneway_marginals(
 
             if should_total:
                 total = counts.pop().item()
-            else:
-                total = minimum_variance_unbiased_total(
-                    LinearMeasurement(count["len"].to_numpy(), [name], stddev=std)
-                    for name, count in zip(names, counts)
-                    if name in keys
+                lm_counts.append(
+                    LinearMeasurement(
+                        np.asarray([total], dtype=float), clique=(), stddev=std
+                    )
                 )
 
             for name, count in zip(names, counts):
@@ -502,16 +533,32 @@ def _make_oneway_marginals(
 
                 if name in keys:
                     values_iter: Iterator[int] = (lookup[k] for k in keys[name])
+                    values = np.fromiter(values_iter, dtype=np.int64)
+                    lm_counts.append(
+                        LinearMeasurement(values, clique=[name], stddev=std)
+                    )
                 else:
-                    lookup.setdefault(None, 0)
-                    lookup[None] += total - count["len"].sum()
                     dtype = count[name].dtype
+                    observed_keys = [key for key in lookup if key is not None]
 
-                    new_keys[name] = pl.Series(name, lookup.keys(), dtype=dtype)
-                    values_iter = lookup.values()  # type: ignore[assignment]
+                    # Null represents both actual nulls and values omitted by
+                    # private key discovery. Keep it as a latent final cell.
+                    new_keys[name] = pl.Series(
+                        name, [*observed_keys, None], dtype=dtype
+                    )
 
-                values = np.fromiter(values_iter, dtype=np.int64)
-                lm_counts.append(LinearMeasurement(values, clique=[name], stddev=std))
+                    if observed_keys:
+                        values = np.fromiter(
+                            (lookup[key] for key in observed_keys), dtype=np.int64
+                        )
+                        lm_counts.append(
+                            LinearMeasurement(
+                                values,
+                                clique=[name],
+                                stddev=std,
+                                query=SelectPrefixQuery(len(observed_keys)),
+                            )
+                        )
 
             return new_keys, lm_counts
 

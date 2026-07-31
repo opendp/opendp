@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, cast, get_args, TYPE_CHECKING
+from typing import Callable, Literal, Optional, Any, Iterator, get_args, TYPE_CHECKING
 from functools import reduce
 from math import sqrt
 from opendp._internal import (
@@ -35,8 +35,10 @@ from opendp.mod import (
     Metric,
     Transformation,
 )
+
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
+
 
 @dataclass
 class Count:
@@ -64,15 +66,17 @@ def mirror_descent(
     potentials=None,  # CliqueVector | None
 ):  # MarkovRandomField
     """Fit a MarkovRandomField over the domain and loss function using mirror descent.
-    
+
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
     from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
 
     return _mirror_descent(domain, loss_fn, potentials=potentials)
 
+
 OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
+
 
 @dataclass(kw_only=True, frozen=True)
 class Algorithm(ABC):
@@ -100,7 +104,9 @@ class Algorithm(ABC):
 
     def __post_init__(self):
         if self.oneway not in get_args(OnewayType):
-            raise ValueError(f'oneway ({self.oneway}) must be in {get_args(OnewayType)}')
+            raise ValueError(
+                f"oneway ({self.oneway}) must be in {get_args(OnewayType)}"
+            )
 
         if self.oneway_split is not None and not (0 <= self.oneway_split < 1):
             raise ValueError(f"oneway_split ({self.oneway_split}) must be in [0, 1)")
@@ -114,7 +120,7 @@ class Algorithm(ABC):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: "Marginals",
         model,  # MarkovRandomField
     ) -> Measurement: ...
 
@@ -238,7 +244,11 @@ def make_stable_marginals(
 
     def pivot(x, clique: tuple[str, ...]):
         y = np.zeros(shape(clique), dtype=np.int32)
-        y[tuple(x[clique].to_numpy().T)] = x["len"].to_numpy()
+        # u32 counts are clipped before narrowing to i32: numpy treats
+        # uint32->int32 as a same-kind cast and silently wraps instead of erroring.
+        y[tuple(x[clique].to_numpy().T)] = (
+            x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32).to_numpy()
+        )
         return y
 
     def function(data):
@@ -342,35 +352,129 @@ def row_major_order(keys: Iterator):
     return reduce(reducer, (keyset.to_frame() for keyset in keys))
 
 
-def weight_marginals(
-    marginals: dict[tuple[str, ...], Any], *new_marginals
-) -> dict[tuple[str, ...], Any]:
-    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+@dataclass(frozen=True)
+class SelectPrefixQuery:
+    """Select a prefix of a flattened MBI marginal.
 
-    marginals = marginals.copy()
+    Used when the final cell is a latent synthetic ``other`` bucket rather than
+    a directly measured count.
+    """
 
-    for new_marginal in new_marginals:
-        if not isinstance(new_marginal, LinearMeasurement):
-            raise ValueError("each new marginal must be of type LinearMeasurement")
+    length: int
 
-        clique = new_marginal.clique
-        old_marginal = cast(Optional[LinearMeasurement], marginals.get(clique))
+    def __call__(self, factor):
+        return factor.datavector()[: self.length]
 
-        if old_marginal is None:
-            marginals[clique] = new_marginal
-            continue
 
-        old_var = old_marginal.stddev**2
-        old = old_marginal.noisy_measurement
+def _queries_equal(left: Callable, right: Callable) -> bool:
+    if left is right:
+        return True
+    try:
+        result = left == right
+        return result if isinstance(result, bool) else False
+    except Exception:  # pragma: no cover - defensive for user-defined queries
+        return False
 
-        new_var = new_marginal.stddev**2
-        new = new_marginal.noisy_measurement
 
-        weighted_var = 1 / (1 / old_var + 1 / new_var)
-        weighted = (old / old_var + new / new_var) * weighted_var
+def _same_shape(left, right) -> bool:
+    import numpy as np  # type: ignore[import-not-found]
 
-        marginals[clique] = LinearMeasurement(
-            weighted, clique, stddev=sqrt(weighted_var)
-        )
+    left_shape = np.asarray(left.noisy_measurement).shape
+    right_shape = np.asarray(right.noisy_measurement).shape
+    return left_shape == right_shape
 
-    return marginals
+
+def _inverse_variance_combine(old, new):
+    from mbi import LinearMeasurement
+
+    old_var = old.stddev**2
+    new_var = new.stddev**2
+    combined_var = 1 / (1 / old_var + 1 / new_var)
+
+    combined = (
+        old.noisy_measurement / old_var + new.noisy_measurement / new_var
+    ) * combined_var
+
+    return LinearMeasurement(
+        combined,
+        old.clique,
+        stddev=sqrt(combined_var),
+        query=old.query,
+    )
+
+
+def identity_query_precision(measurement) -> float:
+    """Return precision contributed by a full-datavector observation.
+
+    Partial queries do not provide a uniform uncertainty estimate for every
+    cell in a marginal, so they contribute zero precision.
+    """
+    from mbi import Factor  # type: ignore[import-untyped,import-not-found]
+
+    if _queries_equal(measurement.query, Factor.datavector):
+        return 1 / measurement.stddev**2
+    return 0.0
+
+
+class Marginals:
+    """A multimap from clique to independent :py:class:`mbi.LinearMeasurement`.
+
+    A clique identifies the marginal a query operates on; it does not
+    uniquely identify the observation. Several independent measurements can
+    legitimately share a clique: an initial partial (prefix) release, a later
+    full release, a zero-way total, or any other linear query over the same
+    marginal. Distinct query operators are kept as separate observations,
+    even when their cliques match.
+    """
+
+    def __init__(self, by_clique: Optional[dict[tuple[str, ...], list]] = None):
+        self.by_clique: dict[tuple[str, ...], list] = {
+            clique: list(group) for clique, group in (by_clique or {}).items()
+        }
+
+    def cliques(self) -> list[tuple[str, ...]]:
+        """Unique cliques with at least one measurement."""
+        return list(self.by_clique)
+
+    def flatten(self) -> list:
+        """All measurements, across all cliques."""
+        return [
+            measurement for group in self.by_clique.values() for measurement in group
+        ]
+
+    def copy(self) -> "Marginals":
+        return Marginals(self.by_clique)
+
+    def add(self, *new_measurements) -> "Marginals":
+        """Return a new collection with `new_measurements` merged in.
+
+        A new measurement is combined with an existing one under the same
+        clique only if they share a query and output shape; otherwise it is
+        kept as an independent observation."""
+        from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+
+        result = self.copy()
+
+        for new in new_measurements:
+            if not isinstance(new, LinearMeasurement):
+                raise ValueError("each new marginal must be of type LinearMeasurement")
+
+            group = result.by_clique.setdefault(new.clique, [])
+
+            for index, old in enumerate(group):
+                if not _queries_equal(old.query, new.query):
+                    continue
+
+                # should be impossible to reach
+                if old.noisy_measurement.shape != new.noisy_measurement.shape:
+                    raise ValueError(
+                        "equal queries over the same clique have "
+                        "incompatible measurement shapes"
+                    )
+
+                group[index] = _inverse_variance_combine(old, new)
+                break
+            else:
+                group.append(new)
+
+        return result

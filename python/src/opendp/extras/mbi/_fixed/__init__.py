@@ -8,10 +8,10 @@ from opendp._lib import import_optional_dependency
 from opendp.extras.mbi._utilities import (
     get_associated_metric,
     then_noise_marginals,
-    weight_marginals,
     make_stable_marginals,
     Algorithm,
     Count,
+    Marginals,
     OnewayType,
     ONEWAY_UNKEYED
 )
@@ -58,7 +58,7 @@ class Fixed(Algorithm):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: Marginals,
         model: Any,  # MarkovRandomField
     ):
         """Implements a "Fixed" algorithm over ordinal data.
@@ -94,13 +94,13 @@ class Fixed(Algorithm):
 
         def function(
             new_releases: list,
-        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
-            all_marginals = weight_marginals(marginals, *new_releases)
+        ) -> tuple[Marginals, MarkovRandomField]:
+            all_marginals = marginals.add(*new_releases)
 
             new_model = self.estimator(
                 model.domain,
-                list(all_marginals.values()),
-                potentials=model.potentials.expand(list(all_marginals.keys())),
+                all_marginals.flatten(),
+                potentials=model.potentials,
             )
             return all_marginals, new_model
 
