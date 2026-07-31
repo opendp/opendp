@@ -180,7 +180,7 @@ def make_private_group_by(
             pass
         elif threshold_info is not None:  # |\label{line:privacy-map-threshold}|
             _, noise, threshold_value, _ = threshold_info
-            if 0 >= threshold_value:
+            if 0 > threshold_value:
                 raise f"Threshold must be greater than 0."
 
             d_instability = threshold_value.neg_inf_sub(li)
