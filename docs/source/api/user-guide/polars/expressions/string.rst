@@ -47,14 +47,14 @@ Dates can be parsed from strings via ``.str.strptime``, and its variants
             ...         pl.col.YEAR.cast(str).str.to_date(format=r"%Y")
             ...     )
             ...     .group_by("YEAR")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query.release().collect().sort("YEAR")
             shape: (9, 2)
             ┌────────────┬────────┐
             │ YEAR       ┆ len    │
             │ ---        ┆ ---    │
-            │ date       ┆ u32    │
+            │ date       ┆ i64    │
             ╞════════════╪════════╡
             │ 2005-01-01 ┆ ... │
             │ 2006-01-01 ┆ ... │
@@ -94,7 +94,7 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
             ...         )
             ...     )
             ...     .group_by("YEAR")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> try:
             ...     query.release()

@@ -58,6 +58,21 @@ _KEY_SIZE_THRESHOLD_MB = 2 ** 10
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
+def _resolve_signed(signed: bool | None) -> bool:
+    if signed is None:
+        warn(
+            "The default for counting queries will change to signed=True in a future "
+            "release. Pass signed=True to preserve negative noisy counts as Int64, "
+            "or signed=False to retain the current unsigned behavior.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        return False
+    if not isinstance(signed, bool):
+        raise TypeError("signed must be a bool or None")
+    return signed
+
+
 def _size_warning(keys):
     mb_factor = 1024**2  # bytes per MB
 
@@ -116,13 +131,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(dp.len())
+        >>> query = context.query().select(dp.len(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
         │ len │
         │ --- │
-        │ u32 │
+        │ i64 │
         ╞═════╡
         │ ... │
         └─────┘
@@ -156,13 +171,17 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    def len(self, scale: float | None = None, signed: bool = False):
+    def len(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
         so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
 
         :param scale: parameter for the noise distribution.
         :param signed: if True, the output type is Int64 and negative noisy results are preserved.
@@ -178,24 +197,25 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.len())
+        >>> query = context.query().select(pl.col("visits").dp.len(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
 
         Output is noise added to three.
 
-        It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,
+        It can differ from frame length (``.select(dp.len(signed=True))``) if the expression uses transformations that change the number of rows,
         like filtering.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
+        signed = _resolve_signed(signed)
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
@@ -203,7 +223,7 @@ class DPExpr(object):
             returns_scalar=True,
         )
 
-    def count(self, scale: float | None = None, signed: bool = False):
+    def count(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, not including null values.
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
@@ -212,6 +232,10 @@ class DPExpr(object):
 
         When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
         so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
 
         :param scale: parameter for the noise distribution.
         :param signed: if True, the output type is Int64 and negative noisy results are preserved.
@@ -227,13 +251,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.count())
+        >>> query = context.query().select(pl.col("visits").dp.count(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -245,11 +269,11 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_count",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def null_count(self, scale: float | None = None, signed: bool = False):
+    def null_count(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of null elements in `self`.
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
@@ -258,6 +282,10 @@ class DPExpr(object):
 
         When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
         so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
 
         :param scale: parameter for the noise distribution.
         :param signed: if True, the output type is Int64 and negative noisy results are preserved.
@@ -273,13 +301,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.null_count())
+        >>> query = context.query().select(pl.col("visits").dp.null_count(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -288,18 +316,18 @@ class DPExpr(object):
 
         Note that if you want to count the number of null *and* non-null records,
         consider combining the queries by constructing a boolean nullity column to group on,
-        grouping by this column, and then using ``dp.len()``.
+        grouping by this column, and then using ``dp.len(signed=True)``.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_null_count",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def n_unique(self, scale: float | None = None, signed: bool = False):
+    def n_unique(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of unique elements in `self`.
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
@@ -308,6 +336,10 @@ class DPExpr(object):
 
         When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
         so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
 
         :param scale: parameter for the noise distribution.
         :param signed: if True, the output type is Int64 and negative noisy results are preserved.
@@ -323,13 +355,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.n_unique())
+        >>> query = context.query().select(pl.col("visits").dp.n_unique(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -341,7 +373,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_n_unique",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
@@ -544,13 +576,17 @@ if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
 
-def dp_len(scale: float | None = None, signed: bool = False):
+def dp_len(scale: float | None = None, signed: bool | None = None):
     """Compute a differentially private estimate of the number of rows.
 
     If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
     When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
     so negative noisy outputs are preserved.
+
+    Omitting signed (or passing None) currently uses False and emits a warning.
+    The default will change to True in a future release; pass True or False
+    explicitly to opt in or retain unsigned output without a warning.
 
     :param scale: parameter for the noise distribution.
     :param signed: if True, the output type is Int64 and negative noisy results are preserved.
@@ -566,13 +602,13 @@ def dp_len(scale: float | None = None, signed: bool = False):
     ...     privacy_loss=dp.loss_of(epsilon=1.),
     ...     split_evenly_over=1,
     ... )
-    >>> query = context.query().select(dp.len())
+    >>> query = context.query().select(dp.len(signed=True))
     >>> query.release().collect()
     shape: (1, 1)
     ┌─────┐
     │ len │
     │ --- │
-    │ u32 │
+    │ i64 │
     ╞═════╡
     │ ... │
     └─────┘
@@ -582,7 +618,7 @@ def dp_len(scale: float | None = None, signed: bool = False):
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
-        args=(scale, signed),
+        args=(scale, _resolve_signed(signed)),
         returns_scalar=True,
     )
 
@@ -1089,7 +1125,7 @@ class LazyFrameQuery:
             ... )
 
             >>> query = context.query().select(
-            ...     dp.len(),
+            ...     dp.len(signed=True),
             ...     pl.col("convicted").dp.sum((0, 1))
             ... )
 

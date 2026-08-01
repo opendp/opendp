@@ -172,7 +172,7 @@ if pl is not None:
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=10,
     )
-    query = context.query().select(dp.len())
+    query = context.query().select(dp.len(signed=True))
 
     @pytest.mark.parametrize(
         "dp_obj",
@@ -183,14 +183,14 @@ if pl is not None:
                 lf_domain_with_margin,
                 dp.symmetric_distance(),
                 dp.max_divergence(),
-                lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+                lf.select([dp.len(signed=True), pl.col("A").dp.sum((0, 1))]),
                 global_scale=1.0,
             ),
             dp.m.make_private_expr(
                 dp.wild_expr_domain([], dp.polars.Margin(by=[])),
                 dp.l01inf_distance(dp.symmetric_distance()),
                 dp.max_divergence(),
-                dp.len(scale=1.0),
+                dp.len(scale=1.0, signed=True),
             ),
         ],
         ids=lambda arg: str(arg),

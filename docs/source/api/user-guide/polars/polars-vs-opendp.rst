@@ -38,7 +38,7 @@ OpenDP Polars differs from typical Polars in these ways:
 
         >>> #                                 /‾‾‾‾‾‾‾‾‾‾‾‾‾\
         >>> query: dp.polars.LazyFrameQuery = context.query().select(
-        ...     dp.len()
+        ...     dp.len(signed=True)
         ... )
 
 2. **How you construct the query.**
@@ -88,7 +88,7 @@ OpenDP Polars differs from typical Polars in these ways:
         ┌─────┐
         │ len │
         │ --- │
-        │ u32 │
+        │ i64 │
         ╞═════╡
         │ ... │
         └─────┘
