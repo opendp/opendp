@@ -1,13 +1,15 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
+use crate::measurements::expr_noise::{NoiseDistribution, NoisePlugin, Support};
 use crate::measurements::{make_private_expr, make_private_lazyframe};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L0PInfDistance, SymmetricDistance};
-use crate::polars::PrivacyNamespace;
+use crate::polars::{PrivacyNamespace, apply_plugin};
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
+use super::matching::is_len_expr;
 use super::*;
 
 #[test]
@@ -194,5 +196,28 @@ fn test_find_len_expr() -> Fallible<()> {
             supported_expr,
         );
     }
+
+    // Casts other than the stable u32-to-i64 widening cast are rejected.
+    let valid_dp_expr = process_expr(supported[1].clone())?;
+    for (dtype, support) in [
+        (DataType::Int32, Support::Integer),
+        (DataType::Float64, Support::Float),
+    ] {
+        let invalid_dp_expr = apply_plugin(
+            vec![len().cast(dtype.clone())],
+            valid_dp_expr.clone(),
+            NoisePlugin {
+                distribution: NoiseDistribution::Laplace,
+                scale: 1.0,
+                support,
+            },
+        );
+        assert!(
+            is_len_expr(&invalid_dp_expr, None).is_none(),
+            "Invalid cast incorrectly identified as a len expression: {:?}",
+            dtype,
+        );
+    }
+
     Ok(())
 }
