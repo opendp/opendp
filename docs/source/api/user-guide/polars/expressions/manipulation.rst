@@ -163,7 +163,7 @@ individuals working each hour range.
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ... │
             │ (-inf, 0] ┆ ... │
@@ -230,7 +230,7 @@ from grouping:
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ (-inf, 0] ┆ ... │
             │ (0, 20]   ┆ ... │
@@ -634,7 +634,7 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             ┌─────────┬─────────┐
             │ HWUSUAL ┆ len     │
             │ ---     ┆ ---     │
-            │ u32     ┆ u32     │
+            │ u32     ┆ i64     │
             ╞═════════╪═════════╡
             │ 0       ┆ ... │
             │ 1       ┆ ... │

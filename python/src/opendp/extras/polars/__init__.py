@@ -45,6 +45,7 @@ from opendp.mod import (
     Metric,
     OpenDPException,
     SymmetricIdDistance,
+    GLOBAL_FEATURES,
 )
 from opendp.transformations import make_stable_lazyframe
 
@@ -57,6 +58,24 @@ _KEY_SIZE_THRESHOLD_MB = 2 ** 10
 
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
+
+_SIGNED_COUNT_WARNING_FEATURE = "disable-signed-count-warning"
+
+
+def _resolve_signed(signed: bool) -> bool:
+    if not isinstance(signed, bool):
+        raise TypeError("signed must be a bool")
+    if signed and _SIGNED_COUNT_WARNING_FEATURE not in GLOBAL_FEATURES:
+        warn(
+            "Counting queries now default to signed=True, which preserves negative "
+            "noisy counts as Int64. Pass signed=False to retain the previous "
+            "unsigned behavior, or enable the "
+            f"{_SIGNED_COUNT_WARNING_FEATURE!r} feature to disable this warning.",
+            FutureWarning,
+            stacklevel=3,
+        )
+    return signed
+
 
 def _size_warning(keys):
     mb_factor = 1024**2  # bytes per MB
@@ -122,7 +141,7 @@ class DPExpr(object):
         ┌─────┐
         │ len │
         │ --- │
-        │ u32 │
+        │ i64 │
         ╞═════╡
         │ ... │
         └─────┘
@@ -156,7 +175,7 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    def len(self, scale: float | None = None, signed: bool = False):
+    def len(self, scale: float | None = None, signed: bool = True):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
@@ -184,7 +203,7 @@ class DPExpr(object):
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -196,6 +215,7 @@ class DPExpr(object):
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
+        signed = _resolve_signed(signed)
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
@@ -203,7 +223,7 @@ class DPExpr(object):
             returns_scalar=True,
         )
 
-    def count(self, scale: float | None = None, signed: bool = False):
+    def count(self, scale: float | None = None, signed: bool = True):
         """Compute a differentially private estimate of the number of elements in `self`, not including null values.
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
@@ -233,7 +253,7 @@ class DPExpr(object):
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -245,11 +265,11 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_count",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def null_count(self, scale: float | None = None, signed: bool = False):
+    def null_count(self, scale: float | None = None, signed: bool = True):
         """Compute a differentially private estimate of the number of null elements in `self`.
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
@@ -279,7 +299,7 @@ class DPExpr(object):
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -295,11 +315,11 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_null_count",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def n_unique(self, scale: float | None = None, signed: bool = False):
+    def n_unique(self, scale: float | None = None, signed: bool = True):
         """Compute a differentially private estimate of the number of unique elements in `self`.
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
@@ -329,7 +349,7 @@ class DPExpr(object):
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -341,7 +361,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_n_unique",
-            args=(self.expr, scale, signed),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
@@ -554,7 +574,7 @@ if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
 
-def dp_len(scale: float | None = None, signed: bool = False):
+def dp_len(scale: float | None = None, signed: bool = True):
     """Compute a differentially private estimate of the number of rows.
 
     If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
@@ -582,7 +602,7 @@ def dp_len(scale: float | None = None, signed: bool = False):
     ┌─────┐
     │ len │
     │ --- │
-    │ u32 │
+    │ i64 │
     ╞═════╡
     │ ... │
     └─────┘
@@ -592,7 +612,7 @@ def dp_len(scale: float | None = None, signed: bool = False):
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
-        args=(scale, signed),
+        args=(scale, _resolve_signed(signed)),
         returns_scalar=True,
     )
 
