@@ -25,7 +25,7 @@ from ..helpers import ids
 
 
 def _test_estimator(domain, loss_fn, *, potentials=None):
-    from mbi.estimation import mirror_descent  # type: ignore[import-not-found]
+    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
 
     return mirror_descent(
         domain,
@@ -37,7 +37,7 @@ def _test_estimator(domain, loss_fn, *, potentials=None):
 
 def _fast_test_estimator(domain, loss_fn, *, potentials=None):
     """Keep structural table tests from spending time optimizing fit quality."""
-    from mbi.estimation import mirror_descent  # type: ignore[import-not-found]
+    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
 
     return mirror_descent(
         domain,
