@@ -106,7 +106,7 @@ been transformed in a way that changes the number of rows.
             ┌─────┬─────────┬─────────┐
             │ SEX ┆ len     ┆ HWUSUAL │
             │ --- ┆ ---     ┆ ---     │
-            │ i64 ┆ u32     ┆ u32     │
+            │ i64 ┆ i64     ┆ i64     │
             ╞═════╪═════════╪═════════╡
             ...
             └─────┴─────────┴─────────┘
@@ -156,15 +156,15 @@ result in one more, or one less, unique value.
             ┌─────────┐
             │ HWUSUAL │
             │ ---     │
-            │ u32     │
+            │ i64     │
             ╞═════════╡
             ...
             └─────────┘
 
 
-Noise added to a count can make the count go negative, but since the
-output data type is an unsigned integer, the library may return zero.
-This is more likely to happen when the true value is small.
+Counting queries default to signed output, preserving negative noisy counts
+as ``Int64`` values. Pass ``signed=False`` to opt into the legacy unsigned
+behavior, where negative noisy counts may be returned as zero.
 
 This release tells us that the number of null values is relatively
 small.
@@ -172,10 +172,11 @@ small.
 Signed Counts
 -------------
 
-Pass ``signed=True`` to any counting query (``dp.len``, expression ``len``,
-``count``, ``null_count`` or ``n_unique``) to cast the exact count to a
+Counting queries default to ``signed=True``. This casts the exact count to a
 signed ``Int64`` before noise is added, so negative noisy outputs are
-preserved instead of being clamped to zero:
+preserved instead of being clamped to zero. Pass ``signed=False`` to any
+counting query (``dp.len``, expression ``len``, ``count``, ``null_count`` or
+``n_unique``) to retain the legacy unsigned behavior:
 
 .. tab-set::
 
@@ -293,7 +294,7 @@ The noise scale dropped from 360 to 180…
             ┌─────────────────┬─────────┐
             │ HWUSUAL_is_null ┆ len     │
             │ ---             ┆ ---     │
-            │ bool            ┆ u32     │
+            │ bool            ┆ i64     │
             ╞═════════════════╪═════════╡
             ...
             └─────────────────┴─────────┘

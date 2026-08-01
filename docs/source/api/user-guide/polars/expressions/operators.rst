@@ -55,7 +55,7 @@ predicates and grouping columns.
             ┌─────┬─────────┬────────┐
             │ SEX ┆ OVER_40 ┆ len    │
             │ --- ┆ ---     ┆ ---    │
-            │ i64 ┆ bool    ┆ u32    │
+            │ i64 ┆ bool    ┆ i64    │
             ╞═════╪═════════╪════════╡
             │ 1   ┆ false   ┆ ... │
             │ 1   ┆ true    ┆ ... │

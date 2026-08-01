@@ -4,9 +4,14 @@ import re
 
 import opendp.prelude as dp
 
+# Suppress the signed-count migration warning while test modules are collected.
+# Tests that exercise the warning explicitly disable this feature.
+dp.enable_features("disable-signed-count-warning")
+
 
 @pytest.fixture(autouse=True)
 def add_dp(doctest_namespace):
+    dp.enable_features("disable-signed-count-warning")
     doctest_namespace["dp"] = dp
 
 

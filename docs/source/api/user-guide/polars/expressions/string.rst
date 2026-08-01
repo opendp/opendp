@@ -54,7 +54,7 @@ Dates can be parsed from strings via ``.str.strptime``, and its variants
             ┌────────────┬────────┐
             │ YEAR       ┆ len    │
             │ ---        ┆ ---    │
-            │ date       ┆ u32    │
+            │ date       ┆ i64    │
             ╞════════════╪════════╡
             │ 2005-01-01 ┆ ... │
             │ 2006-01-01 ┆ ... │
