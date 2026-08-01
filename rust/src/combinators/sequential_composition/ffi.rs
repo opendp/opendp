@@ -2,7 +2,7 @@ use crate::{
     combinators::Composability,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, RenyiDP, zCDP},
 };
 
 use super::{Adaptivity, CompositionMeasure};
@@ -19,7 +19,7 @@ impl CompositionMeasure for AnyMeasure {
             self_.downcast_ref::<M>()?.composability(adaptivity)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+            (self.type_, [PureDP, Approximate<PureDP>, zCDP, Approximate<zCDP>, RenyiDP])
         ], (self, adaptivity))
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
@@ -40,7 +40,7 @@ impl CompositionMeasure for AnyMeasure {
                 .map(AnyObject::new)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+            (self.type_, [PureDP, Approximate<PureDP>, zCDP, Approximate<zCDP>, RenyiDP])
         ], (self, d_i))
     }
 }

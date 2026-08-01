@@ -22,7 +22,7 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
             ...             dp.atom_domain(T=int)
             ...         ),
             ...         input_metric=dp.symmetric_distance(),
-            ...         output_measure=dp.max_divergence(),
+            ...         output_measure=dp.pure_dp(),
             ...     )
             ... )
 

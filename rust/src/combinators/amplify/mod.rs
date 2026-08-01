@@ -3,7 +3,7 @@ mod ffi;
 
 use crate::core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::error::Fallible;
-use crate::measures::{Approximate, MaxDivergence};
+use crate::measures::{Approximate, PureDP};
 use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, IsSizedDomain};
 
 /// Implemented for privacy measures that support privacy amplification by subsampling.
@@ -22,7 +22,7 @@ pub trait AmplifiableMeasure: Measure {
     ) -> Fallible<Self::Distance>;
 }
 
-impl AmplifiableMeasure for MaxDivergence {
+impl AmplifiableMeasure for PureDP {
     fn amplify(&self, epsilon: &f64, population_size: usize, sample_size: usize) -> Fallible<f64> {
         let sampling_rate =
             f64::exact_int_cast(sample_size)?.inf_div(&f64::exact_int_cast(population_size)?)?;
@@ -33,7 +33,7 @@ impl AmplifiableMeasure for MaxDivergence {
             .inf_ln_1p()
     }
 }
-impl AmplifiableMeasure for Approximate<MaxDivergence> {
+impl AmplifiableMeasure for Approximate<PureDP> {
     fn amplify(
         &self,
         (epsilon, delta): &(f64, f64),

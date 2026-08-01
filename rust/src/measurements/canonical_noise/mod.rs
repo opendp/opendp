@@ -13,7 +13,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::AtomDomain,
     error::Fallible,
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, PureDP},
     metrics::AbsoluteDistance,
     traits::samplers::{CanonicalRV, PartialSample},
 };
@@ -42,8 +42,7 @@ pub fn make_canonical_noise(
     input_metric: AbsoluteDistance<f64>,
     d_in: f64,
     d_out: (f64, f64),
-) -> Fallible<Measurement<AtomDomain<f64>, AbsoluteDistance<f64>, Approximate<MaxDivergence>, f64>>
-{
+) -> Fallible<Measurement<AtomDomain<f64>, AbsoluteDistance<f64>, Approximate<PureDP>, f64>> {
     if input_domain.nan() {
         return fallible!(MakeMeasurement, "input_domain must consist of non-nan data");
     }
@@ -60,7 +59,7 @@ pub fn make_canonical_noise(
     Measurement::new(
         input_domain,
         input_metric,
-        Approximate(MaxDivergence),
+        Approximate(PureDP),
         Function::new_fallible(move |&arg: &f64| {
             let canonical_rv = CanonicalRV {
                 shift: RBig::try_from(arg.clamp(f64::MIN, f64::MAX)).unwrap_or(RBig::ZERO),
@@ -85,7 +84,7 @@ pub fn make_canonical_noise(
     )
 }
 
-#[proven]
+#[proven(proof_path = "measurements/canonical_noise/approximate_to_tradeoff.tex")]
 /// # Proof Definition
 /// Given epsilon and delta, return the corresponding f-DP tradeoff curve
 /// with conservative arithmetic,

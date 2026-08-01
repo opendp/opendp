@@ -20,11 +20,11 @@ def test_amplification():
 def test_fix_delta():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
-    m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.0))
-    assert m_gauss.map(1.0).epsilon(1e-6) == 0.42994146883694945
+    m_gauss = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 10.0))
+    assert m_gauss.map(1.0).epsilon(1e-6) == 0.42994146883695367
 
     m_gauss_fixed = dp.c.make_fix_delta(m_gauss, 1e-6)
-    assert m_gauss_fixed.map(1.0) == (0.42994146883694945, 1e-06)
+    assert m_gauss_fixed.map(1.0) == (0.42994146883695367, 1e-06)
 
 
 def test_make_composition():
@@ -111,36 +111,34 @@ def test_make_composition_approx():
     composed_fixed = dp.c.make_composition(
         [
             dp.c.make_fix_delta(
-                dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.0)), 1e-7
+                dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 1.0)), 1e-7
             )
         ]
         * 2
     )
-    assert composed_fixed.map(1.0) == (11.341717670937543, 2e-07)
+    assert composed_fixed.map(1.0) == (11.341717670937626, 2e-07)
 
 
 def test_cast_zcdp_approxdp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
-    base_gaussian = input_space >> dp.m.then_gaussian(
-        10.0, MO=dp.ZeroConcentratedDivergence
-    )
+    base_gaussian = input_space >> dp.m.then_gaussian(10.0, MO=dp.zCDP)
     assert base_gaussian.map(1.0) == 0.005
 
-    approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
-    assert approx_gaussian.map(1.0).epsilon(1e-6) == 0.42994146883694945
+    approx_gaussian = dp.c.make_zCDP_to_curveDP(base_gaussian)
+    assert approx_gaussian.map(1.0).epsilon(1e-6) == 0.42994146883695367
 
 
 def test_cast_azcdp_approxdp():
     m_azcdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool),
         dp.absolute_distance(T=float),
-        dp.approximate(dp.zero_concentrated_divergence()),
+        dp.approximate(dp.zcdp()),
         lambda x: x,
         # rho, and catastrophic delta
         lambda d_in: (d_in * 0.05, d_in * 1e-7),
     )
-    m_asdp = dp.c.make_zCDP_to_approxDP(m_azcdp)
+    m_asdp = dp.c.make_zCDP_to_curveDP(m_azcdp)
     curve, delta = m_asdp.map(1.0)
     assert delta == 1e-7
 
@@ -154,7 +152,7 @@ def test_renyidp():
     m_rdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool),
         dp.absolute_distance(T=float),
-        dp.renyi_divergence(),
+        dp.renyi_dp(),
         lambda x: x,
         lambda d_in: lambda alpha: d_in * alpha / 2.0,
     )
@@ -180,7 +178,7 @@ def test_make_approximate():
         [
             m_lap,
             dp.c.make_fix_delta(
-                dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.0)),
+                dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 1.0)),
                 delta=1e-6,
             ),
         ]
@@ -201,10 +199,10 @@ def test_make_pureDP_to_zCDP():
     assert meas.map(1.0) == 0.010000000000000002
 
 
-def test_make_fixed_approxDP_to_approxDP():
+def test_make_approxDP_to_curveDP():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     fadp_meas = dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.0))
 
-    adp_meas = dp.c.make_fixed_approxDP_to_approxDP(fadp_meas)
+    adp_meas = dp.c.make_approxDP_to_curveDP(fadp_meas)
 
     assert adp_meas.map(1.0).epsilon(delta=1e-7) == 0.1

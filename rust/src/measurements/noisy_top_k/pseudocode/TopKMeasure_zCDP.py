@@ -1,5 +1,5 @@
 # type: ignore
-# ZeroConcentratedDivergence
+# zCDP
 REPLACEMENT = True
 
 

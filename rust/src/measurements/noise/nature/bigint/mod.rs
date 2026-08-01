@@ -23,9 +23,10 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<IBig>, AbsoluteDistance<RBig>),
+        output_measure: MO,
     ) -> Fallible<Measurement<AtomDomain<IBig>, AbsoluteDistance<RBig>, MO, IBig>> {
         let t_vec = make_vec(input_space)?;
-        let m_noise = self.make_noise(t_vec.output_space())?;
+        let m_noise = self.make_noise(t_vec.output_space(), output_measure)?;
 
         t_vec >> m_noise >> then_index_or_default(0)
     }

@@ -1,4 +1,4 @@
-use crate::{measurements::then_laplace, metrics::L1Distance};
+use crate::{measurements::then_laplace, measures::PureDP, metrics::L1Distance};
 
 use super::*;
 
@@ -86,7 +86,7 @@ fn test_make_b_ary_tree() -> Fallible<()> {
 fn test_noise_b_ary_tree() -> Fallible<()> {
     let meas =
         (make_b_ary_tree::<_, i32>(Default::default(), L1Distance::<u32>::default(), 10, 2)?
-            >> then_laplace(1., None))?;
+            >> then_laplace::<_, _, PureDP>(1., None))?;
     println!("noised {:?}", meas.invoke(&vec![1; 10])?);
 
     Ok(())
@@ -96,7 +96,7 @@ fn test_noise_b_ary_tree() -> Fallible<()> {
 fn test_identity() -> Fallible<()> {
     let b = 2;
     let trans = make_b_ary_tree::<_, i32>(Default::default(), L1Distance::<u32>::default(), 10, b)?;
-    let meas = (trans.clone() >> then_laplace(0., None))?;
+    let meas = (trans.clone() >> then_laplace::<_, _, PureDP>(0., None))?;
     let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
     let noisy_tree = meas.invoke(&vec![1; 10])?;

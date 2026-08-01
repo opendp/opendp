@@ -1293,52 +1293,6 @@ impl Shuffle for AnyObject {
     }
 }
 
-#[bootstrap(
-    name = "privacy_profile_delta",
-    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
-)]
-/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
-///
-/// # Arguments
-/// * `curve` - The PrivacyProfile.
-/// * `epsilon` - What to fix epsilon to compute delta.
-///
-/// # Returns
-/// Delta at a given `epsilon`.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__privacy_profile_delta(
-    curve: *const AnyObject,
-    epsilon: f64,
-) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(curve).downcast_ref::<PrivacyCurve>())
-        .delta(epsilon)
-        .map(AnyObject::new)
-        .into()
-}
-
-#[bootstrap(
-    name = "privacy_profile_epsilon",
-    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
-)]
-/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
-///
-/// # Arguments
-/// * `profile` - The PrivacyProfile.
-/// * `delta` - What to fix delta to compute epsilon.
-///
-/// # Returns
-/// Epsilon at a given `delta`.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__privacy_profile_epsilon(
-    profile: *const AnyObject,
-    delta: f64,
-) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(profile).downcast_ref::<PrivacyCurve>())
-        .epsilon(delta)
-        .map(AnyObject::new)
-        .into()
-}
-
 #[cfg(feature = "polars")]
 /// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
 /// The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.

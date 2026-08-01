@@ -34,15 +34,18 @@ use crate::core::{Function, Measure};
 /// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// $Y, Y'$ are $d$-close under the max divergence measure whenever
+/// $Y, Y'$ are $d$-close under the pure-DP privacy measure whenever
 ///
 /// ```math
 /// D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct MaxDivergence;
+pub struct PureDP;
 
-impl Measure for MaxDivergence {
+#[deprecated(since = "1.15.0", note = "Use `PureDP` instead.")]
+pub type MaxDivergence = PureDP;
+
+impl Measure for PureDP {
     type Distance = f64;
 }
 
@@ -94,7 +97,7 @@ impl Measure for MaxDivergence {
 /// ## `d`-closeness (profile-DP)
 ///
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// we say that $Y, Y'$ are $d$-close under the smoothed max divergence measure
+/// we say that $Y, Y'$ are $d$-close under the profile-DP privacy measure
 /// whenever, for every non-negative $\epsilon$, with $\delta = d(\epsilon)$,
 /// and for every event $S \subseteq \mathrm{Supp}(Y)$,
 ///
@@ -114,6 +117,7 @@ impl Measure for PrivacyCurveDP {
 
 #[deprecated(since = "0.15.0", note = "Use `PrivacyCurveDP` instead.")]
 pub type SmoothedMaxDivergence = PrivacyCurveDP;
+
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
 /// In the following definition, $d$ corresponds to privacy parameters $(d', \delta)$
@@ -137,8 +141,8 @@ pub type SmoothedMaxDivergence = PrivacyCurveDP;
 /// The exact interpretation of the slack depends on the underlying privacy
 /// measure PM.
 ///
-/// ### Special case: `PM = MaxDivergence`
-/// When $d = (\epsilon, \delta)$ and `PM = MaxDivergence`,
+/// ### Special case: `PM = PureDP`
+/// When $d = (\epsilon, \delta)$ and `PM = PureDP`,
 /// this is exactly fixed $(\epsilon, \delta)$-approximate differential privacy:
 ///
 /// ```math
@@ -172,7 +176,7 @@ impl<M: Measure> Measure for Approximate<M> {
 /// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// we say that $Y, Y'$ are $d$-close under the zero-concentrated divergence measure
+/// we say that $Y, Y'$ are $d$-close under the zCDP privacy measure
 /// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
@@ -182,9 +186,13 @@ impl<M: Measure> Measure for Approximate<M> {
 /// \right)^\alpha \right] \le d \cdot \alpha.
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct ZeroConcentratedDivergence;
+#[allow(non_camel_case_types)]
+pub struct zCDP;
 
-impl Measure for ZeroConcentratedDivergence {
+#[deprecated(since = "1.15.0", note = "Use `zCDP` instead.")]
+pub type ZeroConcentratedDivergence = zCDP;
+
+impl Measure for zCDP {
     type Distance = f64;
 }
 
@@ -201,7 +209,7 @@ impl Measure for ZeroConcentratedDivergence {
 ///
 /// ## `d`-closeness
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// we say that $Y, Y'$ are $d$-close under the Rényi divergence measure
+/// we say that $Y, Y'$ are $d$-close under the Rényi-DP privacy measure
 /// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
@@ -215,8 +223,11 @@ impl Measure for ZeroConcentratedDivergence {
 /// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct RenyiDivergence;
+pub struct RenyiDP;
 
-impl Measure for RenyiDivergence {
+#[deprecated(since = "1.15.0", note = "Use `RenyiDP` instead.")]
+pub type RenyiDivergence = RenyiDP;
+
+impl Measure for RenyiDP {
     type Distance = Function<f64, f64>;
 }

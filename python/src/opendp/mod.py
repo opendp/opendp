@@ -14,7 +14,7 @@ import importlib
 import json
 import warnings
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, AnyObject, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -43,6 +43,7 @@ __all__ = [
     'Measure',
     'ExtrinsicDivergence',
     'ApproximateDivergence',
+    'PrivacyCurve',
     'PrivacyProfile',
     '_PartialConstructor',
     'UnknownTypeException',
@@ -84,7 +85,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence)
+        output_measure = PureDP)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -92,7 +93,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     >>> print('concise: ', laplace(100))  # -> 99            # doctest: +ELLIPSIS
     concise: ...
     >>> # check the measurement's relation at
-    >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
+    >>> #     (1, 0.5): (AbsoluteDistance<u32>, PureDP)
     >>> assert laplace.check(1, 0.5)
 
     >>> # chain with a transformation from the trans module
@@ -107,7 +108,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     dp count: ...
 
     >>> # check the chained measurement's relation at
-    >>> #     (1, 0.5): (SymmetricDistance, MaxDivergence)
+    >>> #     (1, 0.5): (SymmetricDistance, PureDP)
     >>> assert chained.check(1, 0.5)
     """
     _type_ = AnyMeasurement
@@ -1057,7 +1058,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     >>> import opendp.prelude as dp
     >>> measure, distance = dp.loss_of(epsilon=1.0)
     >>> measure, distance
-    (MaxDivergence, 1.0)
+    (PureDP, 1.0)
 
     '''
     _type_ = AnyMeasure
@@ -1141,20 +1142,97 @@ class ApproximateDivergence(Measure):
     
     @property
     def inner_measure(self) -> Measure:
-        from opendp.measures import _approximate_divergence_get_inner_measure
-        return _approximate_divergence_get_inner_measure(self)
+        from opendp.measures import _approximate_get_inner_measure
+        return _approximate_get_inner_measure(self)
     
 
-class PrivacyProfile(object):
+class PrivacyCurve:
     '''
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    Wrapper over a privacy curve that can be queried as either a privacy profile
+    or an f-DP tradeoff curve.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Use this class to:
+    1. evaluate ``delta(epsilon)``
+    2. invert to ``epsilon(delta)``
+    3. evaluate ``beta(alpha)``
+    4. invert to ``alpha(beta)``
+    5. construct from one or more privacy representations at once
+
+    Conventions:
+    * ``delta(epsilon)`` returns an upper-conservative delta value.
+    * ``epsilon(delta)`` returns a certified epsilon sufficient for the given delta.
+    * ``beta(alpha)`` returns a lower-conservative beta value.
+    * ``alpha(beta)`` returns a lower-conservative alpha value.
     '''
-    def __init__(self, curve):
-        self.curve = curve
+    def __init__(
+        self,
+        curve=None,
+        *,
+        profile: Optional[Callable[[float], float]] = None,
+        log_profile: Optional[Callable[[float], float]] = None,
+        tradeoff: Optional[Callable[[float], float]] = None,
+        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        approxDP: Optional[list[tuple[float, float]]] = None,
+        gaussianDP: Optional[float] = None,
+        renyiDP: Optional[Callable[[float], float]] = None,
+        zCDP: Optional[float] = None,
+    ):
+        supplied = [
+            profile is not None,
+            log_profile is not None,
+            tradeoff is not None,
+            symmetric_tradeoff is not None,
+            approxDP is not None,
+            gaussianDP is not None,
+            renyiDP is not None,
+            zCDP is not None,
+        ]
+
+        if isinstance(curve, ctypes.POINTER(AnyObject)):
+            if any(supplied):
+                raise TypeError("internal `curve` pointer cannot be combined with constructor keyword arguments")
+            self.curve = curve
+            return
+
+        if curve is not None:
+            raise TypeError("`curve` is reserved for internal use; construct with keyword arguments like `PrivacyCurve(profile=...)`")
+
+        if not any(supplied):
+            raise TypeError(
+                "expected at least one of profile, log_profile, tradeoff, symmetric_tradeoff, "
+                "approxDP, gaussianDP, renyiDP, or zCDP"
+            )
+
+        from opendp.measures import (
+            _new_privacy_curve,
+            _privacy_curve_with_approxDP,
+            _privacy_curve_with_gaussianDP,
+            _privacy_curve_with_profile,
+            _privacy_curve_with_renyiDP,
+            _privacy_curve_with_tradeoff,
+            _privacy_curve_with_zCDP,
+        )
+
+        curve = _new_privacy_curve()
+
+        if profile is not None:
+            curve = _privacy_curve_with_profile(curve, profile, log=False)
+        if log_profile is not None:
+            curve = _privacy_curve_with_profile(curve, log_profile, log=True)
+        if tradeoff is not None:
+            curve = _privacy_curve_with_tradeoff(curve, tradeoff, symmetric=False)
+        if symmetric_tradeoff is not None:
+            curve = _privacy_curve_with_tradeoff(curve, symmetric_tradeoff, symmetric=True)
+        if approxDP is not None:
+            curve = _privacy_curve_with_approxDP(curve, approxDP)
+        if gaussianDP is not None:
+            curve = _privacy_curve_with_gaussianDP(curve, gaussianDP)
+        if renyiDP is not None:
+            curve = _privacy_curve_with_renyiDP(curve, renyiDP)
+        if zCDP is not None:
+            curve = _privacy_curve_with_zCDP(curve, zCDP)
+
+        self.curve = curve.curve
 
     def delta(self, epsilon):
         '''
@@ -1162,8 +1240,8 @@ class PrivacyProfile(object):
         
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_delta
-        return privacy_profile_delta(self.curve, epsilon)
+        from opendp.measures import _privacy_curve_delta
+        return _privacy_curve_delta(self.curve, epsilon)
 
     def epsilon(self, delta):
         '''
@@ -1171,9 +1249,29 @@ class PrivacyProfile(object):
         
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_epsilon
-        return privacy_profile_epsilon(self.curve, delta)
+        from opendp.measures import _privacy_curve_epsilon
+        return _privacy_curve_epsilon(self.curve, delta)
+
+    def beta(self, alpha):
+        '''
+        Returns the beta that corresponds to this alpha.
+
+        :param alpha: Type I error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_curve_beta
+        return _privacy_curve_beta(self.curve, alpha)
     
+    def alpha(self, beta):
+        '''
+        Returns the alpha that corresponds to beta.
+
+        :param beta: Type II error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_curve_alpha
+        return _privacy_curve_alpha(self.curve, beta)
+    
+
+PrivacyProfile = PrivacyCurve
 
 class _PartialConstructor(object):
     '''
@@ -1327,7 +1425,7 @@ def binary_search_chain(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
@@ -1389,7 +1487,7 @@ def binary_search_param(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -1521,11 +1619,10 @@ def binary_search(
         return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
-    Missing bounds are inferred. Pass `None` for either element of `bounds` to
-    conduct a one-sided search, or omit `bounds` to conduct an exponential search.
+    If bounds are not passed, conducts an exponential search.
     
     :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of optional lower and upper bounds to the input of `predicate`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to `predicate`, one of {float, int}
     :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
@@ -1551,7 +1648,7 @@ def binary_search(
 
     >>> # build a histogram that emits float counts
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
-    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
+    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_curveDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
     ...     1e-8
     ... )
@@ -1559,7 +1656,7 @@ def binary_search(
     >>> dp.binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
     ...     bounds = (0., 1.))
-    0.523556126954663
+    0.5235561269546677
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
@@ -1577,7 +1674,7 @@ def binary_search(
 
     if bounds is not None:
         lower, upper = bounds
-        if lower is not None and upper is not None and type(lower) is not type(upper):
+        if lower is not None and upper is not None and type(lower) != type(upper):
             raise TypeError("bounds must share the same type")
     else:
         lower, upper = None, None

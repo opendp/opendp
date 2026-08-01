@@ -208,16 +208,15 @@ Measure
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
 Transformations don't make use of a measure, but measurements do have an ``output_measure``.
 
-.. _max-divergence:
+.. _pure-dp:
 
-A concrete example is ``MaxDivergence``, read as "the max divergence privacy measure."
-The max divergence measure has distances that correspond to ``epsilon`` in the definition of pure differential privacy.
+A concrete example is ``PureDP`` (via :py:func:`~opendp.measures.pure_dp`), 
+where distances/privacy parameters are expressed in terms of ``epsilon``.
 
 
-.. _smoothed-max-divergence:
+.. _approx-dp:
 
-Another example is ``SmoothedMaxDivergence``.
-The smoothed max divergence measure corresponds to approximate differential privacy,
+Another example is ``ApproxDP`` (via :py:func:`~opendp.measures.approx_dp`),
 where distances are ``(epsilon, delta)`` tuples.
 
 Every Measurement (:ref:`see listing <measurement-constructors>`) contains an output_measure, and compositors are always typed by a Measure.
@@ -302,7 +301,7 @@ or some kind of global sensitivity metric like :ref:`AbsoluteDistance <absolute-
 
 The ``input_metric`` of Measurements is initially only some kind of global sensitivity metric.
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
-The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
+The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`PureDP <pure-dp>` or :ref:`ApproxDP <approx-dp>`.
 
 In some cases, distances may not form a total order. 
 For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`, 

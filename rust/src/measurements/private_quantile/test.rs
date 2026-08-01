@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::{measures::ZeroConcentratedDivergence, metrics::SymmetricDistance};
+use crate::{measures::zCDP, metrics::SymmetricDistance};
 
 #[test]
 fn test_private_quantile_unsized() -> Fallible<()> {
@@ -10,7 +10,7 @@ fn test_private_quantile_unsized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
-        ZeroConcentratedDivergence,
+        zCDP,
         candidates.clone(),
         0.75,
         0.0,
@@ -22,7 +22,7 @@ fn test_private_quantile_unsized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain,
         SymmetricDistance,
-        ZeroConcentratedDivergence,
+        zCDP,
         candidates.clone(),
         0.75,
         1.0,
@@ -41,7 +41,7 @@ fn test_private_quantile_sized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
-        ZeroConcentratedDivergence,
+        zCDP,
         candidates.clone(),
         0.75,
         0.0,
@@ -52,7 +52,7 @@ fn test_private_quantile_sized() -> Fallible<()> {
     let m_q75_sized = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
-        ZeroConcentratedDivergence,
+        zCDP,
         candidates,
         0.75,
         1.0,

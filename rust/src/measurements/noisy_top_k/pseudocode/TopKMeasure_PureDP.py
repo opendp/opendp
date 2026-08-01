@@ -1,5 +1,5 @@
 # type: ignore
-# MaxDivergence
+# PureDP
 REPLACEMENT = False
 
 

@@ -4,7 +4,7 @@ use super::*;
 use crate::{
     domains::AtomDomain,
     measurements::make_randomized_response_bool,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, zCDP},
     metrics::DiscreteDistance,
 };
 
@@ -14,7 +14,7 @@ fn test_sequential_composition() -> Fallible<()> {
     let root = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::default(),
         DiscreteDistance,
-        MaxDivergence,
+        PureDP,
         1,
         vec![0.1, 0.1, 0.3, 0.5],
     )?;
@@ -41,7 +41,7 @@ fn test_sequential_composition() -> Fallible<()> {
     let sc_query_3 = make_adaptive_composition::<_, _, _, bool>(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        MaxDivergence,
+        PureDP,
         1,
         vec![0.1, 0.1],
     )?
@@ -63,7 +63,7 @@ fn test_sequential_composition() -> Fallible<()> {
     let sc_query_4 = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        MaxDivergence,
+        PureDP,
         1,
         vec![0.2, 0.3],
     )?
@@ -93,7 +93,7 @@ fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
     let mc = make_adaptive_composition::<_, _, _, bool>(
         AtomDomain::<bool>::default().clone(),
         DiscreteDistance.clone(),
-        Approximate(ZeroConcentratedDivergence).clone(),
+        Approximate(zCDP).clone(),
         1,
         vec![(1.0, 1e-7)],
     )?;
@@ -102,7 +102,7 @@ fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
     let m1 = (Measurement::new(
         AtomDomain::<bool>::default().clone(),
         DiscreteDistance.clone(),
-        Approximate(ZeroConcentratedDivergence).clone(),
+        Approximate(zCDP).clone(),
         Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(arg))),
         PrivacyMap::new(|_| (1.0, 1e-7)),
     )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {

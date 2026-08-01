@@ -71,6 +71,10 @@ def test_binary_search_one_sided_errors(bounds, message):
     with pytest.raises(ValueError, match=message):
         dp.binary_search(lambda x: x <= 5, bounds=bounds)
 
+    with pytest.raises(ValueError, match="unable to infer upper bound"):
+        dp.binary_search(lambda x: x <= -5, bounds=(0, None))
+    with pytest.raises(ValueError, match="unable to infer lower bound"):
+        dp.binary_search(lambda x: x <= -5, bounds=(None, -10))
 
 def test_mixed_type_bounds():
     with pytest.raises(TypeError, match="bounds must share the same type"):

@@ -4,12 +4,12 @@ use crate::{
     core::{FfiResult, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::MaxDivergence,
+    measures::PureDP,
 };
 
 #[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from `MaxDivergence` to `ZeroConcentratedDivergence`.
+/// is casted from `PureDP` to `zCDP`.
 ///
 /// # Citations
 /// - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
@@ -20,10 +20,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     let privacy_map = measurement.privacy_map.clone();
     let measurement = measurement.with_map(
         measurement.input_metric.clone(),
-        measurement
-            .output_measure
-            .clone()
-            .downcast::<MaxDivergence>()?,
+        measurement.output_measure.clone().downcast::<PureDP>()?,
         PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<f64>()),
     )?;
 

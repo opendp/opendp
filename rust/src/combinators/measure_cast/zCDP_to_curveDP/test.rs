@@ -1,4 +1,4 @@
-use crate::{measures::PrivacyCurve, measures::zcdp::zcdp_epsilon};
+use crate::measures::{ZeroConcentratedDivergence, zcdp::zcdp_epsilon};
 
 use crate::{
     combinators::make_approximate, domains::AtomDomain, measurements::make_gaussian,
@@ -19,14 +19,8 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     )?)?
     .map(&d_in)?;
     let rho = (d_in / scale).powi(2) / 2.0;
-    let direct = PrivacyCurve::new().with_zCDP(rho)?;
 
     assert_eq!(profile.epsilon(0.)?, f64::INFINITY);
-    assert_eq!(profile.epsilon(1e-3)?, direct.epsilon(1e-3)?);
-    assert_eq!(
-        profile.delta(0.6880024554878085)?,
-        direct.delta(0.6880024554878085)?
-    );
 
     // Compare the two independently optimized directions to within one ulp.
     let epsilon = zcdp_epsilon(rho, 1e-3)?;

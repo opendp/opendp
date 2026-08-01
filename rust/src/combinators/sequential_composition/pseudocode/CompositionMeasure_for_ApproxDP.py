@@ -1,10 +1,8 @@
 # type: ignore
-class CompositionMeasure(ApproximateMaxDivergence):
+class CompositionMeasure(ApproxDP):
     def composability(  # |\label{line:composability}|
         self, adaptivity: Adaptivity
     ) -> Composability:
-        if matches(adaptivity, Adaptivity.FullyAdaptive):
-            raise "fully-adaptive composition is not currently supported for max-divergence"
         return Composability.Concurrent
 
     def compose(self, d_mids: Vec[Self_Distance]) -> Self_Distance:

@@ -172,22 +172,12 @@ where
         (Some(lower), None) => {
             let at_lower = predicate(&lower)?;
             fallible_signed_band_search(predicate, lower.clone(), at_lower, 1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is below the lower bound or the predicate does not change above it"
-                    )
-                })
+                .ok_or_else(|| err!(Search, "unable to infer upper bound"))
         }
         (None, Some(upper)) => {
             let at_upper = predicate(&upper)?;
             fallible_signed_band_search(predicate, upper.clone(), at_upper, -1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is above the upper bound or the predicate does not change below it"
-                    )
-                })
+                .ok_or_else(|| err!(Search, "unable to infer lower bound"))
         }
         (None, None) => fallible_exponential_bounds_search(predicate)?
             .ok_or_else(|| err!(Search, "unable to infer bounds")),
@@ -413,15 +403,12 @@ where
     Ok(None)
 }
 
-// These utilities are consumed by privacy-curve implementations in subsequent stack commits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(dead_code)]
 pub(crate) enum SearchMode {
     Minimize,
     Maximize,
 }
 
-#[allow(dead_code)]
 impl SearchMode {
     #[inline]
     pub(crate) fn bad_value(self) -> f64 {
@@ -450,14 +437,12 @@ impl SearchMode {
 }
 
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
 pub(crate) struct Optimum {
     pub(crate) arg: f64,
     pub(crate) value: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
 pub(crate) struct BracketedOptimum {
     /// Best sampled/refined argument found by the search.
     pub(crate) arg: f64,
@@ -474,7 +459,6 @@ pub(crate) struct BracketedOptimum {
     pub(crate) hi: f64,
 }
 
-#[allow(dead_code)]
 impl BracketedOptimum {
     #[inline]
     pub(crate) fn optimum(self) -> Optimum {
@@ -492,7 +476,6 @@ impl BracketedOptimum {
 /// `n` grid points and refines every local extremum. This is useful for
 /// envelopes/minima that may have kinks.
 #[inline]
-#[allow(dead_code)]
 pub(crate) fn optimize_to_precision<F>(
     mode: SearchMode,
     lo: f64,
@@ -508,7 +491,6 @@ where
 
 /// Like [`optimize_to_precision`], but also returns the final small bracket.
 #[inline]
-#[allow(dead_code)]
 pub(crate) fn optimize_to_precision_bracket<F>(
     mode: SearchMode,
     lo: f64,
@@ -548,7 +530,7 @@ where
 
     for i in 0..grid {
         let t = i as f64 / (grid - 1) as f64;
-        let x = interpolate(lo, hi, t);
+        let x = lo + t * (hi - lo);
         let value = mode.sanitize(f(x));
 
         xs.push(x);
@@ -565,7 +547,7 @@ where
     }
 
     for i in 0..grid {
-        let no_worse_than_neighbors = match mode {
+        let is_local_extremum = match mode {
             SearchMode::Minimize => {
                 (i == 0 || vals[i] <= vals[i - 1]) && (i + 1 == grid || vals[i] <= vals[i + 1])
             }
@@ -573,19 +555,8 @@ where
                 (i == 0 || vals[i] >= vals[i - 1]) && (i + 1 == grid || vals[i] >= vals[i + 1])
             }
         };
-        let better_than_a_neighbor = match mode {
-            SearchMode::Minimize => {
-                (i > 0 && vals[i] < vals[i - 1]) || (i + 1 < grid && vals[i] < vals[i + 1])
-            }
-            SearchMode::Maximize => {
-                (i > 0 && vals[i] > vals[i - 1]) || (i + 1 < grid && vals[i] > vals[i + 1])
-            }
-        };
 
-        // Do not launch a full precision search from every point of a flat
-        // objective. A plateau adjacent to a worse value still has a strict
-        // edge and is refined once.
-        if !(no_worse_than_neighbors && better_than_a_neighbor) {
+        if !is_local_extremum {
             continue;
         }
 
@@ -605,7 +576,6 @@ where
 
 /// Optimize an objective over positive arguments using `x = ln(arg)`.
 #[inline]
-#[allow(dead_code)]
 pub(crate) fn optimize_log_domain_to_precision<F>(
     mode: SearchMode,
     arg_lo: f64,
@@ -622,7 +592,6 @@ where
 /// Like [`optimize_log_domain_to_precision`], but also returns a bracket in the
 /// original positive argument domain.
 #[inline]
-#[allow(dead_code)]
 pub(crate) fn optimize_log_domain_to_precision_bracket<F>(
     mode: SearchMode,
     arg_lo: f64,
@@ -647,7 +616,7 @@ where
     let x_hi = arg_hi.ln();
 
     let f_x = |x: f64| -> f64 {
-        let arg = x.exp().clamp(arg_lo, arg_hi);
+        let arg = x.exp();
         if !(arg > 0.0) || !arg.is_finite() {
             return mode.bad_value();
         }
@@ -669,7 +638,6 @@ where
 /// This is intended for cheap cap-finding passes where final tightness is not
 /// determined by the probe itself.
 #[inline]
-#[allow(dead_code)]
 pub(crate) fn sample_log_domain<F>(
     mode: SearchMode,
     arg_lo: f64,
@@ -698,7 +666,7 @@ where
 
     for i in 0..grid {
         let t = i as f64 / (grid - 1) as f64;
-        let arg = interpolate(x_lo, x_hi, t).exp().clamp(arg_lo, arg_hi);
+        let arg = (x_lo + t * (x_hi - x_lo)).exp();
         let value = mode.sanitize(f_arg(arg));
 
         if mode.is_better(value, best.value) {
@@ -709,7 +677,6 @@ where
     best
 }
 
-#[allow(dead_code)]
 fn golden_search_to_precision<F>(
     mode: SearchMode,
     mut lo: f64,
@@ -732,8 +699,8 @@ where
         };
     }
 
-    let mut c = interpolate(lo, hi, INV_PHI2);
-    let mut d = interpolate(lo, hi, INV_PHI);
+    let mut c = lo + INV_PHI2 * (hi - lo);
+    let mut d = lo + INV_PHI * (hi - lo);
 
     let mut fc = mode.sanitize(f(c));
     let mut fd = mode.sanitize(f(d));
@@ -751,13 +718,13 @@ where
             hi = d;
             d = c;
             fd = fc;
-            c = interpolate(lo, hi, INV_PHI2);
+            c = lo + INV_PHI2 * (hi - lo);
             fc = mode.sanitize(f(c));
         } else {
             lo = c;
             c = d;
             fc = fd;
-            d = interpolate(lo, hi, INV_PHI);
+            d = lo + INV_PHI * (hi - lo);
             fd = mode.sanitize(f(d));
         }
 
@@ -792,17 +759,4 @@ where
     }
 
     best
-}
-
-/// Interpolate without overflowing when both finite endpoints have an infinite
-/// difference, as happens for intervals spanning most of the f64 range.
-#[inline]
-#[allow(dead_code)]
-fn interpolate(lo: f64, hi: f64, t: f64) -> f64 {
-    let width = hi - lo;
-    if width.is_finite() {
-        lo + t * width
-    } else {
-        (1.0 - t) * lo + t * hi
-    }
 }
