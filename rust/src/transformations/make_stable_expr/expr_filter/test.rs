@@ -19,7 +19,7 @@ fn make_expr_filter_standard() -> Fallible<()> {
 
     let lf_filter = lf
         .clone()
-        .select([col("a").filter(col("b").gt(15)).dp().count(None)]);
+        .select([col("a").filter(col("b").gt(15)).dp().count(None, false)]);
 
     let t_obs = make_private_lazyframe(
         lf_domain,
