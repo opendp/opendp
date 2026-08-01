@@ -66,9 +66,9 @@ rows.
             ...     .agg(
             ...         [
             ...             # total number of rows in the frame, including nulls
-            ...             dp.len(),
+            ...             dp.len(signed=True),
             ...             # total number of rows in the HWUSUAL column (including nulls)
-            ...             pl.col.HWUSUAL.dp.len(),
+            ...             pl.col.HWUSUAL.dp.len(signed=True),
             ...         ]
             ...     )
             ...     # explicitly specifying keys makes the query satisfy pure-DP
@@ -106,7 +106,7 @@ been transformed in a way that changes the number of rows.
             ┌─────┬─────────┬─────────┐
             │ SEX ┆ len     ┆ HWUSUAL │
             │ --- ┆ ---     ┆ ---     │
-            │ i64 ┆ u32     ┆ u32     │
+            │ i64 ┆ i64     ┆ i64     │
             ╞═════╪═════════╪═════════╡
             ...
             └─────┴─────────┴─────────┘
@@ -131,7 +131,7 @@ result in one more, or one less, unique value.
             >>> query_n_unique = context.query().select(
             ...     [
             ...         # total number of unique elements in the HWUSUAL column (including null)
-            ...         pl.col.HWUSUAL.dp.n_unique(),
+            ...         pl.col.HWUSUAL.dp.n_unique(signed=True),
             ...     ]
             ... )
             >>> query_n_unique.summarize()
@@ -156,15 +156,15 @@ result in one more, or one less, unique value.
             ┌─────────┐
             │ HWUSUAL │
             │ ---     │
-            │ u32     │
+            │ i64     │
             ╞═════════╡
             ...
             └─────────┘
 
 
-Noise added to a count can make the count go negative, but since the
-output data type is an unsigned integer, the library may return zero.
-This is more likely to happen when the true value is small.
+These examples use ``signed=True`` to preserve negative noisy counts as
+``Int64`` values. With ``signed=False``, negative noisy counts may be
+returned as zero.
 
 This release tells us that the number of null values is relatively
 small.
@@ -172,10 +172,17 @@ small.
 Signed Counts
 -------------
 
-Pass ``signed=True`` to any counting query (``dp.len``, expression ``len``,
-``count``, ``null_count`` or ``n_unique``) to cast the exact count to a
-signed ``Int64`` before noise is added, so negative noisy outputs are
-preserved instead of being clamped to zero:
+Pass ``signed=True`` to cast the exact count to a signed ``Int64`` before
+noise is added, so negative noisy outputs are preserved instead of being
+clamped to zero. This applies to all counting queries (``dp.len``, expression
+``len``, ``count``, ``null_count`` and ``n_unique``).
+
+For now, omitting ``signed`` (or passing ``None``) retains unsigned output
+and emits a warning. The default will change to ``True`` in a future release.
+Pass ``signed=True`` to opt in now, or ``signed=False`` to explicitly retain
+unsigned output. Neither explicit boolean emits a warning.
+
+For example:
 
 .. tab-set::
 
@@ -225,9 +232,9 @@ respectively, as follows:
             >>> query_counts = context.query().select(
             ...     [
             ...         # total number of non-null elements in the HWUSUAL column
-            ...         pl.col.HWUSUAL.dp.count(),
+            ...         pl.col.HWUSUAL.dp.count(signed=True),
             ...         # total number of null elements in the HWUSUAL column
-            ...         pl.col.HWUSUAL.dp.null_count(),
+            ...         pl.col.HWUSUAL.dp.null_count(signed=True),
             ...     ]
             ... )
             >>> query_counts.summarize()
@@ -262,7 +269,7 @@ privacy loss, but with half as much noise.
             ...         pl.col("HWUSUAL").is_null().alias("HWUSUAL_is_null")
             ...     )
             ...     .group_by("HWUSUAL_is_null")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ...     # we're grouping on a bool column, so the groups are:
             ...     .with_keys(
             ...         pl.LazyFrame({"HWUSUAL_is_null": [True, False]})
@@ -293,7 +300,7 @@ The noise scale dropped from 360 to 180…
             ┌─────────────────┬─────────┐
             │ HWUSUAL_is_null ┆ len     │
             │ ---             ┆ ---     │
-            │ bool            ┆ u32     │
+            │ bool            ┆ i64     │
             ╞═════════════════╪═════════╡
             ...
             └─────────────────┴─────────┘
