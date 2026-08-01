@@ -236,6 +236,19 @@ def domain_of(T, infer: bool = False) -> Domain:
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 
+        # A scipy sparse matrix infers a sparse binary domain over its columns.
+        # scipy is optional: only probed here, and only imported when actually matched.
+        sp = import_optional_dependency("scipy.sparse", raise_error=False)
+        if sp is not None and sp.issparse(T):
+            from opendp.extras.sklearn.cluster import sparse_binary_domain
+
+            domain = sparse_binary_domain(T.shape[1])
+            if not domain.member(T):
+                raise ValueError(
+                    "cannot infer a sparse binary domain from nonbinary sparse data"
+                )
+            return domain
+
     # normalize to a type descriptor
     if infer:
         T = ty.RuntimeType.infer(T)
