@@ -30,5 +30,5 @@ def __getattr__(name):
 
 __all__ = [
     "SklearnFit", "SklearnFitDomain", "sklearn_fit_domain",
-    "decomposition", "linear_model",
+    "cluster", "decomposition", "linear_model",
 ]
