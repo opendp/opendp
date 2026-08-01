@@ -63,8 +63,11 @@ a random covariance matrix.
             ... )
 
 
-Releasing a DP PCA model with the OpenDP Library is easy because it
-provides an API similar to scikit-learn:
+Recommended API
+---------------
+
+The Context-based workflow is the recommended public API and has an API
+akin to scikit-learn:
 
 .. tab-set::
 
@@ -73,11 +76,21 @@ provides an API similar to scikit-learn:
 
         .. code:: pycon
 
+            >>> domain = dp.numpy.array2_domain(
+            ...     size=num_rows,
+            ...     num_columns=num_columns,
+            ...     nan=False,
+            ...     T=float,
+            ... )
+            >>> context = dp.Context.compositor(
+            ...     data=example_dataset,
+            ...     domain=domain,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ... )
             >>> model = dp.sklearn.decomposition.PCA(
-            ...     epsilon=1.0,
-            ...     row_norm=1.0,
-            ...     n_samples=num_rows,
-            ...     n_features=4,
+            ...     n_components=2,
             ... )
 
 
@@ -90,8 +103,17 @@ A private release occurs when you fit the model to the data.
 
         .. code:: pycon
 
-            >>> model.fit(example_dataset)
-            PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)
+            >>> model.fit(
+            ...     context.query().np_clip(
+            ...         p=2,
+            ...         norm=1.0,
+            ...     )
+            ... ) is model
+            True
+
+PCA requires an L2 norm bound. ``np_clip`` projects each row onto an L2
+ball as part of the query preprocessing chain; the estimator itself contains
+only PCA parameters.
 
 The fitted model can then be introspected just like Scikit-Learn’s
 non-private PCA:
@@ -123,30 +145,26 @@ allocated to estimating each eigenvector internally.
 
         .. code:: pycon
 
-            >>> model = dp.sklearn.decomposition.PCA(
-            ...     epsilon=1.0,
-            ...     row_norm=1.0,
-            ...     n_samples=num_rows,
-            ...     n_features=4,
-            ...     n_components=2,  # only estimate 2 of 4 components this time
+            >>> bounded_domain = dp.numpy.array2_domain(
+            ...     norm=1.0,
+            ...     p=2,
+            ...     size=num_rows,
+            ...     num_columns=num_columns,
+            ...     nan=False,
+            ...     T=float,
             ... )
-            >>> meas = model.measurement()
+            >>> model = dp.sklearn.decomposition.PCA(n_components=2)
+            >>> measurement = model.make(
+            ...     bounded_domain,
+            ...     dp.symmetric_distance(),
+            ...     dp.max_divergence(),
+            ...     1,
+            ...     1.0,
+            ... )
 
 
-The measurement fits ``model`` and then returns ``model``:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> meas(example_dataset)
-            PCA(epsilon=1.0, n_components=2, n_features=4, n_samples=10000, row_norm=1.0)
-
-``.measurement()`` makes it more convenient to use the Scikit-Learn API
-with other combinators, like compositors.
+The measurement returns a :class:`~PCARelease`; fitting through a query
+consumes the release and stores sklearn fitted attributes on ``model``:
 
 .. tab-set::
 
@@ -155,9 +173,24 @@ with other combinators, like compositors.
 
         .. code:: pycon
 
-            >>> print(model.singular_values_)
+            >>> release = measurement(example_dataset)
+            >>> release.components.shape
+            (2, 4)
+
+``make(...)`` makes it possible to use the calibrated release
+with other OpenDP combinators. Ordinary inference methods such as
+``transform`` and ``inverse_transform`` operate on caller-held public data.
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> print(release.singular_values)
             [... ...]
-            >>> print(model.components_)
+            >>> print(release.components)
             [[... ... ... ...]
              [... ... ... ...]]
 

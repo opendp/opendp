@@ -1,4 +1,4 @@
-'''
+"""
 This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
@@ -8,157 +8,147 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The members of this module will then be accessible at ``dp.sklearn.decomposition``.    
+The members of this module will then be accessible at ``dp.sklearn.decomposition``.
 
-See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
-'''
+Differentially private scikit-learn-compatible PCA. The estimator contains only
+PCA parameters; privacy and dataset information are supplied by an OpenDP
+:class:`~opendp.context.Context` query.
+"""
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING, Sequence
-from dataclasses import dataclass, asdict, astuple
-from opendp.extras.numpy import then_np_clamp
+
+import warnings
+from dataclasses import asdict, dataclass
+from typing import Optional, Sequence, TYPE_CHECKING
+
+from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
+from opendp._lib import import_optional_dependency
 from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
-from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
+from opendp.extras.numpy import then_np_clip
+from opendp.extras.sklearn._estimator import DPEstimator
+from opendp.extras.sklearn._make_eigendecomposition import (
+    then_private_np_eigendecomposition,
+)
 from opendp.mod import Domain, Measurement, Metric
-from opendp._lib import import_optional_dependency
-from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 
-if TYPE_CHECKING: # pragma: no cover
-    import numpy # type: ignore[import-not-found]
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy
+
+
+@dataclass(kw_only=True, frozen=True)
+class PCARelease:
+    """The private PCA release consumed by :class:`PCA`."""
+
+    mean: numpy.ndarray
+    singular_values: numpy.ndarray
+    components: numpy.ndarray
 
 
 @dataclass(kw_only=True, frozen=True)
 class PCAEpsilons:
-    '''
-    Tuple used to describe the ε-expenditure per changed record in the input data
-    '''
+    """Internal epsilon allocation for the PCA release."""
+
     eigvals: float
-    '''ε-expenditure to estimate the eigenvalues'''
     eigvecs: Sequence[float]
-    '''ε-expenditure to estimate the eigenvectors'''
     mean: Optional[float]
-    """ε-expenditure to estimate the mean.
-
-A portion of the budget is used to estimate the mean because the OpenDP PCA algorithm 
-releases an eigendecomposition of the sum of squares and cross-products matrix (SSCP), 
-not of the covariance matrix. 
-If the data is centered beforehand (either by a prior from the user or by privately estimating the mean and then centering), 
-then PCA will correspond to the covariance matrix, as expected, 
-because the SSCP matrix of centered data is equivalent to a scaled covariance matrix.
-
-If the data is not centered (or the mean is poorly estimated), then the first eigenvector will be dominated by the true mean.
-"""
 
 
-def make_private_pca(
+def _make_private_pca_with_unit_epsilon(
     input_domain: Domain,
     input_metric: Metric,
     unit_epsilon: float | PCAEpsilons,
-    norm: float | None = None,
-    num_components=None,
+    *,
+    row_norm: float | None = None,
+    num_components: int | None = None,
 ) -> Measurement:
-    """Construct a Measurement that returns the data mean, singular values and right singular vectors.
-
-    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
-    :param input_metric: instance of `symmetric_distance()`
-    :param unit_epsilon: ε-expenditure per changed record in the input data
-    :param norm: clamp each row to this norm bound
-    :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
-
-    :return: a Measurement that computes a tuple of (mean, S, Vt)
-    """
+    """Build the historical PCA mechanism using its internal epsilon units."""
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
 
+    np = import_optional_dependency("numpy")
     dp.assert_features("contrib", "idealized-numerics")
-
-    @dataclass(kw_only=True, frozen=True)
-    class PCAResult:
-        mean: numpy.ndarray
-        S: numpy.ndarray
-        Vt: numpy.ndarray
 
     input_desc = input_domain.descriptor
     if input_desc.size is None:
         raise ValueError("input_domain's size must be known")  # pragma: no cover
-
     if input_desc.num_columns is None:
         raise ValueError("input_domain's num_columns must be known")  # pragma: no cover
-
     if input_desc.p not in {None, 2}:
         raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
-
     if input_desc.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
 
     num_components = (
         input_desc.num_columns if num_components is None else num_components
     )
+    if not isinstance(num_components, int) or num_components < 1:
+        raise ValueError("num_components must be a positive integer")  # pragma: no cover
+    num_components = min(num_components, input_desc.num_columns)
 
     if isinstance(unit_epsilon, float):
         num_eigvec_releases = min(num_components, input_desc.num_columns - 1)
+        # A one-dimensional PCA has no eigenvector release to allocate.
+        if num_eigvec_releases == 0:
+            num_eigvec_releases = 1  # pragma: no cover
         unit_epsilon = _split_pca_epsilon_evenly(
-            unit_epsilon, num_eigvec_releases, estimate_mean=input_desc.origin is None
+            unit_epsilon,
+            num_eigvec_releases,
+            estimate_mean=input_desc.origin is None,
         )
 
     if not isinstance(unit_epsilon, PCAEpsilons):
-        raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
+        raise ValueError("unit_epsilon must be a float or PCAEpsilons")  # pragma: no cover
 
-    def _make_eigdecomp(norm, origin):
-        if not isinstance(unit_epsilon, PCAEpsilons):
-            raise ValueError("expected epsilon to be PCAEpsilons at this point")  # pragma: no cover
+    def _make_eigendecomposition(norm, origin):
         return (
             (input_domain, input_metric)
-            >> then_np_clamp(norm, p=2, origin=origin)
+            >> then_np_clip(norm, p=2, origin=origin)
             >> then_center()
-            >> then_private_np_eigendecomposition(unit_epsilon.eigvals, unit_epsilon.eigvecs)
+            >> then_private_np_eigendecomposition(
+                unit_epsilon.eigvals,
+                unit_epsilon.eigvecs,
+                num_components=num_components,
+            )
             >> _new_pure_function(
-                lambda out: PCAResult(
+                lambda out: PCARelease(
                     mean=origin,
-                    S=np.sqrt(np.maximum(out[0], 0))[::-1],
-                    Vt=out[1].T,
+                    singular_values=np.sqrt(np.maximum(out[0], 0))[::-1],
+                    components=out[1].T,
                 )
             )
         )
 
     if input_desc.norm is not None:
         if unit_epsilon.mean is not None:
-            raise ValueError("unit_epsilon.mean should be zero because origin is known")  # pragma: no cover
-        norm = input_desc.norm if norm is None else norm
-        norm = min(input_desc.norm, norm)
-        return _make_eigdecomp(norm, input_desc.origin)
-    elif norm is None:
-        raise ValueError("must have either bounded `input_domain` or specify `norm`")  # pragma: no cover
+            raise ValueError("unit_epsilon.mean must be zero because origin is known")  # pragma: no cover
+        return _make_eigendecomposition(input_desc.norm, input_desc.origin)
 
+    if row_norm is None:
+        raise ValueError("must have either bounded input_domain or specify row_norm")  # pragma: no cover
 
-    # make releases under the assumption that d_in is 2.
+    # The internal PCA mechanism is calibrated for a two-record change.
     unit_d_in = 2
-
     compositor = dp.c.make_adaptive_composition(
         input_domain,
         input_metric,
         dp.max_divergence(),
         d_in=unit_d_in,
-        d_mids=[unit_epsilon.mean, _make_eigdecomp(norm, 0).map(unit_d_in)],
+        d_mids=[unit_epsilon.mean, _make_eigendecomposition(row_norm, 0).map(unit_d_in)],
     )
 
     def _function(data):
         qbl = compositor(data)
-
-        # find origin
-        m_mean = dp.binary_search_chain(  # type: ignore[misc]
-            lambda s: make_private_np_mean(
-                input_domain, input_metric, s, norm=norm, p=1
+        m_mean = dp.binary_search_chain(
+            lambda scale: make_private_np_mean(
+                input_domain, input_metric, scale, norm=row_norm, p=1
             ),
             d_in=unit_d_in,
             d_out=unit_epsilon.mean,
             T=float,
         )
         origin = qbl(m_mean)
-        # make full release
-        return qbl(_make_eigdecomp(norm, origin))
+        return qbl(_make_eigendecomposition(row_norm, origin))
 
     return _make_measurement(
         input_domain,
@@ -169,224 +159,466 @@ def make_private_pca(
     )
 
 
-# generate then variant of the constructor
+def make_private_pca(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure,
+    d_in,
+    d_out,
+    *,
+    num_components: int | None = None,
+) -> Measurement:
+    """Construct a calibrated differentially private PCA measurement.
+
+    The public constructor is calibrated in the units of ``output_measure``;
+    the legacy epsilon allocation is kept private to this module.
+    """
+    import opendp.prelude as dp
+
+    if input_metric != dp.symmetric_distance():
+        raise ValueError("PCA currently supports symmetric_distance() only")  # pragma: no cover
+    if output_measure != dp.max_divergence():
+        raise ValueError("PCA currently supports max_divergence() only")  # pragma: no cover
+    if d_in <= 0 or d_out <= 0:
+        raise ValueError("d_in and d_out must be positive")  # pragma: no cover
+    if d_in != 1:
+        raise ValueError("PCA currently supports d_in=1 only")
+
+    desc = input_domain.descriptor
+    if not hasattr(desc, "num_columns") or not hasattr(desc, "size"):
+        raise ValueError("input_domain must be a two-dimensional NumPy array domain")  # pragma: no cover
+    if desc.size is None or desc.num_columns is None:
+        raise ValueError("input_domain size and num_columns must be known")  # pragma: no cover
+    if desc.norm is None:
+        raise ValueError(
+            "PCA requires an L2-bounded input domain. Apply "
+            "query.np_clip(p=2, norm=...) before fitting."
+        )
+    if desc.p != 2:
+        raise ValueError(
+            "PCA requires an L2 norm bound; apply np_clip with p=2."
+        )
+
+    # Calibrate the historical mechanism to the Context privacy budget. The
+    # input domain already certifies the row norm and origin.
+    unit_epsilon = 2 * float(d_out) / float(d_in)
+    return _make_private_pca_with_unit_epsilon(
+        input_domain,
+        input_metric,
+        unit_epsilon,
+        num_components=num_components,
+    )
+
+
 then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA:
-    '''
-    DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
-    This implementation is based on `Differentially Private Covariance Estimation <https://papers.nips.cc/paper_files/paper/2019/hash/4158f6d19559955bae372bb00f6204e4-Abstract.html>`_ by Kareem Amin, et al.
+class PCA(DPEstimator):
+    """Differentially private PCA with a sklearn estimator interface."""
 
-    Trying to create an instance without sklearn installed will raise an ``ImportError``.
-    
-    See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
-
-    :param whiten: Mirrors the corresponding sklearn parameter:
-        When ``True`` (``False`` by default) the ``components_`` vectors are multiplied
-        by the square root of n_samples and then divided by the singular values
-        to ensure uncorrelated outputs with unit component-wise variances.
-    '''
     def __init__(
         self,
+        n_components=None,
         *,
-        epsilon: float,
-        row_norm: float,
-        n_samples: int,
-        n_features: int,
-        n_components: int | float | str | None = None,
-        n_changes: int = 1,
-        whiten: bool = False,
-    ) -> None:  # pragma: no cover
-        # Error if constructor called without dependency:
-        import_optional_dependency('sklearn.decomposition')
-        # used for mypy typing
-        self.n_samples_ = None
-        self.components_ = None
-        self.n_components_ = None
-        self.explained_variance_ = None
-        self.explained_variance_ratio_ = None
-        self.singular_values_ = None
+        whiten=False,
+        row_norm=None,
+        epsilon=None,
+        n_samples=None,
+        n_features=None,
+        n_changes=1,
+    ):
+        self.n_components = n_components
+        self.whiten = whiten
+        self.row_norm = row_norm
+
+        # Removal target: OpenDP 0.16.0. Remove epsilon, n_samples,
+        # n_features, n_changes, raw-array fit, measurement(), _legacy_mode,
+        # and _make_legacy_measurement() together.
+        self.epsilon = epsilon
+        self.n_samples = n_samples
+        self.n_features = n_features
+        self.n_changes = n_changes
+
+        legacy_values = (epsilon, n_samples, n_features)
+        if any(value is not None for value in legacy_values) and not all(
+            value is not None for value in legacy_values
+        ):
+            raise TypeError(
+                "Legacy PCA requires epsilon, n_samples, and n_features together"
+            )
+
+        if epsilon is not None and not epsilon > 0:
+            raise ValueError("epsilon must be positive")
+        if n_samples is not None and not n_samples > 1:
+            raise ValueError("n_samples must be greater than 1")
+        if n_features is not None and not n_features >= 1:
+            raise ValueError("n_features must be at least 1")
+        if not n_changes >= 1:
+            raise ValueError("n_changes must be at least 1")
+
+        if all(value is not None for value in legacy_values):
+            self._validate_n_components(n_components, n_samples, n_features)
 
     @property
-    def n_features(self):
-        '''
-        Number of features
-        '''
-        ...
+    def _legacy_mode(self) -> bool:
+        legacy_values = (
+            self.epsilon,
+            self.n_samples,
+            self.n_features,
+        )
 
-    def fit(self, X, y=None):
-        '''
-        Fit the model with X.
-
-        :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
-        :param y: Ignored
-        '''
-        ...
-
-    # this overrides the scikit-learn method to instead use the opendp-core constructor
-    def _fit(self, X):
-        ...
-
-    def _prepare_fitter(self) -> Measurement:  # type: ignore[empty-body]
-        """Returns a measurement that computes the mean and eigendecomposition,
-        and then apply those releases to self."""
-        ...
-
-    def _postprocess(self, values):
-        """A function that applies a release of the mean and eigendecomposition to self"""
-        ...
-
-    def measurement(self) -> Measurement:  # type: ignore[empty-body]
-        """Return a measurement that releases a fitted model."""
-        ...
-
-    def _validate_params(*args, **kwargs):
-        ...
-
-
-_decomposition = import_optional_dependency('sklearn.decomposition', False)
-if _decomposition is not None:
-    class PCA(_decomposition.PCA):  # type: ignore  # noqa: F811
-        def __init__(
-            self,
-            *,
-            epsilon: float,
-            row_norm: float,
-            n_samples: int,
-            n_features: int,
-            n_components: int | float | str | None = None,
-            n_changes: int = 1,
-            whiten: bool = False,
-        ) -> None:
-            super().__init__(
-                n_components or n_features,
-                whiten=whiten,
-            )
-            self.epsilon = epsilon
-            self.row_norm = row_norm
-            self.n_samples = n_samples
-            self.n_features_in_ = n_features
-            self.n_changes = n_changes
-
-        @property
-        def n_features(self):
-            '''
-            Number of features
-            '''
-            return self.n_features_in_
-
-        # This isn't strictly necessary, since we just call the superclass method,
-        # but this lets us document a frequently used method,
-        # and avoids a number of mypy warnings.
-        def fit(self, X, y=None):
-            '''
-            Fit the model with X.
-
-            :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
-            :param y: Ignored
-            '''
-            return super().fit(X)
-
-        # this overrides the scikit-learn method to instead use the opendp-core constructor
-        def _fit(self, X):
-            return self._prepare_fitter()(X)
-
-        def _prepare_fitter(self) -> Measurement:
-            """Returns a measurement that computes the mean and eigendecomposition,
-            and then apply those releases to self."""
-            import opendp.prelude as dp
-
-            if hasattr(self, "components_"):
-                raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
-
-            input_domain = dp.numpy.array2_domain(
-                num_columns=self.n_features_in_, size=self.n_samples, T=float
-            )
-            input_metric = dp.symmetric_distance()
-
-            n_estimated_components = (
-                self.n_components
-                if isinstance(self.n_components, int)
-                else self.n_features_in_
+        if any(value is not None for value in legacy_values) and not all(
+            value is not None for value in legacy_values
+        ):
+            raise TypeError(
+                "Legacy PCA requires epsilon, n_samples, and n_features together"
             )
 
-            return make_private_pca(
-                input_domain,
-                input_metric,
-                self.epsilon / self.n_changes * 2,
-                norm=self.row_norm,
-                num_components=n_estimated_components,
-            ) >> self._postprocess
+        if not all(value is not None for value in legacy_values):
+            return False
 
-        def _postprocess(self, values):
-            """A function that applies a release of the mean and eigendecomposition to self"""
-            np = import_optional_dependency('numpy')
-            from sklearn.utils.extmath import svd_flip # type: ignore[import]
-            from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
+        if self.epsilon <= 0:
+            raise ValueError("epsilon must be positive")
+        if self.n_samples <= 1:
+            raise ValueError("n_samples must be greater than 1")
+        if self.n_features < 1:
+            raise ValueError("n_features must be at least 1")
+        if self.n_changes < 1:
+            raise ValueError("n_changes must be at least 1")
 
-            self.mean_, S, Vt = astuple(values)
-            U = Vt.T
-            n_samples, n_features = self.n_samples, self.n_features_in_
-            n_components = self.n_components
+        self._validate_n_components(
+            self.n_components,
+            self.n_samples,
+            self.n_features,
+        )
+        return True
 
-            # CODE BELOW THIS POINT IS FROM SKLEARN
-            # flip eigenvectors' sign to enforce deterministic output
-            U, Vt = svd_flip(U, Vt)
+    def make(
+        self,
+        input_domain,
+        input_metric,
+        output_measure,
+        d_in,
+        d_out,
+    ) -> Measurement:
+        if self.row_norm is not None and not self._legacy_mode:
+            raise TypeError(
+                "Apply norm clipping to the input domain or query with "
+                "np_clip(p=2, norm=...) instead of setting row_norm."
+            )
 
-            components_ = Vt
+        desc = input_domain.descriptor
+        if getattr(desc, "size", None) is None or getattr(desc, "num_columns", None) is None:
+            raise ValueError("PCA requires known input-domain size and num_columns")
+        self._validate_n_components(self.n_components, desc.size, desc.num_columns)
+        # Integer component counts can avoid releasing unused eigenvectors.
+        # Other modes need the full decomposition for postprocessing.
+        num_components = (
+            self.n_components
+            if isinstance(self.n_components, int)
+            and not isinstance(self.n_components, bool)
+            else None
+        )
+        return make_private_pca(
+            input_domain,
+            input_metric,
+            output_measure,
+            d_in,
+            d_out,
+            num_components=num_components,
+        )
 
-            # Get variance explained by singular values
-            explained_variance_ = (S**2) / (n_samples - 1)
-            total_var = np.sum(explained_variance_)
-            explained_variance_ratio_ = explained_variance_ / total_var
-            singular_values_ = S # Store the singular values. 
+    @staticmethod
+    def _validate_n_components(n_components, n_samples, n_features):
+        if n_components is None:
+            return
+        if n_components == "mle":
+            if n_samples < n_features:
+                raise ValueError("n_components='mle' requires n_samples >= n_features")
+            return
+        if isinstance(n_components, bool):
+            raise ValueError("n_components must be None, an integer, a fraction, or 'mle'")
+        if isinstance(n_components, int):
+            if not 1 <= n_components <= min(n_samples, n_features):
+                raise ValueError("n_components must be between 1 and min(n_samples, n_features)")
+            return
+        if isinstance(n_components, float):
+            if not 0 < n_components < 1:
+                raise ValueError("n_components must be in (0, 1) when fractional")
+            return
+        raise ValueError("n_components must be None, an integer, a fraction, or 'mle'")
 
-            # Postprocess the number of components required
-            if n_components == "mle":
-                n_components = _infer_dimension(explained_variance_, n_samples)
-            elif 0 < n_components < 1.0:
-                # number of components for which the cumulated explained
-                # variance percentage is superior to the desired threshold
-                # side='right' ensures that number of features selected
-                # their variance is always greater than n_components float
-                # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
-                explained_variance_ratio_np = explained_variance_ratio_
-                ratio_cumsum = np.cumsum(explained_variance_ratio_np)
-                n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
+    @staticmethod
+    def _preflight_sklearn():
+        import_optional_dependency("sklearn")
+        from sklearn.decomposition._pca import _infer_dimension
+        from sklearn.utils.extmath import svd_flip
 
-            # Compute noise covariance using Probabilistic PCA model
-            # The sigma2 maximum likelihood (cf. eq. 12.46)
-            if n_components < min(n_features, n_samples):
-                self.noise_variance_ = np.mean(explained_variance_[n_components:])
-            else:
-                self.noise_variance_ = 0.0
+        return _infer_dimension, svd_flip
 
-            self.n_samples_ = n_samples
-            self.components_ = components_[:n_components, :]
-            self.n_components_ = n_components
-            self.explained_variance_ = explained_variance_[:n_components]
-            self.explained_variance_ratio_ = explained_variance_ratio_[:n_components]
-            self.singular_values_ = singular_values_[:n_components]
+    def fit(self, X, y=None, **fit_params):
+        from opendp.context import Query
 
-            return U, S, Vt
+        if isinstance(X, Query):
+            if self._legacy_mode:
+                raise TypeError(
+                    "Do not provide epsilon, n_samples, or n_features when fitting "
+                    "PCA through an OpenDP Context"
+                )
+            if self.row_norm is not None:
+                raise TypeError(
+                    "row_norm is only supported by the deprecated array-based PCA "
+                    "API. Apply norm clipping to the query instead, for example "
+                    "context.query().np_clip(p=2, norm=...)."
+                )
+            return super().fit(X, y=y, **fit_params)
 
-        def measurement(self) -> Measurement:
-            """Return a measurement that releases a fitted model."""
-            return self._prepare_fitter() >> _new_pure_function(lambda _: self)
+        if not self._legacy_mode:
+            raise TypeError(
+                "PCA.fit() expects an OpenDP Context query. "
+                "The deprecated array-based API requires epsilon, n_samples, "
+                "and n_features in the constructor."
+            )
 
-        # overrides an sklearn method
-        def _validate_params(*args, **kwargs):
-            pass
+        warnings.warn(
+            "Passing an array directly to PCA.fit() is deprecated. "
+            "Construct PCA with algorithm parameters only and fit a bounded "
+            "query, for example PCA(...).fit(context.query().np_clip(p=2, "
+            "norm=...)).",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return self._fit_legacy(X, y=y, **fit_params)
+
+    def _prepare_fit_query(self, X, y=None, **fit_params):
+        # Validate sklearn before the query consumes any privacy budget.
+        self._preflight_sklearn()
+        # PCA ignores y, as sklearn's PCA does.
+        self._reject_fit_params(fit_params)
+        return X
+
+    def _make_legacy_measurement(self) -> Measurement:
+        if hasattr(self, "components_"):
+            raise ValueError("DP-PCA model has already been fitted")
+
+        import opendp.prelude as dp
+
+        n_estimated_components = (
+            self.n_components
+            if isinstance(self.n_components, int)
+            and not isinstance(self.n_components, bool)
+            else self.n_features
+        )
+        input_domain = dp.numpy.array2_domain(
+            num_columns=self.n_features,
+            size=self.n_samples,
+            T=float,
+        )
+        unit_epsilon = self.epsilon / self.n_changes * 2
+        return _make_private_pca_with_unit_epsilon(
+            input_domain,
+            dp.symmetric_distance(),
+            unit_epsilon,
+            row_norm=self.row_norm,
+            num_components=n_estimated_components,
+        )
+
+    def _fit_legacy(self, X, y=None, **fit_params):
+        if not self._legacy_mode:
+            raise TypeError(
+                "PCA.fit() expects an OpenDP Context query. "
+                "The deprecated array-based API requires epsilon, n_samples, "
+                "and n_features in the constructor."
+            )
+
+        np = import_optional_dependency("numpy")
+
+        self._reject_fit_params(fit_params)
+        self._preflight_sklearn()
+
+        if hasattr(self, "components_"):
+            raise ValueError("DP-PCA model has already been fitted")
+
+        X = np.asarray(X)
+        expected_shape = (self.n_samples, self.n_features)
+        if X.ndim != 2 or X.shape != expected_shape:
+            raise ValueError(f"X must have shape {expected_shape}")
+
+        self._fit_n_samples = self.n_samples
+        self._fit_n_features = self.n_features
+        release = self._make_legacy_measurement()(X)
+        self._ingest_release(release)
+        return self
+
+    def measurement(self):
+        if not self._legacy_mode:
+            raise TypeError(
+                "measurement() is only available for the deprecated PCA "
+                "constructor. Use make(...) or fit(context.query())."
+            )
+
+        warnings.warn(
+            "PCA.measurement() is deprecated. Use PCA.make(...) or fit an "
+            "OpenDP Context query instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+        self._preflight_sklearn()
+        measurement = self._make_legacy_measurement()
+
+        def ingest_and_return(release):
+            self._fit_n_samples = self.n_samples
+            self._fit_n_features = self.n_features
+            self._ingest_release(release)
+            return self
+
+        return measurement >> _new_pure_function(ingest_and_return)
+
+    def _ingest_release(self, release: PCARelease) -> None:
+        np = import_optional_dependency("numpy")
+        _infer_dimension, svd_flip = self._preflight_sklearn()
+
+        if not isinstance(release, PCARelease):
+            raise TypeError("PCA expected a PCARelease")
+
+        n_samples = self._fit_n_samples
+        n_features = self._fit_n_features
+        if n_samples <= 1:
+            raise ValueError("PCA requires at least two samples")
+
+        mean = np.asarray(release.mean)
+        singular_values = np.asarray(release.singular_values)
+        components = np.asarray(release.components)
+        U, components = svd_flip(components.T, components)
+        del U
+
+        explained_variance = singular_values**2 / (n_samples - 1)
+        total_variance = np.sum(explained_variance)
+        explained_variance_ratio = explained_variance / total_variance
+
+        n_components = self.n_components
+        if n_components is None:
+            n_components = min(n_samples, n_features)
+        elif n_components == "mle":
+            if n_samples < n_features:
+                raise ValueError("n_components='mle' requires n_samples >= n_features")
+            n_components = _infer_dimension(explained_variance, n_samples)
+        elif isinstance(n_components, float):
+            if not 0 < n_components < 1:
+                raise ValueError("n_components must be in (0, 1) when fractional")
+            n_components = (
+                np.searchsorted(
+                    np.cumsum(explained_variance_ratio), n_components, side="right"
+                )
+                + 1
+            )
+        elif isinstance(n_components, int) and not isinstance(n_components, bool):
+            if not 1 <= n_components <= min(n_samples, n_features):
+                raise ValueError("n_components must be between 1 and min(n_samples, n_features)")
+        else:
+            raise ValueError("n_components must be None, an integer, a fraction, or 'mle'")
+
+        n_components = int(n_components)
+        if n_components < 1 or n_components > len(explained_variance):
+            raise ValueError("n_components is incompatible with the released PCA")
+
+        self.mean_ = mean
+        self.components_ = components[:n_components, :]
+        self.n_components_ = n_components
+        self.explained_variance_ = explained_variance[:n_components]
+        self.explained_variance_ratio_ = explained_variance_ratio[:n_components]
+        self.singular_values_ = singular_values[:n_components]
+        self.noise_variance_ = (
+            float(np.mean(explained_variance[n_components:]))
+            if n_components < min(n_features, n_samples)
+            else 0.0
+        )
+        self.n_samples_ = n_samples
+        self.n_features_in_ = n_features
+        del self._fit_n_samples
+        del self._fit_n_features
+
+    def then(self, output_measure, d_in, d_out):
+        # Capture public shape metadata for the release postprocessor without
+        # putting dataset dimensions in the estimator constructor.
+        def make(input_domain, input_metric):
+            desc = input_domain.descriptor
+            self._fit_n_samples = desc.size
+            self._fit_n_features = desc.num_columns
+            return self.make(
+                input_domain, input_metric, output_measure, d_in, d_out
+            )
+
+        from opendp.mod import _PartialConstructor
+
+        return _PartialConstructor(make)
+
+    def _check_is_fitted(self):
+        if not hasattr(self, "components_"):
+            raise ValueError("PCA instance is not fitted yet")
+
+    def _whitening_scale(self):
+        np = import_optional_dependency("numpy")
+        scale = np.sqrt(self.explained_variance_)
+        return np.maximum(scale, np.finfo(scale.dtype).eps)
+
+    def transform(self, X):
+        np = import_optional_dependency("numpy")
+        self._check_is_fitted()
+        X = np.asarray(X)
+        if X.ndim != 2 or X.shape[1] != self.n_features_in_:
+            raise ValueError(f"X must have shape (n_samples, {self.n_features_in_})")
+        transformed = (X - self.mean_) @ self.components_.T
+        if self.whiten:
+            transformed /= self._whitening_scale()
+        return transformed
+
+    def inverse_transform(self, X):
+        np = import_optional_dependency("numpy")
+        self._check_is_fitted()
+        X = np.asarray(X)
+        if X.ndim != 2 or X.shape[1] != self.n_components_:
+            raise ValueError(f"X must have shape (n_samples, {self.n_components_})")
+        if self.whiten:
+            X = X * self._whitening_scale()
+        return X @ self.components_ + self.mean_
+
+    def get_covariance(self):
+        np = import_optional_dependency("numpy")
+        self._check_is_fitted()
+
+        explained_variance = np.maximum(
+            self.explained_variance_ - self.noise_variance_,
+            0.0,
+        )
+
+        components = self.components_
+        if self.whiten:
+            components = components * np.sqrt(self.explained_variance_)[:, None]
+
+        covariance = (
+            components.T * explained_variance
+        ) @ components
+        covariance.flat[:: len(covariance) + 1] += self.noise_variance_
+        return covariance
+
+    def get_precision(self):
+        np = import_optional_dependency("numpy")
+        self._check_is_fitted()
+        return np.linalg.inv(self.get_covariance())
+
+    def fit_transform(self, X, y=None, **fit_params):
+        raise NotImplementedError(
+            "fit_transform would release transformed private training records; "
+            "fit through an OpenDP Context and call transform on public data."
+        )
 
 
-
-        
 def _smaller(v):
-    """returns the next non-negative float closer to zero"""
-    np = import_optional_dependency('numpy')
-
+    """Return the next non-negative float closer to zero."""
+    np = import_optional_dependency("numpy")
     if v < 0:
         raise ValueError("expected non-negative value")  # pragma: no cover
     return v if v == 0 else np.nextafter(v, -1)
@@ -396,8 +628,6 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
     num_queries = 3 if estimate_mean else 2
     per_query_epsilon = unit_epsilon / num_queries
     per_evec_epsilon = per_query_epsilon / num_eigvec_releases
-
-    # use conservatively smaller budgets to prevent totals from exceeding total epsilon
     return PCAEpsilons(
         eigvals=per_query_epsilon,
         eigvecs=[_smaller(per_evec_epsilon)] * num_eigvec_releases,
@@ -407,19 +637,24 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
 
 def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
 
+    np = import_optional_dependency("numpy")
     dp.assert_features("contrib", "idealized-numerics")
-
     input_desc = input_domain.descriptor
-
-    kwargs = asdict(input_desc) | {"origin": np.zeros(input_desc.num_columns)}
+    center = (
+        input_desc.origin
+        if input_desc.origin is not None
+        else np.zeros(input_desc.num_columns)
+    )
+    kwargs = asdict(input_desc) | {
+        "origin": np.zeros(input_desc.num_columns)
+    }
     return _make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),
         input_metric,
-        lambda arg: arg - input_desc.origin,
+        lambda arg: arg - center,
         lambda d_in: d_in,
     )
 
