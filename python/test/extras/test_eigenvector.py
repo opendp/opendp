@@ -28,7 +28,7 @@ def test_private_eigenvector():
 
 
 def test_eigenvector_integration():
-    from opendp.extras.numpy import then_np_clamp
+    from opendp.extras.numpy import then_np_clip
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 
@@ -42,7 +42,7 @@ def test_eigenvector_integration():
     with optional_dependency("randomgen"):
         meas = (
             space
-            >> then_np_clamp(norm=1.0, p=2)
+            >> then_np_clip(norm=1.0, p=2)
             >> then_np_sscp()
             >> then_private_eigenvector(1.0)
         )
@@ -53,7 +53,7 @@ def test_eigenvector_integration():
 
 
 def test_eigenvectors():
-    from opendp.extras.numpy import then_np_clamp
+    from opendp.extras.numpy import then_np_clip
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 
@@ -64,7 +64,7 @@ def test_eigenvectors():
         domain,
         dp.symmetric_distance(),
     )
-    sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
+    sp_sscp = space >> then_np_clip(norm=4.0, p=2) >> then_np_sscp()
     with optional_dependency("scipy.linalg"):
         meas = sp_sscp >> then_private_eigenvectors([1.0] * 3)
 
