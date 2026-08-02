@@ -1,8 +1,8 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
-    traits::InfSub,
+    measures::{Approximate, MaxDivergence, PrivacyCurve, SmoothedMaxDivergence},
+    traits::DInterval,
 };
 
 #[cfg(feature = "ffi")]
@@ -78,10 +78,13 @@ impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
     }
     fn fix_delta(
         &self,
-        (curve, fixed_delta): &(PrivacyProfile, f64),
+        (curve, fixed_delta): &(PrivacyCurve, f64),
         delta: f64,
     ) -> Fallible<(f64, f64)> {
-        let remaining_delta = delta.neg_inf_sub(&fixed_delta)?;
+        let remaining_delta = DInterval::point(delta)?
+            .sub(DInterval::point(*fixed_delta)?)?
+            .max(DInterval::point(0.0)?)?
+            .lower_f64()?;
         curve.epsilon(remaining_delta).map(|v| (v, delta.clone()))
     }
 }
