@@ -256,7 +256,7 @@ where
         upper(default = b"null", c_type = "void *"),
         return_sign(default = false),
     ),
-    generics(T(example = "$get_first_non_null(lower, upper)"))
+    generics(T(example = "$get_first(bounds)"))
 )]
 /// Find the closest passing value to the decision boundary of `predicate`.
 ///
