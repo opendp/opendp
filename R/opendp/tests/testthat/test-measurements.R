@@ -386,3 +386,36 @@ test_that("test_randomized_response_bitvec", {
   expect_equal(m_rr(d_in = 1L), 0.8006676684558611)
   m_rr(arg = xx)
 })
+
+test_that("privacy guarantee RDP representation", {
+  batches <- list()
+  guarantee <- privacy_guarantee(renyiDP = function(orders) {
+    batches[[length(batches) + 1L]] <<- orders
+    0.5 * orders
+  })
+  expect_gt(guarantee(delta = 0.1), 0.)
+  expect_lt(guarantee(epsilon = 1.), 1.)
+
+  approximate <- privacy_guarantee(
+    renyiDP = \(orders) rep(0., length(orders)),
+    renyiDP_delta = 0.2
+  )
+  expect_equal(approximate(epsilon = Inf), 0.2)
+  expect_gt(length(batches), 0L)
+  expect_true(all(lengths(batches) == 1L))
+
+  for (output in list(numeric(), c(0., 0.), NaN, -1.)) {
+    invalid <- privacy_guarantee(renyiDP = \(orders) output)
+    caught <- tryCatch(invalid(epsilon = 1.), error = identity)
+    expect_s3_class(caught, "opendp_error")
+    expect_identical(caught$variant, if (anyNA(output)) "NumericError" else "FailedMap")
+  }
+  failing <- privacy_guarantee(
+    approx_dp = c(1., 0.1),
+    renyiDP = function(orders) stop("RDP failed", call. = FALSE)
+  )
+  caught <- tryCatch(failing(epsilon = 1.), error = identity)
+  expect_s3_class(caught, "opendp_error")
+  expect_identical(caught$variant, "FFI")
+  expect_identical(caught$raw_message, "RDP failed")
+})

@@ -569,6 +569,56 @@ def test_fdp_reporting_propagates_invalid_source_results(output):
             query(0.5)
 
 
+def test_privacy_guarantee_renyi_representation():
+    from opendp.mod import PrivacyGuarantee
+
+    with pytest.raises(TypeError, match="renyiDP_delta requires renyiDP"):
+        PrivacyGuarantee(approx_dp=(1.0, 0.1), renyiDP_delta=0.2)
+
+    batches = []
+
+    def curve(orders):
+        batches.append(orders)
+        assert isinstance(orders, list)
+        assert all(order > 1 for order in orders)
+        return [0.5 * order for order in orders]
+
+    guarantee = PrivacyGuarantee(renyiDP=curve)
+    assert guarantee.epsilon(delta=0.1) > 0.0
+    assert guarantee.delta(epsilon=1.0) < 1.0
+
+    approximate = PrivacyGuarantee(
+        renyiDP=lambda orders: [0.0] * len(orders),
+        renyiDP_delta=0.2,
+    )
+    assert approximate.delta(epsilon=float("inf")) == 0.2
+    assert batches and all(len(batch) == 1 for batch in batches)
+
+
+@pytest.mark.parametrize("output", [[], [0.0, 0.0], [float("nan")], [-1.0]])
+def test_privacy_guarantee_invalid_renyi_output(output):
+    import math
+
+    guarantee = dp.PrivacyGuarantee(renyiDP=lambda _: output)
+    with pytest.raises(dp.OpenDPException) as error:
+        guarantee.delta(epsilon=1.0)
+    assert error.value.variant == (
+        "NumericError" if any(math.isnan(x) for x in output) else "FailedMap"
+    )
+
+
+def test_privacy_guarantee_renyi_callback_error():
+    original = dp.OpenDPException("NumericError", "RDP failed")
+
+    def curve(_):
+        raise original
+
+    guarantee = dp.PrivacyGuarantee(approx_dp=(1.0, 0.1), renyiDP=curve)
+    with pytest.raises(dp.OpenDPException) as error:
+        guarantee.delta(epsilon=1.0)
+    assert error.value is original
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

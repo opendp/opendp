@@ -721,3 +721,191 @@ fn test_aggregate_queries_preserve_numerical_failures() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_renyi_batches_and_validation() -> Fallible<()> {
+    let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let recorded = calls.clone();
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(
+        move |orders| {
+            recorded.lock().unwrap().push(orders.to_vec());
+            Ok(orders.iter().map(|order| 0.5 * order).collect())
+        },
+        0.1,
+    )?;
+    let curve = guarantee.renyi.as_ref().unwrap().curve.as_ref();
+    let orders = [1.5, 2.0, 2.0, 4.0];
+    assert_eq!(
+        renyidp::evaluate_renyi(curve, &orders)?,
+        vec![0.75, 1.0, 1.0, 2.0]
+    );
+    assert!(renyidp::evaluate_renyi(curve, &[])?.is_empty());
+    assert_eq!(*calls.lock().unwrap(), vec![orders.to_vec(), vec![]]);
+    for invalid in [
+        vec![1.0],
+        vec![0.0],
+        vec![f64::NAN],
+        vec![f64::INFINITY],
+        vec![f64::NEG_INFINITY],
+        vec![3.0, 2.0],
+    ] {
+        assert_eq!(
+            renyidp::evaluate_renyi(curve, &invalid)
+                .unwrap_err()
+                .variant,
+            ErrorVariant::FailedMap
+        );
+    }
+    assert_eq!(calls.lock().unwrap().len(), 2);
+    // Optimizers continue to use singleton batches without weakening bounds.
+    guarantee.delta(1.0)?;
+    assert!(
+        calls.lock().unwrap()[2..]
+            .iter()
+            .all(|batch| batch.len() == 1)
+    );
+
+    for output in [
+        vec![],
+        vec![1.0, 2.0],
+        vec![f64::NAN],
+        vec![-1.0],
+        vec![f64::NEG_INFINITY],
+    ] {
+        let expected = if output.iter().any(|x| x.is_nan()) {
+            ErrorVariant::NumericError
+        } else {
+            ErrorVariant::FailedMap
+        };
+        let invalid = PrivacyGuarantee::new().with_renyiDP(move |_| Ok(output.clone()), 0.0)?;
+        assert_eq!(invalid.delta(1.0).unwrap_err().variant, expected);
+    }
+    // Genuine infinity is a valid conservative bound, not an overflow error.
+    assert_eq!(
+        renyidp::evaluate_renyi(&|orders| Ok(vec![f64::INFINITY; orders.len()]), &[2.0])?,
+        vec![f64::INFINITY]
+    );
+    for delta in [-0.1, 1.1, f64::NAN, f64::INFINITY] {
+        assert!(
+            PrivacyGuarantee::new()
+                .with_renyiDP(batch(|_| Ok(0.0)), delta)
+                .is_err()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_renyi_representation_queries_and_aggregation() -> Fallible<()> {
+    let exact = PrivacyGuarantee::new().with_renyiDP(batch(|_| Ok(0.0)), 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_renyiDP(batch(|_| Ok(0.0)), 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert_eq!(exact.beta(&[0.5])?[0], 0.5);
+    let alpha = exact.alpha(&[0.5])?[0];
+    assert!(alpha < 0.5 && alpha > 0.5 - 1e-14);
+    assert!(exact.beta(&[alpha])?[0] > 0.5);
+
+    let profile = ApproxDPRepr::new(1.0, 0.2)?.into_profile()?;
+    let profile_only = PrivacyGuarantee::new().with_profile(profile.clone());
+    let rdp_only = PrivacyGuarantee::new().with_renyiDP(batch(|_| Ok(0.0)), 0.0)?;
+    let combined = PrivacyGuarantee::new()
+        .with_approx_dp(2.0, 0.3)?
+        .with_profile(profile.clone())
+        .with_renyiDP(batch(|_| Ok(0.0)), 0.0)?;
+    assert_eq!(combined.approx_dp(), Some((2.0, 0.3)));
+    assert!(combined.profile().is_some());
+
+    assert!(combined.delta(1.0)? <= profile_only.delta(1.0)?);
+    assert!(combined.delta(1.0)? <= rdp_only.delta(1.0)?);
+    assert!(combined.epsilon(0.2)? <= profile_only.epsilon(0.2)?);
+    assert!(combined.epsilon(0.2)? <= rdp_only.epsilon(0.2)?);
+    assert!(combined.beta(&[0.5])?[0] >= profile_only.beta(&[0.5])?[0]);
+    assert!(combined.beta(&[0.5])?[0] >= rdp_only.beta(&[0.5])?[0]);
+    assert!(combined.alpha(&[0.5])?[0] >= profile_only.alpha(&[0.5])?[0]);
+    assert!(combined.alpha(&[0.5])?[0] >= rdp_only.alpha(&[0.5])?[0]);
+
+    let profile_only = PrivacyGuarantee::new().with_profile(profile);
+    let failing_rdp =
+        profile_only.with_renyiDP(|_| fallible!(FailedFunction, "RDP failed"), 0.0)?;
+    assert_eq!(
+        failing_rdp.delta(1.0).unwrap_err().variant,
+        ErrorVariant::FailedFunction
+    );
+    Ok(())
+}
+
+#[test]
+fn test_renyi_high_order_delta_search() -> Fallible<()> {
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(batch(|_| Ok(1.0)), 0.0)?;
+    let delta = guarantee.delta(1.0)?;
+
+    // The order-1024 result is around 1e-3; high-order probing should find
+    // the substantially tighter backend-supported bound.
+    assert!(delta < 1e-12, "delta={delta}");
+    Ok(())
+}
+
+#[test]
+fn test_aggregate_queries_preserve_renyi_numerical_failure() -> Fallible<()> {
+    let guarantee = PrivacyGuarantee::new()
+        .with_profile(PrivacyProfile::new(batch(|_| Ok(0.0))))
+        .with_renyiDP(|_| fallible!(NumericError, "RDP callback failed"), 0.0)?;
+    for result in [
+        guarantee.delta(1.0),
+        guarantee.epsilon(0.5),
+        guarantee.beta(&[0.5]).map(|v| v[0]),
+        guarantee.alpha(&[0.5]).map(|v| v[0]),
+    ] {
+        assert_eq!(result.unwrap_err().variant, ErrorVariant::NumericError);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_renyi_delta_search_propagates_unevaluable_order() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let callback_calls = calls.clone();
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(
+        batch(move |order| {
+            callback_calls.fetch_add(1, Ordering::Relaxed);
+            if order > 1_000.0 {
+                fallible!(FailedFunction, "RDP order is unevaluable")
+            } else {
+                Ok(1.0)
+            }
+        }),
+        0.0,
+    )?;
+
+    let error = guarantee.delta(1.0).unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::FailedFunction);
+    assert_eq!(error.message.as_deref(), Some("RDP order is unevaluable"));
+    assert!(calls.load(Ordering::Relaxed) > 0);
+    Ok(())
+}
+
+#[test]
+fn test_renyi_nonzero_curve_exercises_all_queries() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let callback_calls = calls.clone();
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(
+        batch(move |order| {
+            callback_calls.fetch_add(1, Ordering::Relaxed);
+            Ok(0.01 + 0.05 * order)
+        }),
+        0.0,
+    )?;
+
+    let delta = guarantee.delta(1.0)?;
+    let epsilon = guarantee.epsilon(1.0)?;
+    let beta = guarantee.beta(&[1.0])?[0];
+    let alpha = guarantee.alpha(&[1.0])?[0];
+    for value in [delta, epsilon, beta, alpha] {
+        assert!(!value.is_nan());
+        assert!(value >= 0.0);
+    }
+    assert!(calls.load(Ordering::Relaxed) > 0);
+    Ok(())
+}

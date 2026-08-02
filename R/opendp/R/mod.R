@@ -491,12 +491,15 @@ new_privacy_guarantee_internal <- function(ptr) {
 #'
 #' @param approx_dp Numeric pair c(epsilon, delta); zero delta certifies pure DP.
 #' @param profile A PrivacyProfile object, independently certified.
+#' @param renyiDP Vector-valued callback mapping nondecreasing finite Renyi orders
+#'   greater than one (duplicates allowed) to nonnegative epsilon bounds of the same length.
+#' @param renyiDP_delta Source delta for approximate RDP.
 #' Alpha and beta report f-DP lower bounds derived from these representations,
 #' accepting scalars or nondecreasing vectors (duplicates permitted).
 #' No tradeoff representation is stored.
 #' @export
-privacy_guarantee <- function(approx_dp = NULL, profile = NULL) {
-  if (is.null(approx_dp) && is.null(profile)) {
+privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, renyiDP_delta = 0) {
+  if (is.null(approx_dp) && is.null(profile) && is.null(renyiDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
@@ -505,12 +508,18 @@ privacy_guarantee <- function(approx_dp = NULL, profile = NULL) {
   if (!is.null(profile) && !inherits(profile, "privacy_profile")) {
     stop("profile must be a privacy_profile", call. = FALSE)
   }
+  if (is.null(renyiDP) && renyiDP_delta != 0) {
+    stop("renyiDP_delta requires renyiDP", call. = FALSE)
+  }
   guarantee <- `_new_privacy_guarantee`()
   if (!is.null(approx_dp)) {
     guarantee <- `_privacy_guarantee_with_approx_dp`(guarantee, approx_dp[[1]], approx_dp[[2]])
   }
   if (!is.null(profile)) {
     guarantee <- `_privacy_guarantee_with_profile`(guarantee, profile)
+  }
+  if (!is.null(renyiDP)) {
+    guarantee <- `_privacy_guarantee_with_renyiDP`(guarantee, renyiDP, renyiDP_delta)
   }
   guarantee
 }
