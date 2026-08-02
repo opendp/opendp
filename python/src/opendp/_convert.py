@@ -153,6 +153,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
+        if isinstance(value, PrivacyProfile):
+            return value.curve
         if isinstance(value, ctypes.POINTER(AnyObject)):
             return value
 
@@ -192,7 +194,7 @@ def c_to_py(value: Any) -> Any:
         obj_type = object_type(value)
 
         if obj_type == PrivacyProfile.__name__:
-            return PrivacyProfile(value)
+            return PrivacyProfile(_ptr=value)
         
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)

@@ -444,7 +444,60 @@ pub extern "C" fn opendp_measures__new_privacy_profile(
     curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {
     let curve = wrap_func(try_as_ref!(curve).clone());
-    FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
-        move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
-    )))
+    let profile =
+        PrivacyProfile::new(move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>());
+    FfiResult::Ok(AnyObject::new_raw(profile))
+}
+
+#[bootstrap(
+    name = "new_privacy_profile_log",
+    features("contrib", "honest-but-curious"),
+    arguments(curve(rust_type = "f64")),
+    returns(rust_type = "PrivacyProfile")
+)]
+/// Construct a PrivacyProfile from a user-defined epsilon-to-log-delta callback.
+///
+/// # Why honest-but-curious?
+///
+/// The callback is supplied by the library user and is trusted to define a
+/// valid, nonincreasing log-delta profile.
+///
+/// The callback must return a conservative natural logarithm of delta.
+#[allow(dead_code)]
+fn new_privacy_profile_log(curve: *const CallbackFn) -> Fallible<AnyObject> {
+    let _ = curve;
+    panic!("this signature only exists for code generation")
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__new_privacy_profile_log(
+    curve: *const CallbackFn,
+) -> FfiResult<*mut AnyObject> {
+    let curve = wrap_func(try_as_ref!(curve).clone());
+    let profile = PrivacyProfile::new(|_| Ok(1.0))
+        .with_log_profile(move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>());
+    FfiResult::Ok(AnyObject::new_raw(try_!(profile)))
+}
+
+#[bootstrap(
+    name = "new_privacy_profile_from_points",
+    features("contrib"),
+    arguments(points(rust_type = "Vec<(f64, f64)>")),
+    returns(rust_type = "PrivacyProfile")
+)]
+/// Construct a PrivacyProfile from approximate-DP `(epsilon, delta)` points.
+#[allow(dead_code)]
+fn new_privacy_profile_from_points(points: *const AnyObject) -> Fallible<AnyObject> {
+    let _ = points;
+    panic!("this signature only exists for code generation")
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__new_privacy_profile_from_points(
+    points: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let points = try_!(try_as_ref!(points).downcast_ref::<Vec<(f64, f64)>>()).clone();
+    let profile = try_!(PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(points));
+    FfiResult::Ok(AnyObject::new_raw(profile))
 }

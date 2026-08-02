@@ -1,4 +1,4 @@
-use crate::{core::Function, domains::AtomDomain, metrics::DiscreteDistance, traits::InfExp};
+use crate::{core::Function, domains::AtomDomain, metrics::DiscreteDistance};
 
 use super::*;
 
@@ -9,14 +9,15 @@ fn test_fix_delta_adp() -> Fallible<()> {
         DiscreteDistance,
         SmoothedMaxDivergence,
         Function::new(|&v| v),
-        PrivacyMap::new(|_d_in| PrivacyProfile::new(|eps| (-eps).inf_exp())),
+        PrivacyMap::new(|_d_in| PrivacyProfile::new(|eps| Ok((-eps).exp()))),
     )?;
     let m_fixed = make_fix_delta(&meas, 1e-7)?;
 
     let (eps, del) = m_fixed.map(&1)?;
 
-    // -ln(1e-7)
-    assert_eq!(eps, 16.11809565095832);
+    // -ln(1e-7), conservatively rounded upward.
+    assert!(eps >= 16.11809565095832);
+    assert!((eps - 16.11809565095832).abs() < 1e-14);
     assert_eq!(del, 1e-7);
     Ok(())
 }
@@ -28,14 +29,41 @@ fn test_fix_delta_approx_adp() -> Fallible<()> {
         DiscreteDistance,
         Approximate(SmoothedMaxDivergence),
         Function::new(|&v| v),
-        PrivacyMap::new(|_d_in| (PrivacyProfile::new(|eps| (-eps).inf_exp()), 1e-7)),
+        PrivacyMap::new(|_d_in| (PrivacyProfile::new(|eps| Ok((-eps).exp())), 1e-7)),
     )?;
     let m_fixed = make_fix_delta(&meas, 2e-7)?;
 
     let (eps, del) = m_fixed.map(&1)?;
 
-    // -ln(1e-7)
-    assert_eq!(eps, 16.11809565095832);
+    // -ln(1e-7), conservatively rounded upward.
+    assert!(eps >= 16.11809565095832);
+    assert!((eps - 16.11809565095832).abs() < 1e-14);
     assert_eq!(del, 2e-7);
+    assert!(make_fix_delta(&meas, -0.0)?.privacy_map.eval(&1).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_fix_delta_outer_delta_boundaries() -> Fallible<()> {
+    let meas = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(SmoothedMaxDivergence),
+        Function::new(|&v| v),
+        PrivacyMap::new_fallible(|_d_in| {
+            Ok((
+                PrivacyProfile::new(|_| Ok(0.0)).with_approxDP(vec![(0.0, 0.0)])?,
+                0.2,
+            ))
+        }),
+    )?;
+    let below = make_fix_delta(&meas, 0.2f64.next_down())?;
+    assert!(below.privacy_map.eval(&1)?.0.is_infinite());
+
+    let equal = make_fix_delta(&meas, 0.2)?;
+    assert_eq!(equal.privacy_map.eval(&1)?.0, 0.0);
+
+    let above = make_fix_delta(&meas, 0.2f64.next_up())?;
+    assert_eq!(above.privacy_map.eval(&1)?.0, 0.0);
     Ok(())
 }

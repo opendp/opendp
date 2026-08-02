@@ -14,7 +14,7 @@ import importlib
 import json
 import warnings
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyObjectPtr, AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -1147,15 +1147,42 @@ class ApproximateDivergence(Measure):
     
 
 class PrivacyProfile(object):
-    '''
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    '''A privacy profile mapping epsilon to a conservative delta bound.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Construct a profile from exactly one of an ordinary delta callback,
+    a log-delta callback, or approximate-DP ``(epsilon, delta)`` points.
     '''
-    def __init__(self, curve):
-        self.curve = curve
+    def __init__(
+        self,
+        curve: Optional[Callable[[float], float]] = None,
+        *,
+        log_profile: Optional[Callable[[float], float]] = None,
+        approxDP: Optional[Sequence[tuple[float, float]]] = None,
+        _ptr: AnyObjectPtr | None = None,
+    ):
+        if _ptr is not None:
+            if curve is not None or log_profile is not None or approxDP is not None:
+                raise TypeError("_ptr cannot be combined with profile constructors")
+            self.curve = _ptr
+            return
+
+        choices = sum(value is not None for value in (curve, log_profile, approxDP))
+        if choices != 1:
+            raise TypeError(
+                "expected exactly one of curve, log_profile, or approxDP"
+            )
+
+        from opendp.measures import (
+            new_privacy_profile,
+            new_privacy_profile_from_points,
+            new_privacy_profile_log,
+        )
+        if curve is not None:
+            self.curve = new_privacy_profile(curve).curve
+        elif log_profile is not None:
+            self.curve = new_privacy_profile_log(log_profile).curve
+        else:
+            self.curve = new_privacy_profile_from_points(approxDP).curve
 
     def delta(self, epsilon):
         '''
