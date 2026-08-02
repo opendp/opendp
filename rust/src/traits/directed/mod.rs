@@ -680,7 +680,21 @@ where
 
     #[inline]
     fn exp_to_<DOut: ODPRound>(self) -> Fallible<Self::Output<DOut>> {
-        Ok(DBig::raw(self.value.with_rounding::<DOut>().exp()))
+        let value = self
+            .value
+            .with_precision(64)
+            .value()
+            .with_rounding::<DOut>();
+        let min = FBig::<DOut>::try_from(f64::from_bits(1))?
+            .with_precision(64)
+            .value();
+        let min_log = min.clone().ln();
+
+        if value <= min_log {
+            return Ok(DBig::raw(if DOut::IS_UP { min } else { FBig::ZERO }));
+        }
+
+        Ok(DBig::raw(value.exp()))
     }
 }
 

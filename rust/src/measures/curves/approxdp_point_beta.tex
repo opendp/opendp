@@ -1,0 +1,81 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{ApproxDPPoint::beta}}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{epsilon} of type \texttt{f64}
+    \item Argument \texttt{delta} of type \texttt{f64}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\texttt{epsilon} is finite and nonnegative, and \texttt{delta} is in $[0,1]$.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approxdp_point_beta.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    For all $\alpha \in [0, 1]$, the pseudocode returns
+    $\tilde{f}(\alpha) \le f_{\epsilon,\delta}(\alpha)$, where
+    $f_{\epsilon,\delta}$ is the exact approximate-DP tradeoff curve.
+\end{theorem}
+
+We start with the following standard definition of approximate DP.
+\begin{definition}
+    \label{def-2-2}
+    Let $\epsilon > 0$ and $\delta \geq 0$, and define
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha, \exp(-\epsilon) (1 - \delta - \alpha)).
+    \end{equation}
+    Then we say that a mechanism $M$ satisfies $(\epsilon, \delta)$-DP if it satisfies $f_{\epsilon,\delta}$-DP.
+\end{definition}
+
+\begin{proof}
+The definition assumes $\alpha \in [0, 1]$, which is the domain of the returned function.
+The code clamps the base of the second affine branch at zero, as in Definition~\ref{def-2-2}.
+
+The interval upper endpoint on line \ref{exp-eps} over-estimates
+$\exp(\epsilon)$, and the interval lower endpoint on line
+\ref{exp-neg-eps} under-estimates $\exp(-\epsilon)$.
+The results of these constants are converted exactly into rationals to be used in the tradeoff function.
+
+The function defined on line \ref{tradeoff} implements the formula in Definition~\ref{def-2-2} with exact fractional arithmetic, except that it substitutes these conservative rounded constants for $\exp(\epsilon)$ and $\exp(-\epsilon)$.
+
+For $\alpha \in [0, 1]$, the first branch
+\[
+    1 - \delta - \texttt{exp\_eps} \cdot \alpha
+\]
+is no greater than
+\[
+    1 - \delta - \exp(\epsilon)\alpha,
+\]
+because $\texttt{exp\_eps} \ge \exp(\epsilon)$ and $\alpha \ge 0$.
+
+For the second branch, if $1 - \delta - \alpha \ge 0$, then
+\[
+    \texttt{exp\_neg\_eps} \cdot (1 - \delta - \alpha)
+    \le
+    \exp(-\epsilon)(1 - \delta - \alpha),
+\]
+because $\texttt{exp\_neg\_eps} \le \exp(-\epsilon)$.
+If instead $1 - \delta - \alpha < 0$, then both expressions are negative, so they do not affect the outer maximum with $0$.
+
+Therefore, for all $\alpha \in [0, 1]$, the function returned by the pseudocode is pointwise no greater than $f_{\epsilon,\delta}(\alpha)$.
+This is the required reporting behavior because a smaller $\beta$ is a weaker
+tradeoff guarantee.
+\end{proof}
+
+\end{document}
