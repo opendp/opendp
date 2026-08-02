@@ -459,13 +459,18 @@ new_privacy_guarantee_internal <- function(ptr) {
 #' @param profile A PrivacyProfile object.
 #' @param tradeoff Callback mapping alpha to beta.
 #' @param symmetric_tradeoff Symmetric callback mapping alpha to beta.
+#' @param renyiDP Callback mapping Renyi order alpha to epsilon(alpha).
+#' @param renyiDP_delta Source delta for approximate RDP.
 #' @export
-privacy_guarantee <- function(profile, tradeoff, symmetric_tradeoff) {
-  if (missing(profile) && missing(tradeoff) && missing(symmetric_tradeoff)) {
+privacy_guarantee <- function(profile, tradeoff, symmetric_tradeoff, renyiDP, renyiDP_delta = 0) {
+  if (missing(profile) && missing(tradeoff) && missing(symmetric_tradeoff) && missing(renyiDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!missing(profile) && !inherits(profile, "privacy_profile")) {
     stop("profile must be a PrivacyProfile", call. = FALSE)
+  }
+  if (missing(renyiDP) && renyiDP_delta != 0) {
+    stop("renyiDP_delta requires renyiDP", call. = FALSE)
   }
 
   guarantee <- `_new_privacy_guarantee`()
@@ -477,6 +482,9 @@ privacy_guarantee <- function(profile, tradeoff, symmetric_tradeoff) {
   }
   if (!missing(symmetric_tradeoff)) {
     guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, symmetric_tradeoff, symmetric = TRUE)
+  }
+  if (!missing(renyiDP)) {
+    guarantee <- `_privacy_guarantee_with_renyiDP`(guarantee, renyiDP, renyiDP_delta)
   }
   guarantee
 }

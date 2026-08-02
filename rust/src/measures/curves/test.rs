@@ -221,6 +221,64 @@ fn test_aggregate_queries_are_monotone() -> Fallible<()> {
 
 #[cfg(feature = "honest-but-curious")]
 #[test]
+fn test_renyi_representation_queries_and_aggregation() -> Fallible<()> {
+    let exact = PrivacyGuarantee::new().with_renyiDP(|_| Ok(0.0), 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_renyiDP(|_| Ok(0.0), 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert_eq!(exact.beta(0.5)?, 0.5);
+    assert!((exact.alpha(0.5)? - 0.5).abs() < 1e-14);
+
+    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 0.2)])?;
+    let profile_only = PrivacyGuarantee::from_profile(profile.clone());
+    let rdp_only = PrivacyGuarantee::new().with_renyiDP(|_| Ok(0.0), 0.0)?;
+    let combined =
+        PrivacyGuarantee::from_profile(profile.clone()).with_renyiDP(|_| Ok(0.0), 0.0)?;
+
+    assert!(combined.delta(1.0)? <= profile_only.delta(1.0)?);
+    assert!(combined.delta(1.0)? <= rdp_only.delta(1.0)?);
+    assert!(combined.epsilon(0.2)? <= profile_only.epsilon(0.2)?);
+    assert!(combined.epsilon(0.2)? <= rdp_only.epsilon(0.2)?);
+    assert!(combined.beta(0.5)? >= profile_only.beta(0.5)?);
+    assert!(combined.beta(0.5)? >= rdp_only.beta(0.5)?);
+    assert!(combined.alpha(0.5)? >= profile_only.alpha(0.5)?);
+    assert!(combined.alpha(0.5)? >= rdp_only.alpha(0.5)?);
+
+    let profile_only = PrivacyGuarantee::from_profile(profile);
+    let failing_rdp =
+        profile_only.with_renyiDP(|_| fallible!(FailedFunction, "RDP failed"), 0.0)?;
+    assert_eq!(failing_rdp.delta(1.0)?, 0.2);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_renyi_nonzero_curve_exercises_all_queries() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let callback_calls = calls.clone();
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(
+        move |order| {
+            callback_calls.fetch_add(1, Ordering::Relaxed);
+            Ok(0.01 + 0.05 * order)
+        },
+        0.0,
+    )?;
+
+    let delta = guarantee.delta(1.0)?;
+    let epsilon = guarantee.epsilon(1.0)?;
+    let beta = guarantee.beta(1.0)?;
+    let alpha = guarantee.alpha(1.0)?;
+    for value in [delta, epsilon, beta, alpha] {
+        assert!(!value.is_nan());
+        assert!(value >= 0.0);
+    }
+    assert!(calls.load(Ordering::Relaxed) > 0);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
 fn test_tradeoff_and_profile_paths_are_both_available() -> Fallible<()> {
     let tradeoff =
         PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| Ok((0.75 - alpha).max(0.0)))?;

@@ -227,6 +227,20 @@ def test_privacy_guarantee_tradeoff_queries():
     assert certified.beta(alpha=0.3) >= 0.0
 
 
+def test_privacy_guarantee_renyi_representation():
+    from opendp.mod import PrivacyGuarantee
+
+    guarantee = PrivacyGuarantee(renyiDP=lambda alpha: 0.5 * alpha)
+    assert guarantee.epsilon(delta=0.1) > 0.0
+    assert guarantee.delta(epsilon=1.0) < 1.0
+
+    approximate = PrivacyGuarantee(
+        renyiDP=lambda _alpha: 0.0,
+        renyiDP_delta=0.2,
+    )
+    assert approximate.delta(epsilon=float("inf")) == 0.2
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

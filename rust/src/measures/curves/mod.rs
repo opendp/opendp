@@ -8,8 +8,11 @@ use crate::{
 mod approxdp;
 pub(crate) mod logspace;
 mod profile_to_tradeoff;
+mod renyidp;
 mod tradeoff;
 
+#[cfg(feature = "ffi")]
+mod renyidp_ffi;
 #[cfg(feature = "ffi")]
 mod tradeoff_ffi;
 
@@ -40,6 +43,7 @@ pub struct PrivacyProfile {
 pub struct PrivacyGuarantee {
     profile: Option<PrivacyProfile>,
     tradeoff: Option<TradeoffRepresentation>,
+    renyi: Option<RenyiRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -150,6 +154,37 @@ impl PrivacyGuarantee {
         }
     }
 
+    /// Attach an RDP representation with OpenDP's additive source-delta semantics.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(non_snake_case)]
+    pub fn with_renyiDP(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        source_delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(source_delta)?;
+        self.renyi = Some(RenyiRepresentation {
+            curve: Arc::new(curve),
+            source_delta,
+        });
+        Ok(self)
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_snake_case)]
+    pub(crate) fn with_renyiDP_trusted(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        source_delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(source_delta)?;
+        self.renyi = Some(RenyiRepresentation {
+            curve: Arc::new(curve),
+            source_delta,
+        });
+        Ok(self)
+    }
+
     /// Evaluate the tightest successfully available conservative delta bound.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
@@ -164,6 +199,17 @@ impl PrivacyGuarantee {
         }
         if let Some(TradeoffRepresentation { beta, symmetric }) = &self.tradeoff {
             match tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon) {
+                Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+        if let Some(RenyiRepresentation {
+            curve,
+            source_delta,
+        }) = &self.renyi
+        {
+            match renyidp::delta_via_renyiDP(curve.as_ref(), *source_delta, epsilon) {
                 Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
@@ -204,6 +250,20 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        if let Some(RenyiRepresentation {
+            curve,
+            source_delta,
+        }) = &self.renyi
+        {
+            match invert_decreasing_callback(
+                |epsilon| renyidp::delta_via_renyiDP(curve.as_ref(), *source_delta, epsilon),
+                delta,
+            ) {
+                Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
 
         match best {
             Some(epsilon) => Ok(epsilon),
@@ -232,6 +292,17 @@ impl PrivacyGuarantee {
         }
         if let Some(tradeoff) = &self.tradeoff {
             match (tradeoff.beta)(alpha).and_then(|beta| check_beta(beta).map(|_| beta)) {
+                Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+        if let Some(RenyiRepresentation {
+            curve,
+            source_delta,
+        }) = &self.renyi
+        {
+            match renyidp::beta_via_renyiDP(curve.clone(), *source_delta, alpha) {
                 Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
@@ -273,6 +344,20 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        if let Some(RenyiRepresentation {
+            curve,
+            source_delta,
+        }) = &self.renyi
+        {
+            match invert_decreasing_callback(
+                |alpha| renyidp::beta_via_renyiDP(curve.clone(), *source_delta, alpha),
+                beta,
+            ) {
+                Ok(alpha) => best = Some(best.map_or(alpha, |value: f64| value.max(alpha))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
 
         match best {
             Some(alpha) => check_alpha(alpha).map(|_| alpha),
@@ -293,6 +378,7 @@ impl std::fmt::Debug for PrivacyGuarantee {
         f.debug_struct("PrivacyGuarantee")
             .field("profile", &self.profile.is_some())
             .field("tradeoff", &self.tradeoff.is_some())
+            .field("renyi", &self.renyi.is_some())
             .finish()
     }
 }
@@ -304,6 +390,13 @@ struct TradeoffRepresentation {
 }
 
 type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+
+#[derive(Clone)]
+struct RenyiRepresentation {
+    curve: Arc<RenyiFn>,
+    source_delta: f64,
+}
 
 #[derive(Clone)]
 enum PrivacyProfileRepr {
