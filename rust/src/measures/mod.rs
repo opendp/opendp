@@ -9,6 +9,10 @@ pub(crate) mod ffi;
 mod privacy_profile;
 pub(crate) use privacy_profile::{delta_to_log_lower, delta_to_log_upper, log_to_delta_upper};
 
+pub(crate) mod rdp_to_approxdp;
+pub(crate) mod zcdp;
+pub(crate) use zcdp::{zcdp_delta, zcdp_epsilon, zcdp_log_delta};
+
 pub(crate) mod curves;
 pub use curves::*;
 
