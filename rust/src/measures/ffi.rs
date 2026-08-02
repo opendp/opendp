@@ -18,7 +18,7 @@ use crate::{
     traits::ProductOrd,
 };
 
-use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
+use super::{PrivacyGuarantee, RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -444,7 +444,9 @@ pub extern "C" fn opendp_measures__new_privacy_profile(
     curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {
     let curve = wrap_func(try_as_ref!(curve).clone());
-    FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
-        move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
-    )))
+    let profile = try_!(
+        PrivacyGuarantee::new()
+            .with_profile(move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),)
+    );
+    FfiResult::Ok(AnyObject::new_raw(profile))
 }

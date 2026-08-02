@@ -26,6 +26,8 @@ fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
     assert_eq!(profile.delta(eps.next_down_())?, 1.0);
     assert_eq!(profile.delta(eps)?, del);
     assert_eq!(profile.delta(eps.next_up_())?, del);
+    assert_eq!(profile.epsilon(del)?, eps);
+    assert_eq!(profile.epsilon(del.next_down())?, f64::INFINITY);
 
     Ok(())
 }

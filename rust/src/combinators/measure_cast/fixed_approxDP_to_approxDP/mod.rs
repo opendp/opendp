@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
+    measures::{Approximate, MaxDivergence, PrivacyGuarantee, SmoothedMaxDivergence},
 };
 
 #[cfg(feature = "ffi")]
@@ -35,20 +35,7 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map
                 .eval(d_in)
-                .map(|(eps, delta)| PrivacyProfile::new(fixed_approx_dp_privacy_curve(eps, delta)))
+                .and_then(|(eps, delta)| PrivacyGuarantee::new().with_approxDP(vec![(eps, delta)]))
         }),
     )
-}
-
-fn fixed_approx_dp_privacy_curve(
-    fixed_epsilon: f64,
-    fixed_delta: f64,
-) -> impl Fn(f64) -> Fallible<f64> {
-    move |epsilon: f64| {
-        Ok(if epsilon >= fixed_epsilon {
-            fixed_delta
-        } else {
-            1.0
-        })
-    }
 }
