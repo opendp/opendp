@@ -6,6 +6,8 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+pub(crate) mod rdp_to_approxdp;
+
 pub(crate) mod curves;
 pub use curves::*;
 
@@ -97,11 +99,24 @@ pub(crate) enum Purity {
 pub(crate) struct PrivacyCapabilities {
     approx_dp: Option<Purity>,
     profile: Option<Purity>,
+    renyi: Option<Purity>,
 }
 
 impl PrivacyCapabilities {
     pub(crate) fn new(approx_dp: Option<Purity>, profile: Option<Purity>) -> Self {
-        Self { approx_dp, profile }
+        Self {
+            approx_dp,
+            profile,
+            renyi: None,
+        }
+    }
+
+    pub(crate) fn with_renyi(mut self, purity: Purity) -> Self {
+        self.renyi = Some(purity);
+        self
+    }
+    pub(crate) fn renyi(&self) -> Option<Purity> {
+        self.renyi
     }
 
     pub(crate) fn approx_dp(&self) -> Option<Purity> {
@@ -127,6 +142,10 @@ pub struct MultiDP {
 impl MultiDP {
     pub(crate) fn new(capabilities: PrivacyCapabilities) -> Self {
         Self { capabilities }
+    }
+
+    pub(crate) fn with_renyi(purity: Purity) -> Self {
+        Self::new(PrivacyCapabilities::default().with_renyi(purity))
     }
 
     pub(crate) fn with_approx_dp(purity: Purity) -> Self {

@@ -386,3 +386,15 @@ test_that("test_randomized_response_bitvec", {
   expect_equal(m_rr(d_in = 1L), 0.8006676684558611)
   m_rr(arg = xx)
 })
+
+test_that("privacy guarantee RDP representation", {
+  guarantee <- privacy_guarantee(renyiDP = \(alpha) 0.5 * alpha)
+  expect_gt(guarantee(delta = 0.1), 0.)
+  expect_lt(guarantee(epsilon = 1.), 1.)
+
+  approximate <- privacy_guarantee(
+    renyiDP = \(alpha) 0.,
+    renyiDP_delta = 0.2
+  )
+  expect_equal(approximate(epsilon = Inf), 0.2)
+})
