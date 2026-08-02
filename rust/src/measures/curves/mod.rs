@@ -4,19 +4,24 @@ use std::sync::Arc;
 use crate::measures::curves::{
     approxdp::{beta_via_approxDP, delta_via_approxDP, epsilon_via_approxdp},
     profile::{beta_via_profile, delta_via_profile},
+    renyidp::{beta_via_renyiDP, beta_via_zCDP, delta_via_renyiDP, delta_via_zCDP},
     tradeoff::delta_via_tradeoff,
 };
 use dashu::rational::RBig;
 
 use crate::{
     error::{ErrorVariant, Fallible},
-    measures::privacy_profile::{delta_to_log_lower, delta_to_log_upper},
+    measures::{
+        privacy_profile::{delta_to_log_lower, delta_to_log_upper},
+        zcdp_epsilon,
+    },
     traits::DInterval,
     utilities::search::{Above, fallible_binary_search},
 };
 
 mod approxdp;
 mod profile;
+mod renyidp;
 mod tradeoff;
 
 #[cfg(test)]
@@ -36,6 +41,8 @@ pub struct PrivacyCurve {
     approx_dp: Option<Arc<[ApproxDPPoint]>>,
     profile: Option<Profile>,
     tradeoff: Option<Tradeoff>,
+    renyi_dp: Option<Arc<RenyiFn>>,
+    zcdp: Option<f64>,
 }
 
 #[derive(Clone)]
@@ -85,6 +92,7 @@ struct Tradeoff {
 type ProfileFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ApproxDPPoint {
@@ -280,6 +288,58 @@ impl PrivacyCurve {
         Ok(self)
     }
 
+    /// Construct a privacy curve from a Rényi differential privacy profile.
+    ///
+    /// The callback must return an upper bound on the mechanism's RDP epsilon
+    /// at Rényi order `alpha`.
+    ///
+    /// # Why honest-but-curious?
+    ///
+    /// The callback should implement a well-defined RDP curve:
+    ///
+    /// * is functionally pure
+    /// * returns a finite or infinite non-negative value.
+    /// * returns an upper bound on the true RDP value at order `alpha`.
+    ///
+    /// The supplied profile is a valid RDP profile, not just pointwise numbers.
+    /// In particular, it should satisfy the usual RDP regularity/convexity
+    /// structure needed by RDP-to-DP conversions.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(non_snake_case)]
+    pub fn with_renyiDP(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.renyi_dp = Some(Arc::new(curve));
+        Ok(self)
+    }
+
+    #[allow(dead_code)] // consumed by privacy-curve output measures later in the stack
+    #[allow(non_snake_case)]
+    pub(crate) fn with_renyiDP_trusted(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.renyi_dp = Some(Arc::new(curve));
+        Ok(self)
+    }
+
+    /// Construct a privacy curve from a zero-concentrated differential privacy
+    /// parameter `rho`.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64) -> Fallible<Self> {
+        if rho.is_nan() {
+            return fallible!(FailedMap, "rho must not be NaN");
+        }
+
+        if rho.is_sign_negative() {
+            return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
+        }
+
+        self.zcdp = Some(rho);
+        Ok(self)
+    }
+
     /// Evaluate the privacy profile at `epsilon`.
     ///
     /// # Arguments
@@ -297,6 +357,10 @@ impl PrivacyCurve {
             delta_via_approxDP(points, epsilon)
         } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
             delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)
+        } else if let Some(rho) = &self.zcdp {
+            delta_via_zCDP(*rho, epsilon)
+        } else if let Some(curve) = &self.renyi_dp {
+            delta_via_renyiDP(curve.as_ref(), epsilon)
         } else {
             return fallible!(FailedFunction, "PrivacyCurve has no representation");
         }?;
@@ -340,6 +404,10 @@ impl PrivacyCurve {
             beta_via_profile(log_delta.as_ref(), alpha)?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, alpha)?
+        } else if let Some(rho) = &self.zcdp {
+            beta_via_zCDP(*rho, alpha)?
+        } else if let Some(curve) = &self.renyi_dp {
+            beta_via_renyiDP(curve.as_ref(), alpha)?
         } else {
             return fallible!(FailedFunction, "PrivacyCurve has no representation");
         };
@@ -382,6 +450,10 @@ impl PrivacyCurve {
             .clamp(0.0, 1.0);
 
         if self.delta_slack == 0.0 {
+            if let Some(rho) = self.zcdp {
+                return zcdp_epsilon(rho, remaining_delta);
+            }
+
             if let Some(Profile { log_delta, epsilon }) = &self.profile {
                 if let Some(epsilon) = epsilon {
                     let value = epsilon(remaining_delta)?;
@@ -452,6 +524,10 @@ impl PrivacyCurve {
             beta_via_profile(log_delta.as_ref(), beta)?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, beta)?
+        } else if let Some(rho) = &self.zcdp {
+            beta_via_zCDP(*rho, beta)?
+        } else if let Some(curve) = &self.renyi_dp {
+            beta_via_renyiDP(curve.as_ref(), beta)?
         } else {
             return fallible!(FailedFunction, "PrivacyCurve has no representation");
         };
@@ -485,6 +561,16 @@ impl PrivacyCurve {
 
         let mut composed_any_base_repr = false;
 
+        if curves.iter().any(|curve| curve.renyi_dp.is_some()) {
+            if let Some(renyi_dp) = compose_renyiDP_with_zCDP_normalization(&curves)? {
+                out.renyi_dp = Some(renyi_dp);
+                composed_any_base_repr = true;
+            }
+        } else if let Some(rho) = compose_zCDP(&curves)? {
+            out.zcdp = Some(rho);
+            composed_any_base_repr = true;
+        }
+
         if let Some(points) = compose_singleton_approxDP(&curves)? {
             out.approx_dp = Some(points);
             composed_any_base_repr = true;
@@ -507,8 +593,103 @@ impl PrivacyCurve {
     }
 
     fn has_base_repr(&self) -> bool {
-        self.approx_dp.is_some() || self.profile.is_some() || self.tradeoff.is_some()
+        self.approx_dp.is_some()
+            || self.profile.is_some()
+            || self.tradeoff.is_some()
+            || self.renyi_dp.is_some()
+            || self.zcdp.is_some()
     }
+}
+
+fn compose_zCDP(curves: &[PrivacyCurve]) -> Fallible<Option<f64>> {
+    let mut rho_sum = DInterval::point(0.0)?;
+    let mut saw_non_identity = false;
+
+    for curve in curves {
+        match curve.zcdp {
+            Some(rho) => {
+                check_rho(rho)?;
+                if rho.is_infinite() {
+                    return Ok(Some(f64::INFINITY));
+                }
+                rho_sum = rho_sum.add(DInterval::point(rho)?)?;
+                saw_non_identity = true;
+            }
+            None if !curve.has_base_repr() => {}
+            None => return Ok(None),
+        }
+    }
+
+    if !saw_non_identity {
+        return Ok(None);
+    }
+    Ok(Some(rho_sum.upper_f64()?))
+}
+
+#[derive(Clone)]
+enum RdpComponent {
+    RenyiDP(Arc<RenyiFn>),
+    ZCDP(f64),
+    Zero,
+}
+
+fn compose_renyiDP_with_zCDP_normalization(
+    curves: &[PrivacyCurve],
+) -> Fallible<Option<Arc<RenyiFn>>> {
+    let mut components = Vec::with_capacity(curves.len());
+    let mut saw_non_identity = false;
+
+    for curve in curves {
+        if let Some(renyi_dp) = &curve.renyi_dp {
+            components.push(RdpComponent::RenyiDP(renyi_dp.clone()));
+            saw_non_identity = true;
+        } else if let Some(rho) = curve.zcdp {
+            check_rho(rho)?;
+            components.push(RdpComponent::ZCDP(rho));
+            saw_non_identity = true;
+        } else if !curve.has_base_repr() {
+            components.push(RdpComponent::Zero);
+        } else {
+            return Ok(None);
+        }
+    }
+
+    if !saw_non_identity {
+        return Ok(None);
+    }
+
+    Ok(Some(Arc::new(move |alpha: f64| -> Fallible<f64> {
+        check_renyi_order(alpha)?;
+
+        let mut sum = DInterval::point(0.0)?;
+        for component in components.iter() {
+            let eps = match component {
+                RdpComponent::RenyiDP(curve) => curve(alpha)?,
+                RdpComponent::ZCDP(rho) => {
+                    if rho.is_infinite() {
+                        return Ok(f64::INFINITY);
+                    }
+                    DInterval::point(alpha)?
+                        .mul(DInterval::point(*rho)?)?
+                        .upper_f64()?
+                }
+                RdpComponent::Zero => 0.0,
+            };
+
+            if eps.is_nan() || eps.is_sign_negative() {
+                return fallible!(
+                    FailedMap,
+                    "RDP epsilon ({eps}) must be non-negative and not NaN"
+                );
+            }
+
+            if eps.is_infinite() {
+                return Ok(f64::INFINITY);
+            }
+            sum = sum.add(DInterval::point(eps)?)?;
+        }
+        sum.upper_f64()
+    })))
 }
 
 #[allow(dead_code)] // called by PrivacyCurve::compose later in the stack
@@ -604,6 +785,26 @@ fn checked_log_delta_output(log_delta: f64) -> Fallible<f64> {
         );
     }
     Ok(log_delta)
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() {
+        return fallible!(FailedMap, "rho must not be NaN");
+    }
+    if rho.is_sign_negative() {
+        return fallible!(FailedMap, "rho ({rho}) must be non-negative");
+    }
+    Ok(())
+}
+
+fn check_renyi_order(alpha: f64) -> Fallible<()> {
+    if !alpha.is_finite() || alpha <= 1.0 {
+        return fallible!(
+            FailedMap,
+            "Rényi order alpha ({alpha}) must be finite and greater than one"
+        );
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {

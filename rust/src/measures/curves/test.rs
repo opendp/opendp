@@ -209,3 +209,55 @@ fn test_subnormal_log_to_delta_conversion() -> Fallible<()> {
     assert_eq!(log_to_delta_upper(minimum.ln().next_down())?, minimum);
     Ok(())
 }
+
+#[test]
+fn test_zcdp_curve_uses_shared_profile_conversion() -> Fallible<()> {
+    let rho = 0.5;
+    let epsilon = 1.0;
+    let curve = PrivacyCurve::new().with_zCDP(rho)?;
+    assert_eq!(
+        curve.delta(epsilon)?,
+        crate::measures::zcdp_delta(rho, epsilon)?
+    );
+    assert!((0.0..=1.0).contains(&curve.beta(0.5)?));
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_and_rdp_composition_is_conservative() -> Fallible<()> {
+    assert!(PrivacyCurve::new().with_zCDP(-0.0).is_err());
+
+    let first = PrivacyCurve::new().with_zCDP(0.1)?;
+    let second = PrivacyCurve::new().with_zCDP(0.2)?;
+    let composed = PrivacyCurve::compose(vec![first, second])?;
+    assert!(composed.zcdp.unwrap() >= 0.1 + 0.2);
+
+    let rdp = PrivacyCurve::new().with_renyiDP_trusted(|_| Ok(0.1))?;
+    let zcdp = PrivacyCurve::new().with_zCDP(0.2)?;
+    let composed = PrivacyCurve::compose(vec![rdp, zcdp])?;
+    let epsilon = composed.renyi_dp.unwrap()(2.0)?;
+    assert!(epsilon >= 0.1 + 2.0 * 0.2);
+
+    let non_private = PrivacyCurve::new().with_zCDP(f64::INFINITY)?;
+    let composed = PrivacyCurve::compose(vec![non_private])?;
+    assert_eq!(composed.zcdp, Some(f64::INFINITY));
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_renyi_curve_queries() -> Fallible<()> {
+    let curve = PrivacyCurve::new().with_renyiDP(|alpha| Ok(alpha * 0.25))?;
+    assert!((0.0..=1.0).contains(&curve.delta(1.0)?));
+    assert!((0.0..=1.0).contains(&curve.beta(0.5)?));
+    Ok(())
+}
+
+#[test]
+fn test_renyi_error_propagation() -> Fallible<()> {
+    let curve = PrivacyCurve::new()
+        .with_renyiDP_trusted(|_| fallible!(FailedFunction, "test RDP failure"))?;
+    assert!(curve.delta(1.0).is_err());
+    assert!(curve.epsilon(1e-3).is_err());
+    Ok(())
+}
