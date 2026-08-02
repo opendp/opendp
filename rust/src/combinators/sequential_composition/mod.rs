@@ -20,7 +20,7 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PrivacyCurve, PrivacyCurveDP, PureDP, RenyiDP, zCDP},
     traits::InfAdd,
 };
 
@@ -53,10 +53,8 @@ pub trait CompositionMeasure: Measure {
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
-#[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
-)]
-impl CompositionMeasure for MaxDivergence {
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_PureDP.tex")]
+impl CompositionMeasure for PureDP {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
@@ -65,10 +63,8 @@ impl CompositionMeasure for MaxDivergence {
     }
 }
 
-#[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
-)]
-impl CompositionMeasure for ZeroConcentratedDivergence {
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_zCDP.tex")]
+impl CompositionMeasure for zCDP {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
@@ -77,10 +73,8 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
     }
 }
 
-#[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateMaxDivergence.tex"
-)]
-impl CompositionMeasure for Approximate<MaxDivergence> {
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproxDP.tex")]
+impl CompositionMeasure for Approximate<PureDP> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
@@ -93,10 +87,8 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
     }
 }
 
-#[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateZeroConcentratedDivergence.tex"
-)]
-impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproxZCDP.tex")]
+impl CompositionMeasure for Approximate<zCDP> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Sequential)
     }
@@ -109,10 +101,8 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     }
 }
 
-#[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_RenyiDivergence.tex"
-)]
-impl CompositionMeasure for RenyiDivergence {
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_RenyiDP.tex")]
+impl CompositionMeasure for RenyiDP {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
@@ -124,5 +114,18 @@ impl CompositionMeasure for RenyiDivergence {
                 .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
+    }
+}
+
+impl CompositionMeasure for PrivacyCurveDP {
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        // Conservative because PrivacyCurve can represent approximate-zCDP-like
+        // guarantees via delta_slack. If you later split exact PrivacyCurveDP from
+        // approximate PrivacyCurveDP, the exact measure could plausibly be Concurrent.
+        Ok(Composability::Sequential)
+    }
+
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        PrivacyCurve::compose(d_mids)
     }
 }

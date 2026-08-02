@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../../lib.sty}
 
-\title{\texttt{NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamily<2>}}
+\title{\texttt{NoisePrivacyMap<L2Distance<RBig>, zCDP> for ZExpFamily<2>}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -18,7 +18,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Noi
 \texttt{NoisePrivacyMap} is parameterized as follows:
 \begin{itemize}
     \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L2Distance<RBig>}
-    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{ZeroConcentratedDivergence}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{zCDP}
 \end{itemize}
 
 \subsubsection*{Caller-verified}

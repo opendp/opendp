@@ -382,6 +382,18 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
         }
         UNPROTECT(1);
     }
+    else if (str_equal(c_origin, "PrivacyCurve"))
+    {
+        if (len == 1)
+            result = privacycurveptr_to_sexp(((AnyObject **)input)[0], R_NilValue);
+        else
+        {
+            result = PROTECT(allocVector(VECSXP, len));
+            for (int i = 0; i < len; i++)
+                SET_VECTOR_ELT(result, i, privacycurveptr_to_sexp(((AnyObject **)input)[i], R_NilValue));
+            UNPROTECT(1);
+        }
+    }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
         if (len == 1)
@@ -472,8 +484,25 @@ FfiSlice vector_to_slice(SEXP value, SEXP type_name)
     PROTECT(value);
     PROTECT(type_name);
     SEXP atom_type = VECTOR_ELT(get_args(type_name), 0);
-    // all SEXP are vectors, so scalars are also vectors
-    FfiSlice slice = scalar_to_slice(value, atom_type);
+    const char *c_origin = sexp_to_charptr(get_origin(atom_type));
+
+    FfiSlice slice;
+    if (is_in(c_origin, ATOM_TYPES) || str_equal(c_origin, "ExtrinsicObject") || str_equal(c_origin, "AnyMeasurementPtr"))
+    {
+        // all SEXP are vectors, so scalars are also vectors
+        slice = scalar_to_slice(value, atom_type);
+    }
+    else
+    {
+        if (TYPEOF(value) != VECSXP)
+            error("expected a list when constructing Vec of non-atomic values");
+
+        AnyObject **objects = (AnyObject **)malloc(LENGTH(value) * sizeof(AnyObject *));
+        for (int i = 0; i < LENGTH(value); i++)
+            objects[i] = sexp_to_anyobjectptr(VECTOR_ELT(value, i), atom_type);
+        FfiSlice t = {.ptr = objects, .len = (uintptr_t)LENGTH(value)};
+        slice = t;
+    }
     UNPROTECT(2);
     return slice;
 }
@@ -729,6 +758,12 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
             type_name = VECTOR_ELT(get_args(type_name), 0);
     }
 
+    if (str_equal(c_origin, "PrivacyCurve") || str_equal(c_origin, "PrivacyProfile"))
+    {
+        UNPROTECT(2);
+        return sexp_to_privacycurveptr(data);
+    }
+
     const char *c_type_name = rt_to_string(type_name);
 
     FfiSlice slice = sexp_to_slice(data, type_name);
@@ -756,9 +791,9 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
-    if (str_equal(c_origin, "PrivacyProfile"))
+    if (str_equal(c_origin, "PrivacyCurve") || str_equal(c_origin, "PrivacyProfile"))
     {
-        SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
+        SEXP profile = privacycurveptr_to_sexp(obj, R_NilValue);
         UNPROTECT(1);
         return profile;
     }

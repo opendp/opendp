@@ -32,14 +32,14 @@ Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0
 Collate: 
     'mod.R'
-    'extras.R'
     'typing.R'
-    'internal.R'
     'accuracy.R'
     'combinators.R'
     'core.R'
     'data.R'
     'domains.R'
+    'extras.R'
+    'internal.R'
     'measurements.R'
     'measures.R'
     'metrics.R'

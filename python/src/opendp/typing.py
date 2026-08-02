@@ -398,10 +398,10 @@ L1Distance: SensitivityMetric = SensitivityMetric('L1Distance')
 L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 
-MaxDivergence = 'MaxDivergence'
-SmoothedMaxDivergence = 'SmoothedMaxDivergence'
-FixedSmoothedMaxDivergence = 'FixedSmoothedMaxDivergence'
-ZeroConcentratedDivergence = 'ZeroConcentratedDivergence'
+PureDP = 'PureDP'
+PrivacyCurveDP = 'PrivacyCurveDP'
+ApproxDP = 'ApproxDP'
+zCDP = 'zCDP'
 
 class Carrier(RuntimeType):
     def __getitem__(self, subdomains):
@@ -477,7 +477,6 @@ def get_first_non_null(*values):
         if value is not None:
             return value
     return None
-
 
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     '''

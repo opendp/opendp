@@ -7,7 +7,7 @@ use crate::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
         util::Type,
     },
-    measures::MaxDivergence,
+    measures::PureDP,
     traits::RoundCast,
 };
 
@@ -28,10 +28,7 @@ fn make_select_private_candidate(
     let measurement = Measurement::new(
         measurement.input_domain.clone(),
         measurement.input_metric.clone(),
-        measurement
-            .output_measure
-            .downcast_ref::<MaxDivergence>()?
-            .clone(),
+        measurement.output_measure.downcast_ref::<PureDP>()?.clone(),
         Function::new_fallible(move |arg: &AnyObject| {
             let release = function.eval(arg)?;
 

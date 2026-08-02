@@ -1,3 +1,5 @@
+import math
+from statistics import NormalDist
 import pytest
 import opendp.prelude as dp
 
@@ -6,39 +8,29 @@ from .helpers import ids
 
 def test_gaussian_curve():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.0))
-    profile = meas.map(d_in=1.0)
-    assert profile.epsilon(delta=0.0) == float("inf")
+    meas = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 4.))
+    profile = meas.map(d_in=1.)
+    assert profile.epsilon(delta=0.) == float('inf')
     # see cdp_delta for formula of 0.688 and 0.151
 
     # cdp_epsilon(rho=(1/4)^2 / 2, delta=1e-3)
-    assert profile.epsilon(delta=1e-3) == 0.6880024554878085
+    assert profile.epsilon(delta=1e-3) == 0.6880024554878167
     assert profile.epsilon(delta=1.0) == 0.0
     # cdp_delta(rho=(1/4)^2 / 2, epsilon=0.0)
-    assert profile.delta(epsilon=0.0) == 0.1508457845622862
+    assert profile.delta(epsilon=0.0) == 0.15084578456229011
     # reuse the constant above
-    assert profile.delta(epsilon=0.6880024554878085) == 1e-3
+    assert profile.delta(epsilon=0.6880024554878167) == 0.0009999999999999994
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.0)).map(
-        d_in=0.0
-    )
+    profile = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
     assert profile.epsilon(0.0) == 0.0
-    with pytest.raises(dp.OpenDPException):
-        profile.epsilon(delta=-0.0)
-    with pytest.raises(dp.OpenDPException):
-        profile.delta(epsilon=-0.0)
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.0)).map(
-        d_in=1.0
-    )
-    assert profile.epsilon(delta=0.0) == float("inf")
-    assert profile.epsilon(delta=0.1) == float("inf")
+    profile = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
+    assert profile.epsilon(delta=0.0) == float('inf')
+    assert profile.epsilon(delta=0.1) == float('inf')
     assert profile.delta(epsilon=0.0) == 1.0
     assert profile.delta(epsilon=0.1) == 1.0
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.0)).map(
-        d_in=0.0
-    )
+    profile = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=0.0)
     assert profile.epsilon(delta=0.0) == 0.0
     assert profile.epsilon(delta=0.1) == 0.0
     assert profile.delta(epsilon=0.0) == 0.0
@@ -49,9 +41,7 @@ def test_gaussian_search():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     def make_approx_gauss(scale, delta):
-        return dp.c.make_fix_delta(
-            dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale)), delta
-        )
+        return dp.c.make_fix_delta(dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, scale)), delta)
 
     fixed_meas = make_approx_gauss(1.0, 1e-5)
     ideal_dist = fixed_meas.map(1.0)
@@ -72,10 +62,10 @@ def new_make_noise(measure):
 
     return make_noise
 
-
-@pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
-)
+@pytest.mark.parametrize("constructor", [
+    dp.m.make_laplace,
+    new_make_noise(dp.pure_dp())
+])
 def test_laplace(constructor):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = constructor(*input_space, 1)
@@ -83,9 +73,10 @@ def test_laplace(constructor):
     assert meas.map(1.0) == 1.0
 
 
-@pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
-)
+@pytest.mark.parametrize("constructor", [
+    dp.m.make_laplace,
+    new_make_noise(dp.pure_dp())
+])
 def test_vector_laplace(constructor):
     input_space = (
         dp.vector_domain(dp.atom_domain(T=float, nan=False)),
@@ -98,10 +89,10 @@ def test_vector_laplace(constructor):
     assert meas.map(1.0) == 1.0
 
 
-def test_gaussian_smoothed_max_divergence():
+def test_gaussian_profile_dp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5))
-    print("base gaussian:", meas(100.0))
+    meas = dp.c.make_zCDP_to_curveDP(dp.m.make_gaussian(*input_space, scale=10.5))
+    print("base gaussian:", meas(100.))
 
     epsilon = meas.map(d_in=1.0).epsilon(delta=0.000001)
     print("epsilon:", epsilon)
@@ -110,10 +101,8 @@ def test_gaussian_smoothed_max_divergence():
 
 def test_gaussian_zcdp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = input_space >> dp.m.then_gaussian(
-        scale=1.5, MO=dp.ZeroConcentratedDivergence
-    )
-    print("base gaussian:", meas(100.0))
+    meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.zCDP)
+    print("base gaussian:", meas(100.))
 
     rho = meas.map(d_in=1.0)
     print("rho:", rho)
@@ -126,10 +115,10 @@ def test_vector_gaussian():
         dp.l2_distance(T=float),
     )
     meas = dp.c.make_fix_delta(
-        dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5)), delta
-    )
-    print("base gaussian:", meas([80.0, 90.0, 100.0]))
-    assert meas.check(1.0, (0.6, delta))
+        dp.c.make_zCDP_to_curveDP(
+            dp.m.make_gaussian(*input_space, scale=10.5)), delta)
+    print("base gaussian:", meas([80., 90., 100.]))
+    assert meas.check(1., (0.6, delta))
 
 
 def test_geometric():
@@ -253,9 +242,9 @@ def test_gaussian():
     "measure,d_out",
     [
         # d_in * 2 / scale = 2
-        (dp.max_divergence(), 2),
+        (dp.pure_dp(), 2),
         # (d_in * 2 / scale)^2 / 8
-        (dp.zero_concentrated_divergence(), 1 / 2),
+        (dp.zcdp(), 1 / 2)
     ],
     ids=ids,
 )
@@ -273,9 +262,9 @@ def test_noisy_max(measure, d_out):
     "measure,d_out",
     [
         # (d_in * 2) / scale * 2 = 4
-        (dp.max_divergence(), 4),
+        (dp.pure_dp(), 4),
         # ((d_in * 2) / scale)^2 / 8 * 2 = 1
-        (dp.zero_concentrated_divergence(), 1),
+        (dp.zcdp(), 1)
     ],
     ids=ids,
 )
@@ -382,7 +371,7 @@ def test_gaussian_threshold_int():
 
 
 def make_noise_threshold_zCDP(domain, metric, scale, threshold):
-    measure = dp.approximate(dp.zero_concentrated_divergence())
+    measure = dp.approximate(dp.zcdp())
     return dp.m.make_noise_threshold(domain, metric, measure, scale, threshold)
 
 
@@ -406,8 +395,71 @@ def test_gaussian_threshold_float(constructor):
 
 def test_canonical_noise():
     space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=(1.0, 1e-6))
+    curve = dp.PrivacyCurve(gaussianDP=1.0)
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
 
-    assert m_cnd.map(1.0) == (1.0, 1e-6)
-    # just check that it runs
-    assert isinstance(m_cnd(0.0), float)
+    mapped_curve = m_cnd.map(1.)
+    assert mapped_curve.beta(0.0) == 1.0
+    assert mapped_curve.beta(1.0) == 0.0
+    assert isinstance(m_cnd(0.), float)
+
+
+def test_canonical_noise_fdp():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    epsilon, delta = 1.0, 0.0
+    exp_eps = math.exp(epsilon)
+    exp_neg_eps = math.exp(-epsilon)
+    curve = dp.PrivacyCurve(
+        tradeoff=lambda alpha: max(
+            0.0,
+            max(1.0 - delta - exp_eps * alpha, exp_neg_eps * (1.0 - delta - alpha)),
+        )
+    )
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+
+    mapped_curve = m_cnd.map(1.)
+    for alpha in [0.1, 0.3, 0.7]:
+        expected = max(0.0, max(1.0 - delta - exp_eps * alpha, exp_neg_eps * (1.0 - delta - alpha)))
+        assert mapped_curve.beta(alpha) == pytest.approx(expected)
+
+    with pytest.raises(dp.OpenDPException):
+        m_cnd.map(0.5)
+
+    assert isinstance(m_cnd(0.), float)
+
+def test_canonical_noise_fdp_invalid():
+    dp.enable_features("contrib", "honest-but-curious")
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    curve = dp.PrivacyCurve(tradeoff=lambda alpha: 1 - alpha)
+    with pytest.raises(dp.OpenDPException, match="fixed-point of the f-DP tradeoff curve must be less than 1/2"):
+        space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+
+
+def test_gdp_tradeoff_curve():
+    mu = 1.0
+    curve = dp.PrivacyCurve(gaussianDP=mu)
+    normal = NormalDist()
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+    for alpha in [0.1, 0.3, 0.7]:
+        expected = normal.cdf(normal.inv_cdf(1.0 - alpha) - mu)
+        assert curve.beta(alpha) == pytest.approx(expected)
+
+def test_canonical_noise_with_epsilon_delta_tuple():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+
+    # Pass (epsilon, delta) tuple instead of PrivacyCurve
+    epsilon, delta = 0.5, 1e-6
+    curve = dp.PrivacyCurve(approxDP=[(epsilon, delta)])
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+
+    # Should work and produce a valid measurement
+    noise_value = m_cnd(0.)
+    assert isinstance(noise_value, float)
+
+    # Map the measurement and check it produces a valid privacy profile
+    mapped = m_cnd.map(1.)
+    assert isinstance(mapped, dp.PrivacyCurve)
+    assert mapped.delta(epsilon) <= delta

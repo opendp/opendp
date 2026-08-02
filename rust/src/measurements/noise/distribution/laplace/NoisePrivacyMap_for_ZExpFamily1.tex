@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../../lib.sty}
 
-\title{\texttt{NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1>}}
+\title{\texttt{NoisePrivacyMap<L1Distance<RBig>, PureDP> for ZExpFamily<1>}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -18,7 +18,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Noi
 \texttt{NoisePrivacyMap} is parameterized as follows:
 \begin{itemize}
     \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L1Distance<RBig>}
-    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{MaxDivergence}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{PureDP}
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -61,7 +61,7 @@ None
     \begin{align}
         &\max_{x \sim x'} D_\infty(M(x), M(x')) \\
         &=\max_{x \sim x'} \max_{S \subseteq \textrm{supp}(M(\cdot))} \Big[\ln \dfrac{\Pr[M(x) \in S]}{\Pr[M(x') \in S]} \Big]
-            &&\text{substitute } \rustdoc{measures/struct}{MaxDivergence} \\
+            &&\text{substitute } \rustdoc{measures/struct}{PureDP} \\
         &\leq\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \Big[\ln \dfrac{\Pr[M(x) = y]}{\Pr[M(x') = y]} \Big] 
             &&\text{mass is upper-bounded by point densities}\\
         &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \dfrac{\prod_{i=1}^d \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x_i - z_i|/s}}{\prod_{i=1}^d\frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x'_i-z_i|/s}}

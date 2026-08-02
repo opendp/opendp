@@ -8,7 +8,7 @@ use crate::{
     domains::{AtomDomain, Margin, SeriesDomain},
     error::ErrorVariant,
     measurements::make_private_lazyframe,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{FrameDistance, SymmetricDistance},
     polars::PrivacyNamespace,
 };
@@ -41,7 +41,7 @@ fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
     make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         query,
         None,
         None,
@@ -59,7 +59,7 @@ fn test_make_private_lazyframe_post_invalid() -> Fallible<()> {
         make_private_lazyframe(
             lf_domain,
             FrameDistance(SymmetricDistance),
-            MaxDivergence,
+            PureDP,
             query,
             None,
             None,

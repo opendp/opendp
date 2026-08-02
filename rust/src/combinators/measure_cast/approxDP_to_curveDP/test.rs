@@ -16,7 +16,7 @@ fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
         10,
         None,
     )?;
-    let meas_smooth = make_fixed_approxDP_to_approxDP(meas_fixed.clone())?;
+    let meas_smooth = make_approxDP_to_curveDP(meas_fixed.clone())?;
 
     let (eps, del) = meas_fixed.map(&(1, 1, 1))?;
 

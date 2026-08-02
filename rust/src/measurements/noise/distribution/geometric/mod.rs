@@ -9,6 +9,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
+    measures::PureDP,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{ExactIntCast, InfExp, InfSub, Integer, samplers::sample_discrete_laplace_linear},
     transformations::{make_vec, then_index_or_default},
@@ -25,7 +26,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "OptionT", default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence")),
+    generics(DI(suppress), MI(suppress), MO(default = "PureDP")),
     derived_types(
         T = "$get_atom(get_carrier_type(input_domain))",
         OptionT = "Option<(T, T)>"
@@ -46,7 +47,7 @@ mod test;
 /// # Generics
 /// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
-/// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
+/// * `MO` - Measure used to quantify privacy loss. Valid values are just `PureDP`
 pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
@@ -59,10 +60,11 @@ where
     (DI, MI): MetricSpace,
 {
     let input_space = (input_domain, input_metric);
+    let output_measure = MO::default();
     if let Some(bounds) = bounds {
-        ConstantTimeGeometric { scale, bounds }.make_noise(input_space)
+        ConstantTimeGeometric { scale, bounds }.make_noise(input_space, output_measure)
     } else {
-        DiscreteLaplace { scale, k: None }.make_noise(input_space)
+        DiscreteLaplace { scale, k: None }.make_noise(input_space, output_measure)
     }
 }
 
@@ -88,9 +90,10 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
+        output_measure: MO,
     ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
-        let m_geom = self.make_noise(t_vec.output_space())?;
+        let m_geom = self.make_noise(t_vec.output_space(), output_measure)?;
         t_vec >> m_geom >> then_index_or_default(0)
     }
 }
@@ -99,20 +102,20 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/geometric/MakeNoise_VectorDomain_for_ConstantTimeGeometric.tex"
 )]
-impl<T, QI, MO> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO>
+impl<T, QI> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, PureDP>
     for ConstantTimeGeometric<T>
 where
     T: Integer,
     QI: Clone + Debug,
-    MO: 'static + Measure,
     usize: ExactIntCast<T>,
     RBig: TryFrom<QI>,
-    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MO>,
+    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, PureDP>,
 {
     fn make_noise(
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO, Vec<T>>> {
+        output_measure: PureDP,
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, PureDP, Vec<T>>> {
         let ConstantTimeGeometric {
             scale,
             bounds: (lower, upper),
@@ -125,7 +128,6 @@ where
             scale: RBig::from_f64(scale)
                 .ok_or_else(|| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
         };
-        let output_measure = MO::default();
 
         let privacy_map =
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;

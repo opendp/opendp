@@ -392,22 +392,30 @@ new_function_internal <- function(ptr, log) {
   opendp_function
 }
 
-#' new privacy profile
+#' new privacy curve
 #'
 #' @concept mod
-#' @param ptr a pointer to a privacy profile
-new_privacy_profile_internal <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+#' @param ptr a pointer to a privacy curve
+new_privacy_curve_internal <- function(ptr) {
+  privacy_curve <- function(attr, epsilon, delta, alpha, beta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) + missing(beta) != 4) {
+      stop("expected exactly one of attr, epsilon, delta, alpha or beta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
-      return(privacy_profile_delta(ptr, epsilon))
+      return(`_privacy_curve_delta`(ptr, epsilon))
     }
 
     if (!missing(delta)) {
-      return(privacy_profile_epsilon(ptr, delta))
+      return(`_privacy_curve_epsilon`(ptr, delta))
+    }
+
+    if (!missing(alpha)) {
+      return(`_privacy_curve_beta`(ptr, alpha))
+    }
+
+    if (!missing(beta)) {
+      return(`_privacy_curve_alpha`(ptr, beta))
     }
 
     switch(attr,
@@ -415,8 +423,120 @@ new_privacy_profile_internal <- function(ptr) {
       stop("unrecognized attribute", call. = FALSE)
     )
   }
-  class(privacy_profile) <- "privacy_profile"
-  privacy_profile
+  class(privacy_curve) <- "privacy_curve"
+  privacy_curve
+}
+
+#' Construct a privacy curve.
+#'
+#' A privacy curve can be queried as either a privacy profile or an f-DP
+#' tradeoff curve. Supply one or more of `profile`, `log_profile`, `tradeoff`,
+#' `symmetric_tradeoff`, `approxDP`, `gaussianDP`, `renyiDP`, or `zCDP`.
+#'
+#' @concept mod
+#'
+#' @param profile Callback mapping epsilon to delta.
+#' @param log_profile Callback mapping epsilon to log(delta).
+#' @param tradeoff Callback mapping alpha to beta.
+#' @param symmetric_tradeoff Symmetric callback mapping alpha to beta.
+#' @param approxDP List of approximate-DP `(epsilon, delta)` pairs.
+#' @param gaussianDP Gaussian-DP parameter `mu`.
+#' @param renyiDP Callback mapping Renyi order `alpha` to `epsilon(alpha)`.
+#' @param zCDP zCDP parameter `rho`.
+#'
+#' @section Callback contracts:
+#'
+#' Callback-based constructors are honest-but-curious: OpenDP cannot fully
+#' verify semantic properties of a black-box callback.
+#'
+#' A `profile` callback should define a valid privacy profile:
+#'
+#' * it is functionally pure;
+#' * it is nonincreasing in epsilon;
+#' * it returns delta values in `[0, 1]`;
+#' * returned delta values are upper-conservative if numerically approximate;
+#' * `lambda -> delta(log(lambda))` is convex and nonincreasing for
+#'   `lambda >= 1`.
+#'
+#' A `log_profile` callback should define the same privacy profile, but return
+#' log-delta values in `[-Inf, 0]`.
+#'
+#' A `tradeoff` callback should define a valid f-DP tradeoff curve:
+#'
+#' * it is functionally pure;
+#' * it returns finite beta values in `[0, 1]`;
+#' * it satisfies `beta(0) = 1` and `beta(1) = 0`;
+#' * it is nonincreasing and convex on `[0, 1]`;
+#' * returned beta values are downward-conservative if numerically approximate.
+#'
+#' A `symmetric_tradeoff` callback must additionally satisfy
+#' `beta(beta(alpha)) = alpha`.
+#'
+#' @export
+privacy_curve <- function(
+  profile,
+  log_profile,
+  tradeoff,
+  symmetric_tradeoff,
+  approxDP,
+  gaussianDP,
+  renyiDP,
+  zCDP
+) {
+  supplied <- c(
+    profile = !missing(profile),
+    log_profile = !missing(log_profile),
+    tradeoff = !missing(tradeoff),
+    symmetric_tradeoff = !missing(symmetric_tradeoff),
+    approxDP = !missing(approxDP),
+    gaussianDP = !missing(gaussianDP),
+    renyiDP = !missing(renyiDP),
+    zCDP = !missing(zCDP)
+  )
+
+  if (!any(supplied)) {
+    stop(
+      "expected at least one of profile, log_profile, tradeoff, ",
+      "symmetric_tradeoff, approxDP, gaussianDP, renyiDP or zCDP",
+      call. = FALSE
+    )
+  }
+
+  curve <- `_new_privacy_curve`()
+
+  if (supplied[["profile"]]) {
+    curve <- `_privacy_curve_with_profile`(curve, profile, log = FALSE)
+  }
+
+  if (supplied[["log_profile"]]) {
+    curve <- `_privacy_curve_with_profile`(curve, log_profile, log = TRUE)
+  }
+
+  if (supplied[["tradeoff"]]) {
+    curve <- `_privacy_curve_with_tradeoff`(curve, tradeoff, symmetric = FALSE)
+  }
+
+  if (supplied[["symmetric_tradeoff"]]) {
+    curve <- `_privacy_curve_with_tradeoff`(curve, symmetric_tradeoff, symmetric = TRUE)
+  }
+
+  if (supplied[["approxDP"]]) {
+    curve <- `_privacy_curve_with_approxDP`(curve, approxDP)
+  }
+
+  if (supplied[["gaussianDP"]]) {
+    curve <- `_privacy_curve_with_gaussianDP`(curve, gaussianDP)
+  }
+
+  if (supplied[["renyiDP"]]) {
+    curve <- `_privacy_curve_with_renyiDP`(curve, renyiDP)
+  }
+
+  if (supplied[["zCDP"]]) {
+    curve <- `_privacy_curve_with_zCDP`(curve, zCDP)
+  }
+
+  curve
 }
 
 #' new queryable
@@ -599,10 +719,8 @@ unbox2 <- function(x) {
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
-#' @param bounds a two-element list of optional lower and upper bounds on the input
-#'   of `make_chain`; use `NULL` for either bound to infer it
-#' @param .T type of argument to `make_chain`, either "float" or "int"; when set,
-#'   takes precedence over the type inferred from `bounds`
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return a Transformation or Measurement (chain) that is (`d_in`, `d_out`)-close.
 #' @export
 #' @examples
@@ -627,10 +745,8 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @param make_chain a function that takes a number and returns a Transformation or Measurement
 #' @param d_in how far apart input datasets can be
 #' @param d_out how far apart output datasets or distributions can be
-#' @param bounds a two-element list of optional lower and upper bounds on the input
-#'   of `make_chain`; use `NULL` for either bound to infer it
-#' @param .T type of argument to `make_chain`, either "float" or "int"; when set,
-#'   takes precedence over the type inferred from `bounds`
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `make_chain`, either "float" or "int"
 #' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
@@ -680,7 +796,22 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
       }
       rust_error <- parse_rust_error_message(conditionMessage(e))
       if (identical(rust_error$variant, "Search")) {
-        stop(rust_error$message, call. = FALSE)
+        message <- rust_error$message
+        if (is.list(bounds) && length(bounds) == 2) {
+          if (
+            identical(message, "unable to infer upper bound") &&
+              !is.null(bounds[[1]]) && is.null(bounds[[2]])
+          ) {
+            message <- "the decision boundary is below the lower bound"
+          }
+          if (
+            identical(message, "unable to infer lower bound") &&
+              is.null(bounds[[1]]) && !is.null(bounds[[2]])
+          ) {
+            message <- "the decision boundary is above the upper bound"
+          }
+        }
+        stop(message, call. = FALSE)
       }
       stop(conditionMessage(e), call. = FALSE)
     }
@@ -693,16 +824,23 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }
 
   if (!is.null(bounds)) {
-    present_bounds <- Filter(Negate(is.null), as.list(bounds))
-    if (length(present_bounds) > 0) {
-      if (all(vapply(present_bounds, inherits, logical(1), "integer"))) {
-        return(rt_parse("int"))
-      } else if (all(vapply(present_bounds, inherits, logical(1), "numeric"))) {
-        return(rt_parse("float"))
-      } else {
-        stop("bounds must be either float or int", call. = FALSE)
-      }
+    if (!is.list(bounds) && length(bounds) != 2) {
+      stop("use list(lower, NULL) or list(NULL, upper) for one-sided bounds", call. = FALSE)
     }
+
+    values <- if (is.list(bounds)) {
+      bounds[!vapply(bounds, is.null, logical(1))]
+    } else {
+      as.list(bounds)
+    }
+
+    if (length(values) > 0 && all(vapply(values, is.integer, logical(1)))) {
+      return(rt_parse("int"))
+    }
+    if (length(values) > 0 && all(vapply(values, is.numeric, logical(1)))) {
+      return(rt_parse("float"))
+    }
+    stop("bounds must be either float or int", call. = FALSE)
   }
 
   check_type <- function(v) {
@@ -721,33 +859,22 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 
 #' Find the closest passing value to the decision boundary of `predicate`
 #'
-#' Missing bounds are inferred. Use `NULL` for either element of `bounds` to
-#' conduct a one-sided search, or omit `bounds` to conduct an exponential search.
+#' If bounds are not passed, conducts an exponential search.
 #'
 #' @concept mod
 #' @param predicate a monotonic unary function from a number to a boolean
-#' @param bounds a two-element list of optional lower and upper bounds on the input
-#'   of `predicate`; use `NULL` for either bound to infer it
-#' @param .T type of argument to `predicate`, one of float or int; when set,
-#'   takes precedence over the type inferred from `bounds`
+#' @param bounds a 2-tuple of the lower and upper bounds on the input of `make_chain`
+#' @param .T type of argument to `predicate`, one of float or int
 #' @param return_sign if True, also return the direction away from the decision boundary
 #' @return the discovered parameter within the bounds
 #' @export
-#' @examples
-#' binary_search(\(x) x <= -5L, bounds = list(-10L, NULL))
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
   if (is.null(bounds)) {
     lower <- NULL
     upper <- NULL
   } else {
-    if (length(bounds) != 2) {
-      stop(
-        "bounds must contain exactly two elements; use list(lower, NULL) or list(NULL, upper) for a one-sided search",
-        call. = FALSE
-      )
-    }
-    lower <- bounds[[1]]
-    upper <- bounds[[2]]
+    lower <- if (is.list(bounds)) bounds[[1]] else bounds[1]
+    upper <- if (is.list(bounds)) bounds[[2]] else bounds[2]
   }
   .T <- .infer_search_type(predicate, .T, bounds)
 
@@ -759,6 +886,14 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
       `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
     }
   )
+
+  result_value <- if (return_sign) result[[1]] else result
+  if (!is.null(lower) && result_value < lower) {
+    stop("the decision boundary is below the lower bound", call. = FALSE)
+  }
+  if (!is.null(upper) && result_value > upper) {
+    stop("the decision boundary is above the upper bound", call. = FALSE)
+  }
 
   if (return_sign) {
     return(c(result[[1]], result[[2]]))

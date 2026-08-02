@@ -1,13 +1,16 @@
 # type: ignore
-def approxdp_point_beta(
+def approximate_to_tradeoff(
     epsilon: f64,
     delta: f64,
 ) -> Callable[[RBig], RBig]:
-    epsilon = DInterval.point(epsilon)
+    epsilon = FBig.try_from(epsilon)
     delta = RBig.try_from(delta)
 
-    exp_eps = epsilon.exp().upper.to_rbig()  # `\label{exp-eps}`
-    exp_neg_eps = (-epsilon).exp().lower.to_rbig()  # `\label{exp-neg-eps}`
+    precision = epsilon.precision().max(10)
+    epsilon = epsilon.with_precision(precision).value()
+
+    exp_eps = RBig.try_from(epsilon.with_rounding().exp())  # `\label{exp-eps}`
+    exp_neg_eps = RBig.try_from((-epsilon).with_rounding().exp())  # `\label{exp-neg-eps}`
 
     def tradeoff(alpha: RBig) -> RBig:  # `\label{tradeoff}`
         t1 = RBig(1) - delta - exp_eps * alpha

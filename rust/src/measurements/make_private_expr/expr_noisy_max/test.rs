@@ -5,7 +5,7 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 use crate::{
     error::ErrorVariant,
     measurements::make_private_expr,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::{PrivacyNamespace, apply_anonymous_function},
     transformations::expr_discrete_quantile_score::{
@@ -61,7 +61,7 @@ fn test_noisy_max_expr() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         {
             let this = col("cycle_(..101f64)");
             let alpha = 0.5;
@@ -96,7 +96,7 @@ fn test_fail_noisy_max_expr_nan_scale() -> Fallible<()> {
     let err_variant = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
         None,
     )

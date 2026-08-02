@@ -6,7 +6,7 @@ use crate::combinators::AmplifiableMeasure;
 use crate::core::FfiResult;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast};
-use crate::measures::{Approximate, MaxDivergence};
+use crate::measures::{Approximate, PureDP};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
@@ -29,7 +29,7 @@ impl AmplifiableMeasure for AnyMeasure {
         }
         dispatch!(
             monomorphize,
-            [(self.type_, [MaxDivergence, Approximate<MaxDivergence>])],
+            [(self.type_, [PureDP, Approximate<PureDP>])],
             (self, budget, population_size, sample_size)
         )
     }

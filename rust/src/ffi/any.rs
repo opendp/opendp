@@ -738,7 +738,7 @@ mod tests {
 
     use crate::domains::AtomDomain;
     use crate::error::*;
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
+    use crate::measures::{PrivacyCurveDP, PureDP};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
 
     use super::*;
@@ -787,18 +787,18 @@ mod tests {
 
     #[test]
     fn test_any_measure() -> Fallible<()> {
-        let measure1 = MaxDivergence;
-        let measure2 = MaxDivergence;
+        let measure1 = PureDP;
+        let measure2 = PureDP;
         assert_eq!(measure1, measure2);
 
-        let measure1 = AnyMeasure::new(MaxDivergence);
-        let measure2 = AnyMeasure::new(MaxDivergence);
-        let measure3 = AnyMeasure::new(SmoothedMaxDivergence);
+        let measure1 = AnyMeasure::new(PureDP);
+        let measure2 = AnyMeasure::new(PureDP);
+        let measure3 = AnyMeasure::new(PrivacyCurveDP);
         assert_eq!(measure1, measure2);
         assert_ne!(measure1, measure3);
 
-        let _measure1: MaxDivergence = measure1.downcast()?;
-        let measure3: Fallible<MaxDivergence> = measure3.downcast();
+        let _measure1: PureDP = measure1.downcast()?;
+        let measure3: Fallible<PureDP> = measure3.downcast();
         assert_eq!(
             measure3.err().unwrap_test().variant,
             ErrorVariant::FailedCast
@@ -810,7 +810,7 @@ mod tests {
     #[test]
     fn test_any_chain() -> Fallible<()> {
         use crate::metrics::AbsoluteDistance;
-        use crate::{measurements, transformations};
+        use crate::{measurements, measures::PureDP, transformations};
 
         #[allow(deprecated)]
         let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
@@ -822,7 +822,7 @@ mod tests {
             .into_any();
         let t5 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t6 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
-        let m1 = measurements::make_laplace(
+        let m1 = measurements::make_laplace::<_, _, PureDP>(
             AtomDomain::<f64>::new_non_nan(),
             AbsoluteDistance::<f64>::default(),
             0.0,

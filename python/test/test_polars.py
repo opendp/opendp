@@ -103,8 +103,7 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    "measure", [dp.pure_dp(), dp.zcdp()],
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
@@ -136,7 +135,7 @@ def test_private_lazyframe_explicit_sum(measure):
 
 @pytest.mark.parametrize(
     "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    [dp.pure_dp(), dp.zcdp()],
     ids=ids,
 )
 def test_private_lazyframe_sum(measure):
@@ -166,7 +165,7 @@ def test_private_lazyframe_sum(measure):
 
 @pytest.mark.parametrize(
     "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    [dp.pure_dp(), dp.zcdp()],
     ids=ids,
 )
 def test_private_lazyframe_mean(measure):
@@ -218,7 +217,7 @@ def test_private_expr():
     m_len = dp.m.make_private_expr(
         dp.wild_expr_domain([], dp.polars.Margin(by=[])),
         dp.l01inf_distance(dp.symmetric_distance()),
-        dp.max_divergence(),
+        dp.pure_dp(),
         dp.len(scale=1.0),
     )
 
@@ -241,7 +240,7 @@ def test_private_lazyframe_median():
     m_lf = dp.m.make_private_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        dp.pure_dp(),
         plan,
         0.0,
     )
@@ -254,7 +253,7 @@ def test_private_lazyframe_median():
 
 @pytest.mark.parametrize(
     "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    [dp.pure_dp(), dp.zcdp()],
     ids=ids,
 )
 @pytest.mark.parametrize(
@@ -284,7 +283,7 @@ def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+        lf_domain, dp.symmetric_distance(), dp.pure_dp(), plan
     )
 
     of = m_lf(lf)
@@ -299,7 +298,7 @@ def test_onceframe_lazy():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+        lf_domain, dp.symmetric_distance(), dp.pure_dp(), plan
     )
 
     of = m_lf(lf)
@@ -308,7 +307,7 @@ def test_onceframe_lazy():
 
 @pytest.mark.parametrize(
     "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    [dp.pure_dp(), dp.zcdp()],
     ids=ids,
 )
 def test_mechanisms(measure):
@@ -319,7 +318,7 @@ def test_mechanisms(measure):
     lf_domain, lf = example_lf()
 
     with pytest.warns(DeprecationWarning):
-        if measure == dp.max_divergence():
+        if measure == dp.pure_dp():
             expr = pl.len().dp.laplace(0.0)
         else:
             expr = pl.len().dp.gaussian(0.0)
@@ -680,7 +679,7 @@ def test_replace_binary_path():
     m_expr = dp.m.make_private_expr(
         dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
         dp.l01inf_distance(dp.symmetric_distance()),
-        dp.max_divergence(),
+        dp.pure_dp(),
         expr,
     )
     assert "opendp_testing!" in str(m_expr(pl.LazyFrame(dict())).expr)
@@ -750,7 +749,7 @@ def test_pickle_bomb():
         dp.m.make_private_expr(
             dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
             dp.l01inf_distance(dp.symmetric_distance()),
-            dp.max_divergence(),
+            dp.pure_dp(),
             bomb_expr,
         )
 
@@ -758,7 +757,7 @@ def test_pickle_bomb():
         dp.m.make_private_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
-            dp.max_divergence(),
+            dp.pure_dp(),
             bomb_lf,
         )
 
@@ -871,7 +870,7 @@ def test_categorical_domain_with_mapping(wrap_with_option):
     dp.m.make_private_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        dp.pure_dp(),
         lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
         global_scale=1.0,
     )
@@ -951,7 +950,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
         match="max_groups must be known when the metric is not sensitive to ordering",
     ):
         dp.m.make_private_lazyframe(
-            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+            lf_domain, dp.symmetric_distance(), dp.pure_dp(), plan
         )
 
 
@@ -991,7 +990,7 @@ def test_count_queries():
     )
 
     m_counts = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+        lf_domain, dp.symmetric_distance(), dp.pure_dp(), plan
     )
 
     release = m_counts(pl.LazyFrame({"data": [1, 1, 1, None]})).collect()
@@ -1018,7 +1017,7 @@ def test_explicit_grouping_keys():
     labels = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     plan = labels.join(plan_right, on="B", how="left")
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+        lf_domain, dp.symmetric_distance(), dp.pure_dp(), plan, 0.0
     )
 
     df_act = m_lf(lf).collect()
