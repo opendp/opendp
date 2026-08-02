@@ -6,6 +6,8 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+pub(crate) mod rdp_to_approxdp;
+
 pub(crate) mod curves;
 pub use curves::*;
 

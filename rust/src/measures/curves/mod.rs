@@ -6,6 +6,7 @@ use crate::measures::curves::{
     logspace::{check_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked},
     profile::delta_via_profile,
     profile_to_tradeoff::beta_via_profile,
+    renyidp::{beta_via_renyiDP, delta_via_renyiDP},
     tradeoff::delta_via_tradeoff,
 };
 use dashu::rational::RBig;
@@ -19,6 +20,7 @@ mod approxdp;
 pub(crate) mod logspace;
 mod profile;
 mod profile_to_tradeoff;
+mod renyidp;
 mod tradeoff;
 
 #[cfg(test)]
@@ -42,6 +44,7 @@ pub struct PrivacyGuarantee {
     approx_dp: Option<Arc<[ApproxDPPoint]>>,
     profile: Option<Profile>,
     tradeoff: Option<Tradeoff>,
+    renyi_dp: Option<RenyiDP>,
 }
 
 #[derive(Clone)]
@@ -95,6 +98,15 @@ struct Tradeoff {
 
 type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+
+#[derive(Clone)]
+struct RenyiDP {
+    curve: Arc<RenyiFn>,
+    /// Source delta in OpenDP's additive approximate-RDP convention. The
+    /// RDP-to-approximate-DP theorem adds it to the exact-RDP conversion delta.
+    delta: f64,
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct ApproxDPPoint {
@@ -299,10 +311,42 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
-    /// Evaluate the privacy profile at `epsilon`.
+    /// Attach an approximate Rényi-DP representation.
     ///
-    /// # Arguments
-    /// * `epsilon` - What to fix epsilon to compute delta.
+    /// `delta` follows OpenDP's additive approximate-RDP convention: the
+    /// source delta is added by the RDP-to-approximate-DP conversion theorem.
+    /// Therefore `(curve, delta)` is one complete source RDP guarantee; this
+    /// delta does not relax any other representation stored on the curve.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(non_snake_case)]
+    pub fn with_renyiDP(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(delta)?;
+        self.renyi_dp = Some(RenyiDP {
+            curve: Arc::new(curve),
+            delta,
+        });
+        Ok(self)
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_snake_case)]
+    pub(crate) fn with_renyiDP_trusted(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(delta)?;
+        self.renyi_dp = Some(RenyiDP {
+            curve: Arc::new(curve),
+            delta,
+        });
+        Ok(self)
+    }
+
     /// Return a conservative upper bound on delta at the given nonnegative epsilon.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
@@ -313,6 +357,8 @@ impl PrivacyGuarantee {
             delta_via_approxDP(points, epsilon)?
         } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
             delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)?
+        } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
+            delta_via_renyiDP(curve.as_ref(), *delta, epsilon)?
         } else {
             return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
         };
@@ -339,6 +385,8 @@ impl PrivacyGuarantee {
             )?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, alpha)?
+        } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
+            beta_via_renyiDP(curve.clone(), *delta, alpha)?
         } else {
             return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
         };
@@ -418,6 +466,12 @@ impl PrivacyGuarantee {
             )?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, beta)?
+        } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
+            if *delta == 0.0 {
+                beta_via_renyiDP(curve.clone(), *delta, beta)?
+            } else {
+                return self.alpha_by_inverting_beta(beta);
+            }
         } else {
             return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
         };
