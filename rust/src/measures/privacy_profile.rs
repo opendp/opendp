@@ -6,47 +6,24 @@ use crate::{
     utilities::search::{Above, fallible_binary_search},
 };
 
-type DeltaFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type LogDeltaFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 
-/// A privacy profile with an authoritative `epsilon -> log(delta)` map and an
-/// optional independently certified inverse.
+/// A privacy profile represented canonically by an epsilon-to-log-delta map.
 ///
-/// Legacy ordinary-delta callbacks are retained directly so public `delta()`
-/// queries and generic inversion do not introduce a delta -> log -> delta
-/// round trip. Built-in analytic profiles should prefer
-/// [`PrivacyProfile::new_log_with_epsilon`].
+/// The optional reverse map is reserved for built-in conversions whose
+/// certification is established independently of the generic inversion.
 #[derive(Clone)]
 pub struct PrivacyProfile {
-    delta: Option<Arc<DeltaFn>>,
     log_delta: Arc<LogDeltaFn>,
     epsilon: Option<Arc<EpsilonFn>>,
 }
 
 impl PrivacyProfile {
-    /// Construct a profile from an ordinary `epsilon -> delta` callback.
-    ///
-    /// The callback must return an upward-conservative value in `[0, 1]`.
-    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
-        let delta: Arc<DeltaFn> = Arc::new(delta);
-        let delta_for_log = delta.clone();
-
+    /// Construct a profile from an upward-conservative epsilon-to-log-delta
+    /// callback. The callback must return a value in `[-infinity, 0]`.
+    pub fn new(log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
         Self {
-            delta: Some(delta),
-            log_delta: Arc::new(move |epsilon| {
-                delta_to_log_upper(checked_delta(delta_for_log(epsilon)?)?)
-            }),
-            epsilon: None,
-        }
-    }
-
-    /// Construct a profile from an authoritative `epsilon -> log(delta)` map.
-    ///
-    /// The callback must return an upward-conservative value in `[-infinity, 0]`.
-    pub fn new_log(log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
-        Self {
-            delta: None,
             log_delta: Arc::new(log_delta),
             epsilon: None,
         }
@@ -55,16 +32,13 @@ impl PrivacyProfile {
     /// Construct a built-in profile with independently certified forward and
     /// reverse maps.
     ///
-    /// This constructor is crate-private because accepting two unrelated user
-    /// callbacks would create two sources of truth. A built-in caller is
-    /// responsible for proving that `epsilon(delta)` is conservative for the
-    /// same guarantee represented by `log_delta(epsilon)`.
-    pub(crate) fn new_log_with_epsilon(
+    /// This constructor is crate-private so arbitrary callbacks cannot claim
+    /// to be trusted certified inverses.
+    pub(crate) fn new_with_epsilon(
         log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
         epsilon: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
     ) -> Self {
         Self {
-            delta: None,
             log_delta: Arc::new(log_delta),
             epsilon: Some(Arc::new(epsilon)),
         }
@@ -78,55 +52,19 @@ impl PrivacyProfile {
 
     /// Return a conservative upper bound on delta.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
-        check_epsilon(epsilon)?;
-
-        if let Some(delta) = &self.delta {
-            return checked_delta(delta(epsilon)?);
-        }
-
         log_to_delta_upper(self.log_delta(epsilon)?)
     }
 
-    /// Return a conservative upper bound on the smallest epsilon satisfying the
-    /// requested delta.
+    /// Return a conservative upper bound on the smallest epsilon satisfying
+    /// the requested delta.
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         check_delta(delta)?;
 
-        if delta == 1.0 {
-            return Ok(0.0);
-        }
-
-        self.epsilon_unchecked(delta)
-    }
-
-    pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
         if let Some(epsilon) = &self.epsilon {
             return checked_epsilon_output(epsilon(delta)?);
         }
 
-        // Preserve the exact ordinary-delta comparison for compatibility
-        // profiles. This avoids computing a certified logarithm at every search
-        // step and avoids false rejection caused by separately rounded logs.
-        if self.delta.is_some() {
-            return self.invert_delta(delta);
-        }
-
         self.invert_log_delta(delta)
-    }
-
-    fn invert_delta(&self, target_delta: f64) -> Fallible<f64> {
-        if self.delta(0.0)? <= target_delta {
-            return Ok(0.0);
-        }
-
-        match fallible_binary_search(
-            |epsilon| Ok(self.delta(*epsilon)? <= target_delta),
-            Above(0.0),
-        ) {
-            Ok(epsilon) => Ok(epsilon),
-            Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
-            Err(err) => Err(err),
-        }
     }
 
     fn invert_log_delta(&self, target_delta: f64) -> Fallible<f64> {
@@ -145,14 +83,10 @@ impl PrivacyProfile {
             };
         }
 
-        // The profile returns an upper bound on log(delta). Compare it with a
-        // lower bound on the exact logarithm of the requested f64 delta:
-        //
-        //   log_delta_true(epsilon)
-        //       <= log_delta_upper(epsilon)
-        //       <= log_target_lower
-        //       <= log(target_delta).
-        let log_target_lower = DInterval::point(target_delta)?.ln()?.lower_f64()?;
+        // Compare the conservative log-delta upper bound with a lower bound on
+        // the exact logarithm of the requested f64 delta. This avoids an
+        // extra exp/log round trip during generic inversion.
+        let log_target_lower = log_delta_lower(target_delta)?;
 
         if self.log_delta(0.0)? <= log_target_lower {
             return Ok(0.0);
@@ -172,13 +106,15 @@ impl PrivacyProfile {
 impl fmt::Debug for PrivacyProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PrivacyProfile")
-            .field("has_direct_delta", &self.delta.is_some())
             .field("has_direct_epsilon", &self.epsilon.is_some())
             .finish_non_exhaustive()
     }
 }
 
-fn delta_to_log_upper(delta: f64) -> Fallible<f64> {
+/// Convert an ordinary delta callback result to the canonical log-delta
+/// representation. This is only used by compatibility FFI/adapters.
+pub(crate) fn delta_to_log_upper(delta: f64) -> Fallible<f64> {
+    check_delta(delta)?;
     if delta == 0.0 {
         return Ok(f64::NEG_INFINITY);
     }
@@ -187,6 +123,13 @@ fn delta_to_log_upper(delta: f64) -> Fallible<f64> {
     }
 
     DInterval::point(delta)?.ln()?.upper_f64()
+}
+
+fn log_delta_lower(delta: f64) -> Fallible<f64> {
+    if delta == 0.0 {
+        return Ok(f64::NEG_INFINITY);
+    }
+    DInterval::point(delta)?.ln()?.lower_f64()
 }
 
 fn log_to_delta_upper(log_delta: f64) -> Fallible<f64> {
@@ -199,12 +142,14 @@ fn log_to_delta_upper(log_delta: f64) -> Fallible<f64> {
         return Ok(1.0);
     }
 
-    Ok(log_delta.inf_exp()?.min(1.0))
-}
+    // The smallest positive f64 is conservative for every smaller positive
+    // result and avoids asking the arbitrary-precision backend to underflow.
+    let min_positive = f64::from_bits(1);
+    if log_delta <= min_positive.ln() {
+        return Ok(min_positive);
+    }
 
-fn checked_delta(delta: f64) -> Fallible<f64> {
-    check_delta(delta)?;
-    Ok(delta)
+    Ok(log_delta.inf_exp()?.min(1.0))
 }
 
 fn checked_log_delta(log_delta: f64) -> Fallible<f64> {
@@ -254,17 +199,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_legacy_delta_profile_preserves_direct_queries() -> Fallible<()> {
-        let profile = PrivacyProfile::new(|epsilon| Ok((-epsilon).exp()));
-        assert_eq!(profile.delta(2.0)?, (-2.0f64).exp());
-        assert!(profile.log_delta(2.0)? >= -2.0);
-        assert!((profile.epsilon((-2.0f64).exp())? - 2.0).abs() <= f64::EPSILON);
-        Ok(())
-    }
-
-    #[test]
     fn test_log_profile_generic_inversion() -> Fallible<()> {
-        let profile = PrivacyProfile::new_log(|epsilon| Ok(-epsilon));
+        let profile = PrivacyProfile::new(|epsilon| Ok(-epsilon));
         assert!(profile.delta(2.0)? >= (-2.0f64).exp());
         assert!(profile.epsilon((-2.0f64).exp())? >= 2.0);
         assert_eq!(profile.epsilon(0.0)?, f64::INFINITY);
@@ -276,7 +212,7 @@ mod test {
         let forward_calls = Arc::new(AtomicUsize::new(0));
         let forward_calls_ = forward_calls.clone();
 
-        let profile = PrivacyProfile::new_log_with_epsilon(
+        let profile = PrivacyProfile::new_with_epsilon(
             move |epsilon| {
                 forward_calls_.fetch_add(1, Ordering::Relaxed);
                 Ok(-epsilon)
@@ -291,11 +227,11 @@ mod test {
 
     #[test]
     fn test_validation() {
-        let profile = PrivacyProfile::new_log(|_| Ok(0.0));
+        let profile = PrivacyProfile::new(|_| Ok(0.0));
         assert!(profile.delta(-0.0).is_err());
         assert!(profile.epsilon(-0.0).is_err());
 
-        let invalid = PrivacyProfile::new_log(|_| Ok(0.1));
+        let invalid = PrivacyProfile::new(|_| Ok(0.1));
         assert!(invalid.delta(0.0).is_err());
     }
 }

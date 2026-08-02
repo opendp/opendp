@@ -70,3 +70,35 @@ fn test_underflow_remains_conservative() -> Fallible<()> {
     assert_eq!(zcdp_delta(1e-6, 1e100)?, f64::from_bits(1));
     Ok(())
 }
+
+#[test]
+fn test_epsilon_inverse_round_trip_and_monotonicity() -> Fallible<()> {
+    for rho in [f64::from_bits(1), 1e-6, 0.01, 0.5, 10.] {
+        for epsilon in [0.1, 1., 10.] {
+            let delta = zcdp_delta(rho, epsilon)?;
+            let recovered = zcdp_epsilon(rho, delta)?;
+            assert!(
+                recovered <= epsilon + 1e-8,
+                "rho={rho}, epsilon={epsilon}, delta={delta}, recovered={recovered}"
+            );
+        }
+    }
+
+    let loose = zcdp_epsilon(0.5, 1e-1)?;
+    let tight = zcdp_epsilon(0.5, 1e-2)?;
+    assert!(tight >= loose);
+    Ok(())
+}
+
+#[test]
+fn test_inverse_special_values_and_subnormals() -> Fallible<()> {
+    let tiny = f64::from_bits(1);
+    assert_eq!(zcdp_epsilon(0., tiny)?, 0.);
+    assert_eq!(zcdp_epsilon(1., 1.)?, 0.);
+    assert_eq!(zcdp_epsilon(f64::INFINITY, 1.)?, 0.);
+    assert_eq!(zcdp_epsilon(1., 0.)?, f64::INFINITY);
+    assert!(zcdp_epsilon(1e-320, tiny)?.is_finite());
+    assert!(zcdp_epsilon(f64::NAN, tiny).is_err());
+    assert!(zcdp_epsilon(1., f64::NAN).is_err());
+    Ok(())
+}

@@ -8,6 +8,7 @@ pub(crate) mod ffi;
 
 mod privacy_profile;
 pub use privacy_profile::PrivacyProfile;
+pub(crate) use privacy_profile::delta_to_log_upper;
 
 pub(crate) mod rdp_to_approxdp;
 pub(crate) mod zcdp;

@@ -1,7 +1,9 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
+    measures::{
+        Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence, delta_to_log_upper,
+    },
 };
 
 #[cfg(feature = "ffi")]
@@ -33,9 +35,11 @@ where
         measurement.input_metric.clone(),
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .map(|(eps, delta)| PrivacyProfile::new(fixed_approx_dp_privacy_curve(eps, delta)))
+            privacy_map.eval(d_in).map(|(eps, delta)| {
+                PrivacyProfile::new(move |epsilon| {
+                    delta_to_log_upper(fixed_approx_dp_privacy_curve(eps, delta)(epsilon)?)
+                })
+            })
         }),
     )
 }

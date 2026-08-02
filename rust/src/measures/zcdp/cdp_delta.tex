@@ -189,6 +189,48 @@ Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfy
 This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
 \end{proof}
 
+\section{Certified inverse}
+
+For a fixed order $\alpha$, the expression in
+\ref{renyidp-approxdp-epsilon} is the inverse of the branch-zero
+log-delta bound. The directed interval implementation evaluates this
+expression with $\gamma = \alpha\rho$ and returns an upper endpoint, so
+that endpoint is a sufficient epsilon for the requested delta.
+
+For the second branch, the theorem requires $\epsilon > \gamma$ and its
+inverse additionally requires $\alpha\delta < 1$. Solving the bound in
+\ref{asoodeh-rdp-approxdp} gives
+\begin{equation}
+    \epsilon = \frac{1}{\alpha-1}
+    \operatorname{softplus}\left(\log(\exp((\alpha-1)\gamma)-1)
+    -\log(\alpha)-\log(\delta)\right).
+\end{equation}
+The implementation represents a branch that cannot establish these strict
+domains as `None`; numerical failures remain errors. Thus every certified
+candidate is independently a valid upper bound, and the minimum of the
+candidates is valid as well.
+
+Native floating-point arithmetic is used only to select promising orders.
+The final bracket endpoints and optimizer argument are recomputed with
+outward-rounded `DInterval` arithmetic. Search accuracy therefore affects
+only tightness, not soundness. The special cases $\rho=0$, $\rho=\infty$,
+$\delta=0$, and $\delta=1$ return the corresponding trivial valid bounds
+before finite interval evaluation.
+
+\begin{theorem}
+For any valid $\rho$ and $\delta$, a successful return from
+\texttt{zcdp\_epsilon} is a sufficient epsilon for the requested delta.
+\end{theorem}
+\begin{proof}
+The fixed-order inverse formulas above are sufficient by their respective
+forward theorems. The optimizer only chooses the finite candidate orders;
+each candidate is certified independently with outward-rounded interval
+arithmetic. The upper endpoint is therefore conservative, and the minimum
+of independently valid bounds remains valid. The explicit special-case
+returns are valid by the trivial privacy bounds. Errors are propagated, so
+no uncertified arithmetic result is accepted.
+\end{proof}
+
 \section{Hoare Triple}
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
@@ -222,9 +264,9 @@ logarithm of the corresponding valid bound. The minimum remains valid because
 every candidate bounds the same privacy quantity from above.
 
 Finally, \texttt{InfExp} rounds exponentiation upwards and returns the smallest
-positive \texttt{f64} on underflow. Any interval-evaluation failure contributes
-the trivial bound one. Thus the returned \texttt{delta} satisfies the
-postcondition.
+positive \texttt{f64} on underflow. Any interval-evaluation failure is
+returned as an error rather than being used as a privacy result. Thus every
+successful returned \texttt{delta} satisfies the postcondition.
 \end{proof}
 
 

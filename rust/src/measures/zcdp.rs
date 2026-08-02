@@ -77,19 +77,21 @@ pub(crate) fn zcdp_log_delta(rho: f64, epsilon: f64) -> Fallible<f64> {
         search_log_delta0(alpha, rho, epsilon)
     });
     visit_certification_candidates(branch0, |alpha| {
-        if let Some(value) = certify_log_delta0(alpha, rho, epsilon) {
+        if let Some(value) = certify_log_delta0(alpha, rho, epsilon)? {
             best = best.min(value);
         }
-    });
+        Ok(())
+    })?;
 
     if let Some(log_gap_hi) = log_gap_upper_delta1(rho, epsilon) {
         let branch1 =
             optimize_alpha_log_gap(log_gap_hi, |alpha| search_log_delta1(alpha, rho, epsilon));
         visit_certification_candidates(branch1, |alpha| {
-            if let Some(value) = certify_log_delta1(alpha, rho, epsilon) {
+            if let Some(value) = certify_log_delta1(alpha, rho, epsilon)? {
                 best = best.min(value);
             }
-        });
+            Ok(())
+        })?;
     }
 
     Ok(best.min(0.0))
@@ -117,9 +119,9 @@ pub(crate) fn zcdp_epsilon(rho: f64, delta: f64) -> Fallible<f64> {
         return Ok(f64::INFINITY);
     }
 
-    // At epsilon = 0, the forward guarantee already covers this target.
-    // This also preserves the exact zero boundary instead of returning a tiny
-    // positive artifact from the fixed-order inverse formulas.
+    // Preserve the exact zero boundary. The inverse kernels operate on
+    // rounded log(delta) inputs, so checking the certified forward bound at
+    // epsilon zero avoids turning an exact zero into a rounding artifact.
     if delta >= zcdp_delta(rho, 0.0)? {
         return Ok(0.0);
     }
@@ -130,19 +132,21 @@ pub(crate) fn zcdp_epsilon(rho: f64, delta: f64) -> Fallible<f64> {
         search_epsilon0(alpha, rho, delta)
     });
     visit_certification_candidates(branch0, |alpha| {
-        if let Some(value) = certify_epsilon0(alpha, rho, delta) {
+        if let Some(value) = certify_epsilon0(alpha, rho, delta)? {
             best = best.min(value);
         }
-    });
+        Ok(())
+    })?;
 
     if let Some(log_gap_hi) = log_gap_upper_epsilon1(delta) {
         let branch1 =
             optimize_alpha_log_gap(log_gap_hi, |alpha| search_epsilon1(alpha, rho, delta));
         visit_certification_candidates(branch1, |alpha| {
-            if let Some(value) = certify_epsilon1(alpha, rho, delta) {
+            if let Some(value) = certify_epsilon1(alpha, rho, delta)? {
                 best = best.min(value);
             }
-        });
+            Ok(())
+        })?;
     }
 
     Ok(best.max(0.0))
@@ -200,12 +204,13 @@ fn search_log_delta0(alpha: f64, rho: f64, epsilon: f64) -> f64 {
 }
 
 fn search_log_delta1(alpha: f64, rho: f64, epsilon: f64) -> f64 {
-    zcdp_log_delta1_on::<A>(alpha, rho, epsilon)
-        .and_then(|value| value.map(|value| value.upper_f64()).transpose())
-        .ok()
-        .flatten()
-        .map(clean_log_delta_search_value)
-        .unwrap_or(f64::INFINITY)
+    match zcdp_log_delta1_on::<A>(alpha, rho, epsilon) {
+        Ok(Some(value)) => value
+            .upper_f64()
+            .map(clean_log_delta_search_value)
+            .unwrap_or(f64::INFINITY),
+        Ok(None) | Err(_) => f64::INFINITY,
+    }
 }
 
 fn search_epsilon0(alpha: f64, rho: f64, delta: f64) -> f64 {
@@ -216,46 +221,43 @@ fn search_epsilon0(alpha: f64, rho: f64, delta: f64) -> f64 {
 }
 
 fn search_epsilon1(alpha: f64, rho: f64, delta: f64) -> f64 {
-    zcdp_epsilon1_on::<A>(alpha, rho, delta)
-        .and_then(|value| value.map(|value| value.upper_f64()).transpose())
-        .ok()
-        .flatten()
-        .map(clean_epsilon_search_value)
-        .unwrap_or(f64::INFINITY)
+    match zcdp_epsilon1_on::<A>(alpha, rho, delta) {
+        Ok(Some(value)) => value
+            .upper_f64()
+            .map(clean_epsilon_search_value)
+            .unwrap_or(f64::INFINITY),
+        Ok(None) | Err(_) => f64::INFINITY,
+    }
 }
 
 // -----------------------------------------------------------------------------
 // Final certification: soft directed interval arithmetic
 // -----------------------------------------------------------------------------
 
-fn certify_log_delta0(alpha: f64, rho: f64, epsilon: f64) -> Option<f64> {
-    zcdp_log_delta0_on::<D>(alpha, rho, epsilon)
-        .and_then(|value| value.upper_f64())
-        .ok()
-        .and_then(clean_certified_log_delta)
+fn certify_log_delta0(alpha: f64, rho: f64, epsilon: f64) -> Fallible<Option<f64>> {
+    let value = zcdp_log_delta0_on::<D>(alpha, rho, epsilon)?.upper_f64()?;
+    clean_certified_log_delta(value)
 }
 
-fn certify_log_delta1(alpha: f64, rho: f64, epsilon: f64) -> Option<f64> {
-    zcdp_log_delta1_on::<D>(alpha, rho, epsilon)
-        .ok()
-        .flatten()
-        .and_then(|value| value.upper_f64().ok())
-        .and_then(clean_certified_log_delta)
+fn certify_log_delta1(alpha: f64, rho: f64, epsilon: f64) -> Fallible<Option<f64>> {
+    let value = zcdp_log_delta1_on::<D>(alpha, rho, epsilon)?;
+    match value.map(|value| value.upper_f64()).transpose()? {
+        Some(value) => clean_certified_log_delta(value),
+        None => Ok(None),
+    }
 }
 
-fn certify_epsilon0(alpha: f64, rho: f64, delta: f64) -> Option<f64> {
-    zcdp_epsilon0_on::<D>(alpha, rho, delta)
-        .and_then(|value| value.upper_f64())
-        .ok()
-        .and_then(clean_certified_epsilon)
+fn certify_epsilon0(alpha: f64, rho: f64, delta: f64) -> Fallible<Option<f64>> {
+    let value = zcdp_epsilon0_on::<D>(alpha, rho, delta)?.upper_f64()?;
+    clean_certified_epsilon(value)
 }
 
-fn certify_epsilon1(alpha: f64, rho: f64, delta: f64) -> Option<f64> {
-    zcdp_epsilon1_on::<D>(alpha, rho, delta)
-        .ok()
-        .flatten()
-        .and_then(|value| value.upper_f64().ok())
-        .and_then(clean_certified_epsilon)
+fn certify_epsilon1(alpha: f64, rho: f64, delta: f64) -> Fallible<Option<f64>> {
+    let value = zcdp_epsilon1_on::<D>(alpha, rho, delta)?;
+    match value.map(|value| value.upper_f64()).transpose()? {
+        Some(value) => clean_certified_epsilon(value),
+        None => Ok(None),
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -275,7 +277,10 @@ fn optimize_alpha_log_gap(log_gap_hi: f64, objective: impl Fn(f64) -> f64) -> Br
     )
 }
 
-fn visit_certification_candidates(optimum: BracketedOptimum, mut visit: impl FnMut(f64)) {
+fn visit_certification_candidates(
+    optimum: BracketedOptimum,
+    mut visit: impl FnMut(f64) -> Fallible<()>,
+) -> Fallible<()> {
     let mut previous = None;
     for log_gap in [optimum.lo, optimum.arg, optimum.hi] {
         let alpha = alpha_from_log_gap(log_gap);
@@ -283,8 +288,9 @@ fn visit_certification_candidates(optimum: BracketedOptimum, mut visit: impl FnM
             continue;
         }
         previous = Some(alpha);
-        visit(alpha);
+        visit(alpha)?;
     }
+    Ok(())
 }
 
 fn alpha_from_log_gap(log_gap: f64) -> f64 {
@@ -415,12 +421,18 @@ fn clean_epsilon_search_value(value: f64) -> f64 {
     }
 }
 
-fn clean_certified_log_delta(value: f64) -> Option<f64> {
-    (!value.is_nan()).then_some(value.min(0.0))
+fn clean_certified_log_delta(value: f64) -> Fallible<Option<f64>> {
+    if value.is_nan() {
+        return fallible!(FailedMap, "certified log(delta) is NaN");
+    }
+    Ok(Some(value.min(0.0)))
 }
 
-fn clean_certified_epsilon(value: f64) -> Option<f64> {
-    (!value.is_nan() && value >= 0.0).then_some(value.max(0.0))
+fn clean_certified_epsilon(value: f64) -> Fallible<Option<f64>> {
+    if value.is_nan() || value < 0.0 {
+        return fallible!(FailedMap, "certified epsilon is invalid: {value}");
+    }
+    Ok(Some(value.max(0.0)))
 }
 
 fn log_to_delta_upper(log_delta: f64) -> Fallible<f64> {

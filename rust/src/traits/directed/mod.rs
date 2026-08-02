@@ -1255,9 +1255,25 @@ impl<Bk: IntervalExpBackend> Interval<Bk> {
             return self.add(Self::between(-f64::EPSILON, 0.0)?);
         }
 
-        let one = Self::point(1.0)?;
-        let correction = one.sub(self.clone().neg()?.exp()?)?.ln()?;
-        self.add(correction)
+        self.clone().add(self.neg()?.log1mexp()?)
+    }
+
+    /// Stable enclosure of `log(1 - exp(x))` for intervals strictly below zero.
+    #[inline]
+    pub fn log1mexp(self) -> Fallible<Self>
+    where
+        Bk: IntervalArithmeticBackend,
+    {
+        if self.upper_f64()? >= 0.0 {
+            return fallible!(FailedMap, "log1mexp domain requires a negative interval");
+        }
+
+        // For values at most log(1/2), subtraction is well-conditioned. Near
+        // zero, use expm1 to avoid cancellation in 1 - exp(x).
+        if self.upper_f64()? <= -std::f64::consts::LN_2 {
+            return Self::point(1.0)?.sub(self.exp()?)?.ln();
+        }
+        self.exp_m1()?.neg()?.ln()
     }
 
     /// Stable enclosure of `ln(1 + exp(x))` without overflowing `exp(x)`.
