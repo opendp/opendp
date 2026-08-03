@@ -1,3 +1,5 @@
+use crate::error::Fallible;
+
 use super::{InverseCDF, ODPRound};
 use dashu::{rational::RBig, rbig};
 use opendp_derive::proven;
@@ -20,8 +22,15 @@ pub struct CanonicalRV<'a> {
 #[proven(proof_path = "traits/samplers/psrn/canonical/InverseCDF_for_CanonicalRV.tex")]
 impl<'a> InverseCDF for CanonicalRV<'a> {
     type Edge = RBig;
-    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, _refinements: usize) -> Option<RBig> {
-        Some(quantile_cnd(uniform, self.tradeoff, self.fixed_point)? * self.scale + &self.shift)
+    fn inverse_cdf<R: ODPRound>(
+        &self,
+        uniform: RBig,
+        _refinements: usize,
+    ) -> Fallible<Option<RBig>> {
+        let Some(value) = quantile_cnd(uniform, self.tradeoff, self.fixed_point) else {
+            return Ok(None);
+        };
+        Ok(Some(value * self.scale + &self.shift))
     }
 }
 
