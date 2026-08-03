@@ -1,21 +1,17 @@
-use dashu::{
-    float::{
-        FBig,
-        round::mode::{Down, Up},
-    },
-    rational::RBig,
-    rbig,
-};
+use dashu::{rational::RBig, rbig};
 use num::Zero;
-use opendp_derive::{bootstrap, proven};
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::AtomDomain,
     error::Fallible,
-    measures::{Approximate, PureDP},
+    measures::{MultiDP, PrivacyGuarantee},
     metrics::AbsoluteDistance,
-    traits::samplers::{CanonicalRV, PartialSample},
+    traits::{
+        InfCast,
+        samplers::{CanonicalRV, PartialSample},
+    },
 };
 
 #[cfg(feature = "ffi")]
@@ -24,10 +20,12 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
-#[bootstrap(features("contrib"))]
-/// Make a Measurement that adds noise from a canonical noise distribution.
-/// The implementation is tailored towards approximate-DP,
-/// resulting in noise sampled from the Tulap distribution.
+#[bootstrap(
+    features("contrib", "honest-but-curious"),
+    arguments(d_out(c_type = "AnyObject *", hint = "PrivacyGuarantee"))
+)]
+/// Make a Measurement that adds noise from the canonical noise distribution
+/// associated with the supplied symmetric nontrivial f-DP tradeoff curve.
 ///
 /// # Citations
 /// - [AV23 Canonical Noise Distributions and Private Hypothesis Tests](https://projecteuclid.org/journals/annals-of-statistics/volume-51/issue-2/Canonical-noise-distributions-and-private-hypothesis-tests/10.1214/23-AOS2259.short)
@@ -36,13 +34,18 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric of the input.
 /// * `d_in` - Sensitivity
-/// * `d_out` - Privacy parameters (ε, δ)
+/// * `d_out` - Privacy guarantee queried through its tradeoff-function view
+///
+/// # Why honest-but-curious?
+/// The supplied tradeoff curve must be an explicitly symmetric, nontrivial
+/// lower bound. This caller-verified precondition is required by the canonical
+/// noise distribution theorem.
 pub fn make_canonical_noise(
     input_domain: AtomDomain<f64>,
     input_metric: AbsoluteDistance<f64>,
     d_in: f64,
-    d_out: (f64, f64),
-) -> Fallible<Measurement<AtomDomain<f64>, AbsoluteDistance<f64>, Approximate<PureDP>, f64>> {
+    d_out: PrivacyGuarantee,
+) -> Fallible<Measurement<AtomDomain<f64>, AbsoluteDistance<f64>, MultiDP, f64>> {
     if input_domain.nan() {
         return fallible!(MakeMeasurement, "input_domain must consist of non-nan data");
     }
@@ -53,13 +56,37 @@ pub fn make_canonical_noise(
         );
     }
 
-    let (tradeoff, fixed_point) = approximate_to_tradeoff(d_out)?;
+    // Canonical noise requires the explicitly supplied symmetric tradeoff
+    // representation. Do not derive a curve from another representation: the
+    // theorem applies to the exact curve used to construct the sampler.
+    let source_tradeoff = d_out.symmetric_tradeoff()?;
+    let tradeoff_for_sampler = source_tradeoff.clone();
+    let tradeoff = move |alpha: RBig| {
+        Ok(RBig::try_from(tradeoff_for_sampler(f64::inf_cast(
+            alpha,
+        )?)?)?)
+    };
+
+    let fixed_point = find_fixed_point(&tradeoff)?;
+
+    // A fixed point at or above 1/2 corresponds to perfect privacy, while a
+    // fixed point at zero is the trivial perfectly distinguishable curve. Both
+    // are outside the nontrivial CND theorem and the former diverges in the
+    // canonical quantile recursion.
+    if fixed_point <= rbig!(0) || fixed_point >= rbig!(1 / 2) {
+        return fallible!(
+            MakeMeasurement,
+            "fixed-point of the f-DP tradeoff curve must be strictly between 0 and 1/2"
+        );
+    }
+
     let r_d_in = RBig::try_from(d_in)?;
+    let tradeoff_for_map = source_tradeoff.clone();
 
     Measurement::new(
         input_domain,
         input_metric,
-        Approximate(PureDP),
+        MultiDP::with_tradeoff(),
         Function::new_fallible(move |&arg: &f64| {
             let canonical_rv = CanonicalRV {
                 shift: RBig::try_from(arg.clamp(f64::MIN, f64::MAX)).unwrap_or(RBig::ZERO),
@@ -76,60 +103,37 @@ pub fn make_canonical_noise(
                     "d_in from the map ({d_in_p}) must be in [0, {d_in}]"
                 );
             }
-            if d_in.is_zero() {
-                return Ok((0.0, 0.0));
+            if d_in_p.is_zero() {
+                return PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| Ok(1.0 - alpha));
             }
-            Ok(d_out.clone())
+            PrivacyGuarantee::new().with_symmetric_tradeoff({
+                let tradeoff = tradeoff_for_map.clone();
+                move |alpha| tradeoff(alpha)
+            })
         }),
     )
 }
 
-#[proven]
-/// # Proof Definition
-/// Given epsilon and delta, return the corresponding f-DP tradeoff curve
-/// with conservative arithmetic,
-/// as well as the fixed point `c` where `c = f(c)`.
-/// Returns an error if epsilon or delta are invalid.
-pub(crate) fn approximate_to_tradeoff(
-    (epsilon, delta): (f64, f64),
-) -> Fallible<(impl Fn(RBig) -> RBig + 'static + Clone + Send + Sync, RBig)> {
-    if epsilon.is_sign_negative() || epsilon.is_zero() {
-        return fallible!(
-            MakeMeasurement,
-            "epsilon ({epsilon}) must not be positive (greater than zero)"
-        );
+// The oracle is a lower bound on the true tradeoff. Therefore every value
+// accepted by `tradeoff(mid) >= mid` is below the true fixed point, and the
+// returned `lo` is a conservative lower bound on that fixed point.
+fn find_fixed_point(tradeoff: &impl Fn(RBig) -> Fallible<RBig>) -> Fallible<RBig> {
+    let mut lo = 0.0;
+    let mut hi = 0.5;
+    let mut mid = -1.0;
+
+    loop {
+        let new_mid = lo + (hi - lo) / 2.0;
+        if new_mid == mid {
+            return Ok(RBig::try_from(lo)?);
+        }
+        mid = new_mid;
+
+        let mid_r = RBig::try_from(mid)?;
+        if tradeoff(mid_r.clone())? >= mid_r {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
     }
-    if !(0.0..=1.0).contains(&delta) {
-        return fallible!(MakeMeasurement, "delta ({delta}) must be within [0, 1]");
-    }
-
-    let epsilon = FBig::<Down>::try_from(epsilon)?;
-    let delta = RBig::try_from(delta)?;
-
-    // exp(ε)
-    let exp_eps = epsilon.clone().with_rounding::<Down>().exp();
-    let exp_eps = RBig::try_from(exp_eps)?;
-
-    // exp(-ε)
-    let exp_neg_eps = (-epsilon).with_rounding::<Up>().exp();
-    let exp_neg_eps = RBig::try_from(exp_neg_eps)?;
-
-    //              = (1 - δ) / (1 + exp(ε))
-    let fixed_point = (rbig!(1) - &delta) / (rbig!(1) + &exp_eps);
-
-    // greater than 1/2 means the tradeoff curve is greater than 1 - x, which is invalid
-    // exactly 1 / 2 means perfect privacy, and results in an infinite loop when sampling "infinite" noise
-    if fixed_point >= rbig!(1 / 2) {
-        return fallible!(
-            MakeMeasurement,
-            "fixed-point of the f-DP tradeoff curve must be less than 1/2. This indicates that your privacy parameters are too small."
-        );
-    }
-
-    let tradeoff = move |alpha: RBig| {
-        let t1 = rbig!(1) - &delta - &exp_eps * &alpha;
-        let t2 = &exp_neg_eps * (rbig!(1) - &delta - alpha);
-        t1.max(t2).max(rbig!(0))
-    };
-    Ok((tradeoff, fixed_point))
 }

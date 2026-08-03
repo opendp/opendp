@@ -1,4 +1,6 @@
-use crate::{core::Function, domains::AtomDomain, metrics::DiscreteDistance};
+#![cfg(feature = "honest-but-curious")]
+
+use crate::{core::Function, domains::AtomDomain, measures::MultiDP, metrics::DiscreteDistance};
 
 use super::*;
 
