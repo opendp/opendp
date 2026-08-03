@@ -238,7 +238,11 @@ def make_stable_marginals(
 
     def pivot(x, clique: tuple[str, ...]):
         y = np.zeros(shape(clique), dtype=np.int32)
-        y[tuple(x[clique].to_numpy().T)] = x["len"].to_numpy()
+        # u32 counts are clipped before narrowing to i32: numpy treats
+        # uint32->int32 as a same-kind cast and silently wraps instead of erroring.
+        y[tuple(x[clique].to_numpy().T)] = (
+            x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32).to_numpy()
+        )
         return y
 
     def function(data):

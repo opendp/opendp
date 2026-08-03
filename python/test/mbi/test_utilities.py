@@ -116,6 +116,35 @@ def test_make_stable_marginals():
         )
 
 
+def test_make_stable_marginals_clips_u32_counts(monkeypatch):
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    domain = dp.lazyframe_domain(
+        [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 0)))]
+    )
+    transformation = make_stable_marginals(
+        domain,
+        dp.frame_distance(dp.symmetric_distance()),
+        dp.l1_distance(T="u32"),
+        cliques=[("A",)],
+    )
+
+    # Avoid materializing more than i32::MAX rows while still exercising the
+    # UInt32-to-Int32 conversion performed by the marginal transformation.
+    counts = pl.DataFrame(
+        {
+            "A": pl.Series("A", [0], dtype=pl.UInt32),
+            "len": pl.Series("len", [np.iinfo(np.uint32).max], dtype=pl.UInt32),
+        }
+    )
+    monkeypatch.setattr(pl, "collect_all", lambda _: [counts])
+
+    marginals = transformation(pl.LazyFrame({"A": [0]}))
+    assert marginals[("A",)].tolist() == [np.iinfo(np.int32).max]
+
+
 def test_make_noise_marginal():
     pytest.importorskip("mbi")
     kwargs = dict(
