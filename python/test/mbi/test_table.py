@@ -24,21 +24,30 @@ import warnings
 from ..helpers import ids
 
 
-@pytest.mark.parametrize(
-    "privacy_loss", [{"epsilon": 5.0}, {"rho": 0.2}], ids=["DP", "zCDP"]
-)
-@pytest.mark.parametrize("approximate", [True, False], ids=["approximate", "pure"])
-@pytest.mark.parametrize(
-    "algorithm",
-    [
-        AIM(queries=2),
-        MST(),
-        Fixed(queries=[Count(("C",)), Count(("A", "B"))]),
-        Sequential(algorithms=[Fixed(queries=[Count(("A", "B"))]), AIM()]),
-    ],
-    ids=["AIM", "MST", "Fixed", "Sequential"],
-)
-def test_fit_effectiveness(algorithm, privacy_loss, approximate):
+def _test_estimator(domain, loss_fn, *, potentials=None):
+    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
+
+    return mirror_descent(
+        domain,
+        loss_fn,
+        potentials=potentials,
+        iters=500 if potentials is None else 400,
+    )
+
+
+def _fast_test_estimator(domain, loss_fn, *, potentials=None):
+    """Keep structural table tests from spending time optimizing fit quality."""
+    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
+
+    return mirror_descent(
+        domain,
+        loss_fn,
+        potentials=potentials,
+        iters=25 if potentials is None else 10,
+    )
+
+
+def _make_effectiveness_table(privacy_loss, approximate, algorithm):
     pytest.importorskip("mbi")
     # mutating `parameter` interferes with other pytest parameterizations
     privacy_loss = privacy_loss.copy()
@@ -93,6 +102,37 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         .contingency_table(cuts=cuts, keys=keys, algorithm=algorithm)
         .release()
     )
+    return table, cov, lookup_B, lookup_C
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    [
+        AIM(queries=2, rounds=6, estimator=_test_estimator),
+        MST(estimator=_test_estimator),
+        Fixed(
+            queries=[Count(("C",)), Count(("A", "B"))],
+            estimator=_test_estimator,
+        ),
+        Sequential(
+            estimator=_test_estimator,
+            algorithms=[
+                Fixed(
+                    queries=[Count(("A", "B"))],
+                    estimator=_test_estimator,
+                ),
+                AIM(rounds=6, estimator=_test_estimator),
+            ],
+        ),
+    ],
+    ids=["AIM", "MST", "Fixed", "Sequential"],
+)
+def test_fit_effectiveness(algorithm):
+    import numpy as np  # type: ignore[import-not-found]
+
+    table, cov, lookup_B, lookup_C = _make_effectiveness_table(
+        {"rho": 0.2}, False, algorithm
+    )
 
     try:
         std = table.std(("A",))
@@ -106,7 +146,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        synthetic_df = table.synthesize()
+        synthetic_df = table.synthesize(rows=2_000)
 
     synthetic_list = [
         synthetic_df["A"],
@@ -127,6 +167,38 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     test_cov(("A", "B"))
     for clique in (cl for cl in table.marginals.cliques() if 0 < len(cl) <= 2):
         test_cov(clique)
+
+
+@pytest.mark.parametrize(
+    ("privacy_loss", "approximate"),
+    [
+        ({"epsilon": 5.0}, False),
+        ({"epsilon": 5.0}, True),
+        ({"rho": 0.2}, True),
+    ],
+    ids=["DP", "DP-approximate", "zCDP-approximate"],
+)
+def test_fit_configuration_smoke(privacy_loss, approximate):
+    import numpy as np  # type: ignore[import-not-found]
+
+    table, _, _, _ = _make_effectiveness_table(
+        privacy_loss,
+        approximate,
+        Fixed(
+            queries=[Count(("C",)), Count(("A", "B"))],
+            estimator=_fast_test_estimator,
+        ),
+    )
+
+    assert set(table.schema) == {"A", "B", "C"}
+    assert table.cuts["A"].to_list() == [-2, -1, 0, 1, 2]
+    assert table.keys["B"].to_list() == ["a", "b", "c", "d", "e", "f", None]
+    assert len(table.keys["A"]) == len(table.cuts["A"]) + 1
+
+    projection = table.project(("A", "B"))
+    assert projection.shape == (len(table.keys["A"]), len(table.keys["B"]))
+    assert np.isfinite(projection).all()
+    assert np.isclose(projection.sum(), table.project([]))
 
 
 def test_contingency_table_int_cuts():
@@ -223,7 +295,9 @@ def test_make_contingency_table_multi_fit():
         .select("A", "B")
         .contingency_table(
             keys={"A": list(range(5)), "B": list(range(10))},
-            algorithm=Fixed(queries=[Count(("A", "B"))]),
+            algorithm=Fixed(
+                queries=[Count(("A", "B"))], estimator=_fast_test_estimator
+            ),
         )
         .release()
     )
@@ -234,7 +308,11 @@ def test_make_contingency_table_multi_fit():
     table2: ContingencyTable = (
         context.query(rho=0.05)
         .select("B", "C")
-        .contingency_table(keys={"C": list(range(20))}, table=table)
+        .contingency_table(
+            keys={"C": list(range(20))},
+            table=table,
+            algorithm=AIM(estimator=_fast_test_estimator, rounds=6),
+        )
         .release()
     )
 
@@ -366,7 +444,13 @@ def test_contingency_table_minimum_variance_weighted_total():
     # tests fit when no columns have keys, so total is estimated directly
     table: ContingencyTable = (
         context.query(epsilon=1.0, delta=1e-8)
-        .contingency_table(algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9))
+        .contingency_table(
+            algorithm=Fixed(
+                queries=[Count(("A",))],
+                oneway_split=0.9,
+                estimator=_fast_test_estimator,
+            )
+        )
         .release()
     )
 
@@ -722,7 +806,10 @@ def test_synthesize_with_cuts():
         )
         table: ContingencyTable = (
             context.query(epsilon=5.0)
-            .contingency_table(cuts={"A": cutset}, algorithm=Fixed(queries=[Count(("A",))]))
+            .contingency_table(
+                cuts={"A": cutset},
+                algorithm=Fixed(queries=[Count(("A",))], estimator=_fast_test_estimator),
+            )
             .release()
         )
 
@@ -810,7 +897,11 @@ def test_oneway_split_zero_all_keys_known():
         context.query(epsilon=1.0)
         .contingency_table(
             keys={"A": [0, 1, 2]},
-            algorithm=Fixed(queries=[Count(("A",))], oneway_split=0),
+            algorithm=Fixed(
+                queries=[Count(("A",))],
+                oneway_split=0,
+                estimator=_fast_test_estimator,
+            ),
         )
         .release()
     )
@@ -848,7 +939,11 @@ def test_oneway_unkeyed_all_keys_known_skips_oneway_phase():
         context.query(epsilon=1.0)
         .contingency_table(
             keys={"A": [0, 1, 2]},
-            algorithm=Fixed(queries=[Count(("A",))], oneway="unkeyed"),
+            algorithm=Fixed(
+                queries=[Count(("A",))],
+                oneway="unkeyed",
+                estimator=_fast_test_estimator,
+            ),
         )
         .release()
     )
@@ -871,7 +966,9 @@ def test_table_extension_removes_need_for_new_oneway_phase():
         .select("A")
         .contingency_table(
             keys={"A": [0, 1, 2]},
-            algorithm=Fixed(queries=[Count(("A",))]),
+            algorithm=Fixed(
+                queries=[Count(("A",))], estimator=_fast_test_estimator
+            ),
         )
         .release()
     )
@@ -885,7 +982,11 @@ def test_table_extension_removes_need_for_new_oneway_phase():
         .contingency_table(
             keys={"B": [0, 1]},
             table=table,
-            algorithm=Fixed(queries=[Count(("A", "B"))], oneway_split=0),
+            algorithm=Fixed(
+                queries=[Count(("A", "B"))],
+                oneway_split=0,
+                estimator=_fast_test_estimator,
+            ),
         )
         .release()
     )

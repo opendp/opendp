@@ -1,6 +1,5 @@
 from opendp.extras.mbi import (
     Fixed,
-    mirror_descent,
     Count,
     AIM,
     MST,
@@ -34,7 +33,11 @@ def test_algorithm_err_elements(algorithm):
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-untyped,import-not-found]
 
-    model = mirror_descent(mbi.Domain(("A",), (2,)), [])
+    domain = mbi.Domain(("A",), (2,))
+    clique_vector = mbi.CliqueVector(domain=domain, cliques=[], arrays={})
+    model = mbi.MarkovRandomField(
+        potentials=clique_vector, marginals=clique_vector
+    )
 
     msg = "input_domain columns must be bounded"
     with pytest.raises(ValueError, match=re.escape(msg)):
