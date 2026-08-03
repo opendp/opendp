@@ -57,7 +57,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
-/// * `output_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
+/// * `output_measure` - Privacy measure. Either `PureDP` or `zCDP`.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.

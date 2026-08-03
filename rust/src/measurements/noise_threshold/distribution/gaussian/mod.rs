@@ -13,7 +13,7 @@ use crate::{
         DiscreteGaussian, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
         NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
     },
-    measures::{Approximate, ZeroConcentratedDivergence},
+    measures::{Approximate, zCDP},
     metrics::{AbsoluteDistance, L2Distance, L02InfDistance},
     traits::{InfPowI, InfSqrt, InfSub},
 };
@@ -27,11 +27,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(threshold(c_type = "void *", rust_type = "TV"), k(default = b"null")),
-    generics(
-        DI(suppress),
-        MI(suppress),
-        MO(default = "Approximate<ZeroConcentratedDivergence>")
-    ),
+    generics(DI(suppress), MI(suppress), MO(default = "Approximate<zCDP>")),
     derived_types(TV = "$get_value_type(get_carrier_type(input_domain))")
 )]
 /// Make a Measurement that uses propose-test-release to release a hashmap of counts.
@@ -106,20 +102,15 @@ where
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/gaussian/NoiseThresholdPrivacyMap_for_ZExpFamily2.tex"
 )]
-impl
-    NoiseThresholdPrivacyMap<
-        L02InfDistance<AbsoluteDistance<RBig>>,
-        Approximate<ZeroConcentratedDivergence>,
-    > for ZExpFamily<2>
+impl NoiseThresholdPrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<zCDP>>
+    for ZExpFamily<2>
 {
     fn noise_threshold_privacy_map(
         &self,
         _input_metric: &L02InfDistance<AbsoluteDistance<RBig>>,
-        output_measure: &Approximate<ZeroConcentratedDivergence>,
+        output_measure: &Approximate<zCDP>,
         threshold: UBig,
-    ) -> Fallible<
-        PrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<ZeroConcentratedDivergence>>,
-    > {
+    ) -> Fallible<PrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<zCDP>>> {
         let noise_privacy_map =
             self.noise_privacy_map(&L2Distance::default(), &output_measure.0)?;
         let ZExpFamily { scale } = self.clone();

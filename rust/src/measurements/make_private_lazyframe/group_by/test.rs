@@ -2,7 +2,7 @@ use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::{make_private_expr, make_private_lazyframe};
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::{L0PInfDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
@@ -28,7 +28,7 @@ fn test_aggregate() -> Fallible<()> {
     let error_variant_res = make_private_group_by::<_, _>(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
             .logical_plan,
@@ -54,7 +54,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        Approximate(MaxDivergence),
+        Approximate(PureDP),
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[len().dp().noise(None)]),
@@ -81,7 +81,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        Approximate(ZeroConcentratedDivergence),
+        Approximate(zCDP),
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[len().dp().noise(None)]),
@@ -123,7 +123,7 @@ fn test_explicit_keys() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence,
+        PureDP,
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[sum_expr, median_expr])
@@ -168,7 +168,7 @@ fn process_expr(expr: Expr) -> Fallible<Expr> {
             },
         },
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         expr,
         Some(1.0),
     )?

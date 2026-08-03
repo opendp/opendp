@@ -11,7 +11,7 @@ use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::Fallible,
     measurements::make_private_lazyframe,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{FrameDistance, SymmetricDistance},
     polars::PrivacyNamespace,
 };
@@ -31,7 +31,7 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.select([
             len().dp().noise(None),
             col("A").dp().sum((lit(0), lit(1)), None),
@@ -77,7 +77,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.select([col("A").dp().mean((lit(3), lit(5)), Some(1.0))]),
         None,
         None,
@@ -125,7 +125,7 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
     let meas = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.select([
             col("A")
                 .dp()

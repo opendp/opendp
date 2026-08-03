@@ -4,7 +4,7 @@ use crate::{
     core::{Function, Measurement},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::LInfDistance,
     traits::{CastInternalRational, InfCast, Number},
 };
@@ -41,12 +41,12 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`
 /// * `input_metric` - Metric on the input domain. Must be `LInfDistance`
-/// * `output_measure` - One of `MaxDivergence`, `ZeroConcentratedDivergence`
+/// * `output_measure` - One of `PureDP`, `zCDP`
 /// * `scale` - Scale for the noise distribution
 /// * `negate` - Set to true to return min
 ///
 /// # Generics
-/// * `MO` - Output measure. One of `MaxDivergence` or `ZeroConcentratedDivergence`
+/// * `MO` - Output measure. One of `PureDP` or `zCDP`
 /// * `TIA` - Atom Input Type. Type of each element in the score vector
 pub fn make_noisy_max<MO: TopKMeasure, TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
@@ -98,7 +98,7 @@ pub fn make_report_noisy_max_gumbel<TIA>(
     input_metric: LInfDistance<TIA>,
     scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MaxDivergence, usize>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, PureDP, usize>>
 where
     TIA: Number + CastInternalRational,
     FBig: TryFrom<TIA> + TryFrom<f64>,
@@ -107,7 +107,7 @@ where
     make_noisy_max(
         input_domain,
         input_metric,
-        MaxDivergence,
+        PureDP,
         scale,
         matches!(optimize, Optimize::Max),
     )

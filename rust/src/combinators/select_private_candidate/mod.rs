@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::PureDP,
     traits::{CastInternalRational, InfLn, InfMul, InfSub, samplers::sample_geometric_exp_fast},
 };
 use dashu::integer::UBig;
@@ -47,10 +47,10 @@ pub fn make_select_private_candidate<
     MI: 'static + Metric,
     TO: 'static + Debug,
 >(
-    measurement: Measurement<DI, MI, MaxDivergence, (f64, TO)>,
+    measurement: Measurement<DI, MI, PureDP, (f64, TO)>,
     stop_probability: f64,
     threshold: f64,
-) -> Fallible<Measurement<DI, MI, MaxDivergence, Option<(f64, TO)>>>
+) -> Fallible<Measurement<DI, MI, PureDP, Option<(f64, TO)>>>
 where
     (DI, MI): MetricSpace,
 {

@@ -11,7 +11,7 @@ use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::{AbsoluteDistance, L01InfDistance};
 use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
 use crate::traits::{Hashable, InfCast, InfMul, Integer};
@@ -218,12 +218,7 @@ pub fn make_alp_state_with_hashers<K, CI>(
     projection_size: usize,
     hashers: Vec<HashFunction<K>>,
 ) -> Fallible<
-    Measurement<
-        SparseDomain<K, CI>,
-        L01InfDistance<AbsoluteDistance<CI>>,
-        MaxDivergence,
-        AlpState<K>,
-    >,
+    Measurement<SparseDomain<K, CI>, L01InfDistance<AbsoluteDistance<CI>>, PureDP, AlpState<K>>,
 >
 where
     K: 'static + Hashable,
@@ -254,7 +249,7 @@ where
     Measurement::new(
         input_domain,
         input_metric,
-        MaxDivergence,
+        PureDP,
         Function::new_fallible(move |x: &HashMap<K, CI>| {
             let z = compute_projection(x, &hashers, alpha, scale, projection_size)?;
             Ok(AlpState {
@@ -280,12 +275,7 @@ pub fn make_alp_state<K, CI>(
     size_factor: Option<u32>,
     alpha: Option<u32>,
 ) -> Fallible<
-    Measurement<
-        SparseDomain<K, CI>,
-        L01InfDistance<AbsoluteDistance<CI>>,
-        MaxDivergence,
-        AlpState<K>,
-    >,
+    Measurement<SparseDomain<K, CI>, L01InfDistance<AbsoluteDistance<CI>>, PureDP, AlpState<K>>,
 >
 where
     K: 'static + Hashable,
@@ -391,7 +381,7 @@ pub fn make_alp_queryable<K, CI>(
     Measurement<
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
         L01InfDistance<AbsoluteDistance<CI>>,
-        MaxDivergence,
+        PureDP,
         Queryable<K, f64>,
     >,
 >

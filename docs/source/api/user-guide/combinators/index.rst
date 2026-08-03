@@ -60,7 +60,7 @@ OpenDP has several compositors for making multiple releases on the same dataset:
      - Interactive
      - Interactive
 
-Composition combinators can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures,
+Composition combinators can compose Measurements with ``zCDP``, ``PureDP`` and ``ApproxDP`` output measures,
 and arbitrary input metrics and domains.
 
 Each of these is described in more detail:

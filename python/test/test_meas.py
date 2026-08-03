@@ -6,7 +6,7 @@ from .helpers import ids
 
 def test_gaussian_curve():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.0))
+    meas = dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 4.0))
     profile = meas.map(d_in=1.0)
     assert profile.epsilon(delta=0.0) == float("inf")
     # see cdp_delta for formula of 0.688 and 0.151
@@ -19,14 +19,14 @@ def test_gaussian_curve():
     # reuse the constant above
     assert profile.delta(epsilon=0.6880024554878085) == pytest.approx(1e-3)
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.0)).map(
+    profile = dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 4.0)).map(
         d_in=0.0
     )
     assert profile.epsilon(0.0) == 0.0
     assert profile.epsilon(delta=-0.0) == 0.0
     assert profile.delta(epsilon=-0.0) == 0.0
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.0)).map(
+    profile = dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 0.0)).map(
         d_in=1.0
     )
     assert profile.epsilon(delta=0.0) == float("inf")
@@ -34,7 +34,7 @@ def test_gaussian_curve():
     assert profile.delta(epsilon=0.0) == 1.0
     assert profile.delta(epsilon=0.1) == 1.0
 
-    profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.0)).map(
+    profile = dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 0.0)).map(
         d_in=0.0
     )
     assert profile.epsilon(delta=0.0) == 0.0
@@ -48,7 +48,7 @@ def test_gaussian_search():
 
     def make_approx_gauss(scale, delta):
         return dp.c.make_fix_delta(
-            dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale)), delta
+            dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, scale)), delta
         )
 
     fixed_meas = make_approx_gauss(1.0, 1e-5)
@@ -72,7 +72,7 @@ def new_make_noise(measure):
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
+    "constructor", [dp.m.make_laplace, new_make_noise(dp.pure_dp())]
 )
 def test_laplace(constructor):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
@@ -82,7 +82,7 @@ def test_laplace(constructor):
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
+    "constructor", [dp.m.make_laplace, new_make_noise(dp.pure_dp())]
 )
 def test_vector_laplace(constructor):
     input_space = (
@@ -96,9 +96,9 @@ def test_vector_laplace(constructor):
     assert meas.map(1.0) == 1.0
 
 
-def test_gaussian_smoothed_max_divergence():
+def test_gaussian_profile_dp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5))
+    meas = dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, scale=10.5))
     print("base gaussian:", meas(100.0))
 
     epsilon = meas.map(d_in=1.0).epsilon(delta=0.000001)
@@ -109,7 +109,7 @@ def test_gaussian_smoothed_max_divergence():
 def test_gaussian_zcdp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = input_space >> dp.m.then_gaussian(
-        scale=1.5, MO=dp.ZeroConcentratedDivergence
+        scale=1.5, MO=dp.zCDP
     )
     print("base gaussian:", meas(100.0))
 
@@ -124,7 +124,7 @@ def test_vector_gaussian():
         dp.l2_distance(T=float),
     )
     meas = dp.c.make_fix_delta(
-        dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5)), delta
+        dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, scale=10.5)), delta
     )
     print("base gaussian:", meas([80.0, 90.0, 100.0]))
     assert meas.check(1.0, (0.6, delta))
@@ -251,9 +251,9 @@ def test_gaussian():
     "measure,d_out",
     [
         # d_in * 2 / scale = 2
-        (dp.max_divergence(), 2),
+        (dp.pure_dp(), 2),
         # (d_in * 2 / scale)^2 / 8
-        (dp.zero_concentrated_divergence(), 1 / 2),
+        (dp.zcdp(), 1 / 2),
     ],
     ids=ids,
 )
@@ -271,9 +271,9 @@ def test_noisy_max(measure, d_out):
     "measure,d_out",
     [
         # (d_in * 2) / scale * 2 = 4
-        (dp.max_divergence(), 4),
+        (dp.pure_dp(), 4),
         # ((d_in * 2) / scale)^2 / 8 * 2 = 1
-        (dp.zero_concentrated_divergence(), 1),
+        (dp.zcdp(), 1),
     ],
     ids=ids,
 )
@@ -380,7 +380,7 @@ def test_gaussian_threshold_int():
 
 
 def make_noise_threshold_zCDP(domain, metric, scale, threshold):
-    measure = dp.approximate(dp.zero_concentrated_divergence())
+    measure = dp.approximate(dp.zcdp())
     return dp.m.make_noise_threshold(domain, metric, measure, scale, threshold)
 
 

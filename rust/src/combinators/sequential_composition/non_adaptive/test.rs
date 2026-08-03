@@ -2,7 +2,7 @@ use crate::core::*;
 use crate::domains::AtomDomain;
 use crate::interactive::Queryable;
 use crate::measurements::make_laplace;
-use crate::measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence};
+use crate::measures::{Approximate, PureDP, RenyiDP, zCDP};
 use crate::metrics::{AbsoluteDistance, DiscreteDistance};
 
 use super::*;
@@ -12,14 +12,14 @@ fn test_make_composition() -> Fallible<()> {
     let measurement0 = Measurement::new(
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<i32>::default(),
-        MaxDivergence,
+        PureDP,
         Function::new(|arg: &i32| (arg + 1) as f64),
         PrivacyMap::new(|_d_in: &i32| f64::INFINITY),
     )?;
     let measurement1 = Measurement::new(
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<i32>::default(),
-        MaxDivergence,
+        PureDP,
         Function::new(|arg: &i32| (arg - 1) as f64),
         PrivacyMap::new(|_d_in: &i32| f64::INFINITY),
     )?;
@@ -35,7 +35,7 @@ fn test_make_composition() -> Fallible<()> {
 fn test_make_composition_2() -> Fallible<()> {
     let input_domain = AtomDomain::<f64>::new_non_nan();
     let input_metric = AbsoluteDistance::default();
-    let laplace = make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, 1.0f64, None)?;
+    let laplace = make_laplace::<_, _, PureDP>(input_domain, input_metric, 1.0f64, None)?;
     let measurements = vec![laplace; 2];
     let composition = make_composition(measurements)?;
     let arg = 99.;
@@ -54,7 +54,7 @@ fn test_rdp_composition() -> Fallible<()> {
     let m_gauss = Measurement::new(
         AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
-        RenyiDivergence,
+        RenyiDP,
         Function::new(|arg| *arg),
         PrivacyMap::new(|&d_in: &f64| Function::new(move |alpha| alpha * d_in.powi(2) / 2.)),
     )?;
@@ -73,7 +73,7 @@ fn test_interactive_postprocessing() -> Fallible<()> {
     let m1 = (Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(ZeroConcentratedDivergence),
+        Approximate(zCDP),
         Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(arg))),
         PrivacyMap::new(|_| (1.0, 1e-7)),
     )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {
@@ -83,7 +83,7 @@ fn test_interactive_postprocessing() -> Fallible<()> {
     let m2 = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(ZeroConcentratedDivergence),
+        Approximate(zCDP),
         Function::new(|arg: &bool| *arg),
         PrivacyMap::new(|_| (1.0, 1e-7)),
     )?;

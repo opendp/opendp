@@ -86,7 +86,7 @@ def make_private_eigenvector(
     return _make_measurement(
         input_domain,
         input_metric,
-        dp.max_divergence(),
+        dp.pure_dp(),
         function,
         lambda d_in: d_in / 2 * unit_epsilon,
         TO=f"Vec<{input_desc.T}>",
@@ -156,7 +156,7 @@ def make_private_eigenvectors(
             f"must specify at most {input_desc.num_features - 1} unit_epsilons"
         )  # pragma: no cover
 
-    privacy_measure = dp.max_divergence()
+    privacy_measure = dp.pure_dp()
     m_compose = dp.c.make_adaptive_composition(
         input_domain, input_metric, privacy_measure, 2, unit_epsilons
     )

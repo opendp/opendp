@@ -32,7 +32,7 @@ from opendp.extras.mbi._utilities import (
 )
 from opendp.measurements import make_private_lazyframe
 from opendp.mod import (
-    ApproximateDivergence,
+    ApproxDP,
     FrameDistance,
     LazyFrameDomain,
     Measure,
@@ -302,7 +302,7 @@ def make_contingency_table(
         input_domain, input_metric, output_measure, d_in, d_mids
     )
 
-    if isinstance(output_measure, ApproximateDivergence):
+    if isinstance(output_measure, ApproxDP):
         inner_measure = output_measure.inner_measure
     else:
         inner_measure = output_measure
@@ -517,7 +517,7 @@ def _make_oneway_marginals(
 
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
-    if isinstance(output_measure, ApproximateDivergence):
+    if isinstance(output_measure, ApproxDP):
         compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
         scale = binary_search(compare_s, T=float)
 

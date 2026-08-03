@@ -9,7 +9,7 @@ use crate::measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily};
 use crate::{
     core::{Domain, Measurement, PrivacyMap},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::L1Distance,
     traits::InfCast,
 };
@@ -23,7 +23,7 @@ pub(crate) mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(k(default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence"))
+    generics(DI(suppress), MI(suppress), MO(default = "PureDP"))
 )]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.
 ///
@@ -49,7 +49,7 @@ pub(crate) mod ffi;
 /// # Generics
 /// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
-/// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
+/// * `MO` - Measure used to quantify privacy loss. Valid values are just `PureDP`
 pub fn make_laplace<DI: Domain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
@@ -84,12 +84,12 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/laplace/NoisePrivacyMap_for_ZExpFamily1.tex"
 )]
-impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
+impl NoisePrivacyMap<L1Distance<RBig>, PureDP> for ZExpFamily<1> {
     fn noise_privacy_map(
         &self,
         _input_metric: &L1Distance<RBig>,
-        _output_measure: &MaxDivergence,
-    ) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
+        _output_measure: &PureDP,
+    ) -> Fallible<PrivacyMap<L1Distance<RBig>, PureDP>> {
         let ZExpFamily { scale } = self.clone();
         if scale < RBig::ZERO {
             return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);

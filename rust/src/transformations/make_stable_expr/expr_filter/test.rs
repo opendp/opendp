@@ -4,7 +4,7 @@ use polars::series::Series;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::measurements::make_private_lazyframe;
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 
@@ -24,7 +24,7 @@ fn make_expr_filter_standard() -> Fallible<()> {
     let t_obs = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf_filter,
         Some(0.0),
         None,
@@ -53,7 +53,7 @@ fn make_expr_filter_impute() -> Fallible<()> {
     let t_obs = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf_filter,
         Some(0.0),
         None,

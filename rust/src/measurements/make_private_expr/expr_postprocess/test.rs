@@ -4,7 +4,7 @@ use polars::{
 };
 
 use crate::{
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{L0PInfDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
@@ -20,7 +20,7 @@ fn test_postprocess_alias() -> Fallible<()> {
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         Some(0.),
     )?;
 
@@ -47,7 +47,7 @@ fn test_postprocess_binary() -> Fallible<()> {
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         Some(0.),
     )?;
 

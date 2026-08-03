@@ -16,7 +16,7 @@
     # privacy-loss
     >>> privacy_loss = dp.loss_of(epsilon=1.0)
     >>> privacy_loss
-    (MaxDivergence, 1.0)
+    (PureDP, 1.0)
 
     # /privacy-loss
 

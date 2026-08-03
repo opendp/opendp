@@ -1,10 +1,10 @@
 #[allow(non_snake_case)]
-mod fixed_approxDP_to_approxDP;
-pub use fixed_approxDP_to_approxDP::*;
+mod approxDP_to_profileDP;
+pub use approxDP_to_profileDP::*;
 
 #[allow(non_snake_case)]
-mod zCDP_to_approxDP;
-pub use zCDP_to_approxDP::*;
+mod zCDP_to_profileDP;
+pub use zCDP_to_profileDP::*;
 
 #[allow(non_snake_case)]
 mod approximate;

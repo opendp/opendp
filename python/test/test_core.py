@@ -132,7 +132,7 @@ def test_supporting_elements():
     assert str(mechanism.input_domain.carrier_type) == "f64"
     assert str(mechanism.input_metric) == "AbsoluteDistance(f64)"
     assert str(mechanism.input_metric.distance_type) == "f64"
-    assert str(mechanism.output_measure) == "MaxDivergence"
+    assert str(mechanism.output_measure) == "PureDP"
     assert str(mechanism.output_measure.distance_type) == "f64"
 
 
@@ -352,7 +352,7 @@ def test_new_domain():
         dp.m.make_user_measurement(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
-            dp.max_divergence(),
+            dp.pure_dp(),
             lambda x: x,
             lambda _: 0.0,
         ),
@@ -367,7 +367,7 @@ def test_new_domain():
         dp.c.make_fully_adaptive_composition(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
-            dp.max_divergence(),
+            dp.pure_dp(),
         ),
         dp.user_distance(""),
         dp.user_divergence(""),
@@ -441,13 +441,13 @@ def test_extrinsic_callback_result_roundtrip():
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
     query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
+        dp.pure_dp(),
         lambda x: x,
         lambda _: 0.0,
     )
 
     sc_meas = space >> dp.c.then_adaptive_composition(
-        dp.max_divergence(),
+        dp.pure_dp(),
         d_in=1,
         d_mids=[1.0],
     )

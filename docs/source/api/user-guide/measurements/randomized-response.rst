@@ -64,7 +64,7 @@ following six elements:
       (``DiscreteDistance``).
 
    6. We similarly describe units on the output (:math:`\epsilon`) via the
-      **output measure** (``MaxDivergence``).
+      **output measure** (``PureDP``).
 
 ``make_randomized_response_bool`` returns the equivalent measurement:
 

@@ -7,7 +7,7 @@ fn test_fix_delta_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        SmoothedMaxDivergence,
+        ProfileDP,
         Function::new(|&v| v),
         PrivacyMap::new(|_d_in| PrivacyProfile::new(|eps| Ok((-eps).exp()))),
     )?;
@@ -27,7 +27,7 @@ fn test_fix_delta_approx_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(SmoothedMaxDivergence),
+        Approximate(ProfileDP),
         Function::new(|&v| v),
         PrivacyMap::new(|_d_in| (PrivacyProfile::new(|eps| Ok((-eps).exp())), 1e-7)),
     )?;
@@ -48,7 +48,7 @@ fn test_fix_delta_outer_delta_boundaries() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(SmoothedMaxDivergence),
+        Approximate(ProfileDP),
         Function::new(|&v| v),
         PrivacyMap::new_fallible(|_d_in| {
             Ok((

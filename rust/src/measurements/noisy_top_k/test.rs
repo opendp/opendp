@@ -1,5 +1,5 @@
 use crate::traits::samplers::{Shuffle, test::check_chi_square};
-use crate::{error::Fallible, measures::ZeroConcentratedDivergence};
+use crate::{error::Fallible, measures::zCDP};
 use dashu::rbig;
 use std::array::from_fn;
 
@@ -30,14 +30,7 @@ fn test_rnm_gumbel_distribution_varied() -> Fallible<()> {
 fn test_noisy_top_k_gumbel() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
     let input_metric = LInfDistance::new(true);
-    let de = make_noisy_top_k(
-        input_domain,
-        input_metric,
-        ZeroConcentratedDivergence,
-        1,
-        1.,
-        false,
-    )?;
+    let de = make_noisy_top_k(input_domain, input_metric, zCDP, 1, 1., false)?;
     let release = de.invoke(&vec![1., 2., 30., 2., 1.])?;
     assert_eq!(release, vec![2]);
     // (1/1)^2 / 8
@@ -50,7 +43,7 @@ fn test_noisy_top_k_gumbel() -> Fallible<()> {
 fn test_noisy_top_k_exponential() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
     let input_metric = LInfDistance::default();
-    let de = make_noisy_top_k(input_domain, input_metric, MaxDivergence, 1, 1., false)?;
+    let de = make_noisy_top_k(input_domain, input_metric, PureDP, 1, 1., false)?;
     let release = de.invoke(&vec![1., 2., 30., 2., 1.])?;
     assert_eq!(release, vec![2]);
     assert_eq!(de.map(&1.0)?, 2.0);
@@ -79,37 +72,19 @@ fn check_top_k_outcome<M: TopKMeasure>(
 
 #[test]
 fn test_max_vs_min_gumbel_top_k() -> Fallible<()> {
-    check_top_k_outcome(
-        ZeroConcentratedDivergence,
-        0.,
-        false,
-        vec![1, 2, 3],
-        vec![2],
-    )?;
-    check_top_k_outcome(ZeroConcentratedDivergence, 0., true, vec![1, 2, 3], vec![0])?;
-    check_top_k_outcome(
-        ZeroConcentratedDivergence,
-        1.,
-        false,
-        vec![1, 1, 100_000],
-        vec![2],
-    )?;
-    check_top_k_outcome(
-        ZeroConcentratedDivergence,
-        1.,
-        true,
-        vec![1, 100_000, 100_000],
-        vec![0],
-    )?;
+    check_top_k_outcome(zCDP, 0., false, vec![1, 2, 3], vec![2])?;
+    check_top_k_outcome(zCDP, 0., true, vec![1, 2, 3], vec![0])?;
+    check_top_k_outcome(zCDP, 1., false, vec![1, 1, 100_000], vec![2])?;
+    check_top_k_outcome(zCDP, 1., true, vec![1, 100_000, 100_000], vec![0])?;
     Ok(())
 }
 
 #[test]
 fn test_max_vs_min_exponential_top_k() -> Fallible<()> {
-    check_top_k_outcome(MaxDivergence, 0., false, vec![1, 2, 3], vec![2])?;
-    check_top_k_outcome(MaxDivergence, 0., true, vec![1, 2, 3], vec![0])?;
-    check_top_k_outcome(MaxDivergence, 1., false, vec![1, 1, 100_000], vec![2])?;
-    check_top_k_outcome(MaxDivergence, 1., true, vec![1, 100_000, 100_000], vec![0])?;
+    check_top_k_outcome(PureDP, 0., false, vec![1, 2, 3], vec![2])?;
+    check_top_k_outcome(PureDP, 0., true, vec![1, 2, 3], vec![0])?;
+    check_top_k_outcome(PureDP, 1., false, vec![1, 1, 100_000], vec![2])?;
+    check_top_k_outcome(PureDP, 1., true, vec![1, 100_000, 100_000], vec![0])?;
     Ok(())
 }
 

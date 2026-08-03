@@ -3,7 +3,7 @@ use polars::prelude::*;
 use crate::{
     error::Fallible,
     measurements::make_private_expr::expr_dp_frame_len::make_expr_dp_frame_len,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::dp_len,
     transformations::test_helper::get_test_data,
@@ -20,7 +20,7 @@ fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fall
     let measurement = make_expr_dp_frame_len(
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         dp_len(Some(0.0), signed),
         None,
     )?;

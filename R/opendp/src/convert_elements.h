@@ -29,9 +29,11 @@ SEXP anymeasureptr_to_sexp(AnyMeasure *input, SEXP info);
 AnyFunction *sexp_to_anyfunctionptr(SEXP data);
 SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP info);
 
-// privacy profile
+// privacy profile and guarantee
 AnyObject *sexp_to_privacyprofileptr(SEXP data);
 SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info);
+AnyObject *sexp_to_privacyguaranteeptr(SEXP data);
+SEXP privacyguaranteeptr_to_sexp(AnyObject *input, SEXP info);
 
 // privacy guarantee
 AnyObject *sexp_to_privacyguaranteeptr(SEXP data);

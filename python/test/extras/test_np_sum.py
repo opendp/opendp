@@ -37,7 +37,7 @@ def test_private_np_sum():
             dp.numpy.array2_domain(norm=1.0, p=2, nan=False, T=float),
             dp.symmetric_distance(),
         )
-    meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(), scale=1.0)
+    meas = space >> then_private_np_sum(dp.zcdp(), scale=1.0)
     np = pytest.importorskip("numpy")
     data = np.random.normal(size=(1000, 4))
     print("meas(data)", meas(data))

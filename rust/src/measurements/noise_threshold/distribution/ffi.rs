@@ -10,7 +10,7 @@ use crate::{
         gaussian::ffi::opendp_measurements__make_gaussian_threshold,
         laplace::ffi::opendp_measurements__make_laplace_threshold,
     },
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, zCDP},
 };
 
 #[unsafe(no_mangle)]
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
     k: *const i32,
 ) -> FfiResult<*mut AnyMeasurement> {
     let MO = &try_as_ref!(output_measure).type_;
-    if *MO == Type::of::<Approximate<ZeroConcentratedDivergence>>() {
+    if *MO == Type::of::<Approximate<zCDP>>() {
         opendp_measurements__make_gaussian_threshold(
             input_domain,
             input_metric,
@@ -32,7 +32,7 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
             k,
             try_!(into_c_char_p(MO.descriptor.clone())),
         )
-    } else if *MO == Type::of::<Approximate<MaxDivergence>>() {
+    } else if *MO == Type::of::<Approximate<PureDP>>() {
         opendp_measurements__make_laplace_threshold(
             input_domain,
             input_metric,
@@ -42,10 +42,6 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
             try_!(into_c_char_p(MO.descriptor.clone())),
         )
     } else {
-        err!(
-            FFI,
-            "output_measure must be MaxDivergence or ZeroConcentratedDivergence"
-        )
-        .into()
+        err!(FFI, "output_measure must be PureDP or zCDP").into()
     }
 }
