@@ -31,7 +31,7 @@ impl ApproxDPPoint {
         })
     }
 
-    #[proven(proof_path = "measures/curves/approxdp_point_beta.tex")]
+    #[proven(proof_path = "measures/curves/approximate_to_tradeoff.tex")]
     #[inline]
     pub fn beta(&self, alpha: &RBig) -> RBig {
         let t1 = &self.one_minus_delta - &self.exp_eps_up * alpha;

@@ -8,13 +8,8 @@ use crate::{
     measures::{Approximate, zCDP},
 };
 
-#[bootstrap(features("contrib"))]
-/// Constructs a new output measurement where the output measure
-/// is casted from `zCDP` to `MultiDP`.
-///
-/// # Arguments
-/// * `measurement` - a measurement with a privacy measure to be casted
-fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
+#[allow(non_snake_case)]
+fn make_zCDP_to_multiDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
     fn monomorphize<MO: 'static + ConcentratedMeasure>(
         meas: &AnyMeasurement,
     ) -> Fallible<AnyMeasurement> {
@@ -28,7 +23,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
                 privacy_map.eval(d_in)?.downcast::<MO::Distance>()
             }),
         )?;
-        let meas = super::make_zCDP_to_approxDP(meas)?;
+        let meas = super::make_zCDP_to_multiDP(meas)?;
         let privacy_map = meas.privacy_map.clone();
         Measurement::new(
             meas.input_domain.clone(),
@@ -49,10 +44,30 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
     )
 }
 
+#[bootstrap(name = "make_zCDP_to_multiDP", features("contrib"))]
+/// Constructs a new output measurement where the output measure
+/// is cast from `zCDP` to `MultiDP`.
+///
+/// # Arguments
+/// * `measurement` - a measurement with a privacy measure to be cast
 #[unsafe(no_mangle)]
+#[allow(non_snake_case)]
+pub extern "C" fn opendp_combinators__make_zCDP_to_multiDP(
+    measurement: *const AnyMeasurement,
+) -> FfiResult<*mut AnyMeasurement> {
+    FfiResult::from(make_zCDP_to_multiDP(try_as_ref!(measurement)))
+}
+
+#[bootstrap(name = "make_zCDP_to_approxDP", features("contrib"))]
+#[deprecated(since = "0.15.0", note = "Use `make_zCDP_to_multiDP` instead.")]
+/// Deprecated compatibility alias for `make_zCDP_to_multiDP`.
+///
+/// # Arguments
+/// * `measurement` - a measurement with a privacy measure to be cast
+#[unsafe(no_mangle)]
+#[allow(non_snake_case)]
 pub extern "C" fn opendp_combinators__make_zCDP_to_approxDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
-    // run combinator on measurement
-    FfiResult::from(make_zCDP_to_approxDP(try_as_ref!(measurement)))
+    opendp_combinators__make_zCDP_to_multiDP(measurement)
 }

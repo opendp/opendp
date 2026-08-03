@@ -1,5 +1,5 @@
 >>> dp.enable_features("contrib", "honest-but-curious")
->>> profile = dp.new_privacy_profile(lambda eps: 1.0 if eps < 0.5 else 1e-8)
+>>> profile = dp._new_privacy_profile(lambda eps: 1.0 if eps < 0.5 else 1e-8)
 ...
 >>> # epsilon is not enough, so delta saturates to one
 >>> profile.delta(epsilon=0.499)

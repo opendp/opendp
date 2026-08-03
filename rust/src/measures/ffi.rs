@@ -2,7 +2,7 @@ use std::{cmp::Ordering, ffi::c_char};
 
 use crate::{
     ffi::{
-        any::{AnyObject, CallbackFn, Downcast, wrap_func},
+        any::Downcast,
         util::{ExtrinsicObject, c_bool},
     },
     measures::MultiDP,
@@ -21,7 +21,7 @@ use crate::{
     traits::ProductOrd,
 };
 
-use super::{PrivacyGuarantee, RenyiDP};
+use super::RenyiDP;
 
 #[bootstrap(
     name = "_measure_free",
@@ -139,17 +139,14 @@ pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut A
 }
 
 #[bootstrap(name = "multi_dp")]
-/// Privacy measure used to define $\epsilon(\delta)$-approximate differential privacy.
+/// `MultiDP` is a privacy measure whose distance is a `PrivacyGuarantee`,
+/// allowing a measurement to retain multiple valid DP representations
+/// simultaneously.
 ///
-/// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
-/// That is, a privacy profile $\epsilon(\delta)$ is no smaller than $d(\delta)$ for all possible choices of $\delta$,
-/// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
-/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
-/// The measurement's input metric defines the notion of adjacency,
-/// and the measurement's input domain defines the set of possible datasets.
-///
-/// The distance $d$ is of type PrivacyProfile, so it can be invoked with an $\epsilon$
-/// to retrieve the corresponding $\delta$.
+/// A `PrivacyGuarantee` contains multiple simultaneously valid privacy
+/// representations for the same mechanism and neighboring relation. Stored
+/// representations hold conjunctively and may differ in strength or closure
+/// properties under later operations.
 ///
 /// # Proof Definition
 ///
@@ -440,40 +437,4 @@ pub extern "C" fn opendp_measures___extrinsic_measure_descriptor(
 ) -> FfiResult<*mut ExtrinsicObject> {
     let measure = try_!(try_as_ref!(measure).downcast_ref::<ExtrinsicDivergence>()).clone();
     FfiResult::Ok(util::into_raw(measure.element.value.clone()))
-}
-
-#[bootstrap(
-    name = "new_privacy_profile",
-    features("contrib", "honest-but-curious"),
-    arguments(curve(rust_type = "f64")),
-    returns(rust_type = "PrivacyProfile")
-)]
-/// Construct a PrivacyProfile from a user-defined callback.
-///
-/// # Arguments
-/// * `curve` - A privacy curve mapping epsilon to delta
-///
-/// # Why honest-but-curious?
-///
-/// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
-///
-/// * monotonically decreasing
-/// * rejects epsilon values that are less than zero or nan
-/// * returns delta values only within $[0, 1]$
-#[allow(dead_code)]
-fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
-    let _ = curve;
-    panic!("this signature only exists for code generation")
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__new_privacy_profile(
-    curve: *const CallbackFn,
-) -> FfiResult<*mut AnyObject> {
-    let curve = wrap_func(try_as_ref!(curve).clone());
-    let profile = try_!(
-        PrivacyGuarantee::new()
-            .with_profile(move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),)
-    );
-    FfiResult::Ok(AnyObject::new_raw(profile))
 }

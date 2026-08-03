@@ -15,7 +15,7 @@ use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable, Downcast};
 use crate::measures::ffi::ExtrinsicDivergence;
-use crate::measures::{Approximate, MultiDP, PrivacyProfile, PureDP, RenyiDP, zCDP};
+use crate::measures::{Approximate, MultiDP, PrivacyGuarantee, PureDP, RenyiDP, zCDP};
 use crate::metrics::ffi::ExtrinsicDistance;
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -416,8 +416,8 @@ lazy_static! {
             type_vec![Approximate, <PureDP, MultiDP, zCDP, RenyiDP, ExtrinsicDivergence>],
 
             // measure distances
-            type_vec![PrivacyProfile],
-            vec![t!((PrivacyProfile, f64))]
+            type_vec![PrivacyGuarantee],
+            vec![t!((PrivacyGuarantee, f64))]
         ].into_iter().chain(polars_types).flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");

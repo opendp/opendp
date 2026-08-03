@@ -84,7 +84,7 @@ pub fn make_canonical_noise(
     )
 }
 
-#[proven]
+#[proven(proof_path = "measurements/canonical_noise/approximate_to_tradeoff.tex")]
 /// # Proof Definition
 /// Given epsilon and delta, return the corresponding f-DP tradeoff curve
 /// with conservative arithmetic,

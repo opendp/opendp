@@ -14,7 +14,7 @@ import importlib
 import json
 import warnings
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, AnyObject, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -43,6 +43,7 @@ __all__ = [
     'Measure',
     'ExtrinsicDivergence',
     'ApproximateDivergence',
+    'PrivacyGuarantee',
     'PrivacyProfile',
     '_PartialConstructor',
     'UnknownTypeException',
@@ -1142,20 +1143,111 @@ class ApproximateDivergence(Measure):
     
     @property
     def inner_measure(self) -> Measure:
-        from opendp.measures import _approximate_divergence_get_inner_measure
-        return _approximate_divergence_get_inner_measure(self)
+        from opendp.measures import _approximate_get_inner_measure
+        return _approximate_get_inner_measure(self)
     
 
-class PrivacyProfile(object):
+class PrivacyGuarantee:
     '''
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    Contains multiple simultaneously valid privacy representations for the same
+    mechanism and neighboring relation.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Every supplied representation holds conjunctively. Representations may have
+    different strengths and different closure properties under later operations.
+
+    Use this class to:
+    1. evaluate ``delta(epsilon)``
+    2. invert to ``epsilon(delta)``
+    3. evaluate ``beta(alpha)``
+    4. invert to ``alpha(beta)``
+    5. construct from one or more privacy representations at once
+
+    Conventions:
+    * ``delta(epsilon)`` returns an upper-conservative delta value.
+    * ``epsilon(delta)`` returns a certified epsilon sufficient for the given delta.
+    * ``beta(alpha)`` returns a lower-conservative beta value.
+    * ``alpha(beta)`` returns a lower-conservative alpha value.
+    * ``renyiDP_delta`` is the source delta in OpenDP's additive approximate-RDP
+      convention and is interpreted only by the RDP conversion theorem.
+    * ``zCDP_delta`` is the source delta in OpenDP's additive approximate-zCDP
+      convention and is interpreted only by the zCDP conversion theorem.
     '''
-    def __init__(self, curve):
-        self.curve = curve
+    def __init__(
+        self,
+        guarantee=None,
+        *,
+        profile: Optional[Callable[[float], float]] = None,
+        log_profile: Optional[Callable[[float], float]] = None,
+        tradeoff: Optional[Callable[[float], float]] = None,
+        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        approxDP: Optional[list[tuple[float, float]]] = None,
+        gaussianDP: Optional[float] = None,
+        renyiDP: Optional[Callable[[float], float]] = None,
+        renyiDP_delta: float = 0.0,
+        zCDP: Optional[float] = None,
+        zCDP_delta: float = 0.0,
+    ):
+        supplied = [
+            profile is not None,
+            log_profile is not None,
+            tradeoff is not None,
+            symmetric_tradeoff is not None,
+            approxDP is not None,
+            gaussianDP is not None,
+            renyiDP is not None,
+            zCDP is not None,
+        ]
+
+        if renyiDP is None and renyiDP_delta != 0.0:
+            raise TypeError("renyiDP_delta requires renyiDP")
+        if zCDP is None and zCDP_delta != 0.0:
+            raise TypeError("zCDP_delta requires zCDP")
+
+        if isinstance(guarantee, ctypes.POINTER(AnyObject)):
+            if any(supplied):
+                raise TypeError("internal `guarantee` pointer cannot be combined with constructor keyword arguments")
+            self.guarantee = guarantee
+            return
+
+        if guarantee is not None:
+            raise TypeError("`guarantee` is reserved for internal use; construct with keyword arguments like `PrivacyGuarantee(profile=...)`")
+
+        if not any(supplied):
+            raise TypeError(
+                "expected at least one of profile, log_profile, tradeoff, symmetric_tradeoff, "
+                "approxDP, gaussianDP, renyiDP, or zCDP"
+            )
+
+        from opendp.measures import (
+            _new_privacy_guarantee,
+            _privacy_guarantee_with_approxDP,
+            _privacy_guarantee_with_gaussianDP,
+            _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_renyiDP,
+            _privacy_guarantee_with_tradeoff,
+            _privacy_guarantee_with_zCDP,
+        )
+
+        guarantee = _new_privacy_guarantee()
+
+        if profile is not None:
+            guarantee = _privacy_guarantee_with_profile(guarantee, profile, log=False)
+        if log_profile is not None:
+            guarantee = _privacy_guarantee_with_profile(guarantee, log_profile, log=True)
+        if tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(guarantee, tradeoff, symmetric=False)
+        if symmetric_tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(guarantee, symmetric_tradeoff, symmetric=True)
+        if approxDP is not None:
+            guarantee = _privacy_guarantee_with_approxDP(guarantee, approxDP)
+        if gaussianDP is not None:
+            guarantee = _privacy_guarantee_with_gaussianDP(guarantee, gaussianDP)
+        if renyiDP is not None:
+            guarantee = _privacy_guarantee_with_renyiDP(guarantee, renyiDP, renyiDP_delta)
+        if zCDP is not None:
+            guarantee = _privacy_guarantee_with_zCDP(guarantee, zCDP, zCDP_delta)
+
+        self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):
         '''
@@ -1163,8 +1255,8 @@ class PrivacyProfile(object):
         
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_delta
-        return privacy_profile_delta(self.curve, epsilon)
+        from opendp.measures import _privacy_guarantee_delta
+        return _privacy_guarantee_delta(self.guarantee, epsilon)
 
     def epsilon(self, delta):
         '''
@@ -1172,9 +1264,29 @@ class PrivacyProfile(object):
         
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_epsilon
-        return privacy_profile_epsilon(self.curve, delta)
+        from opendp.measures import _privacy_guarantee_epsilon
+        return _privacy_guarantee_epsilon(self.guarantee, delta)
+
+    def beta(self, alpha):
+        '''
+        Returns the beta that corresponds to this alpha.
+
+        :param alpha: Type I error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_guarantee_beta
+        return _privacy_guarantee_beta(self.guarantee, alpha)
+
+    def alpha(self, beta):
+        '''
+        Returns the alpha that corresponds to beta.
+
+        :param beta: Type II error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_guarantee_alpha
+        return _privacy_guarantee_alpha(self.guarantee, beta)
     
+
+PrivacyProfile = PrivacyGuarantee
 
 class _PartialConstructor(object):
     '''
@@ -1328,7 +1440,7 @@ def binary_search_chain(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
@@ -1390,7 +1502,7 @@ def binary_search_param(
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
     :param d_out: how far apart output datasets or distributions can be
-    :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
     :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
@@ -1522,11 +1634,10 @@ def binary_search(
         return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
 
-    Missing bounds are inferred. Pass `None` for either element of `bounds` to
-    conduct a one-sided search, or omit `bounds` to conduct an exponential search.
+    If bounds are not passed, conducts an exponential search.
     
     :param predicate: a monotonic unary function from a number to a boolean
-    :param bounds: a 2-tuple of optional lower and upper bounds to the input of `predicate`; use `None` for either bound to infer it
+    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to `predicate`, one of {float, int}
     :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
@@ -1552,7 +1663,7 @@ def binary_search(
 
     >>> # build a histogram that emits float counts
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
-    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
+    >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_multiDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
     ...     1e-8
     ... )
@@ -1583,7 +1694,7 @@ def binary_search(
                 "use (lower, None) or (None, upper) for a one-sided search"
             )
         lower, upper = bounds
-        if lower is not None and upper is not None and type(lower) is not type(upper):
+        if lower is not None and upper is not None and type(lower) != type(upper):
             raise TypeError("bounds must share the same type")
     else:
         lower, upper = None, None

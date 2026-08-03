@@ -31,7 +31,7 @@ use crate::core::{Function, Measure};
 /// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// $Y, Y'$ are $d$-close under the max divergence measure whenever
+/// $Y, Y'$ are $d$-close under the pure-DP privacy measure whenever
 ///
 /// ```math
 /// D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
@@ -39,31 +39,61 @@ use crate::core::{Function, Measure};
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct PureDP;
 
-#[deprecated(since = "0.15.0", note = "Use `PureDP` instead.")]
+#[deprecated(since = "1.15.0", note = "Use `PureDP` instead.")]
 pub type MaxDivergence = PureDP;
 
 impl Measure for PureDP {
     type Distance = f64;
 }
 
-/// Privacy measure used to define $\delta(\epsilon)$-approximate differential privacy.
+/// `MultiDP` is a privacy measure whose distance is a [`PrivacyGuarantee`],
+/// allowing a measurement to retain multiple valid DP representations
+/// simultaneously.
 ///
-/// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
+/// A `PrivacyGuarantee` contains multiple simultaneously valid privacy
+/// representations for the same mechanism and neighboring relation. Every
+/// stored representation holds conjunctively; representations may differ in
+/// strength and in their closure properties under later operations. The
+/// guarantee can be queried as a privacy profile via [`PrivacyGuarantee::delta`]
+/// or as an f-DP tradeoff function via [`PrivacyGuarantee::beta`].
+///
+/// Under the privacy profile interpretation,
+/// $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
 /// That is, a privacy profile $\delta(\epsilon)$ is no smaller than $d(\epsilon)$ for all possible choices of $\epsilon$,
 /// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
 /// and the measurement's input domain defines the set of possible datasets.
 ///
-/// The distance $d$ is of type [`PrivacyGuarantee`], so it can be invoked with an $\epsilon$
-/// to retrieve the corresponding $\delta$.
+/// Under the tradeoff-function interpretation,
+/// $d$ corresponds to an $f$-DP tradeoff function when also quantified over all
+/// adjacent datasets. That is, a tradeoff function $\beta(\alpha)$ is no smaller
+/// than $d(\alpha)$ for all $\alpha$ and all adjacent datasets.
+///
+/// The distance $d$ is a [`PrivacyGuarantee`] and can be queried in either form.
 ///
 /// # Proof Definition
 ///
-/// ## `d`-closeness
+/// ## `d`-closeness ($f$-DP)
+/// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
+/// we say that $Y, Y'$ are $d$-close under f-DP
+/// whenever, for every $\alpha \in [0, 1]$,
+/// with $\beta = d(\alpha)$,
+///
+/// ```math
+/// T(Y, Y')(\alpha) \ge \beta,
+/// ```
+///
+/// where $T(Y, Y')$ is the hypothesis-testing tradeoff function between $Y$ and $Y'$.
+///
+/// Note that this $\alpha$ and $\beta$ are not privacy parameters
+/// until quantified over all adjacent datasets,
+/// as is done in the definition of a measurement.
+///
+/// ## `d`-closeness (profile-DP)
 ///
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// we say that $Y, Y'$ are $d$-close under the smoothed max divergence measure
+/// we say that $Y, Y'$ are $d$-close under the profile-DP privacy measure
 /// whenever, for every non-negative $\epsilon$, with $\delta = d(\epsilon)$,
 /// and for every event $S \subseteq \mathrm{Supp}(Y)$,
 ///
@@ -74,17 +104,15 @@ impl Measure for PureDP {
 /// Note that $\epsilon$ and $\delta$ are not privacy parameters
 /// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
-/// Privacy measure whose distance is a [`PrivacyGuarantee`], allowing a
-/// measurement to retain multiple valid DP representations simultaneously.
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct MultiDP;
-
-#[deprecated(since = "0.15.0", note = "Use `MultiDP` instead.")]
-pub type SmoothedMaxDivergence = MultiDP;
 
 impl Measure for MultiDP {
     type Distance = PrivacyGuarantee;
 }
+
+#[deprecated(since = "0.15.0", note = "Use `MultiDP` instead.")]
+pub type SmoothedMaxDivergence = MultiDP;
 
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
@@ -144,7 +172,7 @@ impl<M: Measure> Measure for Approximate<M> {
 /// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// we say that $Y, Y'$ are $d$-close under the zero-concentrated divergence measure
+/// we say that $Y, Y'$ are $d$-close under the zCDP privacy measure
 /// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
@@ -157,7 +185,7 @@ impl<M: Measure> Measure for Approximate<M> {
 #[allow(non_camel_case_types)]
 pub struct zCDP;
 
-#[deprecated(since = "0.15.0", note = "Use `zCDP` instead.")]
+#[deprecated(since = "1.15.0", note = "Use `zCDP` instead.")]
 pub type ZeroConcentratedDivergence = zCDP;
 
 impl Measure for zCDP {
@@ -177,7 +205,7 @@ impl Measure for zCDP {
 ///
 /// ## `d`-closeness
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// we say that $Y, Y'$ are $d$-close under the Rényi divergence measure
+/// we say that $Y, Y'$ are $d$-close under the Rényi-DP privacy measure
 /// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
@@ -193,7 +221,7 @@ impl Measure for zCDP {
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct RenyiDP;
 
-#[deprecated(since = "0.15.0", note = "Use `RenyiDP` instead.")]
+#[deprecated(since = "1.15.0", note = "Use `RenyiDP` instead.")]
 pub type RenyiDivergence = RenyiDP;
 
 impl Measure for RenyiDP {

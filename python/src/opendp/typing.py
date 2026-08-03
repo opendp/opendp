@@ -486,7 +486,6 @@ def get_first_non_null(*values):
             return value
     return None
 
-
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     '''
     Given a ``RuntimeTypeDescriptor``, returns a ``RuntimeType`` or ``str``.

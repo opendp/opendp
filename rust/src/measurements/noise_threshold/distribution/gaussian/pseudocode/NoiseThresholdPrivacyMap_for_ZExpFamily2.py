@@ -6,9 +6,7 @@ class ZExpFamily2:
         _input_metric: L02InfDistance[AbsoluteDistance[RBig]],
         output_measure: Approximate[zCDP],
         threshold: UBig,
-    ) -> PrivacyMap[
-        L02InfDistance[AbsoluteDistance[RBig]], Approximate[zCDP]
-    ]:
+    ) -> PrivacyMap[L02InfDistance[AbsoluteDistance[RBig]], Approximate[zCDP]]:
         # |\label{line:noise-privacy-map}|
         noise_privacy_map = self.noise_privacy_map(
             L2Distance.default(), output_measure[0]

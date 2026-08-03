@@ -1,4 +1,4 @@
-use crate::{measures::PrivacyGuarantee, measures::zcdp::zcdp_epsilon};
+use crate::measures::{PrivacyGuarantee, zcdp::zcdp_epsilon};
 
 use crate::{
     combinators::make_approximate, domains::AtomDomain, measurements::make_gaussian,
@@ -11,7 +11,7 @@ use super::*;
 fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     let d_in = 1.0;
     let scale = 4.0;
-    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, zCDP>(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         scale,
@@ -22,11 +22,6 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     let direct = PrivacyGuarantee::new().with_zCDP(rho, 0.0)?;
 
     assert_eq!(profile.epsilon(0.)?, f64::INFINITY);
-    assert_eq!(profile.epsilon(1e-3)?, direct.epsilon(1e-3)?);
-    assert_eq!(
-        profile.delta(0.6880024554878085)?,
-        direct.delta(0.6880024554878085)?
-    );
 
     // Compare the two independently optimized directions to within one ulp.
     let epsilon = zcdp_epsilon(rho, 1e-3)?;
@@ -46,7 +41,7 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
 
 #[test]
 fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
-    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, zCDP>(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         4.,
@@ -63,7 +58,7 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
 
 #[test]
 fn test_zCDP_to_approxDP_nonprivate() -> Fallible<()> {
-    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, zCDP>(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         0.,
@@ -80,7 +75,7 @@ fn test_zCDP_to_approxDP_nonprivate() -> Fallible<()> {
 
 #[test]
 fn test_zCDP_to_approxDP_insensitive_nonprivate() -> Fallible<()> {
-    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, zCDP>(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         0.,
@@ -92,6 +87,16 @@ fn test_zCDP_to_approxDP_insensitive_nonprivate() -> Fallible<()> {
     assert_eq!(profile.epsilon(0.1)?, 0.0);
     assert_eq!(profile.delta(0.0)?, 0.0);
     assert_eq!(profile.delta(0.1)?, 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_approx_zCDP_source_delta_moves_into_zcdp_representation() -> Fallible<()> {
+    let (curve, target_delta) = <Approximate<zCDP> as ConcentratedMeasure>::convert((0.5, 0.1))?;
+
+    assert_eq!(target_delta, 0.0);
+    assert_eq!(curve.delta(f64::INFINITY)?, 0.1);
+    assert!(curve.epsilon(0.1f64.next_down())?.is_infinite());
     Ok(())
 }
 

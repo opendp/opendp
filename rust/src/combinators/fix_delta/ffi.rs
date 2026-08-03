@@ -12,8 +12,8 @@ use crate::{
 /// Fix the delta parameter in the privacy map of a `measurement` with a MultiDP output measure.
 ///
 /// # Arguments
-/// * `measurement` - a measurement with a privacy curve to be fixed
-/// * `delta` - parameter to fix the privacy curve with
+/// * `measurement` - a measurement with a privacy guarantee to be fixed
+/// * `delta` - parameter to fix the privacy guarantee with
 fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasurement> {
     fn monomorphize<MO: 'static + FixDeltaMeasure>(
         meas: &AnyMeasurement,

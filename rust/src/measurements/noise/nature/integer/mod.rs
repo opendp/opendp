@@ -69,9 +69,10 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
+        output_measure: MO,
     ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
-        let m_noise = self.make_noise(t_vec.output_space())?;
+        let m_noise = self.make_noise(t_vec.output_space(), output_measure)?;
 
         t_vec >> m_noise >> then_index_or_default(0)
     }
@@ -93,13 +94,14 @@ where
     fn make_noise(
         self,
         input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
+        output_measure: MO,
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO, Vec<T>>> {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
         };
 
         let t_int = make_int_to_bigint(input_space)?;
-        let m_noise = distribution.make_noise(t_int.output_space())?;
+        let m_noise = distribution.make_noise(t_int.output_space(), output_measure)?;
         t_int >> m_noise >> then_saturating_cast()
     }
 }
