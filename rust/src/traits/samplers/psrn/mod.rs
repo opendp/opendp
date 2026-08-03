@@ -28,7 +28,11 @@ pub trait InverseCDF: Sized {
     /// with error in direction `R`, or `None`.
     ///
     /// The error between `out` and the exactly-computed CDF decreases monotonically as `refinements` increases.
-    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, refinements: usize) -> Option<Self::Edge>;
+    fn inverse_cdf<R: ODPRound>(
+        &self,
+        uniform: RBig,
+        refinements: usize,
+    ) -> Fallible<Option<Self::Edge>>;
 }
 
 /// A partially sampled random number.
@@ -61,7 +65,7 @@ impl<D: InverseCDF> PartialSample<D> {
 
 impl<D: InverseCDF> PartialSample<D> {
     // Retrieve either a lower or upper bound on the sample.
-    fn edge<R: ODPRound>(&self) -> Option<D::Edge> {
+    fn edge<R: ODPRound>(&self) -> Fallible<Option<D::Edge>> {
         let uniform_edge = RBig::from_parts(
             IBig::from(self.randomness.clone() + R::UBIG),
             UBig::ONE << self.refinements,
@@ -80,12 +84,12 @@ impl<D: InverseCDF> PartialSample<D> {
     }
 
     /// Retrieve a lower bound on the sample.
-    fn lower(&self) -> Option<D::Edge> {
+    fn lower(&self) -> Fallible<Option<D::Edge>> {
         self.edge::<Down>()
     }
 
     /// Retrieve an upper bound on the sample.
-    fn upper(&self) -> Option<D::Edge> {
+    fn upper(&self) -> Fallible<Option<D::Edge>> {
         self.edge::<Up>()
     }
 
@@ -99,11 +103,11 @@ impl<D: InverseCDF> PartialSample<D> {
         other: &mut PartialSample<D>,
     ) -> Fallible<bool> {
         Ok(loop {
-            match self.lower().zip(other.upper()) {
+            match self.lower()?.zip(other.upper()?) {
                 Some((l, r)) if l > r => break true,
                 _ => (),
             }
-            match self.upper().zip(other.lower()) {
+            match self.upper()?.zip(other.lower()?) {
                 Some((l, r)) if l < r => break false,
                 _ => (),
             }
@@ -124,7 +128,7 @@ impl<D: InverseCDF> PartialSample<D> {
     /// or an error if there is a lack of system entropy.
     pub fn value<TO: RoundCast<D::Edge> + PartialEq>(&mut self) -> Fallible<TO> {
         Ok(loop {
-            let Some((l, r)) = self.lower().zip(self.upper()) else {
+            let Some((l, r)) = self.lower()?.zip(self.upper()?) else {
                 self.refine()?;
                 continue;
             };
