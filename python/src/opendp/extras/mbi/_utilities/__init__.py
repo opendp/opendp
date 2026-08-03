@@ -54,9 +54,11 @@ class Count:
     """
 
     def __post_init__(self):
+        import math
+
         self.by = tuple(self.by)
-        if self.weight < 0:
-            raise ValueError(f"weight ({self.weight}) must be non-negative")
+        if not math.isfinite(self.weight) or self.weight <= 0:
+            raise ValueError(f"weight ({self.weight}) must be finite and positive")
 
 
 def mirror_descent(
