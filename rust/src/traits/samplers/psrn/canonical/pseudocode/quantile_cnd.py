@@ -1,5 +1,10 @@
 # type: ignore
-def quantile_cnd(uniform: RBig, f: Callable[[RBig], RBig], c: RBig) -> RBig | None:
+def quantile_cnd(
+    uniform: RBig, f: Callable[[RBig], RBig], c: RBig
+) -> RBig | None:
+    if uniform.is_zero() or uniform == RBig(1):
+        return None
+
     if uniform < c:
         return quantile_cnd(RBig(1) - f(uniform), f, c) - RBig(1)
     elif uniform <= RBig(1) - c:  # the linear function
