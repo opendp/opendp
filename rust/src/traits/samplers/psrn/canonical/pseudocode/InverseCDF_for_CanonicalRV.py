@@ -6,4 +6,6 @@ class InverseCDF(CanonicalRV):
         f_inv = quantile_cnd(
             uniform, self.tradeoff, self.fixed_point
         )  # `\label{f_inv}`
+        if f_inv is None:
+            return None
         return f_inv * self.scale + self.shift

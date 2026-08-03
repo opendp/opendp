@@ -33,6 +33,7 @@ from opendp.combinators import (
     make_pureDP_to_zCDP,
     make_adaptive_composition,
     make_zCDP_to_approxDP,
+    make_multiDP_to_approxDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.extras._utilities import supports_partial, to_then
@@ -772,11 +773,17 @@ class Query(object):
         # - its d_out argument is already stored in the chain
         # - it has a special postprocessor
         from opendp.measurements import then_canonical_noise
+        from opendp.mod import PrivacyGuarantee
         from opendp._internal import _new_pure_function
         from opendp.extras.numpy.canonical import BinomialCND
 
         def then(d_in, d_out):
-            m_noise = then_canonical_noise(d_in, d_out)
+            specification = (
+                d_out
+                if isinstance(d_out, PrivacyGuarantee)
+                else PrivacyGuarantee(approx_dp=d_out)
+            )
+            m_noise = then_canonical_noise(d_in, specification)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
                     lambda x: BinomialCND(x, d_in, d_out, binomial_size),
@@ -1200,6 +1207,9 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return make_approximate(chain)
+
+    if from_to == ("MultiDP", "Approximate<MaxDivergence>"):
+        return make_multiDP_to_approxDP(chain, d_to[1])
 
     if from_to == (
         "ZeroConcentratedDivergence",
