@@ -12,7 +12,7 @@ use crate::{
     core::{Function, Measure, Measurement, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, zCDP},
     metrics::{
         ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01InfDistance,
     },
@@ -164,7 +164,7 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
 
 const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ordering in the original dataset, the output dataset is shuffled. Therefore, sorting the data before release (that shuffles) is wasted computation.";
 
-impl<MI> PrivateDslPlan<FrameDistance<MI>, MaxDivergence> for DslPlan
+impl<MI> PrivateDslPlan<FrameDistance<MI>, PureDP> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
@@ -175,10 +175,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: FrameDistance<MI>,
-        output_measure: MaxDivergence,
+        output_measure: PureDP,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MaxDivergence, DslPlan>> {
+    ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, PureDP, DslPlan>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
@@ -205,7 +205,7 @@ where
     }
 }
 
-impl<MI> PrivateDslPlan<FrameDistance<MI>, ZeroConcentratedDivergence> for DslPlan
+impl<MI> PrivateDslPlan<FrameDistance<MI>, zCDP> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
@@ -215,11 +215,10 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: FrameDistance<MI>,
-        output_measure: ZeroConcentratedDivergence,
+        output_measure: zCDP,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, ZeroConcentratedDivergence, DslPlan>>
-    {
+    ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, zCDP, DslPlan>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }

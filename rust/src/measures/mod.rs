@@ -37,9 +37,12 @@ use crate::core::{Function, Measure};
 /// D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct MaxDivergence;
+pub struct PureDP;
 
-impl Measure for MaxDivergence {
+#[deprecated(since = "0.15.0", note = "Use `PureDP` instead.")]
+pub type MaxDivergence = PureDP;
+
+impl Measure for PureDP {
     type Distance = f64;
 }
 
@@ -71,10 +74,15 @@ impl Measure for MaxDivergence {
 /// Note that $\epsilon$ and $\delta$ are not privacy parameters
 /// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
+/// Privacy measure whose distance is a [`PrivacyGuarantee`], allowing a
+/// measurement to retain multiple valid DP representations simultaneously.
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct SmoothedMaxDivergence;
+pub struct MultiDP;
 
-impl Measure for SmoothedMaxDivergence {
+#[deprecated(since = "0.15.0", note = "Use `MultiDP` instead.")]
+pub type SmoothedMaxDivergence = MultiDP;
+
+impl Measure for MultiDP {
     type Distance = PrivacyGuarantee;
 }
 
@@ -101,8 +109,8 @@ impl Measure for SmoothedMaxDivergence {
 /// The exact interpretation of the slack depends on the underlying privacy
 /// measure PM.
 ///
-/// ### Special case: `PM = MaxDivergence`
-/// When $d = (\epsilon, \delta)$ and `PM = MaxDivergence`,
+/// ### Special case: `PM = PureDP`
+/// When $d = (\epsilon, \delta)$ and `PM = PureDP`,
 /// this is exactly fixed $(\epsilon, \delta)$-approximate differential privacy:
 ///
 /// ```math
@@ -111,7 +119,7 @@ impl Measure for SmoothedMaxDivergence {
 /// ```
 ///
 /// The profile form of this notion, where $\delta$ is a function of $\epsilon$,
-/// is represented by [`SmoothedMaxDivergence`].
+/// can be retained as one representation in [`MultiDP`].
 ///
 /// Note that $d'$ and $\delta$ are not privacy parameters until quantified over
 /// all adjacent datasets, as is done in the definition of a measurement.
@@ -146,9 +154,13 @@ impl<M: Measure> Measure for Approximate<M> {
 /// \right)^\alpha \right] \le d \cdot \alpha.
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct ZeroConcentratedDivergence;
+#[allow(non_camel_case_types)]
+pub struct zCDP;
 
-impl Measure for ZeroConcentratedDivergence {
+#[deprecated(since = "0.15.0", note = "Use `zCDP` instead.")]
+pub type ZeroConcentratedDivergence = zCDP;
+
+impl Measure for zCDP {
     type Distance = f64;
 }
 
@@ -179,8 +191,11 @@ impl Measure for ZeroConcentratedDivergence {
 /// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct RenyiDivergence;
+pub struct RenyiDP;
 
-impl Measure for RenyiDivergence {
+#[deprecated(since = "0.15.0", note = "Use `RenyiDP` instead.")]
+pub type RenyiDivergence = RenyiDP;
+
+impl Measure for RenyiDP {
     type Distance = Function<f64, f64>;
 }

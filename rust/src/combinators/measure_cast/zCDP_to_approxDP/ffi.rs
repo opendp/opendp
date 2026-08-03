@@ -5,12 +5,12 @@ use crate::{
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{Approximate, ZeroConcentratedDivergence},
+    measures::{Approximate, zCDP},
 };
 
 #[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+/// is casted from `zCDP` to `MultiDP`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
@@ -44,7 +44,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
     let MO = measurement.output_measure.type_.clone();
     dispatch!(
         monomorphize,
-        [(MO, [ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
+        [(MO, [zCDP, Approximate<zCDP>])],
         (measurement)
     )
 }

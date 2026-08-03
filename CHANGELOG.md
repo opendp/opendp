@@ -529,7 +529,7 @@ Also:
 - Privacy profiles now take ε and return δ.
 - All privacy measures are no longer generic over the distance type
     - Remove the `T=float` arguments
-- `FixedSmoothedMaxDivergence<f64>` is now `Approximate<MaxDivergence>`
+- `FixedMultiDP<f64>` is now `Approximate<PureDP>`
 - rename SMDCurve to PrivacyProfile [#1999](https://github.com/opendp/opendp/pull/1999)
 
 
@@ -1079,14 +1079,14 @@ Testing:
     - `make_base_discrete_laplace` is equivalent to `make_base_geometric`, but executes in a constant-time number of operations
     - `make_base_discrete_gaussian` for the discrete gaussian mechanism
 - Add zero-concentrated differential privacy to the gaussian and discrete gaussian mechanisms
-    - Output measure is now always `ZeroConcentratedDivergence<Q>`, and output distance is in terms of rho
-- Add combinator to cast a measurement's output measure from `ZeroConcentratedDivergence<Q>` to `SmoothedMaxDivergence<Q>`
+    - Output measure is now always `zCDP<Q>`, and output distance is in terms of rho
+- Add combinator to cast a measurement's output measure from `zCDP<Q>` to `MultiDP<Q>`
     - `meas_smd = opendp.comb.make_zCDP_to_approxDP(meas_zcd)`
-- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve: 
+- The `MultiDP<Q>` measure represents distances as an `ε(δ)` privacy curve:
     - Can construct a curve by invoking the map: `curve = meas_smd.map(d_in)`
     - Can evaluate a curve at a given delta `epsilon = curve.epsilon(delta)`
-- Add `make_fix_delta` combinator to fix the delta parameter in a `SmoothedMaxDivergence<Q>` measure
-    - The resulting measure is `FixedSmoothedMaxDivergence<Q>`, where the output distance is an `(ε, δ)` pair
+- Add `make_fix_delta` combinator to fix the delta parameter in a `MultiDP<Q>` measure
+    - The resulting measure is `FixedMultiDP<Q>`, where the output distance is an `(ε, δ)` pair
     - `eps, delta = make_fix_delta(meas_smd, delta=1e-8).map(d_in)`
     - The fixed measure supports composition (unlike the curve measure)
 - Utility functions `set_default_float_type` and `set_default_int_type` to set the default bit depth of ints and floats
@@ -1129,7 +1129,7 @@ Testing:
     - MFPR has a different exponent range, which could lead to unintended rounding of floats that are out of exponent range
 
 ### Migration
-- `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
+- `make_base_gaussian`'s output measure is now zCDP.
     - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
     - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve. 
     - Use `fadp_meas = opendp.comb.make_fix_delta(adp_meas)` to change output distance from an ε(δ) curve to an (ε, δ) tuple

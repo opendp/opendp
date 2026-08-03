@@ -132,7 +132,7 @@ def test_supporting_elements():
     assert str(mechanism.input_domain.carrier_type) == "f64"
     assert str(mechanism.input_metric) == "AbsoluteDistance(f64)"
     assert str(mechanism.input_metric.distance_type) == "f64"
-    assert str(mechanism.output_measure) == "MaxDivergence"
+    assert str(mechanism.output_measure) == "PureDP"
     assert str(mechanism.output_measure.distance_type) == "f64"
 
 

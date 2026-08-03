@@ -61,7 +61,7 @@ def test_algorithm_err_elements(algorithm):
             model=model,
         )
 
-    msg = "output_measure (RenyiDivergence) must be max_divergence() or zero_concentrated_divergence()"
+    msg = "output_measure (RenyiDP) must be max_divergence() or zero_concentrated_divergence()"
     with pytest.raises(ValueError, match=re.escape(msg)):
         algorithm.make_marginals(
             dp.lazyframe_domain(

@@ -1,5 +1,5 @@
 # type: ignore
-class CompositionMeasure(ApproximateZeroConcentratedDivergence):
+class CompositionMeasure(ApproxZCDP):
     def composability(  # |\label{line:composability}|
         self, adaptivity: Adaptivity
     ) -> Composability:

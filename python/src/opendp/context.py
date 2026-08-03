@@ -291,11 +291,11 @@ def loss_of(
 
     >>> import opendp.prelude as dp
     >>> dp.loss_of(epsilon=1.0)
-    (MaxDivergence, 1.0)
+    (PureDP, 1.0)
     >>> dp.loss_of(epsilon=1.0, delta=1e-9)
-    (Approximate(MaxDivergence), (1.0, 1e-09))
+    (Approximate(PureDP), (1.0, 1e-09))
     >>> dp.loss_of(rho=1.0)
-    (ZeroConcentratedDivergence, 1.0)
+    (zCDP, 1.0)
 
     :param epsilon: Parameter for pure ε-DP.
     :param delta: Parameter for δ-approximate DP.
@@ -1128,24 +1128,24 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     from_to = str(chain.output_measure.type), str(to_measure.type)
 
-    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
+    if from_to == ("PureDP", "Approximate<PureDP>"):
         return make_approximate(chain)
 
     if from_to == (
-        "ZeroConcentratedDivergence",
-        "Approximate<ZeroConcentratedDivergence>",
+        "zCDP",
+        "Approximate<zCDP>",
     ):
         return make_approximate(chain)
 
-    if from_to == ("MaxDivergence", "ZeroConcentratedDivergence"):
+    if from_to == ("PureDP", "zCDP"):
         return make_pureDP_to_zCDP(chain)
 
     if from_to == (
-        "ZeroConcentratedDivergence",
-        "Approximate<MaxDivergence>",
+        "zCDP",
+        "Approximate<PureDP>",
     ) or from_to == (
-        "Approximate<ZeroConcentratedDivergence>",
-        "Approximate<MaxDivergence>",
+        "Approximate<zCDP>",
+        "Approximate<PureDP>",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
 
@@ -1175,10 +1175,10 @@ def _translate_measure_distance(
 
     constant = 1.0  # the choice of constant doesn't matter
 
-    if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
+    if from_to == ("PureDP", "Approximate<PureDP>"):
         return (d_from, 0.0)
 
-    if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
+    if from_to == ("zCDP", "PureDP"):
         space = atom_domain(T=float, nan=False), absolute_distance(T=float)
         scale = binary_search_param(
             lambda scale: make_pureDP_to_zCDP(make_laplace(*space, scale)),
@@ -1189,8 +1189,8 @@ def _translate_measure_distance(
         return make_laplace(*space, scale).map(constant)
 
     if from_to == (
-        "Approximate<MaxDivergence>",
-        "ZeroConcentratedDivergence",
+        "Approximate<PureDP>",
+        "zCDP",
     ):
 
         def _caster(measurement):
@@ -1206,8 +1206,8 @@ def _translate_measure_distance(
         return make_gaussian(*space, scale).map(constant)
 
     if from_to == (
-        "Approximate<MaxDivergence>",
-        "Approximate<ZeroConcentratedDivergence>",
+        "Approximate<PureDP>",
+        "Approximate<zCDP>",
     ):
         epsilon, delta = d_from
         if alpha is None or not (0 <= alpha < 1):

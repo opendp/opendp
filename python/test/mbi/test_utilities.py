@@ -46,7 +46,7 @@ def test_typed_dict_domain():
 
 
 def test_get_std():
-    message = "output_measure (RenyiDivergence) must be"
+    message = "output_measure (RenyiDP) must be"
     with pytest.raises(ValueError, match=re.escape(message)):
         get_std(dp.renyi_divergence(), 1.0)
 

@@ -4,12 +4,12 @@ use crate::{
     core::{FfiResult, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, PureDP},
 };
 
 #[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
-/// is casted from `Approximate<MaxDivergence>` to `SmoothedMaxDivergence`.
+/// is casted from `Approximate<PureDP>` to `MultiDP`.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
@@ -21,7 +21,7 @@ fn make_fixed_approxDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<Any
         measurement
             .output_measure
             .clone()
-            .downcast::<Approximate<MaxDivergence>>()?,
+            .downcast::<Approximate<PureDP>>()?,
         PrivacyMap::new_fallible(move |d_in: &AnyObject| {
             privacy_map.eval(d_in)?.downcast::<(f64, f64)>()
         }),

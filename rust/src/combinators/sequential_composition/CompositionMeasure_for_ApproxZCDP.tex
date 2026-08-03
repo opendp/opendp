@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{CompositionMeasure for Approximate<MaxDivergence>}}
+\title{\texttt{CompositionMeasure for Approximate<zCDP>}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -11,7 +11,7 @@
 
 \contrib
 Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
-for \texttt{Approximate<MaxDivergence>} in \asOfCommit{mod.rs}{f5bb719}.
+for \texttt{Approximate<zCDP>} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -23,7 +23,7 @@ Types matching pseudocode.
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ApproximateMaxDivergence.py}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ApproxZCDP.py}
 
 \subsection*{Postcondition}
 \begin{theorem}
@@ -34,19 +34,16 @@ None
 
 \begin{proof}
   By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$,
-  where the summation is applied independently to epsilons and deltas, and the comparison applies to both the global epsilon and global delta.
+  where the summation is applied independently to rhos and deltas, and the comparison applies to both the global rho and global delta.
 
   \begin{center}
     \begin{tabular}{ r | l l }
       Adaptivity & Sequential & Concurrent \\ 
       \hline
-      Non-Adaptive & Theorem~1\cite{dwork2006gaussian} & Theorem~1.3\cite{vadhan2023concurrent} \\  
-      Adaptive & Theorem~1\cite{dwork2006gaussian} & Theorem~1.3\cite{vadhan2023concurrent} \\
-      Fully-Adaptive & Lemma~3.5\cite{rogers2021payasyougo} & Theorem~1.3\cite{vadhan2023concurrent}
+      Non-Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\  
+      Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\
+      Fully-Adaptive & Theorem~1\cite{whitehouse2023fullyadaptive} & None
     \end{tabular}
-
-    The reference for fully adaptive sequential composition is specifically for the version of the paper prior to correction (v1, not v2).
-    The correction is not necessary for the privacy proof when odometers are defined in terms of a truncated view.
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.
   \end{center}
