@@ -6,7 +6,13 @@ use crate::{
     utilities::search::{Bands, fallible_binary_search},
 };
 
+mod approxdp;
 pub(crate) mod logspace;
+mod profile_to_tradeoff;
+mod tradeoff;
+
+#[cfg(feature = "ffi")]
+mod tradeoff_ffi;
 use logspace::{
     check_delta, check_log_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked,
     log_to_delta_upper, logaddexp_upper,
@@ -80,6 +86,7 @@ impl ApproxDPRepr {
 pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
+    tradeoff: Option<TradeoffRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -101,41 +108,198 @@ impl PrivacyGuarantee {
         self
     }
 
+    /// Attach the symmetric tradeoff implied by the stored approximate-DP certificate.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(non_snake_case)]
+    pub(crate) fn with_approxDP_tradeoff_trusted(mut self) -> Fallible<Self> {
+        let parameters = self.approx_dp().ok_or_else(|| {
+            err!(
+                FailedMap,
+                "certified ApproxDP-to-tradeoff conversion requires an approximate-DP certificate"
+            )
+        })?;
+        let points = vec![ApproxDPPoint::build(parameters)?];
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(move |alpha| approxdp::beta_via_approxDP(&points, alpha)),
+            symmetric: true,
+        });
+        Ok(self)
+    }
+
+    /// Attach a functionally pure, nonincreasing, convex tradeoff lower bound
+    /// on the entire real interval [0, 1], not just its representable inputs.
+    /// These properties must hold for the actual numerical callback.
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(beta),
+            symmetric: false,
+        });
+        Ok(self)
+    }
+
+    /// Attach a genuinely symmetric tradeoff satisfying the contract of
+    /// [`Self::with_tradeoff`]. This attestation is the caller's responsibility.
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_symmetric_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(beta),
+            symmetric: true,
+        });
+        Ok(self)
+    }
+
+    /// Return only an explicitly supplied symmetric tradeoff representation.
+    #[cfg(feature = "honest-but-curious")]
+    pub(crate) fn symmetric_tradeoff(&self) -> Fallible<Arc<TradeoffFn>> {
+        match &self.tradeoff {
+            Some(TradeoffRepresentation {
+                beta,
+                symmetric: true,
+            }) => Ok(beta.clone()),
+            Some(_) => fallible!(
+                FailedMap,
+                "privacy guarantee requires an explicitly symmetric tradeoff representation"
+            ),
+            None => fallible!(
+                FailedMap,
+                "privacy guarantee requires an explicitly supplied symmetric tradeoff representation"
+            ),
+        }
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
-        min_bound(
-            self.approx_dp.as_ref().map(|repr| {
-                if epsilon < repr.epsilon {
-                    1.0
-                } else {
-                    repr.delta
-                }
-            }),
-            self.profile
-                .as_ref()
-                .map(|profile| profile.delta(&[epsilon]).map(|values| values[0]))
-                .transpose()?,
+        combine_bounds(
+            [
+                self.approx_dp.as_ref().map(|repr| {
+                    if epsilon < repr.epsilon {
+                        1.0
+                    } else {
+                        repr.delta
+                    }
+                }),
+                self.profile
+                    .as_ref()
+                    .map(|profile| profile.delta(&[epsilon]).map(|values| values[0]))
+                    .transpose()?,
+                self.tradeoff
+                    .as_ref()
+                    .map(|repr| {
+                        tradeoff::delta_via_tradeoff(repr.beta.as_ref(), repr.symmetric, epsilon)
+                    })
+                    .transpose()?,
+            ],
+            f64::min,
         )
     }
 
     /// Return the tightest epsilon bound, propagating representation errors.
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         check_delta(delta)?;
-        min_bound(
-            self.approx_dp.as_ref().map(|repr| {
-                if delta == 1.0 {
-                    0.0
-                } else if delta < repr.delta {
-                    f64::INFINITY
-                } else {
-                    repr.epsilon
-                }
-            }),
-            self.profile
-                .as_ref()
-                .map(|profile| profile.epsilon(&[delta]).map(|values| values[0]))
-                .transpose()?,
+        combine_bounds(
+            [
+                self.approx_dp.as_ref().map(|repr| {
+                    if delta == 1.0 {
+                        0.0
+                    } else if delta < repr.delta {
+                        f64::INFINITY
+                    } else {
+                        repr.epsilon
+                    }
+                }),
+                self.profile
+                    .as_ref()
+                    .map(|profile| profile.epsilon(&[delta]).map(|values| values[0]))
+                    .transpose()?,
+                self.tradeoff
+                    .as_ref()
+                    .map(|repr| {
+                        invert_decreasing_callback(
+                            |epsilon| {
+                                tradeoff::delta_via_tradeoff(
+                                    repr.beta.as_ref(),
+                                    repr.symmetric,
+                                    epsilon,
+                                )
+                            },
+                            delta,
+                        )
+                    })
+                    .transpose()?,
+            ],
+            f64::min,
+        )
+    }
+
+    /// Return the strongest beta lower bound, propagating representation errors.
+    pub fn beta(&self, alpha: f64) -> Fallible<f64> {
+        check_alpha(alpha)?;
+        if alpha == 1.0 {
+            return Ok(0.0);
+        }
+        combine_bounds(
+            [
+                self.approx_dp
+                    .as_ref()
+                    .map(|repr| approxdp::beta_via_certificate(repr, alpha))
+                    .transpose()?,
+                self.profile
+                    .as_ref()
+                    .map(|profile| profile_to_tradeoff::beta_via_profile(profile, alpha))
+                    .transpose()?,
+                self.tradeoff
+                    .as_ref()
+                    .map(|repr| {
+                        let beta = (repr.beta)(alpha)?;
+                        check_beta(beta)?;
+                        Ok(beta)
+                    })
+                    .transpose()?,
+            ],
+            f64::max,
+        )
+    }
+
+    /// Return the strongest left-inverse lower bound, propagating representation errors.
+    pub fn alpha(&self, beta: f64) -> Fallible<f64> {
+        check_beta(beta)?;
+        if beta == 1.0 {
+            return Ok(0.0);
+        }
+        combine_bounds(
+            [
+                self.approx_dp
+                    .as_ref()
+                    .map(|repr| {
+                        invert_beta_callback(
+                            |alpha| approxdp::beta_via_certificate(repr, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
+                self.profile
+                    .as_ref()
+                    .map(|profile| {
+                        invert_beta_callback(
+                            |alpha| profile_to_tradeoff::beta_via_profile(profile, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
+                self.tradeoff
+                    .as_ref()
+                    .map(|repr| invert_beta_callback(repr.beta.as_ref(), beta))
+                    .transpose()?,
+            ],
+            f64::max,
         )
     }
 
@@ -155,16 +319,36 @@ impl std::fmt::Debug for PrivacyGuarantee {
         f.debug_struct("PrivacyGuarantee")
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
+            .field("tradeoff", &self.tradeoff.is_some())
             .finish()
     }
 }
 
-fn min_bound(certificate: Option<f64>, profile: Option<f64>) -> Fallible<f64> {
-    match (certificate, profile) {
-        (Some(bound), Some(other)) => Ok(bound.min(other)),
-        (Some(bound), None) | (None, Some(bound)) => Ok(bound),
-        (None, None) => fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
-    }
+fn combine_bounds(bounds: [Option<f64>; 3], combine: fn(f64, f64) -> f64) -> Fallible<f64> {
+    bounds
+        .into_iter()
+        .flatten()
+        .reduce(combine)
+        .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))
+}
+
+#[derive(Clone)]
+struct TradeoffRepresentation {
+    beta: Arc<TradeoffFn>,
+    symmetric: bool,
+}
+
+type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+
+// Certified arithmetic cache for a source certificate's tradeoff envelope.
+// This is not a PrivacyProfile representation or public point constructor.
+#[derive(Clone, Debug)]
+struct ApproxDPPoint {
+    epsilon: f64,
+    delta: f64,
+    one_minus_delta: dashu::rational::RBig,
+    exp_eps_up: dashu::rational::RBig,
+    exp_neg_eps_down: dashu::rational::RBig,
 }
 
 impl PrivacyProfile {
@@ -400,6 +584,37 @@ fn invert_decreasing_callback(
         lower = upper;
     }
     Ok(f64::INFINITY)
+}
+
+/// Lower-bound the left generalized inverse with strict numerical witnesses.
+fn invert_beta_callback(beta: impl Fn(f64) -> Fallible<f64>, target: f64) -> Fallible<f64> {
+    let predicate = |alpha: &f64| {
+        let value = beta(*alpha)?;
+        check_beta(value)?;
+        Ok(value > target)
+    };
+    if !predicate(&0.0)? {
+        return Ok(0.0);
+    }
+    if predicate(&1.0)? {
+        return Ok(1.0);
+    }
+    fallible_binary_search(predicate, (0.0, 1.0))
+}
+
+fn check_alpha(alpha: f64) -> Fallible<()> {
+    check_unit_interval(alpha, "alpha")
+}
+
+fn check_beta(beta: f64) -> Fallible<()> {
+    check_unit_interval(beta, "beta")
+}
+
+fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
+    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+        return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {
