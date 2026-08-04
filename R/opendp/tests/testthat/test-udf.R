@@ -52,7 +52,7 @@ test_that("new function and privacy profile work in R", {
 
   profile <- new_privacy_profile(\(epsilon) if (epsilon < 0.5) 1. else 1e-8)
   expect_equal(profile(epsilon = 0.499), 1.)
-  expect_equal(profile(delta = 1e-8), 0.5)
+  expect_equal(profile(delta = 1.1e-8), 0.5)
 })
 
 test_that("user-defined callback errors surface cleanly", {

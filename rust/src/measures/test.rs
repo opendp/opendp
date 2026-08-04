@@ -25,6 +25,7 @@ fn multidp_capabilities_are_inspectable() {
     let pure = MultiDP::with_profile(Purity::Pure);
     let approximate = MultiDP::with_profile(Purity::Approximate);
     let empty = MultiDP::default();
+    let tradeoff = MultiDP::with_tradeoff();
 
     assert_eq!(pure.capabilities().profile(), Some(Purity::Pure));
     assert_eq!(
@@ -32,6 +33,8 @@ fn multidp_capabilities_are_inspectable() {
         Some(Purity::Approximate)
     );
     assert_eq!(empty.capabilities().profile(), None);
+    assert!(!empty.capabilities().tradeoff());
+    assert!(tradeoff.capabilities().tradeoff());
     assert!(format!("{pure:?}").contains("Pure"));
     assert!(format!("{approximate:?}").contains("Approximate"));
 }

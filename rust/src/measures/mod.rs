@@ -93,17 +93,28 @@ pub(crate) enum Purity {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) struct PrivacyCapabilities {
     profile: Option<Purity>,
+    tradeoff: bool,
 }
 
 impl PrivacyCapabilities {
     pub(crate) fn with_profile(purity: Purity) -> Self {
         Self {
             profile: Some(purity),
+            tradeoff: false,
         }
     }
 
     pub(crate) fn profile(&self) -> Option<Purity> {
         self.profile
+    }
+
+    pub(crate) fn with_tradeoff(mut self) -> Self {
+        self.tradeoff = true;
+        self
+    }
+
+    pub(crate) fn tradeoff(&self) -> bool {
+        self.tradeoff
     }
 }
 
@@ -125,6 +136,10 @@ impl MultiDP {
 
     pub(crate) fn with_profile(purity: Purity) -> Self {
         Self::new(PrivacyCapabilities::with_profile(purity))
+    }
+
+    pub(crate) fn with_tradeoff() -> Self {
+        Self::new(PrivacyCapabilities::default().with_tradeoff())
     }
 
     pub(crate) fn capabilities(&self) -> &PrivacyCapabilities {
