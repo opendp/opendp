@@ -1,10 +1,13 @@
+use dashu::{rational::RBig, rbig};
+use opendp_derive::proven;
+
 use crate::{
     error::Fallible,
     measures::{
         ApproxDPPoint,
-        curves::{check_epsilon, logspace::check_delta},
+        curves::{check_delta, check_epsilon},
     },
-    traits::CInterval,
+    traits::{InfCast, SInterval, backend::Dashu},
 };
 
 impl ApproxDPPoint {
@@ -12,12 +15,43 @@ impl ApproxDPPoint {
         check_epsilon(epsilon)?;
         check_delta(delta)?;
 
-        let epsilon = CInterval::point(epsilon)?;
+        let epsilon = SInterval::<Dashu>::point(epsilon)?;
+        let exp_eps = epsilon.clone().exp()?;
+        let exp_neg_eps = (-epsilon.clone())?.exp()?;
+
+        let exp_eps_up = RBig::try_from(exp_eps.upper_f64()?)?;
+        let exp_neg_eps_down = RBig::try_from(exp_neg_eps.lower_f64()?)?;
+
         Ok(Self {
             epsilon: epsilon.upper_f64()?,
             delta,
+            one_minus_delta: RBig::ONE - RBig::try_from(delta)?,
+            exp_eps_up,
+            exp_neg_eps_down,
         })
     }
+
+    #[proven(proof_path = "measures/curves/approxdp_point_beta.tex")]
+    #[inline]
+    pub fn beta(&self, alpha: &RBig) -> RBig {
+        let t1 = &self.one_minus_delta - &self.exp_eps_up * alpha;
+        let base = (&self.one_minus_delta - alpha).max(rbig!(0));
+        let t2 = &self.exp_neg_eps_down * base;
+
+        t1.max(t2).max(rbig!(0))
+    }
+}
+
+pub fn beta_via_approxDP(points: &[ApproxDPPoint], alpha: f64) -> Fallible<f64> {
+    let alpha = RBig::try_from(alpha)?;
+
+    let best = points
+        .iter()
+        .map(|p| p.beta(&alpha))
+        .max()
+        .unwrap_or_default();
+
+    Ok(f64::neg_inf_cast(best)?.clamp(0.0, 1.0))
 }
 
 pub fn delta_via_approxDP(points: &[ApproxDPPoint], epsilon: f64) -> Fallible<f64> {

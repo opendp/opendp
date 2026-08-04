@@ -1,9 +1,6 @@
-use crate::{
-    error::Fallible,
-    measures::curves::{LogProfileFn, eval_log_profile},
-};
+use crate::{error::Fallible, measures::curves::LogProfileFn};
 
-use super::logspace::delta_from_log_upper_unchecked;
+use super::{eval_log_profile, logspace::delta_from_log_upper_unchecked};
 
 /// Evaluate a conservative upper bound on a log-delta privacy profile.
 pub fn delta_via_profile(profile: &LogProfileFn, epsilon: f64) -> Fallible<f64> {

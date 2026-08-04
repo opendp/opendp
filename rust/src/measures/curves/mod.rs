@@ -2,19 +2,24 @@ use core::f64;
 use std::{cmp::Ordering, sync::Arc};
 
 use crate::measures::curves::{
-    approxdp::{delta_via_approxDP, epsilon_via_approxdp},
+    approxdp::{beta_via_approxDP, delta_via_approxDP, epsilon_via_approxdp},
     logspace::{check_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked},
     profile::delta_via_profile,
+    profile_to_tradeoff::beta_via_profile,
+    tradeoff::delta_via_tradeoff,
 };
+use dashu::rational::RBig;
 
 use crate::{
     error::{ErrorVariant, Fallible},
-    utilities::search::{Above, fallible_binary_search_by},
+    utilities::search::{Above, fallible_binary_search, fallible_binary_search_by},
 };
 
 mod approxdp;
 pub(crate) mod logspace;
 mod profile;
+mod profile_to_tradeoff;
+mod tradeoff;
 
 #[cfg(test)]
 mod test;
@@ -29,13 +34,14 @@ pub type PrivacyProfile = PrivacyGuarantee;
 ///
 /// Every representation stored in a `PrivacyGuarantee` holds conjunctively.
 /// Representations may differ in strength and in their closure properties under
-/// later operations. Privacy-profile queries are available through
-/// [`PrivacyGuarantee::delta`] and [`PrivacyGuarantee::epsilon`].
+/// later operations. The guarantee can be queried as a privacy profile or an
+/// f-DP tradeoff function.
 #[derive(Clone, Default)]
 pub struct PrivacyGuarantee {
     // invariant: order increasing in epsilon, nonincreasing in delta
     approx_dp: Option<Arc<[ApproxDPPoint]>>,
     profile: Option<Profile>,
+    tradeoff: Option<Tradeoff>,
 }
 
 #[derive(Clone)]
@@ -47,7 +53,6 @@ struct Profile {
 
 type ProfileFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 type LogProfileFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
-type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 
 impl Profile {
     fn new(log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
@@ -82,10 +87,23 @@ impl Profile {
     }
 }
 
+#[derive(Clone)]
+struct Tradeoff {
+    beta: Arc<TradeoffFn>,
+    symmetric: bool,
+}
+
+type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+
 #[derive(Clone, Debug)]
 pub(crate) struct ApproxDPPoint {
     epsilon: f64,
     delta: f64,
+    // allows to cache computations that are repeated many times in tradeoff evaluation
+    one_minus_delta: RBig,
+    exp_eps_up: RBig,
+    exp_neg_eps_down: RBig,
 }
 
 impl PrivacyGuarantee {
@@ -158,6 +176,14 @@ impl PrivacyGuarantee {
 
     /// Attach a privacy-profile representation mapping `epsilon -> delta`.
     ///
+    /// For tight conversion to f-DP, the profile should also preserve the
+    /// hockey-stick structure of true privacy profiles:
+    ///
+    /// * λ ↦ δ(log λ) is convex and nonincreasing for λ >= 1
+    ///
+    /// If this property is not satisfied, `beta(alpha)` remains conservative,
+    /// but may be loose because the optimizer may miss the best epsilon.
+    ///
     /// # Arguments
     /// * `curve` - A privacy profile mapping epsilon to delta
     ///
@@ -179,6 +205,14 @@ impl PrivacyGuarantee {
     }
 
     /// Attach a log-space privacy-profile representation mapping `epsilon -> log(delta)`.
+    ///
+    /// For tight conversion to f-DP, the profile should also preserve the
+    /// hockey-stick structure of true privacy profiles:
+    ///
+    /// * λ ↦ δ(log λ) is convex and nonincreasing for λ >= 1
+    ///
+    /// If this property is not satisfied, `beta(alpha)` remains conservative,
+    /// but may be loose because the optimizer may miss the best epsilon.
     ///
     /// # Arguments
     /// * `curve` - A privacy profile mapping epsilon to delta
@@ -211,6 +245,60 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Construct a symmetric tradeoff function from a callback mapping `alpha -> beta`.
+    ///
+    /// # Arguments
+    /// * `curve` - An $f$-DP tradeoff curve mapping alpha to beta
+    ///
+    /// # Why honest-but-curious?
+    ///
+    /// The tradeoff curve should implement a well-defined $\beta(\alpha)$ curve.
+    ///
+    /// * is functionally pure
+    /// * maps [0, 1] into finite beta values in [0, 1]
+    /// * is nonincreasing and convex on [0, 1]
+    /// * satisfies beta(1) = 0 and the self-duality relationship under the
+    ///   generalized-inverse convention implemented by [`PrivacyGuarantee::alpha`]
+    ///   (beta(0) may be less than one for singular failure mass)
+    /// * returns downward-conservative beta values if numerically approximate
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_symmetric_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(Tradeoff {
+            beta: Arc::new(beta),
+            symmetric: true,
+        });
+        Ok(self)
+    }
+
+    /// Construct a tradeoff function from a callback mapping `alpha -> beta`.
+    ///
+    /// # Arguments
+    /// * `curve` - An $f$-DP tradeoff curve mapping alpha to beta
+    ///
+    /// # Why honest-but-curious?
+    ///
+    /// The tradeoff curve should implement a well-defined $\beta(\alpha)$ curve:
+    ///
+    /// * is functionally pure
+    /// * maps [0, 1] into finite beta values in [0, 1]
+    /// * is nonincreasing and convex on [0, 1]
+    /// * satisfies beta(1) = 0; beta(0) may be less than one
+    /// * returns downward-conservative beta values if numerically approximate
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(Tradeoff {
+            beta: Arc::new(beta),
+            symmetric: false,
+        });
+        Ok(self)
+    }
+
     /// Evaluate the privacy profile at `epsilon`.
     ///
     /// # Arguments
@@ -223,12 +311,40 @@ impl PrivacyGuarantee {
             delta_via_profile(profile.as_ref(), epsilon)?
         } else if let Some(points) = &self.approx_dp {
             delta_via_approxDP(points, epsilon)?
+        } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
+            delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)?
         } else {
             return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
         };
 
         check_delta(delta)?;
         Ok(delta)
+    }
+
+    /// Return a conservative lower bound on beta at the given alpha in `[0, 1]`.
+    pub fn beta(&self, alpha: f64) -> Fallible<f64> {
+        check_alpha(alpha)?;
+
+        if alpha == 1.0 {
+            return Ok(0.0);
+        }
+
+        let beta = if let Some(Tradeoff { beta, .. }) = &self.tradeoff {
+            beta(alpha)?
+        } else if let Some(Profile { delta: profile, .. }) = &self.profile {
+            let profile = profile.clone();
+            beta_via_profile(
+                &move |epsilon| eval_log_profile(profile.as_ref(), epsilon),
+                alpha,
+            )?
+        } else if let Some(points) = &self.approx_dp {
+            beta_via_approxDP(points, alpha)?
+        } else {
+            return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
+        };
+
+        check_beta(beta)?;
+        Ok(beta)
     }
 
     /// Query the guarantee for the smallest `epsilon`
@@ -267,6 +383,52 @@ impl PrivacyGuarantee {
         }
 
         invert_decreasing_callback(|epsilon| self.delta(epsilon), delta)
+    }
+
+    /// Returns a conservative lower bound on the smallest alpha such that
+    /// beta(alpha) <= beta.
+    ///
+    /// # Arguments
+    /// * `beta` - What to fix beta to compute alpha.
+    pub fn alpha(&self, beta: f64) -> Fallible<f64> {
+        check_beta(beta)?;
+
+        if beta == 1.0 {
+            return Ok(0.0);
+        }
+
+        let alpha = if let Some(Tradeoff {
+            beta: beta_fn,
+            symmetric,
+        }) = &self.tradeoff
+        {
+            if *symmetric {
+                // For symmetric tradeoff curves, alpha(beta) == beta(beta).
+                beta_fn(beta)?
+            } else {
+                // Non-symmetric tradeoff is still the preferred beta representation,
+                // so invert the preferred beta path instead of falling through.
+                return self.alpha_by_inverting_beta(beta);
+            }
+        } else if let Some(Profile { delta: profile, .. }) = &self.profile {
+            let profile = profile.clone();
+            beta_via_profile(
+                &move |epsilon| eval_log_profile(profile.as_ref(), epsilon),
+                beta,
+            )?
+        } else if let Some(points) = &self.approx_dp {
+            beta_via_approxDP(points, beta)?
+        } else {
+            return fallible!(FailedFunction, "PrivacyGuarantee has no representation");
+        };
+
+        check_alpha(alpha)?;
+        Ok(alpha)
+    }
+
+    fn alpha_by_inverting_beta(&self, beta: f64) -> Fallible<f64> {
+        let passing = fallible_binary_search(|alpha| Ok(self.beta(*alpha)? <= beta), (0.0, 1.0))?;
+        Ok(passing.next_down().clamp(0.0, 1.0))
     }
 }
 
@@ -343,6 +505,21 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
             FailedMap,
             "epsilon ({epsilon}) must be a non-negative number"
         );
+    }
+    Ok(())
+}
+fn check_alpha(alpha: f64) -> Fallible<()> {
+    check_01(alpha, "alpha")
+}
+fn check_beta(beta: f64) -> Fallible<()> {
+    check_01(beta, "beta")
+}
+fn check_01(value: f64, name: &str) -> Fallible<()> {
+    if !value.is_finite() {
+        return fallible!(FailedMap, "{name} ({value}) must be finite");
+    }
+    if value.is_sign_negative() || value > 1.0 {
+        return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
     }
     Ok(())
 }

@@ -80,3 +80,22 @@ pub(in crate::measures::curves) fn delta_from_log_upper_unchecked(
     };
     SInterval::<Dashu>::between(0.0, delta_upper)
 }
+
+/// Return a certified lower bound for `1 - delta` from an upper log-delta
+/// bound. The subnormal branch avoids losing the result to ordinary-f64
+/// underflow or cancellation.
+pub(in crate::measures::curves) fn one_minus_delta_from_log_upper_unchecked(
+    log_delta: f64,
+) -> Fallible<SInterval<Dashu>> {
+    if log_delta == f64::NEG_INFINITY {
+        return SInterval::<Dashu>::point(1.0);
+    }
+
+    if log_delta < LOG_TRUE_MIN {
+        return (SInterval::<Dashu>::point(1.0)?
+            - SInterval::<Dashu>::between(0.0, F64_TRUE_MIN)?)?
+        .clamp01();
+    }
+
+    (SInterval::<Dashu>::point(0.0)? - SInterval::<Dashu>::point(log_delta)?.exp_m1()?)?.clamp01()
+}
