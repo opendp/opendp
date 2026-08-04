@@ -515,6 +515,21 @@ def test_privacy_guarantee_and_profile_pointer_roundtrips():
     assert reference() is None
 
 
+def test_privacy_guarantee_tradeoff_queries():
+    import math
+    from opendp.mod import PrivacyGuarantee
+    from opendp.measures import _privacy_guarantee_with_approxDP_tradeoff
+
+    guarantee = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+    assert guarantee.beta(alpha=0.3) == 0.7
+    assert math.nextafter(0.3, 0.0) <= guarantee.alpha(beta=0.7) <= 0.3
+    symmetric = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+    assert symmetric.beta(alpha=0.3) == 0.7
+    certificate = PrivacyGuarantee(approx_dp=(1.0, 0.1))
+    certified = _privacy_guarantee_with_approxDP_tradeoff(certificate)
+    assert certified.beta(alpha=0.3) >= 0.0
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

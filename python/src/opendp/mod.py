@@ -1373,15 +1373,23 @@ class PrivacyGuarantee(object):
         *,
         approx_dp: Optional[tuple[float, float]] = None,
         profile: Optional[PrivacyProfile] = None,
+        tradeoff: Optional[Callable[[float], float]] = None,
+        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
         _ptr: Any = None,
     ):
         if _ptr is not None:
-            if approx_dp is not None or profile is not None:
+            if any(
+                value is not None
+                for value in (approx_dp, profile, tradeoff, symmetric_tradeoff)
+            ):
                 raise TypeError("_ptr cannot be combined with guarantee constructors")
             self.guarantee = _ptr
             return
-        if approx_dp is None and profile is None:
-            raise TypeError("expected at least one of approx_dp or profile")
+        if all(
+            value is None
+            for value in (approx_dp, profile, tradeoff, symmetric_tradeoff)
+        ):
+            raise TypeError("expected at least one privacy representation")
         if approx_dp is not None and (
             not isinstance(approx_dp, tuple) or len(approx_dp) != 2
         ):
@@ -1393,6 +1401,7 @@ class PrivacyGuarantee(object):
             _new_privacy_guarantee,
             _privacy_guarantee_with_approx_dp,
             _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_tradeoff,
         )
 
         guarantee = _new_privacy_guarantee()
@@ -1400,6 +1409,14 @@ class PrivacyGuarantee(object):
             guarantee = _privacy_guarantee_with_approx_dp(guarantee, *approx_dp)
         if profile is not None:
             guarantee = _privacy_guarantee_with_profile(guarantee, profile)
+        if tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(
+                guarantee, tradeoff, symmetric=False
+            )
+        if symmetric_tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(
+                guarantee, symmetric_tradeoff, symmetric=True
+            )
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):
@@ -1411,6 +1428,16 @@ class PrivacyGuarantee(object):
         from opendp.measures import privacy_guarantee_epsilon
 
         return privacy_guarantee_epsilon(self.guarantee, delta)
+
+    def beta(self, alpha):
+        from opendp.measures import _privacy_guarantee_beta
+
+        return _privacy_guarantee_beta(self.guarantee, alpha)
+
+    def alpha(self, beta):
+        from opendp.measures import _privacy_guarantee_alpha
+
+        return _privacy_guarantee_alpha(self.guarantee, beta)
 
 
 class _PartialConstructor(object):

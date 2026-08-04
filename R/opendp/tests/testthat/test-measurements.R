@@ -270,6 +270,15 @@ test_that("privacy guarantee construction validates representations", {
   expect_error(empty(delta = 1.), "no representation")
 })
 
+test_that("privacy guarantee tradeoff queries", {
+  enable_features("honest-but-curious")
+  guarantee <- privacy_guarantee(tradeoff = \(alpha) 1. - alpha)
+  expect_equal(guarantee(alpha = 0.3), 0.7)
+  expect_equal(guarantee(beta = 0.7), 0.3)
+  symmetric <- privacy_guarantee(symmetric_tradeoff = \(alpha) 1. - alpha)
+  expect_equal(symmetric(alpha = 0.3), 0.7)
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)

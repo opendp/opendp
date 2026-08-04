@@ -97,11 +97,27 @@ pub(crate) enum Purity {
 pub(crate) struct PrivacyCapabilities {
     approx_dp: Option<Purity>,
     profile: Option<Purity>,
+    tradeoff: bool,
 }
 
 impl PrivacyCapabilities {
     pub(crate) fn new(approx_dp: Option<Purity>, profile: Option<Purity>) -> Self {
-        Self { approx_dp, profile }
+        Self {
+            approx_dp,
+            profile,
+            tradeoff: false,
+        }
+    }
+
+    pub(crate) fn with_tradeoff() -> Self {
+        Self {
+            tradeoff: true,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn tradeoff(&self) -> bool {
+        self.tradeoff
     }
 
     pub(crate) fn approx_dp(&self) -> Option<Purity> {
@@ -127,6 +143,10 @@ pub struct MultiDP {
 impl MultiDP {
     pub(crate) fn new(capabilities: PrivacyCapabilities) -> Self {
         Self { capabilities }
+    }
+
+    pub(crate) fn with_tradeoff() -> Self {
+        Self::new(PrivacyCapabilities::with_tradeoff())
     }
 
     pub(crate) fn with_approx_dp(purity: Purity) -> Self {
