@@ -1208,22 +1208,38 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     '''Aggregate of simultaneously valid privacy representations.'''
     _type_ = AnyObject
 
-    def __init__(self, *, profile: Optional[PrivacyProfile] = None, _ptr=None):
+    def __init__(
+        self,
+        *,
+        profile: Optional[PrivacyProfile] = None,
+        tradeoff: Optional[Callable[[float], float]] = None,
+        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        _ptr=None,
+    ):
         if _ptr is not None:
             self.guarantee = _ptr
             return
-        if profile is None:
-            raise TypeError("expected `profile=PrivacyProfile(...)")
-        if not isinstance(profile, PrivacyProfile):
+        if profile is None and tradeoff is None and symmetric_tradeoff is None:
+            raise TypeError("expected at least one privacy representation")
+        if profile is not None and not isinstance(profile, PrivacyProfile):
             raise TypeError("profile must be a PrivacyProfile")
 
         from opendp.measures import (
             _new_privacy_guarantee,
             _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_tradeoff,
         )
-        guarantee = _privacy_guarantee_with_profile(
-            _new_privacy_guarantee(), profile
-        )
+        guarantee = _new_privacy_guarantee()
+        if profile is not None:
+            guarantee = _privacy_guarantee_with_profile(guarantee, profile)
+        if tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(
+                guarantee, tradeoff, symmetric=False
+            )
+        if symmetric_tradeoff is not None:
+            guarantee = _privacy_guarantee_with_tradeoff(
+                guarantee, symmetric_tradeoff, symmetric=True
+            )
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):
@@ -1233,6 +1249,14 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     def epsilon(self, delta):
         from opendp.measures import privacy_guarantee_epsilon
         return privacy_guarantee_epsilon(self.guarantee, delta)
+
+    def beta(self, alpha):
+        from opendp.measures import _privacy_guarantee_beta
+        return _privacy_guarantee_beta(self.guarantee, alpha)
+
+    def alpha(self, beta):
+        from opendp.measures import _privacy_guarantee_alpha
+        return _privacy_guarantee_alpha(self.guarantee, beta)
 
 
 class _PartialConstructor(object):

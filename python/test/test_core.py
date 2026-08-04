@@ -210,6 +210,17 @@ def test_privacy_guarantee_profile_representation_is_distinct():
     assert guarantee.delta(1.0) == pytest.approx(profile.delta(1.0))
 
 
+def test_privacy_guarantee_tradeoff_queries():
+    from opendp.mod import PrivacyGuarantee
+
+    guarantee = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+    assert guarantee.beta(alpha=0.3) == 0.7
+    assert guarantee.alpha(beta=0.7) == 0.3
+
+    symmetric = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+    assert symmetric.beta(alpha=0.3) == 0.7
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

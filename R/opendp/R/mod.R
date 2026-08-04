@@ -424,9 +424,9 @@ new_privacy_profile_internal <- function(ptr) {
 #' @concept mod
 #' @param ptr a pointer to a privacy guarantee
 new_privacy_guarantee_internal <- function(ptr) {
-  privacy_guarantee <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+  privacy_guarantee <- function(attr, epsilon, delta, alpha, beta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) + missing(beta) != 4) {
+      stop("expected exactly one of attr, epsilon, delta, alpha or beta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
@@ -435,6 +435,14 @@ new_privacy_guarantee_internal <- function(ptr) {
 
     if (!missing(delta)) {
       return(privacy_guarantee_epsilon(privacy_guarantee, delta))
+    }
+
+    if (!missing(alpha)) {
+      return(`_privacy_guarantee_beta`(ptr, alpha))
+    }
+
+    if (!missing(beta)) {
+      return(`_privacy_guarantee_alpha`(ptr, beta))
     }
 
     switch(attr,
@@ -446,16 +454,31 @@ new_privacy_guarantee_internal <- function(ptr) {
   privacy_guarantee
 }
 
-#' Construct a privacy guarantee from an existing privacy profile.
+#' Construct a privacy guarantee from profile and f-DP representations.
 #'
 #' @param profile A PrivacyProfile object.
+#' @param tradeoff Callback mapping alpha to beta.
+#' @param symmetric_tradeoff Symmetric callback mapping alpha to beta.
 #' @export
-privacy_guarantee <- function(profile) {
-  if (missing(profile)) {
-    stop("expected profile", call. = FALSE)
+privacy_guarantee <- function(profile, tradeoff, symmetric_tradeoff) {
+  if (missing(profile) && missing(tradeoff) && missing(symmetric_tradeoff)) {
+    stop("expected at least one privacy representation", call. = FALSE)
   }
+  if (!missing(profile) && !inherits(profile, "privacy_profile")) {
+    stop("profile must be a PrivacyProfile", call. = FALSE)
+  }
+
   guarantee <- `_new_privacy_guarantee`()
-  `_privacy_guarantee_with_profile`(guarantee, profile)
+  if (!missing(profile)) {
+    guarantee <- `_privacy_guarantee_with_profile`(guarantee, profile)
+  }
+  if (!missing(tradeoff)) {
+    guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, tradeoff, symmetric = FALSE)
+  }
+  if (!missing(symmetric_tradeoff)) {
+    guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, symmetric_tradeoff, symmetric = TRUE)
+  }
+  guarantee
 }
 
 #' new queryable
