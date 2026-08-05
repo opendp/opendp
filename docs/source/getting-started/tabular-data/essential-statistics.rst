@@ -11,7 +11,7 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
   - of rows in frame, including nulls (``len()``)
   - of rows in column, including nulls (``.len()``)
   - of rows in column, excluding nulls (``.count()``)
-  - of rows in column, excluding nulls (``.null_count()``)
+  - of rows in column, exclusively nulls (``.null_count()``)
   - of *unique* rows in column, including null (``.n_unique()``)
 
 - Sum (``.sum(bounds)``)
@@ -22,7 +22,7 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
 We will use `sample
 data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
-from the Labor Force Survey in France.
+from the Labour Force Survey in France.
 
 .. tab-set::
 
