@@ -117,6 +117,24 @@ pub enum ErrorVariant {
     #[error("Search")]
     Search,
 
+    /// A numerical operand lies outside the operation's mathematical domain.
+    #[error("NumericDomain")]
+    NumericDomain,
+
+    /// The mathematical result is below the provider's representable range.
+    #[error("NumericRangeBelow")]
+    NumericRangeBelow,
+
+    /// The mathematical result is above the provider's representable range.
+    #[error("NumericRangeAbove")]
+    NumericRangeAbove,
+
+    #[error("NumericIndeterminate")]
+    NumericIndeterminate,
+
+    #[error("NumericBackend")]
+    NumericBackend,
+
     #[error("Overflow")]
     Overflow,
 
