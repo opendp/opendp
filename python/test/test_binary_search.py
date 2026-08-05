@@ -55,6 +55,33 @@ def test_binary_search():
     assert dp.binary_search(lambda x: x >= 5, T=int) == 5
 
 
+@pytest.mark.parametrize("bounds", [(0, None), (None, 10)])
+def test_binary_search_one_sided(bounds):
+    assert dp.binary_search(lambda x: x <= 5, bounds=bounds) == 5
+
+
+@pytest.mark.parametrize("bounds", [(0,), (0, 10, 20)])
+def test_binary_search_rejects_malformed_bounds(bounds):
+    with pytest.raises(ValueError, match="bounds must contain exactly two elements"):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+@pytest.mark.parametrize(
+    ("bounds", "message"),
+    [
+        ((10, None), "decision boundary is below the lower bound"),
+        ((None, 0), "decision boundary is above the upper bound"),
+    ],
+)
+def test_binary_search_one_sided_errors(bounds, message):
+    with pytest.raises(ValueError, match=message):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+def test_mixed_type_bounds():
+    with pytest.raises(TypeError, match="bounds must share the same type"):
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.))
+
 def test_binary_search_inferred_int():
     def predicate(v):
         if not isinstance(v, int):

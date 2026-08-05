@@ -329,6 +329,12 @@ get_first <- function(x) {
   }
 }
 
+get_first_non_null <- function(...) {
+  values <- list(...)
+  present <- Filter(Negate(is.null), values)
+  if (length(present) == 0) NULL else present[[1]]
+}
+
 #' Parse a runtime type or infer it from an example
 #'
 #' Mirrors Python's public `RuntimeType.parse_or_infer(...)` entrypoint.
