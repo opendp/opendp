@@ -809,11 +809,11 @@ class Query(object):
         ``d_in`` is the stability of the prior chain and ``d_out`` is the query's
         privacy allowance.
         """
-        from opendp.extras.sklearn import SklearnEstimator
+        from opendp.extras.sklearn import DPEstimator
 
-        if not isinstance(estimator, SklearnEstimator):
+        if not isinstance(estimator, DPEstimator):
             raise ValueError(
-                "sklearn(...) expects an opendp.extras.sklearn.SklearnEstimator instance"
+                "sklearn(...) expects an opendp.extras.sklearn.DPEstimator instance"
             )
         if isinstance(self._chain, tuple):
             d_mid = self._d_in

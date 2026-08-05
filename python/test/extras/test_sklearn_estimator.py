@@ -1,9 +1,9 @@
 import pytest
 
-from opendp.extras.sklearn import SklearnEstimator
+from opendp.extras.sklearn import DPEstimator
 
 
-class _DummyEstimator(SklearnEstimator):
+class _DummyEstimator(DPEstimator):
     def __init__(self, marker="default"):
         self.marker = marker
 
@@ -21,7 +21,7 @@ class _BadQueryEstimator(_DummyEstimator):
         return object()
 
 
-class _CountEstimator(SklearnEstimator):
+class _CountEstimator(DPEstimator):
     def __init__(self, scale=1.0):
         self.scale = scale
 
@@ -42,14 +42,14 @@ class _CountEstimator(SklearnEstimator):
 
 def test_sklearn_estimator_is_abstract():
     with pytest.raises(TypeError):
-        SklearnEstimator()
+        DPEstimator()
 
     with pytest.raises(NotImplementedError):
-        SklearnEstimator.make(
+        DPEstimator.make(
             _DummyEstimator(), None, None, None, 1, 1  # type: ignore[arg-type]
         )
     with pytest.raises(NotImplementedError):
-        SklearnEstimator._ingest_release(_DummyEstimator(), None)
+        DPEstimator._ingest_release(_DummyEstimator(), None)
 
 
 def test_sklearn_estimator_clone_and_params():
@@ -97,7 +97,7 @@ def test_query_sklearn_rejects_non_estimator():
         d_in=1,
         d_out=1.0,
     )
-    with pytest.raises(ValueError, match="SklearnEstimator"):
+    with pytest.raises(ValueError, match="DPEstimator"):
         query.sklearn(object())
 
 
