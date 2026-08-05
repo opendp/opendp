@@ -50,6 +50,8 @@ def make_np_clip(
         return np.nan_to_num(current_norm)
 
     def _function(arg):
+        if arg.size == 0:
+            return arg
         with np.errstate(over="ignore"):
             # don't mutate the input array
             arg = arg - origin
