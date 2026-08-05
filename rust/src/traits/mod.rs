@@ -11,6 +11,9 @@ pub use bounded::*;
 mod arithmetic;
 pub use arithmetic::*;
 
+mod directed;
+pub use directed::*;
+
 mod cast;
 pub use cast::*;
 
