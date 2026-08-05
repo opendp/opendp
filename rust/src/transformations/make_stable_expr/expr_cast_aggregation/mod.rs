@@ -1,55 +1,24 @@
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
-use std::collections::HashMap;
-use std::sync::LazyLock;
 
 use super::StableExpr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
+use crate::traits::{CheckAtom, ExactIntCast, FiniteBounds};
 use crate::transformations::traits::UnboundedMetric;
 
 #[cfg(test)]
 mod test;
 
-// Constant hashmap of types to their allowed cast types.
-// This is necessary to prevent downcasting.
-static ALLOWED_TRANSFORMATIONS: LazyLock<HashMap<DataType, Vec<DataType>>> = LazyLock::new(|| {
-    let mut m = HashMap::new();
-    m.insert(
-        DataType::Int8,
-        vec![
-            DataType::Int8,
-            DataType::Int16,
-            DataType::Int32,
-            DataType::Int64,
-        ],
-    );
-    m.insert(
-        DataType::Int16,
-        vec![DataType::Int16, DataType::Int32, DataType::Int64],
-    );
-    m.insert(DataType::Int32, vec![DataType::Int32, DataType::Int64]);
-    m.insert(DataType::Int64, vec![DataType::Int64]);
-    m.insert(DataType::UInt32, vec![DataType::Int64]);
-    m
-});
-
-/// Make a Transformation that casts an aggregation output to int 64.
-/// Casting aggregations to i64 before noise is added can enable negative values.
+/// Make a Transformation that casts an integer aggregation output to a signed integer type.
 ///
-/// # Arguments
-/// * `input_domain` - Domain of input data
-/// * `input_metric` - Metric on input domain
-/// * `expr` - The input measurement to be cast
-///
-/// # Generics
-/// * `TIA` - Atomic Input Type to cast from
-/// * `TOA` - Atomic Output Type to cast into
+/// A cast is accepted when the input domain, including any bounds that are tighter than the
+/// input type's natural bounds, is representable by the output type.
 pub fn make_cast_aggregation<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
@@ -80,6 +49,7 @@ where
         })?
         .clone();
 
+    // Errors can reveal private aggregate values, so always use a non-strict cast.
     if matches!(options, CastOptions::Strict) {
         options = CastOptions::NonStrict;
     }
@@ -88,44 +58,28 @@ where
         .as_ref()
         .clone()
         .make_stable(input_domain, input_metric)?;
-
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let active_column = &mut output_domain.column;
+    let source_dtype = middle_domain.column.dtype();
+    let cast_succeeded = set_cast_domain(
+        &middle_domain.column,
+        &mut output_domain.column,
+        &to_type_dtype,
+    );
 
-    if ALLOWED_TRANSFORMATIONS.contains_key(&to_type_dtype) {
-        match to_type_dtype {
-            DataType::Int8 => active_column.set_element_domain(AtomDomain::<i8>::default()),
-            DataType::Int16 => active_column.set_element_domain(AtomDomain::<i16>::default()),
-            DataType::Int32 => active_column.set_element_domain(AtomDomain::<i32>::default()),
-            DataType::Int64 => active_column.set_element_domain(AtomDomain::<i64>::default()),
-            _ => return fallible!(MakeTransformation, "Unsupported integer target type."),
-        }
-    } else {
+    if !cast_succeeded {
         return fallible!(
             MakeTransformation,
-            "make_cast_aggregation cannot cast from {} to {}.",
-            active_column.dtype(),
-            to_type_dtype
-        );
-    }
-
-    if !ALLOWED_TRANSFORMATIONS
-        .get(&middle_domain.column.dtype())
-        .is_some_and(|targets| targets.contains(&to_type_dtype))
-    {
-        return fallible!(
-            MakeTransformation,
-            "cannot downcast from {} to {}",
-            middle_domain.column.dtype(),
+            "cannot downcast from {} to {}: input domain bounds are not representable by the target type",
+            source_dtype,
             to_type_dtype
         );
     }
 
     t_prior
         >> Transformation::new(
-            middle_domain.clone(),
+            middle_domain,
             middle_metric.clone(),
             output_domain,
             middle_metric,
@@ -136,4 +90,58 @@ where
             }),
             StabilityMap::new(Clone::clone),
         )?
+}
+
+fn set_cast_domain(
+    source: &SeriesDomain,
+    target: &mut SeriesDomain,
+    target_dtype: &DataType,
+) -> bool {
+    macro_rules! cast_from {
+        ($source_ty:ty) => {
+            match target_dtype {
+                DataType::Int8 => cast_atom_domain::<$source_ty, i8>(source)
+                    .map(|domain| target.set_element_domain(domain)),
+                DataType::Int16 => cast_atom_domain::<$source_ty, i16>(source)
+                    .map(|domain| target.set_element_domain(domain)),
+                DataType::Int32 => cast_atom_domain::<$source_ty, i32>(source)
+                    .map(|domain| target.set_element_domain(domain)),
+                DataType::Int64 => cast_atom_domain::<$source_ty, i64>(source)
+                    .map(|domain| target.set_element_domain(domain)),
+                _ => None,
+            }
+        };
+    }
+
+    match source.dtype() {
+        DataType::UInt32 => cast_from!(u32),
+        DataType::UInt64 => cast_from!(u64),
+        DataType::Int8 => cast_from!(i8),
+        DataType::Int16 => cast_from!(i16),
+        DataType::Int32 => cast_from!(i32),
+        DataType::Int64 => cast_from!(i64),
+        _ => None,
+    }
+    .is_some()
+}
+
+fn cast_atom_domain<TI, TO>(source: &SeriesDomain) -> Option<AtomDomain<TO>>
+where
+    TI: 'static + Clone + CheckAtom + FiniteBounds,
+    TO: 'static + CheckAtom + ExactIntCast<TI> + PartialOrd + Debug,
+{
+    let source = source.atom_domain::<TI>().ok()?;
+
+    let Some(bounds) = &source.bounds else {
+        TO::exact_int_cast(TI::MIN_FINITE).ok()?;
+        TO::exact_int_cast(TI::MAX_FINITE).ok()?;
+        return Some(AtomDomain::default());
+    };
+
+    let (lower, upper) = bounds.get_closed().ok()?;
+    AtomDomain::new_closed((
+        TO::exact_int_cast(lower).ok()?,
+        TO::exact_int_cast(upper).ok()?,
+    ))
+    .ok()
 }

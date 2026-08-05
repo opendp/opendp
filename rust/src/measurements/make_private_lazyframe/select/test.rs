@@ -46,7 +46,7 @@ fn test_select() -> Fallible<()> {
         FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.clone().select(&[
-            col("A").dp().sum((lit(0), lit(3)), Some(0.)),
+            col("A").dp().sum((lit(0), lit(3)), Some(0.), false),
             len().dp().noise(Some(0.)),
         ]),
         Some(1.),

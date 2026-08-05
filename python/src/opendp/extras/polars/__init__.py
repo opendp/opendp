@@ -345,13 +345,23 @@ class DPExpr(object):
             returns_scalar=True,
         )
 
-    def sum(self, bounds: tuple[float, float], scale: float | None = None):
+    def sum(
+        self,
+        bounds: tuple[float, float],
+        scale: float | None = None,
+        signed: bool = False,
+    ):
         """Compute the differentially private sum.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        When signed=True, an unsigned integer sum is cast to Int64 before noise is added,
+        so negative noisy outputs are preserved. A UInt64 sum is first clipped to the
+        maximum Int64 value.
+
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameter for the noise distribution
+        :param signed: if True, unsigned integer sums have output type Int64
 
         :example:
 
@@ -388,7 +398,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_sum",
-            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale, signed),
             returns_scalar=True,
             changes_length=True,
         )

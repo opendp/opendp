@@ -17,9 +17,11 @@ fn make_expr_drop_nan_standard() -> Fallible<()> {
         .with_margin(Margin::select().with_max_length(5))?;
     let lf = df!("" => &[1.0, f32::NAN])?.lazy();
 
-    let lf_filter = lf
-        .clone()
-        .select([col("").drop_nans().dp().sum((lit(0.0), lit(1.0)), None)]);
+    let lf_filter =
+        lf.clone().select([col("")
+            .drop_nans()
+            .dp()
+            .sum((lit(0.0), lit(1.0)), None, false)]);
 
     let m_obs = make_private_lazyframe(
         lf_domain,
@@ -45,9 +47,9 @@ fn make_expr_drop_null_standard() -> Fallible<()> {
         .with_margin(Margin::select().with_max_length(5))?;
     let lf = df!("" => &[Some(1i32), None])?.lazy();
 
-    let lf_filter = lf
-        .clone()
-        .select([col("").drop_nulls().dp().sum((lit(0), lit(1)), None)]);
+    let lf_filter =
+        lf.clone()
+            .select([col("").drop_nulls().dp().sum((lit(0), lit(1)), None, false)]);
 
     let m_obs = make_private_lazyframe(
         lf_domain,

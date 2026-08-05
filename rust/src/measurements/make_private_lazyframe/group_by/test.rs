@@ -112,7 +112,10 @@ fn test_explicit_keys() -> Fallible<()> {
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
     let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();
 
-    let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
+    let sum_expr = col("B")
+        .dp()
+        .sum((lit(0.0), lit(1.0)), None, false)
+        .alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
     let median_expr = col("B")
         .fill_nan(0.0)

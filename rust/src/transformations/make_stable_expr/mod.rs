@@ -33,6 +33,9 @@ mod expr_cast_aggregation;
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
+mod expr_clip_aggregation;
+
+#[cfg(feature = "contrib")]
 mod expr_col;
 
 #[cfg(feature = "contrib")]
@@ -264,6 +267,16 @@ where
 
             #[cfg(feature = "contrib")]
             Cast { .. } => expr_cast_aggregation::make_cast_aggregation::<MI, P>(
+                input_domain,
+                input_metric,
+                self,
+            ),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::Clip { .. },
+                ..
+            } => expr_clip_aggregation::make_clip_aggregation::<MI, P>(
                 input_domain,
                 input_metric,
                 self,

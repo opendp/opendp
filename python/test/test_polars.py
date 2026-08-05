@@ -322,6 +322,37 @@ def test_signed_counting_queries(signed):
     pl_testing.assert_frame_equal(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("dtype", "T", "values", "bounds", "expected"),
+    [
+        ("UInt32", dp.u32, [1, 2], (0, 2), 3),
+        ("UInt64", dp.u64, [2**63 - 1, 1], (0, 2**63 - 1), 2**63 - 1),
+    ],
+)
+def test_signed_sum(dtype, T, values, bounds, expected):
+    """Signed UInt64 sums clip to Int64 max before casting."""
+    pl = pytest.importorskip("polars")
+    dp.enable_features("contrib")
+
+    lf = pl.LazyFrame({"A": pl.Series(values, dtype=getattr(pl, dtype))})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=T))]),
+        dp.polars.Margin(max_length=len(values)),
+    )
+    plan = lf.select(pl.col("A").dp.sum(bounds, scale=0.0, signed=True))
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        plan,
+        0.0,
+    )
+    result = measurement(lf).collect()
+
+    assert result.schema["A"] == pl.Int64
+    assert result["A"][0] == expected
+
+
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
