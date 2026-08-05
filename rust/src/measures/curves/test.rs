@@ -252,6 +252,90 @@ fn test_renyi_representation_queries_and_aggregation() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_zcdp_representation_queries_and_source_delta() -> Fallible<()> {
+    let exact = PrivacyGuarantee::new().with_zCDP(0.5, 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_zCDP(0.5, 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert!(approximate.epsilon(0.1f64.next_down())?.is_infinite());
+    assert!(approximate.beta(0.5)? >= 0.0);
+    assert!(approximate.alpha(0.5)? >= 0.0);
+
+    assert!(PrivacyGuarantee::new().with_zCDP(-0.0, 0.0).is_err());
+    assert!(PrivacyGuarantee::new().with_zCDP(0.5, -0.0).is_err());
+    assert!(PrivacyGuarantee::new().with_zCDP(f64::NAN, 0.0).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_and_rdp_are_independent_representations() -> Fallible<()> {
+    let guarantee = PrivacyGuarantee::new()
+        .with_zCDP(0.0, 0.2)?
+        .with_renyiDP_trusted(|_| Ok(0.0), 0.7)?;
+
+    // Both representations are queried; zCDP is not silently replaced by RDP.
+    assert_eq!(guarantee.delta(f64::INFINITY)?, 0.2);
+    assert_eq!(guarantee.epsilon(0.2)?, 0.0);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_zcdp_beats_intentionally_loose_native_rdp() -> Fallible<()> {
+    // zCDP rho=.1 embeds as the all-orders curve .1*alpha. This is a valid
+    // all-orders RDP fact, but intentionally looser than that induced curve.
+    let loose = PrivacyGuarantee::new().with_renyiDP(|alpha| Ok(10.0 * alpha), 0.0)?;
+    let zcdp = PrivacyGuarantee::new().with_zCDP(0.1, 0.0)?;
+    let combined = loose.clone().with_zCDP(0.1, 0.0)?;
+
+    let loose_delta = loose.delta(1.0)?;
+    let zcdp_delta = zcdp.delta(1.0)?;
+    let combined_delta = combined.delta(1.0)?;
+    assert!(zcdp_delta < loose_delta);
+    assert_eq!(combined_delta, zcdp_delta);
+    let loose_epsilon = loose.epsilon(0.1)?;
+    let zcdp_epsilon = zcdp.epsilon(0.1)?;
+    let combined_epsilon = combined.epsilon(0.1)?;
+    assert!(zcdp_epsilon < loose_epsilon);
+    assert_eq!(combined_epsilon, zcdp_epsilon);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_native_rdp_beats_independently_looser_zcdp() -> Fallible<()> {
+    // The native .01*alpha curve is tighter than the .1*alpha curve induced
+    // by the independently stored zCDP fact.
+    let native = PrivacyGuarantee::new().with_renyiDP(|alpha| Ok(0.01 * alpha), 0.0)?;
+    let zcdp = PrivacyGuarantee::new().with_zCDP(0.1, 0.0)?;
+    let combined = native.clone().with_zCDP(0.1, 0.0)?;
+
+    let native_delta = native.delta(1.0)?;
+    let zcdp_delta = zcdp.delta(1.0)?;
+    let combined_delta = combined.delta(1.0)?;
+    assert!(native_delta < zcdp_delta);
+    assert_eq!(combined_delta, native_delta);
+    let native_epsilon = native.epsilon(0.1)?;
+    let zcdp_epsilon = zcdp.epsilon(0.1)?;
+    let combined_epsilon = combined.epsilon(0.1)?;
+    assert!(native_epsilon < zcdp_epsilon);
+    assert_eq!(combined_epsilon, native_epsilon);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_zcdp_does_not_refine_native_rdp_storage() -> Fallible<()> {
+    let guarantee = PrivacyGuarantee::new()
+        .with_renyiDP(|alpha| Ok(10.0 * alpha), 0.0)?
+        .with_zCDP(0.1, 0.0)?;
+    let representation = guarantee.renyi.as_ref().expect("native RDP stored");
+    assert_eq!((representation.curve)(2.0)?, 20.0);
+    Ok(())
+}
+
 #[cfg(feature = "honest-but-curious")]
 #[cfg(feature = "honest-but-curious")]
 #[test]

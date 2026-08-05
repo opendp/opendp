@@ -217,6 +217,15 @@ test_that("privacy guarantee RDP representation", {
   expect_equal(approximate(epsilon = Inf), 0.2)
 })
 
+test_that("privacy guarantee zCDP representation", {
+  guarantee <- privacy_guarantee(zCDP = 0.5)
+  expect_gt(guarantee(delta = 0.1), 0.)
+  expect_lt(guarantee(epsilon = 1.), 1.)
+
+  approximate <- privacy_guarantee(zCDP = 0., zCDP_delta = 0.2)
+  expect_equal(approximate(epsilon = Inf), 0.2)
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)

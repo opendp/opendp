@@ -244,6 +244,17 @@ def test_privacy_guarantee_renyi_representation():
     assert approximate.delta(epsilon=float("inf")) == 0.2
 
 
+def test_privacy_guarantee_zcdp_representation():
+    from opendp.mod import PrivacyGuarantee
+
+    guarantee = PrivacyGuarantee(zCDP=0.5)
+    assert guarantee.epsilon(delta=0.1) > 0.0
+    assert guarantee.delta(epsilon=1.0) < 1.0
+
+    approximate = PrivacyGuarantee(zCDP=0.0, zCDP_delta=0.2)
+    assert approximate.delta(epsilon=float("inf")) == 0.2
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

@@ -1,5 +1,5 @@
 # type: ignore
-def cdp_delta(rho: float, eps: float) -> float:
+def zcdp_delta(rho: float, eps: float) -> float:
     """The Rust code may be easier to follow due to more commenting."""
     if rho < 0.0:
         raise ValueError(f"rho ({rho}) must be non-negative")
