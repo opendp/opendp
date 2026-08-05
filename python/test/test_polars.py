@@ -352,6 +352,26 @@ def test_signed_sum(dtype, T, values, bounds, expected):
     assert result.schema["A"] == pl.Int64
     assert result["A"][0] == expected
 
+def test_signed_counting_default_warning():
+    feature = "disable-signed-count-warning"
+    dp.disable_features(feature)
+    with pytest.warns(FutureWarning, match="default to signed=True"):
+        dp.len(scale=0.0)
+
+    dp.enable_features(feature)
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            dp.len(scale=0.0)
+        assert not caught
+    finally:
+        dp.disable_features(feature)
+
+
+def test_signed_counting_rejects_non_bool():
+    with pytest.raises(TypeError, match="signed must be a bool"):
+        dp.len(scale=0.0, signed=1)  # type: ignore[arg-type]
+
 
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
@@ -760,7 +780,7 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len([false])"
+    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len([true])"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -869,7 +889,7 @@ def test_cut():
     actual = context.query().group_by(*by).agg(dp.len()).release().collect().sort("x")
     expected = pl.DataFrame(
         {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
-        schema={"x": pl.UInt32, "len": pl.UInt32},
+        schema={"x": pl.UInt32, "len": pl.Int64},
     )
 
     pl_testing.assert_frame_equal(actual, expected)
@@ -1075,7 +1095,7 @@ def test_count_queries():
             "n_unique": [2],
             "null_count": [1],
         }
-    ).cast({pl.Int64: pl.UInt32})
+    ).cast({pl.Int64: pl.Int64})
     pl_testing.assert_frame_equal(release, expected)
 
 

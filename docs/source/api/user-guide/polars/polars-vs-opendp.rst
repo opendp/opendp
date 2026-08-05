@@ -88,7 +88,7 @@ OpenDP Polars differs from typical Polars in these ways:
         ┌─────┐
         │ len │
         │ --- │
-        │ u32 │
+        │ i64 │
         ╞═════╡
         │ ... │
         └─────┘
