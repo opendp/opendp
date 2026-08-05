@@ -1,14 +1,14 @@
 \documentclass{article}
-\input{../../../../lib.sty}
+\input{../../lib.sty}
 
 
-\title{\texttt{fn cdp\_delta}}
+\title{\texttt{fn zcdp\_delta}}
 \author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
 
-Proves soundness of \texttt{fn cdp\_delta} in \asOfCommit{cdp_delta.rs}{0b8f4222}.
+Proves soundness of \texttt{fn zcdp\_delta}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
 \section{Bound Derivation}
 
@@ -47,7 +47,7 @@ For any $E \subset \mathcal{Y}$, we have
 \begin{equation}
     \mathbb{P}[Y' \in E] = \mathbb{E}[\mathbb{I}[Y' \in E]] = \mathbb{E}[\mathbb{I}[Y \in E] e^{-f(Y)}].
 \end{equation}
-This is because $e^{-f(y)} = \frac{\mathbb{P}[Y=y]}{\mathbb{P}[Y'=y]}$.
+This is because $e^{-f(y)} = \frac{\mathbb{P}[Y'=y]}{\mathbb{P}[Y=y]}$.
 
 Thus, for all $E \subset \mathcal{Y}$, we have 
 \begin{equation}
@@ -135,6 +135,35 @@ Thus
 
 \end{proof}
 
+\begin{theorem}
+\label{asoodeh-rdp-approxdp}
+\cite[Lemma 1, Equation (25)]{ALCKS21}
+Let $M$ satisfy $(\alpha,\gamma)$-RDP for $\alpha>1$. If
+$\epsilon>\gamma$, then $M$ is $(\epsilon,\delta)$-differentially
+private for
+\begin{equation}
+    \delta =
+    \frac{e^{(\alpha-1)\gamma}-1}
+         {\alpha\left(e^{(\alpha-1)\epsilon}-1\right)}.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The second term of \cite[Lemma 1, Equation (25)]{ALCKS21} states that,
+when $0<\alpha\delta<1$, the smallest guaranteed approximate-DP
+epsilon is at most
+\begin{equation}
+    \frac{1}{\alpha-1}
+    \log\left(
+        \frac{e^{(\alpha-1)\gamma}-1}{\alpha\delta}+1
+    \right).
+\end{equation}
+Substitution of the stated $\delta$ makes this expression equal to
+$\epsilon$. Moreover, $\epsilon>\gamma$ implies
+$e^{(\alpha-1)\epsilon}-1>e^{(\alpha-1)\gamma}-1$, and therefore
+$0<\alpha\delta<1$, satisfying the lemma's condition.
+\end{proof}
+
 \begin{corollary}
 \label{renyidp-approxdp-epsilon}
 \cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry. Then M is $(\epsilon, \delta)$-differentially private for 
@@ -160,6 +189,48 @@ Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfy
 This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
 \end{proof}
 
+\section{Certified inverse}
+
+For a fixed order $\alpha$, the expression in
+\ref{renyidp-approxdp-epsilon} is the inverse of the branch-zero
+log-delta bound. The directed interval implementation evaluates this
+expression with $\gamma = \alpha\rho$ and returns an upper endpoint, so
+that endpoint is a sufficient epsilon for the requested delta.
+
+For the second branch, the theorem requires $\epsilon > \gamma$ and its
+inverse additionally requires $\alpha\delta < 1$. Solving the bound in
+\ref{asoodeh-rdp-approxdp} gives
+\begin{equation}
+    \epsilon = \frac{1}{\alpha-1}
+    \operatorname{softplus}\left(\log(\exp((\alpha-1)\gamma)-1)
+    -\log(\alpha)-\log(\delta)\right).
+\end{equation}
+The implementation represents a branch that cannot establish these strict
+domains as `None`; numerical failures remain errors. Thus every certified
+candidate is independently a valid upper bound, and the minimum of the
+candidates is valid as well.
+
+Native floating-point arithmetic is used only to select promising orders.
+The final bracket endpoints and optimizer argument are recomputed with
+outward-rounded `DInterval` arithmetic. Search accuracy therefore affects
+only tightness, not soundness. The special cases $\rho=0$, $\rho=\infty$,
+$\delta=0$, and $\delta=1$ return the corresponding trivial valid bounds
+before finite interval evaluation.
+
+\begin{theorem}
+For any valid $\rho$ and $\delta$, a successful return from
+\texttt{zcdp\_epsilon} is a sufficient epsilon for the requested delta.
+\end{theorem}
+\begin{proof}
+The fixed-order inverse formulas above are sufficient by their respective
+forward theorems. The optimizer only chooses the finite candidate orders;
+each candidate is certified independently with outward-rounded interval
+arithmetic. The upper endpoint is therefore conservative, and the minimum
+of independently valid bounds remains valid. The explicit special-case
+returns are valid by the trivial privacy bounds. Errors are propagated, so
+no uncertified arithmetic result is accepted.
+\end{proof}
+
 \section{Hoare Triple}
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
@@ -175,15 +246,28 @@ None
 \subsection*{Postcondition}
 
 \begin{theorem}
-    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{zcdp\_delta}$ either returns an error,
     or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
 \begin{proof}
-The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
-Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
-Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$, 
-where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
-Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
+The validation and special-case branches return an error or a trivial valid
+bound. Otherwise, ordinary floating-point optimization only selects a finite
+set $A$ of candidate orders strictly greater than one. Its accuracy affects
+tightness but not soundness.
+
+For each candidate, the code evaluates the logarithm of either the bound from
+\ref{renyidp-approxdp-delta}, or, when $\epsilon>\alpha\rho$, the bound from
+\ref{asoodeh-rdp-approxdp}, with the zCDP guarantee
+$\gamma=\alpha\rho$. These evaluations use \texttt{DInterval}, whose
+operations round outwards, so each upper endpoint is at least the exact
+logarithm of the corresponding valid bound. The minimum remains valid because
+every candidate bounds the same privacy quantity from above.
+
+Finally, directed interval exponentiation rounds upwards, including when the
+result is below the smallest positive \texttt{f64}; the result is clamped to
+the probability range. Any interval-evaluation failure is returned as an
+error rather than being used as a privacy result. Thus every successful
+returned \texttt{delta} satisfies the postcondition.
 \end{proof}
 
 

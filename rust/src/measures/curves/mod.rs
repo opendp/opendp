@@ -6,7 +6,9 @@ use crate::measures::curves::{
     logspace::{check_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked},
     profile::delta_via_profile,
     profile_to_tradeoff::beta_via_profile,
-    renyidp::{beta_via_renyiDP, delta_via_renyiDP},
+    renyidp::{
+        beta_via_renyiDP, beta_via_zCDP, delta_via_renyiDP, delta_via_zCDP, epsilon_via_zCDP,
+    },
     tradeoff::delta_via_tradeoff,
 };
 use dashu::rational::RBig;
@@ -45,6 +47,7 @@ pub struct PrivacyGuarantee {
     profile: Option<Profile>,
     tradeoff: Option<Tradeoff>,
     renyi_dp: Option<RenyiDP>,
+    zcdp: Option<ZCDP>,
 }
 
 #[derive(Clone)]
@@ -105,6 +108,14 @@ struct RenyiDP {
     curve: Arc<RenyiFn>,
     /// Source delta in OpenDP's additive approximate-RDP convention. The
     /// RDP-to-approximate-DP theorem adds it to the exact-RDP conversion delta.
+    delta: f64,
+}
+
+#[derive(Clone, Copy)]
+struct ZCDP {
+    rho: f64,
+    /// Source delta in OpenDP's additive approximate-zCDP convention. The
+    /// zCDP-to-approximate-DP theorem adds it to the exact-zCDP conversion delta.
     delta: f64,
 }
 
@@ -347,6 +358,25 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach an approximate zero-concentrated DP representation.
+    ///
+    /// `delta` follows OpenDP's additive approximate-zCDP convention: the
+    /// source delta is added by the zCDP-to-approximate-DP conversion theorem.
+    /// Therefore `(rho, delta)` is one complete source zCDP guarantee; this
+    /// delta does not relax any other representation stored on the curve.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64, delta: f64) -> Fallible<Self> {
+        if rho.is_nan() {
+            return fallible!(FailedMap, "rho must not be NaN");
+        }
+        if rho.is_sign_negative() {
+            return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
+        }
+        check_delta(delta)?;
+        self.zcdp = Some(ZCDP { rho, delta });
+        Ok(self)
+    }
+
     /// Return a conservative upper bound on delta at the given nonnegative epsilon.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
@@ -357,6 +387,8 @@ impl PrivacyGuarantee {
             delta_via_approxDP(points, epsilon)?
         } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
             delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)?
+        } else if let Some(ZCDP { rho, delta }) = &self.zcdp {
+            delta_via_zCDP(*rho, *delta, epsilon)?
         } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
             delta_via_renyiDP(curve.as_ref(), *delta, epsilon)?
         } else {
@@ -385,6 +417,8 @@ impl PrivacyGuarantee {
             )?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, alpha)?
+        } else if let Some(ZCDP { rho, delta }) = &self.zcdp {
+            beta_via_zCDP(*rho, *delta, alpha)?
         } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
             beta_via_renyiDP(curve.clone(), *delta, alpha)?
         } else {
@@ -430,6 +464,16 @@ impl PrivacyGuarantee {
             return epsilon_via_approxdp(points, delta);
         }
 
+        if self.profile.is_none() && self.approx_dp.is_none() && self.tradeoff.is_none() {
+            if let Some(ZCDP {
+                rho,
+                delta: source_delta,
+            }) = self.zcdp
+            {
+                return epsilon_via_zCDP(rho, source_delta, delta);
+            }
+        }
+
         invert_decreasing_callback(|epsilon| self.delta(epsilon), delta)
     }
 
@@ -466,6 +510,12 @@ impl PrivacyGuarantee {
             )?
         } else if let Some(points) = &self.approx_dp {
             beta_via_approxDP(points, beta)?
+        } else if let Some(ZCDP { rho, delta }) = &self.zcdp {
+            if *delta == 0.0 {
+                beta_via_zCDP(*rho, *delta, beta)?
+            } else {
+                return self.alpha_by_inverting_beta(beta);
+            }
         } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
             if *delta == 0.0 {
                 beta_via_renyiDP(curve.clone(), *delta, beta)?

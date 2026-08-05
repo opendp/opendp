@@ -9,6 +9,7 @@ use crate::{
             profile_to_tradeoff::beta_via_profile,
         },
         rdp_to_approxdp::{rdp_log_delta0_on, rdp_log_delta1_on},
+        zcdp_delta, zcdp_epsilon,
     },
     traits::{CInterval, S, SInterval, backend::Dashu},
     utilities::search::{SearchMode, fallible_optimize_log_domain_to_precision, sample_log_domain},
@@ -106,6 +107,99 @@ pub fn beta_via_renyiDP(curve: Arc<RenyiFn>, source_delta: f64, alpha: f64) -> F
 /// Apply the delta parameter from an approximate-RDP statement to the
 /// conversion theorem's delta bound. This addition is local to RDP semantics.
 fn add_approximate_rdp_delta(conversion_delta: f64, source_delta: f64) -> Fallible<f64> {
+    check_delta(conversion_delta)?;
+    check_delta(source_delta)?;
+
+    if conversion_delta == 0.0 {
+        return Ok(source_delta);
+    }
+    if source_delta == 0.0 {
+        return Ok(conversion_delta);
+    }
+
+    Ok(
+        (CInterval::point(conversion_delta)? + CInterval::point(source_delta)?)?
+            .upper_f64()?
+            .min(1.0),
+    )
+}
+
+/// Convert rho-zCDP to an approximate-DP delta upper bound.
+#[allow(non_snake_case)]
+pub fn delta_via_zCDP(rho: f64, source_delta: f64, epsilon: f64) -> Fallible<f64> {
+    check_delta(source_delta)?;
+    // Keep PrivacyGuarantee's exact-zCDP conversion identical to the canonical
+    // certified conversion used by the zCDP measure cast, then apply the delta
+    // from this approximate-zCDP statement locally.
+    let conversion_delta = zcdp_delta(rho, epsilon)?;
+    add_approximate_zcdp_delta(conversion_delta, source_delta)
+}
+
+/// Convert rho-zCDP to an f-DP tradeoff lower bound beta(alpha).
+///
+/// Here `alpha` is the type-I error in the f-DP tradeoff function.
+#[allow(non_snake_case)]
+pub fn beta_via_zCDP(rho: f64, source_delta: f64, alpha: f64) -> Fallible<f64> {
+    check_rho(rho)?;
+    check_delta(source_delta)?;
+    check_alpha(alpha)?;
+
+    if source_delta != 0.0 {
+        return beta_via_profile(
+            &move |epsilon| {
+                delta_to_log_upper_unchecked(delta_via_zCDP(rho, source_delta, epsilon)?)
+            },
+            alpha,
+        );
+    }
+
+    if alpha == 0.0 {
+        return Ok(1.0);
+    }
+    if alpha == 1.0 {
+        return Ok(0.0);
+    }
+    if rho == 0.0 {
+        return Ok(1.0 - alpha);
+    }
+    if rho.is_infinite() {
+        return Ok(0.0);
+    }
+
+    let rdp = |order: f64| zcdp_rdp_upper(rho, order);
+    let alpha_cap = find_beta_alpha_cap(alpha, &rdp);
+
+    beta_via_renyiDP_core(alpha, alpha_cap, &rdp)
+}
+
+/// Invert the complete approximate-zCDP profile while keeping subtraction of
+/// its source delta local to the zCDP conversion theorem.
+#[allow(non_snake_case)]
+pub fn epsilon_via_zCDP(rho: f64, source_delta: f64, target_delta: f64) -> Fallible<f64> {
+    check_rho(rho)?;
+    check_delta(source_delta)?;
+    check_delta(target_delta)?;
+
+    if target_delta < source_delta {
+        return Ok(f64::INFINITY);
+    }
+    if target_delta == 1.0 {
+        return Ok(0.0);
+    }
+
+    let conversion_delta = if target_delta == source_delta {
+        0.0
+    } else if source_delta == 0.0 {
+        target_delta
+    } else {
+        (CInterval::point(target_delta)? - CInterval::point(source_delta)?)?
+            .lower_f64()?
+            .clamp(0.0, 1.0)
+    };
+    zcdp_epsilon(rho, conversion_delta)
+}
+
+fn add_approximate_zcdp_delta(conversion_delta: f64, source_delta: f64) -> Fallible<f64> {
     check_delta(conversion_delta)?;
     check_delta(source_delta)?;
 
@@ -615,6 +709,22 @@ where
     Ok(value.next_up())
 }
 
+fn zcdp_rdp_upper(rho: f64, alpha: f64) -> Fallible<f64> {
+    let value = alpha * rho;
+
+    if value == 0.0 {
+        return Ok(0.0);
+    }
+    if value.is_infinite() {
+        return Ok(f64::INFINITY);
+    }
+    if value.is_nan() || value.is_sign_negative() {
+        return fallible!(FailedMap, "computed zCDP RDP value is invalid");
+    }
+
+    Ok(value.next_up())
+}
+
 fn gamma_upper_next(gamma: f64) -> f64 {
     if gamma == 0.0 || gamma.is_infinite() {
         gamma
@@ -721,4 +831,14 @@ fn strictly_smaller(a: f64, b: f64) -> bool {
 
 fn improvement_threshold(a: f64, b: f64) -> f64 {
     ROUNDING_SLACK * a.abs().max(b.abs()).max(1.0)
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() {
+        return fallible!(FailedMap, "rho must not be NaN");
+    }
+    if rho.is_sign_negative() {
+        return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
+    }
+    Ok(())
 }

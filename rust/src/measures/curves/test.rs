@@ -588,6 +588,56 @@ fn test_subnormal_log_to_delta_conversion() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_zcdp_curve_uses_shared_profile_conversion() -> Fallible<()> {
+    let rho = 0.5;
+    let epsilon = 1.0;
+    let curve = PrivacyGuarantee::new().with_zCDP(rho, 0.0)?;
+    assert_eq!(
+        curve.delta(epsilon)?,
+        crate::measures::zcdp_delta(rho, epsilon)?
+    );
+    assert!((0.0..=1.0).contains(&curve.beta(0.5)?));
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_delta_is_representation_specific() -> Fallible<()> {
+    let rho = 0.5;
+    let exact = PrivacyGuarantee::new().with_zCDP(rho, 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_zCDP(rho, 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert!(approximate.epsilon(0.1f64.next_down())?.is_infinite());
+
+    let exact_delta = exact.delta(1.0)?;
+    let approximate_delta = approximate.delta(1.0)?;
+    assert!(approximate_delta >= exact_delta + 0.1);
+    assert!(approximate_delta <= (exact_delta + 0.1).next_up());
+
+    assert!(PrivacyGuarantee::new().with_zCDP(rho, -0.0).is_err());
+    assert!(PrivacyGuarantee::new().with_zCDP(rho, f64::NAN).is_err());
+
+    let vacuous = PrivacyGuarantee::new().with_zCDP(rho, 1.0)?;
+    assert_eq!(vacuous.delta(f64::INFINITY)?, 1.0);
+    assert_eq!(vacuous.epsilon(1.0)?, 0.0);
+    assert!(vacuous.epsilon(1.0f64.next_down())?.is_infinite());
+    Ok(())
+}
+
+#[test]
+fn test_multiple_source_representations_keep_distinct_deltas() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new()
+        .with_zCDP(0.0, 0.2)?
+        .with_renyiDP_trusted(|_| Ok(0.0), 0.7)?;
+
+    // zCDP precedes RDP, so only the selected zCDP representation's delta is used.
+    assert_eq!(curve.delta(f64::INFINITY)?, 0.2);
+    assert_eq!(curve.epsilon(0.2)?, 0.0);
+    Ok(())
+}
+
 #[cfg(feature = "honest-but-curious")]
 #[test]
 fn test_renyi_curve_queries() -> Fallible<()> {
