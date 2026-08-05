@@ -8,6 +8,7 @@ use crate::{
             profile_to_tradeoff::beta_via_profile,
         },
         rdp_to_approxdp::{rdp_log_delta0_on, rdp_log_delta1_on},
+        zcdp::{add_source_delta, zcdp_delta},
     },
     traits::{CInterval, SInterval, SoftFloat},
     utilities::search::{OptimizationResult, SearchMode, fallible_optimize_unimodal},
@@ -252,6 +253,51 @@ pub fn beta_via_renyiDP(curve: Arc<RenyiFn>, source_delta: f64, alpha: f64) -> F
     let rdp = |order| evaluate_renyi(curve.as_ref(), &[order]).map(|values| values[0]);
     let alpha_cap = find_beta_alpha_cap(alpha, &rdp)?;
     beta_via_renyiDP_core(alpha, alpha_cap, &rdp)
+}
+
+/// Convert an independently supplied rho-zCDP guarantee to an
+/// approximate-DP delta bound.
+#[allow(non_snake_case)]
+pub fn delta_via_zCDP(rho: f64, source_delta: f64, epsilon: f64) -> Fallible<f64> {
+    check_delta(source_delta)?;
+    let conversion_delta = zcdp_delta(rho, epsilon)?;
+    add_source_delta(conversion_delta, source_delta)
+}
+
+/// Convert a rho-zCDP representation to its conservative f-DP tradeoff bound.
+#[allow(non_snake_case)]
+pub fn beta_via_zCDP(rho: f64, source_delta: f64, alpha: f64) -> Fallible<f64> {
+    check_alpha(alpha)?;
+    let profile = PrivacyProfile::new(move |epsilons| {
+        epsilons
+            .iter()
+            .map(|&epsilon| delta_via_zCDP(rho, source_delta, epsilon))
+            .collect()
+    });
+    beta_via_profile(&profile, alpha)
+}
+
+/// Convert an independently supplied rho-zCDP guarantee to an
+/// approximate-DP epsilon bound by inverting its converted profile.
+#[allow(non_snake_case)]
+pub fn epsilon_via_zCDP(rho: f64, source_delta: f64, target_delta: f64) -> Fallible<f64> {
+    check_delta(source_delta)?;
+    check_delta(target_delta)?;
+
+    if target_delta < source_delta {
+        return Ok(f64::INFINITY);
+    }
+    if rho == 0.0 || target_delta == 1.0 {
+        return Ok(0.0);
+    }
+
+    let profile = PrivacyProfile::new(move |epsilons| {
+        epsilons
+            .iter()
+            .map(|&epsilon| delta_via_zCDP(rho, source_delta, epsilon))
+            .collect()
+    });
+    Ok(profile.epsilon(&[target_delta])?[0])
 }
 
 /// Apply the delta parameter from an approximate-RDP statement to the

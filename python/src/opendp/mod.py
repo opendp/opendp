@@ -1384,6 +1384,8 @@ class PrivacyGuarantee(object):
         profile: Optional[PrivacyProfile] = None,
         renyiDP: Optional[Callable[[list[float]], list[float]]] = None,
         renyiDP_delta: float = 0.0,
+        zCDP: Optional[float] = None,
+        zCDP_delta: float = 0.0,
         _ptr: Any = None,
     ):
         if _ptr is not None:
@@ -1392,12 +1394,16 @@ class PrivacyGuarantee(object):
                 or profile is not None
                 or renyiDP is not None
                 or renyiDP_delta != 0.0
+                or zCDP is not None
+                or zCDP_delta != 0.0
             ):
                 raise TypeError("_ptr cannot be combined with guarantee constructors")
             self.guarantee = _ptr
             return
-        if approx_dp is None and profile is None and renyiDP is None:
+        if approx_dp is None and profile is None and renyiDP is None and zCDP is None:
             raise TypeError("expected at least one privacy representation")
+        if zCDP is None and zCDP_delta != 0.0:
+            raise TypeError("zCDP_delta requires zCDP")
         if renyiDP is None and renyiDP_delta != 0.0:
             raise TypeError("renyiDP_delta requires renyiDP")
         if approx_dp is not None and (
@@ -1412,6 +1418,7 @@ class PrivacyGuarantee(object):
             _privacy_guarantee_with_approx_dp,
             _privacy_guarantee_with_profile,
             _privacy_guarantee_with_renyiDP,
+            _privacy_guarantee_with_zCDP,
         )
 
         guarantee = _new_privacy_guarantee()
@@ -1423,6 +1430,8 @@ class PrivacyGuarantee(object):
             guarantee = _privacy_guarantee_with_renyiDP(
                 guarantee, renyiDP, renyiDP_delta
             )
+        if zCDP is not None:
+            guarantee = _privacy_guarantee_with_zCDP(guarantee, zCDP, zCDP_delta)
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):

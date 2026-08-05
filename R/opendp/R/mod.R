@@ -494,12 +494,14 @@ new_privacy_guarantee_internal <- function(ptr) {
 #' @param renyiDP Vector-valued callback mapping nondecreasing finite Renyi orders
 #'   greater than one (duplicates allowed) to nonnegative epsilon bounds of the same length.
 #' @param renyiDP_delta Source delta for approximate RDP.
+#' @param zCDP zCDP parameter rho.
+#' @param zCDP_delta Source delta for approximate zCDP.
 #' Alpha and beta report f-DP lower bounds derived from these representations,
 #' accepting scalars or nondecreasing vectors (duplicates permitted).
 #' No tradeoff representation is stored.
 #' @export
-privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, renyiDP_delta = 0) {
-  if (is.null(approx_dp) && is.null(profile) && is.null(renyiDP)) {
+privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0) {
+  if (is.null(approx_dp) && is.null(profile) && is.null(renyiDP) && is.null(zCDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
@@ -507,6 +509,9 @@ privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, 
   }
   if (!is.null(profile) && !inherits(profile, "privacy_profile")) {
     stop("profile must be a privacy_profile", call. = FALSE)
+  }
+  if (is.null(zCDP) && zCDP_delta != 0) {
+    stop("zCDP_delta requires zCDP", call. = FALSE)
   }
   if (is.null(renyiDP) && renyiDP_delta != 0) {
     stop("renyiDP_delta requires renyiDP", call. = FALSE)
@@ -520,6 +525,9 @@ privacy_guarantee <- function(approx_dp = NULL, profile = NULL, renyiDP = NULL, 
   }
   if (!is.null(renyiDP)) {
     guarantee <- `_privacy_guarantee_with_renyiDP`(guarantee, renyiDP, renyiDP_delta)
+  }
+  if (!is.null(zCDP)) {
+    guarantee <- `_privacy_guarantee_with_zCDP`(guarantee, zCDP, zCDP_delta)
   }
   guarantee
 }
