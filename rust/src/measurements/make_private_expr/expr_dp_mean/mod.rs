@@ -99,11 +99,11 @@ where
     };
 
     let sum = apply_plugin(
-        vec![input.clone(), lower, upper, scale],
+        vec![input.clone(), lower, upper, scale, lit(false)],
         expr.clone(),
         DPSumShim,
     );
-    let len = apply_plugin(vec![input, scale_denom], expr, DPLenShim);
+    let len = apply_plugin(vec![input, scale_denom, lit(false)], expr, DPLenShim);
 
     Expr::BinaryExpr {
         left: Arc::new(sum),

@@ -57,28 +57,7 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let (lower, upper) = {
-        let data_column = &mut output_domain.column;
-
-        use DataType::*;
-        match data_column.dtype() {
-            UInt32 => extract_bounds::<u32>(lower, upper, data_column)?,
-            UInt64 => extract_bounds::<u64>(lower, upper, data_column)?,
-            Int8 => extract_bounds::<i8>(lower, upper, data_column)?,
-            Int16 => extract_bounds::<i16>(lower, upper, data_column)?,
-            Int32 => extract_bounds::<i32>(lower, upper, data_column)?,
-            Int64 => extract_bounds::<i64>(lower, upper, data_column)?,
-            Float32 => extract_bounds::<f32>(lower, upper, data_column)?,
-            Float64 => extract_bounds::<f64>(lower, upper, data_column)?,
-            UInt8 | UInt16 => {
-                return fallible!(
-                    MakeTransformation,
-                    "u8 and 16 are not supported, please use u32 or u64 instead"
-                );
-            }
-            dtype => return fallible!(MakeTransformation, "unsupported dtype: {}", dtype),
-        }
-    };
+    let (lower, upper) = extract_bounds(lower, upper, &mut output_domain.column)?;
 
     t_prior
         >> Transformation::new(
@@ -89,6 +68,29 @@ where
             Function::then_expr(move |expr| expr.clip(lower.clone(), upper.clone())),
             StabilityMap::new(Clone::clone),
         )?
+}
+
+pub(super) fn extract_bounds(
+    lower: Expr,
+    upper: Expr,
+    data_column: &mut SeriesDomain,
+) -> Fallible<(Expr, Expr)> {
+    use DataType::*;
+    match data_column.dtype() {
+        UInt32 => extract_typed_bounds::<u32>(lower, upper, data_column),
+        UInt64 => extract_typed_bounds::<u64>(lower, upper, data_column),
+        Int8 => extract_typed_bounds::<i8>(lower, upper, data_column),
+        Int16 => extract_typed_bounds::<i16>(lower, upper, data_column),
+        Int32 => extract_typed_bounds::<i32>(lower, upper, data_column),
+        Int64 => extract_typed_bounds::<i64>(lower, upper, data_column),
+        Float32 => extract_typed_bounds::<f32>(lower, upper, data_column),
+        Float64 => extract_typed_bounds::<f64>(lower, upper, data_column),
+        UInt8 | UInt16 => fallible!(
+            MakeTransformation,
+            "u8 and 16 are not supported, please use u32 or u64 instead"
+        ),
+        dtype => fallible!(MakeTransformation, "unsupported dtype: {}", dtype),
+    }
 }
 
 fn extract_bound<T: NumericDataType>(bound: Expr) -> Fallible<T> {
@@ -107,7 +109,7 @@ fn extract_bound<T: NumericDataType>(bound: Expr) -> Fallible<T> {
     value.try_extract().map_err(Into::into)
 }
 
-fn extract_bounds<T: Number + NumericDataType + Literal>(
+fn extract_typed_bounds<T: Number + NumericDataType + Literal>(
     lower: Expr,
     upper: Expr,
     domain: &mut SeriesDomain,

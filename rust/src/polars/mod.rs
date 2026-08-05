@@ -426,9 +426,14 @@ impl DPExpr {
     /// # Arguments
     /// * `bounds` - The bounds of the input data
     /// * `scale` - parameter for the noise distribution
-    pub fn sum(self, bounds: (Expr, Expr), scale: Option<f64>) -> Expr {
+    /// * `signed` - if true, an unsigned integer sum is cast to `Int64` before noise is added,
+    ///   so negative noisy outputs are preserved instead of being clamped to zero.
+    pub fn sum(self, bounds: (Expr, Expr), scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_default();
-        apply_anonymous_function(vec![self.0, bounds.0, bounds.1, scale], DPSumShim)
+        apply_anonymous_function(
+            vec![self.0, bounds.0, bounds.1, scale, lit(signed)],
+            DPSumShim,
+        )
     }
 
     /// Compute the differentially private mean.

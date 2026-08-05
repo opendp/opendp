@@ -34,7 +34,7 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         MaxDivergence,
         lf.select([
             len().dp().noise(None),
-            col("A").dp().sum((lit(0), lit(1)), None),
+            col("A").dp().sum((lit(0), lit(1)), None, false),
         ]),
         Some(1.0),
         None,

@@ -18,7 +18,9 @@ fn test_make_expr_puredp() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         MaxDivergence,
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
+        col("const_1f64")
+            .dp()
+            .sum((lit(0.), lit(1.)), Some(scale), false),
         None,
     )?;
 
@@ -39,7 +41,9 @@ fn test_make_expr_zcdp() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
+        col("const_1f64")
+            .dp()
+            .sum((lit(0.), lit(1.)), Some(scale), false),
         None,
     )?;
 
@@ -60,7 +64,9 @@ fn test_make_expr_gaussian() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
+        col("const_1f64")
+            .dp()
+            .sum((lit(0.), lit(1.)), Some(scale), false),
         None,
     )?;
 
