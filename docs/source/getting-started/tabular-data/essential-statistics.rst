@@ -11,7 +11,7 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
   - of rows in frame, including nulls (``len()``)
   - of rows in column, including nulls (``.len()``)
   - of rows in column, excluding nulls (``.count()``)
-  - of rows in column, exclusively nulls (``.null_count()``)
+  - of rows in column, excluding nulls (``.null_count()``)
   - of *unique* rows in column, including null (``.n_unique()``)
 
 - Sum (``.sum(bounds)``)
@@ -22,7 +22,7 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
 We will use `sample
 data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
-from the Labour Force Survey in France.
+from the Labor Force Survey in France.
 
 .. tab-set::
 
@@ -47,7 +47,9 @@ introduction <index.rst>`__.
 
         .. code:: pycon
 
-            >>> lazyframe = pl.scan_csv(dp.examples.get_france_lfs_path())
+            >>> lazyframe = pl.scan_csv(
+            ...     dp.examples.get_france_lfs_path(), infer_schema=False
+            ... ).with_columns(pl.col("HWUSUAL").cast(pl.Float64))
             >>> context = dp.Context.compositor(
             ...     data=lazyframe,
             ...     privacy_unit=dp.unit_of(contributions=36),
@@ -76,7 +78,7 @@ introduction <index.rst>`__.
 Count
 -----
 
-The simplest query is a count of the number of records in a dataset.
+The simplest query is a count of records in a dataset.
 
 .. tab-set::
 
@@ -174,7 +176,7 @@ All the operations which follow require some information about
 the expected range of values: sum and mean need upper and lower bounds,
 while median and quantile take a set of candidate values.
 If you set bounds too wide, the additional noise will mean less accurate results;
-If you set bounds too narrow, clipping may produced biased results.
+If you set bounds too narrow, clipping may produce biased results.
 
 In some cases, for instance age in a demographic dataset, you will have prior
 knowledge that allows you to set bounds. In others, there may be a comparable
@@ -187,7 +189,7 @@ values to estimate the 5th and 95th percentiles (see :ref:`quantile`),
 or you could estimate a histogram using exponentially increasing bin widths.
 
 There are several good options;
-The only bad option is look at the data to determine bounds.
+The only bad option is to look at the data to determine bounds.
 
 
 Sum
@@ -217,7 +219,9 @@ know about the data.
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(), infer_schema=False
+            ...     ).with_columns(pl.col("HWUSUAL").cast(pl.Float64)),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
@@ -253,7 +257,7 @@ about the data to a potential adversary, the library is able to ensure
 that overflow and/or numerical instability won’t undermine privacy
 guarantees.
 
-Now that you’ve become acquainted with margins, lets release some
+Now that you’ve become acquainted with margins, let's release some
 queries that make use of it. We start by releasing the total number of
 work hours across responses.
 
@@ -421,9 +425,11 @@ data invariant in the margin: ``invariant="lengths"``.
 
             >>> # apply some preprocessing outside of OpenDP (see note below)
             >>> # drops "Not applicable" values
-            >>> data = pl.scan_csv(
-            ...     dp.examples.get_france_lfs_path()
-            ... ).filter(pl.col.HWUSUAL != 99)
+            >>> data = (
+            ...     pl.scan_csv(dp.examples.get_france_lfs_path(), infer_schema=False)
+            ...     .with_columns(pl.col("HWUSUAL").cast(pl.Float64))
+            ...     .filter(pl.col.HWUSUAL != 99)
+            ... )
 
             >>> # apply domain descriptors (margins) to preprocessed data
             >>> context_bounded_dp = dp.Context.compositor(
@@ -467,7 +473,7 @@ filtered data, as shown above.
 
 When ``invariant="lengths"`` is set, the number of records in the data
 is not protected (for those familiar with DP terminology, this is
-equivalent to bounded-DP). Therefore when computing the mean, a noisy
+equivalent to bounded-DP). Therefore, when computing the mean, a noisy
 sum is released and subsequently divided by the exact length. This
 behavior can be observed in the query summary:
 
