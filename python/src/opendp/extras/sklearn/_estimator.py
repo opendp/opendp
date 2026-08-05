@@ -46,7 +46,7 @@ _BaseEstimator = (
 )
 
 
-class SklearnEstimator(_BaseEstimator, ABC):  # type: ignore
+class DPEstimator(_BaseEstimator, ABC):  # type: ignore
     """Base class for OpenDP scikit-learn-style DP estimators.
 
     This is the type accepted by the Context API's ``.sklearn(...)`` query method.
@@ -126,7 +126,7 @@ class SklearnEstimator(_BaseEstimator, ABC):  # type: ignore
         self._reject_fit_params(fit_params)
         return X
 
-    def fit(self, X: "Query", y=None, **fit_params) -> "SklearnEstimator":
+    def fit(self, X: "Query", y=None, **fit_params) -> "DPEstimator":
         """Fit the estimator by releasing it through a Context query.
 
         The Context supplies the input domain/metric, output measure, ``d_in`` and
