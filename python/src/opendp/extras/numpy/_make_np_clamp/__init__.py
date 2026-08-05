@@ -7,16 +7,19 @@ from opendp._lib import import_optional_dependency
 from opendp._internal import _make_transformation
 
 
-def make_np_clamp(
+def make_np_clip(
     input_domain: Domain, input_metric: Metric, norm, p, origin=None
 ) -> Transformation:
-    """Construct a Transformation that clamps the norm of input data.
+    """Project each row onto an Lp ball.
+
+    Rows whose distance from ``origin`` exceeds ``norm`` are rescaled to lie
+    on the boundary of the ball. This is not elementwise scalar clipping.
 
     :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
-    :param norm: clamp each row to this norm. Required if data is not already bounded
+    :param norm: radius of the ball. Required if data is not already bounded
     :param p: designates L`p` norm
-    :param origin: norm clamping is centered on this point. Defaults to zero
+    :param origin: center of the ball. Defaults to zero
     """
     import opendp.prelude as dp
 
@@ -80,5 +83,10 @@ def make_np_clamp(
 
 # generate then variant of the constructor
 # TODO: Show this in the API Reference?
-register(make_np_clamp)
-then_np_clamp = to_then(make_np_clamp)
+register(make_np_clip)
+then_np_clip = to_then(make_np_clip)
+
+# Compatibility aliases for the previous Python constructor names. Only
+# ``np_clip`` is registered as a Context query constructor.
+make_np_clamp = make_np_clip
+then_np_clamp = then_np_clip
