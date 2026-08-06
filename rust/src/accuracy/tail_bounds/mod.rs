@@ -3,7 +3,7 @@ use num::Zero;
 use statrs::function::erf::erfc;
 
 use crate::{
-    error::Fallible,
+    error::{ErrorVariant, Fallible},
     traits::{InfAdd, InfCast, InfDiv, InfExp, NextFloat},
 };
 
@@ -36,7 +36,7 @@ pub fn conservative_continuous_laplacian_tail_to_alpha(scale: RBig, tail: RBig) 
 /// violating either flips the exponent's sign and can cause > 1 probability or panics
 fn check_tail_arguments(scale: &RBig, tail: &RBig) -> Fallible<()> {
     if scale <= &RBig::ZERO {
-        return fallible!(FailedFunction, "scale ({scale}) must be positive");
+        return fallible!(NumericRangeBelow, "scale ({scale}) must be positive");
     }
     if tail < &RBig::ZERO {
         return fallible!(FailedFunction, "tail ({tail}) must be nonnegative");
@@ -62,9 +62,15 @@ fn check_tail_arguments(scale: &RBig, tail: &RBig) -> Fallible<()> {
 pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) -> Fallible<f64> {
     check_tail_arguments(&scale, &RBig::from(tail.clone()))?;
     let numer = f64::inf_cast(-RBig::from(tail) / scale.clone())?.inf_exp()?;
-    let denom = f64::neg_inf_cast(RBig::ONE / scale)?
-        .neg_inf_exp()?
-        .neg_inf_add(&1.)?;
+    let denom_exp = f64::neg_inf_cast(RBig::ONE / scale.clone())?;
+    let denom_exp = match denom_exp.neg_inf_exp() {
+        Ok(value) => value,
+        Err(error) if error.variant == ErrorVariant::Overflow => {
+            return fallible!(NumericRangeBelow, "scale ({scale}) is too small");
+        }
+        Err(error) => return Err(error),
+    };
+    let denom = denom_exp.neg_inf_add(&1.)?;
     numer.inf_div(&denom)
 }
 

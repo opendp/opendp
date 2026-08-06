@@ -60,7 +60,7 @@ where
         return fallible!(MakeTransformation, "constant must be a member of DA");
     }
     if size == 0 {
-        return fallible!(MakeTransformation, "row size must be greater than zero");
+        return fallible!(NumericRangeBelow, "row size must be greater than zero");
     }
 
     Transformation::new(

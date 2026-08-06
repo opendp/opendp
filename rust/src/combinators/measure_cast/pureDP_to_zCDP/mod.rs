@@ -34,9 +34,14 @@ where
         m.input_metric.clone(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .and_then(|eps| eps.inf_powi(2.into())?.inf_div(&2.0))
+            privacy_map.eval(d_in).and_then(|eps| {
+                if !eps.is_finite() || eps > f64::sqrt(f64::MAX) {
+                    // An unrepresentably large pure-DP loss is below the
+                    // useful parameter range for finite zCDP searches.
+                    return fallible!(NumericRangeBelow, "privacy loss is too large");
+                }
+                eps.inf_powi(2.into())?.inf_div(&2.0)
+            })
         }),
     )
 }

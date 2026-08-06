@@ -46,7 +46,7 @@ where
     })?;
     let bounds = input_domain.element_domain.get_closed_bounds()?;
     if size == 0 {
-        return fallible!(MakeTransformation, "dataset size must be positive");
+        return fallible!(NumericRangeBelow, "dataset size must be positive");
     }
 
     let size_ = T::exact_int_cast(size)?;

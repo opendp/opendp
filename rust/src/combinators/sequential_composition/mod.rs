@@ -53,6 +53,17 @@ pub trait CompositionMeasure: Measure {
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
+/// Privacy loss can legitimately be infinite for a zero-scale mechanism.
+/// Treat it as an absorbing value during composition instead of attempting
+/// directed `0 + infinity`, which is numerically indeterminate.
+fn privacy_loss_add(left: f64, right: f64) -> Fallible<f64> {
+    if left.is_infinite() || right.is_infinite() {
+        Ok(f64::INFINITY)
+    } else {
+        left.inf_add(&right)
+    }
+}
+
 #[proven(
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
 )]
@@ -61,7 +72,9 @@ impl CompositionMeasure for MaxDivergence {
         Ok(Composability::Concurrent)
     }
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+        d_mids
+            .iter()
+            .try_fold(0.0, |sum, d_i| privacy_loss_add(sum, *d_i))
     }
 }
 
@@ -73,7 +86,9 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
         Ok(Composability::Concurrent)
     }
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+        d_mids
+            .iter()
+            .try_fold(0.0, |sum, d_i| privacy_loss_add(sum, *d_i))
     }
 }
 
@@ -88,7 +103,7 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
         d_mids
             .iter()
             .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
-                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+                Ok((privacy_loss_add(eps_g, *eps_i)?, del_g.inf_add(del_i)?))
             })
     }
 }
@@ -104,7 +119,7 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
         d_mids
             .iter()
             .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
-                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+                Ok((privacy_loss_add(eps_g, *eps_i)?, del_g.inf_add(del_i)?))
             })
     }
 }
@@ -122,7 +137,7 @@ impl CompositionMeasure for RenyiDivergence {
             d_mids
                 .iter()
                 .map(|f| f.eval(alpha))
-                .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
+                .try_fold(0.0, |sum, eps| privacy_loss_add(sum, eps?))
         }))
     }
 }

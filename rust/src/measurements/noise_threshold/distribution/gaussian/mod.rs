@@ -148,7 +148,7 @@ impl
 
                 if li > threshold {
                     return fallible!(
-                        FailedMap,
+                        NumericRangeBelow,
                         "threshold ({threshold}) must not be smaller than l-infinity sensitivity {li}"
                     );
                 }
