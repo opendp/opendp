@@ -196,6 +196,26 @@ def test_context_init_split_evenly_over():
     # print("context.query().dp_sum((1, 10)).release()", context.query().dp_sum((1, 10)).release())
 
 
+@pytest.mark.parametrize("epsilon", [1.01, 1e-300])
+def test_legacy_context_parameter_calibration(epsilon):
+    context = dp.Context.compositor(
+        data=[0.0, 1.0],
+        domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=epsilon),
+        split_evenly_over=1,
+    )
+    measurement = (
+        context.query()
+        .clamp((0.0, 1.0))
+        .sum()
+        .laplace()
+        .resolve(bounds=None if epsilon == 1.01 else (0.0, 1e301), T=float)
+    )
+    assert measurement.check(1, epsilon)
+    assert measurement.map(1) <= epsilon
+
+
 def test_context_zCDP():
     context = dp.Context.compositor(
         data=[1, 2, 3],

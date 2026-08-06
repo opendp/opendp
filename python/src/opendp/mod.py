@@ -1470,6 +1470,7 @@ def binary_search_chain(  # noqa: UP047 (PEP 695 type parameters need Python 3.1
     then returns the Transformation or Measurement corresponding to said parameter.
 
     See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.
+    Exceptions propagate as described in `binary_search`.
 
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
@@ -1478,8 +1479,6 @@ def binary_search_chain(  # noqa: UP047 (PEP 695 type parameters need Python 3.1
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: a chain parameterized at the nearest passing value to the decision point of the relation
     :rtype: Union[Transformation, Measurement]
-    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
-    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
 
     :example:
@@ -1534,6 +1533,7 @@ def binary_search_param(
 
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
+    Exceptions propagate as described in `binary_search`.
 
     :param make_chain: a function that takes a number and returns a Transformation or Measurement
     :param d_in: how far apart input datasets can be
@@ -1541,8 +1541,6 @@ def binary_search_param(
     :param bounds: a 2-tuple of optional lower and upper bounds on the input of `make_chain`; use `None` for either bound to infer it
     :param T: type of argument to `make_chain`, one of {float, int}
     :return: the nearest passing value to the decision point of the relation
-    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
-    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
     :example:
 
@@ -1593,48 +1591,6 @@ def binary_search_param(
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
 
-def _call_rust_search(
-    predicate: Callable[[float], bool],
-    T: "RuntimeType | str",
-    search: Callable[[Callable[[float], bool]], Any],
-    bounds: tuple[float | None, float | None] | None = (None, None),
-) -> Any:
-    first_exception = None
-    had_success = False
-
-    def wrapped(arg):
-        nonlocal first_exception, had_success
-        try:
-            result = predicate(arg)
-        except Exception as err:
-            if first_exception is None:
-                first_exception = err
-            raise
-        else:
-            had_success = True
-            return result
-
-    try:
-        return search(wrapped)
-    except Exception as err:
-        if first_exception is not None:
-            exc = first_exception
-            if (bounds is None or bounds == (None, None)) and not had_success:
-                center = 0.0 if T in {"f32", "f64"} else 0
-                exc.add_note(
-                    "Predicate in binary search always raises an exception. "
-                    f"This exception is raised when the predicate is evaluated at {center}."
-                )
-            raise exc
-        if not isinstance(err, OpenDPException):
-            raise
-        if err.variant == "Search":
-            raise ValueError(err.message)
-        if err.variant == "Type":
-            raise TypeError(err.message)
-        raise err
-
-
 # when return sign is false, only return float
 @overload
 def binary_search(
@@ -1677,13 +1633,17 @@ def binary_search(
     Missing bounds are inferred. Pass `None` for either element of `bounds` to
     conduct a one-sided search, or omit `bounds` to conduct an exponential search.
 
+    Callback exceptions propagate unchanged, including callback-raised `OpenDPException`.
+    If type inference fails, pass `T` or explicit bounds.
+
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of optional lower and upper bounds to the input of `predicate`; use `None` for either bound to infer it
     :param T: type of argument to `predicate`, one of {float, int}
     :param return_sign: if True, also return the direction away from the decision boundary
     :return: the discovered parameter within the bounds
-    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid
-    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
+    :raises OpenDPException: for Rust failures, preserving the variant (including Search and Type)
+    :raises TypeError: for Python-side type validation failures
+    :raises ValueError: for malformed bounds rejected by Python
 
     :example:
 
@@ -1749,41 +1709,37 @@ def binary_search(
     else:
         runtime_T = RuntimeType.parse(_infer_type(predicate))
 
-    return _call_rust_search(
-        predicate,
-        runtime_T,
-        lambda wrapped: _binary_search(
-            wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T
-        ),
-        bounds=bounds,
+    return _binary_search(
+        predicate, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T
     )
 
 
 def exponential_bounds_search(
     predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
 ) -> Optional[tuple[float, float]]:
-    """Determine bounds for a binary search via an exponential search,
-    in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
-    Will attempt to recover once if `predicate` throws an exception,
-    by searching bands on the ok side of the exception boundary.
+    """Determine bounds for a binary search via an exponential search.
 
+    Integer searches use exponentially increasing bands. Floating-point
+    searches also include the finite type extrema. ``Overflow`` makes a probe
+    unavailable, not passing or failing. The search attempts to recover a Boolean
+    bracket anchored at a successful observation. Any initial error triggers
+    best-effort discovery of an evaluable anchor, then bisection toward the invalid
+    initial point. Finite probes may miss narrow evaluable intervals. Outside this
+    initial recovery, unexpected errors propagate immediately.
+    Callback exceptions propagate unchanged, as in `binary_search`.
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param T: type of argument to predicate, one of {float, int}
-    :return: a tuple of float or int bounds that the decision boundary lies within
-    :raises TypeError: if the type is not inferrable (pass T)
-    :raises ValueError: if the predicate function is constant
+    :return: bounds containing a Boolean transition, or None if no bracket is found
+    :raises OpenDPException: for Rust failures, preserving the variant
+    :raises TypeError: for Python-side type validation failures
     """
     from opendp.typing import RuntimeType
     from opendp._internal import _exponential_bounds_search
 
     runtime_T = RuntimeType.parse(T or _infer_type(predicate))
 
-    return _call_rust_search(
-        predicate,
-        runtime_T,
-        lambda wrapped: _exponential_bounds_search(wrapped, runtime_T),
-    )
+    return _exponential_bounds_search(predicate, runtime_T)
 
 
 def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[int]]:
@@ -1810,9 +1766,6 @@ def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[i
         if not _is_type_error(e):
             # it didn't reject the type, but did fail with a different error
             return int
-        e.add_note(
-            "Unable to infer type `T`; pass the type `T` or bounds. This exception is raised when the predicate is evaluated at 0"
-        )
         raise
 
 

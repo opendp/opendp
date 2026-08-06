@@ -112,6 +112,22 @@ This is extremely powerful!
 
 The API documentation on these functions have more specific usage examples.
 
+Error Contract
+--------------
+Rust-generated failures propagate as Python ``OpenDPException`` or R ``opendp_error``,
+preserving their structured variant, including ``Search`` and ``Type``.
+They are not translated into Python ``ValueError`` or ``TypeError``.
+
+Python callback failures propagate as the original exception object, including callback-raised ``OpenDPException``.
+R callback failures return canonical ``opendp_error`` conditions:
+recognized structured variants are preserved, while ordinary errors and malformed or unknown variants become ``FFI``.
+No variants are inferred from error message text.
+
+Python-side argument validation still raises ordinary ``ValueError`` or ``TypeError``.
+For example, malformed bound tuples are rejected by Python, while nonfinite bounds rejected by Rust have variant ``Search``.
+A recovered callback failure does not replace a later Rust or callback error.
+If automatic discovery misses a narrow evaluable interval, supply explicit bounds within the predicate's domain.
+
 Exponential Search
 ------------------
 
@@ -125,23 +141,32 @@ If the heuristics fail you, then pass your own bounds into the binary search uti
 
 .. dropdown:: Algorithm Details
 
-  If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero.
+  If it is unknown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero.
   If a type error is thrown, it similarly checks the predicate function at an integer zero.
   If the predicate function fails both times, you'll have to pass a type argument ``T`` of either ``float`` or ``int``.
   This heuristic can fail if the predicate function is invalid at zero.
 
-  The integer bounds search doesn't actually take exponential steps, it checks the predicate function along zero, one, and eight even steps of size 2^16.
-  On the other hand, since floats are logarithmically distributed, 8 steps are made along 2^(k^2).
-  This explores a parameter regime that is unlikely to overflow, even when the origin is offset.
-
-  If the positive band search fails to find a change in sign, then the same procedure is run in the negative direction.
+  Integer probes use offsets of one, successive powers of sixteen, and the finite type extrema.
+  Float probes use offsets of one-half and 2^(k^2), followed by the finite type extrema.
+  From an evaluable origin, the positive direction is searched before the negative direction.
+  One-sided bounds restrict probing to the permitted direction.
   In the case that no acceptance region crosses the edge of a search band, the algorithm gives up,
   and you'll have to work out a reasonable set of bounds that intersect the acceptance region on your own.
   Luckily, most predicate functions are monotonic, so this is unlikely to happen.
 
-  If at any time the predicate function throws an exception, then a search is run for the decision boundary of the exception.
-  We can safely consider the exception region invalid, and attempt to exclude it from the search space.
-  An example of this is when searching for a suitable size, n, for which the predicate function outright throws an exception if negative due to being malformed.
+  If the initial evaluation fails, finite positive and negative probes discover an evaluable anchor.
+  Discovery can tolerate any initial error, but may miss narrow evaluable intervals.
+  If no anchor is found, the original error is returned.
+  From an anchor, bisection toward the invalid initial point stops when opposing successful Boolean observations establish a bracket.
+  Errors in this initial segment only move the unavailable endpoint; they never supply Boolean comparison information.
+  If no bracket is found there, search continues outward, away from the invalid initial point.
+  One-sided bounds restrict all recovery to the permitted direction.
 
-  If this search fails to find an edge to the exception region, we give up, and claim that the predicate function always fails.
-  Otherwise, we shift the origin of the bounds search to the exception boundary, and try one more directional bounds search away from the exception.
+  Outside initial recovery, only typed ``Overflow`` makes a bracketing probe unavailable.
+  Unexpected errors, including ``NumericError``, propagate once an anchor exists.
+  During ordinary bisection every error propagates, including overflow.
+  Supplied floating-point bounds must be finite and not NaN.
+  Silent infinity or NaN is not an exception: predicates must validate numerical results or use APIs that reject nonfinite values.
+  Binary search can certify only the Boolean predicate it is given.
+  Arithmetic midpoint bisection is retained; extreme intervals near zero or subnormal boundaries can require thousands of evaluations.
+  Supplying tighter bounds reduces that cost.
