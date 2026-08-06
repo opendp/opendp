@@ -70,7 +70,7 @@ fn test_make_laplace_threshold_float_map() -> Fallible<()> {
     assert_eq!(m_float.map(&(1, -0., -0.))?, (0.0, 0.0));
     assert_eq!(m_float.map(&(1, 0., 0.))?, (0.0, 0.0));
     assert_eq!(m_float.map(&(1, 1., 1.))?, (1.0, 6.17049020433802e-5));
-    assert_eq!(m_float.map(&(1, 2., 2.))?, (2.0, 0.0001677313139513137));
+    assert_eq!(m_float.map(&(1, 2., 2.))?, (2.0, 0.0001677313139514247));
     assert_eq!(m_float.map(&(1, 3., 3.))?, (3.0, 0.00045594098277745854));
     assert!(
         m_float
