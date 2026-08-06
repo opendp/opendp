@@ -66,39 +66,47 @@ static FfiResult_____AnyObject *wrap_success(AnyObject *obj)
     return result;
 }
 
-static char *error_variant_from_message(const char *message)
+static const char *strip_r_error_prefix(const char *message)
 {
-    static const char *known_variants[] = {
-        "FFI", "TypeParse", "Type", "FailedFunction", "FailedMap",
-        "RelationDebug", "FailedCast", "DomainMismatch", "MetricMismatch",
-        "MeasureMismatch", "MakeDomain", "MakeTransformation", "MakeMeasurement",
-        "MetricSpace", "InvalidDistance", "Search", "NumericDomain",
-        "NumericRangeBelow", "NumericRangeAbove", "NumericIndeterminate",
-        "NumericBackend", "Overflow", "NotImplemented"
-    };
     const char *candidate = message;
+    while (isspace((unsigned char)*candidate))
+        candidate++;
 
     if (strncmp(candidate, "Error in", 8) == 0 || strncmp(candidate, "Error:", 6) == 0)
     {
         candidate = strchr(candidate, ':');
-        if (candidate)
-            candidate++;
+        if (!candidate)
+            return "";
+        candidate++;
     }
-    if (!candidate)
-        return heap_strdup("FFI");
+    return candidate;
+}
+
+static char *error_variant_from_message(const char *message)
+{
+    const char *candidate = strip_r_error_prefix(message);
     while (isspace((unsigned char)*candidate))
         candidate++;
 
-    for (size_t i = 0; i < sizeof(known_variants) / sizeof(known_variants[0]); i++)
-    {
-        const char *variant = known_variants[i];
-        size_t length = strlen(variant);
-        char terminator = candidate[length];
-        if (strncmp(candidate, variant, length) == 0 &&
-            (terminator == '\0' || terminator == ':' || terminator == '(' || isspace((unsigned char)terminator)))
-            return heap_strdup(variant);
-    }
-    return heap_strdup("FFI");
+    bool bracketed = *candidate == '[';
+    if (bracketed)
+        candidate++;
+
+    const char *end = candidate;
+    while (*end && *end != ':' && *end != '(' && !isspace((unsigned char)*end) &&
+           (!bracketed || *end != ']'))
+        end++;
+
+    if (end == candidate || (bracketed && *end != ']'))
+        return heap_strdup("FFI");
+
+    size_t length = (size_t)(end - candidate);
+    char *variant = (char *)malloc(length + 1);
+    if (!variant)
+        error("failed to allocate error variant");
+    memcpy(variant, candidate, length);
+    variant[length] = '\0';
+    return variant;
 }
 
 static FfiResult_____AnyObject *wrap_failure_details(
@@ -107,16 +115,8 @@ static FfiResult_____AnyObject *wrap_failure_details(
     const char *backtrace
 )
 {
-    FfiResult_____AnyObject *result = (FfiResult_____AnyObject *)malloc(sizeof(FfiResult_____AnyObject));
-    FfiError *err = (FfiError *)malloc(sizeof(FfiError));
-    if (!result || !err)
-        error("failed to allocate callback error");
-    err->variant = heap_strdup(variant);
-    err->message = heap_strdup(message);
-    err->backtrace = heap_strdup(backtrace);
-    result->tag = Err_____AnyObject;
-    result->err = err;
-    return result;
+    // Rust owns validation and allocation of callback errors.
+    return (FfiResult_____AnyObject *)ffiresult_err(variant, message, backtrace);
 }
 
 static FfiResult_____AnyObject *wrap_failure_from_message(const char *message)

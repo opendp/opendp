@@ -158,32 +158,7 @@ impl<TI: 'static, TO: 'static + Send + Sync> IntoAnyFunctionFfiResultExt
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");
-        let variant = match variant {
-            "FFI" => ErrorVariant::FFI,
-            "TypeParse" => ErrorVariant::TypeParse,
-            "Type" => ErrorVariant::Type,
-            "FailedFunction" => ErrorVariant::FailedFunction,
-            "FailedMap" => ErrorVariant::FailedMap,
-            "RelationDebug" => ErrorVariant::RelationDebug,
-            "FailedCast" => ErrorVariant::FailedCast,
-            "DomainMismatch" => ErrorVariant::DomainMismatch,
-            "MetricMismatch" => ErrorVariant::MetricMismatch,
-            "MeasureMismatch" => ErrorVariant::MeasureMismatch,
-            "MakeDomain" => ErrorVariant::MakeDomain,
-            "MakeTransformation" => ErrorVariant::MakeTransformation,
-            "MakeMeasurement" => ErrorVariant::MakeMeasurement,
-            "MetricSpace" => ErrorVariant::MetricSpace,
-            "InvalidDistance" => ErrorVariant::InvalidDistance,
-            "Search" => ErrorVariant::Search,
-            "NumericDomain" => ErrorVariant::NumericDomain,
-            "NumericRangeBelow" => ErrorVariant::NumericRangeBelow,
-            "NumericRangeAbove" => ErrorVariant::NumericRangeAbove,
-            "NumericIndeterminate" => ErrorVariant::NumericIndeterminate,
-            "NumericBackend" => ErrorVariant::NumericBackend,
-            "Overflow" => ErrorVariant::Overflow,
-            "NotImplemented" => ErrorVariant::NotImplemented,
-            unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
-        };
+        let variant = variant.parse::<ErrorVariant>().unwrap_or(ErrorVariant::FFI);
         Error {
             variant,
             message: util::to_option_str(val.message)
@@ -410,6 +385,17 @@ mod tests {
         assert_variant!(NumericDomain);
         assert_variant!(NumericIndeterminate);
         assert_variant!(NumericBackend);
+    }
+
+    #[test]
+    fn test_unknown_error_variant_from_ffi_defaults_to_ffi() {
+        let ffi_err = FfiError {
+            variant: "UnknownVariant".to_char_p(),
+            message: "callback error".to_char_p(),
+            backtrace: "".to_char_p(),
+        };
+        let err: Error = ffi_err.into();
+        assert_eq!(err.variant, ErrorVariant::FFI);
     }
 
     #[test]

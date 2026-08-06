@@ -182,8 +182,22 @@ pub fn fallible_binary_search_by<T>(
 where
     T: BinarySearchable,
 {
+    signed_fallible_binary_search_by(comparison, bounds).map(|(value, _sign)| value)
+}
+
+fn signed_fallible_binary_search_by<T>(
+    comparison: impl Fn(&T) -> Fallible<Ordering>,
+    bounds: impl BoundSpec<T>,
+) -> Fallible<(T, i8)>
+where
+    T: BinarySearchable,
+{
     let bounds = resolve_comparison_bounds(&comparison, bounds)?;
-    fallible_binary_search_by_with_bounds(&comparison, bounds)
+    signed_fallible_binary_search_by_with_bounds(
+        &comparison,
+        bounds,
+        "the comparator does not cross the target within the bounds",
+    )
 }
 
 fn ordered_result(result: Fallible<Ordering>) -> Fallible<Ordering> {
@@ -239,17 +253,17 @@ where
             if at_center == Ordering::Equal {
                 return Ok((center.clone(), center));
             }
-            let predicate = |value: &T| comparison(value).map(|ordering| ordering == at_center);
-            fallible_exponential_bounds_search(&predicate)?
+            fallible_exponential_bounds_search_by(&comparison, center, at_center)?
                 .ok_or_else(|| err!(Search, "unable to infer bounds for comparator"))
         }
     }
 }
 
-fn fallible_binary_search_by_with_bounds<T>(
+fn signed_fallible_binary_search_by_with_bounds<T>(
     comparison: &impl Fn(&T) -> Fallible<Ordering>,
     bounds: (T, T),
-) -> Fallible<T>
+    boundary_error: &'static str,
+) -> Fallible<(T, i8)>
 where
     T: BinarySearchable,
 {
@@ -261,19 +275,16 @@ where
     let lower_order = ordered_result(comparison(&lower))?;
     let upper_order = ordered_result(comparison(&upper))?;
     if lower_order == Ordering::Equal {
-        return Ok(lower);
+        return Ok((lower, 0));
     }
     if upper_order == Ordering::Equal {
-        return Ok(upper);
+        return Ok((upper, 0));
     }
     if !matches!(
         (lower_order, upper_order),
         (Ordering::Less, Ordering::Greater) | (Ordering::Greater, Ordering::Less)
     ) {
-        return fallible!(
-            Search,
-            "the comparator does not cross the target within the bounds"
-        );
+        return fallible!(Search, "{boundary_error}");
     }
 
     let mut mid = lower.clone();
@@ -285,7 +296,7 @@ where
 
         mid = new_mid;
         match ordered_result(comparison(&mid))? {
-            Ordering::Equal => return Ok(mid),
+            Ordering::Equal => return Ok((mid, 0)),
             ordering if ordering == lower_order => lower = mid.clone(),
             ordering if ordering == upper_order => upper = mid.clone(),
             _ => {
@@ -295,9 +306,9 @@ where
     }
 
     Ok(if lower_order == Ordering::Less {
-        lower
+        (lower, -1)
     } else {
-        upper
+        (upper, 1)
     })
 }
 
@@ -310,7 +321,20 @@ where
     T: BinarySearchable,
 {
     let bounds = resolve_bounds(&predicate, bounds)?;
-    signed_fallible_binary_search_with_bounds(predicate, bounds)
+    let comparison = |value: &T| {
+        predicate(value).map(|passes| {
+            if passes {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        })
+    };
+    signed_fallible_binary_search_by_with_bounds(
+        &comparison,
+        bounds,
+        "the decision boundary of the predicate is outside the bounds",
+    )
 }
 
 fn resolve_bounds<T>(
@@ -345,52 +369,6 @@ where
         (None, None) => fallible_exponential_bounds_search(predicate)?
             .ok_or_else(|| err!(Search, "unable to infer bounds")),
     }
-}
-
-fn signed_fallible_binary_search_with_bounds<T>(
-    predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: (T, T),
-) -> Fallible<(T, i8)>
-where
-    T: BinarySearchable,
-{
-    let (mut lower, mut upper) = bounds;
-    if lower > upper {
-        swap(&mut lower, &mut upper);
-    }
-
-    let maximize = predicate(&lower)?;
-    let minimize = predicate(&upper)?;
-
-    if maximize == minimize {
-        return fallible!(
-            Search,
-            "the decision boundary of the predicate is outside the bounds"
-        );
-    }
-
-    let mut mid = lower.clone();
-
-    loop {
-        let new_mid = T::midpoint(&lower, &upper);
-
-        // Avoid an infinite loop from float roundoff or integer truncation.
-        if new_mid == mid || new_mid == lower || new_mid == upper {
-            break;
-        }
-
-        mid = new_mid;
-        if predicate(&mid)? == minimize {
-            upper = mid.clone();
-        } else {
-            lower = mid.clone();
-        }
-    }
-
-    Ok((
-        if minimize { upper } else { lower },
-        if minimize { 1 } else { -1 },
-    ))
 }
 
 pub trait Bands: Sized {
@@ -479,6 +457,10 @@ macro_rules! impl_bands_int {
 
 impl_bands_int!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
+/// Determine bounds for a binary search via an exponential search.
+///
+/// Integer searches use exponentially increasing bands. Floating-point searches also include the
+/// finite type extrema, so they do not stop at the old `2^(k^2)` sequence.
 pub fn exponential_bounds_search<T>(predicate: &impl Fn(&T) -> bool) -> Option<(T, T)>
 where
     T: BinarySearchable,
@@ -492,8 +474,10 @@ where
 
 /// Determine bounds for a binary search via an exponential search.
 ///
-/// If `predicate` fails at the origin, recover by first finding the edge of the exceptional region
-/// and then searching away from it.
+/// Integer searches use exponentially increasing bands. Floating-point searches also include the
+/// finite type extrema, so they do not stop at the old `2^(k^2)` sequence. If `predicate` fails at
+/// the origin, recover by first finding the edge of the exceptional region and then searching away
+/// from it.
 pub fn fallible_exponential_bounds_search<T>(
     predicate: &impl Fn(&T) -> Fallible<bool>,
 ) -> Fallible<Option<(T, T)>>
@@ -521,12 +505,37 @@ where
         },
     };
 
-    let (center, sign) = signed_fallible_binary_search_with_bounds(
-        |value| Ok(exception_predicate(value)),
+    let comparison = |value: &T| {
+        Ok(if exception_predicate(value) {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        })
+    };
+    let (center, sign) = signed_fallible_binary_search_by_with_bounds(
+        &comparison,
         exception_bounds,
+        "the decision boundary of the predicate is outside the bounds",
     )?;
     let at_center = predicate(&center)?;
     fallible_signed_band_search(predicate, center, at_center, sign)
+}
+
+fn fallible_exponential_bounds_search_by<T, V>(
+    evaluator: &impl Fn(&T) -> Fallible<V>,
+    center: T,
+    at_center: V,
+) -> Fallible<Option<(T, T)>>
+where
+    T: BinarySearchable,
+    V: Clone + PartialEq,
+{
+    if let Some(bounds) =
+        fallible_signed_band_search_by(evaluator, center.clone(), at_center.clone(), 1)?
+    {
+        return Ok(Some(bounds));
+    }
+    fallible_signed_band_search_by(evaluator, center, at_center, -1)
 }
 
 fn signed_band_search<T>(

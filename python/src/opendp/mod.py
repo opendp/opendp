@@ -1611,10 +1611,16 @@ def binary_search_by(
 ) -> float | int:
     """Find a boundary using a monotone three-way comparator.
 
-    The comparator returns a negative value below the target, zero at the
-    target, and a positive value above it. If no exact value exists, the
-    comparator's ``Less`` endpoint is returned: the lower bracket for an
-    increasing comparator and the upper bracket for a decreasing comparator.
+    Any negative comparator result means ``Less``, zero means ``Equal``, and
+    any positive result means ``Greater``. Python normalizes this sign before
+    crossing the FFI boundary. If no exact value exists, the comparator's
+    ``Less`` endpoint is returned: the lower bracket for an increasing
+    comparator and the upper bracket for a decreasing comparator.
+
+    ``NumericRangeBelow`` and ``NumericRangeAbove`` are consumed as ordering
+    information only when they describe the final quantity being compared.
+    ``NumericDomain``, ``NumericIndeterminate``, and ``NumericBackend``
+    propagate to the caller.
     """
     from opendp._internal import _binary_search_by
     from opendp.typing import RuntimeType
@@ -1640,8 +1646,12 @@ def binary_search_by(
     else:
         runtime_T = RuntimeType.parse(_infer_type(comparison))
 
+    def normalized_comparison(value):
+        result = comparison(value)
+        return int(result > 0) - int(result < 0)
+
     return _call_rust_search(
-        comparison,
+        normalized_comparison,
         runtime_T,
         lambda wrapped: _binary_search_by(
             wrapped, lower=lower, upper=upper, T=runtime_T
@@ -1653,10 +1663,13 @@ def binary_search_by(
 def exponential_bounds_search(
     predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
 ) -> Optional[tuple[float, float]]:
-    """Determine bounds for a binary search via an exponential search,
-    in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
-    Will attempt to recover once if `predicate` throws an exception, 
-    by searching bands on the ok side of the exception boundary.
+    """Determine bounds for a binary search via an exponential search.
+
+    Integer searches use exponentially increasing bands. Floating-point
+    searches also include the finite type extrema, so the bands do not stop
+    at the old ``2^(k^2)`` sequence. The search will attempt to recover once
+    if `predicate` throws an exception, by searching bands on the ok side of
+    the exception boundary.
     
 
     :param predicate: a monotonic unary function from a number to a boolean

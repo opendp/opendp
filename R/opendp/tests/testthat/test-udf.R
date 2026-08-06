@@ -102,10 +102,22 @@ test_that("numeric callback variants survive the R boundary", {
     "NumericIndeterminate", "NumericBackend"
   )) {
     postprocess <- new_function(
-      function_ = \(.arg) stop(paste0(variant, ": callback failure"), call. = FALSE),
+      function_ = \(.arg) stop(paste0("[", variant, "] : callback failure"), call. = FALSE),
       .TO = i32
     )
-    expect_error(postprocess(arg = 1L), variant)
+    expect_error(postprocess(arg = 1L), paste0("^\\[", variant, "\\]"))
+  }
+
+  for (message in c(
+    "prefix NumericRangeAbove: message",
+    "[UnknownVariant] : message",
+    "[NumericRangeAboveX] : message"
+  )) {
+    postprocess <- new_function(
+      function_ = \(.arg) stop(message, call. = FALSE),
+      .TO = i32
+    )
+    expect_error(postprocess(arg = 1L), "^\\[FFI\\]")
   }
 })
 

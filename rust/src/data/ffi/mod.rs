@@ -27,7 +27,7 @@ use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
-use crate::error::Fallible;
+use crate::error::{ErrorVariant, Fallible};
 use crate::ffi::any::{
     AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
 };
@@ -1387,40 +1387,11 @@ pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*cons
 /// * `backtrace` - The error backtrace.
 #[unsafe(no_mangle)]
 pub extern "C" fn ffiresult_err(
-    variant: *mut c_char,
-    message: *mut c_char,
-    backtrace: *mut c_char,
+    variant: *const c_char,
+    message: *const c_char,
+    backtrace: *const c_char,
 ) -> *const FfiResult<*const AnyObject> {
-    fn is_known_variant(value: &str) -> bool {
-        matches!(
-            value,
-            "FFI"
-                | "TypeParse"
-                | "Type"
-                | "FailedFunction"
-                | "FailedMap"
-                | "RelationDebug"
-                | "FailedCast"
-                | "DomainMismatch"
-                | "MetricMismatch"
-                | "MeasureMismatch"
-                | "MakeDomain"
-                | "MakeTransformation"
-                | "MakeMeasurement"
-                | "MetricSpace"
-                | "InvalidDistance"
-                | "Search"
-                | "NumericDomain"
-                | "NumericRangeBelow"
-                | "NumericRangeAbove"
-                | "NumericIndeterminate"
-                | "NumericBackend"
-                | "Overflow"
-                | "NotImplemented"
-        )
-    }
-
-    fn make_message(message: *mut c_char, backtrace: *mut c_char) -> Fallible<*mut c_char> {
+    fn make_message(message: *const c_char, backtrace: *const c_char) -> Fallible<*mut c_char> {
         let message = util::to_str(message)?;
         let backtrace = util::to_str(backtrace)?;
         let message = format!("{message}:\n{backtrace}");
@@ -1429,8 +1400,9 @@ pub extern "C" fn ffiresult_err(
 
     let variant = util::to_str(variant)
         .ok()
-        .filter(|variant| is_known_variant(variant))
-        .unwrap_or("FFI");
+        .and_then(|variant| variant.parse::<ErrorVariant>().ok())
+        .unwrap_or(ErrorVariant::FFI)
+        .to_string();
     let message = match make_message(message, backtrace) {
         Ok(v) => v,
         Err(e) => return util::into_raw(FfiResult::from(e)),
