@@ -1,4 +1,5 @@
 use std::{
+    cell::Cell,
     iter::{once, successors},
     mem::swap,
     ops::{Add, Div, Sub},
@@ -7,7 +8,7 @@ use std::{
 use num::{CheckedAdd, CheckedSub, One, Zero};
 
 use crate::{
-    error::Fallible,
+    error::{Error, ErrorVariant, Fallible},
     traits::{ExactIntCast, FiniteBounds},
 };
 
@@ -16,7 +17,15 @@ mod test;
 
 /// Types that support OpenDP's binary-search utilities.
 pub trait BinarySearchable:
-    Bands + Zero + One + Clone + PartialEq + PartialOrd + Add<Output = Self> + Sub<Output = Self>
+    Bands
+    + FiniteBounds
+    + Zero
+    + One
+    + Clone
+    + PartialEq
+    + PartialOrd
+    + Add<Output = Self>
+    + Sub<Output = Self>
 {
     fn midpoint(lower: &Self, upper: &Self) -> Self;
 }
@@ -171,57 +180,80 @@ where
     T: BinarySearchable,
 {
     let bounds = resolve_bounds(&predicate, bounds)?;
-    signed_fallible_binary_search_with_bounds(predicate, bounds)
+    signed_fallible_binary_search_with_bounds(&predicate, bounds)
 }
 
 fn resolve_bounds<T>(
     predicate: &impl Fn(&T) -> Fallible<bool>,
     bounds: impl BoundSpec<T>,
-) -> Fallible<(T, T)>
+) -> Fallible<((T, bool), (T, bool))>
 where
     T: BinarySearchable,
 {
-    match bounds.resolve() {
-        (Some(lower), Some(upper)) => Ok((lower, upper)),
+    let (lower, upper) = bounds.resolve();
+    for value in lower.iter().chain(upper.iter()) {
+        if !(value >= &T::MIN_FINITE && value <= &T::MAX_FINITE) {
+            return fallible!(Search, "search bounds must be finite and not NaN");
+        }
+    }
+    let (mut lower, mut upper) = match (lower, upper) {
+        (Some(lower), Some(upper)) => (lower, upper),
         (Some(lower), None) => {
-            let at_lower = predicate(&lower)?;
-            fallible_signed_band_search(predicate, lower.clone(), at_lower, 1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is below the lower bound or the predicate does not change above it"
-                    )
-                })
+            return infer_bounds(predicate, lower, &[1])?.ok_or_else(|| {
+                err!(
+                    Search,
+                    "the decision boundary is below the lower bound or the predicate does not change above it"
+                )
+            });
         }
         (None, Some(upper)) => {
-            let at_upper = predicate(&upper)?;
-            fallible_signed_band_search(predicate, upper.clone(), at_upper, -1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is above the upper bound or the predicate does not change below it"
-                    )
-                })
+            return infer_bounds(predicate, upper, &[-1])?.ok_or_else(|| {
+                err!(
+                    Search,
+                    "the decision boundary is above the upper bound or the predicate does not change below it"
+                )
+            });
         }
-        (None, None) => fallible_exponential_bounds_search(predicate)?
-            .ok_or_else(|| err!(Search, "unable to infer bounds")),
+        (None, None) => {
+            return infer_bounds(predicate, T::zero(), &[1, -1])?
+                .ok_or_else(|| err!(Search, "unable to infer bounds"));
+        }
+    };
+    if lower > upper {
+        swap(&mut lower, &mut upper);
     }
+    // Evaluate sequentially: unexpected errors must escape before any further
+    // callback. Pass the observations to bisection rather than evaluating twice.
+    let maximize = match predicate(&lower) {
+        Ok(value) => value,
+        Err(error) if is_range_error(&error) => {
+            let at_upper = predicate(&upper)?;
+            return recover_range_bracket(predicate, upper, at_upper, lower, error);
+        }
+        Err(error) => return Err(error),
+    };
+    let minimize = match predicate(&upper) {
+        Ok(value) => value,
+        Err(error) if is_range_error(&error) => {
+            return recover_range_bracket(predicate, lower, maximize, upper, error);
+        }
+        Err(error) => return Err(error),
+    };
+    Ok(((lower, maximize), (upper, minimize)))
 }
 
 fn signed_fallible_binary_search_with_bounds<T>(
-    predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: (T, T),
+    predicate: &dyn Fn(&T) -> Fallible<bool>,
+    bounds: ((T, bool), (T, bool)),
 ) -> Fallible<(T, i8)>
 where
     T: BinarySearchable,
 {
     let (mut lower, mut upper) = bounds;
-    if lower > upper {
+    if lower.0 > upper.0 {
         swap(&mut lower, &mut upper);
     }
-
-    let maximize = predicate(&lower)?;
-    let minimize = predicate(&upper)?;
+    let ((mut lower, maximize), (mut upper, minimize)) = (lower, upper);
 
     if maximize == minimize {
         return fallible!(
@@ -263,14 +295,22 @@ macro_rules! impl_bands_float {
         $(impl Bands for $ty {
             fn bands(center: Self, sign: i8) -> Vec<Self> {
                 let sign: Self = if sign > 0 { 1.0 } else { -1.0 };
-                let half: Self = 0.5;
                 let two: Self = 2.0;
-
-                let mut bands = vec![center, center + sign * half];
-                bands.extend(
-                    (0..std::mem::size_of::<Self>())
-                        .map(|k| center + sign * two.powi((k as i32).pow(2))),
-                );
+                let mut bands = vec![center];
+                let offsets = once(0.5).chain((0i32..)
+                    .map(|k| k * k)
+                    .take_while(|&exponent| exponent < Self::MAX_EXP)
+                    .map(|exponent| two.powi(exponent)));
+                for offset in offsets {
+                    let candidate = center + sign * offset;
+                    if candidate.is_finite() && sign * candidate > sign * *bands.last().unwrap() {
+                        bands.push(candidate);
+                    }
+                }
+                let extreme = sign * Self::MAX;
+                if bands.last() != Some(&extreme) {
+                    bands.push(extreme);
+                }
                 bands
             }
         })+
@@ -327,6 +367,7 @@ macro_rules! impl_bands_int {
 
 impl_bands_int!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
+/// Determine bounds for a binary search via an exponential search.
 pub fn exponential_bounds_search<T>(predicate: &impl Fn(&T) -> bool) -> Option<(T, T)>
 where
     T: BinarySearchable,
@@ -334,95 +375,184 @@ where
     let center = T::zero();
     let at_center = predicate(&center);
 
-    signed_band_search(predicate, center.clone(), at_center, 1)
-        .or_else(|| signed_band_search(predicate, center, at_center, -1))
+    fallible_exponential_bounds_search_from(
+        &|value| Ok(predicate(value)),
+        center,
+        at_center,
+        &[1, -1],
+    )
+    .ok()
+    .flatten()
+    .map(|((lower, _), (upper, _))| (lower, upper))
 }
 
 /// Determine bounds for a binary search via an exponential search.
 ///
-/// If `predicate` fails at the origin, recover by first finding the edge of the exceptional region
-/// and then searching away from it.
+/// Overflow makes a probe unavailable, not passing or failing. The predicate must
+/// be deterministic and monotone on its evaluable interval. Any initial error
+/// triggers best-effort finite anchor discovery, which can miss narrow intervals.
+/// Once anchored, unexpected errors propagate outside the initial invalid segment.
 pub fn fallible_exponential_bounds_search<T>(
     predicate: &impl Fn(&T) -> Fallible<bool>,
 ) -> Fallible<Option<(T, T)>>
 where
     T: BinarySearchable,
 {
-    let center = T::zero();
-    let center_result = predicate(&center);
-
-    if let Ok(at_center) = center_result.as_ref() {
-        match fallible_signed_band_search(predicate, center.clone(), *at_center, 1) {
-            Ok(Some(bounds)) => return Ok(Some(bounds)),
-            Ok(None) => return fallible_signed_band_search(predicate, center, *at_center, -1),
-            Err(_) => {}
-        }
-    }
-
-    let exception_predicate = |value: &T| predicate(value).is_ok();
-
-    let exception_bounds = match exponential_bounds_search(&exception_predicate) {
-        Some(bounds) => bounds,
-        None => match center_result {
-            Ok(_) => return fallible!(Search, "predicate always fails"),
-            Err(err) => return Err(err),
-        },
-    };
-
-    let (center, sign) = signed_fallible_binary_search_with_bounds(
-        |value| Ok(exception_predicate(value)),
-        exception_bounds,
-    )?;
-    let at_center = predicate(&center)?;
-    fallible_signed_band_search(predicate, center, at_center, sign)
+    infer_bounds(predicate, T::zero(), &[1, -1])
+        .map(|bounds| bounds.map(|((lower, _), (upper, _))| (lower, upper)))
 }
 
-fn signed_band_search<T>(
-    predicate: &impl Fn(&T) -> bool,
-    center: T,
-    at_center: bool,
-    sign: i8,
-) -> Option<(T, T)>
-where
-    T: BinarySearchable,
-{
-    let bands = T::bands(center, sign);
-
-    for window in bands.windows(2) {
-        if at_center != predicate(&window[1]) {
-            let mut lower = window[0].clone();
-            let mut upper = window[1].clone();
-            if lower > upper {
-                swap(&mut lower, &mut upper);
-            }
-            return Some((lower, upper));
-        }
-    }
-
-    None
-}
-
-fn fallible_signed_band_search<T>(
+fn infer_bounds<T: BinarySearchable>(
     predicate: &impl Fn(&T) -> Fallible<bool>,
     center: T,
-    at_center: bool,
-    sign: i8,
-) -> Fallible<Option<(T, T)>>
-where
-    T: BinarySearchable,
-{
-    let bands = T::bands(center, sign);
-
-    for window in bands.windows(2) {
-        if at_center != predicate(&window[1])? {
-            let mut lower = window[0].clone();
-            let mut upper = window[1].clone();
-            if lower > upper {
-                swap(&mut lower, &mut upper);
+    directions: &[i8],
+) -> Fallible<Option<((T, bool), (T, bool))>> {
+    let initial_error = match predicate(&center) {
+        Ok(value) => {
+            return fallible_exponential_bounds_search_from(predicate, center, value, directions);
+        }
+        Err(error) => error,
+    };
+    // Best effort only: these finite probes may miss a narrow evaluable interval.
+    let bands: Vec<_> = directions
+        .iter()
+        .map(|&sign| T::bands(center.clone(), sign))
+        .collect();
+    for index in 1..bands.iter().map(Vec::len).max().unwrap_or(0) {
+        for bands in &bands {
+            let Some(point) = bands.get(index) else {
+                continue;
+            };
+            if let Ok(value) = predicate(point) {
+                return recover_initial_segment(predicate, center, point.clone(), value);
             }
-            return Ok(Some((lower, upper)));
+        }
+    }
+    Err(initial_error)
+}
+
+// Only this initial segment can contain arbitrary domain/construction failures.
+// Successful observations, never errors, establish the predicate bracket.
+fn recover_initial_segment<T: BinarySearchable>(
+    predicate: &impl Fn(&T) -> Fallible<bool>,
+    mut unavailable: T,
+    mut anchor: T,
+    at_anchor: bool,
+) -> Fallible<Option<((T, bool), (T, bool))>> {
+    let sign = if anchor > unavailable { 1 } else { -1 };
+    loop {
+        let mid = if sign > 0 {
+            T::midpoint(&unavailable, &anchor)
+        } else {
+            T::midpoint(&anchor, &unavailable)
+        };
+        if mid == anchor || mid == unavailable {
+            break;
+        }
+        match predicate(&mid) {
+            Ok(value) if value != at_anchor => {
+                return Ok(Some(((anchor, at_anchor), (mid, value))));
+            }
+            Ok(_) => anchor = mid,
+            Err(_) => unavailable = mid,
+        }
+    }
+    // Confirm the evaluable endpoint before leaving initial recovery. This also
+    // clears a tolerated callback error if the anchor has no outward probes.
+    predicate(&anchor)?;
+    fallible_exponential_bounds_search_from(predicate, anchor, at_anchor, &[sign])
+}
+
+fn fallible_exponential_bounds_search_from<T: BinarySearchable>(
+    predicate: &dyn Fn(&T) -> Fallible<bool>,
+    center: T,
+    at_center: bool,
+    directions: &[i8],
+) -> Fallible<Option<((T, bool), (T, bool))>> {
+    let mut range_error = None;
+    // Try one direction at a time. For a successful zero anchor this finds
+    // ordinary positive calibrations before probing invalid negative parameters.
+    for &sign in directions {
+        match fallible_band_search(predicate, &T::bands(center.clone(), sign), at_center) {
+            Ok(Some(bounds)) => return Ok(Some(bounds)),
+            Ok(None) => (),
+            Err(error) if is_range_error(&error) => range_error = Some(error),
+            Err(error) => return Err(error),
+        }
+    }
+    match range_error {
+        Some(error) => Err(error),
+        None => Ok(None),
+    }
+}
+
+fn fallible_band_search<T: BinarySearchable>(
+    predicate: &dyn Fn(&T) -> Fallible<bool>,
+    bands: &[T],
+    at_center: bool,
+) -> Fallible<Option<((T, bool), (T, bool))>> {
+    for window in bands.windows(2) {
+        match predicate(&window[1]) {
+            Ok(value) if value != at_center => {
+                let mut lower = (window[0].clone(), at_center);
+                let mut upper = (window[1].clone(), value);
+                if lower.0 > upper.0 {
+                    swap(&mut lower, &mut upper);
+                }
+                return Ok(Some((lower, upper)));
+            }
+            Ok(_) => (),
+            Err(error) if is_range_error(&error) => {
+                return recover_range_bracket(
+                    predicate,
+                    window[0].clone(),
+                    at_center,
+                    window[1].clone(),
+                    error,
+                )
+                .map(Some);
+            }
+            Err(error) => return Err(error),
         }
     }
 
     Ok(None)
+}
+
+fn is_range_error(error: &Error) -> bool {
+    error.variant == ErrorVariant::Overflow
+}
+
+/// Recover only along the segment from a successful observation to an unavailable
+/// probe. Use the Boolean engine to find the evaluation edge; overflow itself
+/// supplies no information about the original Boolean predicate.
+fn recover_range_bracket<T: BinarySearchable>(
+    predicate: &dyn Fn(&T) -> Fallible<bool>,
+    center: T,
+    at_center: bool,
+    unavailable: T,
+    error: Error,
+) -> Fallible<((T, bool), (T, bool))> {
+    let at_edge = Cell::new(at_center);
+    let (edge, _) = signed_fallible_binary_search_with_bounds(
+        &|value| match predicate(value) {
+            Ok(observation) => {
+                at_edge.set(observation);
+                Ok(true)
+            }
+            Err(error) if is_range_error(&error) => Ok(false),
+            Err(error) => Err(error),
+        },
+        ((center.clone(), true), (unavailable, false)),
+    )?;
+    // Bisection's passing endpoint is its last successful evaluation.
+    let at_edge = at_edge.get();
+    if at_edge == at_center {
+        return Err(error);
+    }
+    Ok(if center < edge {
+        ((center, at_center), (edge, at_edge))
+    } else {
+        ((edge, at_edge), (center, at_center))
+    })
 }

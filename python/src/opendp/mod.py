@@ -1595,37 +1595,38 @@ def binary_search_param(
 
 def _call_rust_search(
     predicate: Callable[[float], bool],
-    T: "RuntimeType | str",
     search: Callable[[Callable[[float], bool]], Any],
-    bounds: tuple[float | None, float | None] | None = (None, None),
 ) -> Any:
-    first_exception = None
-    had_success = False
+    initial_error = callback_error = None
+    has_value = False
 
     def wrapped(arg):
-        nonlocal first_exception, had_success
+        nonlocal initial_error, callback_error, has_value
+        callback_error = None
         try:
-            result = predicate(arg)
-        except Exception as err:
-            if first_exception is None:
-                first_exception = err
+            value = predicate(arg)
+            has_value = True
+            return value
+        except Exception as exc:
+            if initial_error is None and not has_value:
+                initial_error = exc
+            callback_error = exc
             raise
-        else:
-            had_success = True
-            return result
 
     try:
         return search(wrapped)
     except OpenDPException as err:
-        if first_exception is not None:
-            exc = first_exception
-            if (bounds is None or bounds == (None, None)) and not had_success:
-                center = 0.0 if T in {"f32", "f64"} else 0
-                exc.add_note(
-                    "Predicate in binary search always raises an exception. "
-                    f"This exception is raised when the predicate is evaluated at {center}."
-                )
-            raise exc
+        # Discovery may have seen several different errors without an anchor.
+        if not has_value and initial_error is not None:
+            raise initial_error
+        if callback_error is not None:
+            variant = (
+                callback_error.variant
+                if isinstance(callback_error, OpenDPException)
+                else "FFI"
+            )
+            if err.variant == variant:
+                raise callback_error
         if err.variant == "Search":
             raise ValueError(err.message)
         if err.variant == "Type":
@@ -1749,21 +1750,24 @@ def binary_search(
 
     return _call_rust_search(
         predicate,
-        runtime_T,
         lambda wrapped: _binary_search(
             wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T
         ),
-        bounds=bounds,
     )
 
 
 def exponential_bounds_search(
     predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
 ) -> Optional[tuple[float, float]]:
-    """Determine bounds for a binary search via an exponential search,
-    in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
-    Will attempt to recover once if `predicate` throws an exception,
-    by searching bands on the ok side of the exception boundary.
+    """Determine bounds for a binary search via an exponential search.
+
+    Integer searches use exponentially increasing bands. Floating-point
+    searches also include the finite type extrema. ``Overflow`` makes a probe
+    unavailable, not passing or failing. The search attempts to recover a Boolean
+    bracket anchored at a successful observation. Any initial error triggers
+    best-effort discovery of an evaluable anchor, then bisection toward the invalid
+    initial point. Finite probes may miss narrow evaluable intervals. Outside this
+    initial recovery, unexpected errors propagate immediately.
 
 
     :param predicate: a monotonic unary function from a number to a boolean
@@ -1779,7 +1783,6 @@ def exponential_bounds_search(
 
     return _call_rust_search(
         predicate,
-        runtime_T,
         lambda wrapped: _exponential_bounds_search(wrapped, runtime_T),
     )
 

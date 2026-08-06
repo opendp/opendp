@@ -639,50 +639,44 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
-.call_search_callback <- function(predicate, .T, call_expr, bounds = NULL) {
-  parse_rust_error_message <- function(message) {
-    first_line <- strsplit(message, "\n", fixed = TRUE)[[1]][1]
-    parsed <- regexec("^\\[([^]]+)\\] : (.*)$", first_line)
-    parts <- regmatches(first_line, parsed)[[1]]
-    if (length(parts) == 3) {
-      return(list(variant = parts[[2]], message = parts[[3]]))
+.call_search_callback <- function(predicate, call_expr) {
+  variant <- function(e) {
+    if (inherits(e, "opendp_error") && is.character(e$variant) &&
+        length(e$variant) == 1L && !is.na(e$variant)) {
+      return(e$variant)
     }
-    list(variant = NULL, message = first_line)
+    "FFI"
   }
 
   state <- new.env(parent = emptyenv())
-  state$first_error <- NULL
-  state$had_success <- FALSE
+  state$initial_error <- state$callback_error <- NULL
+  state$has_value <- FALSE
 
   wrapped <- function(v) {
+    state$callback_error <- NULL
     tryCatch({
-      out <- predicate(v)
-      state$had_success <- TRUE
-      out
+      value <- predicate(v)
+      state$has_value <- TRUE
+      value
     }, error = function(e) {
-      if (is.null(state$first_error)) {
-        state$first_error <- e
-      }
-      stop(conditionMessage(e), call. = FALSE)
+      if (is.null(state$initial_error) && !state$has_value) state$initial_error <- e
+      state$callback_error <- e
+      stop(e) # nolint: condition_call_linter.
     })
   }
 
   tryCatch(
     force(call_expr(wrapped)),
     error = function(e) {
-      if (!is.null(state$first_error)) {
-        if (is.null(bounds) && !isTRUE(state$had_success)) {
-          center <- if (.T$origin %in% c("f32", "f64")) 0. else 0L
-          msg <- "Predicate always fails. Example error at %s: %s"
-          stop(sprintf(msg, center, conditionMessage(state$first_error)), call. = FALSE)
-        }
-        stop(conditionMessage(state$first_error), call. = FALSE)
+      if (!state$has_value && !is.null(state$initial_error)) {
+        stop(state$initial_error) # nolint: condition_call_linter.
       }
-      rust_error <- parse_rust_error_message(conditionMessage(e))
-      if (identical(rust_error$variant, "Search")) {
-        stop(rust_error$message, call. = FALSE)
+      # Rust also transports malformed/unknown condition variants as FFI.
+      if (!is.null(state$callback_error) &&
+          (identical(variant(e), "FFI") || identical(variant(e), variant(state$callback_error)))) {
+        stop(state$callback_error) # nolint: condition_call_linter.
       }
-      stop(conditionMessage(e), call. = FALSE)
+      stop(e) # nolint: condition_call_linter.
     }
   )
 }
@@ -753,8 +747,6 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
 
   result <- .call_search_callback(
     predicate = predicate,
-    .T = .T,
-    bounds = bounds,
     call_expr = function(wrapped) {
       `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
     }
@@ -771,7 +763,6 @@ exponential_bounds_search <- function(predicate, .T) {
 
   result <- .call_search_callback(
     predicate = predicate,
-    .T = .T,
     call_expr = function(wrapped) {
       `_exponential_bounds_search`(wrapped, .T = .T)
     }
