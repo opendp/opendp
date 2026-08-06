@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     iter::{once, successors},
     mem::swap,
     ops::{Add, Div, Sub},
@@ -7,7 +8,7 @@ use std::{
 use num::{CheckedAdd, CheckedSub, One, Zero};
 
 use crate::{
-    error::Fallible,
+    error::{ErrorVariant, Fallible},
     traits::{ExactIntCast, FiniteBounds},
 };
 
@@ -162,6 +163,144 @@ where
     signed_fallible_binary_search(predicate, bounds).map(|(value, _sign)| value)
 }
 
+/// Find the boundary of a monotone comparator.
+///
+/// The callback compares its argument to the target. Range variants are
+/// consumed here as ordering information: `NumericRangeBelow` means `Less`,
+/// and `NumericRangeAbove` means `Greater`. A callback may return a range
+/// variant only when that side describes the final quantity being compared to
+/// the target; operation-local range failures must remain ordinary errors.
+///
+/// If the comparator returns `Equal`, that value is returned. If no exact
+/// value exists, the endpoint whose comparison is `Less` is returned. Thus an
+/// increasing comparator returns the lower bracket, while a decreasing
+/// comparator returns the upper bracket.
+pub fn fallible_binary_search_by<T>(
+    comparison: impl Fn(&T) -> Fallible<Ordering>,
+    bounds: impl BoundSpec<T>,
+) -> Fallible<T>
+where
+    T: BinarySearchable,
+{
+    let bounds = resolve_comparison_bounds(&comparison, bounds)?;
+    fallible_binary_search_by_with_bounds(&comparison, bounds)
+}
+
+fn ordered_result(result: Fallible<Ordering>) -> Fallible<Ordering> {
+    match result {
+        Ok(ordering) => Ok(ordering),
+        Err(error) if error.variant == ErrorVariant::NumericRangeBelow => Ok(Ordering::Less),
+        Err(error) if error.variant == ErrorVariant::NumericRangeAbove => Ok(Ordering::Greater),
+        Err(error) => Err(error),
+    }
+}
+
+fn resolve_comparison_bounds<T>(
+    comparison: &impl Fn(&T) -> Fallible<Ordering>,
+    bounds: impl BoundSpec<T>,
+) -> Fallible<(T, T)>
+where
+    T: BinarySearchable,
+{
+    let comparison = |value: &T| ordered_result(comparison(value));
+    match bounds.resolve() {
+        (Some(lower), Some(upper)) => Ok((lower, upper)),
+        (Some(lower), None) => {
+            let at_lower = comparison(&lower)?;
+            if at_lower == Ordering::Equal {
+                return Ok((lower.clone(), lower));
+            }
+            fallible_signed_band_search_by(&comparison, lower.clone(), at_lower, 1)?.ok_or_else(
+                || {
+                    err!(
+                        Search,
+                        "the decision boundary is below the lower bound or the comparator does not change above it"
+                    )
+                },
+            )
+        }
+        (None, Some(upper)) => {
+            let at_upper = comparison(&upper)?;
+            if at_upper == Ordering::Equal {
+                return Ok((upper.clone(), upper));
+            }
+            fallible_signed_band_search_by(&comparison, upper.clone(), at_upper, -1)?.ok_or_else(
+                || {
+                    err!(
+                        Search,
+                        "the decision boundary is above the upper bound or the comparator does not change below it"
+                    )
+                },
+            )
+        }
+        (None, None) => {
+            let center = T::zero();
+            let at_center = comparison(&center)?;
+            if at_center == Ordering::Equal {
+                return Ok((center.clone(), center));
+            }
+            let predicate = |value: &T| comparison(value).map(|ordering| ordering == at_center);
+            fallible_exponential_bounds_search(&predicate)?
+                .ok_or_else(|| err!(Search, "unable to infer bounds for comparator"))
+        }
+    }
+}
+
+fn fallible_binary_search_by_with_bounds<T>(
+    comparison: &impl Fn(&T) -> Fallible<Ordering>,
+    bounds: (T, T),
+) -> Fallible<T>
+where
+    T: BinarySearchable,
+{
+    let (mut lower, mut upper) = bounds;
+    if lower > upper {
+        swap(&mut lower, &mut upper);
+    }
+
+    let lower_order = ordered_result(comparison(&lower))?;
+    let upper_order = ordered_result(comparison(&upper))?;
+    if lower_order == Ordering::Equal {
+        return Ok(lower);
+    }
+    if upper_order == Ordering::Equal {
+        return Ok(upper);
+    }
+    if !matches!(
+        (lower_order, upper_order),
+        (Ordering::Less, Ordering::Greater) | (Ordering::Greater, Ordering::Less)
+    ) {
+        return fallible!(
+            Search,
+            "the comparator does not cross the target within the bounds"
+        );
+    }
+
+    let mut mid = lower.clone();
+    loop {
+        let new_mid = T::midpoint(&lower, &upper);
+        if new_mid == mid || new_mid == lower || new_mid == upper {
+            break;
+        }
+
+        mid = new_mid;
+        match ordered_result(comparison(&mid))? {
+            Ordering::Equal => return Ok(mid),
+            ordering if ordering == lower_order => lower = mid.clone(),
+            ordering if ordering == upper_order => upper = mid.clone(),
+            _ => {
+                return fallible!(Search, "the comparator is not monotone within the bounds");
+            }
+        }
+    }
+
+    Ok(if lower_order == Ordering::Less {
+        lower
+    } else {
+        upper
+    })
+}
+
 /// Fallible version of [`signed_binary_search`].
 pub fn signed_fallible_binary_search<T>(
     predicate: impl Fn(&T) -> Fallible<bool>,
@@ -262,15 +401,28 @@ macro_rules! impl_bands_float {
     ($($ty:ty),+ $(,)?) => {
         $(impl Bands for $ty {
             fn bands(center: Self, sign: i8) -> Vec<Self> {
-                let sign: Self = if sign > 0 { 1.0 } else { -1.0 };
+                let sign_value = sign;
+                let sign: Self = if sign_value > 0 { 1.0 } else { -1.0 };
                 let half: Self = 0.5;
                 let two: Self = 2.0;
 
-                let mut bands = vec![center, center + sign * half];
-                bands.extend(
-                    (0..std::mem::size_of::<Self>())
-                        .map(|k| center + sign * two.powi((k as i32).pow(2))),
-                );
+                let mut bands = vec![center];
+                let first = center + sign * half;
+                if first.is_finite() {
+                    bands.push(first);
+                }
+                for k in 0..std::mem::size_of::<Self>() {
+                    let candidate = center + sign * two.powi((k as i32).pow(2));
+                    if candidate.is_finite() {
+                        bands.push(candidate);
+                    } else {
+                        break;
+                    }
+                }
+                let extreme = if sign_value > 0 { <$ty>::MAX } else { <$ty>::MIN };
+                if bands.last() != Some(&extreme) {
+                    bands.push(extreme);
+                }
                 bands
             }
         })+
@@ -411,10 +563,23 @@ fn fallible_signed_band_search<T>(
 where
     T: BinarySearchable,
 {
+    fallible_signed_band_search_by(predicate, center, at_center, sign)
+}
+
+fn fallible_signed_band_search_by<T, V>(
+    evaluator: &impl Fn(&T) -> Fallible<V>,
+    center: T,
+    at_center: V,
+    sign: i8,
+) -> Fallible<Option<(T, T)>>
+where
+    T: BinarySearchable,
+    V: PartialEq,
+{
     let bands = T::bands(center, sign);
 
     for window in bands.windows(2) {
-        if at_center != predicate(&window[1])? {
+        if at_center != evaluator(&window[1])? {
             let mut lower = window[0].clone();
             let mut upper = window[1].clone();
             if lower > upper {

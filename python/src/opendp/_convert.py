@@ -16,6 +16,7 @@ from opendp.mod import (
     SeriesDomain,
     SymmetricIdDistance,
     UnknownTypeException,
+    OpenDPException,
     Transformation,
     Measurement,
     PrivacyProfile,
@@ -961,13 +962,23 @@ def _invoke_py_callback(c_arg, userdata):
         lib.ffiresult_ok.restype = ctypes.c_void_p
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    except Exception:
+    except OpenDPException as err:
         import traceback
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-            ctypes.c_char_p(traceback.format_exc().encode()),
+            err.variant.encode(),
+            str(err).encode(),
+            traceback.format_exc().encode(),
+        )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            b"FFI",
+            b"Exception in user-defined function",
+            traceback.format_exc().encode(),
         )
 
 
@@ -1021,13 +1032,23 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         lib.ffiresult_ok.restype = ctypes.c_void_p
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    except Exception:
+    except OpenDPException as err:
         import traceback
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-            ctypes.c_char_p(traceback.format_exc().encode()),
+            err.variant.encode(),
+            str(err).encode(),
+            traceback.format_exc().encode(),
+        )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            b"FFI",
+            b"Exception in user-defined function",
+            traceback.format_exc().encode(),
         )
 
 

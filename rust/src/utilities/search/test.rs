@@ -130,3 +130,91 @@ fn test_binary_search_uses_search_error_variant() {
         Some("the decision boundary of the predicate is outside the bounds")
     );
 }
+
+#[test]
+fn test_fallible_binary_search_by_increasing_and_decreasing() -> Fallible<()> {
+    let increasing = |x: &i32| Ok(x.cmp(&5));
+    let decreasing = |x: &i32| Ok(5.cmp(x));
+
+    assert_eq!(fallible_binary_search_by(increasing, ())?, 5);
+    assert_eq!(fallible_binary_search_by(decreasing, ())?, 5);
+    assert_eq!(
+        fallible_binary_search_by(|x: &i32| Ok(x.cmp(&5)), (0, 10))?,
+        5
+    );
+    assert_eq!(
+        fallible_binary_search_by(|x: &i32| Ok(5.cmp(x)), (0, 10))?,
+        5
+    );
+    Ok(())
+}
+
+#[test]
+fn test_fallible_binary_search_by_non_exact_boundary() -> Fallible<()> {
+    let increasing = |x: &i32| Ok((*x as f64).partial_cmp(&5.5).unwrap());
+    let decreasing = |x: &i32| Ok(5.5.partial_cmp(&(*x as f64)).unwrap());
+
+    // The Less-side rule returns the lower bracket for increasing comparators
+    // and the upper bracket for decreasing comparators.
+    assert_eq!(fallible_binary_search_by(increasing, (0, 10))?, 5);
+    assert_eq!(fallible_binary_search_by(decreasing, (0, 10))?, 6);
+    Ok(())
+}
+
+#[test]
+fn test_fallible_binary_search_by_explicit_and_inferred_bounds() -> Fallible<()> {
+    assert_eq!(<f32 as Bands>::bands(0.0, 1).last(), Some(&f32::MAX));
+    assert_eq!(<f64 as Bands>::bands(0.0, -1).last(), Some(&-f64::MAX));
+
+    assert_eq!(
+        fallible_binary_search_by(|x: &i32| Ok(x.cmp(&5)), Above(0))?,
+        5
+    );
+    assert_eq!(
+        fallible_binary_search_by(|x: &i32| Ok(x.cmp(&-5)), Below(0))?,
+        -5
+    );
+
+    let positive_target = f32::MAX / 2.0;
+    assert_eq!(
+        fallible_binary_search_by(|x: &f32| Ok(x.partial_cmp(&positive_target).unwrap()), (),)?,
+        positive_target
+    );
+
+    let negative_target = -f32::MAX / 2.0;
+    assert_eq!(
+        fallible_binary_search_by(|x: &f32| Ok(x.partial_cmp(&negative_target).unwrap()), (),)?,
+        negative_target
+    );
+    Ok(())
+}
+
+#[test]
+fn test_fallible_binary_search_by_consumes_only_range_variants() -> Fallible<()> {
+    let result = fallible_binary_search_by(
+        |x: &i32| {
+            if *x < 0 {
+                fallible!(NumericRangeBelow, "final value is below target")
+            } else if *x > 10 {
+                fallible!(NumericRangeAbove, "final value is above target")
+            } else {
+                Ok(x.cmp(&5))
+            }
+        },
+        (-10, 20),
+    )?;
+    assert_eq!(result, 5);
+
+    macro_rules! assert_propagates {
+        ($variant:ident) => {
+            let error =
+                fallible_binary_search_by(|_| fallible!($variant, "callback failure"), (0, 10))
+                    .unwrap_err();
+            assert_eq!(error.variant, ErrorVariant::$variant);
+        };
+    }
+    assert_propagates!(NumericDomain);
+    assert_propagates!(NumericIndeterminate);
+    assert_propagates!(NumericBackend);
+    Ok(())
+}

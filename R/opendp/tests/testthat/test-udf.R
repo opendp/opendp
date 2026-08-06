@@ -94,6 +94,21 @@ test_that("user-defined callback errors surface cleanly", {
   )
 })
 
+test_that("numeric callback variants survive the R boundary", {
+  enable_features("contrib", "honest-but-curious")
+
+  for (variant in c(
+    "NumericRangeBelow", "NumericRangeAbove", "NumericDomain",
+    "NumericIndeterminate", "NumericBackend"
+  )) {
+    postprocess <- new_function(
+      function_ = \(.arg) stop(paste0(variant, ": callback failure"), call. = FALSE),
+      .TO = i32
+    )
+    expect_error(postprocess(arg = 1L), variant)
+  }
+})
+
 test_that("user-defined callbacks surface conversion failures cleanly", {
   enable_features("contrib", "honest-but-curious")
 

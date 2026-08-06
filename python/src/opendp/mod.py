@@ -54,6 +54,7 @@ __all__ = [
     'binary_search_chain',
     'binary_search_param',
     'binary_search',
+    'binary_search_by',
     'exponential_bounds_search',
     'serialize',
     'deserialize',
@@ -1602,6 +1603,52 @@ def binary_search(
         lambda wrapped: _binary_search(wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T),
         bounds=bounds,
     )
+
+def binary_search_by(
+    comparison: Callable[[float], int],
+    bounds: Optional[tuple[float | None, float | None]] = (None, None),
+    T: Optional[Union[Type[float], Type[int]]] = None,
+) -> float | int:
+    """Find a boundary using a monotone three-way comparator.
+
+    The comparator returns a negative value below the target, zero at the
+    target, and a positive value above it. If no exact value exists, the
+    comparator's ``Less`` endpoint is returned: the lower bracket for an
+    increasing comparator and the upper bracket for a decreasing comparator.
+    """
+    from opendp._internal import _binary_search_by
+    from opendp.typing import RuntimeType
+
+    if bounds is not None:
+        if len(bounds) != 2:
+            raise ValueError(
+                "bounds must contain exactly two elements; "
+                "use (lower, None) or (None, upper) for a one-sided search"
+            )
+        lower, upper = bounds
+        if lower is not None and upper is not None and type(lower) is not type(upper):
+            raise TypeError("bounds must share the same type")
+    else:
+        lower, upper = None, None
+
+    if T is not None:
+        runtime_T = RuntimeType.parse(T)
+    elif lower is not None:
+        runtime_T = RuntimeType.infer(lower)
+    elif upper is not None:
+        runtime_T = RuntimeType.infer(upper)
+    else:
+        runtime_T = RuntimeType.parse(_infer_type(comparison))
+
+    return _call_rust_search(
+        comparison,
+        runtime_T,
+        lambda wrapped: _binary_search_by(
+            wrapped, lower=lower, upper=upper, T=runtime_T
+        ),
+        bounds=bounds,
+    )
+
 
 def exponential_bounds_search(
     predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]

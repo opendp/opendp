@@ -135,6 +135,35 @@ def test_binary_search_forwards_untranslated_rust_errors():
         _call_rust_search(lambda _: True, "i32", search)
 
 
+@pytest.mark.parametrize(
+    "variant",
+    [
+        "NumericRangeBelow",
+        "NumericRangeAbove",
+        "NumericDomain",
+        "NumericIndeterminate",
+        "NumericBackend",
+    ],
+)
+def test_binary_search_callback_round_trips_numeric_errors(variant):
+    def comparison(_):
+        raise OpenDPException(variant, "numeric callback failure")
+
+    with pytest.raises(OpenDPException, match=variant):
+        dp.binary_search_by(comparison, bounds=(0, 10), T=int)
+
+
+def test_binary_search_by_consumes_range_variants_from_callback():
+    def comparison(value):
+        if value < 0:
+            raise OpenDPException("NumericRangeBelow", "final value is below target")
+        if value > 10:
+            raise OpenDPException("NumericRangeAbove", "final value is above target")
+        return (value > 5) - (value < 5)
+
+    assert dp.binary_search_by(comparison, bounds=(-10, 20), T=int) == 5
+
+
 def test_exponential_bounds_search():
     assert dp.exponential_bounds_search(lambda x: x > 0, int) == (0, 1)
     assert dp.exponential_bounds_search(lambda x: x > 0, float) == (0.0, 0.5)

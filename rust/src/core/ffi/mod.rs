@@ -175,6 +175,11 @@ impl From<FfiError> for Error {
             "MetricSpace" => ErrorVariant::MetricSpace,
             "InvalidDistance" => ErrorVariant::InvalidDistance,
             "Search" => ErrorVariant::Search,
+            "NumericDomain" => ErrorVariant::NumericDomain,
+            "NumericRangeBelow" => ErrorVariant::NumericRangeBelow,
+            "NumericRangeAbove" => ErrorVariant::NumericRangeAbove,
+            "NumericIndeterminate" => ErrorVariant::NumericIndeterminate,
+            "NumericBackend" => ErrorVariant::NumericBackend,
             "Overflow" => ErrorVariant::Overflow,
             "NotImplemented" => ErrorVariant::NotImplemented,
             unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
@@ -384,6 +389,27 @@ mod tests {
         };
         let err: Error = ffi_err.into();
         assert_eq!(err, err!(FailedFunction, "Eat my shorts!"))
+    }
+
+    #[test]
+    fn test_numeric_error_variants_round_trip_from_ffi() {
+        macro_rules! assert_variant {
+            ($variant:ident) => {
+                let ffi_err = FfiError {
+                    variant: stringify!($variant).to_char_p(),
+                    message: "numeric callback error".to_char_p(),
+                    backtrace: "".to_char_p(),
+                };
+                let err: Error = ffi_err.into();
+                assert_eq!(err.variant, ErrorVariant::$variant);
+            };
+        }
+
+        assert_variant!(NumericRangeBelow);
+        assert_variant!(NumericRangeAbove);
+        assert_variant!(NumericDomain);
+        assert_variant!(NumericIndeterminate);
+        assert_variant!(NumericBackend);
     }
 
     #[test]
