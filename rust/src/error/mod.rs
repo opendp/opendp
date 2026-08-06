@@ -121,11 +121,15 @@ pub enum ErrorVariant {
     #[error("NumericDomain")]
     NumericDomain,
 
-    /// The mathematical result is below the provider's representable range.
+    /// The finite mathematical value is below the finite range representable
+    /// at the requested output boundary. An actual negative infinity is a
+    /// value, not a range error.
     #[error("NumericRangeBelow")]
     NumericRangeBelow,
 
-    /// The mathematical result is above the provider's representable range.
+    /// The finite mathematical value is above the finite range representable
+    /// at the requested output boundary. An actual positive infinity is a
+    /// value, not a range error.
     #[error("NumericRangeAbove")]
     NumericRangeAbove,
 
