@@ -33,7 +33,7 @@ This functionality is not enabled by default.
         Add ``"polars"`` to the features of the ``opendp`` dependency in your ``Cargo.toml``.
 
 
-Dataset Description 
+Dataset Description
 -------------------
 
 We will use a `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat
@@ -41,54 +41,57 @@ for this tutorial, with some `additional preprocessing <https://github.com/opend
 On a quarterly cadence Eurostat surveys the working hours of individuals in the European Union.
 The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
-We chose this dataset for a few reasons: 
 
-1. **Accessibility:** The dataset is accessible to users across various domains.
-2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
+.. dropdown:: Dataset Details
 
-For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
+  We chose this dataset for a few reasons: 
 
-The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
-for the dataset describes many variables. 
-Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+  1. **Accessibility:** The dataset is accessible to users across various domains.
+  2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
+  3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
 
-.. list-table:: 
-   :header-rows: 1
+  For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
 
-   * - Variable
-     - Definition
-     - Coding
-   * - ``SEX``
-     - Sex
-     - | ``1``: Male
-       | ``2``: Female
-   * - ``AGE``
-     - Age of the Individual During the Reference Week
-     - Single Years
-   * - ``ILOSTAT``
-     - Labour Status During the Reference Week
-     - | ``1``: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service)
-       | ``2``: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service)
-       | ``3``: Was not working because of lay-off
-       | ``4``: Was a conscript on compulsory military or community service
-       | ``5``: Other (15 years or more) who neither worked nor had a job or business during the reference week
-       | ``9``: Not applicable (child less than 15 years old)
-   * - ``HWUSUAL``
-     - Number of Hours Per Week Usually Worked
-     - | ``00``: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month
-       | ``01`` - ``98``: Number of hours usually worked in the main job
-       | ``99``: Not applicable
-       | *blank*: No answer
-   * - ``QUARTER``
-     - Fixed Reference Quarter
-     - Single Quarter
-   * - ``YEAR``
-     - Fixed Reference Year
-     - Single Year
+  The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
+  for the dataset describes many variables. 
+  Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
-While the dataset does not contain a unique identifier for individuals,
-we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
+  .. list-table:: 
+    :header-rows: 1
+
+    * - Variable
+      - Definition
+      - Coding
+    * - ``SEX``
+      - Sex
+      - | ``1``: Male
+        | ``2``: Female
+    * - ``AGE``
+      - Age of the Individual During the Reference Week
+      - Single Years
+    * - ``ILOSTAT``
+      - Labour Status During the Reference Week
+      - | ``1``: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service)
+        | ``2``: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service)
+        | ``3``: Was not working because of lay-off
+        | ``4``: Was a conscript on compulsory military or community service
+        | ``5``: Other (15 years or more) who neither worked nor had a job or business during the reference week
+        | ``9``: Not applicable (child less than 15 years old)
+    * - ``HWUSUAL``
+      - Number of Hours Per Week Usually Worked
+      - | ``00``: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month
+        | ``01`` - ``98``: Number of hours usually worked in the main job
+        | ``99``: Not applicable
+        | *blank*: No answer
+    * - ``QUARTER``
+      - Fixed Reference Quarter
+      - Single Quarter
+    * - ``YEAR``
+      - Fixed Reference Year
+      - Single Year
+
+  While the dataset does not contain a unique identifier for individuals,
+  we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
 
 Loading data
 ------------
