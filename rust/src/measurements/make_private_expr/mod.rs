@@ -146,7 +146,7 @@ where
         }
         macro_rules! counting_query {
             ($plugin:ident, $constructor:ident) => {
-                if match_shim::<$plugin, 2>(&self)?.is_some() {
+                if match_shim::<$plugin, 3>(&self)?.is_some() {
                     return expr_dp_counting_query::$constructor(
                         input_domain,
                         input_metric,
@@ -158,16 +158,7 @@ where
             };
         }
 
-        if match_shim::<DPLenShim, 3>(&self)?.is_some() {
-            return expr_dp_counting_query::make_expr_dp_len(
-                input_domain,
-                input_metric,
-                output_measure,
-                self,
-                global_scale,
-            );
-        }
-
+        counting_query!(DPLenShim, make_expr_dp_len);
         counting_query!(DPCountShim, make_expr_dp_count);
         counting_query!(DPNullCountShim, make_expr_dp_null_count);
         counting_query!(DPNUniqueShim, make_expr_dp_n_unique);

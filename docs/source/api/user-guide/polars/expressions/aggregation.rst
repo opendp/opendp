@@ -169,6 +169,46 @@ This is more likely to happen when the true value is small.
 This release tells us that the number of null values is relatively
 small.
 
+Signed Counts
+-------------
+
+Pass ``signed=True`` to any counting query (``dp.len``, expression ``len``,
+``count``, ``null_count`` or ``n_unique``) to cast the exact count to a
+signed ``Int64`` before noise is added, so negative noisy outputs are
+preserved instead of being clamped to zero:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> query_signed = context.query().select(
+            ...     [
+            ...         dp.len(signed=True),
+            ...         pl.col.HWUSUAL.dp.len(signed=True).alias(
+            ...             "expr_len"
+            ...         ),
+            ...         pl.col.HWUSUAL.dp.count(signed=True).alias("count"),
+            ...         pl.col.HWUSUAL.dp.null_count(signed=True).alias(
+            ...             "null_count"
+            ...         ),
+            ...         pl.col.HWUSUAL.dp.n_unique(signed=True).alias(
+            ...             "n_unique"
+            ...         ),
+            ...     ]
+            ... )
+            >>> query_signed.release().collect()  # doctest: +SKIP
+            shape: (1, 5)
+            ┌─────┬──────────┬───────┬────────────┬──────────┐
+            │ len ┆ expr_len ┆ count ┆ null_count ┆ n_unique │
+            │ --- ┆ ---      ┆ ---   ┆ ---        ┆ ---      │
+            │ i64 ┆ i64      ┆ i64   ┆ i64        ┆ i64      │
+            ╞═════╪══════════╪═══════╪════════════╪══════════╡
+            │ ... ┆ ...      ┆ ...   ┆ ...        ┆ ...      │
+            └─────┴──────────┴───────┴────────────┴──────────┘
+
 Null and Non-Null Counts
 ------------------------
 
