@@ -4,8 +4,9 @@ use crate::{
     combinators::make_adaptive_composition,
     domains::AtomDomain,
     measurements::make_randomized_response_bool,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
+    traits::{InfAdd, InfMul},
 };
 
 use super::*;
@@ -93,5 +94,142 @@ fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
     let mut qbl = m_odo.invoke(&false)?;
     assert!(qbl.invoke(m_query)?);
     assert_eq!(qbl.privacy_loss(1)?, (1.0, 1e-7));
+    Ok(())
+}
+
+/// Under a Sequential measure, spawning a new query locks earlier interactive children.
+#[test]
+fn test_sequentiality_enforced() -> Fallible<()> {
+    let odometer = make_fully_adaptive_composition::<_, _, _, Queryable<(), bool>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+    )?;
+
+    let m_interactive = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(!arg))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+
+    let mut qbl = odometer.invoke(&false)?;
+    let mut child = qbl.invoke(m_interactive.clone())?;
+    // the child answers while it is the most recent query
+    assert!(child.eval(&())?);
+    // a new root query locks it
+    let _child_2 = qbl.invoke(m_interactive)?;
+    assert!(child.eval(&()).is_err());
+    Ok(())
+}
+
+/// a renyi measurement whose curve counts its own evaluations
+fn make_counting_renyi_measurement(
+    eval_count: Rc<RefCell<usize>>,
+    rho: f64,
+) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, RenyiDivergence, bool>> {
+    let curve = Function::new(move |alpha: &f64| {
+        *eval_count.borrow_mut() += 1;
+        rho * alpha
+    });
+    Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        RenyiDivergence,
+        Function::new(|&arg: &bool| arg),
+        PrivacyMap::new(move |_d_in: &u32| curve.clone()),
+    )
+}
+
+#[test]
+fn test_renyi_curve_evaluated_once_per_distinct_map() -> Fallible<()> {
+    let count_1 = Rc::new(RefCell::new(0));
+    let count_2 = Rc::new(RefCell::new(0));
+    let m1 = make_counting_renyi_measurement(count_1.clone(), 0.5)?;
+    let m2 = make_counting_renyi_measurement(count_2.clone(), 0.25)?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        RenyiDivergence,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+
+    let k = 50;
+    for _ in 0..k {
+        qbl.invoke(m1.clone())?;
+        qbl.invoke(m2.clone())?;
+    }
+
+    let curve = qbl.privacy_loss(1)?;
+    assert_eq!(curve.eval(&2.0)?, (k as f64) * 1.0 + (k as f64) * 0.5);
+    assert_eq!(*count_1.borrow(), 1);
+    assert_eq!(*count_2.borrow(), 1);
+    Ok(())
+}
+
+#[test]
+fn test_uniform_run_matches_ungrouped_composition_exactly() -> Fallible<()> {
+    let m = make_counting_renyi_measurement(Rc::new(RefCell::new(0)), 0.5)?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        RenyiDivergence,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+
+    for _ in 0..100 {
+        qbl.invoke(m.clone())?;
+    }
+
+    // reference: compose 100 curves with separate allocations, which are not merged
+    let reference = RenyiDivergence.compose(
+        (0..100)
+            .map(|_| (Function::new(|alpha: &f64| 0.5 * alpha), 1))
+            .collect(),
+    )?;
+    assert_eq!(qbl.privacy_loss(1)?.eval(&2.0)?, reference.eval(&2.0)?);
+    Ok(())
+}
+
+#[test]
+fn test_interleaved_queries_group_by_distinct_map() -> Fallible<()> {
+    let m1 = make_randomized_response_bool(0.75, false)?;
+    let m2 = make_randomized_response_bool(0.6, false)?;
+    let sequence = [&m1, &m1, &m2, &m1];
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+    for m in sequence {
+        qbl.invoke(m.clone())?;
+    }
+
+    // grouped: compose([(e1, 3), (e2, 1)])
+    let e1 = m1.map(&1)?;
+    let e2 = m2.map(&1)?;
+    let expected = e1.inf_mul(&3.0)?.inf_add(&e2)?;
+    assert_eq!(qbl.privacy_loss(1)?, expected);
+
+    // agrees with per-query (submission-order) accounting up to inf rounding
+    let sequential = e1.inf_add(&e1)?.inf_add(&e2)?.inf_add(&e1)?;
+    assert!((qbl.privacy_loss(1)? - sequential).abs() < 1e-12);
+    Ok(())
+}
+
+#[test]
+fn test_privacy_loss_before_any_queries() -> Fallible<()> {
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+    assert_eq!(qbl.privacy_loss(1)?, 0.0);
     Ok(())
 }
