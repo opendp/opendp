@@ -1,6 +1,15 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, cast, get_args, TYPE_CHECKING
+from typing import (
+    Callable,
+    Literal,
+    Optional,
+    Any,
+    Iterator,
+    cast,
+    get_args,
+    TYPE_CHECKING,
+)
 from functools import reduce
 from math import sqrt
 from opendp._internal import (
@@ -35,8 +44,10 @@ from opendp.mod import (
     Metric,
     Transformation,
 )
+
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
+
 
 @dataclass
 class Count:
@@ -64,15 +75,17 @@ def mirror_descent(
     potentials=None,  # CliqueVector | None
 ):  # MarkovRandomField
     """Fit a MarkovRandomField over the domain and loss function using mirror descent.
-    
+
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
     from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
 
     return _mirror_descent(domain, loss_fn, potentials=potentials)
 
+
 OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
+
 
 @dataclass(kw_only=True, frozen=True)
 class Algorithm(ABC):
@@ -100,7 +113,9 @@ class Algorithm(ABC):
 
     def __post_init__(self):
         if self.oneway not in get_args(OnewayType):
-            raise ValueError(f'oneway ({self.oneway}) must be in {get_args(OnewayType)}')
+            raise ValueError(
+                f"oneway ({self.oneway}) must be in {get_args(OnewayType)}"
+            )
 
         if self.oneway_split is not None and not (0 <= self.oneway_split < 1):
             raise ValueError(f"oneway_split ({self.oneway_split}) must be in [0, 1)")
