@@ -71,7 +71,7 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 -->
 
 * Report a bug or request a feature on [Github](https://github.com/opendp/opendp/issues).
-* Send general inqueries to [contact@opendp.org](mailto:contact@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
+* Send general inquiries to [contact@opendp.org](mailto:contact@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
 * To get updates about OpenDP, email [contact@opendp.org](mailto:contact@opendp.org) to join Slack, or join the low volume [mailing list](https://groups.google.com/a/g.harvard.edu/g/opendp-community).
 
 ## Contributing
