@@ -37,6 +37,14 @@ then the unit of privacy corresponds to one row contribution.
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: unit-of-privacy
+            :end-before: /unit-of-privacy
+
     .. tab-item:: Framework API (Python)
         :sync: framework
 
@@ -85,6 +93,14 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: privacy-loss
+            :end-before: /privacy-loss
+
     .. tab-item:: Framework API (Python)
         :sync: framework
 
@@ -126,6 +142,14 @@ Frequently we'll specify bounds on data, based on prior knowledge of the domain.
             :start-after: public-info
             :end-before: /public-info
 
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: public-info
+            :end-before: /public-info
+
     .. tab-item:: Framework API (Python)
         :sync: framework
 
@@ -164,6 +188,17 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :end-before: /mediate
 
         ``dp.Context.compositor`` creates an adaptive composition measurement.
+        You can now submit up to three queries to ``context``, in the form of measurements.
+
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: mediate
+            :end-before: /mediate
+
+        ``Context$compositor`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``context``, in the form of measurements.
 
     .. tab-item:: Framework API (Python)
@@ -209,6 +244,14 @@ Here's a differentially private count:
             :start-after: count
             :end-before: /count
 
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: count
+            :end-before: /count
+
     .. tab-item:: Framework API (Python)
         :sync: framework
 
@@ -236,6 +279,14 @@ Here's a differentially private mean:
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
+            :start-after: mean
+            :end-before: /mean
+
+    .. tab-item:: Context API (R)
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
             :start-after: mean
             :end-before: /mean
 

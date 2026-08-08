@@ -128,3 +128,26 @@ fake_function <- function(
 ";
     assert_eq!(actual_code, expected_code);
 }
+
+#[test]
+fn test_r_partial_constructor_uses_declared_space_argument_names() {
+    let mut domain_argument = make_argument();
+    domain_argument.name = Some("domain".to_string());
+    let mut metric_argument = make_argument();
+    metric_argument.name = Some("metric".to_string());
+    let parameter_argument = make_argument();
+    let return_argument = make_argument();
+    let mut function = make_function(parameter_argument, return_argument);
+    function.name = "make_fake".to_string();
+    function.args = vec![domain_argument, metric_argument, make_argument()];
+    function.supports_partial = true;
+
+    let hierarchy: HashMap<String, Vec<String>> =
+        serde_json::from_str(&include_str!("type_hierarchy.json")).unwrap();
+    let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
+
+    assert!(actual_code.contains("domain = output_domain(base_lhs)"));
+    assert!(actual_code.contains("metric = output_metric(base_lhs)"));
+    assert!(!actual_code.contains("input_domain = output_domain(base_lhs)"));
+    assert!(!actual_code.contains("input_metric = output_metric(base_lhs)"));
+}
