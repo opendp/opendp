@@ -23,15 +23,15 @@ from opendp.combinators import (
     make_privacy_filter,
     make_pureDP_to_zCDP,
     make_adaptive_composition,
-    make_zCDP_to_approxDP,
+    make_zCDP_to_multiDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.extras._utilities import supports_partial, to_then
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     approximate,
-    max_divergence,
-    zero_concentrated_divergence,
+    pure_dp,
+    zcdp,
 )
 from opendp.metrics import (
     absolute_distance,
@@ -321,11 +321,11 @@ def loss_of(
 
     if epsilon is not None:
         _range_warning("epsilon", epsilon, 1, 5)
-        measure, loss = max_divergence(), epsilon
+        measure, loss = pure_dp(), epsilon
 
     if rho is not None:
         _range_warning("rho", rho, 0.25, 0.5)
-        measure, loss = zero_concentrated_divergence(), rho
+        measure, loss = zcdp(), rho
 
     if delta is None:
         return measure, loss
@@ -752,9 +752,21 @@ class Query(object):
         from opendp.measurements import then_canonical_noise
         from opendp._internal import _new_pure_function
         from opendp.extras.numpy.canonical import BinomialCND
+        from opendp.mod import PrivacyGuarantee
 
         def then(d_in, d_out):
-            m_noise = then_canonical_noise(d_in, d_out)
+            if isinstance(d_out, PrivacyGuarantee):
+                # Context can't hold privacy guarantees, so this isn't easily reachable
+                curve = d_out  # pragma: no cover
+            elif isinstance(d_out, tuple) and len(d_out) == 2:
+                epsilon, delta = d_out
+                curve = PrivacyGuarantee(approxDP=[(epsilon, delta)])
+            else:
+                raise ValueError(  # pragma: no cover
+                    "canonical_noise expects d_out to be a PrivacyGuarantee or an (epsilon, delta) pair."
+                )
+
+            m_noise = then_canonical_noise(d_in, curve)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
                     lambda x: BinomialCND(x, d_in, d_out, binomial_size),
@@ -1147,7 +1159,10 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
         "Approximate<zCDP>",
         "Approximate<PureDP>",
     ):
-        return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
+        return make_fix_delta(make_zCDP_to_multiDP(chain), d_to[1])
+
+    if from_to == ("MultiDP", "Approximate<PureDP>"):
+        return make_fix_delta(chain, d_to[1])
 
     raise ValueError(
         f"Unable to cast measure from {from_to[0]} to {from_to[1]}"
@@ -1159,13 +1174,13 @@ def _translate_measure_distance(
 ) -> Union[float, tuple[float, float]]:
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
 
-    >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
+    >>> _translate_measure_distance(1, dp.pure_dp(), dp.pure_dp())
     1
-    >>> _translate_measure_distance(1, dp.max_divergence(), dp.approximate(dp.max_divergence()))
+    >>> _translate_measure_distance(1, dp.pure_dp(), dp.approximate(dp.pure_dp()))
     (1, 0.0)
-    >>> _translate_measure_distance((1.5, 5e-07), dp.approximate(dp.max_divergence()), dp.zero_concentrated_divergence())
+    >>> _translate_measure_distance((1.5, 5e-07), dp.approximate(dp.pure_dp()), dp.zcdp())
     0.0489...
-    >>> _translate_measure_distance(0.05, dp.zero_concentrated_divergence(), dp.max_divergence())
+    >>> _translate_measure_distance(0.05, dp.zcdp(), dp.pure_dp())
     0.316...
     """
     if from_measure == to_measure:
@@ -1194,7 +1209,7 @@ def _translate_measure_distance(
     ):
 
         def _caster(measurement):
-            return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
+            return make_fix_delta(make_zCDP_to_multiDP(measurement), delta=d_from[1])
 
         space = atom_domain(T=int), absolute_distance(T=float)
         scale = binary_search_param(
@@ -1215,7 +1230,7 @@ def _translate_measure_distance(
         delta_zCDP, delta_inf = delta * (1 - alpha), delta * alpha
 
         rho = _translate_measure_distance(
-            (epsilon, delta_zCDP), from_measure, zero_concentrated_divergence()
+            (epsilon, delta_zCDP), from_measure, zcdp()
         )
         return rho, delta_inf  # type: ignore[return-value]
 

@@ -2,7 +2,7 @@ use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::{make_private_expr, make_private_lazyframe};
-use crate::measures::PureDP;
+use crate::measures::{PureDP, zCDP};
 use crate::metrics::{L0PInfDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};

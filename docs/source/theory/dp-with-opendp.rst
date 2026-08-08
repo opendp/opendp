@@ -75,7 +75,7 @@ containing the following five elements:
       absolute distance **input metric** ``absolute_distance(T=f64)``.
 
    5. We similarly describe units on the output (:math:`\epsilon`) via
-      the **output measure** ``max_divergence()``.
+      the **output measure** ``pure_dp()``.
 
 
 The OpenDP Library consists of *constructor functions* that can be

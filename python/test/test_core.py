@@ -1,3 +1,6 @@
+import math
+
+from opendp.mod import PrivacyGuarantee
 import pytest
 
 import opendp.prelude as dp
@@ -125,15 +128,13 @@ def test_supporting_elements():
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_laplace(
-        atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0
-    )
-    assert str(mechanism.input_domain) == "AtomDomain(T=f64)"
-    assert str(mechanism.input_domain.carrier_type) == "f64"
-    assert str(mechanism.input_metric) == "AbsoluteDistance(f64)"
-    assert str(mechanism.input_metric.distance_type) == "f64"
-    assert str(mechanism.output_measure) == "PureDP"
-    assert str(mechanism.output_measure.distance_type) == "f64"
+    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
+    assert str(mechanism.input_domain) == 'AtomDomain(T=f64)'
+    assert str(mechanism.input_domain.carrier_type) == 'f64'
+    assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
+    assert str(mechanism.input_metric.distance_type) == 'f64'
+    assert str(mechanism.output_measure) == 'PureDP'
+    assert str(mechanism.output_measure.distance_type) == 'f64'
 
 
 def test_function():
@@ -158,12 +159,220 @@ def test_function():
 
 
 def test_privacy_profile():
-    from opendp.measures import new_privacy_profile
     import math
-
-    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    with pytest.warns():
+        profile = dp.new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
     assert profile.epsilon(delta=1e-7) == 16.11809565095832
+
+def assert_unit_interval(value):
+    assert 0.0 <= value <= 1.0
+
+
+def exact_approxdp_beta(pairs, alpha):
+    """Exact API beta(alpha) induced by approximate-DP pairs."""
+    if alpha == 0.0:
+        return max(1.0 - delta for _, delta in pairs)
+    if alpha == 1.0:
+        return 0.0
+
+    candidates = [0.0]
+
+    for epsilon, delta in pairs:
+        candidates.append(1.0 - delta - math.exp(epsilon) * alpha)
+
+        base = max(1.0 - delta - alpha, 0.0)
+        candidates.append(math.exp(-epsilon) * base)
+
+    return max(candidates)
+
+
+def test_profile_constructor_delta_and_epsilon():
+    curve = PrivacyGuarantee(profile=lambda eps: math.exp(-eps))
+
+    assert curve.delta(0.0) == pytest.approx(1.0)
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+    # Solves exp(-epsilon) <= 1e-7.
+    assert curve.epsilon(1e-7) == pytest.approx(
+        -math.log(1e-7),
+        rel=0.0,
+        abs=1e-12,
+    )
+
+
+def test_profile_constructor_beta_is_in_range():
+    curve = PrivacyGuarantee(profile=lambda eps: math.exp(-eps))
+
+    assert_unit_interval(curve.beta(0.0))
+    assert_unit_interval(curve.beta(0.25))
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.beta(1.0))
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+
+def test_log_profile_constructor_delta_and_epsilon():
+    curve = PrivacyGuarantee(log_profile=lambda eps: -eps)
+
+    assert curve.delta(0.0) == pytest.approx(1.0)
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+    assert curve.epsilon(1e-7) == pytest.approx(
+        -math.log(1e-7),
+        rel=0.0,
+        abs=1e-12,
+    )
+
+
+def test_approxdp_constructor_delta_and_epsilon():
+    pairs = [(1.0, 0.1), (2.0, 0.01)]
+    curve = PrivacyGuarantee(approxDP=pairs)
+
+    assert curve.delta(1.0) == pytest.approx(0.1)
+    assert curve.delta(2.0) == pytest.approx(0.01)
+
+    assert curve.epsilon(0.1) == pytest.approx(1.0)
+    assert curve.epsilon(0.01) == pytest.approx(2.0)
+
+
+def test_approxdp_constructor_beta_is_conservative_and_tight():
+    pairs = [(1.0, 0.1), (2.0, 0.01)]
+    curve = PrivacyGuarantee(approxDP=pairs)
+
+    for alpha in [0.0, 0.1, 0.5, 0.9, 1.0]:
+        beta = curve.beta(alpha)
+        expected = exact_approxdp_beta(pairs, alpha)
+
+        assert_unit_interval(beta)
+
+        # beta(alpha) should be downward-conservative.
+        assert beta <= expected
+
+        # But not meaningfully loose.
+        assert beta == pytest.approx(expected, rel=0.0, abs=1e-14)
+
+
+def test_tradeoff_constructor_beta_and_delta():
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(0.3) == pytest.approx(0.7)
+    assert curve.beta(1.0) == 0.0
+
+    # beta(alpha) = 1 - alpha is the perfect-privacy tradeoff.
+    assert curve.delta(0.0) == pytest.approx(0.0)
+    assert curve.delta(1.0) == pytest.approx(0.0)
+
+
+def test_symmetric_tradeoff_constructor_alpha_uses_symmetry():
+    curve = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+
+    assert curve.alpha(0.0) == 1.0
+    assert curve.alpha(0.25) == pytest.approx(0.75)
+    assert curve.alpha(1.0) == 0.0
+
+
+def test_nonsymmetric_tradeoff_alpha_inverts_beta_not_calls_beta():
+    # Valid-looking non-symmetric decreasing convex tradeoff:
+    # beta(alpha) = (1 - alpha)^2.
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: (1.0 - alpha) ** 2)
+
+    # alpha(beta) should solve beta = (1 - alpha)^2.
+    # For beta = 0.25, alpha = 0.5.
+    #
+    # This catches an accidental implementation that calls beta(beta),
+    # which would return 0.5625 instead.
+    assert curve.alpha(0.25) == pytest.approx(0.5, abs=1e-12)
+
+
+def test_gdp_constructor_basic_queries():
+    curve = PrivacyGuarantee(gaussianDP=1.0)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.alpha(0.5))
+    assert_unit_interval(curve.delta(0.5))
+
+
+def test_zcdp_constructor_basic_queries():
+    curve = PrivacyGuarantee(zCDP=0.5)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.delta(1.0))
+
+
+def test_renyidp_constructor_basic_queries():
+    curve = PrivacyGuarantee(renyiDP=lambda alpha: 0.5 * alpha)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.delta(1.0))
+
+
+def test_representation_specific_deltas():
+    rdp = PrivacyGuarantee(renyiDP=lambda _alpha: 0.0, renyiDP_delta=0.1)
+    assert rdp.delta(float("inf")) == 0.1
+    assert math.isinf(rdp.epsilon(0.1 - 1e-10))
+
+    zcdp = PrivacyGuarantee(zCDP=0.0, zCDP_delta=0.2)
+    assert zcdp.delta(float("inf")) == 0.2
+    assert zcdp.epsilon(0.2) == 0.0
+
+    selected = PrivacyGuarantee(
+        renyiDP=lambda _alpha: 0.0,
+        renyiDP_delta=0.7,
+        zCDP=0.0,
+        zCDP_delta=0.2,
+    )
+    assert selected.delta(float("inf")) == 0.2
+
+
+def test_multi_representation_constructor_prefers_profile_for_delta():
+    curve = PrivacyGuarantee(
+        profile=lambda eps: math.exp(-eps),
+        tradeoff=lambda alpha: 1.0 - alpha,
+    )
+
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+
+@pytest.mark.parametrize("epsilon", [-1.0, float("nan")])
+def test_delta_rejects_invalid_epsilon(epsilon):
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.delta(epsilon)
+
+
+@pytest.mark.parametrize("delta", [-0.1, 1.1, float("nan")])
+def test_epsilon_rejects_invalid_delta(delta):
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.epsilon(delta)
+
+
+@pytest.mark.parametrize("alpha", [-0.1, 1.1, float("nan")])
+def test_beta_rejects_invalid_alpha(alpha):
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.beta(alpha)
+
+
+@pytest.mark.parametrize("beta", [-0.1, 1.1, float("nan")])
+def test_alpha_rejects_invalid_beta(beta):
+    curve = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.alpha(beta)
 
 
 def test_member():
@@ -249,7 +458,7 @@ def test_new_domain():
         dp.m.make_user_measurement(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
-            dp.max_divergence(),
+            dp.pure_dp(),
             lambda x: x,
             lambda _: 0.0,
         ),
@@ -264,7 +473,7 @@ def test_new_domain():
         dp.c.make_fully_adaptive_composition(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
-            dp.max_divergence(),
+            dp.pure_dp(),
         ),
         dp.user_distance(""),
         dp.user_divergence(""),
@@ -333,13 +542,13 @@ def test_custom_domain(new_domain):
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
     query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
+        dp.pure_dp(),
         lambda x: x,
         lambda _: 0.0,
     )
 
     sc_meas = space >> dp.c.then_adaptive_composition(
-        dp.max_divergence(),
+        dp.pure_dp(),
         d_in=1,
         d_mids=[1.0],
     )

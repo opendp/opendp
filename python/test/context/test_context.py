@@ -46,14 +46,14 @@ def test_unit_of_identifier():
 
 
 def test_privacy_loss_of():
-    assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
-    assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(), 2.0)
+    assert dp.loss_of(epsilon=3) == (dp.pure_dp(), 3.0)
+    assert dp.loss_of(rho=2.0) == (dp.zcdp(), 2.0)
     assert dp.loss_of(epsilon=2.0, delta=1e-6) == (
-        dp.approximate(dp.max_divergence()),
+        dp.approximate(dp.pure_dp()),
         (2.0, 1e-6),
     )
     assert dp.loss_of(rho=0.5, delta=1e-7) == (
-        dp.approximate(dp.zero_concentrated_divergence()),
+        dp.approximate(dp.zcdp()),
         (0.5, 1e-7),
     )
 
@@ -241,7 +241,7 @@ def test_middle_param():
 
 def test_query():
     space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    query = dp.Query(space, dp.max_divergence(), d_in=1, d_out=1.0).laplace()
+    query = dp.Query(space, dp.pure_dp(), d_in=1, d_out=1.0).laplace()
 
     with pytest.raises(
         ValueError, match="Cannot release query without data or context."
@@ -346,13 +346,10 @@ def test_sc_query():
     print("laplace dp_sum", dp_sum_1.release())
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
-    sub_context_2 = (
-        context.query()
-        .compositor(  # type: ignore[attr-defined]
-            split_evenly_over=2, output_measure=dp.zero_concentrated_divergence()
-        )
-        .release()
-    )
+    sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
+        split_evenly_over=2,
+        output_measure=dp.zcdp()
+    ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
     # dp_sum = sub_context_2.query().dp_sum((1, 10))
@@ -393,10 +390,8 @@ def test_approx_to_approx_zCDP():
         split_evenly_over=1,
     )
 
-    azcdp_measure = dp.approximate(dp.zero_concentrated_divergence())
-    context_azcdp = (
-        context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
-    )
+    azcdp_measure = dp.approximate(dp.zcdp())
+    context_azcdp = context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
 
     dom, met = context_azcdp.accountant.input_space
     # the important test is that the following is a valid query for an approx-zCDP compositor
@@ -457,7 +452,7 @@ def test_register():
         return _make_measurement(
             input_domain,
             input_metric,
-            dp.max_divergence(),
+            dp.pure_dp(),
             lambda _: constant,
             lambda _: 0.0,
         )

@@ -27,6 +27,9 @@ mod profile_to_tradeoff;
 mod renyidp;
 mod tradeoff;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 #[cfg(test)]
 mod test;
 

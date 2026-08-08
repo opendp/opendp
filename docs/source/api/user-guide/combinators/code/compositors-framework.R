@@ -52,7 +52,7 @@ meas_mean_fraction(d_in = 1L)
 meas_adaptive_comp <- make_adaptive_composition(
   input_domain = vector_domain(atom_domain(.T = i32)),
   input_metric = symmetric_distance(),
-  output_measure = max_divergence(),
+  output_measure = pure_dp(),
   d_in = 1L,
   d_mids = c(2.0, 1.0)
 )
@@ -80,7 +80,7 @@ qbl_adaptive_comp(query = meas_count)
 odom_fully_adaptive_comp <- make_fully_adaptive_composition(
   input_domain = vector_domain(atom_domain(.T = i32)),
   input_metric = symmetric_distance(),
-  output_measure = max_divergence()
+  output_measure = pure_dp()
 )
 # /fully-adaptive-composition
 
@@ -145,7 +145,7 @@ str_space <- c(vector_domain(atom_domain(.T = String)), symmetric_distance())
 meas_adaptive_comp_str <- str_space |>
   then_cast_default(i32) |>
   then_adaptive_composition(
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     d_in = 1L,
     d_mids = c(2.0, 1.0)
   )
@@ -162,7 +162,7 @@ max_contributions <- 1L
 sum_trans <- input_space |> then_clamp(c(0L, 10L)) |> then_sum()
 meas_adaptive_comp <- sum_trans |>
   then_adaptive_composition(
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     d_in = sum_trans(d_in = max_contributions),
     d_mids = c(2.0, 1.0)
   )

@@ -20,7 +20,7 @@ test_that("user-defined measurement supports typed and extrinsic outputs", {
   typed_meas <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
     input_metric = absolute_distance(i32),
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = \(.arg) 23L,
     privacy_map = \(.d_in) 0.,
     .TO = i32
@@ -32,7 +32,7 @@ test_that("user-defined measurement supports typed and extrinsic outputs", {
   extrinsic_meas <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
     input_metric = absolute_distance(i32),
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = \(arg) list(value = arg, tag = "release"),
     privacy_map = \(.d_in) 0.
   )
@@ -50,7 +50,7 @@ test_that("new function and privacy profile work in R", {
   )
   expect_equal(postprocess(arg = list(12., 100.)), 0.12)
 
-  profile <- new_privacy_profile(\(epsilon) if (epsilon < 0.5) 1. else 1e-8)
+  profile <- privacy_guarantee(profile = \(epsilon) if (epsilon < 0.5) 1. else 1e-8)
   expect_equal(profile(epsilon = 0.499), 1.)
   expect_equal(profile(delta = 1e-8), 0.5)
 })
@@ -70,7 +70,7 @@ test_that("user-defined callback errors surface cleanly", {
   meas <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
     input_metric = absolute_distance(i32),
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = \(arg) stop("boom from release", call. = FALSE),
     privacy_map = \(.d_in) 0.,
     .TO = i32
@@ -83,7 +83,7 @@ test_that("user-defined callback errors surface cleanly", {
   meas_with_bad_map <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
     input_metric = absolute_distance(i32),
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = \(.arg) 23L,
     privacy_map = \(.d_in) stop("boom from privacy map", call. = FALSE),
     .TO = i32
@@ -136,7 +136,7 @@ test_that("user-defined callbacks surface conversion failures cleanly", {
   meas <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
     input_metric = absolute_distance(i32),
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = \(.arg) "not an integer",
     privacy_map = \(.d_in) 0.,
     .TO = i32

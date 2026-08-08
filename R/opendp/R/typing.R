@@ -32,7 +32,7 @@ R_TO_RUST <- list(
   measure = "AnyMeasure",
   measurement = "AnyMeasurement",
   transformation = "AnyTransformation",
-  privacy_profile = "PrivacyProfile",
+  privacy_guarantee = "PrivacyGuarantee",
   queryable = "AnyQueryable",
   odometer_queryable = "AnyOdometerQueryable",
   `function` = "AnyFunction"
@@ -327,12 +327,6 @@ get_first <- function(x) {
   } else {
     x[[1]]
   }
-}
-
-get_first_non_null <- function(...) {
-  values <- list(...)
-  present <- Filter(Negate(is.null), values)
-  if (length(present) == 0) NULL else present[[1]]
 }
 
 #' Parse a runtime type or infer it from an example

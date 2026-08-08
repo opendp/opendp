@@ -19,6 +19,7 @@ from opendp.mod import (
     OpenDPException,
     Transformation,
     Measurement,
+    PrivacyGuarantee,
     PrivacyProfile,
     Queryable,
     OdometerQueryable,
@@ -107,6 +108,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
 
+    if c_type == AnyObjectPtr and isinstance(value, PrivacyGuarantee):
+        return value.guarantee
+
     if isinstance(value, c_type):
         return value
 
@@ -185,8 +189,8 @@ def c_to_py(value: Any) -> Any:
 
         obj_type = object_type(value)
 
-        if obj_type == PrivacyProfile.__name__:
-            return PrivacyProfile(value)
+        if obj_type == PrivacyGuarantee.__name__ or obj_type == PrivacyProfile.__name__:
+            return PrivacyGuarantee(value)
         
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)
@@ -651,11 +655,11 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['PrivacyProfile', 'f64']:
+    if inner_type_names == ["PrivacyGuarantee", 'f64']:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        return PrivacyProfile(curve), delta.contents.value
-    
+        return PrivacyGuarantee(curve), delta.contents.value
+
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)

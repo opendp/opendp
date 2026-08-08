@@ -29,7 +29,10 @@ test_that("binary search supports one-sided bounds", {
 })
 
 test_that("floating-point aliases to idealized-numerics", {
-  disable_features("floating-point", "idealized-numerics")
+  expect_warning(
+    disable_features("floating-point", "idealized-numerics"),
+    "\"floating-point\" is deprecated. Use \"idealized-numerics\" instead."
+  )
 
   expect_warning(
     enable_features("floating-point"),

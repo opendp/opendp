@@ -1,4 +1,4 @@
-use crate::{core::Function, domains::AtomDomain, metrics::DiscreteDistance};
+use crate::{core::Function, domains::AtomDomain, measures::MultiDP, metrics::DiscreteDistance};
 
 use super::*;
 

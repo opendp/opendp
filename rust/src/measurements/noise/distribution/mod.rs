@@ -73,8 +73,9 @@ where
     (DI, MI): MetricSpace,
 {
     output_measure
+        .clone()
         .new_distribution(scale, k)
-        .make_noise((input_domain, input_metric))
+        .make_noise((input_domain, input_metric), output_measure)
 }
 
 pub trait NoiseMeasure: Measure + 'static {

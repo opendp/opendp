@@ -140,7 +140,7 @@ functions to convert to/from accuracy estimates.
      - Output Measure
    * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L01InfDistance<AbsoluteDistance<QI>>``
-     - ``Approximate<PureDP>``
+     - ``ApproxDP``
 
 
 Thresholded Gaussian Noise
@@ -159,7 +159,7 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Output Measure
    * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L02InfDistance<AbsoluteDistance<QI>>``
-     - ``Approximate<zCDP>``
+     - ``ApproxZCDP``
 
 Approximate Laplace Projection
 ------------------------------

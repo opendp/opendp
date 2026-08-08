@@ -24,7 +24,7 @@ distances (``d_in``), and the privacy consumption allowed for each query
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.max_divergence(),
+            ...     output_measure=dp.pure_dp(),
             ...     d_in=1,
             ...     d_mids=[2.0, 1.0],
             ... )

@@ -442,8 +442,8 @@ void odp_AnyObject_finalizer(SEXP XPtr)
     R_ClearExternalPtr(XPtr);
 }
 
-// AnyObject: PrivacyProfile
-AnyObject *sexp_to_privacyprofileptr(SEXP value)
+// AnyObject: PrivacyGuarantee
+AnyObject *sexp_to_privacycurveptr(SEXP value)
 {
     PROTECT(value);
 
@@ -453,7 +453,8 @@ AnyObject *sexp_to_privacyprofileptr(SEXP value)
     if (errorOccurred)
         error("could not determine class");
 
-    if (str_equal(sexp_to_charptr(class), "privacy_profile"))
+    if (str_equal(sexp_to_charptr(class), "privacy_profile") ||
+        str_equal(sexp_to_charptr(class), "privacy_guarantee"))
     {
         SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
         value = Rf_eval(call, R_GlobalEnv);
@@ -465,13 +466,13 @@ AnyObject *sexp_to_privacyprofileptr(SEXP value)
     return (AnyObject *)R_ExternalPtrAddr(value);
 }
 
-SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
+SEXP privacycurveptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_privacy_profile = get_private_func("new_privacy_profile_internal");
+    SEXP new_privacy_profile = get_private_func("new_privacy_guarantee_internal");
     SEXP privacy_profile_expr = lang2(new_privacy_profile, XPtr);
     SEXP privacy_profile = R_tryEval(privacy_profile_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
