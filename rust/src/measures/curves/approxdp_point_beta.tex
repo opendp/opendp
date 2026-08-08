@@ -1,0 +1,75 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{ApproxDPPoint::beta}}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Receiver \texttt{self} of type \texttt{ApproxDPPoint}
+    \item Argument \texttt{alpha} of type \texttt{RBig}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\texttt{alpha} is in $[0,1]$, and \texttt{self} was constructed by
+\texttt{ApproxDPPoint::build} from finite nonnegative $\epsilon$ and
+$\delta \in [0,1]$.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approxdp_point_beta.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    For all $\alpha \in [0, 1]$, \texttt{ApproxDPPoint::beta} returns a value
+    no greater than the exact approximate-DP tradeoff curve
+    $f_{\epsilon,\delta}(\alpha)$.
+\end{theorem}
+
+\begin{definition}
+    \label{def-approxdp-point-beta}
+    For an \texttt{ApproxDPPoint} with parameters $\epsilon$ and $\delta$, define
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha,
+        \exp(-\epsilon) \max(1 - \delta - \alpha, 0)).
+    \end{equation}
+\end{definition}
+
+\begin{proof}
+The receiver was constructed by \texttt{ApproxDPPoint::build}, which stores
+exact rational conversions of directed interval endpoints satisfying
+\[
+    \texttt{self.exp\_eps\_up} \ge \exp(\epsilon), \qquad
+    \texttt{self.exp\_neg\_eps\_down} \le \exp(-\epsilon).
+\]
+The pseudocode uses these cached constants with exact rational arithmetic.
+
+For $\alpha \in [0,1]$, the first affine branch is no greater than
+\[
+    1 - \delta - \exp(\epsilon)\alpha,
+\]
+because \texttt{self.exp\_eps\_up} is an upper bound and $\alpha$ is
+nonnegative. If $1-\delta-\alpha \ge 0$, the second branch satisfies
+\[
+    \texttt{self.exp\_neg\_eps\_down}(1-\delta-\alpha)
+    \le \exp(-\epsilon)(1-\delta-\alpha).
+\]
+If the base is negative, the pseudocode replaces it with zero, which is no
+greater than the exact branch and is consistent with the outer maximum.
+Taking the maximum with zero therefore preserves the pointwise lower bound.
+
+Thus \texttt{ApproxDPPoint::beta} returns a value no greater than
+$f_{\epsilon,\delta}(\alpha)$. This is the required reporting behavior
+because a smaller $\beta$ is a weaker tradeoff guarantee.
+\end{proof}
+
+\end{document}
