@@ -20,6 +20,7 @@ use crate::{
 };
 
 mod approxdp;
+mod composition;
 mod gaussiandp;
 pub(crate) mod logspace;
 mod profile;

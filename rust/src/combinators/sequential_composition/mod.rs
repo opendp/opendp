@@ -20,7 +20,7 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, PureDP, RenyiDP, zCDP},
+    measures::{Approximate, MultiDP, PrivacyGuarantee, PureDP, RenyiDP, zCDP},
     traits::InfAdd,
 };
 
@@ -114,5 +114,17 @@ impl CompositionMeasure for RenyiDP {
                 .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
+    }
+}
+
+impl CompositionMeasure for MultiDP {
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        // Representation-specific approximate-RDP and approximate-zCDP deltas
+        // currently have sequential composition theorems.
+        Ok(Composability::Sequential)
+    }
+
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        PrivacyGuarantee::compose(d_mids)
     }
 }
