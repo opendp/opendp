@@ -135,6 +135,75 @@ def test_binary_search_forwards_untranslated_rust_errors():
         _call_rust_search(lambda _: True, "i32", search)
 
 
+@pytest.mark.parametrize(
+    "variant",
+    [
+        "NumericRangeBelow",
+        "NumericRangeAbove",
+        "NumericDomain",
+        "NumericIndeterminate",
+        "NumericBackend",
+    ],
+)
+def test_generic_callback_round_trips_numeric_errors(variant):
+    def callback(_, variant=variant):
+        raise OpenDPException(variant, "numeric callback failure")
+
+    function = dp.new_function(callback, TO="i32")
+    with pytest.raises(OpenDPException) as exc_info:
+        function(1)
+
+    assert exc_info.value.variant == variant
+
+
+@pytest.mark.parametrize(
+    "variant",
+    ["NumericDomain", "NumericIndeterminate", "NumericBackend"],
+)
+def test_binary_search_by_propagates_non_range_errors(variant):
+    def comparison(_):
+        raise OpenDPException(variant, "numeric callback failure")
+
+    with pytest.raises(OpenDPException) as exc_info:
+        dp.binary_search_by(comparison, bounds=(0, 10), T=int)
+
+    assert exc_info.value.variant == variant
+
+
+def test_binary_search_by_consumes_range_variants_from_callback():
+    def increasing(value):
+        if value < 0:
+            raise OpenDPException("NumericRangeBelow", "final value is below target")
+        if value > 10:
+            raise OpenDPException("NumericRangeAbove", "final value is above target")
+        return (value > 5) - (value < 5)
+
+    def decreasing(value):
+        if value < 0:
+            raise OpenDPException("NumericRangeAbove", "final value is above target")
+        if value > 10:
+            raise OpenDPException("NumericRangeBelow", "final value is below target")
+        return (value < 5) - (value > 5)
+
+    assert dp.binary_search_by(increasing, bounds=(-10, 20), T=int) == 5
+    assert dp.binary_search_by(decreasing, bounds=(-10, 20), T=int) == 5
+
+
+def test_binary_search_by_normalizes_large_comparator_results():
+    assert dp.binary_search_by(lambda value: value - 10_000, bounds=(0, 20_000), T=int) == 10_000
+    assert dp.binary_search_by(lambda value: 10_000 - value, bounds=(0, 20_000), T=int) == 10_000
+
+
+def test_binary_search_by_preserves_callback_exception_variant():
+    def comparison(_):
+        raise OpenDPException("NumericBackend", "callback failed before normalization")
+
+    with pytest.raises(OpenDPException) as exc_info:
+        dp.binary_search_by(comparison, bounds=(0, 10), T=int)
+
+    assert exc_info.value.variant == "NumericBackend"
+
+
 def test_exponential_bounds_search():
     assert dp.exponential_bounds_search(lambda x: x > 0, int) == (0, 1)
     assert dp.exponential_bounds_search(lambda x: x > 0, float) == (0.0, 0.5)

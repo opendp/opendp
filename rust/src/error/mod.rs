@@ -1,7 +1,6 @@
 //! Error handling utilities.
 
-use std::fmt;
-use std::fmt::Debug;
+use std::{fmt, fmt::Debug, str::FromStr};
 
 use std::backtrace::Backtrace as _Backtrace;
 
@@ -144,6 +143,40 @@ pub enum ErrorVariant {
 
     #[error("NotImplemented")]
     NotImplemented,
+}
+
+impl FromStr for ErrorVariant {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        use ErrorVariant::*;
+        Ok(match value {
+            "FFI" => FFI,
+            "TypeParse" => TypeParse,
+            "Type" => Type,
+            "FailedFunction" => FailedFunction,
+            "FailedMap" => FailedMap,
+            "RelationDebug" => RelationDebug,
+            "FailedCast" => FailedCast,
+            "DomainMismatch" => DomainMismatch,
+            "MetricMismatch" => MetricMismatch,
+            "MeasureMismatch" => MeasureMismatch,
+            "MakeDomain" => MakeDomain,
+            "MakeTransformation" => MakeTransformation,
+            "MakeMeasurement" => MakeMeasurement,
+            "MetricSpace" => MetricSpace,
+            "InvalidDistance" => InvalidDistance,
+            "Search" => Search,
+            "NumericDomain" => NumericDomain,
+            "NumericRangeBelow" => NumericRangeBelow,
+            "NumericRangeAbove" => NumericRangeAbove,
+            "NumericIndeterminate" => NumericIndeterminate,
+            "NumericBackend" => NumericBackend,
+            "Overflow" => Overflow,
+            "NotImplemented" => NotImplemented,
+            unknown => return fallible!(NotImplemented, "Unknown ErrorVariant {unknown}"),
+        })
+    }
 }
 
 impl fmt::Display for Error {

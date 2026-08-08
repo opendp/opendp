@@ -1,7 +1,7 @@
 /// This code is used to generate a hidden `_internal` module in Python
 /// containing APIs that allow for the construction of library primitives like Transformations and Measurements
 /// that do not require the "honest-but-curious" flag to be set.
-use std::{ffi::c_char, os::raw::c_void};
+use std::{cmp::Ordering, ffi::c_char, os::raw::c_void};
 
 use opendp_derive::bootstrap;
 
@@ -19,8 +19,8 @@ use crate::{
     measures::ffi::opendp_measures__user_divergence,
     metrics::ffi::opendp_metrics__user_distance,
     utilities::{
-        BinarySearchable, fallible_binary_search, fallible_exponential_bounds_search,
-        signed_fallible_binary_search,
+        BinarySearchable, fallible_binary_search, fallible_binary_search_by,
+        fallible_exponential_bounds_search, signed_fallible_binary_search,
     },
 };
 
@@ -248,6 +248,19 @@ where
     Ok(move |arg: &T| predicate(&AnyObject::new(arg.clone()))?.downcast::<bool>())
 }
 
+fn wrap_search_comparator<T>(
+    comparison: *const CallbackFn,
+) -> Fallible<impl Fn(&T) -> Fallible<Ordering>>
+where
+    T: Clone + 'static + Send + Sync,
+{
+    let comparison = wrap_func(try_as_ref!(comparison).clone());
+    Ok(move |arg: &T| {
+        let value = comparison(&AnyObject::new(arg.clone()))?.downcast::<i8>()?;
+        Ok(value.cmp(&0))
+    })
+}
+
 #[bootstrap(
     name = "_binary_search",
     arguments(
@@ -319,6 +332,62 @@ pub extern "C" fn opendp_internal___binary_search(
             [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]
         )],
         (predicate, lower, upper, return_sign)
+    )
+    .into()
+}
+
+#[bootstrap(
+    name = "_binary_search_by",
+    arguments(
+        comparison(rust_type = "i8"),
+        lower(default = b"null", c_type = "void *"),
+        upper(default = b"null", c_type = "void *"),
+    ),
+    generics(T(example = "$get_first_non_null(lower, upper)"))
+)]
+/// Find a boundary using a monotone three-way comparator.
+///
+/// The comparator returns a signed `i8`: negative for `Less`, zero for
+/// `Equal`, and positive for `Greater`.
+#[allow(dead_code)]
+fn _binary_search_by<T>(
+    comparison: CallbackFn,
+    lower: Option<T>,
+    upper: Option<T>,
+) -> Fallible<AnyObject> {
+    let _ = (comparison, lower, upper);
+    panic!("this signature only exists for code generation")
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_internal___binary_search_by(
+    comparison: *const CallbackFn,
+    lower: *const c_void,
+    upper: *const c_void,
+    T: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T>(
+        comparison: *const CallbackFn,
+        lower: *const c_void,
+        upper: *const c_void,
+    ) -> Fallible<AnyObject>
+    where
+        T: BinarySearchable + 'static + Send + Sync,
+    {
+        let comparison = wrap_search_comparator::<T>(comparison)?;
+        let lower = as_ref(lower as *const T).cloned();
+        let upper = as_ref(upper as *const T).cloned();
+        fallible_binary_search_by(comparison, (lower, upper)).map(AnyObject::new)
+    }
+
+    let T = try_!(Type::try_from(T));
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]
+        )],
+        (comparison, lower, upper)
     )
     .into()
 }
