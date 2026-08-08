@@ -117,6 +117,28 @@ pub enum ErrorVariant {
     #[error("Search")]
     Search,
 
+    /// A numerical operand lies outside the operation's mathematical domain.
+    #[error("NumericDomain")]
+    NumericDomain,
+
+    /// The finite mathematical value is below the finite range representable
+    /// at the requested output boundary. An actual negative infinity is a
+    /// value, not a range error.
+    #[error("NumericRangeBelow")]
+    NumericRangeBelow,
+
+    /// The finite mathematical value is above the finite range representable
+    /// at the requested output boundary. An actual positive infinity is a
+    /// value, not a range error.
+    #[error("NumericRangeAbove")]
+    NumericRangeAbove,
+
+    #[error("NumericIndeterminate")]
+    NumericIndeterminate,
+
+    #[error("NumericBackend")]
+    NumericBackend,
+
     #[error("Overflow")]
     Overflow,
 
