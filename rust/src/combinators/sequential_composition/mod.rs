@@ -20,7 +20,7 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, PureDP, RenyiDP, zCDP},
+    measures::{Approximate, MultiDP, PrivacyGuarantee, PureDP, RenyiDP, zCDP},
     traits::InfAdd,
 };
 
@@ -50,6 +50,23 @@ pub enum Composability {
 /// Otherwise returns an error.
 pub trait CompositionMeasure: Measure {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
+
+    /// Derive the output measure from the measures of all child measurements.
+    ///
+    /// Most measures are only composable when all children use the same
+    /// measure, so the default implementation preserves that behavior.
+    /// Measures whose equality intentionally ignores construction metadata can
+    /// override this hook to derive a sound output descriptor instead.
+    fn compose_measure(measures: &[Self]) -> Fallible<Self> {
+        let Some(first) = measures.first() else {
+            return fallible!(MakeMeasurement, "Must have at least one measurement");
+        };
+        if !measures.iter().all(|measure| measure == first) {
+            return fallible!(MetricMismatch, "All output measures must be the same");
+        }
+        Ok(first.clone())
+    }
+
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
@@ -129,5 +146,69 @@ impl CompositionMeasure for RenyiDP {
                 .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| privacy_loss_add(sum, eps?))
         }))
+    }
+}
+
+impl CompositionMeasure for MultiDP {
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        // Representation-specific approximate-RDP and approximate-zCDP deltas
+        // currently have sequential composition theorems.
+        Ok(Composability::Sequential)
+    }
+
+    fn compose_measure(measures: &[Self]) -> Fallible<Self> {
+        if measures.is_empty() {
+            return fallible!(MakeMeasurement, "Must have at least one measurement");
+        }
+
+        let capabilities = measures.iter().map(|measure| measure.capabilities());
+        let capabilities = capabilities.collect::<Vec<_>>();
+
+        // Native zCDP composition is available whenever every child
+        // guarantees zCDP. Purity is the meet of the child guarantees.
+        let zcdp = capabilities.iter().all(|caps| caps.zcdp().is_some());
+
+        // Pure zCDP embeds into pure RDP. Native pure RDP is the other
+        // supported RDP path. Approximate representations are deliberately
+        // excluded from this exact-RDP capability.
+        let renyi = capabilities.iter().all(|caps| {
+            caps.renyi() == Some(crate::measures::Purity::Pure)
+                || caps.zcdp() == Some(crate::measures::Purity::Pure)
+        });
+
+        let gaussian = capabilities.iter().all(|caps| caps.gaussian());
+        if !zcdp && !renyi && !gaussian {
+            return fallible!(
+                FailedFunction,
+                "MultiDP composition has no supported common capability path"
+            );
+        }
+
+        let mut derived = crate::measures::PrivacyCapabilities::default();
+        if zcdp {
+            let purity = if capabilities
+                .iter()
+                .all(|caps| caps.zcdp() == Some(crate::measures::Purity::Pure))
+            {
+                crate::measures::Purity::Pure
+            } else {
+                crate::measures::Purity::Approximate
+            };
+            derived = derived.with_zcdp(purity);
+        }
+        if renyi {
+            derived = derived.with_renyi(crate::measures::Purity::Pure);
+        }
+        if gaussian {
+            derived = derived.with_gaussian();
+        }
+
+        // Keep this independent of the first child's descriptor. MultiDP
+        // equality intentionally ignores capability richness.
+        Ok(MultiDP::new(derived))
+    }
+
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        PrivacyGuarantee::compose(d_mids)
     }
 }
