@@ -7,6 +7,8 @@
 pub(crate) mod ffi;
 
 pub(crate) mod rdp_to_approxdp;
+pub(crate) mod zcdp;
+pub(crate) use zcdp::{zcdp_delta, zcdp_epsilon, zcdp_log_delta};
 
 pub(crate) mod curves;
 pub use curves::*;

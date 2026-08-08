@@ -21,10 +21,10 @@ def test_fix_delta():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.0))
-    assert m_gauss.map(1.0).epsilon(1e-6) == 0.42994146883694934
+    assert m_gauss.map(1.0).epsilon(1e-6) == pytest.approx(0.42994146883694934, abs=1e-15)
 
     m_gauss_fixed = dp.c.make_fix_delta(m_gauss, 1e-6)
-    assert m_gauss_fixed.map(1.0) == (0.42994146883694934, 1e-06)
+    assert m_gauss_fixed.map(1.0) == pytest.approx((0.42994146883694934, 1e-06), abs=1e-15)
 
 
 def test_make_composition():
@@ -116,7 +116,7 @@ def test_make_composition_approx():
         ]
         * 2
     )
-    assert composed_fixed.map(1.0) == (11.341717670937543, 2e-07)
+    assert composed_fixed.map(1.0) == pytest.approx((11.341717670937543, 2e-07), abs=1e-14)
 
 
 def test_cast_zcdp_approxdp():
@@ -128,7 +128,7 @@ def test_cast_zcdp_approxdp():
     assert base_gaussian.map(1.0) == 0.005
 
     approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
-    assert approx_gaussian.map(1.0).epsilon(1e-6) == 0.42994146883694934
+    assert approx_gaussian.map(1.0).epsilon(1e-6) == pytest.approx(0.42994146883694934, abs=1e-15)
 
 
 def test_cast_azcdp_approxdp():
