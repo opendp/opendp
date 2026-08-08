@@ -3,6 +3,7 @@ use std::{cmp::Ordering, sync::Arc};
 
 use crate::measures::curves::{
     approxdp::{beta_via_approxDP, delta_via_approxDP, epsilon_via_approxdp},
+    gaussiandp::{beta_via_gaussianDP, delta_via_gaussianDP},
     logspace::{check_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked},
     profile::delta_via_profile,
     profile_to_tradeoff::beta_via_profile,
@@ -19,6 +20,7 @@ use crate::{
 };
 
 mod approxdp;
+mod gaussiandp;
 pub(crate) mod logspace;
 mod profile;
 mod profile_to_tradeoff;
@@ -44,6 +46,7 @@ pub type PrivacyProfile = PrivacyGuarantee;
 pub struct PrivacyGuarantee {
     // invariant: order increasing in epsilon, nonincreasing in delta
     approx_dp: Option<Arc<[ApproxDPPoint]>>,
+    gaussian_dp: Option<f64>,
     profile: Option<Profile>,
     tradeoff: Option<Tradeoff>,
     renyi_dp: Option<RenyiDP>,
@@ -327,7 +330,7 @@ impl PrivacyGuarantee {
     /// `delta` follows OpenDP's additive approximate-RDP convention: the
     /// source delta is added by the RDP-to-approximate-DP conversion theorem.
     /// Therefore `(curve, delta)` is one complete source RDP guarantee; this
-    /// delta does not relax any other representation stored on the curve.
+    /// delta does not relax any other representation stored in the guarantee.
     #[cfg(feature = "honest-but-curious")]
     #[allow(non_snake_case)]
     pub fn with_renyiDP(
@@ -358,12 +361,21 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a Gaussian differential privacy representation with parameter `mu`.
+    #[cfg(feature = "idealized-numerics")]
+    #[allow(non_snake_case)]
+    pub fn with_gaussianDP(mut self, mu: f64) -> Fallible<Self> {
+        check_mu(mu)?;
+        self.gaussian_dp = Some(mu);
+        Ok(self)
+    }
+
     /// Attach an approximate zero-concentrated DP representation.
     ///
     /// `delta` follows OpenDP's additive approximate-zCDP convention: the
     /// source delta is added by the zCDP-to-approximate-DP conversion theorem.
     /// Therefore `(rho, delta)` is one complete source zCDP guarantee; this
-    /// delta does not relax any other representation stored on the curve.
+    /// delta does not relax any other representation stored in the guarantee.
     #[allow(non_snake_case)]
     pub fn with_zCDP(mut self, rho: f64, delta: f64) -> Fallible<Self> {
         if rho.is_nan() {
@@ -387,6 +399,8 @@ impl PrivacyGuarantee {
             delta_via_approxDP(points, epsilon)?
         } else if let Some(Tradeoff { beta, symmetric }) = &self.tradeoff {
             delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon)?
+        } else if let Some(mu) = &self.gaussian_dp {
+            delta_via_gaussianDP(*mu, epsilon)?
         } else if let Some(ZCDP { rho, delta }) = &self.zcdp {
             delta_via_zCDP(*rho, *delta, epsilon)?
         } else if let Some(RenyiDP { curve, delta }) = &self.renyi_dp {
@@ -407,7 +421,9 @@ impl PrivacyGuarantee {
             return Ok(0.0);
         }
 
-        let beta = if let Some(Tradeoff { beta, .. }) = &self.tradeoff {
+        let beta = if let Some(mu) = &self.gaussian_dp {
+            beta_via_gaussianDP(*mu, alpha)?
+        } else if let Some(Tradeoff { beta, .. }) = &self.tradeoff {
             beta(alpha)?
         } else if let Some(Profile { delta: profile, .. }) = &self.profile {
             let profile = profile.clone();
@@ -464,7 +480,11 @@ impl PrivacyGuarantee {
             return epsilon_via_approxdp(points, delta);
         }
 
-        if self.profile.is_none() && self.approx_dp.is_none() && self.tradeoff.is_none() {
+        if self.profile.is_none()
+            && self.approx_dp.is_none()
+            && self.tradeoff.is_none()
+            && self.gaussian_dp.is_none()
+        {
             if let Some(ZCDP {
                 rho,
                 delta: source_delta,
@@ -489,7 +509,9 @@ impl PrivacyGuarantee {
             return Ok(0.0);
         }
 
-        let alpha = if let Some(Tradeoff {
+        let alpha = if let Some(mu) = &self.gaussian_dp {
+            beta_via_gaussianDP(*mu, beta)?
+        } else if let Some(Tradeoff {
             beta: beta_fn,
             symmetric,
         }) = &self.tradeoff
@@ -598,6 +620,16 @@ fn eval_log_profile(profile: &LogProfileFn, epsilon: f64) -> Fallible<f64> {
         );
     }
     Ok(value)
+}
+
+fn check_mu(mu: f64) -> Fallible<()> {
+    if mu.is_nan() {
+        return fallible!(FailedMap, "mu must not be NaN");
+    }
+    if !mu.is_finite() || mu.is_sign_negative() {
+        return fallible!(FailedMap, "mu ({mu}) must be a finite non-negative number");
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {
