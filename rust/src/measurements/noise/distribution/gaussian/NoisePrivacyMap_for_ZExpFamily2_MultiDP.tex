@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L2Distance<RBig>, MultiDP> for ZExpFamily<2>}}
+\author{\MichaelShoemateAuthor}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of
+\rustdoc{measurements/noise/trait}{NoisePrivacyMap} for
+\texttt{ZExpFamily<2>} with output measure
+\rustdoc{measures/struct}{MultiDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\texttt{NoisePrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI} is \rustdoc{metrics/type}{L2Distance<RBig>}.
+    \item \texttt{MO} is \rustdoc{measures/struct}{MultiDP}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily2_MultiDP.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+Given a distribution \texttt{self}, the implementation returns an error if
+\texttt{self} is invalid. Otherwise it returns a privacy map for the mechanism
+\texttt{function(x) = x + Z}, where the coordinates of $Z$ are independent
+discrete Gaussian samples represented by \texttt{self}, under
+\texttt{MultiDP}.
+\end{theorem}
+
+\begin{proof}
+Line \ref{line:zcdp-map} delegates to the exact-zCDP privacy map proved in
+\texttt{NoisePrivacyMap\_for\_ZExpFamily2.tex}. That map validates the scale and
+sensitivity and returns the conservative value of $\rho$ established by the
+discrete-Gaussian zCDP theorem.
+
+Line \ref{line:curve} wraps this exact zCDP distance in a
+\texttt{PrivacyGuarantee} with source delta zero. Consequently the advertised
+\texttt{MultiDP} capability contains exactly the zCDP representation already
+proved for this mechanism. No Gaussian-DP or RDP representation is inferred
+from the distribution name; those representations, if useful, can be derived
+later by consumers using their respective theorems. The privacy guarantee is
+therefore valid under \texttt{MultiDP}, and increasing the distance to any
+\texttt{d\_out} accepted by the measure ordering preserves the guarantee.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

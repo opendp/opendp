@@ -5,7 +5,9 @@ use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily, noise::nature::Nature},
-    measures::ZeroConcentratedDivergence,
+    measures::{
+        MultiDP, PrivacyCapabilities, PrivacyGuarantee, Purity, ZeroConcentratedDivergence,
+    },
     metrics::L2Distance,
     traits::InfCast,
 };
@@ -39,7 +41,7 @@ pub(crate) mod ffi;
 /// # Generics
 /// * `DI` - Domain of the data to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MI` - Input Metric to measure distances between members of the input domain.
-/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
+/// * `MO` - Output Measure. Valid measures are `ZeroConcentratedDivergence` and `MultiDP`.
 pub fn make_gaussian<DI: Domain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
@@ -100,6 +102,35 @@ impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamil
             }
 
             f64::inf_cast((d_in / scale.clone()).pow(2) / rbig!(2))
+        }))
+    }
+}
+
+#[proven(
+    proof_path = "measurements/noise/distribution/gaussian/NoisePrivacyMap_for_ZExpFamily2_MultiDP.tex"
+)]
+impl NoisePrivacyMap<L2Distance<RBig>, MultiDP> for ZExpFamily<2> {
+    fn noise_output_measure(&self, _input_metric: &L2Distance<RBig>) -> Fallible<MultiDP> {
+        Ok(MultiDP::new(
+            PrivacyCapabilities::default().with_zcdp(Purity::Pure),
+        ))
+    }
+
+    fn noise_privacy_map(
+        &self,
+        input_metric: &L2Distance<RBig>,
+        _output_measure: &MultiDP,
+    ) -> Fallible<PrivacyMap<L2Distance<RBig>, MultiDP>> {
+        // MultiDP stores only the independently certified zCDP fact here.
+        let zcdp_map = <Self as NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence>>::noise_privacy_map(
+            self,
+            input_metric,
+            &ZeroConcentratedDivergence,
+        )?;
+
+        Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
+            let rho = zcdp_map.eval(d_in)?;
+            PrivacyGuarantee::new().with_zCDP(rho, 0.0)
         }))
     }
 }
