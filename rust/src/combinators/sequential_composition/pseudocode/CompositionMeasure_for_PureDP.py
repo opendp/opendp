@@ -1,5 +1,5 @@
 # type: ignore
-class CompositionMeasure(MaxDivergence):
+class CompositionMeasure(PureDP):
     def composability(  # |\label{line:composability}|
         self, adaptivity: Adaptivity
     ) -> Composability:

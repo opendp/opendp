@@ -135,7 +135,7 @@ test_that("test_fully_adaptive_composition", {
     "Odometer(\n",
     "  input_domain=VectorDomain(AtomDomain(T=i32)),\n",
     "  input_metric=SymmetricDistance(),\n",
-    "  output_measure=MaxDivergence\n",
+    "  output_measure=PureDP\n",
     ")"
   ))
 

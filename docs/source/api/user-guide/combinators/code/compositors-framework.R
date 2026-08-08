@@ -21,14 +21,14 @@ meas_count
 # Measurement(
 #   input_domain=VectorDomain(AtomDomain(T=i32)),
 #   input_metric=SymmetricDistance(),
-#   output_measure=MaxDivergence
+#   output_measure=PureDP
 # )
 
 meas_sum
 # Measurement(
 #   input_domain=VectorDomain(AtomDomain(T=i32)),
 #   input_metric=SymmetricDistance(),
-#   output_measure=MaxDivergence
+#   output_measure=PureDP
 # )
 # /print-up-front
 # nolint end

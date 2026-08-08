@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{CompositionMeasure for Approximate<ZeroConcentratedDivergence>}}
+\title{\texttt{CompositionMeasure for RenyiDP}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -11,7 +11,7 @@
 
 \contrib
 Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
-for \texttt{Approximate<ZeroConcentratedDivergence>} in \asOfCommit{mod.rs}{f5bb719}.
+for \texttt{RenyiDP} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -23,7 +23,7 @@ Types matching pseudocode.
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ApproximateZeroConcentratedDivergence.py}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_RenyiDP.py}
 
 \subsection*{Postcondition}
 \begin{theorem}
@@ -33,16 +33,16 @@ None
 \end{theorem}
 
 \begin{proof}
-  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$,
-  where the summation is applied independently to rhos and deltas, and the comparison applies to both the global rho and global delta.
+  The new curve constructed on line \ref{line:curve} composes all epsilon parameters at a given fixed \texttt{alpha}.
+  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that for any choice of \texttt{alpha}, $\sum_i \texttt{d\_mid}_i(\texttt{alpha}) \le \texttt{compose(d\_mids)}(\alpha)$.
 
   \begin{center}
     \begin{tabular}{ r | l l }
       Adaptivity & Sequential & Concurrent \\ 
       \hline
-      Non-Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\  
-      Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\
-      Fully-Adaptive & Theorem~1\cite{whitehouse2023fullyadaptive} & None
+      Non-Adaptive & Proposition~1\cite{mironov2017renyi} & Theorem~2\cite{lyu2022interactive} \\  
+      Adaptive & - & - \\
+      Fully-Adaptive & Theorem~4.3\cite{feldman2022individual} & Theorem~1.22\cite{vadhan2021concurrent}
     \end{tabular}
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.

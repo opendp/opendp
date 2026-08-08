@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
     measurements::{TopKMeasure, make_private_quantile},
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     traits::Number,
     transformations::traits::UnboundedMetric,
 };
@@ -60,7 +60,7 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
     let TIA = try_!(input_domain.type_.get_atom());
     dispatch!(monomorphize, [
         (MI, @dataset_metrics),
-        (MO, [MaxDivergence, ZeroConcentratedDivergence]),
+        (MO, [PureDP, zCDP]),
         (TIA, @numbers)
     ], (input_domain, input_metric, output_measure, candidates, alpha, scale))
     .into()

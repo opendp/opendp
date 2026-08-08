@@ -210,13 +210,13 @@ Transformations don't make use of a measure, but measurements do have an ``outpu
 
 .. _max-divergence:
 
-A concrete example is ``MaxDivergence``, read as "the max divergence privacy measure."
+A concrete example is ``PureDP``, read as "the max divergence privacy measure."
 The max divergence measure has distances that correspond to ``epsilon`` in the definition of pure differential privacy.
 
 
 .. _smoothed-max-divergence:
 
-Another example is ``SmoothedMaxDivergence``.
+Another example is ``MultiDP``.
 The smoothed max divergence measure corresponds to approximate differential privacy,
 where distances are ``(epsilon, delta)`` tuples.
 
@@ -302,7 +302,7 @@ or some kind of global sensitivity metric like :ref:`AbsoluteDistance <absolute-
 
 The ``input_metric`` of Measurements is initially only some kind of global sensitivity metric.
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
-The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
+The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`PureDP <max-divergence>` or :ref:`MultiDP <smoothed-max-divergence>`.
 
 In some cases, distances may not form a total order. 
 For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`, 

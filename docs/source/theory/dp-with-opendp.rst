@@ -113,7 +113,7 @@ above:
             >>> print("input metric:  ", base_lap.input_metric)
             input metric:   AbsoluteDistance(f64)
             >>> print("output measure:", base_lap.output_measure)
-            output measure: MaxDivergence
+            output measure: PureDP
 
 We now invoke the measurement on some aggregate ``0.``, to sample
 :math:`Laplace(\mu=0., scale=5.)` noise:

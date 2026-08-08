@@ -90,7 +90,7 @@ An instance of the Laplace threshold mechanism is captured by a
 
     5. We similarly describe units on the output
     (:math:`(\epsilon, \delta)`) via the **output measure**
-    (``Approximate<MaxDivergence>``).
+    (``Approximate<PureDP>``).
 
 
 The ``make_laplace_threshold`` constructor function returns the
@@ -188,9 +188,9 @@ In this case, :math:`\Delta_1` in ``d_in`` is replaced with
   value
 
 ``m_lap`` measures privacy with :math:`\epsilon` and :math:`\delta` (in
-the ``Approximate<MaxDivergence>`` measure), and ``m_gauss`` measures
+the ``Approximate<PureDP>`` measure), and ``m_gauss`` measures
 privacy with :math:`\rho` and :math:`\delta` (in the
-``Approximate<ZeroConcentratedDivergence>`` measure).
+``Approximate<zCDP>`` measure).
 
 Notice how much smaller :math:`\delta` is this time (``2.8e-9`` vs
 ``1.1e-16``). This is because the laplace distribution is a “fat-tailed”

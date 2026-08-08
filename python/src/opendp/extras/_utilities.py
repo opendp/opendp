@@ -47,8 +47,8 @@ def with_privacy(
                             *args, **kwargs):
         assert_features("contrib")
         m_constructor = {
-            "ZeroConcentratedDivergence": then_gaussian,
-            "MaxDivergence": then_laplace,
+            "zCDP": then_gaussian,
+            "PureDP": then_laplace,
         }[str(privacy_measure.type)]
 
         return (t_constructor(input_domain, input_metric, *args, **kwargs)

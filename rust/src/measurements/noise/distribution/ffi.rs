@@ -8,7 +8,7 @@ use crate::{
         gaussian::ffi::opendp_measurements__make_gaussian,
         laplace::ffi::opendp_measurements__make_laplace,
     },
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
 };
 
 #[unsafe(no_mangle)]
@@ -20,7 +20,7 @@ pub extern "C" fn opendp_measurements__make_noise(
     k: *const i32,
 ) -> FfiResult<*mut AnyMeasurement> {
     let MO = &try_as_ref!(output_measure).type_;
-    if *MO == Type::of::<ZeroConcentratedDivergence>() {
+    if *MO == Type::of::<zCDP>() {
         opendp_measurements__make_gaussian(
             input_domain,
             input_metric,
@@ -28,7 +28,7 @@ pub extern "C" fn opendp_measurements__make_noise(
             k,
             try_!(into_c_char_p(MO.descriptor.clone())),
         )
-    } else if *MO == Type::of::<MaxDivergence>() {
+    } else if *MO == Type::of::<PureDP>() {
         opendp_measurements__make_laplace(
             input_domain,
             input_metric,
@@ -37,10 +37,6 @@ pub extern "C" fn opendp_measurements__make_noise(
             try_!(into_c_char_p(MO.descriptor.clone())),
         )
     } else {
-        err!(
-            FFI,
-            "output_measure must be MaxDivergence or ZeroConcentratedDivergence"
-        )
-        .into()
+        err!(FFI, "output_measure must be PureDP or zCDP").into()
     }
 }

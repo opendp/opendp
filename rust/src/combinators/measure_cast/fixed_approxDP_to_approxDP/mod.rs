@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyGuarantee, SmoothedMaxDivergence},
+    measures::{Approximate, MultiDP, PrivacyGuarantee, PureDP},
 };
 
 #[cfg(feature = "ffi")]
@@ -11,7 +11,7 @@ mod ffi;
 mod test;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `Approximate<MaxDivergence>` to `SmoothedMaxDivergence`
+/// is casted from `Approximate<PureDP>` to `MultiDP`
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy measure to be casted
@@ -21,8 +21,8 @@ mod test;
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
 pub fn make_fixed_approxDP_to_approxDP<DI, MI, TO>(
-    measurement: Measurement<DI, MI, Approximate<MaxDivergence>, TO>,
-) -> Fallible<Measurement<DI, MI, SmoothedMaxDivergence, TO>>
+    measurement: Measurement<DI, MI, Approximate<PureDP>, TO>,
+) -> Fallible<Measurement<DI, MI, MultiDP, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,
@@ -31,7 +31,7 @@ where
     let privacy_map = measurement.privacy_map.clone();
     measurement.with_map(
         measurement.input_metric.clone(),
-        SmoothedMaxDivergence::default(),
+        MultiDP::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map
                 .eval(d_in)

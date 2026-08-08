@@ -1,10 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{
-        Approximate, PrivacyGuarantee, SmoothedMaxDivergence, ZeroConcentratedDivergence,
-        zcdp_epsilon, zcdp_log_delta,
-    },
+    measures::{Approximate, MultiDP, PrivacyGuarantee, zCDP, zcdp_epsilon, zcdp_log_delta},
 };
 
 #[cfg(feature = "ffi")]
@@ -14,7 +11,7 @@ mod ffi;
 mod test;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+/// is casted from `zCDP` to `MultiDP`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
@@ -53,8 +50,8 @@ pub trait ConcentratedMeasure: Measure {
     fn convert(d_mid: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance>;
 }
 
-impl ConcentratedMeasure for ZeroConcentratedDivergence {
-    type ApproxMeasure = SmoothedMaxDivergence;
+impl ConcentratedMeasure for zCDP {
+    type ApproxMeasure = MultiDP;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         PrivacyGuarantee::new().with_log_profile_with_epsilon(
@@ -64,8 +61,8 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     }
 }
 
-impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
-    type ApproxMeasure = Approximate<SmoothedMaxDivergence>;
+impl ConcentratedMeasure for Approximate<zCDP> {
+    type ApproxMeasure = Approximate<MultiDP>;
 
     fn convert(
         (rho, delta): Self::Distance,

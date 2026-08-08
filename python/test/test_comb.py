@@ -123,7 +123,7 @@ def test_cast_zcdp_approxdp():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     base_gaussian = input_space >> dp.m.then_gaussian(
-        10.0, MO=dp.ZeroConcentratedDivergence
+        10.0, MO=dp.zCDP
     )
     assert base_gaussian.map(1.0) == 0.005
 

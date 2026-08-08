@@ -1,7 +1,7 @@
 use num::Float;
 
 use crate::{
-    measurements::make_noisy_max, measures::ZeroConcentratedDivergence, metrics::SymmetricDistance,
+    measurements::make_noisy_max, measures::zCDP, metrics::SymmetricDistance,
     traits::samplers::sample_uniform_uint_below,
 };
 
@@ -25,7 +25,7 @@ fn test_quantile_score_candidates_median() -> Fallible<()> {
     let m_rnm = make_noisy_max(
         t_qscore.output_domain.clone(),
         t_qscore.output_metric.clone(),
-        ZeroConcentratedDivergence,
+        zCDP,
         1.0,
         true,
     )?;
@@ -237,7 +237,7 @@ mod integration_tests {
         let exp_mech = make_noisy_max(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
-            ZeroConcentratedDivergence,
+            zCDP,
             trans.map(&1)? as f64 * 2.,
             true,
         )?;
@@ -259,7 +259,7 @@ mod integration_tests {
         let exp_mech = make_noisy_max(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
-            ZeroConcentratedDivergence,
+            zCDP,
             trans_sized.map(&2)? as f64 * 2.,
             true,
         )?;

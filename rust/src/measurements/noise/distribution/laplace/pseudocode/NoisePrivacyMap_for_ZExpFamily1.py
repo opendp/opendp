@@ -1,9 +1,9 @@
 # type: ignore
-# analogous to impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> in Rust
+# analogous to impl NoisePrivacyMap<L1Distance<RBig>, PureDP> for ZExpFamily<1> in Rust
 class ZExpFamily1:
     def noise_privacy_map(
-        self, _input_metric: L1Distance[RBig], _output_measure: MaxDivergence
-    ) -> PrivacyMap[L1Distance[RBig], MaxDivergence]:
+        self, _input_metric: L1Distance[RBig], _output_measure: PureDP
+    ) -> PrivacyMap[L1Distance[RBig], PureDP]:
         scale = self.scale
         if scale < RBig.ZERO:  # |\label{line:neg-scale}|
             raise "scale must be non-negative"
