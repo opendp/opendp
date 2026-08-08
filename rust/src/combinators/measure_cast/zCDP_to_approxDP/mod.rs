@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PrivacyGuarantee, SmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
 use self::cdp_delta::cdp_delta;
@@ -58,9 +58,7 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     type ApproxMeasure = SmoothedMaxDivergence;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
-        Ok(PrivacyProfile::new(move |epsilon: f64| {
-            cdp_delta(rho, epsilon)
-        }))
+        PrivacyGuarantee::new().with_profile(move |epsilon: f64| cdp_delta(rho, epsilon))
     }
 }
 
@@ -71,7 +69,7 @@ impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
         (rho, delta): Self::Distance,
     ) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         Ok((
-            PrivacyProfile::new(move |epsilon: f64| cdp_delta(rho, epsilon)),
+            PrivacyGuarantee::new().with_profile(move |epsilon: f64| cdp_delta(rho, epsilon))?,
             delta,
         ))
     }

@@ -1,8 +1,11 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
-    traits::InfSub,
+    measures::{
+        Approximate, MaxDivergence, PrivacyGuarantee, SmoothedMaxDivergence,
+        curves::logspace::check_delta,
+    },
+    traits::CInterval,
 };
 
 #[cfg(feature = "ffi")]
@@ -14,8 +17,8 @@ mod test;
 /// Fix the delta parameter in the privacy map of a `measurement` with a `SmoothedMaxDivergence` output measure.
 ///
 /// # Arguments
-/// * `measurement` - a measurement with a privacy curve to be fixed
-/// * `delta` - parameter to fix the privacy curve with
+/// * `measurement` - a measurement with a privacy guarantee to be fixed
+/// * `delta` - parameter to fix the privacy guarantee with
 ///
 /// # Generics
 /// * `DI` - Input Domain
@@ -78,10 +81,18 @@ impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
     }
     fn fix_delta(
         &self,
-        (curve, fixed_delta): &(PrivacyProfile, f64),
+        (curve, fixed_delta): &(PrivacyGuarantee, f64),
         delta: f64,
     ) -> Fallible<(f64, f64)> {
-        let remaining_delta = delta.neg_inf_sub(&fixed_delta)?;
-        curve.epsilon(remaining_delta).map(|v| (v, delta.clone()))
+        check_delta(*fixed_delta)?;
+        check_delta(delta)?;
+
+        let remaining = (CInterval::point(delta)? - CInterval::point(*fixed_delta)?)?;
+        if remaining.upper_f64()? < 0.0 {
+            return Ok((f64::INFINITY, delta));
+        }
+
+        let remaining_delta = remaining.max(CInterval::point(0.0)?)?.lower_f64()?;
+        curve.epsilon(remaining_delta).map(|v| (v, delta))
     }
 }
