@@ -1,4 +1,9 @@
-use crate::{measurements::make_laplace, metrics::AbsoluteDistance};
+use crate::{
+    core::Measurement,
+    measurements::make_laplace,
+    measures::{PureDP, zCDP},
+    metrics::AbsoluteDistance,
+};
 
 use super::*;
 
@@ -9,36 +14,28 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
         AbsoluteDistance::<f64>::default(),
     );
 
-    assert!(
-        FloatExpFamily::<1> { scale: 1.0, k: 0 }
-            .make_noise(space.clone())
-            .is_ok()
-    );
-    assert!(
-        FloatExpFamily::<1> {
-            scale: f64::NAN,
-            k: 0
-        }
-        .make_noise(space.clone())
-        .is_err()
-    );
-    assert!(
-        FloatExpFamily::<2> {
-            scale: 1.0,
-            k: i32::MIN
-        }
-        .make_noise(space.clone())
-        .is_err()
-    );
+    let valid: Fallible<Measurement<_, _, PureDP, f64>> =
+        FloatExpFamily::<1> { scale: 1.0, k: 0 }.make_noise(space.clone());
+    assert!(valid.is_ok());
+    let invalid: Fallible<Measurement<_, _, PureDP, f64>> = FloatExpFamily::<1> {
+        scale: f64::NAN,
+        k: 0,
+    }
+    .make_noise(space.clone());
+    assert!(invalid.is_err());
+    let invalid_k: Fallible<Measurement<_, _, zCDP, f64>> = FloatExpFamily::<2> {
+        scale: 1.0,
+        k: i32::MIN,
+    }
+    .make_noise(space.clone());
+    assert!(invalid_k.is_err());
 
-    assert!(
-        FloatExpFamily::<2> {
-            scale: 1.0,
-            k: i32::MAX
-        }
-        .make_noise(space.clone())
-        .is_ok()
-    );
+    let valid_k: Fallible<Measurement<_, _, zCDP, f64>> = FloatExpFamily::<2> {
+        scale: 1.0,
+        k: i32::MAX,
+    }
+    .make_noise(space.clone());
+    assert!(valid_k.is_ok());
 
     Ok(())
 }
@@ -57,7 +54,7 @@ fn test_then_deintegerize_vec() -> Fallible<()> {
 
 #[allow(non_snake_case)]
 fn sample_dlap_Z2K(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
-    make_laplace(
+    make_laplace::<_, _, PureDP>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<i8>::default(),
         scale,

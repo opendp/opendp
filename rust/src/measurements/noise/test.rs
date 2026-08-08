@@ -1,6 +1,10 @@
 use dashu::rbig;
 
-use crate::metrics::{L1Distance, L2Distance};
+use crate::{
+    core::Measurement,
+    measures::{PureDP, zCDP},
+    metrics::{L1Distance, L2Distance},
+};
 
 use super::*;
 
@@ -11,13 +15,12 @@ fn test_make_noise_ibig_laplace() -> Fallible<()> {
         L1Distance::<RBig>::default(),
     );
 
-    assert!(
-        ZExpFamily::<1> { scale: rbig!(-1) }
-            .make_noise(space.clone())
-            .is_err()
-    );
+    let invalid: Fallible<Measurement<_, _, PureDP, Vec<IBig>>> =
+        ZExpFamily::<1> { scale: rbig!(-1) }.make_noise(space.clone());
+    assert!(invalid.is_err());
 
-    let m_noise = ZExpFamily::<1> { scale: rbig!(1) }.make_noise(space.clone())?;
+    let m_noise: Measurement<_, _, PureDP, Vec<IBig>> =
+        ZExpFamily::<1> { scale: rbig!(1) }.make_noise(space.clone())?;
     assert_eq!(m_noise.map(&rbig!(1))?, 1.0);
     assert!(m_noise.invoke(&vec![IBig::from(1)]).is_ok());
 
@@ -37,7 +40,8 @@ fn test_make_noise_ibig_gaussian() -> Fallible<()> {
             .is_err()
     );
 
-    let m_noise = ZExpFamily::<2> { scale: rbig!(1) }.make_noise(space.clone())?;
+    let m_noise: Measurement<_, _, zCDP, Vec<IBig>> =
+        ZExpFamily::<2> { scale: rbig!(1) }.make_noise(space.clone())?;
     assert_eq!(m_noise.map(&rbig!(1))?, 0.5);
     assert!(m_noise.invoke(&vec![IBig::from(1)]).is_ok());
 
