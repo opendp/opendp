@@ -61,6 +61,11 @@ fn test_public_tradeoff_endpoints() -> Fallible<()> {
     let pure = PrivacyGuarantee::new().with_approxDP(vec![(1.0, 0.0)])?;
     assert_eq!(pure.beta(0.0)?, 1.0);
 
+    let approximate_rdp = PrivacyGuarantee::new().with_renyiDP(|_| Ok(1.0), 0.1)?;
+    let approximate_rdp_beta_zero = approximate_rdp.beta(0.0)?;
+    assert!(approximate_rdp_beta_zero < 1.0);
+    assert!(approximate_rdp_beta_zero > 0.89);
+
     let callback =
         PrivacyGuarantee::new().with_tradeoff(|alpha| Ok((0.75_f64 - 1.5 * alpha).max(0.0)))?;
     assert_eq!(callback.beta(0.0)?, 0.75);
@@ -175,6 +180,57 @@ fn test_public_tradeoff_generalized_inverse_endpoints() -> Fallible<()> {
     assert!(alpha_zero < 0.91);
     assert!(alpha_zero > 0.89);
     assert!(approx.beta(alpha_zero.next_up())? <= 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_renyi_delta_is_representation_specific() -> Fallible<()> {
+    let exact = PrivacyGuarantee::new().with_renyiDP_trusted(|_| Ok(0.25), 0.0)?;
+    let approximate = PrivacyGuarantee::new().with_renyiDP_trusted(|_| Ok(0.25), 0.1)?;
+
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+    assert_eq!(approximate.delta(f64::INFINITY)?, 0.1);
+    assert!(approximate.epsilon(0.1f64.next_down())?.is_infinite());
+
+    let exact_delta = exact.delta(1.0)?;
+    let approximate_delta = approximate.delta(1.0)?;
+    assert!(approximate_delta >= exact_delta + 0.1);
+    assert!(approximate_delta <= (exact_delta + 0.1).next_up());
+    Ok(())
+}
+
+#[test]
+fn test_selected_representation_owns_its_delta() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new()
+        .with_approxDP(vec![(1.0, 0.2)])?
+        .with_renyiDP_trusted(|_| Ok(0.0), 0.7)?;
+
+    // ApproxDP precedes RDP, so neither forward nor inverse queries use RDP's delta.
+    assert_eq!(curve.delta(1.0)?, 0.2);
+    assert_eq!(curve.epsilon(0.2)?, 1.0);
+    Ok(())
+}
+
+#[test]
+fn test_renyi_delta_validation_and_endpoints() -> Fallible<()> {
+    assert!(
+        PrivacyGuarantee::new()
+            .with_renyiDP_trusted(|_| Ok(0.0), -0.0)
+            .is_err()
+    );
+    assert!(
+        PrivacyGuarantee::new()
+            .with_renyiDP_trusted(|_| Ok(0.0), f64::NAN)
+            .is_err()
+    );
+
+    let exact = PrivacyGuarantee::new().with_renyiDP_trusted(|_| Ok(0.0), 0.0)?;
+    assert_eq!(exact.delta(f64::INFINITY)?, 0.0);
+
+    let vacuous = PrivacyGuarantee::new().with_renyiDP_trusted(|_| Ok(0.0), 1.0)?;
+    assert_eq!(vacuous.delta(f64::INFINITY)?, 1.0);
+    assert_eq!(vacuous.epsilon(1.0)?, 0.0);
+    assert!(vacuous.epsilon(1.0f64.next_down())?.is_infinite());
     Ok(())
 }
 
@@ -423,6 +479,9 @@ fn test_profile_zero_endpoints() -> Fallible<()> {
     let asymptotic = PrivacyGuarantee::new().with_log_profile(|epsilon| Ok(-epsilon))?;
     assert_eq!(asymptotic.epsilon(0.0)?, f64::INFINITY);
 
+    let approximate_rdp = PrivacyGuarantee::new().with_renyiDP(|_| Ok(0.0), 1e-3)?;
+    assert_eq!(approximate_rdp.epsilon(0.0)?, f64::INFINITY);
+
     let direct = PrivacyGuarantee::new().with_log_profile_with_epsilon(
         |_| Ok(f64::NEG_INFINITY),
         |delta| Ok(if delta == 0.0 { 2.0 } else { 0.0 }),
@@ -453,6 +512,8 @@ fn test_delta_at_positive_infinity_uses_profile_representation() -> Fallible<()>
     let ending_zero = PrivacyGuarantee::new().with_approxDP(vec![(1.0, 0.0)])?;
     assert_eq!(ending_zero.delta(f64::INFINITY)?, 0.0);
 
+    let approximate_rdp = PrivacyGuarantee::new().with_renyiDP(|_| Ok(0.0), 0.01)?;
+    assert_eq!(approximate_rdp.delta(f64::INFINITY)?, 0.01);
     Ok(())
 }
 
@@ -524,5 +585,25 @@ fn test_subnormal_log_to_delta_conversion() -> Fallible<()> {
     let minimum = f64::from_bits(1);
     assert_eq!(log_to_delta_upper(minimum.ln())?, f64::from_bits(2));
     assert_eq!(log_to_delta_upper(minimum.ln().next_down())?, minimum);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_renyi_curve_queries() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new().with_renyiDP(|alpha| Ok(alpha * 0.25), 0.0)?;
+    assert!((0.0..=1.0).contains(&curve.delta(1.0)?));
+    assert_eq!(curve.beta(0.0)?, 1.0);
+    assert_eq!(curve.alpha(0.0)?, 1.0);
+    assert!((0.0..=1.0).contains(&curve.beta(0.5)?));
+    Ok(())
+}
+
+#[test]
+fn test_renyi_error_propagation() -> Fallible<()> {
+    let curve = PrivacyGuarantee::new()
+        .with_renyiDP_trusted(|_| fallible!(FailedFunction, "test RDP failure"), 0.0)?;
+    assert!(curve.delta(1.0).is_err());
+    assert!(curve.epsilon(1e-3).is_err());
     Ok(())
 }

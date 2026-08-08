@@ -76,3 +76,25 @@ fn test_fix_delta_outer_delta_boundaries() -> Fallible<()> {
     assert_eq!(above.privacy_map.eval(&1)?.0, 0.0);
     Ok(())
 }
+
+#[test]
+fn test_fix_delta_preserves_internal_rdp_delta() -> Fallible<()> {
+    let meas = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(SmoothedMaxDivergence),
+        Function::new(|&v| v),
+        PrivacyMap::new_fallible(|_d_in| {
+            Ok((
+                PrivacyGuarantee::new().with_renyiDP_trusted(|_| Ok(0.0), 0.1)?,
+                0.2,
+            ))
+        }),
+    )?;
+    let equal = make_fix_delta(&meas, 0.2)?;
+    assert!(equal.privacy_map.eval(&1)?.0.is_infinite());
+
+    let above = make_fix_delta(&meas, 0.3f64.next_up())?;
+    assert_eq!(above.privacy_map.eval(&1)?.0, 0.0);
+    Ok(())
+}
