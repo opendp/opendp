@@ -25,6 +25,18 @@ test_that("make_composition", {
   expect_equal(meas(arg = 1L), list(1L, list(1L, 1L)))
 })
 
+test_that("MultiDP composition retains exact certificates", {
+  measurement <- make_noise(
+    vector_domain(atom_domain(.T = "i32")), l1_distance(.T = "i32"),
+    multi_dp(), scale = 2.
+  )
+  composed <- make_composition(c(measurement, measurement))
+  guarantee <- composed(d_in = 1L)
+  expect_s3_class(guarantee, "privacy_guarantee")
+  expect_equal(guarantee(epsilon = 1.), 0.)
+  expect_equal(composed(d_in = 0L)(delta = 0.), 0.)
+})
+
 test_that("make_chain_mt", {
   domain <- vector_domain(atom_domain(bounds = list(0L, 2L)))
   metric <- symmetric_distance()

@@ -2,7 +2,10 @@ use crate::core::*;
 use crate::domains::AtomDomain;
 use crate::interactive::Queryable;
 use crate::measurements::make_laplace;
-use crate::measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence};
+use crate::measures::{
+    Approximate, MaxDivergence, MultiDP, PrivacyGuarantee, Purity, RenyiDivergence,
+    ZeroConcentratedDivergence,
+};
 use crate::metrics::{AbsoluteDistance, DiscreteDistance};
 
 use super::*;
@@ -65,6 +68,210 @@ fn test_rdp_composition() -> Fallible<()> {
     // then we are composing two queries, so the total loss is 6. * 2. = 12.
     let rdp_curve = composition.map(&2.)?;
     assert_eq!(rdp_curve.eval(&3.0)?, 12.0);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_composition_derives_capabilities_from_all_children() -> Fallible<()> {
+    let domain = AtomDomain::<i32>::default();
+    let metric = AbsoluteDistance::<i32>::default();
+    let rdp_child = Measurement::new(
+        domain.clone(),
+        metric.clone(),
+        MultiDP::with_renyi(Purity::Pure),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| {
+            PrivacyGuarantee::new().with_renyiDP(|orders| Ok(orders.to_vec()), 0.0)
+        }),
+    )?;
+    let zcdp_child = Measurement::new(
+        domain,
+        metric,
+        MultiDP::with_zcdp(Purity::Pure),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| PrivacyGuarantee::new().with_zCDP(0.1, 0.0)),
+    )?;
+
+    let composition = make_composition(vec![rdp_child, zcdp_child])?;
+    assert_eq!(
+        composition.output_measure.capabilities().renyi(),
+        Some(Purity::Pure)
+    );
+    assert_eq!(composition.output_measure.capabilities().zcdp(), None);
+    assert!(composition.map(&1)?.epsilon(1e-3)?.is_finite());
+    Ok(())
+}
+
+#[test]
+fn test_multidp_composes_certificates_and_meets_purity() -> Fallible<()> {
+    let make_measurement = |epsilon, delta, purity| {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            MultiDP::with_approx_dp(purity),
+            Function::new(|_: &i32| 0_i32),
+            PrivacyMap::new_fallible(move |_| {
+                PrivacyGuarantee::new().with_approx_dp(epsilon, delta)
+            }),
+        )
+    };
+    for (delta, purity) in [(0.0, Purity::Pure), (0.25, Purity::Approximate)] {
+        let composition = make_composition(vec![
+            make_measurement(0.5, 0.0, Purity::Pure)?,
+            make_measurement(0.25, delta, purity)?,
+        ])?;
+        let capabilities = composition.output_measure.capabilities();
+        assert_eq!(capabilities.approx_dp(), Some(purity));
+        assert_eq!(capabilities.profile(), None);
+        assert_eq!(capabilities.renyi(), None);
+        assert_eq!(capabilities.zcdp(), None);
+        assert!(!capabilities.gaussian());
+        let guarantee = composition.map(&1)?;
+        assert_eq!(guarantee.approx_dp(), Some((0.75, delta)));
+        assert_eq!(guarantee.epsilon(delta)?, 0.75);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_multidp_runtime_certificates_do_not_enlarge_static_capabilities() -> Fallible<()> {
+    let make_measurement = || {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            MultiDP::with_zcdp(Purity::Pure),
+            Function::new(|_: &i32| 0_i32),
+            PrivacyMap::new_fallible(|_| {
+                PrivacyGuarantee::new()
+                    .with_approx_dp(0.5, 0.0)?
+                    .with_zCDP(0.1, 0.0)
+            }),
+        )
+    };
+    let composition = make_composition(vec![make_measurement()?, make_measurement()?])?;
+    assert_eq!(composition.output_measure.capabilities().approx_dp(), None);
+    assert!(composition.map(&1)?.approx_dp().is_some());
+    Ok(())
+}
+
+#[test]
+fn test_multidp_composition_meets_zcdp_purity() -> Fallible<()> {
+    let pure = Measurement::new(
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
+        MultiDP::with_zcdp(Purity::Pure),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| PrivacyGuarantee::new().with_zCDP(0.1, 0.0)),
+    )?;
+    let approximate = Measurement::new(
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
+        MultiDP::with_zcdp(Purity::Approximate),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| PrivacyGuarantee::new().with_zCDP(0.2, 0.01)),
+    )?;
+
+    let composition = make_composition(vec![pure, approximate])?;
+    assert_eq!(
+        composition.output_measure.capabilities().zcdp(),
+        Some(Purity::Approximate)
+    );
+    assert_eq!(composition.output_measure.capabilities().renyi(), None);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_composition_requires_a_common_capability_path() -> Fallible<()> {
+    let make_measurement = |measure| {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            measure,
+            Function::new(|arg: &i32| *arg),
+            PrivacyMap::new(|_| PrivacyGuarantee::new()),
+        )
+    };
+    let profile = make_measurement(MultiDP::with_profile(Purity::Pure))?;
+    let certificate = make_measurement(MultiDP::with_approx_dp(Purity::Pure))?;
+
+    let error = make_composition(vec![profile, certificate]).unwrap_err();
+    assert_eq!(
+        error.message.as_deref(),
+        Some("MultiDP composition has no supported common capability path")
+    );
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_multidp_composes_native_gaussian_dp() -> Fallible<()> {
+    let make_measurement = |mu| {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            MultiDP::with_gaussian(),
+            Function::new(|arg: &i32| *arg),
+            PrivacyMap::new_fallible(move |_| PrivacyGuarantee::new().with_gaussianDP(mu)),
+        )
+    };
+    let composition = make_composition(vec![make_measurement(0.3)?, make_measurement(0.4)?])?;
+    assert!(composition.output_measure.capabilities().gaussian());
+    assert!(composition.map(&1)?.delta(1.0)?.is_finite());
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_multidp_runtime_extras_do_not_enlarge_capabilities() -> Fallible<()> {
+    let make_measurement = |mu| {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            MultiDP::with_zcdp(Purity::Pure),
+            Function::new(|arg: &i32| *arg),
+            PrivacyMap::new_fallible(move |_| {
+                PrivacyGuarantee::new()
+                    .with_zCDP(0.1, 0.0)
+                    .and_then(|guarantee| guarantee.with_gaussianDP(mu))
+            }),
+        )
+    };
+    let composition = make_composition(vec![make_measurement(0.3)?, make_measurement(0.4)?])?;
+    assert_eq!(
+        composition.output_measure.capabilities().zcdp(),
+        Some(Purity::Pure)
+    );
+    assert!(!composition.output_measure.capabilities().gaussian());
+    assert!(composition.map(&1)?.delta(1.0)?.is_finite());
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[test]
+fn test_multidp_composition_ignores_optional_path_failure() -> Fallible<()> {
+    let domain = AtomDomain::<i32>::default();
+    let metric = AbsoluteDistance::<i32>::default();
+    let first = Measurement::new(
+        domain.clone(),
+        metric.clone(),
+        MultiDP::with_zcdp(Purity::Pure),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| {
+            PrivacyGuarantee::new()
+                .with_zCDP(0.1, 0.0)
+                .and_then(|guarantee| guarantee.with_gaussianDP(f64::MAX))
+        }),
+    )?;
+    let second = Measurement::new(
+        domain,
+        metric,
+        MultiDP::with_zcdp(Purity::Pure),
+        Function::new(|arg: &i32| *arg),
+        PrivacyMap::new_fallible(|_| PrivacyGuarantee::new().with_zCDP(0.2, 0.0)),
+    )?;
+
+    let composition = make_composition(vec![first, second])?;
+    assert!(composition.map(&1)?.epsilon(1e-3)?.is_finite());
     Ok(())
 }
 

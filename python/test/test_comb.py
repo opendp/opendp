@@ -76,6 +76,20 @@ def test_make_composition():
     print("Invocation:", composed.invoke([22, 12]))
 
 
+def test_multidp_composition_preserves_exact_certificate():
+    measurement = dp.m.make_noise(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.l1_distance(T=int),
+        dp.multi_dp(),
+        scale=2.0,
+    )
+    composed = dp.c.make_composition([measurement, measurement])
+    guarantee = composed.map(1)
+    assert isinstance(guarantee, dp.PrivacyGuarantee)
+    assert guarantee.delta(epsilon=1.0) == 0.0
+    assert composed.map(0).epsilon(delta=0.0) == 0.0
+
+
 def test_deprecated_composition():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     m_lap = dp.m.make_laplace(*input_space, 1.0)
