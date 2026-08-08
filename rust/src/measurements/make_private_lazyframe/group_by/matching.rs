@@ -1,8 +1,11 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
+use polars::{
+    datatypes::DataType,
+    prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector},
+};
 use polars_plan::{
-    dsl::{Expr, Operator},
+    dsl::{DataTypeExpr, Expr, Operator},
     prelude::GroupbyOptions,
     utils::expr_output_name,
 };
@@ -221,10 +224,14 @@ pub(super) fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, No
 
     let (inputs, args) = match_trusted_plugin::<NoisePlugin>(&expr).ok().flatten()?;
 
-    // If it is a cast, unwrap to get the len expr.
+    // Signed frame lengths are represented as a stable widening cast from u32.
     let input = match &inputs[0] {
-        Expr::Cast { expr, .. } => expr.as_ref(),
-        x => x,
+        Expr::Cast {
+            expr,
+            dtype: DataTypeExpr::Literal(DataType::Int64),
+            ..
+        } => expr.as_ref(),
+        input => input,
     };
 
     if let Expr::Len = input {
