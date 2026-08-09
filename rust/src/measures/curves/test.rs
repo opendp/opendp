@@ -14,6 +14,31 @@ fn batch(
 }
 
 #[test]
+fn approximate_dp_profile_conversion_preserves_slack_equality_and_plateaus() -> Fallible<()> {
+    for delta in [0.0, f64::from_bits(1), 0.1, 0.5, 1.0] {
+        let profile = ApproxDPRepr::new(2.0, delta)?.into_profile()?;
+        assert_eq!(
+            profile.delta(&[0.0, 2.0_f64.next_down(), 2.0, f64::INFINITY])?,
+            vec![1.0, 1.0, delta, delta]
+        );
+        assert_eq!(
+            profile.epsilon(&[delta])?[0],
+            if delta == 1.0 { 0.0 } else { 2.0 }
+        );
+        if delta > 0.0 {
+            assert_eq!(profile.epsilon(&[delta.next_down()])?[0], f64::INFINITY);
+        }
+        if delta == 0.0 {
+            assert_eq!(profile.pure_epsilon()?, Some(2.0));
+        } else {
+            assert_eq!(profile.pure_epsilon()?, None);
+            assert!(profile.log_delta(&[2.0])?[0] >= delta.ln());
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_ordinary_callback_conversion_is_conservative_and_lazy() -> Fallible<()> {
     let calls = Arc::new(AtomicUsize::new(0));
     let counter = calls.clone();
