@@ -371,6 +371,152 @@ def test_legacy_privacy_profile_scalar_callback_with_vector_queries():
     assert profile.epsilon(0.5) == pytest.approx(math.log(2.0))
 
 
+def test_privacy_guarantee_profile_representation_is_distinct():
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    profile = PrivacyProfile(log_delta=lambda eps: [-value for value in eps])
+    guarantee = PrivacyGuarantee(profile=profile)
+
+    assert isinstance(profile, PrivacyProfile)
+    assert isinstance(guarantee, PrivacyGuarantee)
+    assert not isinstance(profile, PrivacyGuarantee)
+    assert guarantee.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
+
+    with pytest.raises(TypeError, match="profile must be a PrivacyProfile"):
+        PrivacyGuarantee(profile=lambda _eps: 0.0)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        PrivacyGuarantee(profile)  # type: ignore[arg-type, misc]
+    with pytest.raises(TypeError, match="expected at least one"):
+        PrivacyGuarantee()
+    assert guarantee.delta(1.0) == pytest.approx(profile.delta(1.0))
+
+
+@pytest.mark.parametrize("delta", [0.0, 5e-324, 0.1, 1.0])
+def test_privacy_guarantee_approx_dp_certificate(delta):
+    import math
+    from opendp.mod import PrivacyGuarantee
+
+    guarantee = PrivacyGuarantee(approx_dp=(2.0, delta))
+    assert guarantee.delta(2.0) == delta
+    assert guarantee.delta(math.inf) == delta
+    assert guarantee.delta(math.nextafter(2.0, 0.0)) == 1.0
+    assert guarantee.epsilon(delta) == (0.0 if delta == 1.0 else 2.0)
+    assert guarantee.epsilon(1.0) == 0.0
+    if delta > 0.0:
+        assert guarantee.epsilon(math.nextafter(delta, 0.0)) == math.inf
+
+
+def test_privacy_guarantee_conjunctive_representations():
+    import math
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+    from opendp.measures import _privacy_guarantee_with_approx_dp
+
+    profile = PrivacyProfile(
+        log_delta=lambda eps: [0.0 if e < 2.0 else -math.inf for e in eps]
+    )
+    combined = PrivacyGuarantee(approx_dp=(1.0, 0.1), profile=profile)
+    reverse = _privacy_guarantee_with_approx_dp(
+        PrivacyGuarantee(profile=profile), 1.0, 0.1
+    )
+    for guarantee in [combined, reverse]:
+        assert guarantee.delta(1.0) == 0.1
+        assert guarantee.delta(2.0) == 0.0
+        assert guarantee.epsilon(0.1) == 1.0
+        assert guarantee.epsilon(0.0) == 2.0
+    assert profile.delta(1.0) == 1.0
+    assert profile.epsilon(0.1) == 2.0
+
+
+def test_privacy_guarantee_builders_do_not_require_hbc(monkeypatch):
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    profile = PrivacyProfile(log_delta=lambda eps: [-value for value in eps])
+    monkeypatch.setattr("opendp.mod.GLOBAL_FEATURES", {"contrib"})
+    for guarantee in [
+        PrivacyGuarantee(approx_dp=(1.0, 0.1)),
+        PrivacyGuarantee(profile=profile),
+        PrivacyGuarantee(approx_dp=(1.0, 0.1), profile=profile),
+    ]:
+        assert guarantee.delta(1.0) >= 0.0
+        assert guarantee.epsilon(0.1) >= 0.0
+
+
+@pytest.mark.parametrize("approx_dp", [None, (1.0, 0.1)])
+@pytest.mark.parametrize("query, budget", [("delta", 1.0), ("epsilon", 0.1)])
+def test_privacy_guarantee_propagates_representation_errors(approx_dp, query, budget):
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    original = ValueError("profile failure")
+
+    def fail(_):
+        raise original
+
+    guarantee = PrivacyGuarantee(
+        approx_dp=approx_dp, profile=PrivacyProfile(log_delta=fail)
+    )
+    with pytest.raises(ValueError) as error:
+        getattr(guarantee, query)(budget)
+    assert error.value is original
+
+
+def test_privacy_guarantee_construction_validation():
+    import math
+    from opendp.mod import PrivacyGuarantee, OpenDPException
+
+    for invalid in [1.0, (1.0,), (1.0, 0.0, 0.0)]:
+        with pytest.raises(TypeError, match="tuple"):
+            PrivacyGuarantee(approx_dp=invalid)  # type: ignore[arg-type]
+    for epsilon, delta in [
+        (-1.0, 0.0),
+        (math.inf, 0.0),
+        (math.nan, 0.0),
+        (1.0, -0.1),
+        (1.0, 1.1),
+        (1.0, math.nan),
+    ]:
+        with pytest.raises(OpenDPException):
+            PrivacyGuarantee(approx_dp=(epsilon, delta))
+    guarantee = PrivacyGuarantee(approx_dp=(1.0, 0.0))
+    with pytest.raises(TypeError, match="_ptr cannot be combined"):
+        PrivacyGuarantee(approx_dp=(1.0, 0.0), _ptr=guarantee.guarantee)
+    with pytest.raises(TypeError):
+        PrivacyGuarantee((1.0, 0.0))  # type: ignore[misc]
+    with pytest.raises(OpenDPException):
+        guarantee.delta(-1.0)
+    with pytest.raises(OpenDPException):
+        guarantee.epsilon(1.1)
+
+
+def test_privacy_guarantee_and_profile_pointer_roundtrips():
+    import gc
+    import weakref
+    from opendp._convert import py_to_c, c_to_py
+    from opendp._lib import AnyObjectPtr
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    assert PrivacyGuarantee.__bases__ == (object,)
+    assert PrivacyProfile.__bases__ == (object,)
+    callback = lambda eps: [-value for value in eps]
+    reference = weakref.ref(callback)
+    profile = PrivacyProfile(log_delta=callback)
+    roundtrip = c_to_py(py_to_c(profile, AnyObjectPtr, "PrivacyProfile"))
+    assert roundtrip.curve is profile.curve
+    assert roundtrip.log_delta(10000.0) == -10000.0
+    guarantee = PrivacyGuarantee(approx_dp=(1.0, 0.1), profile=roundtrip)
+    del callback, profile, roundtrip
+    gc.collect()
+    assert reference() is not None  # the native profile still owns the callback
+    roundtrip = c_to_py(py_to_c(guarantee, AnyObjectPtr, "PrivacyGuarantee"))
+    assert roundtrip.guarantee is guarantee.guarantee
+    del guarantee
+    gc.collect()
+    assert roundtrip.delta(1.0) == 0.1
+    assert roundtrip.epsilon(0.01) == pytest.approx(4.605170185988092)
+    del roundtrip
+    gc.collect()
+    assert reference() is None
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

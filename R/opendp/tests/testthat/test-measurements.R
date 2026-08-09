@@ -186,6 +186,90 @@ test_that("test_geometric", {
   expect_gt(meas(d_in = 1L), 0.49999)
 })
 
+test_that("privacy profile and guarantee are distinct", {
+  enable_features("honest-but-curious")
+  profile <- privacy_profile(log_delta = \(epsilon) -epsilon)
+  guarantee <- privacy_guarantee(profile = profile)
+
+  expect_s3_class(profile, "privacy_profile")
+  expect_s3_class(guarantee, "privacy_guarantee")
+  expect_false(inherits(profile, "privacy_guarantee"))
+  expect_equal(guarantee(delta = 1e-7), profile(delta = 1e-7))
+})
+
+test_that("privacy guarantees preserve exact approximate-DP certificates", {
+  enable_features("honest-but-curious")
+  for (delta in c(0., 5e-324, 0.1, 1.)) {
+    guarantee <- privacy_guarantee(approx_dp = c(2., delta))
+    expect_identical(guarantee(epsilon = 2.), delta)
+    expect_identical(guarantee(epsilon = Inf), delta)
+    expect_identical(guarantee(delta = delta), if (delta == 1.) 0. else 2.)
+    expect_identical(guarantee(delta = 1.), 0.)
+  }
+  guarantee <- privacy_guarantee(approx_dp = c(2., 0.1))
+  expect_identical(guarantee(delta = 0.1 - .Machine$double.eps * 0.1), Inf)
+})
+
+test_that("privacy guarantees preserve both representations across pointer round-trips", {
+  enable_features("honest-but-curious")
+  profile <- privacy_profile(log_delta = \(eps) ifelse(eps < 2., 0., -Inf))
+  profile_copy <- opendp:::new_privacy_profile_internal(profile("ptr"))
+  combined <- privacy_guarantee(approx_dp = c(1., 0.1), profile = profile_copy)
+  reverse <- opendp:::`_privacy_guarantee_with_approx_dp`(privacy_guarantee(profile = profile), 1., 0.1)
+  roundtrip <- opendp:::new_privacy_guarantee_internal(combined("ptr"))
+  rm(profile, profile_copy, combined)
+  invisible(gc())
+  for (guarantee in list(reverse, roundtrip)) {
+    expect_identical(guarantee(epsilon = 1.), 0.1)
+    expect_identical(guarantee(epsilon = 2.), 0.)
+    expect_identical(guarantee(delta = 0.1), 1.)
+    expect_identical(guarantee(delta = 0.), 2.)
+  }
+})
+
+test_that("privacy guarantee builders do not require honest-but-curious", {
+  enable_features("honest-but-curious")
+  profile <- privacy_profile(log_delta = \(epsilon) -epsilon)
+  old_options <- options(opendp_features = list("contrib"))
+  tryCatch({
+    for (guarantee in list(
+      privacy_guarantee(approx_dp = c(1., 0.1)),
+      privacy_guarantee(profile = profile),
+      privacy_guarantee(approx_dp = c(1., 0.1), profile = profile)
+    )) {
+      expect_gte(guarantee(epsilon = 1.), 0.)
+      expect_gte(guarantee(delta = 0.1), 0.)
+    }
+  }, finally = options(old_options))
+})
+
+test_that("privacy guarantees propagate representation errors", {
+  enable_features("honest-but-curious")
+  original <- simpleError("profile failure")
+  fail <- function(.values) stop(original) # nolint: condition_call_linter.
+  profile <- privacy_profile(log_delta = fail)
+  for (guarantee in list(
+    privacy_guarantee(profile = profile),
+    privacy_guarantee(approx_dp = c(1., 0.1), profile = profile)
+  )) {
+    expect_identical(tryCatch(guarantee(epsilon = 1.), error = identity), original)
+    expect_identical(tryCatch(guarantee(delta = 0.1), error = identity), original)
+  }
+})
+
+test_that("privacy guarantee construction validates representations", {
+  enable_features("honest-but-curious")
+  expect_error(privacy_guarantee(), "at least one")
+  expect_error(privacy_guarantee(approx_dp = 1.), "numeric pair")
+  expect_error(privacy_guarantee(profile = identity), "privacy_profile")
+  expect_error(privacy_guarantee(approx_dp = c(-1., 0.)), "epsilon")
+  expect_error(privacy_guarantee(approx_dp = c(Inf, 0.)), "finite")
+  expect_error(privacy_guarantee(approx_dp = c(1., 1.1)), "delta")
+  empty <- opendp:::`_new_privacy_guarantee`()
+  expect_error(empty(epsilon = 0.), "no representation")
+  expect_error(empty(delta = 1.), "no representation")
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)
