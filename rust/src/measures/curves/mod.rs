@@ -24,6 +24,65 @@ pub struct PrivacyProfile {
     repr: PrivacyProfileRepr,
 }
 
+/// Numeric privacy facts returned by a [`MultiDP`] privacy map.
+///
+/// Aggregate fields are conjunctive facts: each populated field is a valid
+/// description of the same privacy relation. The representations inside a
+/// [`PrivacyProfile`] remain alternative materializations of that profile.
+#[derive(Clone, Default)]
+pub struct PrivacyGuarantee {
+    profile: Option<PrivacyProfile>,
+}
+
+impl PrivacyGuarantee {
+    /// Construct an empty guarantee.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Attach a profile representation to this aggregate.
+    pub(crate) fn with_profile(mut self, profile: PrivacyProfile) -> Self {
+        self.profile = Some(profile);
+        self
+    }
+
+    /// Transport a profile into the aggregate distance type.
+    ///
+    /// This is crate-visible because profile construction and its public APIs
+    /// belong to [`PrivacyProfile`].
+    pub(crate) fn from_profile(profile: PrivacyProfile) -> Self {
+        Self::new().with_profile(profile)
+    }
+
+    /// Evaluate the profile component at `epsilon`.
+    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        self.profile
+            .as_ref()
+            .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))?
+            .delta(epsilon)
+    }
+
+    /// Query the smallest `epsilon` whose profile delta is at most `delta`.
+    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
+        self.profile
+            .as_ref()
+            .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))?
+            .epsilon(delta)
+    }
+
+    pub(crate) fn profile(&self) -> Option<&PrivacyProfile> {
+        self.profile.as_ref()
+    }
+}
+
+impl std::fmt::Debug for PrivacyGuarantee {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrivacyGuarantee")
+            .field("profile", &self.profile.is_some())
+            .finish()
+    }
+}
+
 #[derive(Clone)]
 enum PrivacyProfileRepr {
     Points(Arc<[ApproxDPPoint]>),

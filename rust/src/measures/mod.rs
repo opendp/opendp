@@ -9,6 +9,9 @@ pub(crate) mod ffi;
 pub(crate) mod curves;
 pub use curves::*;
 
+#[cfg(test)]
+mod test;
+
 use std::fmt::Debug;
 
 use crate::core::{Function, Measure};
@@ -72,6 +75,79 @@ pub struct SmoothedMaxDivergence;
 
 impl Measure for SmoothedMaxDivergence {
     type Distance = PrivacyProfile;
+}
+
+/// Purity level of a guaranteed privacy representation.
+///
+/// `Approximate` permits the representation family's nonzero source slack,
+/// while `Pure` guarantees its zero-slack / pure form according to that
+/// representation family's semantics.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Purity {
+    Approximate,
+    Pure,
+}
+
+/// Construction-time lower bounds on the representations a [`MultiDP`]
+/// privacy map guarantees to return.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct PrivacyCapabilities {
+    profile: Option<Purity>,
+}
+
+impl PrivacyCapabilities {
+    pub(crate) fn with_profile(purity: Purity) -> Self {
+        Self {
+            profile: Some(purity),
+        }
+    }
+
+    pub(crate) fn profile(&self) -> Option<Purity> {
+        self.profile
+    }
+}
+
+/// Privacy measure whose distance contains all privacy facts returned by a
+/// privacy map.
+///
+/// Capabilities describe only the representations that every successful map
+/// invocation is guaranteed to provide. They do not alter the mathematical
+/// privacy relation, so they are intentionally ignored by equality.
+#[derive(Clone, Debug)]
+pub struct MultiDP {
+    capabilities: PrivacyCapabilities,
+}
+
+impl MultiDP {
+    pub(crate) fn new(capabilities: PrivacyCapabilities) -> Self {
+        Self { capabilities }
+    }
+
+    pub(crate) fn with_profile(purity: Purity) -> Self {
+        Self::new(PrivacyCapabilities::with_profile(purity))
+    }
+
+    pub(crate) fn capabilities(&self) -> &PrivacyCapabilities {
+        &self.capabilities
+    }
+}
+
+impl Default for MultiDP {
+    fn default() -> Self {
+        Self::new(PrivacyCapabilities::default())
+    }
+}
+
+impl PartialEq for MultiDP {
+    fn eq(&self, _other: &Self) -> bool {
+        // Capability richness describes metadata about maps, not a different
+        // mathematical relation.
+        true
+    }
+}
+
+impl Measure for MultiDP {
+    type Distance = PrivacyGuarantee;
 }
 
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
