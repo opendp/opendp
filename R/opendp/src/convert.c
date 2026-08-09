@@ -763,6 +763,13 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         return profile;
     }
 
+    if (str_equal(c_origin, "PrivacyGuarantee"))
+    {
+        SEXP guarantee = privacyguaranteeptr_to_sexp(obj, R_NilValue);
+        UNPROTECT(1);
+        return guarantee;
+    }
+
     if (str_equal(c_origin, "AnyOdometerQueryable"))
     {
         SEXP queryable = anyodometerqueryableptr_to_sexp(obj, R_NilValue);

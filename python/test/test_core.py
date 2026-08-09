@@ -189,6 +189,24 @@ def test_privacy_profile():
         PrivacyProfile(lambda _: 0.0, log_profile=lambda _: 0.0)
 
 
+def test_privacy_guarantee_profile_representation_is_distinct():
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+    import math
+
+    profile = PrivacyProfile(lambda eps: math.exp(-eps))
+    guarantee = PrivacyGuarantee(profile=profile)
+
+    assert isinstance(profile, PrivacyProfile)
+    assert isinstance(guarantee, PrivacyGuarantee)
+    assert not isinstance(profile, PrivacyGuarantee)
+    assert guarantee.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
+
+    with pytest.raises(TypeError, match="profile must be a PrivacyProfile"):
+        PrivacyGuarantee(profile=lambda _eps: 0.0)
+    with pytest.raises(TypeError):
+        PrivacyGuarantee(profile)
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

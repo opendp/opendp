@@ -14,7 +14,7 @@ import importlib
 import json
 import warnings
 
-from opendp._lib import AnyObjectPtr, AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyObject, AnyObjectPtr, AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -43,6 +43,7 @@ __all__ = [
     'Measure',
     'ExtrinsicDivergence',
     'ApproximateDivergence',
+    'PrivacyGuarantee',
     'PrivacyProfile',
     '_PartialConstructor',
     'UnknownTypeException',
@@ -1202,6 +1203,37 @@ class PrivacyProfile(object):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
+
+class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
+    '''Aggregate of simultaneously valid privacy representations.'''
+    _type_ = AnyObject
+
+    def __init__(self, *, profile: Optional[PrivacyProfile] = None, _ptr=None):
+        if _ptr is not None:
+            self.guarantee = _ptr
+            return
+        if profile is None:
+            raise TypeError("expected `profile=PrivacyProfile(...)")
+        if not isinstance(profile, PrivacyProfile):
+            raise TypeError("profile must be a PrivacyProfile")
+
+        from opendp.measures import (
+            _new_privacy_guarantee,
+            _privacy_guarantee_with_profile,
+        )
+        guarantee = _privacy_guarantee_with_profile(
+            _new_privacy_guarantee(), profile
+        )
+        self.guarantee = guarantee.guarantee
+
+    def delta(self, epsilon):
+        from opendp.measures import privacy_guarantee_delta
+        return privacy_guarantee_delta(self.guarantee, epsilon)
+
+    def epsilon(self, delta):
+        from opendp.measures import privacy_guarantee_epsilon
+        return privacy_guarantee_epsilon(self.guarantee, delta)
+
 
 class _PartialConstructor(object):
     '''

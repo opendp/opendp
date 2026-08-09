@@ -186,6 +186,16 @@ test_that("test_geometric", {
   expect_gt(meas(d_in = 1L), 0.49999)
 })
 
+test_that("privacy profile and guarantee are distinct", {
+  profile <- new_privacy_profile(\(epsilon) exp(-epsilon))
+  guarantee <- privacy_guarantee(profile = profile)
+
+  expect_s3_class(profile, "privacy_profile")
+  expect_s3_class(guarantee, "privacy_guarantee")
+  expect_false(inherits(profile, "privacy_guarantee"))
+  expect_equal(guarantee(delta = 1e-7), profile(delta = 1e-7))
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)

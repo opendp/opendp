@@ -33,6 +33,10 @@ SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP info);
 AnyObject *sexp_to_privacyprofileptr(SEXP data);
 SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info);
 
+// privacy guarantee
+AnyObject *sexp_to_privacyguaranteeptr(SEXP data);
+SEXP privacyguaranteeptr_to_sexp(AnyObject *input, SEXP info);
+
 // queryable
 AnyObject *sexp_to_anyqueryableptr(SEXP data);
 SEXP anyqueryableptr_to_sexp(AnyObject *input, SEXP info);
