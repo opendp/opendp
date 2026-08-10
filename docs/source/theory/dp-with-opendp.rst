@@ -3,12 +3,11 @@ Differential Privacy with OpenDP
 
 This notebook brings together two threads:
 
--  The `previous page <a-framework-to-understand-dp.ipynb>`__ introduced
+-  The :doc:`previous page <a-framework-to-understand-dp>` introduced
    basic DP ideas like *sensitivity* and *epsilon*, as well as terms
    that have particular meaning in OpenDP: *transformations*,
    *measures*, *measurements*, and *stability*.
--  The `User
-   Guide <../api/user-guide/programming-framework/index.rst>`__
+-  The :doc:`User Guide <../api/user-guide/programming-framework/index>`
    introduced OpenDP as a programming framework, without diving into the
    mathematics.
 
