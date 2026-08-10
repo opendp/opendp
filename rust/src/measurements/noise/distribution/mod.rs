@@ -3,7 +3,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::MakeNoise,
-    measures::{PureDP, zCDP},
+    measures::{MultiDP, PureDP, zCDP},
     traits::CheckAtom,
 };
 
@@ -37,9 +37,9 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
     features("contrib"),
     arguments(
         k(default = b"null"),
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null")
     ),
-    generics(DI(suppress), MI(suppress), MO(suppress))
+    generics(DI(suppress), MI(suppress), MSelect(suppress))
 )]
 /// Make a Measurement that adds noise from the appropriate distribution to the input.
 ///
@@ -53,26 +53,26 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be released.
 /// * `input_metric` - Metric of the data type to be released.
-/// * `output_measure` - Privacy measure. Either `PureDP` or `zCDP`.
+/// * `privacy_measure` - Privacy measure selecting the noise mechanism. `PureDP` selects discrete Laplace; `zCDP` selects discrete Gaussian.
 /// * `scale` - Noise scale parameter.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
 /// * `DI` - Domain of the data to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MI` - Input Metric to measure distances between members of the input domain.
-/// * `MO` - Output Measure. Either `PureDP` or `zCDP`.
-pub fn make_noise<DI: Domain, MI: Metric, MO: NoiseMeasure>(
+/// * `MSelect` - Privacy measure selecting the noise mechanism. `PureDP` selects discrete Laplace; `zCDP` selects discrete Gaussian.
+pub fn make_noise<DI: Domain, MI: Metric, MSelect: NoiseMeasure>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MSelect,
     scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
+) -> Fallible<Measurement<DI, MI, MultiDP, DI::Carrier>>
 where
-    MO::Distribution: MakeNoise<DI, MI, MO>,
+    MSelect::Distribution: MakeNoise<DI, MI, MultiDP>,
     (DI, MI): MetricSpace,
 {
-    output_measure
+    privacy_measure
         .new_distribution(scale, k)
         .make_noise((input_domain, input_metric))
 }
@@ -95,5 +95,75 @@ impl NoiseMeasure for zCDP {
 
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution {
         DiscreteGaussian { scale, k }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use dashu::{integer::IBig, rbig};
+
+    use super::*;
+    use crate::{
+        core::Measurement,
+        domains::{AtomDomain, VectorDomain},
+        measures::{PrivacyGuarantee, Purity},
+        metrics::{L1Distance, L2Distance},
+    };
+
+    #[test]
+    fn test_make_noise_pure_dp_selects_multidp_laplace() -> Fallible<()> {
+        let measurement: Measurement<_, _, MultiDP, Vec<IBig>> = make_noise(
+            VectorDomain::new(AtomDomain::<IBig>::default()),
+            L1Distance::default(),
+            PureDP,
+            1.0,
+            None,
+        )?;
+        let capabilities = measurement.output_measure.capabilities();
+        assert_eq!(capabilities.profile(), Some(Purity::Pure));
+        assert_eq!(capabilities.renyi(), Some(Purity::Pure));
+        assert_eq!(capabilities.zcdp(), Some(Purity::Pure));
+        assert!(!capabilities.tradeoff());
+        assert!(!capabilities.gaussian());
+
+        let guarantee = measurement.map(&rbig!(1))?;
+        assert_eq!(guarantee.epsilon(0.0)?, 1.0);
+        assert!(guarantee.delta(1.0)?.is_finite());
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_noise_pure_dp_float_selects_multidp_laplace() -> Fallible<()> {
+        let measurement: Measurement<_, _, MultiDP, f64> = make_noise(
+            AtomDomain::<f64>::new_non_nan(),
+            crate::metrics::AbsoluteDistance::<f64>::default(),
+            PureDP,
+            1.0,
+            None,
+        )?;
+        assert_eq!(measurement.map(&1.0)?.epsilon(0.0)?, 1.0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_noise_zcdp_selects_multidp_gaussian() -> Fallible<()> {
+        let measurement: Measurement<_, _, MultiDP, Vec<IBig>> = make_noise(
+            VectorDomain::new(AtomDomain::<IBig>::default()),
+            L2Distance::default(),
+            zCDP,
+            1.0,
+            None,
+        )?;
+        let capabilities = measurement.output_measure.capabilities();
+        assert_eq!(capabilities.profile(), None);
+        assert_eq!(capabilities.renyi(), None);
+        assert_eq!(capabilities.zcdp(), Some(Purity::Pure));
+        assert!(!capabilities.tradeoff());
+        assert!(!capabilities.gaussian());
+
+        let guarantee: PrivacyGuarantee = measurement.map(&rbig!(1))?;
+        assert!(guarantee.delta(1.0)?.is_finite());
+        assert!(guarantee.epsilon(1e-3)?.is_finite());
+        Ok(())
     }
 }

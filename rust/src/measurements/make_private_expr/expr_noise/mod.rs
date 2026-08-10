@@ -4,7 +4,7 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
-use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, make_noise};
+use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure};
 use crate::measures::zCDP;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -301,15 +301,14 @@ where
     MO::Distribution: MakeNoise<VectorDomain<AtomDomain<T>>, MO::Metric, MO>,
     (VectorDomain<AtomDomain<T>>, MO::Metric): MetricSpace,
 {
-    Ok(make_noise(
-        VectorDomain::new(AtomDomain::<T>::new_non_nan()),
-        input_metric.clone(),
-        MO::default(),
-        scale,
-        None,
-    )?
-    .privacy_map
-    .clone())
+    Ok(MO::default()
+        .new_distribution(scale, None)
+        .make_noise((
+            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+            input_metric.clone(),
+        ))?
+        .privacy_map
+        .clone())
 }
 
 // Code comment, not documentation:
@@ -367,16 +366,14 @@ where
 {
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
-        NoiseDistribution::Laplace => {
-            make_noise(domain, L1Distance::default(), PureDP, scale, None)?
-                .function
-                .clone()
-        }
-        NoiseDistribution::Gaussian => {
-            make_noise(domain, L2Distance::default(), zCDP, scale, None)?
-                .function
-                .clone()
-        }
+        NoiseDistribution::Laplace => DiscreteLaplace { scale, k: None }
+            .make_noise((domain, L1Distance::default()))?
+            .function
+            .clone(),
+        NoiseDistribution::Gaussian => DiscreteGaussian { scale, k: None }
+            .make_noise((domain, L2Distance::default()))?
+            .function
+            .clone(),
     };
     let chunk_iter = series
         // unpack the series into a chunked array

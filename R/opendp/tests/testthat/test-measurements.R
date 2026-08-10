@@ -29,6 +29,30 @@ test_that("then_laplace", {
   (space |> then_laplace(1.))(arg = c(0L, 1L))
 })
 
+test_that("make_noise selects MultiDP mechanisms", {
+  laplace_domain <- vector_domain(atom_domain(.T = "i32"))
+  laplace_metric <- l1_distance(.T = "i32")
+  meas_laplace <- make_noise(
+    laplace_domain, laplace_metric,
+    privacy_measure = pure_dp(), scale = 1.
+  )
+  expect_match(toString(meas_laplace("output_measure")), "MultiDP")
+  guarantee_laplace <- meas_laplace(d_in = 1.)
+  expect_s3_class(guarantee_laplace, "privacy_guarantee")
+  expect_equal(guarantee_laplace(delta = 0.), 1.)
+
+  gaussian_domain <- vector_domain(atom_domain(.T = "i32"))
+  gaussian_metric <- l2_distance(.T = "i32")
+  meas_gaussian <- make_noise(
+    gaussian_domain, gaussian_metric,
+    privacy_measure = zcdp(), scale = 1.
+  )
+  expect_match(toString(meas_gaussian("output_measure")), "MultiDP")
+  guarantee_gaussian <- meas_gaussian(d_in = 1.)
+  expect_s3_class(guarantee_gaussian, "privacy_guarantee")
+  expect_gt(guarantee_gaussian(delta = 1e-3), 0.)
+})
+
 test_that("make_laplace_int", {
   meas <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 1.)
   expect_type(meas(arg = 0L), "integer")

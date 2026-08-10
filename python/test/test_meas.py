@@ -66,25 +66,38 @@ def test_gaussian_search():
 
 def new_make_noise(measure):
     def make_noise(domain, metric, scale):
-        return dp.m.make_noise(domain, metric, measure, scale)
+        return dp.m.make_noise(
+            domain, metric, privacy_measure=measure, scale=scale
+        )
 
     return make_noise
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.pure_dp())]
+    "constructor, returns_guarantee", [
+        (dp.m.make_laplace, False),
+        (new_make_noise(dp.pure_dp()), True),
+    ]
 )
-def test_laplace(constructor):
+def test_laplace(constructor, returns_guarantee):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = constructor(*input_space, 1)
     assert -50 < meas(0.0) < 50
-    assert meas.map(1.0) == 1.0
+    guarantee = meas.map(1.0)
+    if returns_guarantee:
+        assert isinstance(guarantee, dp.PrivacyGuarantee)
+        assert guarantee.epsilon(0.0) == 1.0
+    else:
+        assert guarantee == 1.0
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.pure_dp())]
+    "constructor, returns_guarantee", [
+        (dp.m.make_laplace, False),
+        (new_make_noise(dp.pure_dp()), True),
+    ]
 )
-def test_vector_laplace(constructor):
+def test_vector_laplace(constructor, returns_guarantee):
     input_space = (
         dp.vector_domain(dp.atom_domain(T=float, nan=False)),
         dp.l1_distance(T=float),
@@ -93,7 +106,23 @@ def test_vector_laplace(constructor):
     release = meas([0.0, 0.0, 0.0])
     assert -50 < min(release)
     assert max(release) < 50
-    assert meas.map(1.0) == 1.0
+    guarantee = meas.map(1.0)
+    if returns_guarantee:
+        assert isinstance(guarantee, dp.PrivacyGuarantee)
+        assert guarantee.epsilon(0.0) == 1.0
+    else:
+        assert guarantee == 1.0
+
+
+def test_generic_noise_gaussian_returns_multidp_guarantee():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.m.make_noise(
+        *input_space, privacy_measure=dp.zcdp(), scale=1.0
+    )
+    assert "MultiDP" in str(meas.output_measure)
+    guarantee = meas.map(1.0)
+    assert isinstance(guarantee, dp.PrivacyGuarantee)
+    assert guarantee.epsilon(1e-3) > 0.0
 
 
 def test_gaussian_profile_dp():
