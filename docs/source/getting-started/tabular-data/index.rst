@@ -97,8 +97,7 @@ Loading data
 ------------
 
 Data for this tutorial is available under ``dp.examples``.
-In practice you will load from a local CSV, or preferably use
-`scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_.
+We'll use ``scan_csv`` to load data, but Polars can also read a number of `other formats <https://docs.pola.rs/user-guide/io/>`_.
 
 .. tab-set::
 
@@ -121,7 +120,8 @@ In practice you will load from a local CSV, or preferably use
 
     If the success or failure of ``scan_csv`` has effects outside a trusted environment,
     this information leak may violate differential privacy.
-    Instead, use a schema-bearing source such as Parquet or a database table, 
+    Instead, read from a schema-bearing source such as Parquet with
+    `scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_, 
     or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
     Using ``ignore_errors=True`` avoids some parsing failures, 
     but it may silently change the loaded data and reduce utility, 
