@@ -15,7 +15,7 @@ Summary
 The OpenDP Programming Framework consists of a set of high-level conceptual elements. 
 We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming. 
 If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
-There is also an illustrative notebook `A Framework to Understand DP <../../../theory/a-framework-to-understand-dp.html>`_.
+There is also an illustrative notebook :doc:`A Framework to Understand DP <../../../theory/a-framework-to-understand-dp>`.
 
 * :ref:`Measurements <measurements-user-guide>` are randomized mappings from a private, 
   potentially sensitive dataset or value to an arbitrary output value that is safe to release.
