@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     domains::{AtomDomain, MapDomain},
+    measures::{Approximate, ZeroConcentratedDivergence},
     metrics::{AbsoluteDistance, L0PInfDistance},
     traits::InfCast,
 };
@@ -18,7 +19,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
             let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
-            let meas = make_gaussian_threshold(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
+            let meas = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
 
             let data = HashMap::from([(false, <$ty>::zero()), (true, <$ty>::inf_cast(100)?)]);
             let release = meas.invoke(&data)?;
@@ -39,7 +40,13 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
 fn test_make_gaussian_threshold_bigint() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
     let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
-    let meas = make_gaussian_threshold(domain, metric, 1., ibig!(50), None)?;
+    let meas = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
+        domain,
+        metric,
+        1.,
+        ibig!(50),
+        None,
+    )?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
     let release = meas.invoke(&data)?;
@@ -87,7 +94,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
     }
 
     let metric = L0PInfDistance(AbsoluteDistance::<f64>::default());
-    let m_float = make_gaussian_threshold(
+    let m_float = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<f64>::new_non_nan(),
@@ -99,7 +106,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
     )?;
     test_map(m_float.privacy_map.0.as_ref())?;
 
-    let m_int = make_gaussian_threshold(
+    let m_int = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<i32>::new_non_nan(),
@@ -116,7 +123,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_gaussian_threshold(
+    let meas = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<u32>::default()),
         L0PInfDistance(AbsoluteDistance::<f64>::default()),
         f64::MAX,
@@ -137,7 +144,8 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
         scale: rbig!(23948285282902934157),
     };
 
-    let meas = distribution.make_noise_threshold((domain, metric), ibig!(23948285282902934157))?;
+    let meas: Measurement<_, _, Approximate<ZeroConcentratedDivergence>, _> =
+        distribution.make_noise_threshold((domain, metric), ibig!(23948285282902934157))?;
     // random large number:
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(23948285282902934157))]);
     assert!(meas.invoke(&data).is_ok());
@@ -171,13 +179,21 @@ fn test_gaussian_threshold_strict() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
     let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
 
-    let positive = make_gaussian_threshold(domain.clone(), metric.clone(), 0.0, 10, None)?;
+    let positive = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
+        domain.clone(),
+        metric.clone(),
+        0.0,
+        10,
+        None,
+    )?;
     assert_eq!(
         positive.invoke(&HashMap::from([(false, 10), (true, 11)]))?,
         HashMap::from([(true, 11)])
     );
 
-    let negative = make_gaussian_threshold(domain, metric, 0.0, -10, None)?;
+    let negative = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
+        domain, metric, 0.0, -10, None,
+    )?;
     assert_eq!(
         negative.invoke(&HashMap::from([(false, -10), (true, -11)]))?,
         HashMap::from([(true, -11)])
@@ -196,8 +212,13 @@ fn test_gaussian_threshold_delta_empirical() -> Fallible<()> {
     // Each key is unstable relative to the empty map, so its release probability
     // must be at most delta. The margin controls sampling fluctuations.
     for (count, threshold) in [(1, 2), (-1, -2)] {
-        let measurement =
-            make_gaussian_threshold(domain.clone(), metric.clone(), 0.5, threshold, None)?;
+        let measurement = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
+            domain.clone(),
+            metric.clone(),
+            0.5,
+            threshold,
+            None,
+        )?;
         let data: HashMap<_, _> = (0..N).map(|key| (key, count)).collect();
         let release_rate = measurement.invoke(&data)?.len() as f64 / f64::from(N);
         let delta = measurement.map(&(1, 1, 1))?.1;
@@ -215,8 +236,13 @@ fn test_gaussian_threshold_zero_valued_keys() -> Fallible<()> {
     let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
 
     for threshold in [-1, 1] {
-        let measurement =
-            make_gaussian_threshold(domain.clone(), metric.clone(), 20.0, threshold, None)?;
+        let measurement = make_gaussian_threshold::<_, _, Approximate<ZeroConcentratedDivergence>>(
+            domain.clone(),
+            metric.clone(),
+            20.0,
+            threshold,
+            None,
+        )?;
         assert_eq!(measurement.map(&(0, 0, 0))?, (0.0, 0.0));
 
         // Zero-valued entries are indistinguishable from absent keys under L0PInfDistance.
