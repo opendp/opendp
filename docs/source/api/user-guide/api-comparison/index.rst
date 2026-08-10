@@ -131,7 +131,7 @@ A side-by-side comparison may make the differences more clear.
             :end-before: /mediate
 
         ``dp.c.make_adaptive_composition`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``queryable``, in the form of measurements.
+        You can now submit up to three queries to ``queryable``, in the form of :ref:`Measurements <measurements-user-guide>`.
 
     .. tab-item:: Framework API (R)
         :sync: r
