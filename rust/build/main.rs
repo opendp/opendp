@@ -16,17 +16,16 @@ fn main() {
 
     let polars = std::env::var_os("CARGO_FEATURE_POLARS").is_some();
     let ffi = std::env::var_os("CARGO_FEATURE_FFI").is_some();
-    let polars_ffi = std::env::var_os("CARGO_FEATURE_POLARS_FFI").is_some();
-
+    let polars_plugin = std::env::var_os("CARGO_FEATURE_POLARS_PLUGIN").is_some();
     if polars && resolved_polars_plan_uses_git_patch() {
         println!("cargo:rustc-cfg=patch_polars");
     }
 
-    if polars && ffi && !polars_ffi {
+    if polars && ffi && !polars_plugin {
         eprintln!(
-            "\nerror: invalid feature combination: `polars` + `ffi` requires `polars-ffi`\n\
+            "\nerror: invalid feature combination: `polars` + `ffi` requires `polars-plugin`\n\
              Fix:\n\
-               cargo build --features \"polars-ffi\"\n"
+               cargo build --features \"polars-plugin\"\n"
         );
         std::process::exit(1);
     }

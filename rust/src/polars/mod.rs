@@ -35,6 +35,9 @@ use serde::{Deserialize, Serialize};
 
 pub mod accuracy;
 
+#[cfg(all(feature = "polars-plugin", not(feature = "polars-ffi")))]
+mod plugin_ffi;
+
 #[cfg(test)]
 mod test;
 
@@ -224,6 +227,30 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             options: KW::function_options(),
         },
         _ => unreachable!("only called after constructor checks"),
+    }
+}
+
+#[cfg(feature = "polars-plugin")]
+pub(crate) fn apply_ffi_plugin<KW: OpenDPPlugin>(
+    input: Vec<Expr>,
+    kwargs: KW,
+    lib: impl Into<polars_utils::pl_str::PlSmallStr>,
+) -> Expr {
+    Expr::Function {
+        input,
+        function: FunctionExpr::FfiPlugin {
+            flags: KW::function_options(),
+            lib: lib.into(),
+            symbol: KW::NAME.into(),
+            kwargs: if KW::SHIM {
+                Default::default()
+            } else {
+                serde_pickle::to_vec(&kwargs, Default::default())
+                    .expect("pickling does not fail")
+                    .as_slice()
+                    .into()
+            },
+        },
     }
 }
 

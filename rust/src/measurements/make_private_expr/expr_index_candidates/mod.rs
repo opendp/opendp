@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
 };
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use polars::datatypes::DataType;
 use polars::datatypes::Field;
 use polars::error::polars_bail;
@@ -17,7 +17,7 @@ use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn};
 use polars::series::Series;
 use polars_plan::dsl::{ColumnsUdf, Expr};
 use polars_plan::prelude::{FunctionFlags, FunctionOptions};
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
 
@@ -202,7 +202,7 @@ fn index_candidates_udf(inputs: &[Column], kwargs: IndexCandidatesPlugin) -> Pol
 }
 
 // generate the FFI plugin for the index_candidates noise expression
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[polars_expr(output_type=Null)]
 fn index_candidates(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
@@ -212,6 +212,7 @@ fn index_candidates(_: &[Series]) -> PolarsResult<Series> {
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
 ///
 /// Ensures that the input field is numeric.
+#[cfg(feature = "polars-ffi")]
 pub(crate) fn index_candidates_plugin_type_udf(
     input_fields: &[Field],
     kwargs: IndexCandidatesPlugin,
@@ -231,7 +232,7 @@ pub(crate) fn index_candidates_plugin_type_udf(
 }
 
 // generate the FFI plugin for the index_candidates noise expression
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[polars_expr(output_type_func_with_kwargs=index_candidates_plugin_type_udf)]
 fn index_candidates_plugin(
     inputs: &[Series],

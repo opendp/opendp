@@ -4,6 +4,23 @@ The OpenDP R API largely mirrors the Python API, with some key differences.
 Most Python examples have not yet been translated to R:
 These hints will help you apply the Python examples to R.
 
+## r-polars compatibility target
+
+The foundational Polars integration targets r-polars `v1.7.0`, Polars
+`1.36.1` / Rust Polars `0.52.0` at revision
+`2a151c10fa76790711c2f75e6d012dd69c627ddd`, and DSL schema hash
+`4aade69a4a8aba464f5bb77824e189450cfdd5ba9f38a843b2282b1fea4a071d`.
+
+For plugin-expression integration tests, build r-polars v1.7.0 with
+`ffi_plugin` added to its `polars-lazy` dependency features. The stock v1.7.0
+binary supports ordinary expression and logical-plan serialization but omits
+the `FfiPlugin` DSL variant.
+
+Rewritten execution plugins are internal to `make_private_lazyframe()`; there
+is no generic R plugin constructor. A private measurement returns a single-use
+release whose `collect()` method materializes an r-polars `DataFrame` and
+rejects subsequent collections.
+
 - After invoking `library(opendp)` all functions are available: There are no namespaces like those of the Python library.
 - The chaining operator in R is `|>`, as opposed to `>>` in Python.
 - Type arguments like `.T` are prefixed with a period in R to avoid name conflicts, while in Python it is plain `T`.

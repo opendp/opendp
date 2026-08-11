@@ -24,6 +24,7 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn};
 use polars::series::IntoSeries;
 #[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use polars::series::Series;
 use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
@@ -369,7 +370,7 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
     }
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn noisy_max(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
@@ -409,7 +410,7 @@ pub(crate) fn noisy_max_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<
 }
 
 // generate the FFI plugin for the noisy_max expression
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type_func=noisy_max_plugin_type_udf)]
 fn noisy_max_plugin(inputs: &[Series], kwargs: NoisyMaxPlugin) -> PolarsResult<Series> {
     let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();

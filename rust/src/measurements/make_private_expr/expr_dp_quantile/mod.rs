@@ -120,7 +120,7 @@ where
     input.make_private(input_domain, input_metric, output_measure, global_scale)
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn dp_quantile(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")

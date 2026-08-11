@@ -67,6 +67,7 @@ polars-expr = { version = "=0.52.0", features = ["json"], optional = true }
 polars-plan = { version = "=0.52.0", optional = true }
 polars-utils = { version = "=0.52.0", optional = true }
 polars-arrow = { version = "=0.52.0", optional = true }
+polars-ffi-crate = { package = "polars-ffi", version = "=0.52.0", optional = true }
 pyo3-polars = { version = "=0.25.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "lazy"], optional = true }
 pyo3 = { version = "=0.26.0", features = ["abi3-py310"], optional = true }
 
@@ -75,6 +76,7 @@ pyo3 = { version = "=0.26.0", features = ["abi3-py310"], optional = true }
 chrono = { version = "=0.4.41", default-features = false, features = ["std"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
+ciborium = { version = "0.2", optional = true }
 
 lazy_static = { version = "1.4.0", optional = true }
 
@@ -103,6 +105,7 @@ polars-expr = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 polars-plan = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 polars-utils = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 polars-arrow = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
+polars-ffi = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 polars-mem-engine = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 pyo3-polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
 
@@ -119,19 +122,26 @@ untrusted = ["idealized-numerics", "contrib", "honest-but-curious"]
 polars = [
     "dep:polars",
     "dep:polars-plan",
+    "dep:polars-expr",
     "dep:polars-utils",
     "dep:polars-arrow",
     "dep:serde",
     "dep:serde-pickle",
+    "dep:ciborium",
     "dep:chrono",
 ]
-polars-ffi = [
-    "polars", 
+polars-plugin = [
+    "polars",
     "ffi",
+    "polars-plan/ffi_plugin",
+    "polars-expr/ffi_plugin",
+    "dep:polars-ffi-crate",
+]
+polars-ffi = [
+    "polars-plugin",
     "dep:polars-python",
     "dep:pyo3",
     "dep:pyo3-polars",
-    "polars-plan/ffi_plugin", 
     "polars-plan/python"
 ]
 use-openssl = ["openssl", "dep:openssl-src"]

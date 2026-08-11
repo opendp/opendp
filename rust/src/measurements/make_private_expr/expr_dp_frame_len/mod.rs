@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 #[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
@@ -102,7 +103,7 @@ where
     )
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type = Null)]
 fn dp_frame_len(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")

@@ -319,7 +319,7 @@ where
 /// Implementation of the noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
+pub(crate) fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "noise expects a single input expression");
     };
@@ -396,7 +396,7 @@ where
     Ok(ChunkedArray::try_from_chunk_iter(series.name().clone(), chunk_iter)?.into_series())
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn noise(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
@@ -428,7 +428,7 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
 }
 
 // generate the FFI plugin for the noise expression
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type_func=noise_plugin_type_udf)]
 fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
     let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();

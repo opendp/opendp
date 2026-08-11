@@ -18,7 +18,7 @@ use polars_arrow::{
 };
 use polars_plan::{dsl::ColumnsUdf, prelude::FunctionOptions};
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
@@ -190,7 +190,7 @@ where
     )))
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[polars_expr(output_type=Null)]
 fn discrete_quantile_score(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
@@ -226,7 +226,7 @@ pub(crate) fn discrete_quantile_score_plugin_type_udf(
 }
 
 // generate the FFI plugin for the DQ score expression
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[polars_expr(output_type_func_with_kwargs=discrete_quantile_score_plugin_type_udf)]
 fn discrete_quantile_score_plugin(
     inputs: &[Series],

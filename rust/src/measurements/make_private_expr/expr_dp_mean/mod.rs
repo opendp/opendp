@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 #[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail, polars_err},
@@ -113,7 +114,7 @@ where
     .make_private(input_domain, input_metric, output_measure, global_scale)
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(feature = "polars-ffi")]
 #[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn dp_mean(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
