@@ -534,6 +534,25 @@ pub extern "C" fn opendp_measures___privacy_guarantee_with_profile(
 }
 
 #[bootstrap(
+    name = "_privacy_guarantee_with_approxDP_tradeoff",
+    features("contrib", "honest-but-curious"),
+    arguments(this(rust_type = "PrivacyGuarantee")),
+    returns(rust_type = "PrivacyGuarantee")
+)]
+/// Attach the certified symmetric tradeoff implied by point-backed ApproxDP
+/// information already attached to the guarantee.
+#[cfg(feature = "honest-but-curious")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___privacy_guarantee_with_approxDP_tradeoff(
+    this: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let this = try_!(try_as_ref!(this).downcast_ref::<PrivacyGuarantee>()).clone();
+    this.with_approxDP_tradeoff_trusted()
+        .map(|guarantee| AnyObject::new_raw(guarantee))
+        .into()
+}
+
+#[bootstrap(
     name = "privacy_guarantee_delta",
     arguments(curve(rust_type = "PrivacyGuarantee"), epsilon(rust_type = "f64"))
 )]

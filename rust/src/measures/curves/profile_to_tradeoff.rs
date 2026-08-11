@@ -1,5 +1,6 @@
 use crate::{
     error::Fallible,
+    measures::curves::approxdp::beta_via_approxDP,
     measures::curves::{
         PrivacyProfile, check_alpha, check_epsilon,
         logspace::{LOG_TRUE_MIN, one_minus_delta_from_log_upper_unchecked},
@@ -22,6 +23,10 @@ type Cert = SInterval<Dashu>; // software interval provides certified transcende
 /// lower bound, even when its points were sampled from a valid exact profile.
 pub fn beta_via_profile(profile: &PrivacyProfile, alpha: f64) -> Fallible<f64> {
     check_alpha(alpha)?;
+
+    if let Some(points) = profile.approxDP_points() {
+        return beta_via_approxDP(points, alpha);
+    }
 
     if alpha == 0.0 {
         // At alpha=0, both tradeoff branches are bounded by 1-delta(eps),

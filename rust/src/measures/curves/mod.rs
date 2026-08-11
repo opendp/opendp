@@ -5,6 +5,7 @@ use crate::{
     utilities::search::{Above, fallible_binary_search_by},
 };
 
+mod approxdp;
 pub(crate) mod logspace;
 mod profile_to_tradeoff;
 mod tradeoff;
@@ -59,6 +60,29 @@ impl PrivacyGuarantee {
     /// belong to [`PrivacyProfile`].
     pub(crate) fn from_profile(profile: PrivacyProfile) -> Self {
         Self::new().with_profile(profile)
+    }
+
+    /// Attach the certified symmetric tradeoff implied by point-backed
+    /// ApproxDP information already present on this guarantee.
+    #[cfg(feature = "honest-but-curious")]
+    pub(crate) fn with_approxDP_tradeoff_trusted(mut self) -> Fallible<Self> {
+        let points = self
+            .profile
+            .as_ref()
+            .and_then(PrivacyProfile::approxDP_points)
+            .ok_or_else(|| {
+                err!(
+                    FailedMap,
+                    "certified ApproxDP-to-tradeoff conversion requires point-backed ApproxDP information"
+                )
+            })?
+            .to_vec();
+
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(move |alpha| approxdp::beta_via_approxDP(&points, alpha)),
+            symmetric: true,
+        });
+        Ok(self)
     }
 
     /// Attach an f-DP tradeoff representation.
@@ -297,6 +321,9 @@ type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 pub(crate) struct ApproxDPPoint {
     epsilon: f64,
     delta: f64,
+    one_minus_delta: dashu::rational::RBig,
+    exp_eps_up: dashu::rational::RBig,
+    exp_neg_eps_down: dashu::rational::RBig,
 }
 
 impl PrivacyProfile {
@@ -351,20 +378,22 @@ impl PrivacyProfile {
 
         let mut canonical: Vec<ApproxDPPoint> = Vec::with_capacity(points.len());
         for (epsilon, delta) in points {
-            let epsilon = crate::traits::CInterval::point(epsilon)?.upper_f64()?;
+            let point = ApproxDPPoint::build((epsilon, delta))?;
             if let Some(last) = canonical.last_mut() {
-                if last.epsilon == epsilon {
+                if last.epsilon == point.epsilon {
                     // At a repeated epsilon, retain the tightest bound.
-                    last.delta = last.delta.min(delta);
+                    if point.delta < last.delta {
+                        *last = point;
+                    }
                     continue;
                 }
                 // A point that is no tighter than the preceding point is
                 // dominated (including plateau points) and can be removed.
-                if delta >= last.delta {
+                if point.delta >= last.delta {
                     continue;
                 }
             }
-            canonical.push(ApproxDPPoint { epsilon, delta });
+            canonical.push(point);
         }
 
         self.repr = PrivacyProfileRepr::Points(Arc::from(canonical.into_boxed_slice()));
@@ -482,6 +511,13 @@ impl PrivacyProfile {
             }
         };
         Ok(epsilon)
+    }
+
+    pub(crate) fn approxDP_points(&self) -> Option<&[ApproxDPPoint]> {
+        match &self.repr {
+            PrivacyProfileRepr::Points(points) => Some(points),
+            PrivacyProfileRepr::Function { .. } => None,
+        }
     }
 
     /// Evaluate the canonical log-delta representation for an internal
