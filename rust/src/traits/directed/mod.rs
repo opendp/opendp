@@ -8,5 +8,7 @@ pub enum Direction {
 }
 
 mod scalar;
+mod soft_float;
 
 pub use scalar::{Approximate, Certified, DirectedScalar, DirectedTranscendental, N64};
+pub use soft_float::SoftFloat;

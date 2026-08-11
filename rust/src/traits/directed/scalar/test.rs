@@ -1,9 +1,13 @@
 use super::*;
 use crate::error::{ErrorVariant, Fallible};
 use dashu::rational::RBig;
+use rug::{Float, float::Round};
 
-fn assert_error<T: std::fmt::Debug>(result: Fallible<T>, variant: ErrorVariant) {
-    assert_eq!(result.unwrap_err().variant, variant);
+fn assert_error<T>(result: Fallible<T>, variant: ErrorVariant) {
+    match result {
+        Ok(_) => panic!("expected {variant:?}"),
+        Err(error) => assert_eq!(error.variant, variant),
+    }
 }
 
 fn check_ordering_and_unary<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
@@ -235,6 +239,10 @@ fn test_native_special_values_and_domains() -> Fallible<()> {
         ErrorVariant::NumericIndeterminate,
     );
     assert_error(
+        SoftFloat::exact(1.0)?.div_round(SoftFloat::exact(-0.0)?, Direction::Up),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
         N64::<Approximate>::exact(-1.0)?.ln_round(Direction::Down),
         ErrorVariant::NumericDomain,
     );
@@ -335,6 +343,148 @@ fn check_native_transcendental_identities<R: NativeTranscendental>() -> Fallible
 #[test]
 fn test_native_transcendental_identities() -> Fallible<()> {
     check_native_transcendental_identities::<Approximate>()?;
+    Ok(())
+}
+
+#[test]
+fn test_software_special_values_and_range_errors() -> Fallible<()> {
+    assert_error(
+        SoftFloat::exact(f64::NAN),
+        ErrorVariant::NumericIndeterminate,
+    );
+    for direction in [Direction::Down, Direction::Up] {
+        assert_eq!(
+            SoftFloat::exact(f64::INFINITY)?.to_f64(direction)?,
+            f64::INFINITY
+        );
+        assert_eq!(
+            SoftFloat::exact(f64::NEG_INFINITY)?.to_f64(direction)?,
+            f64::NEG_INFINITY
+        );
+        for zero in [0.0, -0.0] {
+            for value in [
+                SoftFloat::exact(zero)?,
+                SoftFloat::exact(zero)?.sqrt_round(direction)?,
+                SoftFloat::exact(zero)?.exp_m1_round(direction)?,
+            ] {
+                assert_eq!(value.to_f64(direction)?.to_bits(), zero.to_bits());
+            }
+            assert_error(
+                SoftFloat::exact(1.0)?.div_round(SoftFloat::exact(zero)?, direction),
+                ErrorVariant::NumericIndeterminate,
+            );
+        }
+        assert_eq!(
+            SoftFloat::exact(1.0)?
+                .div_round(SoftFloat::exact(f64::NEG_INFINITY)?, direction)?
+                .to_f64(direction)?
+                .to_bits(),
+            (-0.0f64).to_bits(),
+        );
+        // Exact intermediate results can carry precision zero in Dashu.
+        assert_eq!(
+            SoftFloat::exact(0.0)?
+                .exp_round(direction)?
+                .exp_round(direction)?
+                .to_f64(direction)?,
+            SoftFloat::exact(1.0)?
+                .exp_round(direction)?
+                .to_f64(direction)?,
+        );
+    }
+    assert_error(
+        SoftFloat::exact(f64::INFINITY)?
+            .add_round(SoftFloat::exact(f64::NEG_INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        SoftFloat::exact(0.0)?.mul_round(SoftFloat::exact(f64::INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        SoftFloat::exact(f64::INFINITY)?
+            .div_round(SoftFloat::exact(f64::INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        SoftFloat::exact(-1.0)?.ln_round(Direction::Down),
+        ErrorVariant::NumericDomain,
+    );
+    assert_error(
+        SoftFloat::exact(-1.0)?.sqrt_round(Direction::Down),
+        ErrorVariant::NumericDomain,
+    );
+
+    let positive = SoftFloat::exact(10000.0)?.exp_round(Direction::Up)?;
+    assert_eq!(positive.to_f64(Direction::Down)?, f64::MAX);
+    assert_error(
+        positive.to_f64(Direction::Up),
+        ErrorVariant::NumericRangeAbove,
+    );
+    let negative = -positive;
+    assert_error(
+        negative.to_f64(Direction::Down),
+        ErrorVariant::NumericRangeBelow,
+    );
+    assert_eq!(negative.to_f64(Direction::Up)?, -f64::MAX);
+    Ok(())
+}
+
+#[test]
+fn test_software_subnormal_conversion() -> Fallible<()> {
+    let positive = SoftFloat::exact(-10000.0)?.exp_round(Direction::Up)?;
+    assert_eq!(positive.to_f64(Direction::Down)?, 0.0);
+    assert_eq!(positive.to_f64(Direction::Up)?, f64::from_bits(1));
+
+    let negative = -positive;
+    assert_eq!(negative.to_f64(Direction::Down)?, -f64::from_bits(1));
+    assert_eq!(
+        negative.to_f64(Direction::Up)?.to_bits(),
+        (-0.0f64).to_bits()
+    );
+
+    // Halfway cases at several subnormal magnitudes, including the normal
+    // boundary, exercise Dashu's native directed conversion without corrections.
+    let unit = f64::from_bits(1);
+    for magnitude in [0.5, 1.5, 2.5, (1u64 << 52) as f64 - 0.5] {
+        for sign in [-1.0, 1.0] {
+            let factor = sign * magnitude;
+            let value =
+                SoftFloat::exact(unit)?.mul_round(SoftFloat::exact(factor)?, Direction::Down)?;
+            let down = value.to_f64(Direction::Down)?;
+            let up = value.to_f64(Direction::Up)?;
+            assert_encloses(down, up, rational(unit) * rational(factor));
+            assert_eq!(down.next_up(), up);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_software_ordering_and_unary() -> Fallible<()> {
+    check_ordering_and_unary::<SoftFloat>()?;
+    let one = SoftFloat::exact(1.0)?;
+    let tiny = SoftFloat::exact(2.0f64.powi(-255))?;
+    let below = one.clone().sub_round(tiny.clone(), Direction::Down)?;
+    let above = one.clone().add_round(tiny, Direction::Up)?;
+    assert!(below < one && one < above);
+    assert_eq!(below.to_f64(Direction::Up)?, 1.0);
+    assert_eq!(above.to_f64(Direction::Down)?, 1.0);
+    assert!(-above < -one.clone());
+    assert_eq!(
+        SoftFloat::exact(2.0)?.mul_round(SoftFloat::exact(0.5)?, Direction::Up)?,
+        one
+    );
+
+    // Ordering must use internal values even when f64 narrowing underflows
+    // or overflows, rather than reporting conversion range errors.
+    let small = SoftFloat::exact(-10_000.0)?.exp_round(Direction::Up)?;
+    assert!(small > SoftFloat::exact(0.0)?);
+    assert!(-small.clone() < SoftFloat::exact(-0.0)?);
+    assert_eq!(small.to_f64(Direction::Down)?, 0.0);
+    let large = SoftFloat::exact(10_000.0)?.exp_round(Direction::Up)?;
+    assert!(SoftFloat::exact(f64::MAX)? < large && large < SoftFloat::exact(f64::INFINITY)?);
+    assert!(-large > SoftFloat::exact(f64::NEG_INFINITY)?);
     Ok(())
 }
 
@@ -462,6 +612,22 @@ fn native_result<R: NativeRegime>(
     }
 }
 
+fn software_result(
+    lhs: f64,
+    rhs: f64,
+    operation: BinaryOperation,
+    direction: Direction,
+) -> Fallible<SoftFloat> {
+    let lhs = SoftFloat::exact(lhs)?;
+    let rhs = SoftFloat::exact(rhs)?;
+    match operation {
+        BinaryOperation::Add => lhs.add_round(rhs, direction),
+        BinaryOperation::Sub => lhs.sub_round(rhs, direction),
+        BinaryOperation::Mul => lhs.mul_round(rhs, direction),
+        BinaryOperation::Div => lhs.div_round(rhs, direction),
+    }
+}
+
 fn check_native_enclosures<R: NativeRegime>() -> Fallible<()> {
     let values = enclosure_values();
     for &lhs in &values {
@@ -487,9 +653,306 @@ fn check_native_enclosures<R: NativeRegime>() -> Fallible<()> {
     Ok(())
 }
 
+fn software_bound(result: Fallible<f64>, direction: Direction, exact: &RBig) -> f64 {
+    match result {
+        Ok(value) => value,
+        Err(error) => match (&error.variant, direction) {
+            (ErrorVariant::NumericRangeAbove, Direction::Up) if *exact > rational(f64::MAX) => {
+                f64::INFINITY
+            }
+            (ErrorVariant::NumericRangeBelow, Direction::Down) if *exact < rational(-f64::MAX) => {
+                f64::NEG_INFINITY
+            }
+            _ => panic!("unexpected narrowing error: {error:?}"),
+        },
+    }
+}
+
+fn check_software_enclosures() -> Fallible<()> {
+    let values = enclosure_values();
+    for &lhs in &values {
+        for &rhs in &values {
+            for operation in [
+                BinaryOperation::Add,
+                BinaryOperation::Sub,
+                BinaryOperation::Mul,
+                BinaryOperation::Div,
+            ] {
+                if matches!(operation, BinaryOperation::Div) && rhs == 0.0 {
+                    continue;
+                }
+                let exact = expected(lhs, rhs, operation);
+                let down = software_bound(
+                    software_result(lhs, rhs, operation, Direction::Down)?.to_f64(Direction::Down),
+                    Direction::Down,
+                    &exact,
+                );
+                let up = software_bound(
+                    software_result(lhs, rhs, operation, Direction::Up)?.to_f64(Direction::Up),
+                    Direction::Up,
+                    &exact,
+                );
+                assert_encloses(down, up, exact);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn assert_extreme_unary_matches_mpfr(
+    operation: &str,
+    inputs: &[f64],
+    evaluate: fn(SoftFloat, Direction) -> Fallible<SoftFloat>,
+    evaluate_mpfr: fn(&mut Float, Round) -> Ordering,
+) -> Fallible<()> {
+    for &input in inputs {
+        for (direction, round) in [(Direction::Down, Round::Down), (Direction::Up, Round::Up)] {
+            let mut reference = Float::with_val(1024, input);
+            evaluate_mpfr(&mut reference, round);
+            let actual = evaluate(SoftFloat::exact(input)?, direction);
+            if reference.is_nan() {
+                assert_error(actual, ErrorVariant::NumericDomain);
+                continue;
+            }
+            let expected = reference.to_f64_round(round);
+            let actual = actual?.to_f64(direction);
+            if reference.is_finite() && expected.is_infinite() {
+                assert_error(
+                    actual,
+                    if expected.is_sign_negative() {
+                        ErrorVariant::NumericRangeBelow
+                    } else {
+                        ErrorVariant::NumericRangeAbove
+                    },
+                );
+            } else {
+                assert_eq!(
+                    actual?.to_bits(),
+                    expected.to_bits(),
+                    "{operation}({input:?}) with {direction:?}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_extreme_transcendentals_match_mpfr() -> Fallible<()> {
+    assert_extreme_unary_matches_mpfr(
+        "ln",
+        &[
+            -f64::MAX,
+            -f64::from_bits(1),
+            -0.0,
+            0.0,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            1.0,
+            f64::MAX,
+            f64::INFINITY,
+        ],
+        SoftFloat::ln_round,
+        Float::ln_round,
+    )?;
+    assert_extreme_unary_matches_mpfr(
+        "sqrt",
+        &[
+            -f64::MAX,
+            -f64::from_bits(1),
+            -0.0,
+            0.0,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            f64::MAX,
+            f64::INFINITY,
+        ],
+        SoftFloat::sqrt_round,
+        Float::sqrt_round,
+    )?;
+    assert_extreme_unary_matches_mpfr(
+        "exp",
+        &[
+            f64::NEG_INFINITY,
+            -746.0,
+            -745.0,
+            -0.0,
+            0.0,
+            709.0,
+            710.0,
+            f64::INFINITY,
+        ],
+        SoftFloat::exp_round,
+        Float::exp_round,
+    )?;
+    assert_extreme_unary_matches_mpfr(
+        "exp_m1",
+        &[
+            f64::NEG_INFINITY,
+            -f64::MAX,
+            -38.0,
+            -37.0,
+            -0.0,
+            0.0,
+            709.0,
+            710.0,
+            f64::INFINITY,
+        ],
+        SoftFloat::exp_m1_round,
+        Float::exp_m1_round,
+    )
+}
+
+// Transfer the exact binary significand and exponent, never a narrowed f64.
+// Allow Dashu's guard digits as long as MPFR can represent the value exactly.
+fn softfloat_as_mpfr(value: &SoftFloat) -> Float {
+    let repr = value.repr.repr();
+    let precision = 1024;
+    assert!(
+        repr.digits() <= precision as usize,
+        "MPFR precision must preserve the significand"
+    );
+    let significand = Float::parse(repr.significand().to_string()).unwrap();
+    let mut reference = Float::with_val(precision, significand);
+    reference <<= i32::try_from(repr.exponent()).unwrap();
+    reference
+}
+
+#[test]
+fn test_mpfr_conversion_with_guard_digit() -> Fallible<()> {
+    // An inexact subtraction may retain a 257th bit in a 256-bit context.
+    let value =
+        SoftFloat::exact(1.5)?.sub_round(SoftFloat::exact(2.0f64.powi(-300))?, Direction::Down)?;
+    assert_eq!(value.repr.repr().digits(), 257);
+    let mut expected = Float::with_val(1024, 1.5);
+    expected -= 2.0f64.powi(-256);
+    assert_eq!(softfloat_as_mpfr(&value), expected);
+    assert_eq!(softfloat_as_mpfr(&-value), -expected);
+    Ok(())
+}
+
+fn assert_internal_transcendental_enclosure(
+    operation: &str,
+    input: SoftFloat,
+    evaluate: fn(SoftFloat, Direction) -> Fallible<SoftFloat>,
+    evaluate_mpfr: fn(&mut Float, Round) -> Ordering,
+) -> Fallible<()> {
+    for (direction, round) in [(Direction::Down, Round::Down), (Direction::Up, Round::Up)] {
+        let actual = evaluate(input.clone(), direction)?;
+        let mut reference = softfloat_as_mpfr(&input);
+        evaluate_mpfr(&mut reference, round);
+        let endpoint = softfloat_as_mpfr(&actual);
+        assert!(endpoint.is_finite() && reference.is_finite());
+        assert!(
+            match direction {
+                Direction::Down => endpoint <= reference,
+                Direction::Up => endpoint >= reference,
+            },
+            "{operation}({input:?}) with {direction:?}: internal Dashu bound excludes MPFR bound",
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_internal_transcendental_enclosures() -> Fallible<()> {
+    let tiny = 2.0f64.powi(-255);
+    for x in [
+        -10_000.0,
+        -1.0,
+        -tiny,
+        -f64::from_bits(1),
+        0.0,
+        f64::from_bits(1),
+        tiny,
+        std::f64::consts::LN_2.next_down(),
+        std::f64::consts::LN_2,
+        std::f64::consts::LN_2.next_up(),
+        1.0,
+        710.0,
+        10_000.0,
+    ] {
+        assert_internal_transcendental_enclosure(
+            "exp",
+            SoftFloat::exact(x)?,
+            SoftFloat::exp_round,
+            Float::exp_round,
+        )?;
+        assert_internal_transcendental_enclosure(
+            "expm1",
+            SoftFloat::exact(x)?,
+            SoftFloat::exp_m1_round,
+            Float::exp_m1_round,
+        )?;
+    }
+    for x in [
+        f64::from_bits(1),
+        f64::MIN_POSITIVE,
+        0.5,
+        1.0f64.next_down(),
+        1.0,
+        1.0f64.next_up(),
+        2.0,
+        f64::MAX,
+    ] {
+        assert_internal_transcendental_enclosure(
+            "ln",
+            SoftFloat::exact(x)?,
+            SoftFloat::ln_round,
+            Float::ln_round,
+        )?;
+    }
+    // These operands differ from one internally but collapse to one in f64.
+    // ln must retain their cancellation-sensitive, nonzero answers.
+    for offset in [-tiny, tiny] {
+        let input = SoftFloat::exact(1.0)?.add_round(SoftFloat::exact(offset)?, Direction::Down)?;
+        assert_internal_transcendental_enclosure(
+            "ln",
+            input,
+            SoftFloat::ln_round,
+            Float::ln_round,
+        )?;
+    }
+    Ok(())
+}
+
+#[test]
+fn test_software_sqrt_exponent_boundary() -> Fallible<()> {
+    for direction in [Direction::Down, Direction::Up] {
+        let mut tiny = SoftFloat::exact(0.5)?;
+        for _ in 0..isize::BITS - 2 {
+            tiny = tiny.clone().mul_round(tiny, direction)?;
+        }
+        tiny = tiny.mul_round(SoftFloat::exact(2.0)?, direction)?;
+        tiny = tiny.clone().mul_round(tiny, direction)?;
+        assert_error(tiny.sqrt_round(direction), ErrorVariant::NumericBackend);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_software_provider_exhaustion() -> Fallible<()> {
+    // A finite result outside Dashu's exponent range is a backend failure, not
+    // a genuine infinity or an f64 narrowing error. Do not saturate it silently.
+    for direction in [Direction::Down, Direction::Up] {
+        for x in [-f64::MAX, f64::MAX] {
+            assert_error(
+                SoftFloat::exact(x)?.exp_round(direction),
+                ErrorVariant::NumericBackend,
+            );
+        }
+        assert_error(
+            SoftFloat::exact(f64::MAX)?.exp_m1_round(direction),
+            ErrorVariant::NumericBackend,
+        );
+    }
+    Ok(())
+}
+
 #[test]
 fn test_representative_arithmetic_enclosures() -> Fallible<()> {
     check_native_enclosures::<Certified>()?;
+    check_software_enclosures()?;
     Ok(())
 }
 
@@ -586,13 +1049,12 @@ fn test_inexact_zero_is_widened() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_certified_sqrt() -> Fallible<()> {
+fn check_sqrt_enclosures<S: DirectedScalar>() -> Fallible<()> {
     for x in enclosure_values().into_iter().filter(|x| *x >= 0.0) {
-        let down = N64::<Certified>::exact(x)?
+        let down = S::exact(x)?
             .sqrt_round(Direction::Down)?
             .to_f64(Direction::Down)?;
-        let up = N64::<Certified>::exact(x)?
+        let up = S::exact(x)?
             .sqrt_round(Direction::Up)?
             .to_f64(Direction::Up)?;
         assert!(down >= 0.0 && down <= up && up.is_finite());
@@ -606,6 +1068,17 @@ fn test_certified_sqrt() -> Fallible<()> {
             "sqrt upper bound at {x:?}"
         );
     }
+    Ok(())
+}
+
+#[test]
+fn test_software_sqrt_enclosures() -> Fallible<()> {
+    check_sqrt_enclosures::<SoftFloat>()
+}
+
+#[test]
+fn test_certified_sqrt() -> Fallible<()> {
+    check_sqrt_enclosures::<N64<Certified>>()?;
     for direction in [Direction::Down, Direction::Up] {
         for x in [0.0, -0.0, 1.0, f64::INFINITY] {
             assert_eq!(
