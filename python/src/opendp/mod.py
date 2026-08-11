@@ -1151,12 +1151,10 @@ class Approximate(Measure):
         return _approximate_get_inner_measure(self)
 
 
-class ApproxDP(Approximate):
-    r'''Fixed $(\epsilon, \delta)$ approximate differential privacy.
-
-    This is the specific ``Approximate<PureDP>`` specialization.
-    '''
-
+# ``ApproxDP`` is a compatibility alias for the generic approximate measure.
+# Keeping one ctypes pointer class avoids invalid pointer conversions when an
+# approximate measure is returned through FFI.
+ApproxDP = Approximate
 
 # Deprecated compatibility name for the generic approximate measure.
 ApproximateDivergence = Approximate

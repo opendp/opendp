@@ -1138,6 +1138,11 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     if from_to == ("PureDP", "Approximate<PureDP>"):
         return make_approximate(chain)
 
+    # Canonical noise keeps its independent MultiDP output measure; its
+    # typed guarantee is queryable through ApproxDP without a generic cast.
+    if from_to == ("MultiDP", "Approximate<PureDP>"):
+        return chain
+
     if from_to == ("zCDP", "Approximate<zCDP>"):
         return make_approximate(chain)
 
