@@ -3,7 +3,9 @@
 use crate::error::Fallible;
 use std::{cmp::Ordering, fmt, marker::PhantomData};
 
-use super::Direction;
+#[cfg(test)]
+use super::backend::Rug;
+use super::backend::{Dashu, Direction, SoftFloat};
 
 #[cfg(test)]
 mod test;
@@ -27,6 +29,9 @@ pub enum Certified {}
 impl private::Sealed for Approximate {}
 impl private::Sealed for BestEffort {}
 impl private::Sealed for Certified {}
+impl private::Sealed for SoftFloat<Dashu> {}
+#[cfg(test)]
+impl private::Sealed for SoftFloat<Rug> {}
 
 /// Native arithmetic regime.
 ///

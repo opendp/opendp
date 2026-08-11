@@ -1,9 +1,18 @@
 use super::*;
-use crate::error::{ErrorVariant, Fallible};
+use crate::{
+    error::{ErrorVariant, Fallible},
+    traits::directed::backend::{Dashu, Rug},
+};
 use dashu::rational::RBig;
 
-fn assert_error<T: std::fmt::Debug>(result: Fallible<T>, variant: ErrorVariant) {
-    assert_eq!(result.unwrap_err().variant, variant);
+type D = SoftFloat<Dashu>;
+type R = SoftFloat<Rug>;
+
+fn assert_error<T>(result: Fallible<T>, variant: ErrorVariant) {
+    match result {
+        Ok(_) => panic!("expected {variant:?}"),
+        Err(error) => assert_eq!(error.variant, variant),
+    }
 }
 
 fn check_native_overflow<R: NativeRegime>() -> Fallible<()> {
@@ -186,6 +195,10 @@ fn test_native_special_values_and_domains() -> Fallible<()> {
         ErrorVariant::NumericIndeterminate,
     );
     assert_error(
+        D::exact(1.0)?.div_round(D::exact(-0.0)?, Direction::Up),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
         N64::<Approximate>::exact(-1.0)?.ln_round(Direction::Down),
         ErrorVariant::NumericDomain,
     );
@@ -288,6 +301,88 @@ fn test_native_transcendental_identities() -> Fallible<()> {
     check_native_transcendental_identities::<Approximate>()?;
     check_native_transcendental_identities::<BestEffort>()?;
     Ok(())
+}
+
+fn check_software_special_values<S: DirectedTranscendental>() -> Fallible<()> {
+    assert_error(S::exact(f64::NAN), ErrorVariant::NumericIndeterminate);
+    for direction in [Direction::Down, Direction::Up] {
+        assert_eq!(S::exact(f64::INFINITY)?.to_f64(direction)?, f64::INFINITY);
+        assert_eq!(
+            S::exact(f64::NEG_INFINITY)?.to_f64(direction)?,
+            f64::NEG_INFINITY
+        );
+    }
+    assert_error(
+        S::exact(f64::INFINITY)?.add_round(S::exact(f64::NEG_INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        S::exact(0.0)?.mul_round(S::exact(f64::INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        S::exact(f64::INFINITY)?.div_round(S::exact(f64::INFINITY)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
+    assert_error(
+        S::exact(-1.0)?.ln_round(Direction::Down),
+        ErrorVariant::NumericDomain,
+    );
+    assert_error(
+        S::exact(-1.0)?.sqrt_round(Direction::Down),
+        ErrorVariant::NumericDomain,
+    );
+
+    let positive = S::exact(10000.0)?.exp_round(Direction::Up)?;
+    assert_eq!(positive.to_f64(Direction::Down)?, f64::MAX);
+    assert_error(
+        positive.to_f64(Direction::Up),
+        ErrorVariant::NumericRangeAbove,
+    );
+    let negative = positive.neg()?;
+    assert_error(
+        negative.to_f64(Direction::Down),
+        ErrorVariant::NumericRangeBelow,
+    );
+    assert_eq!(negative.to_f64(Direction::Up)?, -f64::MAX);
+    Ok(())
+}
+
+#[test]
+fn test_software_special_values_and_range_errors() -> Fallible<()> {
+    check_software_special_values::<D>()?;
+    check_software_special_values::<R>()
+}
+
+fn check_software_subnormal_conversion<S: DirectedTranscendental>() -> Fallible<()> {
+    let positive = S::exact(-10000.0)?.exp_round(Direction::Up)?;
+    assert_eq!(positive.to_f64(Direction::Down)?, 0.0);
+    assert_eq!(positive.to_f64(Direction::Up)?, f64::from_bits(1));
+
+    let negative = positive.neg()?;
+    assert_eq!(negative.to_f64(Direction::Down)?, -f64::from_bits(1));
+    assert_eq!(negative.to_f64(Direction::Up)?, -0.0);
+    Ok(())
+}
+
+#[test]
+fn test_software_subnormal_conversion() -> Fallible<()> {
+    check_software_subnormal_conversion::<D>()?;
+    check_software_subnormal_conversion::<R>()
+}
+
+fn check_consuming_arithmetic_and_comparison<S: DirectedScalar>() -> Fallible<()> {
+    let lhs = S::exact(2.0)?;
+    let rhs = S::exact(3.0)?;
+    let sum = lhs.add_round(rhs, Direction::Down)?;
+    assert_eq!(sum.compare(&S::exact(5.0)?)?, std::cmp::Ordering::Equal);
+    Ok(())
+}
+
+#[test]
+fn test_consuming_arithmetic_and_comparison() -> Fallible<()> {
+    check_consuming_arithmetic_and_comparison::<D>()?;
+    check_consuming_arithmetic_and_comparison::<R>()
 }
 
 #[derive(Clone, Copy)]
@@ -402,6 +497,22 @@ fn native_result<R: NativeRegime>(
     }
 }
 
+fn software_result<S: DirectedScalar>(
+    lhs: f64,
+    rhs: f64,
+    operation: BinaryOperation,
+    direction: Direction,
+) -> Fallible<S> {
+    let lhs = S::exact(lhs)?;
+    let rhs = S::exact(rhs)?;
+    match operation {
+        BinaryOperation::Add => lhs.add_round(rhs, direction),
+        BinaryOperation::Sub => lhs.sub_round(rhs, direction),
+        BinaryOperation::Mul => lhs.mul_round(rhs, direction),
+        BinaryOperation::Div => lhs.div_round(rhs, direction),
+    }
+}
+
 fn check_native_enclosures<R: NativeRegime>() -> Fallible<()> {
     let values = enclosure_values();
     let f64_max = rational(f64::MAX);
@@ -435,9 +546,122 @@ fn check_native_enclosures<R: NativeRegime>() -> Fallible<()> {
     Ok(())
 }
 
+fn check_software_enclosures<S: DirectedScalar>() -> Fallible<()> {
+    let values = enclosure_values();
+    let f64_max = rational(f64::MAX);
+    for &lhs in &values {
+        for &rhs in &values {
+            for operation in [
+                BinaryOperation::Add,
+                BinaryOperation::Sub,
+                BinaryOperation::Mul,
+                BinaryOperation::Div,
+            ] {
+                if matches!(operation, BinaryOperation::Div) && rhs == 0.0 {
+                    continue;
+                }
+                let exact = expected(lhs, rhs, operation);
+                if exact < -f64_max.clone() || exact > f64_max {
+                    continue;
+                }
+                let down = software_result::<S>(lhs, rhs, operation, Direction::Down)?
+                    .to_f64(Direction::Down)?;
+                let up = software_result::<S>(lhs, rhs, operation, Direction::Up)?
+                    .to_f64(Direction::Up)?;
+                assert_encloses(down, up, exact);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+enum ExtremeOutcome {
+    Value(u64),
+    Error(ErrorVariant),
+}
+
+fn extreme_outcome<S: DirectedTranscendental>(
+    value: f64,
+    direction: Direction,
+    operation: impl FnOnce(S, Direction) -> Fallible<S>,
+) -> ExtremeOutcome {
+    match S::exact(value)
+        .and_then(|value| operation(value, direction))
+        .and_then(|value| value.to_f64(direction))
+    {
+        Ok(value) => ExtremeOutcome::Value(value.to_bits()),
+        Err(error) => ExtremeOutcome::Error(error.variant),
+    }
+}
+
+fn assert_extreme_unary_matches_rug(
+    operation: &str,
+    inputs: &[f64],
+    evaluate: impl Fn(D, Direction) -> Fallible<D> + Copy,
+    evaluate_rug: impl Fn(R, Direction) -> Fallible<R> + Copy,
+) {
+    for &input in inputs {
+        for direction in [Direction::Down, Direction::Up] {
+            assert_eq!(
+                extreme_outcome(input, direction, evaluate),
+                extreme_outcome(input, direction, evaluate_rug),
+                "{operation}({input:?}) with {direction:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_extreme_transcendentals_match_rug() {
+    assert_extreme_unary_matches_rug(
+        "ln",
+        &[
+            -f64::MAX,
+            -f64::from_bits(1),
+            -0.0,
+            0.0,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            1.0,
+            f64::MAX,
+        ],
+        D::ln_round,
+        R::ln_round,
+    );
+    assert_extreme_unary_matches_rug(
+        "sqrt",
+        &[
+            -f64::MAX,
+            -f64::from_bits(1),
+            -0.0,
+            0.0,
+            f64::from_bits(1),
+            f64::MIN_POSITIVE,
+            f64::MAX,
+        ],
+        D::sqrt_round,
+        R::sqrt_round,
+    );
+    assert_extreme_unary_matches_rug(
+        "exp",
+        &[-f64::MAX, -746.0, -745.0, -0.0, 0.0, 709.0, 710.0, f64::MAX],
+        D::exp_round,
+        R::exp_round,
+    );
+    assert_extreme_unary_matches_rug(
+        "exp_m1",
+        &[-f64::MAX, -38.0, -37.0, -0.0, 0.0, 709.0, 710.0, f64::MAX],
+        D::exp_m1_round,
+        R::exp_m1_round,
+    );
+}
+
 #[test]
 fn test_representative_arithmetic_enclosures() -> Fallible<()> {
     check_native_enclosures::<BestEffort>()?;
     check_native_enclosures::<Certified>()?;
+    check_software_enclosures::<D>()?;
+    check_software_enclosures::<R>()?;
     Ok(())
 }
