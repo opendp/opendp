@@ -152,7 +152,8 @@ impl CompositionMeasure for RenyiDP {
 impl CompositionMeasure for MultiDP {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         // Representation-specific approximate-RDP and approximate-zCDP deltas
-        // currently have sequential composition theorems.
+        // currently have sequential composition theorems. Privacy profiles and
+        // tradeoff functions are intentionally not composition capabilities.
         Ok(Composability::Sequential)
     }
 

@@ -1,9 +1,7 @@
 use super::*;
+use crate::measures::PrivacyProfile;
 #[cfg(feature = "contrib")]
-use crate::{
-    combinators::CompositionMeasure,
-    measures::{MultiDP, PrivacyProfile},
-};
+use crate::{combinators::CompositionMeasure, measures::MultiDP};
 
 fn rdp_epsilon(curve: &PrivacyGuarantee, alpha: f64) -> Fallible<f64> {
     (curve.renyi.as_ref().unwrap().curve)(alpha)
@@ -100,6 +98,41 @@ fn test_profile_only_composition_has_no_supported_path() -> Fallible<()> {
 }
 
 #[test]
+fn test_point_backed_profile_is_not_composed_as_approximate_dp() -> Fallible<()> {
+    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(0.1, 0.2)])?;
+    assert!(
+        PrivacyGuarantee::compose(vec![PrivacyGuarantee::from_profile(profile.clone(),)]).is_err()
+    );
+    let first = PrivacyGuarantee::from_profile(profile.clone());
+    let second = PrivacyGuarantee::from_profile(profile);
+    assert!(PrivacyGuarantee::compose(vec![first, second]).is_err());
+
+    let first = PrivacyGuarantee::from_profile(
+        PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(0.1, 0.2)])?,
+    )
+    .with_zCDP(0.1, 0.0)?;
+    let second = PrivacyGuarantee::new().with_zCDP(0.2, 0.0)?;
+    let composed = PrivacyGuarantee::compose(vec![first, second])?;
+
+    assert!(composed.profile.is_none());
+    assert!((0.3..0.31).contains(&composed.zcdp.unwrap().rho));
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_tradeoff_only_composition_has_no_supported_path() -> Fallible<()> {
+    let first = PrivacyGuarantee::new().with_tradeoff(|_| Ok(0.5))?;
+    let second = PrivacyGuarantee::new().with_tradeoff(|_| Ok(0.4))?;
+    let error = PrivacyGuarantee::compose(vec![first, second]).unwrap_err();
+    assert_eq!(
+        error.message.as_deref(),
+        Some("PrivacyGuarantee composition has no supported common representation")
+    );
+    Ok(())
+}
+
+#[test]
 fn test_nary_composition() -> Fallible<()> {
     let curves = [0.1, 0.2, 0.3, 0.4]
         .into_iter()
@@ -151,6 +184,12 @@ fn test_approximate_rdp_composition_requires_a_theorem() -> Fallible<()> {
 #[test]
 fn test_composition_identity() -> Fallible<()> {
     let identity = PrivacyGuarantee::compose(vec![])?;
+    assert!(identity.profile.is_none());
+    assert!(identity.tradeoff.is_none());
+    assert!(identity.renyi.is_some());
+    assert!(identity.zcdp.is_some());
+    #[cfg(feature = "idealized-numerics")]
+    assert!(identity.gaussian.is_some());
     assert_eq!(identity.delta(0.0)?, 0.0);
     Ok(())
 }

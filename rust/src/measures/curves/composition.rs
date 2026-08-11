@@ -10,7 +10,9 @@ impl PrivacyGuarantee {
     /// Compose privacy guarantees while retaining every supported runtime
     /// representation. Static capability selection is performed by
     /// `CompositionMeasure::compose_measure`; this method only evaluates
-    /// representations that happen to be present at runtime.
+    /// representations that happen to be present at runtime. Privacy profiles
+    /// and tradeoff functions have no generic composition rule here: they are
+    /// omitted, even when another supported representation is also present.
     pub(crate) fn compose(curves: Vec<Self>) -> Fallible<Self> {
         if curves.is_empty() {
             let mut identity = PrivacyGuarantee::new();
