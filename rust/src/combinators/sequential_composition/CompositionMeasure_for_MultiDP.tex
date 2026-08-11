@@ -1,0 +1,50 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{CompositionMeasure for MultiDP}}
+\author{\MichaelShoemateAuthor}
+\date{}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} for \texttt{MultiDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+The output measure is derived from the common capabilities of all child measures.
+Only capabilities with a common composition theorem are retained.
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Postcondition}
+\begin{theorem}
+\texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of
+privacy guarantees is bounded above by \texttt{compose(d\_mids)} under the
+reported adaptivity and composability. Otherwise it returns an error.
+\end{theorem}
+
+\begin{proof}
+The composition implementation evaluates each representation only when every
+child supplies that representation. Native zCDP parameters are composed by
+adding $\rho_i$ and source deltas. Pure RDP parameters are composed pointwise
+by adding their curves; pure zCDP is embedded into RDP using the exact
+$\alpha\rho_i$ relation. Gaussian-DP parameters, when enabled, are composed by
+$\mu^2 = \sum_i \mu_i^2$.
+
+Each accumulator uses directed interval arithmetic, so its returned value is
+an upper bound on the corresponding exact composition. Approximate profiles
+and tradeoff functions are not composed without a representation-specific
+theorem. If no common supported capability exists, construction fails rather
+than advertising an unsupported composition. Therefore every representation
+retained in the resulting \texttt{PrivacyGuarantee} is a valid bound for the
+same composed privacy relation.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+\end{document}

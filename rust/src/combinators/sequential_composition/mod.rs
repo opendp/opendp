@@ -149,6 +149,7 @@ impl CompositionMeasure for RenyiDP {
     }
 }
 
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_MultiDP.tex")]
 impl CompositionMeasure for MultiDP {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         // Representation-specific approximate-RDP and approximate-zCDP deltas
