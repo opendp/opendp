@@ -67,7 +67,7 @@ def test_gaussian_search():
 def new_make_noise(measure):
     def make_noise(domain, metric, scale):
         return dp.m.make_noise(
-            domain, metric, privacy_measure=measure, scale=scale
+            domain, metric, output_measure=measure, scale=scale
         )
 
     return make_noise
@@ -76,7 +76,7 @@ def new_make_noise(measure):
 @pytest.mark.parametrize(
     "constructor, returns_guarantee", [
         (dp.m.make_laplace, False),
-        (new_make_noise(dp.pure_dp()), True),
+        (new_make_noise(dp.pure_dp()), False),
     ]
 )
 def test_laplace(constructor, returns_guarantee):
@@ -94,7 +94,7 @@ def test_laplace(constructor, returns_guarantee):
 @pytest.mark.parametrize(
     "constructor, returns_guarantee", [
         (dp.m.make_laplace, False),
-        (new_make_noise(dp.pure_dp()), True),
+        (new_make_noise(dp.pure_dp()), False),
     ]
 )
 def test_vector_laplace(constructor, returns_guarantee):
@@ -117,12 +117,10 @@ def test_vector_laplace(constructor, returns_guarantee):
 def test_generic_noise_gaussian_returns_multidp_guarantee():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = dp.m.make_noise(
-        *input_space, privacy_measure=dp.zcdp(), scale=1.0
+        *input_space, output_measure=dp.zcdp(), scale=1.0
     )
-    assert "MultiDP" in str(meas.output_measure)
-    guarantee = meas.map(1.0)
-    assert isinstance(guarantee, dp.PrivacyGuarantee)
-    assert guarantee.epsilon(1e-3) > 0.0
+    assert meas.output_measure == dp.zcdp()
+    assert meas.map(1.0) == 0.5
 
 
 def test_gaussian_profile_dp():
@@ -438,3 +436,52 @@ def test_canonical_noise():
     assert m_cnd.map(1.0) == (1.0, 1e-6)
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
+
+
+def test_generic_noise_multidp_distribution_selection():
+    domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    laplace = dp.m.make_noise(
+        domain, dp.l1_distance(T=float), dp.multi_dp(), scale=1.0
+    )
+    gaussian = dp.m.make_noise(
+        domain, dp.l2_distance(T=float), dp.multi_dp(), scale=1.0
+    )
+    assert isinstance(laplace.map(1.0), dp.PrivacyGuarantee)
+    assert isinstance(gaussian.map(1.0), dp.PrivacyGuarantee)
+
+    scalar = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noise(*scalar, dp.multi_dp(), scale=1.0)
+    for distribution in ["laplace", "gaussian"]:
+        meas = dp.m.make_noise(
+            *scalar, dp.multi_dp(), scale=1.0, distribution=distribution
+        )
+        assert isinstance(meas.map(1.0), dp.PrivacyGuarantee)
+
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noise(*scalar, dp.pure_dp(), scale=1.0, distribution="gaussian")
+
+
+def test_multidp_noise_threshold_distribution_selection():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
+    for metric, distribution in [
+        (dp.l01inf_distance(dp.absolute_distance(T=int)), "laplace"),
+        (dp.l02inf_distance(dp.absolute_distance(T=int)), "gaussian"),
+    ]:
+        meas = dp.m.make_noise_threshold(
+            domain,
+            metric,
+            dp.approximate(dp.multi_dp()),
+            scale=2.0,
+            threshold=28,
+        )
+        assert isinstance(meas.map((1, 10, 10))[0], dp.PrivacyGuarantee)
+        explicit = dp.m.make_noise_threshold(
+            domain,
+            metric,
+            dp.approximate(dp.multi_dp()),
+            scale=2.0,
+            threshold=28,
+            distribution=distribution,
+        )
+        assert isinstance(explicit.map((1, 10, 10))[0], dp.PrivacyGuarantee)

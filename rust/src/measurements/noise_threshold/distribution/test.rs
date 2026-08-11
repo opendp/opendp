@@ -15,9 +15,10 @@ fn test_noise_threshold() -> Fallible<()> {
         1.0,
         10,
         None,
+        None,
     )?;
 
-    let m_lap = make_laplace_threshold(
+    let m_lap = make_laplace_threshold::<_, _, Approximate<PureDP>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<i32>::new_non_nan(),

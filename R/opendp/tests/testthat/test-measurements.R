@@ -29,28 +29,35 @@ test_that("then_laplace", {
   (space |> then_laplace(1.))(arg = c(0L, 1L))
 })
 
-test_that("make_noise selects MultiDP mechanisms", {
+test_that("make_noise separates output measure and distribution", {
   laplace_domain <- vector_domain(atom_domain(.T = "i32"))
   laplace_metric <- l1_distance(.T = "i32")
   meas_laplace <- make_noise(
     laplace_domain, laplace_metric,
-    privacy_measure = pure_dp(), scale = 1.
+    output_measure = pure_dp(), scale = 1.
   )
-  expect_match(toString(meas_laplace("output_measure")), "MultiDP")
-  guarantee_laplace <- meas_laplace(d_in = 1.)
-  expect_s3_class(guarantee_laplace, "privacy_guarantee")
-  expect_equal(guarantee_laplace(delta = 0.), 1.)
+  expect_equal(meas_laplace(d_in = 1.), 1.)
 
   gaussian_domain <- vector_domain(atom_domain(.T = "i32"))
   gaussian_metric <- l2_distance(.T = "i32")
   meas_gaussian <- make_noise(
     gaussian_domain, gaussian_metric,
-    privacy_measure = zcdp(), scale = 1.
+    output_measure = zcdp(), scale = 1.
   )
-  expect_match(toString(meas_gaussian("output_measure")), "MultiDP")
-  guarantee_gaussian <- meas_gaussian(d_in = 1.)
-  expect_s3_class(guarantee_gaussian, "privacy_guarantee")
-  expect_gt(guarantee_gaussian(delta = 1e-3), 0.)
+  expect_equal(meas_gaussian(d_in = 1.), 0.5)
+
+  meas_multi <- make_noise(
+    laplace_domain, laplace_metric,
+    output_measure = multi_dp(), scale = 1.
+  )
+  expect_s3_class(meas_multi(d_in = 1.), "privacy_guarantee")
+
+  scalar_domain <- atom_domain(.T = "f64", nan = FALSE)
+  scalar_metric <- absolute_distance(.T = "f64")
+  expect_error(
+    make_noise(scalar_domain, scalar_metric, output_measure = multi_dp(), scale = 1.),
+    "distribution is required"
+  )
 })
 
 test_that("make_laplace_int", {

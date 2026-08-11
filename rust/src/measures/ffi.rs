@@ -17,7 +17,7 @@ use crate::{
         any::AnyMeasure,
         util::{self, into_c_char_p},
     },
-    measures::{Approximate, PureDP, zCDP},
+    measures::{Approximate, MultiDP, PureDP, zCDP},
     traits::ProductOrd,
 };
 
@@ -128,6 +128,14 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__pure_dp() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(PureDP)).into()
+}
+
+#[bootstrap(name = "multi_dp")]
+/// Privacy measure that retains all independently certified representations
+/// returned by a mechanism's privacy map.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__multi_dp() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(MultiDP::default())).into()
 }
 
 #[bootstrap(name = "smoothed_max_divergence")]
@@ -251,7 +259,7 @@ pub extern "C" fn opendp_measures__approximate(
 
     dispatch!(
         monomorphize,
-        [(MO, [PureDP, ProfileDP, zCDP, ExtrinsicDivergence])],
+        [(MO, [PureDP, ProfileDP, zCDP, MultiDP, ExtrinsicDivergence])],
         (measure)
     )
     .into()

@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     domains::{AtomDomain, MapDomain},
+    measures::{Approximate, zCDP},
     metrics::{AbsoluteDistance, L0PInfDistance},
     traits::InfCast,
 };
@@ -18,7 +19,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
             let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
-            let meas = make_gaussian_threshold(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
+            let meas = make_gaussian_threshold::<_, _, Approximate<zCDP>>(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
 
             let data = HashMap::from([(false, <$ty>::zero()), (true, <$ty>::inf_cast(100)?)]);
             let release = meas.invoke(&data)?;
@@ -39,7 +40,8 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
 fn test_make_gaussian_threshold_bigint() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
     let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
-    let meas = make_gaussian_threshold(domain, metric, 1., ibig!(50), None)?;
+    let meas =
+        make_gaussian_threshold::<_, _, Approximate<zCDP>>(domain, metric, 1., ibig!(50), None)?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
     let release = meas.invoke(&data)?;
@@ -87,7 +89,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
     }
 
     let metric = L0PInfDistance(AbsoluteDistance::<f64>::default());
-    let m_float = make_gaussian_threshold(
+    let m_float = make_gaussian_threshold::<_, _, Approximate<zCDP>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<f64>::new_non_nan(),
@@ -99,7 +101,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
     )?;
     test_map(m_float.privacy_map.0.as_ref())?;
 
-    let m_int = make_gaussian_threshold(
+    let m_int = make_gaussian_threshold::<_, _, Approximate<zCDP>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<i32>::new_non_nan(),
@@ -116,7 +118,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_gaussian_threshold(
+    let meas = make_gaussian_threshold::<_, _, Approximate<zCDP>>(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<u32>::default()),
         L0PInfDistance(AbsoluteDistance::<f64>::default()),
         f64::MAX,
@@ -137,7 +139,8 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
         scale: rbig!(23948285282902934157),
     };
 
-    let meas = distribution.make_noise_threshold((domain, metric), ibig!(23948285282902934157))?;
+    let meas: Measurement<_, _, Approximate<zCDP>, _> =
+        distribution.make_noise_threshold((domain, metric), ibig!(23948285282902934157))?;
     // random large number:
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(23948285282902934157))]);
     assert!(meas.invoke(&data).is_ok());
