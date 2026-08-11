@@ -438,11 +438,11 @@ new_privacy_guarantee_internal <- function(ptr) {
     }
 
     if (!missing(alpha)) {
-      return(`_privacy_guarantee_beta`(ptr, alpha))
+      return(`_privacy_guarantee_beta`(privacy_guarantee, alpha))
     }
 
     if (!missing(beta)) {
-      return(`_privacy_guarantee_alpha`(ptr, beta))
+      return(`_privacy_guarantee_alpha`(privacy_guarantee, beta))
     }
 
     switch(attr,
