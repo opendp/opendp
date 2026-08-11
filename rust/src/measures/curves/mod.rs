@@ -199,7 +199,7 @@ impl PrivacyProfile {
             PrivacyProfileRepr::Function { log_delta, epsilon } => {
                 if let Some(epsilon) = epsilon {
                     let value = epsilon(delta)?;
-                    if value.is_nan() || value.is_sign_negative() {
+                    if value.is_nan() || value < 0.0 {
                         return fallible!(
                             FailedMap,
                             "epsilon ({value}) must be non-negative and not NaN"
@@ -300,7 +300,7 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
     if epsilon.is_nan() {
         return fallible!(FailedMap, "epsilon must not be nan");
     }
-    if epsilon.is_sign_negative() {
+    if epsilon < 0.0 {
         return fallible!(
             FailedMap,
             "epsilon ({epsilon}) must be a non-negative number"

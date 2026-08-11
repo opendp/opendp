@@ -4,7 +4,7 @@ use crate::{
 };
 
 pub(crate) fn check_delta(delta: f64) -> Fallible<()> {
-    if delta.is_nan() || delta.is_sign_negative() || delta > 1.0 {
+    if delta.is_nan() || delta < 0.0 || delta > 1.0 {
         return fallible!(FailedMap, "delta ({delta}) must be between zero and one");
     }
     Ok(())

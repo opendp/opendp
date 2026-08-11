@@ -59,6 +59,11 @@ fn test_points_normalize_redundant_and_plateau_points() -> Fallible<()> {
 
 #[test]
 fn test_points_validate_individual_values() {
+    let signed_zero = PrivacyProfile::new(|_| Ok(1.0))
+        .with_approxDP(vec![(-0.0, -0.0)])
+        .unwrap();
+    assert_eq!(signed_zero.delta(-0.0).unwrap(), -0.0);
+
     for points in [vec![(f64::NAN, 0.1)], vec![(1.0, -0.1)], vec![(1.0, 1.1)]] {
         let error = PrivacyProfile::new(|_| Ok(1.0))
             .with_approxDP(points)
