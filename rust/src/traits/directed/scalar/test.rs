@@ -1,11 +1,6 @@
 use super::*;
-use crate::{
-    error::{ErrorVariant, Fallible},
-    traits::directed::backend::Dashu,
-};
+use crate::error::{ErrorVariant, Fallible};
 use dashu::rational::RBig;
-
-type D = SoftFloat<Dashu>;
 
 fn assert_error<T: std::fmt::Debug>(result: Fallible<T>, variant: ErrorVariant) {
     assert_eq!(result.unwrap_err().variant, variant);
@@ -184,6 +179,12 @@ fn test_native_special_values_and_domains() -> Fallible<()> {
             .div_round(N64::exact(f64::INFINITY)?, Direction::Down),
         ErrorVariant::NumericIndeterminate,
     );
+    // Division by zero is intentionally classified as indeterminate: the
+    // directed scalar API does not assign an extended-real result to it.
+    assert_error(
+        N64::<Certified>::exact(1.0)?.div_round(N64::exact(0.0)?, Direction::Down),
+        ErrorVariant::NumericIndeterminate,
+    );
     assert_error(
         N64::<Approximate>::exact(-1.0)?.ln_round(Direction::Down),
         ErrorVariant::NumericDomain,
@@ -289,82 +290,6 @@ fn test_native_transcendental_identities() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_dashu_special_values_and_range_errors() -> Fallible<()> {
-    assert_error(D::exact(f64::NAN), ErrorVariant::NumericIndeterminate);
-    assert_eq!(
-        D::exact(f64::INFINITY)?.to_f64(Direction::Down)?,
-        f64::INFINITY
-    );
-    assert_eq!(
-        D::exact(f64::INFINITY)?.to_f64(Direction::Up)?,
-        f64::INFINITY
-    );
-    assert_eq!(
-        D::exact(f64::NEG_INFINITY)?.to_f64(Direction::Down)?,
-        f64::NEG_INFINITY
-    );
-    assert_eq!(
-        D::exact(f64::NEG_INFINITY)?.to_f64(Direction::Up)?,
-        f64::NEG_INFINITY
-    );
-    assert_error(
-        D::exact(f64::INFINITY)?.add_round(D::exact(f64::NEG_INFINITY)?, Direction::Down),
-        ErrorVariant::NumericIndeterminate,
-    );
-    assert_error(
-        D::exact(0.0)?.mul_round(D::exact(f64::INFINITY)?, Direction::Down),
-        ErrorVariant::NumericIndeterminate,
-    );
-    assert_error(
-        D::exact(f64::INFINITY)?.div_round(D::exact(f64::INFINITY)?, Direction::Down),
-        ErrorVariant::NumericIndeterminate,
-    );
-    assert_error(
-        D::exact(-1.0)?.ln_round(Direction::Down),
-        ErrorVariant::NumericDomain,
-    );
-    assert_error(
-        D::exact(-1.0)?.sqrt_round(Direction::Down),
-        ErrorVariant::NumericDomain,
-    );
-
-    let positive = D::exact(10000.0)?.exp_round(Direction::Up)?;
-    assert_eq!(positive.to_f64(Direction::Down)?, f64::MAX);
-    assert_error(
-        positive.to_f64(Direction::Up),
-        ErrorVariant::NumericRangeAbove,
-    );
-    let negative = positive.neg()?;
-    assert_error(
-        negative.to_f64(Direction::Down),
-        ErrorVariant::NumericRangeBelow,
-    );
-    assert_eq!(negative.to_f64(Direction::Up)?, -f64::MAX);
-    Ok(())
-}
-
-#[test]
-fn test_dashu_subnormal_conversion() -> Fallible<()> {
-    let positive = D::exact(-10000.0)?.exp_round(Direction::Up)?;
-    assert_eq!(positive.to_f64(Direction::Down)?, 0.0);
-    assert_eq!(positive.to_f64(Direction::Up)?, f64::from_bits(1));
-
-    let negative = positive.neg()?;
-    assert_eq!(negative.to_f64(Direction::Down)?, -f64::from_bits(1));
-    assert_eq!(negative.to_f64(Direction::Up)?, -0.0);
-    Ok(())
-}
-
-#[test]
-fn test_consuming_arithmetic_and_comparison() -> Fallible<()> {
-    let lhs = D::exact(2.0)?;
-    let rhs = D::exact(3.0)?;
-    let sum = lhs.add_round(rhs, Direction::Down)?;
-    assert_eq!(sum.compare(&D::exact(5.0)?)?, std::cmp::Ordering::Equal);
-    Ok(())
-}
-
 #[derive(Clone, Copy)]
 enum BinaryOperation {
     Add,
@@ -373,14 +298,61 @@ enum BinaryOperation {
     Div,
 }
 
-const ENCLOSURE_CASES: &[(f64, f64)] = &[
-    (0.1, 0.2),
-    (1.0, 3.0),
-    (1e16, -1e16),
-    (-0.1, 0.2),
-    (1e-300, -1e-300),
-    (f64::MIN_POSITIVE, f64::from_bits(1)),
-];
+fn enclosure_values() -> Vec<f64> {
+    let mut values = vec![
+        0.0,
+        -0.0,
+        f64::from_bits(1),
+        -f64::from_bits(1),
+        f64::from_bits(2),
+        -f64::from_bits(2),
+        f64::MIN_POSITIVE,
+        -f64::MIN_POSITIVE,
+        0.5,
+        -0.5,
+        1.0,
+        -1.0,
+        2.0,
+        -2.0,
+        1e-300,
+        -1e-300,
+        1e300,
+        -1e300,
+        f64::MAX / 2.0,
+        -f64::MAX / 2.0,
+        f64::MAX,
+        -f64::MAX,
+    ];
+
+    // Add adjacent values around powers of two and one. This is deterministic
+    // while exercising both sides of normal/subnormal and rounding boundaries.
+    for value in [
+        f64::from_bits(1),
+        f64::MIN_POSITIVE,
+        2f64.powi(-52),
+        1.0,
+        2.0,
+        2f64.powi(52),
+        2f64.powi(53),
+        2f64.powi(100),
+        f64::MAX / 2.0,
+        f64::MAX,
+    ] {
+        for candidate in [
+            value.next_down(),
+            value,
+            value.next_up(),
+            (-value).next_down(),
+            -value,
+            (-value).next_up(),
+        ] {
+            if candidate.is_finite() {
+                values.push(candidate);
+            }
+        }
+    }
+    values
+}
 
 fn rational(value: f64) -> RBig {
     RBig::try_from(value).expect("finite f64 is an exact rational")
@@ -398,14 +370,20 @@ fn expected(lhs: f64, rhs: f64, operation: BinaryOperation) -> RBig {
 }
 
 fn assert_encloses(down: f64, up: f64, expected: RBig) {
-    assert!(
-        rational(down) <= expected,
-        "downward result {down:?} is above exact result {expected:?}"
-    );
-    assert!(
-        expected <= rational(up),
-        "upward result {up:?} is below exact result {expected:?}"
-    );
+    // An outward result may be an infinity when the exact result is at an
+    // f64 boundary; infinity is ordered beyond every finite exact rational.
+    if down != f64::NEG_INFINITY {
+        assert!(
+            rational(down) <= expected,
+            "downward result {down:?} is above exact result {expected:?}"
+        );
+    }
+    if up != f64::INFINITY {
+        assert!(
+            expected <= rational(up),
+            "upward result {up:?} is below exact result {expected:?}"
+        );
+    }
 }
 
 fn native_result<R: NativeRegime>(
@@ -424,52 +402,34 @@ fn native_result<R: NativeRegime>(
     }
 }
 
-fn dashu_result(
-    lhs: f64,
-    rhs: f64,
-    operation: BinaryOperation,
-    direction: Direction,
-) -> Fallible<D> {
-    let lhs = D::exact(lhs)?;
-    let rhs = D::exact(rhs)?;
-    match operation {
-        BinaryOperation::Add => lhs.add_round(rhs, direction),
-        BinaryOperation::Sub => lhs.sub_round(rhs, direction),
-        BinaryOperation::Mul => lhs.mul_round(rhs, direction),
-        BinaryOperation::Div => lhs.div_round(rhs, direction),
-    }
-}
-
 fn check_native_enclosures<R: NativeRegime>() -> Fallible<()> {
-    for &(lhs, rhs) in ENCLOSURE_CASES {
-        for operation in [
-            BinaryOperation::Add,
-            BinaryOperation::Sub,
-            BinaryOperation::Mul,
-            BinaryOperation::Div,
-        ] {
-            let down = native_result::<R>(lhs, rhs, operation, Direction::Down)?
-                .to_f64(Direction::Down)?;
-            let up =
-                native_result::<R>(lhs, rhs, operation, Direction::Up)?.to_f64(Direction::Up)?;
-            assert_encloses(down, up, expected(lhs, rhs, operation));
-        }
-    }
-    Ok(())
-}
-
-fn check_dashu_enclosures() -> Fallible<()> {
-    for &(lhs, rhs) in ENCLOSURE_CASES {
-        for operation in [
-            BinaryOperation::Add,
-            BinaryOperation::Sub,
-            BinaryOperation::Mul,
-            BinaryOperation::Div,
-        ] {
-            let down =
-                dashu_result(lhs, rhs, operation, Direction::Down)?.to_f64(Direction::Down)?;
-            let up = dashu_result(lhs, rhs, operation, Direction::Up)?.to_f64(Direction::Up)?;
-            assert_encloses(down, up, expected(lhs, rhs, operation));
+    let values = enclosure_values();
+    let f64_max = rational(f64::MAX);
+    for &lhs in &values {
+        for &rhs in &values {
+            for operation in [
+                BinaryOperation::Add,
+                BinaryOperation::Sub,
+                BinaryOperation::Mul,
+                BinaryOperation::Div,
+            ] {
+                if matches!(operation, BinaryOperation::Div) && rhs == 0.0 {
+                    continue;
+                }
+                let exact = expected(lhs, rhs, operation);
+                // A finite exact result outside the f64 range is covered by
+                // the explicit range-error/overflow tests above. Here the
+                // oracle checks the enclosure contract when both endpoints
+                // are meaningful f64 bounds.
+                if exact < -f64_max.clone() || exact > f64_max {
+                    continue;
+                }
+                let down = native_result::<R>(lhs, rhs, operation, Direction::Down)?
+                    .to_f64(Direction::Down)?;
+                let up = native_result::<R>(lhs, rhs, operation, Direction::Up)?
+                    .to_f64(Direction::Up)?;
+                assert_encloses(down, up, exact);
+            }
         }
     }
     Ok(())
@@ -479,6 +439,5 @@ fn check_dashu_enclosures() -> Fallible<()> {
 fn test_representative_arithmetic_enclosures() -> Fallible<()> {
     check_native_enclosures::<BestEffort>()?;
     check_native_enclosures::<Certified>()?;
-    check_dashu_enclosures()?;
     Ok(())
 }

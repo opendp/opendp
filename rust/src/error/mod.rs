@@ -133,9 +133,14 @@ pub enum ErrorVariant {
     #[error("NumericRangeAbove")]
     NumericRangeAbove,
 
+    /// A mathematically undefined or indeterminate operation was requested,
+    /// such as infinity minus infinity, zero times infinity, or division by
+    /// zero as classified by the numerical API.
     #[error("NumericIndeterminate")]
     NumericIndeterminate,
 
+    /// The numerical provider or backend failed unexpectedly, rather than
+    /// because of a mathematical domain or representable-range condition.
     #[error("NumericBackend")]
     NumericBackend,
 
