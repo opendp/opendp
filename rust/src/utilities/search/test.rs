@@ -387,7 +387,30 @@ fn test_fallible_scalar_optimization() -> Fallible<()> {
             Ok(x.ln().powi(2))
         })?;
     assert!((log_minimum.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
+
+    let degenerate =
+        fallible_optimize_to_precision(SearchMode::Minimize, 3.0, 3.0, None, |x| Ok(x * x))?;
+    assert_eq!(degenerate.arg, 3.0);
+    assert_eq!(degenerate.value, 9.0);
     Ok(())
+}
+
+#[test]
+fn test_scalar_optimization_rejects_malformed_bounds() {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error = fallible_optimize_to_precision(SearchMode::Minimize, lo, hi, None, |_| Ok(0.0))
+            .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
+
+    for (lo, hi) in [(2.0, 1.0), (0.0, 1.0), (1.0, f64::INFINITY)] {
+        let error =
+            fallible_optimize_log_domain_to_precision(SearchMode::Minimize, lo, hi, None, |_| {
+                Ok(0.0)
+            })
+            .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
 }
 
 #[test]

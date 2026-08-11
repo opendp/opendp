@@ -748,13 +748,16 @@ pub(crate) fn fallible_optimize_to_precision_bracket<F>(
 where
     F: Fn(f64) -> Fallible<f64>,
 {
-    if !(hi > lo) || !lo.is_finite() || !hi.is_finite() {
+    if !lo.is_finite() || !hi.is_finite() || lo > hi {
+        return fallible!(Search, "optimization bounds must be finite and ordered");
+    }
+    if lo == hi {
         let value = mode.sanitize(f(lo)?);
         return Ok(BracketedOptimum {
             arg: lo,
             value,
             lo,
-            hi: lo,
+            hi,
         });
     }
 
@@ -861,7 +864,18 @@ pub(crate) fn fallible_optimize_log_domain_to_precision<F>(
 where
     F: Fn(f64) -> Fallible<f64>,
 {
-    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+    if !arg_lo.is_finite()
+        || !arg_hi.is_finite()
+        || arg_lo <= 0.0
+        || arg_hi <= 0.0
+        || arg_lo > arg_hi
+    {
+        return fallible!(
+            Search,
+            "log optimization bounds must be finite, positive, and ordered"
+        );
+    }
+    if arg_lo == arg_hi {
         return Ok(Optimum {
             arg: arg_lo,
             value: mode.sanitize(f_arg(arg_lo)?),
@@ -900,13 +914,21 @@ pub(crate) fn optimize_log_domain_to_precision_bracket<F>(
 where
     F: Fn(f64) -> f64,
 {
-    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+    assert!(
+        arg_lo.is_finite()
+            && arg_hi.is_finite()
+            && arg_lo > 0.0
+            && arg_hi > 0.0
+            && arg_lo <= arg_hi,
+        "log optimization bounds must be finite, positive, and ordered"
+    );
+    if arg_lo == arg_hi {
         let value = mode.sanitize(f_arg(arg_lo));
         return BracketedOptimum {
             arg: arg_lo,
             value,
             lo: arg_lo,
-            hi: arg_lo,
+            hi: arg_hi,
         };
     }
 
@@ -946,7 +968,15 @@ pub(crate) fn sample_log_domain<F>(
 where
     F: Fn(f64) -> f64,
 {
-    if !(arg_lo > 0.0) || !(arg_hi > arg_lo) || !arg_lo.is_finite() || !arg_hi.is_finite() {
+    assert!(
+        arg_lo.is_finite()
+            && arg_hi.is_finite()
+            && arg_lo > 0.0
+            && arg_hi > 0.0
+            && arg_lo <= arg_hi,
+        "log optimization bounds must be finite, positive, and ordered"
+    );
+    if arg_lo == arg_hi {
         return Optimum {
             arg: arg_lo,
             value: mode.sanitize(f_arg(arg_lo)),
@@ -995,9 +1025,12 @@ where
     const INV_PHI: f64 = 0.6180339887498949;
     const INV_PHI2: f64 = 0.3819660112501051;
 
-    if !(hi > lo) {
+    if !lo.is_finite() || !hi.is_finite() || lo > hi {
+        return fallible!(Search, "optimization bounds must be finite and ordered");
+    }
+    if lo == hi {
         f(lo)?;
-        return Ok((lo, lo));
+        return Ok((lo, hi));
     }
 
     let mut c = interpolate(lo, hi, INV_PHI2);
@@ -1054,13 +1087,16 @@ where
     const INV_PHI: f64 = 0.6180339887498949;
     const INV_PHI2: f64 = 0.3819660112501051;
 
-    if !(hi > lo) {
+    if !lo.is_finite() || !hi.is_finite() || lo > hi {
+        return fallible!(Search, "optimization bounds must be finite and ordered");
+    }
+    if lo == hi {
         let value = mode.sanitize(f(lo)?);
         return Ok(BracketedOptimum {
             arg: lo,
             value,
             lo,
-            hi: lo,
+            hi,
         });
     }
 
