@@ -1179,6 +1179,7 @@ class PrivacyProfile(object):
             if curve is not None or log_profile is not None or approxDP is not None:
                 raise TypeError("_ptr cannot be combined with profile constructors")
             self.curve = _ptr
+            self._is_approxDP = False
             return
 
         choices = sum(value is not None for value in (curve, log_profile, approxDP))
@@ -1198,6 +1199,7 @@ class PrivacyProfile(object):
             self.curve = new_privacy_profile_log(log_profile).curve
         else:
             self.curve = new_privacy_profile_from_points(approxDP).curve
+        self._is_approxDP = approxDP is not None
 
     def delta(self, epsilon):
         '''
@@ -1257,6 +1259,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         from opendp.measures import (
             _new_privacy_guarantee,
             _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_approxDP_tradeoff,
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_tradeoff,
             _privacy_guarantee_with_zCDP,
@@ -1265,6 +1268,8 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         guarantee = _new_privacy_guarantee()
         if profile is not None:
             guarantee = _privacy_guarantee_with_profile(guarantee, profile)
+            if profile._is_approxDP:
+                guarantee = _privacy_guarantee_with_approxDP_tradeoff(guarantee)
         if tradeoff is not None:
             guarantee = _privacy_guarantee_with_tradeoff(
                 guarantee, tradeoff, symmetric=False

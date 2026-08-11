@@ -1,5 +1,8 @@
 use crate::{
-    domains::AtomDomain, error::Fallible, measures::PrivacyGuarantee, metrics::AbsoluteDistance,
+    domains::AtomDomain,
+    error::Fallible,
+    measures::{PrivacyGuarantee, PrivacyProfile},
+    metrics::AbsoluteDistance,
 };
 
 use super::make_canonical_noise;
@@ -19,6 +22,22 @@ fn test_canonical_noise() -> Fallible<()> {
     )?;
     assert!(m_cnd.invoke(&1.).is_ok());
     assert!(m_cnd.map(&1.)?.beta(0.25)? > 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_canonical_noise_respects_approxdp_budget() -> Fallible<()> {
+    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 1e-7)])?;
+    let d_out = PrivacyGuarantee::from_profile(profile).with_approxDP_tradeoff_trusted()?;
+    let measurement = make_canonical_noise(
+        AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
+        1.0,
+        d_out,
+    )?;
+
+    let delta = measurement.map(&1.0)?.delta(1.0)?;
+    assert!(delta <= 1.1e-7, "delta={delta}");
     Ok(())
 }
 

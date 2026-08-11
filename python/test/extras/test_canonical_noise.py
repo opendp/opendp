@@ -1,4 +1,7 @@
 import opendp.prelude as dp
+
+dp.enable_features("contrib", "honest-but-curious")
+
 import numpy as np  # type: ignore[import]
 from opendp.extras.numpy.canonical import (
     BinomialCND,
@@ -201,6 +204,11 @@ def test_canonical_context_no_transformation():
     assert isinstance(
         context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
     )
+
+    measurement = context.query().canonical_noise().resolve()
+    privacy = measurement.map(1.0)
+    assert privacy.epsilon(5e-8) <= 0.5
+    assert privacy.delta(0.5) <= 5e-8
 
 
 def test_canonical_context_with_transformation():

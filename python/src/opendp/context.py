@@ -750,10 +750,17 @@ class Query(object):
         # - its d_out argument is already stored in the chain
         # - it has a special postprocessor
         from opendp.measurements import then_canonical_noise
+        from opendp.mod import PrivacyGuarantee, PrivacyProfile
         from opendp._internal import _new_pure_function
         from opendp.extras.numpy.canonical import BinomialCND
 
         def then(d_in, d_out):
+            # Context budgets are ordinary ApproxDP points. Convert them to a
+            # typed guarantee and attach the certified symmetric tradeoff in
+            # Rust; do not expose a callback-based symmetry assertion here.
+            if isinstance(d_out, tuple):
+                profile = PrivacyProfile(approxDP=[d_out])
+                d_out = PrivacyGuarantee(profile=profile)
             m_noise = then_canonical_noise(d_in, d_out)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
