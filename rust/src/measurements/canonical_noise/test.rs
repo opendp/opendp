@@ -1,3 +1,5 @@
+use dashu::rational::RBig;
+
 use crate::{
     domains::AtomDomain,
     error::Fallible,
@@ -10,6 +12,15 @@ use super::make_canonical_noise;
 fn symmetric_tradeoff() -> Fallible<PrivacyGuarantee> {
     PrivacyGuarantee::new()
         .with_symmetric_tradeoff(|alpha| Ok((1.0 - 2.0 * alpha).max((1.0 - alpha) / 2.0).max(0.0)))
+}
+
+#[test]
+fn test_compiled_tradeoff_has_exact_fixed_point() -> Fallible<()> {
+    let compiled = super::compile_tradeoff(&symmetric_tradeoff()?)?;
+    let fixed_point = compiled.fixed_point();
+    assert_eq!(compiled.beta(&fixed_point), fixed_point);
+    assert!(fixed_point > RBig::ZERO && fixed_point < RBig::from(1) / RBig::from(2));
+    Ok(())
 }
 
 #[test]
@@ -52,7 +63,10 @@ fn test_canonical_noise_uses_only_symmetric_tradeoff_view() -> Fallible<()> {
     )?;
 
     let partial = m_cnd.map(&1.0)?;
-    assert_eq!(partial.beta(0.25)?, 0.5);
+    // The advertised curve is a conservative finite polyhedral weakening of
+    // the source curve, so it need not agree with it at every alpha.
+    let beta = partial.beta(0.25)?;
+    assert!(beta > 0.0 && beta <= 0.5, "beta={beta}");
     let debug = format!("{partial:?}");
     assert!(debug.contains("tradeoff: true"));
     assert!(debug.contains("profile: false"));

@@ -9,7 +9,8 @@ use crate::{
     measures::{MultiDP, PrivacyGuarantee},
     metrics::AbsoluteDistance,
     traits::{
-        InfCast,
+        InfCast, SInterval,
+        backend::Dashu,
         samplers::{CanonicalRV, PartialSample},
     },
 };
@@ -20,12 +21,92 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
+#[derive(Clone)]
+struct CanonicalTradeoffPoint {
+    one_minus_delta: RBig,
+    exp_epsilon: RBig,
+}
+
+impl CanonicalTradeoffPoint {
+    fn new(epsilon: f64, delta: f64) -> Fallible<Self> {
+        // The software interval supplies an upward-rounded, exactly
+        // representable rational upper bound for exp(epsilon). Keep its
+        // reciprocal as an operation on the same rational: independently
+        // rounding exp(-epsilon) would no longer describe an exactly
+        // symmetric tradeoff function.
+        let exp_epsilon = RBig::try_from(SInterval::<Dashu>::point(epsilon)?.exp()?.upper_f64()?)?;
+
+        Ok(Self {
+            one_minus_delta: RBig::ONE - RBig::try_from(delta)?,
+            exp_epsilon,
+        })
+    }
+
+    fn beta(&self, alpha: &RBig) -> RBig {
+        let left = &self.one_minus_delta - &self.exp_epsilon * alpha;
+        let right = (&self.one_minus_delta - alpha) / &self.exp_epsilon;
+        left.max(right).max(RBig::ZERO)
+    }
+
+    fn fixed_point(&self) -> RBig {
+        &self.one_minus_delta / (&self.exp_epsilon + RBig::ONE)
+    }
+}
+
+#[derive(Clone)]
+struct CanonicalTradeoff {
+    points: Vec<CanonicalTradeoffPoint>,
+}
+
+impl CanonicalTradeoff {
+    fn beta(&self, alpha: &RBig) -> RBig {
+        self.points
+            .iter()
+            .map(|point| point.beta(alpha))
+            .max()
+            .unwrap_or(RBig::ZERO)
+    }
+
+    fn fixed_point(&self) -> RBig {
+        self.points
+            .iter()
+            .map(CanonicalTradeoffPoint::fixed_point)
+            .max()
+            .unwrap_or(RBig::ZERO)
+    }
+}
+
+// This grid controls approximation quality only. Every point is independently
+// certified from the selected f-DP curve, so adding or removing grid points
+// cannot weaken the privacy guarantee.
+const CANONICAL_EPSILONS: &[f64] = &[
+    0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0,
+];
+
+fn compile_tradeoff(d_out: &PrivacyGuarantee) -> Fallible<CanonicalTradeoff> {
+    let points = CANONICAL_EPSILONS
+        .iter()
+        .map(|&epsilon| {
+            let delta = d_out.symmetric_delta(epsilon)?;
+            CanonicalTradeoffPoint::new(epsilon, delta)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
+
+    Ok(CanonicalTradeoff { points })
+}
+
 #[bootstrap(
     features("contrib", "honest-but-curious"),
     arguments(d_out(c_type = "AnyObject *", hint = "PrivacyGuarantee"))
 )]
 /// Make a Measurement that adds noise from the canonical noise distribution
 /// associated with the supplied symmetric nontrivial f-DP tradeoff curve.
+///
+/// The supplied curve is sampled at a finite set of epsilon values. Each
+/// sample is converted to a certified approximate-DP point, and the canonical
+/// sampler uses the resulting exact rational polyhedral tradeoff curve. This
+/// makes the fixed point used by the sampler exact; the epsilon grid affects
+/// utility but not privacy safety.
 ///
 /// # Citations
 /// - [AV23 Canonical Noise Distributions and Private Hypothesis Tests](https://projecteuclid.org/journals/annals-of-statistics/volume-51/issue-2/Canonical-noise-distributions-and-private-hypothesis-tests/10.1214/23-AOS2259.short)
@@ -56,18 +137,8 @@ pub fn make_canonical_noise(
         );
     }
 
-    // Canonical noise requires the explicitly supplied symmetric tradeoff
-    // representation. Do not derive a curve from another representation: the
-    // theorem applies to the exact curve used to construct the sampler.
-    let source_tradeoff = d_out.symmetric_tradeoff()?;
-    let tradeoff_for_sampler = source_tradeoff.clone();
-    let tradeoff = move |alpha: RBig| {
-        Ok(RBig::try_from(tradeoff_for_sampler(f64::inf_cast(
-            alpha,
-        )?)?)?)
-    };
-
-    let fixed_point = find_fixed_point(&tradeoff)?;
+    let compiled_tradeoff = compile_tradeoff(&d_out)?;
+    let fixed_point = compiled_tradeoff.fixed_point();
 
     // A fixed point at or above 1/2 corresponds to perfect privacy, while a
     // fixed point at zero is the trivial perfectly distinguishable curve. Both
@@ -81,13 +152,16 @@ pub fn make_canonical_noise(
     }
 
     let r_d_in = RBig::try_from(d_in)?;
-    let tradeoff_for_map = source_tradeoff.clone();
+    let tradeoff_for_sampler = compiled_tradeoff.clone();
+    let tradeoff_for_map = compiled_tradeoff.clone();
 
     Measurement::new(
         input_domain,
         input_metric,
         MultiDP::with_tradeoff(),
         Function::new_fallible(move |&arg: &f64| {
+            let tradeoff_for_sample = tradeoff_for_sampler.clone();
+            let tradeoff = move |alpha: RBig| Ok(tradeoff_for_sample.beta(&alpha));
             let canonical_rv = CanonicalRV {
                 shift: RBig::try_from(arg.clamp(f64::MIN, f64::MAX)).unwrap_or(RBig::ZERO),
                 scale: &r_d_in,
@@ -106,34 +180,12 @@ pub fn make_canonical_noise(
             if d_in_p.is_zero() {
                 return PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| Ok(1.0 - alpha));
             }
-            PrivacyGuarantee::new().with_symmetric_tradeoff({
-                let tradeoff = tradeoff_for_map.clone();
-                move |alpha| tradeoff(alpha)
+
+            let tradeoff = tradeoff_for_map.clone();
+            PrivacyGuarantee::new().with_symmetric_tradeoff(move |alpha| {
+                let alpha = RBig::try_from(alpha)?;
+                f64::neg_inf_cast(tradeoff.beta(&alpha))
             })
         }),
     )
-}
-
-// The oracle is a lower bound on the true tradeoff. Therefore every value
-// accepted by `tradeoff(mid) >= mid` is below the true fixed point, and the
-// returned `lo` is a conservative lower bound on that fixed point.
-fn find_fixed_point(tradeoff: &impl Fn(RBig) -> Fallible<RBig>) -> Fallible<RBig> {
-    let mut lo = 0.0;
-    let mut hi = 0.5;
-    let mut mid = -1.0;
-
-    loop {
-        let new_mid = lo + (hi - lo) / 2.0;
-        if new_mid == mid {
-            return Ok(RBig::try_from(lo)?);
-        }
-        mid = new_mid;
-
-        let mid_r = RBig::try_from(mid)?;
-        if tradeoff(mid_r.clone())? >= mid_r {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
 }
