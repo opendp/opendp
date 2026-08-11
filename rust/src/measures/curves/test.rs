@@ -37,6 +37,27 @@ fn test_points_and_function_queries_agree() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_approxdp_points_have_certified_symmetric_tradeoff() -> Fallible<()> {
+    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 0.1), (2.0, 0.01)])?;
+    let guarantee = PrivacyGuarantee::from_profile(profile).with_approxDP_tradeoff_trusted()?;
+    let alpha = 0.2;
+    let expected = [(1.0_f64, 0.1_f64), (2.0_f64, 0.01_f64)]
+        .into_iter()
+        .map(|(epsilon, delta)| {
+            (0.0_f64)
+                .max(1.0 - delta - epsilon.exp() * alpha)
+                .max((-epsilon).exp() * (1.0 - delta - alpha))
+        })
+        .fold(0.0_f64, f64::max);
+
+    let beta = guarantee.beta(alpha)?;
+    assert!(beta <= expected);
+    assert!(beta > 0.0);
+    Ok(())
+}
+
 #[test]
 fn test_points_normalize_redundant_and_plateau_points() -> Fallible<()> {
     let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![

@@ -65,6 +65,7 @@ impl PrivacyGuarantee {
     /// Attach the certified symmetric tradeoff implied by point-backed
     /// ApproxDP information already present on this guarantee.
     #[cfg(feature = "honest-but-curious")]
+    #[allow(dead_code, non_snake_case)]
     pub(crate) fn with_approxDP_tradeoff_trusted(mut self) -> Fallible<Self> {
         let points = self
             .profile
@@ -513,6 +514,7 @@ impl PrivacyProfile {
         Ok(epsilon)
     }
 
+    #[allow(non_snake_case)]
     pub(crate) fn approxDP_points(&self) -> Option<&[ApproxDPPoint]> {
         match &self.repr {
             PrivacyProfileRepr::Points(points) => Some(points),

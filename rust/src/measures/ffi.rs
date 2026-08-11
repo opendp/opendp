@@ -541,15 +541,18 @@ pub extern "C" fn opendp_measures___privacy_guarantee_with_profile(
 )]
 /// Attach the certified symmetric tradeoff implied by point-backed ApproxDP
 /// information already attached to the guarantee.
+///
+/// # Why honest-but-curious?
+/// The conversion is only available when f-DP tradeoff accounting is enabled.
 #[cfg(feature = "honest-but-curious")]
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures___privacy_guarantee_with_approxDP_tradeoff(
     this: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let this = try_!(try_as_ref!(this).downcast_ref::<PrivacyGuarantee>()).clone();
-    this.with_approxDP_tradeoff_trusted()
-        .map(|guarantee| AnyObject::new_raw(guarantee))
-        .into()
+    FfiResult::Ok(AnyObject::new_raw(try_!(
+        this.with_approxDP_tradeoff_trusted()
+    )))
 }
 
 #[bootstrap(

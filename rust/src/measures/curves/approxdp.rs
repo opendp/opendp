@@ -46,6 +46,7 @@ impl ApproxDPPoint {
 /// Convert point-backed ApproxDP information to a conservative symmetric
 /// tradeoff. Each point gives a certified lower bound, so the aggregate is
 /// their pointwise maximum.
+#[allow(non_snake_case)]
 pub(crate) fn beta_via_approxDP(points: &[ApproxDPPoint], alpha: f64) -> Fallible<f64> {
     check_alpha(alpha)?;
     let alpha = RBig::try_from(alpha)?;
