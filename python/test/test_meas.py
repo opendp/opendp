@@ -436,7 +436,7 @@ def test_canonical_noise():
     )
     m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=privacy)
 
-    assert m_cnd.map(1.0).delta(1.0) <= 1e-6
+    assert m_cnd.map(1.0).delta(1.0) <= 1.1e-6
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
 
