@@ -7,6 +7,9 @@ pub enum Direction {
     Up,
 }
 
+pub mod backend;
+
 mod scalar;
 
+pub use backend::{Dashu, SoftFloat};
 pub use scalar::{Approximate, Certified, DirectedScalar, DirectedTranscendental, N64};
