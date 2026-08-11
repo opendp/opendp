@@ -19,9 +19,10 @@ type Cert = SInterval<Dashu>;
 // always const-stable on older MSRVs.
 const ALPHA_MIN: f64 = 1.0000000149011612;
 
-// A finite search cap keeps certified exponentials inside the backend range.
-// Truncating the order search only weakens the returned conservative bound.
-const ALPHA_HARD_CAP: f64 = 1024.0;
+// The largest order whose square remains representable in f64. The certified
+// kernels use alpha^2 in their high-order regime, so this is a backend-derived
+// endpoint rather than an arbitrary optimization cap.
+const ALPHA_MAX: f64 = 1.3407807929942596e154;
 const ALPHA_START_CAP: f64 = 2.0;
 
 // The final delta search is over the minimum of several per-order upper
@@ -210,37 +211,44 @@ fn find_delta_branch_cap<R>(epsilon: f64, rdp: &R, branch: DeltaBranch) -> f64
 where
     R: Fn(f64) -> Fallible<f64>,
 {
-    let objective = |order: f64| -> f64 {
-        let gamma = match rdp_upper(rdp, order) {
-            Ok(v) => v,
-            Err(_) => return f64::INFINITY,
-        };
-
-        match branch {
+    let objective = |order: f64| -> Option<f64> {
+        let gamma = rdp_upper(rdp, order).ok()?;
+        Some(match branch {
             DeltaBranch::BalleCanonne => log_delta_balle_canonne_fast(order, gamma, epsilon),
             DeltaBranch::Asoodeh => log_delta_asoodeh_fast(order, gamma, epsilon),
             DeltaBranch::LargeDelta => log_delta_large_delta_fast(order, gamma, epsilon),
-        }
+        })
     };
 
-    let mut curr_order = ALPHA_START_CAP;
-
-    let mut prev_value = objective(ALPHA_MIN);
-    let mut curr_value = objective(curr_order);
+    let mut previous_order = ALPHA_MIN;
+    let mut previous_value = match objective(previous_order) {
+        Some(value) => value,
+        None => return previous_order,
+    };
+    let mut current_order = ALPHA_START_CAP;
 
     loop {
-        if !strictly_smaller(curr_value, prev_value) {
-            return curr_order;
+        let Some(current_value) = objective(current_order) else {
+            // The callback or certified backend cannot evaluate this order.
+            // Keep the last known-valid endpoint for the final optimizer.
+            return previous_order;
+        };
+
+        if !strictly_smaller(current_value, previous_value) {
+            return current_order;
         }
 
-        if curr_order >= ALPHA_HARD_CAP / 2.0 {
-            return ALPHA_HARD_CAP;
+        previous_order = current_order;
+        previous_value = current_value;
+        if current_order >= ALPHA_MAX {
+            return current_order;
         }
 
-        prev_value = curr_value;
-
-        curr_order *= 2.0;
-        curr_value = objective(curr_order);
+        let next_order = (current_order * 2.0).min(ALPHA_MAX);
+        if next_order == current_order {
+            return current_order;
+        }
+        current_order = next_order;
     }
 }
 
@@ -295,12 +303,16 @@ where
             return hi;
         }
 
-        if hi >= ALPHA_HARD_CAP / 2.0 {
-            return ALPHA_HARD_CAP;
+        if rdp_upper(rdp, hi).is_err() {
+            // Stop before the first order the callback/backend cannot evaluate.
+            return lo;
+        }
+        if hi >= ALPHA_MAX {
+            return hi;
         }
 
         lo = hi;
-        hi *= 2.0;
+        hi = (hi * 2.0).min(ALPHA_MAX);
     }
 }
 
@@ -620,9 +632,9 @@ fn gamma_upper_next(gamma: f64) -> f64 {
 
 fn normalize_alpha_cap(alpha_cap: f64) -> f64 {
     if alpha_cap.is_finite() && alpha_cap > ALPHA_MIN {
-        alpha_cap.min(ALPHA_HARD_CAP)
+        alpha_cap.min(ALPHA_MAX)
     } else {
-        ALPHA_HARD_CAP
+        ALPHA_MAX
     }
 }
 

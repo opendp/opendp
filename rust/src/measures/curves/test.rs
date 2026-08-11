@@ -253,6 +253,42 @@ fn test_renyi_representation_queries_and_aggregation() -> Fallible<()> {
 }
 
 #[cfg(feature = "honest-but-curious")]
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_renyi_high_order_delta_search() -> Fallible<()> {
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(|_| Ok(1.0), 0.0)?;
+    let delta = guarantee.delta(1.0)?;
+
+    // The order-1024 result is around 1e-3; high-order probing should find
+    // the substantially tighter backend-supported bound.
+    assert!(delta < 1e-12, "delta={delta}");
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_renyi_delta_search_stops_before_unevaluable_order() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let callback_calls = calls.clone();
+    let guarantee = PrivacyGuarantee::new().with_renyiDP(
+        move |order| {
+            callback_calls.fetch_add(1, Ordering::Relaxed);
+            if order > 1_000.0 {
+                fallible!(FailedFunction, "RDP order is unevaluable")
+            } else {
+                Ok(1.0)
+            }
+        },
+        0.0,
+    )?;
+
+    let delta = guarantee.delta(1.0)?;
+    assert!(delta.is_finite());
+    assert!(calls.load(Ordering::Relaxed) > 0);
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
 #[test]
 fn test_renyi_nonzero_curve_exercises_all_queries() -> Fallible<()> {
     let calls = Arc::new(AtomicUsize::new(0));
