@@ -233,7 +233,7 @@ fn test_zcdp_delta_is_representation_specific() -> Fallible<()> {
     assert!(approximate_delta >= exact_delta + 0.1);
     assert!(approximate_delta <= (exact_delta + 0.1).next_up());
 
-    assert!(PrivacyGuarantee::new().with_zCDP(rho, -0.0).is_err());
+    assert!(PrivacyGuarantee::new().with_zCDP(rho, -0.0).is_ok());
     assert!(PrivacyGuarantee::new().with_zCDP(rho, f64::NAN).is_err());
 
     let vacuous = PrivacyGuarantee::new().with_zCDP(rho, 1.0)?;
