@@ -241,7 +241,7 @@ class Checker:
                 )
 
         ast_arg_names = {arg.arg for arg in self.all_ast_args}
-        if doc_param_dict or is_public:
+        if doc_param_dict or self.is_public:
             # Private functions don't need to document params,
             # but if they do, they should be consistent with signature.
             if doc_param_dict.keys() != ast_arg_names:

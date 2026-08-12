@@ -33,7 +33,7 @@ def get_connection(database_name: str, **kwargs):
 
             $ pip install 'ibis-framework[sqlite]'
 
-    :param database: A supported database type. "sqlite", for example.
+    :param database_name: A supported database type. "sqlite", for example.
     :param kwargs: Connection parameters.
     """
     import ibis
@@ -72,8 +72,11 @@ def execute_on_database(query, connection, table_name: str):
 
         >>> connection = get_connection('sqlite')
         >>> table_name = 'demo'
+        >>> import polars as pl
         >>> df = pl.DataFrame({"ints": [1, 2, 3, 4]})
         >>> connection.create_table(table_name, df, overwrite=True)
+        DatabaseTable: demo
+          ints int64
 
         >>> schema_lf = scan_database(connection, table_name)
 
@@ -85,8 +88,12 @@ def execute_on_database(query, connection, table_name: str):
         ...     margins=[
         ...         dp.polars.Margin(max_length=1_000_000),
         ...     ],
+        ... )
         >>> query = context.query().select(dp.len())
-        >>> result = execute_on_database(query, connection, table_name)
+        >>> import warnings  # TODO: Silence warning upstream.
+        >>> with warnings.catch_warnings():
+        ...     warnings.simplefilter("ignore")
+        ...     result = execute_on_database(query, connection, table_name)
     """
     import opendp.prelude as dp
 
