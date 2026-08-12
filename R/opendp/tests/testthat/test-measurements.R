@@ -50,7 +50,7 @@ test_that("make_noise separates output measure and distribution", {
     laplace_domain, laplace_metric,
     output_measure = multi_dp(), scale = 1.
   )
-  expect_s3_class(meas_multi(d_in = 1.), "privacy_guarantee")
+  expect_s3_class(meas_multi(d_in = 1L), "privacy_guarantee")
 
   scalar_domain <- atom_domain(.T = "f64", nan = FALSE)
   scalar_metric <- absolute_distance(.T = "f64")

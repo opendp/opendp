@@ -3,7 +3,7 @@ test_that("binary search", {
   s_vec <- c(vector_domain(atom_domain(.T = "float", nan = FALSE)), symmetric_distance())
   t_sum <- s_vec |> then_clamp(c(0., 1.)) |> then_sum()
 
-  m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1., .T = "float")
+  m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1., d_out = 1., .T = "float")
 })
 
 test_that("binary search honors explicit integer type without bounds", {
