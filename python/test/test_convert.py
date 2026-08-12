@@ -15,9 +15,19 @@ from opendp._convert import (
     _slice_to_scalar,
     _slice_to_vector,
     _vector_to_slice,
+    _invoke_py_callback,
+    _invoke_py_transition,
 )
-from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
+from opendp._lib import (
+    AnyObjectPtr,
+    ctypes,
+    FfiResult,
+    FfiSlice,
+    FfiSlicePtr,
+    unwrap,
+)
 from opendp.extras.polars import Margin, Bound
+from opendp.mod import OpenDPException
 
 
 @pytest.mark.parametrize(
@@ -115,6 +125,96 @@ def test_overflow():
 
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
+
+
+def _unwrap_callback_result(raw):
+    result = ctypes.cast(raw, ctypes.POINTER(FfiResult)).contents
+    return unwrap(result, AnyObjectPtr)
+
+
+@pytest.mark.parametrize(
+    "variant", ["Overflow", "NumericError", "FailedMap", "UnknownVariant", None]
+)
+def test_callback_forwards_opendp_exception(variant):
+    original = OpenDPException(variant, "callback failed", "original Rust traceback")
+
+    def callback(_):
+        raise original
+
+    raw = _invoke_py_callback(py_to_c(1, AnyObjectPtr), (callback, "i32"))
+    result = ctypes.cast(raw, ctypes.POINTER(FfiResult)).contents
+    expected = (
+        variant if variant in {"Overflow", "NumericError", "FailedMap"} else "FFI"
+    )
+    assert result.payload.Err.contents.variant == expected.encode()
+    assert result.payload.Err.contents.message == b"callback failed"
+    assert result.payload.Err.contents.backtrace == b"original Rust traceback"
+    with pytest.raises(OpenDPException) as error:
+        _unwrap_callback_result(raw)
+    assert error.value is original
+
+
+@pytest.mark.parametrize("message", ["[Overflow] : ordinary exception", "\ud800"])
+def test_callback_forwards_ordinary_exception(message):
+    original = ValueError(message)
+
+    def callback(_):
+        raise original
+
+    raw = _invoke_py_callback(py_to_c(1, AnyObjectPtr), (callback, "i32"))
+    result = ctypes.cast(raw, ctypes.POINTER(FfiResult)).contents
+    assert result.payload.Err.contents.variant == b"FFI"
+    assert result.payload.Err.contents.message == message.encode(
+        errors="backslashreplace"
+    )
+    assert result.payload.Err.contents.backtrace == b""
+    with pytest.raises(ValueError) as error:
+        _unwrap_callback_result(raw)
+    assert error.value is original
+
+
+def test_callback_exception_retention_and_broken_diagnostic(monkeypatch):
+    import gc
+    import traceback
+    import weakref
+
+    monkeypatch.setattr(
+        traceback,
+        "format_exc",
+        lambda: pytest.fail("must not eagerly format tracebacks"),
+    )
+
+    class UnprintableError(Exception):
+        def __str__(self):
+            raise RuntimeError("broken exception formatter")
+
+    references = []
+
+    def callback(_):
+        error = UnprintableError()
+        references.append(weakref.ref(error))
+        raise error
+
+    raw = _invoke_py_callback(py_to_c(1, AnyObjectPtr), (callback, "i32"))
+    gc.collect()
+    assert references[0]() is not None
+    with pytest.raises(UnprintableError) as caught:
+        _unwrap_callback_result(raw)
+    assert caught.value is references[0]()
+    del caught
+    gc.collect()
+    assert references[0]() is None
+
+
+def test_transition_forwards_opendp_exception():
+    def transition(_, __):
+        raise OpenDPException("Transition", "transition failed")
+
+    raw = _invoke_py_transition(
+        py_to_c(1, AnyObjectPtr), ctypes.c_bool(False), (transition, "i32")
+    )
+    with pytest.raises(OpenDPException, match='Transition\\("transition failed"\\)'):
+        _unwrap_callback_result(raw)
 
 
 def test_check_and_cast_scalar():

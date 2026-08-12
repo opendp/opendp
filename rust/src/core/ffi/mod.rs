@@ -39,6 +39,8 @@ pub struct FfiError {
     pub message: *mut c_char,
     // MAY BE NULL!
     pub backtrace: *mut c_char,
+    // Null for errors that did not originate in a language callback.
+    pub callback: *mut util::ExtrinsicObject,
 }
 
 impl FfiError {
@@ -70,6 +72,7 @@ impl From<Error> for FfiError {
                 util::into_c_char_p
             )),
             backtrace: try_!(util::into_c_char_p(error.backtrace.to_string())),
+            callback: error.callback.map_or(ptr::null_mut(), util::into_raw),
         }
     }
 }
@@ -79,7 +82,10 @@ impl Drop for FfiError {
         let _variant =
             util::into_string(self.variant).unwrap_assert("variants do not contain null bytes");
         let _message = unsafe { self.message.as_mut() }.map(|p| util::into_string(p).unwrap());
-        let _backtrace = util::into_string(self.backtrace).unwrap();
+        let _backtrace = unsafe { self.backtrace.as_mut() }.map(|p| util::into_string(p).unwrap());
+        if !self.callback.is_null() {
+            let _ = util::into_owned(self.callback);
+        }
     }
 }
 
@@ -158,34 +164,14 @@ impl<TI: 'static, TO: 'static + Send + Sync> IntoAnyFunctionFfiResultExt
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");
-        let variant = match variant {
-            "FFI" => ErrorVariant::FFI,
-            "TypeParse" => ErrorVariant::TypeParse,
-            "Type" => ErrorVariant::Type,
-            "FailedFunction" => ErrorVariant::FailedFunction,
-            "FailedMap" => ErrorVariant::FailedMap,
-            "RelationDebug" => ErrorVariant::RelationDebug,
-            "FailedCast" => ErrorVariant::FailedCast,
-            "DomainMismatch" => ErrorVariant::DomainMismatch,
-            "MetricMismatch" => ErrorVariant::MetricMismatch,
-            "MeasureMismatch" => ErrorVariant::MeasureMismatch,
-            "MakeDomain" => ErrorVariant::MakeDomain,
-            "MakeTransformation" => ErrorVariant::MakeTransformation,
-            "MakeMeasurement" => ErrorVariant::MakeMeasurement,
-            "MetricSpace" => ErrorVariant::MetricSpace,
-            "InvalidDistance" => ErrorVariant::InvalidDistance,
-            "Search" => ErrorVariant::Search,
-            "Overflow" => ErrorVariant::Overflow,
-            "NumericError" => ErrorVariant::NumericError,
-            "NotImplemented" => ErrorVariant::NotImplemented,
-            unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
-        };
+        let variant = variant.parse::<ErrorVariant>().unwrap_or(ErrorVariant::FFI);
         Error {
             variant,
             message: util::to_option_str(val.message)
                 .unwrap_test()
                 .map(|s| s.to_owned()),
             backtrace: std::backtrace::Backtrace::capture(),
+            callback: unsafe { val.callback.as_ref() }.cloned(),
         }
     }
 }
@@ -351,6 +337,7 @@ mod tests {
                 variant: "FailedFunction".to_char_p(),
                 message: "Eat my shorts!".to_char_p(),
                 backtrace: "".to_char_p(),
+                callback: ptr::null_mut(),
             }
         )
     }
@@ -372,6 +359,7 @@ mod tests {
                 variant: "FailedFunction".to_char_p(),
                 message: "Eat my shorts!".to_char_p(),
                 backtrace: "".to_char_p(),
+                callback: ptr::null_mut(),
             }))
         );
     }
@@ -396,13 +384,72 @@ mod tests {
 
     #[test]
     fn test_error_from_ffi_error() {
+        for message in [None, Some("Eat my shorts!")] {
+            let ffi_err = FfiError {
+                variant: "FailedFunction".to_char_p(),
+                message: message.map_or(ptr::null_mut(), |message| message.to_char_p()),
+                backtrace: ptr::null_mut(),
+                callback: ptr::null_mut(),
+            };
+            let err: Error = ffi_err.into();
+            assert_eq!(err.variant, ErrorVariant::FailedFunction);
+            assert_eq!(err.message.as_deref(), message);
+        }
+    }
+
+    #[test]
+    fn test_finite_overflow_conversion_round_trip() -> Fallible<()> {
+        use crate::traits::{DirectedScalar, Direction, SoftFloat};
+        for (sign, direction) in [(1.0, Direction::Up), (-1.0, Direction::Down)] {
+            let value =
+                SoftFloat::exact(sign * f64::MAX)?.mul_round(SoftFloat::exact(2.0)?, direction)?;
+            let error = value.to_f64(direction).unwrap_err();
+            let ffi_error = FfiError::from(error);
+            let error = Error::from(ffi_error);
+            assert_eq!(error.variant, ErrorVariant::Overflow);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_with_variant_preserves_foreign_error() {
+        use crate::error::WithVariant;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        extern "C" fn ref_count(pointer: *const c_void, increment: bool) -> bool {
+            let count = unsafe { &*pointer.cast::<AtomicUsize>() };
+            if increment {
+                count.fetch_add(1, Ordering::SeqCst);
+            } else {
+                count.fetch_sub(1, Ordering::SeqCst);
+            }
+            true
+        }
+        util::_set_ref_count(ref_count);
+        let count = AtomicUsize::new(1);
+        let pointer = (&count as *const AtomicUsize).cast::<c_void>();
+        let mut error = err!(Overflow, "foreign error");
+        error.callback = Some(util::ExtrinsicObject(pointer));
+        let result: Fallible<()> = Err(error);
+        let error = result.with_variant(ErrorVariant::NumericError).unwrap_err();
+        let error = Error::from(FfiError::from(error));
+        assert_eq!(error.variant, ErrorVariant::NumericError);
+        assert_eq!(error.message.as_deref(), Some("foreign error"));
+        assert_eq!(error.callback.as_ref().unwrap().0, pointer);
+        drop(error);
+        assert_eq!(count.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn test_unknown_error_variant_from_ffi_defaults_to_ffi() {
         let ffi_err = FfiError {
-            variant: "FailedFunction".to_char_p(),
-            message: "Eat my shorts!".to_char_p(),
+            variant: "UnknownVariant".to_char_p(),
+            message: "callback error".to_char_p(),
             backtrace: "".to_char_p(),
+            callback: ptr::null_mut(),
         };
         let err: Error = ffi_err.into();
-        assert_eq!(err, err!(FailedFunction, "Eat my shorts!"))
+        assert_eq!(err.variant, ErrorVariant::FFI);
     }
 
     #[test]
@@ -418,6 +465,7 @@ mod tests {
             variant: "FailedFunction".to_char_p(),
             message: "Eat my shorts!".to_char_p(),
             backtrace: "".to_char_p(),
+            callback: ptr::null_mut(),
         }));
         let res = Fallible::from(ffi_res);
         assert_eq!(res, fallible!(FailedFunction, "Eat my shorts!"));
