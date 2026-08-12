@@ -7,6 +7,9 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 /// Cast a `MultiDP` measurement to fixed approximate pure DP at `delta`.
 ///
 /// This adapter consumes the aggregate privacy guarantee returned by the
@@ -28,15 +31,10 @@ where
         Approximate(PureDP),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let guarantee = privacy_map.eval(d_in)?;
-            // Privacy curves are conservative and may have a discontinuity at
-            // the requested delta. Evaluate just above the boundary so the
-            // inversion does not reject an exact floating-point endpoint.
-            let epsilon = guarantee.epsilon(delta.next_up()).or_else(|_| {
-                // At a discontinuous endpoint, the right-limit is the first
-                // stable conservative value above the requested delta.
-                guarantee.epsilon(delta + 1e-12)
-            })?;
-            Ok((epsilon, delta))
+            // Evaluate at the requested delta. Evaluating above this boundary
+            // could report an epsilon that does not certify the requested
+            // approximate-DP guarantee.
+            Ok((guarantee.epsilon(delta)?, delta))
         }),
     )
 }
