@@ -16,9 +16,9 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
-^\\.Rprofile$
-^\\.lintr$
-^src/.*\\.(o|a|so|dylib|dll)$
+^\.Rprofile$
+^\.lintr$
+^src/.*\.(o|a|so|dylib|dll)$
 .*/out/.*$
 .*\.DS_Store$
 
