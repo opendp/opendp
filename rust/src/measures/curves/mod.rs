@@ -178,6 +178,7 @@ impl PrivacyGuarantee {
 
     /// Evaluate the certified approximate-DP delta bound of the supplied
     /// symmetric tradeoff representation.
+    #[cfg(feature = "honest-but-curious")]
     pub(crate) fn symmetric_delta(&self, epsilon: f64) -> Fallible<f64> {
         let tradeoff = self.symmetric_tradeoff()?;
         tradeoff::delta_via_tradeoff(tradeoff.as_ref(), true, epsilon)
