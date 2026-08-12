@@ -4,7 +4,9 @@ use crate::core::{MetricSpace, PrivacyMap};
 use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
-use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure};
+use crate::measurements::{
+    DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, NoiseMeasureFor,
+};
 use crate::measures::zCDP;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -155,15 +157,14 @@ pub(crate) fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasur
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
-    // This is ugly, but necessary because the necessary trait bound spans TIA
-    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    MO: NoiseMeasureFor<VectorDomain<AtomDomain<u32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<u64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i8>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i16>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f64>>, MO::Metric>,
     (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
@@ -293,20 +294,28 @@ pub(crate) fn match_noise(expr: &Expr) -> Fallible<Option<(&Expr, Option<f64>)>>
     Ok(Some((data, scale)))
 }
 
-fn map_function<MO: NoiseExprMeasure, T: CheckAtom>(
+fn map_function<
+    MO: NoiseExprMeasure + NoiseMeasureFor<VectorDomain<AtomDomain<T>>, MO::Metric>,
+    T: CheckAtom,
+>(
     input_metric: &MO::Metric,
     scale: f64,
 ) -> Fallible<PrivacyMap<MO::Metric, MO>>
 where
-    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<T>>, MO::Metric, MO>,
     (VectorDomain<AtomDomain<T>>, MO::Metric): MetricSpace,
 {
+    let distribution = MO::legacy_distribution()
+        .ok_or_else(|| err!(MakeMeasurement, "noise distribution is not specified"))?;
     Ok(MO::default()
-        .new_distribution(scale, None)
-        .make_noise((
-            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
-            input_metric.clone(),
-        ))?
+        .make_noise(
+            (
+                VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+                input_metric.clone(),
+            ),
+            scale,
+            None,
+            distribution,
+        )?
         .privacy_map
         .clone())
 }

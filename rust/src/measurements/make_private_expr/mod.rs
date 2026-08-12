@@ -7,7 +7,7 @@ use crate::{
     domains::{AtomDomain, Context, ExprDomain, ExprPlan, Invariant, VectorDomain, WildExprDomain},
     error::Fallible,
     measurements::{
-        MakeNoise, TopKMeasure,
+        NoiseMeasureFor, TopKMeasure,
         expr_dp_counting_query::{DPCountShim, DPLenShim, DPNUniqueShim, DPNullCountShim},
         expr_dp_frame_len::DPFrameLenShim,
         expr_dp_mean::DPMeanShim,
@@ -110,15 +110,14 @@ impl<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure + TopKMeasure + Composi
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
-    // This is ugly, but necessary because the necessary trait bound spans TIA
-    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    MO: NoiseMeasureFor<VectorDomain<AtomDomain<u32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<u64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i8>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i16>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f64>>, MO::Metric>,
     (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
