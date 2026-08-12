@@ -74,6 +74,15 @@ fn test_points_validate_individual_values() {
 }
 
 #[test]
+fn test_function_inversion_handles_step_profiles() -> Fallible<()> {
+    let profile = PrivacyProfile::new(|epsilon| Ok(if epsilon < 0.5 { 1.0 } else { 1e-8 }));
+    let epsilon = profile.epsilon(1e-8)?;
+    assert!(epsilon.is_finite());
+    assert!((epsilon - 0.5).abs() < 1e-12);
+    Ok(())
+}
+
+#[test]
 fn test_function_inversion_is_lazy() -> Fallible<()> {
     let calls = Arc::new(AtomicUsize::new(0));
     let profile_calls = calls.clone();

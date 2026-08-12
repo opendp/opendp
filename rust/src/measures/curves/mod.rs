@@ -251,10 +251,20 @@ fn eval_log_profile(profile: &LogProfileFn, epsilon: f64) -> Fallible<f64> {
 }
 
 fn invert_log_profile(profile: &LogProfileFn, target_delta: f64) -> Fallible<f64> {
-    invert_decreasing_callback(
-        |epsilon| eval_log_profile(profile, epsilon),
-        delta_to_log_lower_unchecked(target_delta)?,
-    )
+    let callback = |epsilon| eval_log_profile(profile, epsilon);
+    let target_lower = delta_to_log_lower_unchecked(target_delta)?;
+    match invert_decreasing_callback(&callback, target_lower) {
+        Ok(epsilon) => Ok(epsilon),
+        Err(err) if err.variant == ErrorVariant::Search => {
+            let target_upper = delta_to_log_upper_unchecked(target_delta)?;
+            match invert_decreasing_callback(&callback, target_upper) {
+                Ok(epsilon) => Ok(epsilon),
+                Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
+                Err(err) => Err(err),
+            }
+        }
+        Err(err) => Err(err),
+    }
 }
 
 /// Invert a nonincreasing callback while preserving the left edge of plateaus.
@@ -289,11 +299,7 @@ fn invert_decreasing_callback(
         Ordering::Greater => {}
     }
 
-    match fallible_binary_search_by(compare, Above(0.0)) {
-        Ok(epsilon) => Ok(epsilon),
-        Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
-        Err(err) => Err(err),
-    }
+    fallible_binary_search_by(compare, Above(0.0))
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {
