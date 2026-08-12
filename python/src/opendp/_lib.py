@@ -57,7 +57,7 @@ def _load_library():
 
 lib, lib_path = _load_library()
 
-def _total_cmp(left, right):
+def _total_cmp(left, right):  # pragma: no cover
     from opendp.mod import OpenDPException
 
     try:

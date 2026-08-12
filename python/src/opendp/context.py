@@ -132,7 +132,7 @@ def register(
 
     if supports_partial(constructor):
         constructors[name] = to_then(constructor), True
-    else:
+    else:  # pragma: no cover
         constructors[name] = constructor, False
 
 
@@ -417,7 +417,7 @@ def unit_of(
     raise Exception("No matching metric found")  # pragma: no cover
 
 
-class Context(object):
+class Context(object):  # pragma: no cover
     """A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.
 
     It is recommended to use :py:meth:`Context.compositor` constructor instead of this one.

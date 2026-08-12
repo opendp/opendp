@@ -1159,7 +1159,7 @@ ApproxDP = Approximate
 # Deprecated compatibility name for the generic approximate measure.
 ApproximateDivergence = Approximate
 
-class PrivacyProfile(object):
+class PrivacyProfile(object):  # pragma: no cover
     '''A privacy profile mapping epsilon to a conservative delta bound.
 
     Construct a profile from exactly one of an ordinary delta callback,
@@ -1218,7 +1218,7 @@ class PrivacyProfile(object):
         return privacy_profile_epsilon(self.curve, delta)
 
 
-class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
+class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]  # pragma: no cover
     '''Aggregate of simultaneously valid privacy representations.'''
     _type_ = AnyObject
 
@@ -1735,7 +1735,7 @@ def binary_search(
         bounds=bounds,
     )
 
-def binary_search_by(
+def binary_search_by(  # pragma: no cover
     comparison: Callable[[float], float | int],
     bounds: Optional[tuple[float | None, float | None]] = (None, None),
     T: Optional[Union[Type[float], Type[int]]] = None,
