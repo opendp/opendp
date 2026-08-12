@@ -164,13 +164,13 @@ def test_privacy_profile():
 
     profile = new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
-    assert profile.epsilon(delta=1e-7) == 16.11809565095832
+    assert profile.epsilon(delta=1e-7) == pytest.approx(16.11809565095832)
 
     direct = PrivacyProfile(lambda eps: math.exp(-eps))
     assert direct.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
 
     log_profile = PrivacyProfile(log_profile=lambda eps: -eps)
-    assert log_profile.delta(epsilon=1.0) == math.exp(-1.0)
+    assert log_profile.delta(epsilon=1.0) == pytest.approx(math.exp(-1.0))
 
     point_profile = PrivacyProfile(approxDP=[(1.0, 0.1), (2.0, 0.0)])
     assert point_profile.delta(epsilon=1.5) == 0.1
