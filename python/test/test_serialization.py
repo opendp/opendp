@@ -57,7 +57,7 @@ def test_serializable_equal(dp_obj):
     "dp_obj",
     [
         dp.user_domain("trivial_user_domain", lambda: True),
-        dp.PrivacyGuarantee(profile=lambda x: x),
+        dp.PrivacyGuarantee(profile=dp.PrivacyProfile(curve=lambda x: x)),
     ],
     ids=lambda arg: str(arg),
 )

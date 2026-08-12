@@ -50,9 +50,11 @@ test_that("new function and privacy profile work in R", {
   )
   expect_equal(postprocess(arg = list(12., 100.)), 0.12)
 
-  profile <- privacy_guarantee(profile = \(epsilon) if (epsilon < 0.5) 1. else 1e-8)
+  profile <- new_privacy_profile(\(epsilon) if (epsilon < 0.5) 1. else 1e-8)
+  guarantee <- privacy_guarantee(profile = profile)
   expect_equal(profile(epsilon = 0.499), 1.)
   expect_equal(profile(delta = 1.1e-8), 0.5)
+  expect_equal(guarantee(delta = 1.1e-8), 0.5)
 })
 
 test_that("user-defined callback errors surface cleanly", {
