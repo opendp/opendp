@@ -94,6 +94,150 @@ test_that("user-defined callback errors surface cleanly", {
   )
 })
 
+# These closures raise genuine Rust errors, not user-authored variant headers.
+opendp_callback_failures <- function() {
+  sum_trans <- make_sum(
+    vector_domain(atom_domain(.T = i32, bounds = c(0L, 100L))),
+    symmetric_distance()
+  )
+  measurement <- make_user_measurement(
+    input_domain = atom_domain(.T = i32),
+    input_metric = absolute_distance(i32),
+    output_measure = max_divergence(),
+    function_ = identity,
+    privacy_map = \(.d_in) NaN,
+    .TO = i32
+  )
+  zcdp <- make_pureDP_to_zCDP(measurement)
+  list(
+    Overflow = \() sum_trans(d_in = 100000000L),
+    NumericError = \() zcdp(d_in = 1L),
+    MetricSpace = \() make_laplace(atom_domain(.T = f64), absolute_distance(f64), scale = 1.)
+  )
+}
+
+test_that("structured OpenDP errors survive callback and transition boundaries", {
+  enable_features("contrib", "honest-but-curious")
+
+  failures <- opendp_callback_failures()
+  for (variant in names(failures)) {
+    fail <- failures[[variant]]
+    original <- tryCatch(fail(), error = identity)
+    expect_identical(class(original), c("opendp_error", "error", "condition")) # nolint: expect_s3_class_linter.
+    expect_identical(original$variant, variant)
+    expect_null(original$call)
+    expect_type(original$raw_message, "character")
+    expect_type(original$backtrace, "character")
+    expect_match(conditionMessage(original), paste0("^[[]", variant, "[]] : "))
+
+    postprocess <- new_function(function_ = \(.arg) fail(), .TO = i32)
+    transitions <- list(
+      \(.query) fail(),
+      \(.query, .is_internal) fail()
+    )
+    calls <- c(
+      list(\() postprocess(arg = 1L)),
+      lapply(transitions, function(transition) {
+        queryable <- new_queryable(transition, .Q = i32, .A = i32)
+        \() queryable(query = 1L)
+      })
+    )
+    for (invoke in calls) {
+      caught <- tryCatch(invoke(), error = identity)
+      expect_s3_class(caught, "opendp_error")
+      expect_identical(caught$variant, variant)
+      expect_match(caught$raw_message, original$raw_message, fixed = TRUE)
+      expect_match(conditionMessage(caught), paste0("^[[]", variant, "[]] : "))
+    }
+  }
+})
+
+test_that("callback text cannot impersonate structured OpenDP errors", {
+  enable_features("contrib", "honest-but-curious")
+
+  for (message in c(
+    "[Overflow] : callback failure",
+    "[NumericError] : callback failure",
+    "Error: [Overflow] : callback failure",
+    "Error in base::eval(\"quoted : call\") : [Overflow] : callback failure",
+    "\n [Overflow] : multiline\n[NumericError] : nested",
+    "prefix Overflow: message",
+    "Overflow: message",
+    "[UnknownVariant] : message",
+    "[OverflowX] : message"
+  )) {
+    postprocess <- new_function(
+      function_ = \(.arg) stop(message, call. = FALSE),
+      .TO = i32
+    )
+    caught <- tryCatch(postprocess(arg = 1L), error = identity)
+    expect_s3_class(caught, "opendp_error")
+    expect_identical(caught$variant, "FFI")
+    expect_match(caught$raw_message, message, fixed = TRUE)
+  }
+
+  # Keep call. = TRUE to exercise namespace qualifiers and quoted colons.
+  postprocess <- new_function(
+    function_ = \(.arg) base::eval(quote(stop("[Overflow] : callback failure"))), # nolint: condition_call_linter.
+    .TO = i32
+  )
+  expect_identical(tryCatch(postprocess(arg = 1L), error = identity)$variant, "FFI")
+
+  for (variant in list(NULL, NA_character_, 1L, c("Overflow", "NumericError"), "UnknownVariant")) {
+    malformed <- structure(
+      list(message = "[Overflow] : malformed", call = NULL, variant = variant),
+      class = c("opendp_error", "error", "condition")
+    )
+    postprocess <- new_function(function_ = \(.arg) stop(malformed), .TO = i32) # nolint: condition_call_linter.
+    caught <- tryCatch(postprocess(arg = 1L), error = identity)
+    expect_identical(caught$variant, "FFI")
+    expect_match(caught$raw_message, "malformed", fixed = TRUE)
+  }
+})
+
+test_that("extrinsic comparisons return equality and both orderings", {
+  enable_features("contrib", "honest-but-curious")
+  domain <- user_domain("ComparisonDomain", member = \(.x) TRUE)
+  metric <- user_distance("ComparisonDistance")
+  trans <- make_user_transformation(
+    input_domain = domain, input_metric = metric,
+    output_domain = domain, output_metric = metric,
+    function_ = identity, stability_map = identity
+  )
+  expect_true(trans(d_in = 1L, d_out = 1L))
+  expect_true(trans(d_in = 1L, d_out = 2L))
+  expect_false(trans(d_in = 2L, d_out = 1L))
+})
+
+test_that("extrinsic comparisons transport structured conditions, not headers", {
+  enable_features("contrib", "honest-but-curious")
+
+  registerS3method("Ops", "opendp_test_descriptor", function(e1, e2) {
+    stop(attr(e1, "failure")) # nolint: condition_call_linter.
+  })
+  withr::defer(rm("Ops.opendp_test_descriptor", envir = asNamespace("base")$.__S3MethodsTable__.))
+  failures <- lapply(opendp_callback_failures(), function(fail) tryCatch(fail(), error = identity))
+  failures$FFI <- simpleError("[Overflow] : comparison spoof")
+  for (variant in names(failures)) {
+    left <- structure(list(1L), failure = failures[[variant]], class = "opendp_test_descriptor")
+    right <- structure(list(2L), failure = failures[[variant]], class = "opendp_test_descriptor")
+    domain <- user_domain("ComparisonDomain", member = \(.x) TRUE)
+    metric <- user_distance("ComparisonDistance")
+    trans <- make_user_transformation(
+      input_domain = domain,
+      input_metric = metric,
+      output_domain = domain,
+      output_metric = metric,
+      function_ = identity,
+      stability_map = \(.d_in) left
+    )
+    caught <- tryCatch(trans(d_in = left, d_out = right), error = identity)
+    expect_s3_class(caught, "opendp_error")
+    expect_identical(caught$variant, variant)
+    expect_match(caught$raw_message, "overflows|NaN operand|non-nan|comparison spoof")
+  }
+})
+
 test_that("user-defined callbacks surface conversion failures cleanly", {
   enable_features("contrib", "honest-but-curious")
 

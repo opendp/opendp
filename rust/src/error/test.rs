@@ -1,6 +1,15 @@
 use super::*;
 
 #[test]
+fn test_error_variant_from_str() {
+    assert_eq!("FFI".parse(), Ok(ErrorVariant::FFI));
+    assert_eq!("Overflow".parse(), Ok(ErrorVariant::Overflow));
+
+    let error = "Unknown".parse::<ErrorVariant>().unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::NotImplemented);
+}
+
+#[test]
 fn test_error_from_conversion_error() {
     let e: Error = ConversionError::OutOfBounds.into();
     assert_eq!(e.variant, ErrorVariant::FailedCast);

@@ -330,6 +330,11 @@ def test_custom_domain(new_domain):
     assert not map_domain.member(misc_data)
 
 
+def test_extrinsic_callback_result_roundtrip():
+    qbl = dp.new_queryable(lambda query: query + 1, int, int)
+    assert qbl(2) == 3
+
+
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
     query = space >> dp.m.then_user_measurement(

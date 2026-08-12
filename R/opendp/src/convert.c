@@ -83,17 +83,35 @@ SEXP extract_error(FfiError *err)
     char *msg = (char *)R_alloc(1, msg_len * sizeof(char));
     snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
 
-    if (str_equal(err->backtrace, "backtrace disabled"))
-        error("%s", msg);
-    else
+    if (!str_equal(err->backtrace, "backtrace disabled"))
     {
         int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
         char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
         snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error("%s", msg_backtrace);
+        msg = msg_backtrace;
     }
 
-    return (R_NilValue);
+    // Preserve Rust's structured provenance separately from the display text.
+    SEXP condition = PROTECT(allocVector(VECSXP, 5));
+    SEXP names = PROTECT(allocVector(STRSXP, 5));
+    const char *fields[] = {"message", "call", "variant", "raw_message", "backtrace"};
+    for (int i = 0; i < 5; i++)
+        SET_STRING_ELT(names, i, mkChar(fields[i]));
+    setAttrib(condition, R_NamesSymbol, names);
+    SET_VECTOR_ELT(condition, 0, mkString(msg));
+    SET_VECTOR_ELT(condition, 1, R_NilValue);
+    SET_VECTOR_ELT(condition, 2, mkString(err->variant));
+    SET_VECTOR_ELT(condition, 3, mkString(err->message));
+    SET_VECTOR_ELT(condition, 4, mkString(err->backtrace));
+    SEXP classes = PROTECT(allocVector(STRSXP, 3));
+    SET_STRING_ELT(classes, 0, mkChar("opendp_error"));
+    SET_STRING_ELT(classes, 1, mkChar("error"));
+    SET_STRING_ELT(classes, 2, mkChar("condition"));
+    classgets(condition, classes);
+    SEXP call = PROTECT(lang2(install("stop"), condition));
+    Rf_eval(call, R_BaseEnv);
+    UNPROTECT(4);
+    return R_NilValue;
 }
 
 const char *sexp_to_charptr(SEXP type_name)
