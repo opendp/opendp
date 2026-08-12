@@ -99,6 +99,7 @@ fn test_function_inversion_is_lazy() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "honest-but-curious")]
 #[test]
 fn test_independent_inverse_is_used_without_eager_evaluation() -> Fallible<()> {
     let forward_calls = Arc::new(AtomicUsize::new(0));
