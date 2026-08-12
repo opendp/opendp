@@ -153,7 +153,10 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if isinstance(value, PrivacyGuarantee):
             return value.guarantee
         if isinstance(value, ctypes.POINTER(AnyObject)):
-            return ctypes.cast(value, AnyObjectPtr)
+            # Keep the existing pointer wrapper. ctypes.cast would manufacture
+            # a second AnyObjectPtr owner whose finalizer double-frees the
+            # Rust allocation after the FFI call.
+            return value
 
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]

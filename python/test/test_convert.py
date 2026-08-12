@@ -62,6 +62,14 @@ def test_data_object_string_pointer():
     assert obj.value == val_in.encode()
 
 
+def test_anyobject_pointer_conversion_preserves_owner():
+    """Borrowed pointers must not be recast into a second owning wrapper."""
+    owner = py_to_c(123, c_type=AnyObjectPtr, type_name="i32")
+    borrowed = ctypes.cast(owner, ctypes.POINTER(owner._type_))
+
+    assert py_to_c(borrowed, c_type=AnyObjectPtr) is borrowed
+
+
 def test_roundtrip_int():
     in_ = 23
     ptr = ctypes.POINTER(ctypes.c_int32)(ctypes.c_int32(in_))
