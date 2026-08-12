@@ -618,9 +618,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     if inner_type_names == ['f64', 'ExtrinsicObject']:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
-        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1])))
-
-        cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
+        cand_ptr = py_to_c(val[1], c_type=AnyObjectPtr, type_name="ExtrinsicObject")
         array = (ctypes.c_void_p * 2)(
             ctypes.cast(score_ptr, ctypes.c_void_p), 
             ctypes.cast(cand_ptr, ctypes.c_void_p), 
