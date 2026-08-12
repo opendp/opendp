@@ -278,8 +278,10 @@ fn test_exp_subnormal_boundary() -> Fallible<()> {
         let interval = SInterval::<backend::Dashu>::point(epsilon)?.exp()?;
         // The high-precision calculation itself is rounded outward, so the
         // backend may produce a tighter bound by one native ulp.
-        assert!(interval.lower_f64()? <= expected.1);
-        assert!(interval.upper_f64()? >= expected.0);
+        let lower = interval.lower_f64()?;
+        let upper = interval.upper_f64()?;
+        assert!(lower == expected.0 || lower == expected.0.next_up());
+        assert!(upper == expected.1 || upper == expected.1.next_down());
     }
 
     for x in [0.0, 1.0, 2.0] {
@@ -287,8 +289,10 @@ fn test_exp_subnormal_boundary() -> Fallible<()> {
         let interval = SInterval::<backend::Dashu>::point(x)?.exp()?;
         // The high-precision calculation itself is rounded outward, so the
         // backend may produce a tighter bound by one native ulp.
-        assert!(interval.lower_f64()? <= expected.1);
-        assert!(interval.upper_f64()? >= expected.0);
+        let lower = interval.lower_f64()?;
+        let upper = interval.upper_f64()?;
+        assert!(lower == expected.0 || lower == expected.0.next_up());
+        assert!(upper == expected.1 || upper == expected.1.next_down());
     }
     Ok(())
 }
