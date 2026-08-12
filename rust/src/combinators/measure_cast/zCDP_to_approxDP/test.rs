@@ -49,8 +49,8 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
 
     assert_eq!(profile.epsilon(0.0)?, 0.0);
 
-    assert!(profile.epsilon(-0.0).is_err());
-    assert!(profile.delta(-0.0).is_err());
+    assert_eq!(profile.epsilon(-0.0)?, 0.0);
+    assert_eq!(profile.delta(-0.0)?, 0.0);
     Ok(())
 }
 

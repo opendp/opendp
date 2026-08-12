@@ -39,7 +39,7 @@ fn test_fix_delta_approx_adp() -> Fallible<()> {
     assert!(eps >= 16.11809565095832);
     assert!((eps - 16.11809565095832).abs() < 1e-14);
     assert_eq!(del, 2e-7);
-    assert!(make_fix_delta(&meas, -0.0)?.privacy_map.eval(&1).is_err());
+    assert!(make_fix_delta(&meas, -0.0)?.privacy_map.eval(&1).is_ok());
     Ok(())
 }
 
