@@ -200,15 +200,15 @@ def test_canonical_context_no_transformation():
         domain=dp.atom_domain(nan=False, T=float),
     )
 
+    measurement = context.query().canonical_noise().resolve()
+    epsilon, delta = measurement.map(1.0)
+    assert epsilon <= 0.5
+    assert delta <= 5e-8
+
     assert isinstance(context.query().canonical_noise().release(), float)
     assert isinstance(
         context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
     )
-
-    measurement = context.query().canonical_noise().resolve()
-    privacy = measurement.map(1.0)
-    assert privacy.epsilon(5e-8) <= 0.5
-    assert privacy.delta(0.5) <= 5e-8
 
 
 def test_canonical_context_with_transformation():

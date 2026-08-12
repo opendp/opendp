@@ -24,6 +24,7 @@ from opendp.combinators import (
     make_pureDP_to_zCDP,
     make_adaptive_composition,
     make_zCDP_to_profileDP,
+    make_multiDP_to_approxDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.extras._utilities import supports_partial, to_then
@@ -1138,10 +1139,10 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     if from_to == ("PureDP", "Approximate<PureDP>"):
         return make_approximate(chain)
 
-    # Canonical noise keeps its independent MultiDP output measure; its
-    # typed guarantee is queryable through ApproxDP without a generic cast.
+    # Canonical noise returns MultiDP, whose aggregate guarantee can be
+    # projected to the context's fixed ApproxDP budget at the requested delta.
     if from_to == ("MultiDP", "Approximate<PureDP>"):
-        return chain
+        return make_multiDP_to_approxDP(chain, d_to[1])
 
     if from_to == ("zCDP", "Approximate<zCDP>"):
         return make_approximate(chain)
