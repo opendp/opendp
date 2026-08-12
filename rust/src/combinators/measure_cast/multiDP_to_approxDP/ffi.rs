@@ -34,6 +34,11 @@ fn make_multiDP_to_approxDP(measurement: &AnyMeasurement, delta: f64) -> Fallibl
 }
 
 #[bootstrap(name = "make_multiDP_to_approxDP", features("contrib"))]
+/// Cast a `MultiDP` measurement to an approximate-DP measurement at a fixed delta.
+///
+/// # Arguments
+/// * `measurement` - Measurement whose privacy map produces a `PrivacyGuarantee`.
+/// * `delta` - Delta at which to evaluate the privacy guarantee.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_multiDP_to_approxDP(
     measurement: *const AnyMeasurement,

@@ -760,7 +760,13 @@ class Query(object):
             # typed guarantee and attach the certified symmetric tradeoff in
             # Rust; do not expose a callback-based symmetry assertion here.
             if isinstance(d_out, tuple):
-                profile = PrivacyProfile(approxDP=[d_out])
+                epsilon, delta = d_out
+                # Canonical noise compiles a finite f-DP approximation. Reserve
+                # a small amount of delta for its conservative floating-point
+                # enclosure, while the final measure is still cast and
+                # accounted against the original context budget.
+                calibration_delta = delta - min(delta / 2, 1e-12)
+                profile = PrivacyProfile(approxDP=[(epsilon, calibration_delta)])
                 d_out = PrivacyGuarantee(profile=profile)
             m_noise = then_canonical_noise(d_in, d_out)
             if binomial_size is not None:
