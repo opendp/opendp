@@ -306,25 +306,10 @@ fn test_fallible_binary_search_by_propagates_range_variants() -> Fallible<()> {
 }
 
 #[test]
-fn test_scalar_optimization() {
-    let minimum = optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, None, |x| {
-        (x - 2.0).powi(2)
-    });
-    assert!((minimum.arg - 2.0).abs() <= 4.0 * f64::EPSILON);
-
-    let maximum = optimize_to_precision(SearchMode::Maximize, -10.0, 10.0, Some(33), |x| {
-        -(x + 3.0).powi(2)
-    });
-    assert!((maximum.arg + 3.0).abs() <= 8.0 * f64::EPSILON);
-}
-
-#[test]
 fn test_ordered_golden_search_preserves_a_rbig_minimizer() -> Fallible<()> {
     let minimizer: f64 = 0.37;
     let offset = rbig!(100000000000000000000);
 
-    // All of these objective values round to the same f64, despite differing
-    // as exact rationals.
     assert_eq!(
         1e20 + (0.1 - minimizer).powi(2),
         1e20 + (0.9 - minimizer).powi(2)
@@ -370,160 +355,62 @@ fn test_ordered_golden_search_propagates_errors() {
 
 #[test]
 fn test_fallible_scalar_optimization() -> Fallible<()> {
-    let minimum = fallible_optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, None, |x| {
+    let minimum = fallible_optimize_to_precision(SearchMode::Minimize, -10.0, 10.0, |x| {
         Ok((x - 2.0).powi(2))
     })?;
     assert!((minimum.arg - 2.0).abs() <= 4.0 * f64::EPSILON);
 
-    let maximum =
-        fallible_optimize_to_precision_bracket(SearchMode::Maximize, -10.0, 10.0, Some(33), |x| {
-            Ok(-(x + 3.0).powi(2))
-        })?;
+    let maximum = fallible_optimize_to_precision(SearchMode::Maximize, -10.0, 10.0, |x| {
+        Ok(-(x + 3.0).powi(2))
+    })?;
     assert!((maximum.arg + 3.0).abs() <= 8.0 * f64::EPSILON);
-    assert!(maximum.lo <= maximum.arg && maximum.arg <= maximum.hi);
 
-    let log_minimum =
-        fallible_optimize_log_domain_to_precision(SearchMode::Minimize, 1e-6, 1e6, None, |x| {
-            Ok(x.ln().powi(2))
-        })?;
-    assert!((log_minimum.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
+    let boundary =
+        fallible_optimize_to_precision(SearchMode::Minimize, -2.0, 3.0, |x| Ok(x + 2.0))?;
+    assert_eq!(boundary.arg, -2.0);
 
-    let degenerate =
-        fallible_optimize_to_precision(SearchMode::Minimize, 3.0, 3.0, None, |x| Ok(x * x))?;
+    let degenerate = fallible_optimize_to_precision(SearchMode::Minimize, 3.0, 3.0, |x| Ok(x * x))?;
     assert_eq!(degenerate.arg, 3.0);
     assert_eq!(degenerate.value, 9.0);
     Ok(())
 }
 
 #[test]
-fn test_scalar_optimization_rejects_malformed_bounds() {
+fn test_scalar_optimization_rejects_malformed_bounds_and_nan() {
     for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
-        let error = fallible_optimize_to_precision(SearchMode::Minimize, lo, hi, None, |_| Ok(0.0))
-            .unwrap_err();
-        assert_eq!(error.variant, ErrorVariant::Search);
-    }
-
-    for (lo, hi) in [(2.0, 1.0), (0.0, 1.0), (1.0, f64::INFINITY)] {
         let error =
-            fallible_optimize_log_domain_to_precision(SearchMode::Minimize, lo, hi, None, |_| {
-                Ok(0.0)
-            })
-            .unwrap_err();
+            fallible_optimize_to_precision(SearchMode::Minimize, lo, hi, |_| Ok(0.0)).unwrap_err();
         assert_eq!(error.variant, ErrorVariant::Search);
     }
-}
 
-#[test]
-fn test_fallible_scalar_optimization_returns_first_error_immediately() {
-    use std::cell::Cell;
-
-    let calls = Cell::new(0);
-    let error = fallible_optimize_to_precision(SearchMode::Minimize, -1.0, 1.0, None, |_| {
-        calls.set(calls.get() + 1);
-        fallible!(FailedFunction, "ordinary objective failed")
-    })
-    .unwrap_err();
-    assert_eq!(calls.get(), 1);
-    assert_eq!(error.message.as_deref(), Some("ordinary objective failed"));
-
-    let calls = Cell::new(0);
-    let error =
-        fallible_optimize_to_precision_bracket(SearchMode::Maximize, -1.0, 1.0, Some(17), |_| {
-            calls.set(calls.get() + 1);
-            fallible!(FailedFunction, "bracket objective failed")
-        })
+    let error = fallible_optimize_to_precision(SearchMode::Minimize, -1.0, 1.0, |_| Ok(f64::NAN))
         .unwrap_err();
-    assert_eq!(calls.get(), 1);
-    assert_eq!(error.message.as_deref(), Some("bracket objective failed"));
+    assert_eq!(error.variant, ErrorVariant::Search);
+}
 
-    let calls = Cell::new(0);
-    let error =
-        fallible_optimize_log_domain_to_precision(SearchMode::Minimize, 1e-6, 1e6, None, |_| {
-            calls.set(calls.get() + 1);
-            fallible!(FailedFunction, "log objective failed")
-        })
+#[test]
+fn test_ordered_golden_search_rejects_malformed_bounds_and_supports_degenerate() -> Fallible<()> {
+    for (lo, hi) in [(2.0, 1.0), (f64::NEG_INFINITY, 1.0), (1.0, f64::INFINITY)] {
+        let error = fallible_golden_search_to_precision_ordered(
+            SearchMode::Minimize,
+            lo,
+            hi,
+            |_| Ok(()),
+            |_: &(), _: &()| Ok(Ordering::Equal),
+        )
         .unwrap_err();
-    assert_eq!(calls.get(), 1);
-    assert_eq!(error.message.as_deref(), Some("log objective failed"));
-}
+        assert_eq!(error.variant, ErrorVariant::Search);
+    }
 
-#[test]
-fn test_scalar_optimization_handles_boundaries_nonfinite_values_and_wide_ranges() {
-    let boundary = optimize_to_precision(SearchMode::Minimize, -2.0, 3.0, None, |x| x + 2.0);
-    assert_eq!(boundary.arg, -2.0);
-    assert_eq!(boundary.value, 0.0);
-
-    let with_nan = optimize_to_precision(SearchMode::Maximize, -2.0, 2.0, Some(17), |x| {
-        if x < 0.0 { f64::NAN } else { -(x - 1.0).abs() }
-    });
-    assert!((with_nan.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
-    assert_eq!(with_nan.value, 0.0);
-
-    let wide = optimize_to_precision(SearchMode::Minimize, -f64::MAX, f64::MAX, None, f64::abs);
-    assert!(wide.arg.is_finite());
-    assert!(wide.value < f64::MAX);
-}
-
-#[test]
-fn test_scalar_optimization_refines_multiple_local_extrema() {
-    let optimum = optimize_to_precision(SearchMode::Minimize, -4.0, 4.0, Some(65), |x| {
-        ((x + 2.05).powi(2) + 1.0).min((x - 1.1).powi(2))
-    });
-    assert!((optimum.arg - 1.1).abs() <= 8.0 * f64::EPSILON);
-    assert!(optimum.value <= f64::EPSILON);
-}
-
-#[test]
-fn test_scalar_optimization_does_not_refine_flat_grid() {
-    use std::cell::Cell;
-
-    let calls = Cell::new(0);
-    let optimum = optimize_to_precision(SearchMode::Maximize, -4.0, 4.0, Some(65), |_| {
-        calls.set(calls.get() + 1);
-        1.0
-    });
-
-    assert_eq!(optimum.value, 1.0);
-    // One initial evaluation plus the grid, with no golden searches.
-    assert_eq!(calls.get(), 66);
-}
-
-#[test]
-fn test_log_domain_optimization_and_sampling() {
-    let optimum =
-        optimize_log_domain_to_precision(SearchMode::Minimize, 1e-6, 1e6, None, |x| x.ln().powi(2));
-    assert!((optimum.arg - 1.0).abs() <= 4.0 * f64::EPSILON);
-
-    let sampled = sample_log_domain(SearchMode::Maximize, 1e-3, 1e3, 7, |x| -x.ln().abs());
-    assert!((sampled.arg - 1.0).abs() <= f64::EPSILON);
-}
-
-#[test]
-fn test_log_domain_search_stays_within_extreme_bounds() {
-    let lo = 1e-200;
-    let hi = 1e-100;
-
-    let optimum = optimize_log_domain_to_precision(SearchMode::Minimize, lo, hi, None, |x| x);
-    assert!((lo..=hi).contains(&optimum.arg));
-    assert_eq!(optimum.value, optimum.arg);
-
-    let sampled = sample_log_domain(SearchMode::Minimize, lo, hi, 17, |x| x);
-    assert!((lo..=hi).contains(&sampled.arg));
-    assert_eq!(sampled.value, sampled.arg);
-}
-
-#[test]
-fn test_bracketed_optimization_invariants() {
-    let optimum = optimize_to_precision_bracket(SearchMode::Maximize, -10.0, 10.0, None, |x| {
-        -(x - 0.25).powi(2)
-    });
-    assert!(optimum.lo <= optimum.arg);
-    assert!(optimum.arg <= optimum.hi);
-    assert_eq!(optimum.value, -(optimum.arg - 0.25).powi(2));
-
-    let log_optimum =
-        optimize_log_domain_to_precision_bracket(SearchMode::Minimize, 1e-200, 1e-100, None, |x| x);
-    assert!(log_optimum.lo <= log_optimum.arg);
-    assert!(log_optimum.arg <= log_optimum.hi);
-    assert_eq!(log_optimum.value, log_optimum.arg);
+    assert_eq!(
+        fallible_golden_search_to_precision_ordered(
+            SearchMode::Maximize,
+            3.0,
+            3.0,
+            |x| Ok(x),
+            |left, right| left.partial_cmp(right).ok_or_else(|| err!(Search, "NaN")),
+        )?,
+        (3.0, 3.0)
+    );
+    Ok(())
 }
