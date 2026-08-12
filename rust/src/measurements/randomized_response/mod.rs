@@ -47,7 +47,7 @@ pub fn make_randomized_response_bool(
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
-        return fallible!(NumericRangeBelow, "probability must be within [0.5, 1]");
+        return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     }
 
     let privacy_constant = if prob == 1.0 {
@@ -110,7 +110,7 @@ pub fn make_randomized_response<T: Hashable>(
 
     if !(num_categories.recip()..=1f64).contains(&prob) {
         return fallible!(
-            NumericRangeBelow,
+            MakeMeasurement,
             "probability must be within [1/num_categories, 1]"
         );
     }

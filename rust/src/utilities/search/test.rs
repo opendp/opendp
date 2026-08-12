@@ -94,22 +94,6 @@ fn test_fallible_exponential_bounds_search_propagates_callback_errors() {
 }
 
 #[test]
-fn test_fallible_binary_search_recovers_from_numeric_range_boundary() -> Fallible<()> {
-    let discovered = fallible_binary_search::<i32>(
-        |x| {
-            if *x <= 0 {
-                return fallible!(NumericRangeBelow, "x must be positive");
-            }
-            Ok(*x >= 5)
-        },
-        (),
-    )?;
-
-    assert_eq!(discovered, 5);
-    Ok(())
-}
-
-#[test]
 fn test_binary_search_handles_full_signed_ranges() -> Fallible<()> {
     assert_eq!(binary_search(|x: &i32| *x >= 0, (i32::MIN, i32::MAX))?, 0);
     assert_eq!(binary_search(|x: &i8| *x <= 0, (i8::MIN, i8::MAX))?, 0);
@@ -178,9 +162,6 @@ fn test_fallible_binary_search_by_non_exact_boundary() -> Fallible<()> {
 
 #[test]
 fn test_fallible_binary_search_by_explicit_and_inferred_bounds() -> Fallible<()> {
-    assert_eq!(<f32 as Bands>::bands(0.0, 1).last(), Some(&f32::MAX));
-    assert_eq!(<f64 as Bands>::bands(0.0, -1).last(), Some(&-f64::MAX));
-
     assert_eq!(
         fallible_binary_search_by(|x: &i32| Ok(x.cmp(&5)), Above(0))?,
         5
@@ -188,18 +169,6 @@ fn test_fallible_binary_search_by_explicit_and_inferred_bounds() -> Fallible<()>
     assert_eq!(
         fallible_binary_search_by(|x: &i32| Ok(x.cmp(&-5)), Below(0))?,
         -5
-    );
-
-    let positive_target = f32::MAX * 0.999;
-    assert_eq!(
-        fallible_binary_search_by(|x: &f32| Ok(x.partial_cmp(&positive_target).unwrap()), (),)?,
-        positive_target
-    );
-
-    let negative_target = -f32::MAX * 0.999;
-    assert_eq!(
-        fallible_binary_search_by(|x: &f32| Ok(x.partial_cmp(&negative_target).unwrap()), (),)?,
-        negative_target
     );
     Ok(())
 }

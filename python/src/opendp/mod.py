@@ -1459,10 +1459,7 @@ def _call_rust_search(
         try:
             result = predicate(arg)
         except Exception as err:
-            if not (
-                isinstance(err, OpenDPException)
-                and err.variant in {"NumericRangeBelow", "NumericRangeAbove"}
-            ) and first_exception is None:
+            if first_exception is None:
                 first_exception = err
             raise
         else:

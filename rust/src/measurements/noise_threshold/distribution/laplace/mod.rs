@@ -147,7 +147,7 @@ impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximat
 
                 if li > threshold {
                     return fallible!(
-                        NumericRangeBelow,
+                        FailedMap,
                         "threshold ({threshold}) must not be smaller than l-infinity sensitivity {li}"
                     );
                 }

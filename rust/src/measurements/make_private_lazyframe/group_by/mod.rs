@@ -287,7 +287,7 @@ where
             ()
         } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
             if li >= *threshold_value {
-                return fallible!(NumericRangeBelow, "threshold must be greater than {:?}", li);
+                return fallible!(FailedMap, "threshold must be greater than {:?}", li);
             }
 
             let d_instability = threshold_value.neg_inf_sub(&li)?;

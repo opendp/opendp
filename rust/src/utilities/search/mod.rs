@@ -8,7 +8,7 @@ use std::{
 use num::{CheckedAdd, CheckedSub, One, Zero};
 
 use crate::{
-    error::{Error, ErrorVariant, Fallible},
+    error::{ErrorVariant, Fallible},
     traits::{ExactIntCast, FiniteBounds},
 };
 
@@ -213,13 +213,6 @@ where
     )
 }
 
-fn is_numeric_range_error(error: &Error) -> bool {
-    matches!(
-        error.variant,
-        ErrorVariant::NumericRangeBelow | ErrorVariant::NumericRangeAbove
-    )
-}
-
 fn ordered_result(result: Fallible<Ordering>) -> Fallible<Ordering> {
     match result {
         Ok(ordering) => Ok(ordering),
@@ -340,20 +333,7 @@ where
     T: BinarySearchable,
 {
     let bounds = resolve_bounds(&predicate, bounds)?;
-    let comparison = |value: &T| {
-        predicate(value).map(|passes| {
-            if passes {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        })
-    };
-    signed_fallible_binary_search_by_with_bounds(
-        &comparison,
-        bounds,
-        "the decision boundary of the predicate is outside the bounds",
-    )
+    signed_fallible_binary_search_with_bounds(predicate, bounds)
 }
 
 fn resolve_bounds<T>(
@@ -367,27 +347,67 @@ where
         (Some(lower), Some(upper)) => Ok((lower, upper)),
         (Some(lower), None) => {
             let at_lower = predicate(&lower)?;
-            fallible_signed_band_search(predicate, lower.clone(), at_lower, 1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is below the lower bound or the predicate does not change above it"
-                    )
-                })
+            fallible_signed_band_search(predicate, lower.clone(), at_lower, 1)?.ok_or_else(|| {
+                err!(
+                    Search,
+                    "the decision boundary is below the lower bound or the predicate does not change above it"
+                )
+            })
         }
         (None, Some(upper)) => {
             let at_upper = predicate(&upper)?;
-            fallible_signed_band_search(predicate, upper.clone(), at_upper, -1)?
-                .ok_or_else(|| {
-                    err!(
-                        Search,
-                        "the decision boundary is above the upper bound or the predicate does not change below it"
-                    )
-                })
+            fallible_signed_band_search(predicate, upper.clone(), at_upper, -1)?.ok_or_else(|| {
+                err!(
+                    Search,
+                    "the decision boundary is above the upper bound or the predicate does not change below it"
+                )
+            })
         }
         (None, None) => fallible_exponential_bounds_search(predicate)?
             .ok_or_else(|| err!(Search, "unable to infer bounds")),
     }
+}
+
+fn signed_fallible_binary_search_with_bounds<T>(
+    predicate: impl Fn(&T) -> Fallible<bool>,
+    bounds: (T, T),
+) -> Fallible<(T, i8)>
+where
+    T: BinarySearchable,
+{
+    let (mut lower, mut upper) = bounds;
+    if lower > upper {
+        swap(&mut lower, &mut upper);
+    }
+
+    let maximize = predicate(&lower)?;
+    let minimize = predicate(&upper)?;
+    if maximize == minimize {
+        return fallible!(
+            Search,
+            "the decision boundary of the predicate is outside the bounds"
+        );
+    }
+
+    let mut mid = lower.clone();
+    loop {
+        let new_mid = T::midpoint(&lower, &upper);
+        if new_mid == mid || new_mid == lower || new_mid == upper {
+            break;
+        }
+
+        mid = new_mid;
+        if predicate(&mid)? == minimize {
+            upper = mid.clone();
+        } else {
+            lower = mid.clone();
+        }
+    }
+
+    Ok((
+        if minimize { upper } else { lower },
+        if minimize { 1 } else { -1 },
+    ))
 }
 
 pub trait Bands: Sized {
@@ -398,28 +418,15 @@ macro_rules! impl_bands_float {
     ($($ty:ty),+ $(,)?) => {
         $(impl Bands for $ty {
             fn bands(center: Self, sign: i8) -> Vec<Self> {
-                let sign_value = sign;
-                let sign: Self = if sign_value > 0 { 1.0 } else { -1.0 };
+                let sign: Self = if sign > 0 { 1.0 } else { -1.0 };
                 let half: Self = 0.5;
                 let two: Self = 2.0;
 
-                let mut bands = vec![center];
-                let first = center + sign * half;
-                if first.is_finite() {
-                    bands.push(first);
-                }
-                for k in 0..std::mem::size_of::<Self>() {
-                    let candidate = center + sign * two.powi((k as i32).pow(2));
-                    if candidate.is_finite() {
-                        bands.push(candidate);
-                    } else {
-                        break;
-                    }
-                }
-                let extreme = if sign_value > 0 { <$ty>::MAX } else { <$ty>::MIN };
-                if bands.last() != Some(&extreme) {
-                    bands.push(extreme);
-                }
+                let mut bands = vec![center, center + sign * half];
+                bands.extend(
+                    (0..std::mem::size_of::<Self>())
+                        .map(|k| center + sign * two.powi((k as i32).pow(2))),
+                );
                 bands
             }
         })+
@@ -477,9 +484,6 @@ macro_rules! impl_bands_int {
 impl_bands_int!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 /// Determine bounds for a binary search via an exponential search.
-///
-/// Integer searches use exponentially increasing bands. Floating-point searches also include the
-/// finite type extrema, so they do not stop at the old `2^(k^2)` sequence.
 pub fn exponential_bounds_search<T>(predicate: &impl Fn(&T) -> bool) -> Option<(T, T)>
 where
     T: BinarySearchable,
@@ -493,10 +497,8 @@ where
 
 /// Determine bounds for a binary search via an exponential search.
 ///
-/// Integer searches use exponentially increasing bands. Floating-point searches also include the
-/// finite type extrema, so they do not stop at the old `2^(k^2)` sequence. If `predicate` fails at
-/// the origin, recover by first finding the edge of the exceptional region and then searching away
-/// from it.
+/// If `predicate` fails at the origin, recover by first finding the edge of the exceptional region
+/// and then searching away from it. Errors from the predicate are otherwise propagated unchanged.
 pub fn fallible_exponential_bounds_search<T>(
     predicate: &impl Fn(&T) -> Fallible<bool>,
 ) -> Fallible<Option<(T, T)>>
@@ -505,44 +507,17 @@ where
 {
     let center = T::zero();
     let center_result = predicate(&center);
-    let center_is_ok = match center_result.as_ref() {
-        Ok(_) => true,
-        Err(error) if is_numeric_range_error(error) => false,
-        Err(_) => return center_result.map(|_| None),
-    };
 
-    if center_is_ok {
-        let at_center = center_result.as_ref().unwrap();
+    if let Ok(at_center) = center_result.as_ref() {
         match fallible_signed_band_search(predicate, center.clone(), *at_center, 1) {
             Ok(Some(bounds)) => return Ok(Some(bounds)),
-            Ok(None) => {
-                match fallible_signed_band_search(predicate, center.clone(), *at_center, -1) {
-                    Ok(Some(bounds)) => return Ok(Some(bounds)),
-                    Ok(None) => return Ok(None),
-                    Err(error) if !is_numeric_range_error(&error) => return Err(error),
-                    Err(_) => {}
-                }
-            }
-            Err(error) if !is_numeric_range_error(&error) => return Err(error),
-            Err(_) => {}
+            Ok(None) => return fallible_signed_band_search(predicate, center, *at_center, -1),
+            Err(error) => return Err(error),
         }
     }
 
-    let exception_predicate = |value: &T| {
-        predicate(value).map(|_| true).or_else(|error| {
-            if is_numeric_range_error(&error) {
-                Ok(false)
-            } else {
-                Err(error)
-            }
-        })
-    };
-
-    let exception_bounds = match fallible_exponential_bounds_search_by(
-        &exception_predicate,
-        center.clone(),
-        center_is_ok,
-    )? {
+    let exception_predicate = |value: &T| predicate(value).is_ok();
+    let exception_bounds = match exponential_bounds_search(&exception_predicate) {
         Some(bounds) => bounds,
         None => match center_result {
             Ok(_) => return fallible!(Search, "predicate always fails"),
@@ -550,19 +525,9 @@ where
         },
     };
 
-    let comparison = |value: &T| {
-        exception_predicate(value).map(|is_ok| {
-            if is_ok {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        })
-    };
-    let (center, sign) = signed_fallible_binary_search_by_with_bounds(
-        &comparison,
+    let (center, sign) = signed_fallible_binary_search_with_bounds(
+        |value| Ok(exception_predicate(value)),
         exception_bounds,
-        "the decision boundary of the predicate is outside the bounds",
     )?;
     let at_center = predicate(&center)?;
     fallible_signed_band_search(predicate, center, at_center, sign)

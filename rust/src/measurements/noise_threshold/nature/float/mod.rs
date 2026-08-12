@@ -149,7 +149,7 @@ where
             // but it gives a more understandable error message
             if r_li > r_threshold {
                 return fallible!(
-                    NumericRangeBelow,
+                    FailedMap,
                     "threshold ({threshold}) must not be smaller than l-infinity sensitivity ({li})"
                 );
             }
