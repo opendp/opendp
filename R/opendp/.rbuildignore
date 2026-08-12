@@ -19,7 +19,7 @@
 ^\.Rprofile$
 ^\.lintr$
 ^src/.*\.(o|a|so|dylib|dll)$
-.*/out/.*$
+^out(/.*)?$
 .*\.DS_Store$
 
 ^check$
