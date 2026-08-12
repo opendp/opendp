@@ -1,6 +1,8 @@
 Package: opendp
 Version: 0.15.1
 Title: R Bindings for the OpenDP Library
+Author: Stefano Iacus [cre], The OpenDP Project [aut], The authors of the dependency Rust crates [ctb]
+Maintainer: Stefano Iacus <siacus@iq.harvard.edu>
 Authors@R: c(
     person("Stefano", "Iacus",
             role = "cre",
