@@ -1223,7 +1223,13 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         if _ptr is not None:
             self.guarantee = _ptr
             return
-        if profile is None and tradeoff is None and symmetric_tradeoff is None and renyiDP is None:
+        if (
+            profile is None
+            and tradeoff is None
+            and symmetric_tradeoff is None
+            and renyiDP is None
+            and zCDP is None
+        ):
             raise TypeError("expected at least one privacy representation")
         if renyiDP is None and renyiDP_delta != 0.0:
             raise TypeError("renyiDP_delta requires renyiDP")
