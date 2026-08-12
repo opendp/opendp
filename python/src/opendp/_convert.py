@@ -665,6 +665,11 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         candidate_obj.__class__ = ctypes.POINTER(AnyObject)
         return score.contents.value, candidate
 
+    if inner_type_names == ['f64', 'ExtrinsicObject']:
+        score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
+        candidate = ctypes.cast(ptr_data[1], ctypes.POINTER(ExtrinsicObject))
+        return score.contents.value, c_to_py(candidate)
+
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
                  for void_p, name in zip(ptr_data, inner_type_names))
