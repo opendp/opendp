@@ -68,6 +68,8 @@ lib, lib_path = _load_library()
 
 
 def _total_cmp(left, right):
+    from opendp.mod import OpenDPException
+
     try:
         # compare equality first in case order not supported
         if left == right:
@@ -89,16 +91,25 @@ def _total_cmp(left, right):
         c_out.__class__ = ctypes.POINTER(AnyObject)
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
+    except OpenDPException as err:
+        import traceback
+
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            err.variant.encode(),
+            str(err).encode(),
+            traceback.format_exc().encode(),
+        )
     except Exception:
         import traceback
 
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p(
-                "Continued stack trace from Exception in user-defined function".encode()
-            ),
-            ctypes.c_char_p(traceback.format_exc().encode()),
+            b"FFI",
+            b"Exception in user-defined function",
+            traceback.format_exc().encode(),
         )
 
 

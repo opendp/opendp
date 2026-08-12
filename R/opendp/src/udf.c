@@ -4,6 +4,7 @@
 #include <R_ext/Error.h>
 
 #include <stdbool.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,23 +66,75 @@ static FfiResult_____AnyObject *wrap_success(AnyObject *obj)
     return result;
 }
 
-static FfiResult_____AnyObject *wrap_failure_details(const char *message, const char *backtrace)
+static const char *strip_r_error_prefix(const char *message)
 {
-    FfiResult_____AnyObject *result = (FfiResult_____AnyObject *)malloc(sizeof(FfiResult_____AnyObject));
-    FfiError *err = (FfiError *)malloc(sizeof(FfiError));
-    if (!result || !err)
-        error("failed to allocate callback error");
-    err->variant = heap_strdup("FailedFunction");
-    err->message = heap_strdup(message);
-    err->backtrace = heap_strdup(backtrace);
-    result->tag = Err_____AnyObject;
-    result->err = err;
+    const char *candidate = message;
+    while (isspace((unsigned char)*candidate))
+        candidate++;
+
+    if (strncmp(candidate, "Error in", 8) == 0 || strncmp(candidate, "Error:", 6) == 0)
+    {
+        candidate = strchr(candidate, ':');
+        if (!candidate)
+            return "";
+        candidate++;
+    }
+    return candidate;
+}
+
+static char *error_variant_from_message(const char *message)
+{
+    const char *candidate = strip_r_error_prefix(message);
+    while (isspace((unsigned char)*candidate))
+        candidate++;
+
+    // Callback errors use the explicit `[ErrorVariant] : message` encoding.
+    // Do not infer a variant from arbitrary callback text such as
+    // `NumericRangeAbove happened`.
+    if (*candidate != '[')
+        return heap_strdup("FFI");
+    candidate++;
+
+    const char *end = strchr(candidate, ']');
+    if (!end || end == candidate)
+        return heap_strdup("FFI");
+
+    const char *separator = end + 1;
+    while (isspace((unsigned char)*separator))
+        separator++;
+    if (*separator != ':')
+        return heap_strdup("FFI");
+
+    size_t length = (size_t)(end - candidate);
+    char *variant = (char *)malloc(length + 1);
+    if (!variant)
+        error("failed to allocate error variant");
+    memcpy(variant, candidate, length);
+    variant[length] = '\0';
+    return variant;
+}
+
+static FfiResult_____AnyObject *wrap_failure_details(
+    const char *variant,
+    const char *message,
+    const char *backtrace
+)
+{
+    // Rust owns validation and allocation of callback errors.
+    return (FfiResult_____AnyObject *)ffiresult_err(variant, message, backtrace);
+}
+
+static FfiResult_____AnyObject *wrap_failure_from_message(const char *message)
+{
+    char *variant = error_variant_from_message(message);
+    FfiResult_____AnyObject *result = wrap_failure_details(variant, message, "backtrace disabled");
+    free(variant);
     return result;
 }
 
 static FfiResult_____AnyObject *wrap_failure(const char *message)
 {
-    return wrap_failure_details(message, "backtrace disabled");
+    return wrap_failure_details("FFI", message, "backtrace disabled");
 }
 
 static int count_formals(SEXP function)
@@ -243,10 +296,7 @@ static FfiResult_____AnyObject *total_cmp_callback(const void *left_ptr, const v
     if (!R_ToplevelExec(compare_exec, &ctx))
     {
         char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined comparison",
-            message
-        );
+        FfiResult_____AnyObject *result = wrap_failure_from_message(message);
         free(message);
         return result;
     }
@@ -277,7 +327,7 @@ static void callback_exec(void *data)
     if (error_occurred)
     {
         char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined function", message);
+        invocation->result = wrap_failure_from_message(message);
         free(message);
         UNPROTECT(3);
         return;
@@ -304,7 +354,7 @@ static void transition_exec(void *data)
         if (error_occurred)
         {
             char *message = get_last_error_message();
-            invocation->result = wrap_failure_details("Exception in user-defined transition", message);
+            invocation->result = wrap_failure_from_message(message);
             free(message);
             UNPROTECT(4);
             return;
@@ -322,7 +372,7 @@ static void transition_exec(void *data)
     if (error_occurred)
     {
         char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined transition", message);
+        invocation->result = wrap_failure_from_message(message);
         free(message);
         UNPROTECT(3);
         return;
@@ -350,10 +400,7 @@ static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void
     if (!R_ToplevelExec(callback_exec, &invocation))
     {
         char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined function",
-            message
-        );
+        FfiResult_____AnyObject *result = wrap_failure_from_message(message);
         free(message);
         return result;
     }
@@ -378,10 +425,7 @@ static FfiResult_____AnyObject *transition_stub(
     if (!R_ToplevelExec(transition_exec, &invocation))
     {
         char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined transition",
-            message
-        );
+        FfiResult_____AnyObject *result = wrap_failure_from_message(message);
         free(message);
         return result;
     }
