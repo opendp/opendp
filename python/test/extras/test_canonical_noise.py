@@ -206,9 +206,9 @@ def test_canonical_context_no_transformation():
     assert delta <= 5e-8
 
     assert isinstance(context.query().canonical_noise().release(), float)
-    assert isinstance(
-        context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
-    )
+    estimate = context.query().canonical_noise(binomial_size=1000).release()
+    assert isinstance(estimate, BinomialCND)
+    assert estimate.d_out == (0.5, 5e-8)
 
 
 def test_canonical_context_with_transformation():

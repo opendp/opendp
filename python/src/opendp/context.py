@@ -759,6 +759,7 @@ class Query(object):
             # Context budgets are ordinary ApproxDP points. Convert them to a
             # typed guarantee and attach the certified symmetric tradeoff in
             # Rust; do not expose a callback-based symmetry assertion here.
+            inference_d_out = d_out
             if isinstance(d_out, tuple):
                 epsilon, delta = d_out
                 # Canonical noise compiles a finite f-DP approximation. Reserve
@@ -771,7 +772,7 @@ class Query(object):
             m_noise = then_canonical_noise(d_in, d_out)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
-                    lambda x: BinomialCND(x, d_in, d_out, binomial_size),
+                    lambda x: BinomialCND(x, d_in, inference_d_out, binomial_size),
                     TO="ExtrinsicObject",
                 )
             return m_noise
