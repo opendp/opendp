@@ -764,7 +764,7 @@ fn check_beta(beta: f64) -> Fallible<()> {
 }
 
 fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
-    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+    if !value.is_finite() || value < 0.0 || value > 1.0 {
         return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
     }
     Ok(())
@@ -774,7 +774,7 @@ fn check_rho(rho: f64) -> Fallible<()> {
     if rho.is_nan() {
         return fallible!(FailedMap, "rho must not be NaN");
     }
-    if rho.is_sign_negative() {
+    if rho < 0.0 {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
     Ok(())

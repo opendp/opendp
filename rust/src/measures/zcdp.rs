@@ -17,10 +17,10 @@ pub(crate) mod test;
 /// upper bound.
 #[proven(proof_path = "measures/zcdp/zcdp_delta.tex")]
 pub(crate) fn zcdp_delta(rho: f64, epsilon: f64) -> Fallible<f64> {
-    if rho.is_sign_negative() {
+    if rho < 0.0 {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
-    if epsilon.is_sign_negative() {
+    if epsilon < 0.0 {
         return fallible!(FailedMap, "epsilon ({}) must be non-negative", epsilon);
     }
     if rho.is_zero() || epsilon.is_infinite() {
@@ -97,7 +97,7 @@ pub(crate) fn add_source_delta(conversion_delta: f64, source_delta: f64) -> Fall
 }
 
 fn check_delta(delta: f64) -> Fallible<()> {
-    if delta.is_nan() || delta.is_sign_negative() || delta > 1.0 {
+    if delta.is_nan() || delta < 0.0 || delta > 1.0 {
         return fallible!(FailedMap, "delta ({delta}) must be between zero and one");
     }
     Ok(())

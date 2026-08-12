@@ -263,8 +263,8 @@ fn test_zcdp_representation_queries_and_source_delta() -> Fallible<()> {
     assert!(approximate.beta(0.5)? >= 0.0);
     assert!(approximate.alpha(0.5)? >= 0.0);
 
-    assert!(PrivacyGuarantee::new().with_zCDP(-0.0, 0.0).is_err());
-    assert!(PrivacyGuarantee::new().with_zCDP(0.5, -0.0).is_err());
+    assert!(PrivacyGuarantee::new().with_zCDP(-0.0, 0.0).is_ok());
+    assert!(PrivacyGuarantee::new().with_zCDP(0.5, -0.0).is_ok());
     assert!(PrivacyGuarantee::new().with_zCDP(f64::NAN, 0.0).is_err());
     Ok(())
 }
