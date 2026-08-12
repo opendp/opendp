@@ -153,7 +153,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if isinstance(value, PrivacyGuarantee):
             return value.guarantee
         if isinstance(value, ctypes.POINTER(AnyObject)):
-            return value
+            return ctypes.cast(value, AnyObjectPtr)
 
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]
@@ -191,10 +191,10 @@ def c_to_py(value: Any) -> Any:
         obj_type = object_type(value)
 
         if obj_type == PrivacyProfile.__name__:
-            return PrivacyProfile(_ptr=cast(value, AnyObjectPtr))
+            return PrivacyProfile(_ptr=cast(AnyObjectPtr, value))
 
         if obj_type == PrivacyGuarantee.__name__:
-            return PrivacyGuarantee(_ptr=cast(value, AnyObjectPtr))
+            return PrivacyGuarantee(_ptr=cast(AnyObjectPtr, value))
         
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)
@@ -658,7 +658,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
     if inner_type_names in (['PrivacyProfile', 'f64'], ['PrivacyGuarantee', 'f64']):
-        pointer = AnyObjectPtr(ptr_data[0])
+        pointer = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         wrapper = (
             PrivacyProfile(_ptr=pointer)
@@ -669,7 +669,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
 
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
-        candidate_obj = AnyObjectPtr(ptr_data[1])
+        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
         candidate = c_to_py(candidate_obj)
         # The candidate pointer is owned by the returned tuple/object. Do not
         # let its temporary ctypes wrapper free it a second time.
