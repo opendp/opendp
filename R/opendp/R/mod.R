@@ -639,54 +639,6 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
-.call_search_callback <- function(predicate, .T, call_expr, bounds = NULL) {
-  parse_rust_error_message <- function(message) {
-    first_line <- strsplit(message, "\n", fixed = TRUE)[[1]][1]
-    parsed <- regexec("^\\[([^]]+)\\] : (.*)$", first_line)
-    parts <- regmatches(first_line, parsed)[[1]]
-    if (length(parts) == 3) {
-      return(list(variant = parts[[2]], message = parts[[3]]))
-    }
-    list(variant = NULL, message = first_line)
-  }
-
-  state <- new.env(parent = emptyenv())
-  state$first_error <- NULL
-  state$had_success <- FALSE
-
-  wrapped <- function(v) {
-    tryCatch({
-      out <- predicate(v)
-      state$had_success <- TRUE
-      out
-    }, error = function(e) {
-      if (is.null(state$first_error)) {
-        state$first_error <- e
-      }
-      stop(conditionMessage(e), call. = FALSE)
-    })
-  }
-
-  tryCatch(
-    force(call_expr(wrapped)),
-    error = function(e) {
-      if (!is.null(state$first_error)) {
-        if (is.null(bounds) && !isTRUE(state$had_success)) {
-          center <- if (.T$origin %in% c("f32", "f64")) 0. else 0L
-          msg <- "Predicate always fails. Example error at %s: %s"
-          stop(sprintf(msg, center, conditionMessage(state$first_error)), call. = FALSE)
-        }
-        stop(conditionMessage(state$first_error), call. = FALSE)
-      }
-      rust_error <- parse_rust_error_message(conditionMessage(e))
-      if (identical(rust_error$variant, "Search")) {
-        stop(rust_error$message, call. = FALSE)
-      }
-      stop(conditionMessage(e), call. = FALSE)
-    }
-  )
-}
-
 .infer_search_type <- function(predicate, .T = NULL, bounds = NULL) {
   if (!is.null(.T)) {
     return(rt_parse(.T))
@@ -751,14 +703,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   }
   .T <- .infer_search_type(predicate, .T, bounds)
 
-  result <- .call_search_callback(
-    predicate = predicate,
-    .T = .T,
-    bounds = bounds,
-    call_expr = function(wrapped) {
-      `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
-    }
-  )
+  result <- `_binary_search`(predicate, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
 
   if (return_sign) {
     return(c(result[[1]], result[[2]]))
@@ -769,13 +714,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
 exponential_bounds_search <- function(predicate, .T) {
   .T <- .infer_search_type(predicate, .T)
 
-  result <- .call_search_callback(
-    predicate = predicate,
-    .T = .T,
-    call_expr = function(wrapped) {
-      `_exponential_bounds_search`(wrapped, .T = .T)
-    }
-  )
+  result <- `_exponential_bounds_search`(predicate, .T = .T)
 
   if (is.null(result)) {
     return(NULL)

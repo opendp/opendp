@@ -1616,7 +1616,7 @@ def _call_rust_search(
 
     try:
         return search(wrapped)
-    except OpenDPException as err:
+    except Exception as err:
         if first_exception is not None:
             exc = first_exception
             if (bounds is None or bounds == (None, None)) and not had_success:
@@ -1626,6 +1626,8 @@ def _call_rust_search(
                     f"This exception is raised when the predicate is evaluated at {center}."
                 )
             raise exc
+        if not isinstance(err, OpenDPException):
+            raise
         if err.variant == "Search":
             raise ValueError(err.message)
         if err.variant == "Type":

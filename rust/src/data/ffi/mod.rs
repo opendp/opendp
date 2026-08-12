@@ -5,7 +5,7 @@ use std::ffi::{CString, c_void};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
-use std::ptr::null;
+use std::ptr::{null, null_mut};
 use std::slice;
 
 #[cfg(feature = "polars")]
@@ -27,7 +27,7 @@ use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
-use crate::error::Fallible;
+use crate::error::{ErrorVariant, Fallible};
 use crate::ffi::any::{
     AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
 };
@@ -1034,7 +1034,7 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 /// * `this` - A pointer to the string to free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
-    util::into_owned(this).map(|_| ()).into()
+    util::into_string(this).map(|_| ()).into()
 }
 
 #[bootstrap(
@@ -1382,27 +1382,34 @@ pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*cons
 /// construct an FfiResult::Err(e)
 ///
 /// # Arguments
+/// * `variant` - A validated OpenDP error variant name.
 /// * `message` - The error message.
 /// * `backtrace` - The error backtrace.
+/// * `callback` - Optional borrowed original exception, retained for the return trip.
 #[unsafe(no_mangle)]
 pub extern "C" fn ffiresult_err(
-    message: *mut c_char,
-    backtrace: *mut c_char,
+    variant: *const c_char,
+    message: *const c_char,
+    backtrace: *const c_char,
+    callback: *const util::ExtrinsicObject,
 ) -> *const FfiResult<*const AnyObject> {
-    fn make_message(message: *mut c_char, backtrace: *mut c_char) -> Fallible<*mut c_char> {
-        let message = util::to_str(message)?;
-        let backtrace = util::to_str(backtrace)?;
-        let message = format!("{message}:\n{backtrace}");
-        into_c_char_p(message)
-    }
-    let message = match make_message(message, backtrace) {
-        Ok(v) => v,
-        Err(e) => return util::into_raw(FfiResult::from(e)),
-    };
+    let variant = util::to_str(variant)
+        .ok()
+        .and_then(|variant| variant.parse::<ErrorVariant>().ok())
+        .unwrap_or(ErrorVariant::FFI)
+        .to_string();
+    let (message, backtrace) =
+        match util::to_str(message).and_then(|message| Ok((message, util::to_str(backtrace)?))) {
+            Ok(strings) => strings,
+            Err(e) => return util::into_raw(FfiResult::from(e)),
+        };
     util::into_raw(FfiResult::Err(util::into_raw(FfiError {
-        variant: CString::new("FFI").unwrap().into_raw(),
-        message,
-        backtrace: CString::new("").unwrap().into_raw(),
+        variant: CString::new(variant).unwrap().into_raw(),
+        message: CString::new(message).unwrap().into_raw(),
+        backtrace: CString::new(backtrace).unwrap().into_raw(),
+        callback: unsafe { callback.as_ref() }
+            .cloned()
+            .map_or(null_mut(), util::into_raw),
     })))
 }
 
@@ -1426,6 +1433,53 @@ mod tests {
     use crate::ffi::util::ToCharP;
 
     use super::*;
+
+    #[test]
+    fn test_callback_error_variants_round_trip() {
+        for variant in [
+            "FFI",
+            "TypeParse",
+            "Type",
+            "FailedFunction",
+            "FailedMap",
+            "RelationDebug",
+            "FailedCast",
+            "DomainMismatch",
+            "MetricMismatch",
+            "MeasureMismatch",
+            "MakeDomain",
+            "MakeTransformation",
+            "MakeMeasurement",
+            "MetricSpace",
+            "InvalidDistance",
+            "Search",
+            "NumericError",
+            "Overflow",
+            "NotImplemented",
+            "UnknownVariant",
+        ] {
+            let result = ffiresult_err(
+                variant.to_char_p(),
+                "callback diagnostic".to_char_p(),
+                "callback backtrace".to_char_p(),
+                null(),
+            );
+            let result = unsafe { Box::from_raw(result.cast_mut()) };
+            let FfiResult::Err(error) = *result else {
+                panic!("expected a callback error");
+            };
+            let error = *unsafe { Box::from_raw(error) };
+            assert_eq!(util::to_str(error.backtrace).unwrap(), "callback backtrace");
+            let error = Error::from(error);
+            let expected = if variant == "UnknownVariant" {
+                "FFI"
+            } else {
+                variant
+            };
+            assert_eq!(error.variant.to_string(), expected);
+            assert_eq!(error.message.as_deref(), Some("callback diagnostic"));
+        }
+    }
 
     #[test]
     fn test_slice_as_object_number() -> Fallible<()> {
