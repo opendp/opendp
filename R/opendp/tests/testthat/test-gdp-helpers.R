@@ -1,3 +1,6 @@
+library(opendp)
+enable_features("contrib", "idealized-numerics")
+
 test_that("privacy guarantee Gaussian-DP representation", {
   guarantee <- privacy_guarantee(gaussianDP = 1.)
 
