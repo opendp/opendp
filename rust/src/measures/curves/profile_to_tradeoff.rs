@@ -129,7 +129,7 @@ fn maximize_unimodal_epsilon(
         return Ok(lo);
     }
 
-    let optimum = fallible_optimize_to_precision(SearchMode::Maximize, lo, hi, None, objective)?;
+    let optimum = fallible_optimize_to_precision(SearchMode::Maximize, lo, hi, objective)?;
 
     Ok(optimum.arg.clamp(lo, hi))
 }
