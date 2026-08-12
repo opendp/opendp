@@ -233,6 +233,8 @@ def test_extras_docstring_installs(py_path):
         extra = "numpy"
     elif "polars" in namespace:
         extra = "polars"
+    elif "sql" in namespace:
+        extra = "sql"
     elif "mbi" in namespace:
         extra = "mbi"
     elif "examples" in namespace:
