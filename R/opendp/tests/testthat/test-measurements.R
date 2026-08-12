@@ -36,7 +36,7 @@ test_that("make_noise separates output measure and distribution", {
     laplace_domain, laplace_metric,
     output_measure = pure_dp(), scale = 1.
   )
-  expect_equal(meas_laplace(d_in = 1.), 1.)
+  expect_equal(meas_laplace(d_in = 1L), 1.)
 
   gaussian_domain <- vector_domain(atom_domain(.T = "i32"))
   gaussian_metric <- l2_distance(.T = "i32")
@@ -44,7 +44,7 @@ test_that("make_noise separates output measure and distribution", {
     gaussian_domain, gaussian_metric,
     output_measure = zcdp(), scale = 1.
   )
-  expect_equal(meas_gaussian(d_in = 1.), 0.5)
+  expect_equal(meas_gaussian(d_in = 1L), 0.5)
 
   meas_multi <- make_noise(
     laplace_domain, laplace_metric,
