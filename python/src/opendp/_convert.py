@@ -191,10 +191,10 @@ def c_to_py(value: Any) -> Any:
         obj_type = object_type(value)
 
         if obj_type == PrivacyProfile.__name__:
-            return PrivacyProfile(_ptr=cast(AnyObjectPtr, value))
+            return PrivacyProfile(_ptr=ctypes.cast(value, AnyObjectPtr))
 
         if obj_type == PrivacyGuarantee.__name__:
-            return PrivacyGuarantee(_ptr=cast(AnyObjectPtr, value))
+            return PrivacyGuarantee(_ptr=ctypes.cast(value, AnyObjectPtr))
         
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)
