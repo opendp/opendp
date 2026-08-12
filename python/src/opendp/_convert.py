@@ -659,8 +659,10 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
-        candidate = c_to_py(c_to_py(candidate_obj))
-        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        candidate = c_to_py(candidate_obj)
+        # The candidate pointer is owned by the returned tuple/object. Do not
+        # let its temporary ctypes wrapper free it a second time.
+        candidate_obj.__class__ = ctypes.POINTER(AnyObject)
         return score.contents.value, candidate
 
     # tuple of instances of Python types
