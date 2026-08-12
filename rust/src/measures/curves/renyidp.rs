@@ -10,7 +10,7 @@ use crate::{
         rdp_to_approxdp::{rdp_log_delta0_on, rdp_log_delta1_on},
     },
     traits::{CInterval, S, SInterval, backend::Dashu},
-    utilities::search::{SearchMode, fallible_optimize_log_domain_to_precision, sample_log_domain},
+    utilities::search::{Optimum, SearchMode, fallible_optimize_to_precision},
 };
 
 type Cert = SInterval<Dashu>;
@@ -43,6 +43,162 @@ const ROUNDING_SLACK: f64 = 128.0 * f64::EPSILON;
 
 // ln(2^-1074), the smallest positive f64 subnormal.
 const LOG_TRUE_MIN: f64 = -744.4400719213812;
+
+/// Optimize Rényi order in log space. The grid and local-refinement policy is
+/// intentionally local to RDP conversion: the objective may have kinks or
+/// multiple extrema, and the result is only a candidate for the certified
+/// recomputation below.
+fn optimize_log_order<F>(
+    mode: SearchMode,
+    arg_lo: f64,
+    arg_hi: f64,
+    local_grid: usize,
+    f_arg: F,
+) -> Fallible<Optimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    if !arg_lo.is_finite()
+        || !arg_hi.is_finite()
+        || arg_lo <= 0.0
+        || arg_hi <= 0.0
+        || arg_lo > arg_hi
+    {
+        return fallible!(
+            Search,
+            "RDP order bounds must be finite, positive, and ordered"
+        );
+    }
+    if arg_lo == arg_hi {
+        return Ok(Optimum {
+            arg: arg_lo,
+            value: rdp_objective_value(mode, f_arg(arg_lo)?)?,
+        });
+    }
+
+    let x_lo = arg_lo.ln();
+    let x_hi = arg_hi.ln();
+    let evaluate = |x: f64| {
+        let arg = x.exp().clamp(arg_lo, arg_hi);
+        rdp_objective_value(mode, f_arg(arg)?).map(|value| (arg, value))
+    };
+
+    if local_grid < 3 {
+        let optimum = fallible_optimize_to_precision(mode, x_lo, x_hi, |x| {
+            evaluate(x).map(|(_, value)| value)
+        })?;
+        return Ok(Optimum {
+            arg: optimum.arg.exp().clamp(arg_lo, arg_hi),
+            value: optimum.value,
+        });
+    }
+
+    let grid = local_grid.max(3);
+    let mut xs = Vec::with_capacity(grid);
+    let mut values = Vec::with_capacity(grid);
+    let mut best = Optimum {
+        arg: arg_lo,
+        value: evaluate(x_lo)?.1,
+    };
+
+    for i in 0..grid {
+        let x = interpolate_log(x_lo, x_hi, i as f64 / (grid - 1) as f64);
+        let (arg, value) = evaluate(x)?;
+        xs.push(x);
+        values.push(value);
+        if mode.is_better(value, best.value) {
+            best = Optimum { arg, value };
+        }
+    }
+
+    for i in 0..grid {
+        let no_worse = match mode {
+            SearchMode::Minimize => {
+                (i == 0 || values[i] <= values[i - 1])
+                    && (i + 1 == grid || values[i] <= values[i + 1])
+            }
+            SearchMode::Maximize => {
+                (i == 0 || values[i] >= values[i - 1])
+                    && (i + 1 == grid || values[i] >= values[i + 1])
+            }
+        };
+        let strict_edge = match mode {
+            SearchMode::Minimize => {
+                (i > 0 && values[i] < values[i - 1]) || (i + 1 < grid && values[i] < values[i + 1])
+            }
+            SearchMode::Maximize => {
+                (i > 0 && values[i] > values[i - 1]) || (i + 1 < grid && values[i] > values[i + 1])
+            }
+        };
+        if !(no_worse && strict_edge) {
+            continue;
+        }
+
+        let left = if i == 0 { xs[i] } else { xs[i - 1] };
+        let right = if i + 1 == grid { xs[i] } else { xs[i + 1] };
+        if right <= left {
+            continue;
+        }
+
+        let candidate = fallible_optimize_to_precision(mode, left, right, |x| {
+            evaluate(x).map(|(_, value)| value)
+        })?;
+        if mode.is_better(candidate.value, best.value) {
+            best = Optimum {
+                arg: candidate.arg.exp().clamp(arg_lo, arg_hi),
+                value: candidate.value,
+            };
+        }
+    }
+
+    Ok(best)
+}
+
+fn rdp_objective_value(mode: SearchMode, value: f64) -> Fallible<f64> {
+    if value.is_nan() {
+        // These callbacks are heuristic RDP tightness searches. An unusable
+        // candidate is ignored only in the safe direction for this objective.
+        return Ok(match mode {
+            SearchMode::Minimize => f64::INFINITY,
+            SearchMode::Maximize => f64::NEG_INFINITY,
+        });
+    }
+    Ok(value)
+}
+
+fn sample_log_order<F>(mode: SearchMode, arg_lo: f64, arg_hi: f64, grid: usize, f_arg: F) -> Optimum
+where
+    F: Fn(f64) -> f64,
+{
+    debug_assert!(arg_lo.is_finite() && arg_hi.is_finite() && arg_lo > 0.0 && arg_lo <= arg_hi);
+    let x_lo = arg_lo.ln();
+    let x_hi = arg_hi.ln();
+    let mut best = Optimum {
+        arg: arg_lo,
+        value: rdp_objective_value(mode, f_arg(arg_lo)).unwrap_or(match mode {
+            SearchMode::Minimize => f64::INFINITY,
+            SearchMode::Maximize => f64::NEG_INFINITY,
+        }),
+    };
+
+    for i in 0..grid.max(2) {
+        let arg = interpolate_log(x_lo, x_hi, i as f64 / (grid.max(2) - 1) as f64)
+            .exp()
+            .clamp(arg_lo, arg_hi);
+        let value = rdp_objective_value(mode, f_arg(arg)).unwrap_or(match mode {
+            SearchMode::Minimize => f64::INFINITY,
+            SearchMode::Maximize => f64::NEG_INFINITY,
+        });
+        if mode.is_better(value, best.value) {
+            best = Optimum { arg, value };
+        }
+    }
+    best
+}
+
+fn interpolate_log(lo: f64, hi: f64, fraction: f64) -> f64 {
+    lo + fraction * (hi - lo)
+}
 
 /// Convert an RDP profile to an approximate-DP delta upper bound.
 ///
@@ -130,11 +286,11 @@ where
 {
     let alpha_cap = normalize_alpha_cap(alpha_cap);
 
-    let optimum = fallible_optimize_log_domain_to_precision(
+    let optimum = optimize_log_order(
         SearchMode::Minimize,
         ALPHA_MIN,
         alpha_cap,
-        Some(DELTA_LOCAL_GRID),
+        DELTA_LOCAL_GRID,
         |order| Ok(log_delta_fast(order, rdp_upper(curve, order)?, epsilon)),
     )?;
 
@@ -152,11 +308,11 @@ where
 {
     let alpha_cap = normalize_alpha_cap(alpha_cap);
 
-    let optimum = fallible_optimize_log_domain_to_precision(
+    let optimum = optimize_log_order(
         SearchMode::Maximize,
         ALPHA_MIN,
         alpha_cap,
-        Some(BETA_LOCAL_GRID),
+        BETA_LOCAL_GRID,
         |order| {
             let gamma = rdp_upper(rdp, order)?;
             if gamma == 0.0 {
@@ -279,7 +435,7 @@ where
 
     loop {
         let before = best;
-        let band_best = sample_log_domain(
+        let band_best = sample_log_order(
             SearchMode::Maximize,
             lo,
             hi,
