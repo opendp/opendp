@@ -400,8 +400,8 @@ L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 PureDP = 'PureDP'
 ProfileDP = 'ProfileDP'
-Approximate = 'Approximate'
-ApproxDP = 'ApproxDP'
+Approximate: Any = 'Approximate'
+ApproxDP: Any = 'ApproxDP'
 zCDP = 'zCDP'
 RenyiDP = 'RenyiDP'
 
