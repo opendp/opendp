@@ -180,6 +180,7 @@ jobs:
           - 'numpy'
           - 'scikit-learn'
           - 'polars'
+          - 'sql'
           - 'mbi'
 
     steps:
@@ -232,9 +233,10 @@ jobs:
             numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
             scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
             polars)               pytest -v -k "not contingency and not synthetic";;
-            mbi)  coverage run -m pytest -v;;
+            sql)                  pytest -v -k "not contingency and not synthetic";;
+            mbi)                  coverage run -m pytest -v;;
 
-            *)    print "unexpected extra-install"; exit 1;;
+            *)                    print "unexpected extra-install"; exit 1;;
           esac
 
       - name: Test replace-binary-path
