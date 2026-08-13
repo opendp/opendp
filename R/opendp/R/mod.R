@@ -421,6 +421,7 @@ new_privacy_profile_internal <- function(ptr) {
 
 #' New privacy guarantee
 #'
+#' @param ptr a pointer to a privacy guarantee
 new_privacy_guarantee_internal <- function(ptr) {
   privacy_guarantee <- function(attr, epsilon, delta, alpha, beta) {
     if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) + missing(beta) != 4) {
