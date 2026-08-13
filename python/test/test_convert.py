@@ -216,6 +216,13 @@ def test_overflow():
         py_to_c(-129, AnyObjectPtr, i8)
 
 
+def test_extrinsic_tuple_roundtrip():
+    value = (1.5, object())
+    result = c_to_py(py_to_c(value, AnyObjectPtr, "(f64, ExtrinsicObject)"))
+    assert result[0] == value[0]
+    assert result[1] is value[1]
+
+
 def test_polars_dataframe():
     pl = pytest.importorskip("polars")
     val_in = pl.DataFrame(
