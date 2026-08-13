@@ -247,6 +247,9 @@ def test_privacy_guarantee_renyi_representation():
 def test_privacy_guarantee_zcdp_representation():
     from opendp.mod import PrivacyGuarantee
 
+    with pytest.raises(TypeError, match="zCDP_delta requires zCDP"):
+        PrivacyGuarantee(zCDP_delta=0.2)
+
     guarantee = PrivacyGuarantee(zCDP=0.5)
     assert guarantee.epsilon(delta=0.1) > 0.0
     assert guarantee.delta(epsilon=1.0) < 1.0
