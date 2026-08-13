@@ -729,6 +729,19 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
             type_name = VECTOR_ELT(get_args(type_name), 0);
     }
 
+    if (str_equal(c_origin, "PrivacyProfile"))
+    {
+        AnyObject *result = sexp_to_privacyprofileptr(data);
+        UNPROTECT(2);
+        return result;
+    }
+    if (str_equal(c_origin, "PrivacyGuarantee"))
+    {
+        AnyObject *result = sexp_to_privacyguaranteeptr(data);
+        UNPROTECT(2);
+        return result;
+    }
+
     const char *c_type_name = rt_to_string(type_name);
 
     FfiSlice slice = sexp_to_slice(data, type_name);

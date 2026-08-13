@@ -202,9 +202,9 @@ def test_privacy_guarantee_profile_representation_is_distinct():
     assert guarantee.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
 
     with pytest.raises(TypeError, match="profile must be a PrivacyProfile"):
-        PrivacyGuarantee(profile=lambda _eps: 0.0)
+        PrivacyGuarantee(profile=lambda _eps: 0.0)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
-        PrivacyGuarantee(profile)
+        PrivacyGuarantee(profile)  # type: ignore[call-arg, misc]
 
 
 def test_member():
