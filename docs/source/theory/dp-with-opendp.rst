@@ -9,11 +9,11 @@ This notebook brings together two threads:
    *measures*, *measurements*, and *stability*.
 -  The `User
    Guide <../api/user-guide/framework-api/index.rst>`__
-   introduced OpenDP as a programming framework, without diving into the
+   introduced the Framework API, without diving into the
    mathematics.
 
-Here we’ll see how the programming framework is related to the
-underlying mathematics of differential privacy. The modular framework
+Here we’ll see how the Framework API is related to the
+underlying mathematics of differential privacy. The modular API
 helps ensure that we’re using the tools of DP appropriately, but also
 has the flexibility to explore different approaches to DP.
 

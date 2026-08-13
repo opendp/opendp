@@ -58,7 +58,7 @@ You don't need to know all the details of the Framework API to write OpenDP appl
 
 * OpenDP calculations are built by assembling a measurement from a number of constituent transformations and measurements, typically through chaining or composition.
 * Measurements don't have a static privacy loss specified when constructing the measurement. 
-  Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
+  Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the Framework API as a whole.
 
 .. toctree::
   :hidden:
