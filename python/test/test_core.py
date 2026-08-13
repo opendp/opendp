@@ -205,6 +205,9 @@ def test_privacy_guarantee_profile_representation_is_distinct():
         PrivacyGuarantee(profile=lambda _eps: 0.0)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
         PrivacyGuarantee(profile)  # type: ignore[call-arg, misc]
+    with pytest.raises(TypeError, match="expected `profile=PrivacyProfile"):
+        PrivacyGuarantee()
+    assert guarantee.delta(1.0) == pytest.approx(profile.delta(1.0))
 
 
 def test_member():

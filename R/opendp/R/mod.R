@@ -430,11 +430,11 @@ new_privacy_guarantee_internal <- function(ptr) {
     }
 
     if (!missing(epsilon)) {
-      return(privacy_guarantee_delta(ptr, epsilon))
+      return(privacy_guarantee_delta(privacy_guarantee, epsilon))
     }
 
     if (!missing(delta)) {
-      return(privacy_guarantee_epsilon(ptr, delta))
+      return(privacy_guarantee_epsilon(privacy_guarantee, delta))
     }
 
     switch(attr,
