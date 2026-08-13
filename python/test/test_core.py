@@ -231,7 +231,7 @@ def test_privacy_guarantee_renyi_representation():
     from opendp.mod import PrivacyGuarantee
 
     with pytest.raises(TypeError, match="renyiDP_delta requires renyiDP"):
-        PrivacyGuarantee(renyiDP_delta=0.2)
+        PrivacyGuarantee(tradeoff=lambda _alpha: 1.0, renyiDP_delta=0.2)
 
     guarantee = PrivacyGuarantee(renyiDP=lambda alpha: 0.5 * alpha)
     assert guarantee.epsilon(delta=0.1) > 0.0
