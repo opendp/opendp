@@ -78,6 +78,34 @@ def test_binary_search_one_sided_errors(bounds, message):
         dp.binary_search(lambda x: x <= 5, bounds=bounds)
 
 
+@pytest.mark.parametrize("bounds", [(0,), (0, 10, 20)])
+def test_binary_search_by_rejects_malformed_bounds(bounds):
+    with pytest.raises(ValueError, match="bounds must contain exactly two elements"):
+        dp.binary_search_by(lambda x: x - 5, bounds=bounds)
+
+
+def test_binary_search_by_mixed_type_bounds():
+    with pytest.raises(TypeError, match="bounds must share the same type"):
+        dp.binary_search_by(lambda x: x - 5, bounds=(-10, 20.))
+
+
+def test_binary_search_by_inferred_int_from_lower_bound():
+    assert dp.binary_search_by(lambda value: value - 5, bounds=(0, None)) == 5
+
+
+def test_binary_search_by_inferred_int_from_upper_bound():
+    assert dp.binary_search_by(lambda value: value - 5, bounds=(None, 10)) == 5
+
+
+def test_binary_search_by_inferred_type_from_callback():
+    def comparison(value):
+        if not isinstance(value, int):
+            raise TypeError("expected int")
+        return value - 5
+
+    assert dp.binary_search_by(comparison) == 5
+
+
 def test_mixed_type_bounds():
     with pytest.raises(TypeError, match="bounds must share the same type"):
         dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.))
