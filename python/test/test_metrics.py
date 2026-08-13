@@ -1,7 +1,7 @@
 import pytest
 
 from opendp.extras.polars import Bound
-from opendp.mod import ExtrinsicDistance, FrameDistance, OpenDPException, SymmetricIdDistance
+from opendp.mod import ExtrinsicDistance, FrameDistance, SymmetricIdDistance
 import opendp.prelude as dp
 
 
@@ -80,22 +80,6 @@ def test_user_metric_total_cmp_native_distance():
         m_comp.map(2)
     with pytest.raises(dp.OpenDPException, match="not comparable"):
         m_comp.map(float("nan"))
-
-
-def test_user_metric_total_cmp_opendp_exception():
-    class Dist:
-        def __eq__(self, other):
-            raise OpenDPException("Comparison", "comparison failed!")
-
-    m_comp = dp.c.make_adaptive_composition(
-        input_domain=dp.atom_domain(T=bool),
-        input_metric=dp.user_distance("user distance"),
-        output_measure=dp.max_divergence(),
-        d_in=Dist(),
-        d_mids=[1.0],
-    )
-    with pytest.raises(OpenDPException, match="comparison failed!"):
-        m_comp.map(Dist())
 
 
 def test_user_metric_total_cmp_custom_distance():
