@@ -248,7 +248,7 @@ def test_privacy_guarantee_zcdp_representation():
     from opendp.mod import PrivacyGuarantee
 
     with pytest.raises(TypeError, match="zCDP_delta requires zCDP"):
-        PrivacyGuarantee(zCDP_delta=0.2)
+        PrivacyGuarantee(tradeoff=lambda _alpha: 1.0, zCDP_delta=0.2)
 
     guarantee = PrivacyGuarantee(zCDP=0.5)
     assert guarantee.epsilon(delta=0.1) > 0.0
