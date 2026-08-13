@@ -289,11 +289,7 @@ def c_to_py(value: Any) -> Any:
 
         if isinstance(rt_type, RuntimeType):
             if rt_type.origin == "Approximate":
-                value.__class__ = (
-                    ApproxDP
-                    if rt_type.args and str(rt_type.args[0]) == "PureDP"
-                    else Approximate
-                )
+                value.__class__ = ApproximateDivergence
         elif rt_type == ExtrinsicDivergence.__name__:
             value.__class__ = ExtrinsicDivergence
         # if you fall through these cases, then it is just treated as a generic Measure
