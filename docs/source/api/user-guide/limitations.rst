@@ -39,8 +39,8 @@ As components complete the vetting process, they will no longer require the ``co
 API Stability
 -------------
 
-OpenDP follows `semantic versioning <https://semver.org>`_:
-until we release version 1.0.0, OpenDP APIs are subject to change.
+OpenDP follows `semantic versioning <https://semver.org>`_,
+and until we release version 1.0.0, OpenDP APIs are subject to change.
 Release notes will include migration instructions, when we do make backwards-incompatible changes.
 As the API continues to evolve, we appreciate your feedback about what does and doesn't work.
 
