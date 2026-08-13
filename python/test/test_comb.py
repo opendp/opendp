@@ -209,7 +209,7 @@ def test_deprecated_measure_cast_aliases():
         )
     with pytest.deprecated_call():
         dp.c.make_zCDP_to_approxDP(
-            dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 10.0))
+            dp.m.make_gaussian(*input_space, 10.0)
         )
 
 
