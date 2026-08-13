@@ -89,6 +89,10 @@ def test_binary_search_by_mixed_type_bounds():
         dp.binary_search_by(lambda x: x - 5, bounds=(-10, 20.))
 
 
+def test_binary_search_by_explicit_none_bounds():
+    assert dp.binary_search_by(lambda value: value - 5, bounds=None, T=int) == 5
+
+
 def test_binary_search_by_inferred_int_from_lower_bound():
     assert dp.binary_search_by(lambda value: value - 5, bounds=(0, None)) == 5
 
