@@ -243,7 +243,7 @@ number of partitions.
             ...     "gaussian (ε, δ):",
             ...     m_gauss_approx.map(d_in=sensitivity_spread),
             ... )
-            gaussian (ε, δ): (0.049969691134438526, 2.801398224505647e-09)
+            gaussian (ε, δ): (0.04996969113443853, 2.801398224505647e-09)
 
 In this alternative world where individuals may have a small influence
 on many partitions, the thresholded gaussian mechanism dominates in
