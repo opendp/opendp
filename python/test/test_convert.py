@@ -232,6 +232,7 @@ def test_overflow():
 def test_extrinsic_tuple_roundtrip():
     value = (1.5, object())
     type_name = RuntimeType.parse("(f64, ExtrinsicObject)")
+    assert isinstance(type_name, RuntimeType)
     score = ctypes.pointer(ctypes.c_double(value[0]))
     candidate = ctypes.pointer(ExtrinsicObject(ctypes.py_object(value[1])))
     pointers = (ctypes.c_void_p * 2)(
