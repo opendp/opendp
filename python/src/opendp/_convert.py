@@ -5,6 +5,7 @@ from opendp._lib import *
 from opendp.mod import (
     Approximate,
     ApproxDP,
+    ApproximateDivergence,
     ChangeOneIdDistance,
     Domain,
     ExtrinsicDistance,
