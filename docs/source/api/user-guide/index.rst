@@ -74,7 +74,7 @@ See also the :ref:`comprehensive listing of features for Rust<rust-feature-listi
    :maxdepth: 1
 
    limitations
-   programming-framework/index
+   framework-api/index
    transformations/index
    measurements/index
    combinators/index

@@ -1,12 +1,12 @@
-.. _programming-framework:
+.. _framework-api:
 
 Framework API
 =============
 
 OpenDP is based on a conceptual model that defines the characteristics of privacy-preserving operations and provides a way for components to be assembled into programs with desired behavior. 
-This model, known as the OpenDP Framework API, is described in the paper `A Programming Framework for OpenDP <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_. 
-The framework is designed with a precise and verifiable means of capturing the privacy-relevant aspects of an algorithm, while remaining highly flexible and extensible.
-OpenDP (the software library) is intended to be a faithful implementation of that approach. 
+This model, described in the paper `A Programming Framework for OpenDP <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_, 
+is designed with a precise and verifiable means of capturing the privacy-relevant aspects of an algorithm, while remaining highly flexible and extensible.
+The OpenDP Framework API is intended to be a faithful implementation of this model. 
 Because OpenDP is based on a well-defined model, users can create applications with rigorous privacy properties.
 
 Summary
@@ -14,7 +14,7 @@ Summary
 
 The OpenDP Framework API consists of a set of high-level conceptual elements. 
 We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming. 
-If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
+If you're interested in more of the details and motivations behind the API, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
 There is also an illustrative notebook `A Framework to Understand DP <../../../theory/a-framework-to-understand-dp.html>`_.
 
 * :ref:`Measurements <measurements-user-guide>` are randomized mappings from a private, 

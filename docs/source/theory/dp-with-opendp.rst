@@ -8,7 +8,7 @@ This notebook brings together two threads:
    that have particular meaning in OpenDP: *transformations*,
    *measures*, *measurements*, and *stability*.
 -  The `User
-   Guide <../api/user-guide/programming-framework/index.rst>`__
+   Guide <../api/user-guide/framework-api/index.rst>`__
    introduced OpenDP as a programming framework, without diving into the
    mathematics.
 
