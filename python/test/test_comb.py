@@ -201,6 +201,18 @@ def test_make_pureDP_to_zCDP():
     assert meas.map(1.0) == 0.010000000000000002
 
 
+def test_deprecated_measure_cast_aliases():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    with pytest.deprecated_call():
+        dp.c.make_fixed_approxDP_to_approxDP(
+            dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.0))
+        )
+    with pytest.deprecated_call():
+        dp.c.make_zCDP_to_approxDP(
+            dp.c.make_zCDP_to_profileDP(dp.m.make_gaussian(*input_space, 10.0))
+        )
+
+
 def test_make_approxDP_to_profileDP():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     fadp_meas = dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.0))
