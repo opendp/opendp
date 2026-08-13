@@ -25,7 +25,7 @@ def get_connection(database_name: str, **kwargs):
 
     .. note:
 
-        An `Ibis backend <ibis-project.org/install>`_
+        An `Ibis backend <https://ibis-project.org/install>`_
         must be installed for the database you will target.
         For sqlite, for example:
 
@@ -36,7 +36,7 @@ def get_connection(database_name: str, **kwargs):
     :param database_name: A supported database type. "sqlite", for example.
     :param kwargs: Connection parameters.
     """
-    import ibis
+    import ibis  # type: ignore[import-untyped]
 
     # Avoid a direct ibis call in user code.
     return getattr(ibis, database_name).connect(**kwargs)
@@ -49,7 +49,7 @@ def scan_database(connection, table_name: str):
     :param connection: A connection object
     :param table_name: The name of the database table to scan
     """
-    from polars_to_ibis import scan_database
+    from polars_to_ibis import scan_database  # type: ignore[import-not-found]
 
     # Avoid a direct polars_to_ibis call in user code.
     return scan_database(connection, table_name)
@@ -124,7 +124,7 @@ def execute_on_database(query, connection, table_name: str):
         case "Integer":
             support = int
         case "Float":  # pragma: no cover
-            support = float
+            support = float  # type: ignore[assignment]
         case _:  # pragma: no cover
             raise ValueError(
                 f"Expected 'Integer' or 'Float', not {kwargs['support']}"
