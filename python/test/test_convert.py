@@ -14,9 +14,22 @@ from opendp._convert import (
     _slice_to_numpy,
     _slice_to_scalar,
     _slice_to_vector,
+    _slice_to_tuple,
+    _tuple_to_slice,
     _vector_to_slice,
+    _invoke_py_callback,
+    _invoke_py_transition,
 )
-from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
+from opendp._lib import (
+    AnyObjectPtr,
+    ExtrinsicObject,
+    ctypes,
+    FfiResult,
+    FfiSlice,
+    FfiSlicePtr,
+    unwrap,
+)
+from opendp.mod import OpenDPException
 
 
 @pytest.mark.parametrize(
@@ -218,9 +231,42 @@ def test_overflow():
 
 def test_extrinsic_tuple_roundtrip():
     value = (1.5, object())
-    result = c_to_py(py_to_c(value, AnyObjectPtr, "(f64, ExtrinsicObject)"))
+    type_name = RuntimeType.parse("(f64, ExtrinsicObject)")
+    score = ctypes.pointer(ctypes.c_double(value[0]))
+    candidate = ctypes.pointer(ExtrinsicObject(ctypes.py_object(value[1])))
+    pointers = (ctypes.c_void_p * 2)(
+        ctypes.cast(score, ctypes.c_void_p), ctypes.cast(candidate, ctypes.c_void_p)
+    )
+    raw = FfiSlicePtr(FfiSlice(ctypes.cast(pointers, ctypes.c_void_p), 2))
+    raw.depends_on(score, candidate, pointers)
+    result = _slice_to_tuple(raw, type_name)
     assert result[0] == value[0]
     assert result[1] is value[1]
+
+
+def _unwrap_callback_result(raw):
+    result = ctypes.cast(raw, ctypes.POINTER(FfiResult)).contents
+    return unwrap(result, AnyObjectPtr)
+
+
+def test_callback_forwards_opendp_exception():
+    def callback(_):
+        raise OpenDPException("Callback", "callback failed")
+
+    raw = _invoke_py_callback(py_to_c(1, AnyObjectPtr), (callback, "i32"))
+    with pytest.raises(OpenDPException, match='Callback\\("callback failed"\\)'):
+        _unwrap_callback_result(raw)
+
+
+def test_transition_forwards_opendp_exception():
+    def transition(_, __):
+        raise OpenDPException("Transition", "transition failed")
+
+    raw = _invoke_py_transition(
+        py_to_c(1, AnyObjectPtr), ctypes.c_bool(False), (transition, "i32")
+    )
+    with pytest.raises(OpenDPException, match='Transition\\("transition failed"\\)'):
+        _unwrap_callback_result(raw)
 
 
 def test_polars_dataframe():
