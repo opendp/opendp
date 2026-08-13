@@ -23,7 +23,7 @@ from opendp.metrics import (
 )
 from opendp.core import as_array
 from opendp.mod import (
-    ApproxDP,
+    Approximate,
     AtomDomain,
     Domain,
     ExtrinsicDistance,
@@ -160,7 +160,7 @@ class TypedDictDistance:
 
 
 def get_std(measure: Measure, scale: float) -> float:
-    if isinstance(measure, ApproxDP):
+    if isinstance(measure, Approximate):
         measure = measure.inner_measure
 
     if measure == pure_dp():

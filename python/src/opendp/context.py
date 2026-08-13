@@ -584,7 +584,7 @@ class Context(object):
             if observed_measure != expected_measure:
                 msg = f"Expected output measure {expected_measure} but got {observed_measure}."
                 if (
-                    isinstance(expected_measure, ApproximateDivergence)
+                    isinstance(expected_measure, Approximate)
                     and "delta" not in kwargs
                 ):
                     msg += " Consider setting `delta=0.0` in your query."
