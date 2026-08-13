@@ -118,11 +118,17 @@ In practice you will load from a local CSV, or preferably use
 
     If the success or failure of ``scan_csv`` has effects outside a trusted environment,
     this information leak may violate differential privacy.
-    Instead, use a schema-bearing source such as Parquet or a database table, 
-    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    Using ``ignore_errors=True`` avoids some parsing failures, 
-    but it may silently change the loaded data and reduce utility, 
-    so it should be used deliberately rather than by default. 
+    To avoid this, one option is to use ``infer_schema=False``
+    and then explicitly cast values to the desired type.
+    Alternatively, you may use a schema-bearing file type such as `Parquet <https://docs.pola.rs/user-guide/io/parquet/>`_,
+    or reference the database directly,
+    either `reading a database table into memory <https://docs.pola.rs/user-guide/io/database/>`_,
+    or (experimental feature) executing your query on the database
+    with :py:func:`~opendp.extras.sql.execute_on_database`. 
+    
+    If you do stick with ``scan_csv``,
+    using ``ignore_errors=True`` avoids some parsing failures, 
+    but it may silently change the loaded data and reduce utility.
     See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
     for more schema and error-handling options.
 
