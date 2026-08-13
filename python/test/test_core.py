@@ -212,6 +212,7 @@ def test_privacy_guarantee_profile_representation_is_distinct():
 
 def test_privacy_guarantee_tradeoff_queries():
     from opendp.mod import PrivacyGuarantee
+    from opendp.measures import _privacy_guarantee_with_approxDP_tradeoff
 
     guarantee = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
     assert guarantee.beta(alpha=0.3) == 0.7
@@ -219,6 +220,11 @@ def test_privacy_guarantee_tradeoff_queries():
 
     symmetric = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
     assert symmetric.beta(alpha=0.3) == 0.7
+
+    point_profile = dp.PrivacyProfile(approxDP=[(1.0, 0.1), (2.0, 0.0)])
+    point_guarantee = PrivacyGuarantee(profile=point_profile)
+    certified = _privacy_guarantee_with_approxDP_tradeoff(point_guarantee)
+    assert certified.beta(alpha=0.3) >= 0.0
 
 
 def test_member():
