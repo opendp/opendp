@@ -92,6 +92,25 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn opendp_measurements__make_report_noisy_max(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    scale: f64,
+    negate: c_bool,
+    distribution: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    opendp_measurements__make_noisy_max(
+        input_domain,
+        input_metric,
+        output_measure,
+        scale,
+        negate,
+        distribution,
+    )
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

@@ -139,6 +139,53 @@ where
     )
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        negate(default = false),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null"),
+    ),
+    generics(MO(suppress), TIA(suppress))
+)]
+/// Report the indices selected by a private top-k mechanism.
+///
+/// This is an alias for [`make_noisy_top_k`] that makes the report-level API
+/// explicit while preserving the same accounting and distribution semantics.
+///
+/// # Arguments
+/// * `input_domain` - Domain of the input vector.
+/// * `input_metric` - Metric on the input domain.
+/// * `output_measure` - Privacy measure used for accounting.
+/// * `k` - Number of indices to select.
+/// * `scale` - Scale for the selection distribution.
+/// * `negate` - Set to true to report the bottom k indices.
+/// * `distribution` - Optional selection distribution: `"exponential"` or `"gumbel"`.
+pub fn make_report_noisy_top_k<MO: TopKMeasure, TIA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: LInfDistance<TIA>,
+    output_measure: MO,
+    k: usize,
+    scale: f64,
+    negate: bool,
+    distribution: Option<String>,
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, Vec<usize>>>
+where
+    TIA: Number + CastInternalRational,
+    f64: InfCast<TIA> + InfCast<usize>,
+    FBig: TryFrom<TIA>,
+{
+    make_noisy_top_k(
+        input_domain,
+        input_metric,
+        output_measure,
+        k,
+        scale,
+        negate,
+        distribution,
+    )
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SelectionDistribution {
     Exponential,
