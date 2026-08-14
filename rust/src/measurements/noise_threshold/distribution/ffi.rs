@@ -6,12 +6,14 @@ use crate::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement},
         util::{Type, into_c_char_p, to_option_str},
     },
-    measurements::NoiseDistribution,
     measurements::noise_threshold::distribution::{
         gaussian::ffi::opendp_measurements__make_gaussian_threshold,
         laplace::ffi::opendp_measurements__make_laplace_threshold,
     },
+    measurements::{NoiseDistribution, NoiseMetric},
     measures::{Approximate, MultiDP, PureDP, zCDP},
+    metrics::{AbsoluteDistance, L01InfDistance, L02InfDistance},
+    traits::Number,
 };
 
 #[unsafe(no_mangle)]
@@ -30,6 +32,25 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
         .map(NoiseDistribution::try_from)
         .transpose();
     let distribution = try_!(distribution);
+
+    fn infer_multidp_distribution(metric_type: &Type) -> Option<NoiseDistribution> {
+        fn monomorphize<Q: Number>(metric_type: Type) -> Option<NoiseDistribution> {
+            fn monomorphize_metric<MI: NoiseMetric>() -> Option<NoiseDistribution> {
+                MI::multidp_distribution()
+            }
+
+            dispatch!(
+                monomorphize_metric,
+                [(metric_type, [
+                    L01InfDistance<AbsoluteDistance<Q>>,
+                    L02InfDistance<AbsoluteDistance<Q>>
+                ])]
+            )
+        }
+
+        let Q = metric_type.get_atom().ok()?;
+        dispatch!(monomorphize, [(Q, @numbers)], (metric_type.clone()))
+    }
 
     let run_laplace = || {
         opendp_measurements__make_laplace_threshold(
@@ -83,16 +104,14 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
         (id, None) if id == Type::of::<Approximate<PureDP>>().id => run_laplace(),
         (id, None) if id == Type::of::<Approximate<zCDP>>().id => run_gaussian(),
         (id, None) if id == Type::of::<Approximate<MultiDP>>().id => {
-            if metric_type.descriptor.contains("L01InfDistance") {
-                run_laplace()
-            } else if metric_type.descriptor.contains("L02InfDistance") {
-                run_gaussian()
-            } else {
-                err!(
+            match infer_multidp_distribution(metric_type) {
+                Some(NoiseDistribution::Laplace) => run_laplace(),
+                Some(NoiseDistribution::Gaussian) => run_gaussian(),
+                None => err!(
                     FFI,
                     "distribution is required for MultiDP with an ambiguous metric"
                 )
-                .into()
+                .into(),
             }
         }
         _ => err!(
