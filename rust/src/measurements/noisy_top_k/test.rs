@@ -1,5 +1,8 @@
 use crate::traits::samplers::{Shuffle, test::check_chi_square};
-use crate::{error::Fallible, measures::ZeroConcentratedDivergence};
+use crate::{
+    error::Fallible,
+    measures::{MultiDP, ZeroConcentratedDivergence},
+};
 use dashu::rbig;
 use std::array::from_fn;
 
@@ -37,6 +40,7 @@ fn test_noisy_top_k_gumbel() -> Fallible<()> {
         1,
         1.,
         false,
+        None,
     )?;
     let release = de.invoke(&vec![1., 2., 30., 2., 1.])?;
     assert_eq!(release, vec![2]);
@@ -47,10 +51,57 @@ fn test_noisy_top_k_gumbel() -> Fallible<()> {
 }
 
 #[test]
+fn test_multidp_noisy_top_k_exponential_accounting() -> Fallible<()> {
+    let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
+    let input_metric = LInfDistance::new(true);
+    let de = make_noisy_top_k(
+        input_domain,
+        input_metric,
+        MultiDP::default(),
+        3,
+        0.3,
+        false,
+        Some("exponential".to_string()),
+    )?;
+    let expected = top_k_epsilon(1.0, 0.3, 3)?;
+    assert_eq!(de.map(&1.0)?.epsilon(0.0)?, expected);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_noisy_top_k_gumbel_accounting() -> Fallible<()> {
+    let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
+    let input_metric = LInfDistance::new(true);
+    let de = make_noisy_top_k(
+        input_domain,
+        input_metric,
+        MultiDP::default(),
+        3,
+        0.3,
+        false,
+        Some("gumbel".to_string()),
+    )?;
+    let expected = PrivacyGuarantee::new().with_zCDP(top_k_rho(1.0, 0.3, 3)?, 0.0)?;
+    let actual = de.map(&1.0)?;
+    for epsilon in [0.0, 1.0, 5.0] {
+        assert_eq!(actual.delta(epsilon)?, expected.delta(epsilon)?);
+    }
+    Ok(())
+}
+
+#[test]
 fn test_noisy_top_k_exponential() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
     let input_metric = LInfDistance::default();
-    let de = make_noisy_top_k(input_domain, input_metric, MaxDivergence, 1, 1., false)?;
+    let de = make_noisy_top_k(
+        input_domain,
+        input_metric,
+        MaxDivergence,
+        1,
+        1.,
+        false,
+        None,
+    )?;
     let release = de.invoke(&vec![1., 2., 30., 2., 1.])?;
     assert_eq!(release, vec![2]);
     assert_eq!(de.map(&1.0)?, 2.0);
@@ -72,6 +123,7 @@ fn check_top_k_outcome<M: TopKMeasure>(
         expected.len(),
         scale,
         negate,
+        None,
     )?;
     assert_eq!(m_rnm.invoke(&input)?, expected);
     Ok(())
