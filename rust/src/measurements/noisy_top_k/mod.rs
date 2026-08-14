@@ -2,7 +2,7 @@ use crate::{
     core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::{PureDP, zCDP},
+    measures::{MultiDP, PrivacyGuarantee, PrivacyProfile, PureDP, zCDP},
     metrics::LInfDistance,
     traits::{
         CastInternalRational, FiniteBounds, InfCast, InfDiv, InfMul, InfPowI, Number, ProductOrd,
@@ -24,6 +24,7 @@ mod test;
     arguments(
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         negate(default = false),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null"),
     ),
     generics(MO(suppress), TIA(suppress))
 )]
@@ -45,10 +46,11 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `output_measure` - One of `PureDP` or `zCDP`
+/// * `output_measure` - Privacy measure used for accounting. One of `PureDP`, `zCDP`, or `MultiDP`.
 /// * `k` - Number of indices to select.
 /// * `scale` - Scale for the noise distribution.
 /// * `negate` - Set to true to return bottom k
+/// * `distribution` - Optional selection distribution: `"exponential"` or `"gumbel"`.
 ///
 /// # Generics
 /// * `MO` - Output Measure.
@@ -60,6 +62,7 @@ pub fn make_noisy_top_k<MO: TopKMeasure, TIA>(
     k: usize,
     scale: f64,
     negate: bool,
+    distribution: Option<String>,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, Vec<usize>>>
 where
     TIA: Number + CastInternalRational,
@@ -87,14 +90,24 @@ where
     }
 
     let monotonic = input_metric.monotonic;
+    let distribution = distribution
+        .as_deref()
+        .map(SelectionDistribution::try_from)
+        .transpose()?
+        .or_else(|| MO::legacy_distribution())
+        .ok_or_else(|| {
+            err!(
+                MakeMeasurement,
+                "distribution is required for MultiDP noisy selection"
+            )
+        })?;
+    let replacement = MO::replacement(distribution)?;
 
     Measurement::new(
         input_domain,
         input_metric,
         output_measure,
-        Function::new_fallible(move |x: &Vec<TIA>| {
-            noisy_top_k(x, scale, k, negate, MO::REPLACEMENT)
-        }),
+        Function::new_fallible(move |x: &Vec<TIA>| noisy_top_k(x, scale, k, negate, replacement)),
         PrivacyMap::new_fallible(move |d_in: &TIA| {
             // Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
             //
@@ -114,54 +127,173 @@ where
             }
 
             if d_in.is_zero() {
-                return Ok(0.0);
+                return MO::privacy_map(distribution, 0.0, scale, k);
             }
 
             if scale.is_zero() {
-                return Ok(f64::INFINITY);
+                return MO::privacy_map(distribution, d_in, scale, k);
             }
 
-            MO::privacy_map(d_in, scale)?.inf_mul(&f64::inf_cast(k)?)
+            MO::privacy_map(distribution, d_in, scale, k)
         }),
     )
 }
 
-pub trait TopKMeasure: Measure<Distance = f64> + 'static {
-    /// # Proof Definition
-    /// If replacement is set, the function $f$ returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2020 Definition 4),
-    /// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2020 Lemma 1),
-    /// $k$ times by peeling.
-    const REPLACEMENT: bool;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SelectionDistribution {
+    Exponential,
+    Gumbel,
+}
 
-    /// Define
-    /// ```math
-    /// d_{\mathrm{Range}}(x, x') = max_{ij} |(x_i - x'_i) - (x_j - x'_j)|.
-    /// ```
-    ///
-    /// # Proof Definition
-    /// For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
-    /// return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
-    /// where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
-    fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64>;
+impl TryFrom<&str> for SelectionDistribution {
+    type Error = crate::error::Error;
+
+    fn try_from(value: &str) -> Fallible<Self> {
+        match value.to_ascii_lowercase().as_str() {
+            "exponential" => Ok(Self::Exponential),
+            "gumbel" => Ok(Self::Gumbel),
+            _ => fallible!(
+                FailedCast,
+                "distribution must be \"exponential\" or \"gumbel\""
+            ),
+        }
+    }
+}
+
+pub trait TopKMeasure: Measure + 'static {
+    fn legacy_distribution() -> Option<SelectionDistribution>;
+    fn replacement(distribution: SelectionDistribution) -> Fallible<bool>;
+    fn privacy_map(
+        distribution: SelectionDistribution,
+        d_in: f64,
+        scale: f64,
+        k: usize,
+    ) -> Fallible<Self::Distance>;
+}
+
+fn top_k_epsilon(d_in: f64, scale: f64, k: usize) -> Fallible<f64> {
+    if d_in.is_zero() {
+        return Ok(0.0);
+    }
+    if scale.is_zero() {
+        return Ok(f64::INFINITY);
+    }
+    d_in.inf_div(&scale)?.inf_mul(&(k as f64))
+}
+
+fn top_k_rho(d_in: f64, scale: f64, k: usize) -> Fallible<f64> {
+    if d_in.is_zero() {
+        return Ok(0.0);
+    }
+    if scale.is_zero() {
+        return Ok(f64::INFINITY);
+    }
+    d_in.inf_div(&scale)?
+        .inf_powi(ibig!(2))?
+        .inf_div(&8.0)?
+        .inf_mul(&(k as f64))
 }
 
 #[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_PureDP.tex")]
 impl TopKMeasure for PureDP {
-    const REPLACEMENT: bool = false;
+    fn legacy_distribution() -> Option<SelectionDistribution> {
+        Some(SelectionDistribution::Exponential)
+    }
 
-    fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {
-        // d_in / scale
-        d_in.inf_div(&scale)
+    fn replacement(distribution: SelectionDistribution) -> Fallible<bool> {
+        match distribution {
+            SelectionDistribution::Exponential => Ok(false),
+            SelectionDistribution::Gumbel => {
+                fallible!(
+                    MakeMeasurement,
+                    "gumbel distribution is incompatible with PureDP"
+                )
+            }
+        }
+    }
+
+    fn privacy_map(
+        distribution: SelectionDistribution,
+        d_in: f64,
+        scale: f64,
+        k: usize,
+    ) -> Fallible<f64> {
+        match distribution {
+            SelectionDistribution::Exponential => top_k_epsilon(d_in, scale, k),
+            SelectionDistribution::Gumbel => {
+                fallible!(
+                    MakeMeasurement,
+                    "gumbel distribution is incompatible with PureDP"
+                )
+            }
+        }
     }
 }
 
 #[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_zCDP.tex")]
 impl TopKMeasure for zCDP {
-    const REPLACEMENT: bool = true;
+    fn legacy_distribution() -> Option<SelectionDistribution> {
+        Some(SelectionDistribution::Gumbel)
+    }
 
-    fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {
-        // (d_in / scale)^2 / 8
-        d_in.inf_div(&scale)?.inf_powi(ibig!(2))?.inf_div(&8.0)
+    fn replacement(distribution: SelectionDistribution) -> Fallible<bool> {
+        match distribution {
+            SelectionDistribution::Gumbel => Ok(true),
+            SelectionDistribution::Exponential => {
+                fallible!(
+                    MakeMeasurement,
+                    "exponential distribution is incompatible with zCDP"
+                )
+            }
+        }
+    }
+
+    fn privacy_map(
+        distribution: SelectionDistribution,
+        d_in: f64,
+        scale: f64,
+        k: usize,
+    ) -> Fallible<f64> {
+        match distribution {
+            SelectionDistribution::Gumbel => top_k_rho(d_in, scale, k),
+            SelectionDistribution::Exponential => {
+                fallible!(
+                    MakeMeasurement,
+                    "exponential distribution is incompatible with zCDP"
+                )
+            }
+        }
+    }
+}
+
+#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_MultiDP.tex")]
+impl TopKMeasure for MultiDP {
+    fn legacy_distribution() -> Option<SelectionDistribution> {
+        None
+    }
+
+    fn replacement(distribution: SelectionDistribution) -> Fallible<bool> {
+        Ok(matches!(distribution, SelectionDistribution::Gumbel))
+    }
+
+    fn privacy_map(
+        distribution: SelectionDistribution,
+        d_in: f64,
+        scale: f64,
+        k: usize,
+    ) -> Fallible<PrivacyGuarantee> {
+        match distribution {
+            SelectionDistribution::Exponential => {
+                let epsilon = top_k_epsilon(d_in, scale, k)?;
+                let profile =
+                    PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(epsilon, 0.0)])?;
+                Ok(PrivacyGuarantee::from_profile(profile))
+            }
+            SelectionDistribution::Gumbel => {
+                let rho = top_k_rho(d_in, scale, k)?;
+                PrivacyGuarantee::new().with_zCDP(rho, 0.0)
+            }
+        }
     }
 }
 

@@ -1,11 +1,12 @@
 use crate::{
+    core::Measure,
     error::Fallible,
     measures::{PureDP, zCDP},
 };
 
 use super::*;
 
-fn check_rnm_outcome<M: TopKMeasure>(
+fn check_rnm_outcome<M: TopKMeasure + Measure<Distance = f64>>(
     measure: M,
     scale: f64,
     negate: bool,
@@ -19,6 +20,7 @@ fn check_rnm_outcome<M: TopKMeasure>(
         measure,
         scale,
         negate,
+        None,
     )?;
     assert_eq!(m_rnm.invoke(&input)?, expected_idx);
     assert_eq!(m_rnm.map(&1)?, expected_loss);
