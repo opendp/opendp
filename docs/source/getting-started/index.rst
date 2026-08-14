@@ -4,6 +4,7 @@ Getting Started
 This is an overview of OpenDP's Python and R APIs.
 
 * To interactively build OpenDP examples, try `DP Wizard <https://mccalluc-dp-wizard.share.connect.posit.cloud/>`_.
+* For a collection of OpenDP recipes see the `OpenDP Cookbook <https://opendp.github.io/opendp-cookbook/>`_.
 * For a more conceptual overview of differential privacy see the :doc:`../theory/index` section.
 * For Python, R, and Rust library references see the :doc:`../api/index` documentation.
 
