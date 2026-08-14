@@ -54,9 +54,7 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be released.
 /// * `input_metric` - Metric of the data type to be released.
-/// * `output_measure` - Privacy measure used for accounting. `PureDP` and `zCDP`
-///   preserve their historical distribution inference; `MultiDP` requires either
-///   an explicit distribution or an unambiguous metric.
+/// * `output_measure` - Privacy measure used for accounting. `PureDP` and `zCDP` preserve their historical distribution inference; `MultiDP` requires either an explicit distribution or an unambiguous metric.
 /// * `scale` - Noise scale parameter.
 /// * `k` - The noise granularity in terms of 2^k.
 /// * `distribution` - Optional distribution: `"laplace"` or `"gaussian"`.

@@ -61,9 +61,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
-/// * `output_measure` - Privacy measure used for accounting. `PureDP` and `zCDP`
-///   preserve their historical distribution inference; `MultiDP` requires either
-///   an explicit distribution or an unambiguous metric.
+/// * `output_measure` - Privacy measure used for accounting. `PureDP` and `zCDP` preserve their historical distribution inference; `MultiDP` requires either an explicit distribution or an unambiguous metric.
 /// * `scale` - Noise scale parameter.
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
