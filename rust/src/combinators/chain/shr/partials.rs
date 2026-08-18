@@ -288,7 +288,7 @@ mod tests_shr {
             >> then_cast_default()
             >> then_clamp((0, 1))
             >> then_sum()
-            >> then_laplace(1., None))
+            >> then_laplace::<_, _, crate::measures::PureDP>(1., None))
         .map(|_| ())
     }
 }

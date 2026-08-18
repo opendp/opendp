@@ -10,7 +10,7 @@ fn test_amplifier() -> Fallible<()> {
     let meas = (make_mean(
         VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(10),
         SymmetricDistance,
-    ) >> then_laplace(0.5, None))?;
+    ) >> then_laplace::<_, _, crate::measures::PureDP>(0.5, None))?;
     let amp = make_population_amplification(&meas, 100)?;
     amp.function.eval(&vec![1.; 10])?;
     assert!(meas.check(&2, &(2. + 1e-6))?);

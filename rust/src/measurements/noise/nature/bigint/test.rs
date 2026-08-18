@@ -1,11 +1,12 @@
 use dashu::{ibig, rbig};
 
 use super::*;
+use crate::{core::Measurement, measures::zCDP};
 
 #[test]
 fn test_make_noise_atomdomain_ibig() -> Fallible<()> {
     let distribution = ZExpFamily::<2> { scale: rbig!(1) };
-    let meas =
+    let meas: Measurement<_, _, zCDP, IBig> =
         distribution.make_noise((AtomDomain::<IBig>::default(), AbsoluteDistance::default()))?;
     assert!(i8::try_from(meas.invoke(&ibig!(0))?).is_ok());
     assert_eq!(meas.map(&rbig!(0))?, 0.0);

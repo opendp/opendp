@@ -1,6 +1,6 @@
 use dashu::rbig;
 
-use crate::metrics::L2Distance;
+use crate::{core::Measurement, measures::PureDP, metrics::L2Distance};
 
 use super::*;
 
@@ -29,16 +29,12 @@ fn test_make_noise_intexpfamily() -> Fallible<()> {
         AbsoluteDistance::<f64>::default(),
     );
 
-    assert!(
-        IntExpFamily::<1> { scale: 1.0 }
-            .make_noise(space.clone())
-            .is_ok()
-    );
-    assert!(
-        IntExpFamily::<1> { scale: f64::NAN }
-            .make_noise(space.clone())
-            .is_err()
-    );
+    let valid: Fallible<Measurement<_, _, PureDP, i32>> =
+        IntExpFamily::<1> { scale: 1.0 }.make_noise(space.clone());
+    assert!(valid.is_ok());
+    let invalid: Fallible<Measurement<_, _, PureDP, i32>> =
+        IntExpFamily::<1> { scale: f64::NAN }.make_noise(space.clone());
+    assert!(invalid.is_err());
 
     Ok(())
 }
