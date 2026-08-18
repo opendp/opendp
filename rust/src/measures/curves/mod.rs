@@ -10,6 +10,8 @@ pub(crate) mod logspace;
 mod profile_to_tradeoff;
 mod renyidp;
 mod tradeoff;
+#[cfg(feature = "ffi")]
+mod zcdp_ffi;
 
 #[cfg(feature = "ffi")]
 mod renyidp_ffi;
@@ -44,6 +46,7 @@ pub struct PrivacyGuarantee {
     profile: Option<PrivacyProfile>,
     tradeoff: Option<TradeoffRepresentation>,
     renyi: Option<RenyiRepresentation>,
+    zcdp: Option<ZCDPRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -185,6 +188,15 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a rho-zCDP representation with OpenDP's additive source-delta semantics.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64, source_delta: f64) -> Fallible<Self> {
+        check_rho(rho)?;
+        check_delta(source_delta)?;
+        self.zcdp = Some(ZCDPRepresentation { rho, source_delta });
+        Ok(self)
+    }
+
     /// Evaluate the tightest successfully available conservative delta bound.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
@@ -199,6 +211,13 @@ impl PrivacyGuarantee {
         }
         if let Some(TradeoffRepresentation { beta, symmetric }) = &self.tradeoff {
             match tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon) {
+                Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+        if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
+            match renyidp::delta_via_zCDP(rho, source_delta, epsilon) {
                 Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
@@ -245,6 +264,13 @@ impl PrivacyGuarantee {
                 |epsilon| tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon),
                 delta,
             ) {
+                Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+        if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
+            match renyidp::epsilon_via_zCDP(rho, source_delta, delta) {
                 Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
@@ -297,6 +323,13 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
+            match renyidp::beta_via_zCDP(rho, source_delta, alpha) {
+                Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
         if let Some(RenyiRepresentation {
             curve,
             source_delta,
@@ -344,6 +377,16 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
+            match invert_decreasing_callback(
+                |alpha| renyidp::beta_via_zCDP(rho, source_delta, alpha),
+                beta,
+            ) {
+                Ok(alpha) => best = Some(best.map_or(alpha, |value: f64| value.max(alpha))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
         if let Some(RenyiRepresentation {
             curve,
             source_delta,
@@ -379,6 +422,7 @@ impl std::fmt::Debug for PrivacyGuarantee {
             .field("profile", &self.profile.is_some())
             .field("tradeoff", &self.tradeoff.is_some())
             .field("renyi", &self.renyi.is_some())
+            .field("zcdp", &self.zcdp.is_some())
             .finish()
     }
 }
@@ -395,6 +439,12 @@ type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 #[derive(Clone)]
 struct RenyiRepresentation {
     curve: Arc<RenyiFn>,
+    source_delta: f64,
+}
+
+#[derive(Clone, Copy)]
+struct ZCDPRepresentation {
+    rho: f64,
     source_delta: f64,
 }
 
@@ -714,8 +764,18 @@ fn check_beta(beta: f64) -> Fallible<()> {
 }
 
 fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
-    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+    if !value.is_finite() || value < 0.0 || value > 1.0 {
         return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
+    }
+    Ok(())
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() {
+        return fallible!(FailedMap, "rho must not be NaN");
+    }
+    if rho < 0.0 {
+        return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
     Ok(())
 }

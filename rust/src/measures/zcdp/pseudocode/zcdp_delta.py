@@ -1,5 +1,5 @@
 # type: ignore
-def cdp_delta(rho: float, eps: float) -> float:
+def zcdp_delta(rho: float, eps: float) -> float:
     """The Rust code may be easier to follow due to more commenting."""
     if rho < 0.0:
         raise ValueError(f"rho ({rho}) must be non-negative")
@@ -36,7 +36,7 @@ def cdp_delta(rho: float, eps: float) -> float:
     # calculate delta
     ar_e = a_max.inf_mul(rho).inf_sub(eps)
 
-    # the conservative rounding direction of (α-1) follows the sign of its cofactor ar_e
+    # the conservative rounding direction of (a_max - 1) follows the sign of its cofactor ar_e
     if ar_e.is_sign_negative():
         a_1 = a_max.neg_inf_sub(1.0)
     else:

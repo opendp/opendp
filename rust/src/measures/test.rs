@@ -20,6 +20,10 @@ fn multidp_equality_ignores_capabilities() {
     assert_eq!(pure, approximate);
     assert_eq!(pure, empty);
     assert_eq!(renyi_approximate, renyi_pure);
+    assert_eq!(
+        MultiDP::with_zcdp(Purity::Approximate),
+        MultiDP::with_zcdp(Purity::Pure)
+    );
     assert_ne!(pure.capabilities(), approximate.capabilities());
     assert_ne!(pure.capabilities(), empty.capabilities());
 }
@@ -32,6 +36,8 @@ fn multidp_capabilities_are_inspectable() {
     let tradeoff = MultiDP::with_tradeoff();
     let renyi_approximate = MultiDP::with_renyi(Purity::Approximate);
     let renyi_pure = MultiDP::with_renyi(Purity::Pure);
+    let zcdp_approximate = MultiDP::with_zcdp(Purity::Approximate);
+    let zcdp_pure = MultiDP::with_zcdp(Purity::Pure);
     assert_eq!(pure.capabilities().profile(), Some(Purity::Pure));
     assert_eq!(
         approximate.capabilities().profile(),
@@ -46,6 +52,13 @@ fn multidp_capabilities_are_inspectable() {
         Some(Purity::Approximate)
     );
     assert_eq!(renyi_pure.capabilities().renyi(), Some(Purity::Pure));
+    assert_eq!(empty.capabilities().zcdp(), None);
+    assert_eq!(
+        zcdp_approximate.capabilities().zcdp(),
+        Some(Purity::Approximate)
+    );
+    assert_eq!(zcdp_approximate.capabilities().renyi(), None);
+    assert_eq!(zcdp_pure.capabilities().zcdp(), Some(Purity::Pure));
     assert!(format!("{pure:?}").contains("Pure"));
     assert!(format!("{approximate:?}").contains("Approximate"));
 }

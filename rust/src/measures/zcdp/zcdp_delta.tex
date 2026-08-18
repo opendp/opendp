@@ -1,14 +1,14 @@
 \documentclass{article}
-\input{../../../../lib.sty}
+\input{../../lib.sty}
 
 
-\title{\texttt{fn cdp\_delta}}
+\title{\texttt{fn zcdp\_delta}}
 \author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
 
-Proves soundness of \texttt{fn cdp\_delta} in \asOfCommit{cdp_delta.rs}{0b8f4222}.
+Proves soundness of \texttt{fn zcdp\_delta} in \asOfCommit{../zcdp.rs}{ba7d021d}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
 \section{Bound Derivation}
 
@@ -169,13 +169,13 @@ None
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/cdp_delta.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/zcdp_delta.py}
 
 
 \subsection*{Postcondition}
 
 \begin{theorem}
-    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{zcdp\_delta}$ either returns an error, 
     or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
 \begin{proof}

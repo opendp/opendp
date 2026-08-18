@@ -461,30 +461,38 @@ new_privacy_guarantee_internal <- function(ptr) {
 #' @param symmetric_tradeoff Symmetric callback mapping alpha to beta.
 #' @param renyiDP Callback mapping Renyi order alpha to epsilon(alpha).
 #' @param renyiDP_delta Source delta for approximate RDP.
+#' @param zCDP zCDP parameter rho.
+#' @param zCDP_delta Source delta for approximate zCDP.
 #' @export
-privacy_guarantee <- function(profile, tradeoff, symmetric_tradeoff, renyiDP, renyiDP_delta = 0) {
-  if (missing(profile) && missing(tradeoff) && missing(symmetric_tradeoff) && missing(renyiDP)) {
+privacy_guarantee <- function(profile = NULL, tradeoff = NULL, symmetric_tradeoff = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0) {
+  if (is.null(profile) && is.null(tradeoff) && is.null(symmetric_tradeoff) && is.null(renyiDP) && is.null(zCDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
-  if (!missing(profile) && !inherits(profile, "privacy_profile")) {
+  if (!is.null(profile) && !inherits(profile, "privacy_profile")) {
     stop("profile must be a PrivacyProfile", call. = FALSE)
   }
-  if (missing(renyiDP) && renyiDP_delta != 0) {
+  if (is.null(renyiDP) && renyiDP_delta != 0) {
     stop("renyiDP_delta requires renyiDP", call. = FALSE)
+  }
+  if (is.null(zCDP) && zCDP_delta != 0) {
+    stop("zCDP_delta requires zCDP", call. = FALSE)
   }
 
   guarantee <- `_new_privacy_guarantee`()
-  if (!missing(profile)) {
+  if (!is.null(profile)) {
     guarantee <- `_privacy_guarantee_with_profile`(guarantee, profile)
   }
-  if (!missing(tradeoff)) {
+  if (!is.null(tradeoff)) {
     guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, tradeoff, symmetric = FALSE)
   }
-  if (!missing(symmetric_tradeoff)) {
+  if (!is.null(symmetric_tradeoff)) {
     guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, symmetric_tradeoff, symmetric = TRUE)
   }
-  if (!missing(renyiDP)) {
+  if (!is.null(renyiDP)) {
     guarantee <- `_privacy_guarantee_with_renyiDP`(guarantee, renyiDP, renyiDP_delta)
+  }
+  if (!is.null(zCDP)) {
+    guarantee <- `_privacy_guarantee_with_zCDP`(guarantee, zCDP, zCDP_delta)
   }
   guarantee
 }

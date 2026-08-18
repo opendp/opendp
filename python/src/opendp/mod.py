@@ -1216,15 +1216,25 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         symmetric_tradeoff: Optional[Callable[[float], float]] = None,
         renyiDP: Optional[Callable[[float], float]] = None,
         renyiDP_delta: float = 0.0,
+        zCDP: Optional[float] = None,
+        zCDP_delta: float = 0.0,
         _ptr=None,
     ):
         if _ptr is not None:
             self.guarantee = _ptr
             return
-        if profile is None and tradeoff is None and symmetric_tradeoff is None and renyiDP is None:
+        if (
+            profile is None
+            and tradeoff is None
+            and symmetric_tradeoff is None
+            and renyiDP is None
+            and zCDP is None
+        ):
             raise TypeError("expected at least one privacy representation")
         if renyiDP is None and renyiDP_delta != 0.0:
             raise TypeError("renyiDP_delta requires renyiDP")
+        if zCDP is None and zCDP_delta != 0.0:
+            raise TypeError("zCDP_delta requires zCDP")
         if profile is not None and not isinstance(profile, PrivacyProfile):
             raise TypeError("profile must be a PrivacyProfile")
 
@@ -1233,6 +1243,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
             _privacy_guarantee_with_profile,
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_tradeoff,
+            _privacy_guarantee_with_zCDP,
         )
         guarantee = _new_privacy_guarantee()
         if profile is not None:
@@ -1248,6 +1259,10 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         if renyiDP is not None:
             guarantee = _privacy_guarantee_with_renyiDP(
                 guarantee, renyiDP, renyiDP_delta
+            )
+        if zCDP is not None:
+            guarantee = _privacy_guarantee_with_zCDP(
+                guarantee, zCDP, zCDP_delta
             )
         self.guarantee = guarantee.guarantee
 
