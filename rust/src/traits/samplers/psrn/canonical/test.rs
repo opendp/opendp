@@ -20,7 +20,7 @@ fn test_sample_cnd_interval_progression() -> Fallible<()> {
         tradeoff: &tradeoff,
         fixed_point: &c,
     });
-    let (l, r) = assert_ordered_progression(&mut cnd, 20);
+    let (l, r) = assert_ordered_progression(&mut cnd, 20)?;
     let (l, r) = (l.to_f64().value(), r.to_f64().value());
     println!("{l:?}, {r:?}, {}", cnd.refinements);
     Ok(())
