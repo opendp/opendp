@@ -34,11 +34,9 @@ fn test_make_noise_ibig_gaussian() -> Fallible<()> {
         L2Distance::<RBig>::default(),
     );
 
-    assert!(
-        ZExpFamily::<2> { scale: rbig!(-1) }
-            .make_noise(space.clone())
-            .is_err()
-    );
+    let invalid: Fallible<Measurement<_, _, zCDP, Vec<IBig>>> =
+        ZExpFamily::<2> { scale: rbig!(-1) }.make_noise(space.clone());
+    assert!(invalid.is_err());
 
     let m_noise: Measurement<_, _, zCDP, Vec<IBig>> =
         ZExpFamily::<2> { scale: rbig!(1) }.make_noise(space.clone())?;
