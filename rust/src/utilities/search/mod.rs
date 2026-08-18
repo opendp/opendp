@@ -622,7 +622,7 @@ pub(crate) enum SearchMode {
 
 impl SearchMode {
     #[inline]
-    fn is_better(self, candidate: f64, incumbent: f64) -> bool {
+    pub(crate) fn is_better(self, candidate: f64, incumbent: f64) -> bool {
         match self {
             SearchMode::Minimize => candidate < incumbent,
             SearchMode::Maximize => candidate > incumbent,

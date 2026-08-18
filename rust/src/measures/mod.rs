@@ -6,6 +6,8 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+pub(crate) mod rdp_to_approxdp;
+
 pub(crate) mod curves;
 pub use curves::*;
 
@@ -94,6 +96,7 @@ pub(crate) enum Purity {
 pub(crate) struct PrivacyCapabilities {
     profile: Option<Purity>,
     tradeoff: bool,
+    renyi: Option<Purity>,
 }
 
 impl PrivacyCapabilities {
@@ -101,6 +104,7 @@ impl PrivacyCapabilities {
         Self {
             profile: Some(purity),
             tradeoff: false,
+            renyi: None,
         }
     }
 
@@ -115,6 +119,15 @@ impl PrivacyCapabilities {
 
     pub(crate) fn tradeoff(&self) -> bool {
         self.tradeoff
+    }
+
+    pub(crate) fn with_renyi(mut self, purity: Purity) -> Self {
+        self.renyi = Some(purity);
+        self
+    }
+
+    pub(crate) fn renyi(&self) -> Option<Purity> {
+        self.renyi
     }
 }
 
@@ -140,6 +153,10 @@ impl MultiDP {
 
     pub(crate) fn with_tradeoff() -> Self {
         Self::new(PrivacyCapabilities::default().with_tradeoff())
+    }
+
+    pub(crate) fn with_renyi(purity: Purity) -> Self {
+        Self::new(PrivacyCapabilities::default().with_renyi(purity))
     }
 
     pub(crate) fn capabilities(&self) -> &PrivacyCapabilities {

@@ -1188,7 +1188,7 @@ class PrivacyProfile(object):
     def delta(self, epsilon):
         '''
         Returns the delta that corresponds to this epsilon.
-        
+
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_delta
@@ -1197,12 +1197,12 @@ class PrivacyProfile(object):
     def epsilon(self, delta):
         '''
         Returns the epsilon that corresponds to this delta.
-        
+
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
-    
+
 
 class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
     '''Aggregate of simultaneously valid privacy representations.'''
@@ -1214,19 +1214,24 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         profile: Optional[PrivacyProfile] = None,
         tradeoff: Optional[Callable[[float], float]] = None,
         symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        renyiDP: Optional[Callable[[float], float]] = None,
+        renyiDP_delta: float = 0.0,
         _ptr=None,
     ):
         if _ptr is not None:
             self.guarantee = _ptr
             return
-        if profile is None and tradeoff is None and symmetric_tradeoff is None:
+        if profile is None and tradeoff is None and symmetric_tradeoff is None and renyiDP is None:
             raise TypeError("expected at least one privacy representation")
+        if renyiDP is None and renyiDP_delta != 0.0:
+            raise TypeError("renyiDP_delta requires renyiDP")
         if profile is not None and not isinstance(profile, PrivacyProfile):
             raise TypeError("profile must be a PrivacyProfile")
 
         from opendp.measures import (
             _new_privacy_guarantee,
             _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_tradeoff,
         )
         guarantee = _new_privacy_guarantee()
@@ -1239,6 +1244,10 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         if symmetric_tradeoff is not None:
             guarantee = _privacy_guarantee_with_tradeoff(
                 guarantee, symmetric_tradeoff, symmetric=True
+            )
+        if renyiDP is not None:
+            guarantee = _privacy_guarantee_with_renyiDP(
+                guarantee, renyiDP, renyiDP_delta
             )
         self.guarantee = guarantee.guarantee
 
