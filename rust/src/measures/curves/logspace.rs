@@ -3,6 +3,9 @@ use crate::{
     traits::{SInterval, backend::Dashu},
 };
 
+const F64_TRUE_MIN: f64 = f64::from_bits(1);
+pub(crate) const LOG_TRUE_MIN: f64 = -744.4400719213812;
+
 pub(crate) fn check_delta(delta: f64) -> Fallible<()> {
     if delta.is_nan() || delta < 0.0 || delta > 1.0 {
         return fallible!(FailedMap, "delta ({delta}) must be between zero and one");
@@ -57,4 +60,23 @@ pub(crate) fn log_to_delta_upper(log_delta: f64) -> Fallible<f64> {
     }
 
     SInterval::<Dashu>::point(log_delta)?.exp()?.upper_f64()
+}
+
+pub(in crate::measures::curves) fn one_minus_delta_from_log_upper_unchecked(
+    log_delta: f64,
+) -> Fallible<SInterval<Dashu>> {
+    if log_delta == f64::NEG_INFINITY {
+        return SInterval::<Dashu>::point(1.0);
+    }
+    if log_delta == 0.0 {
+        return SInterval::<Dashu>::point(0.0);
+    }
+
+    if log_delta < LOG_TRUE_MIN {
+        return (SInterval::<Dashu>::point(1.0)?
+            - SInterval::<Dashu>::between(0.0, F64_TRUE_MIN)?)?
+        .clamp01();
+    }
+
+    (SInterval::<Dashu>::point(0.0)? - SInterval::<Dashu>::point(log_delta)?.exp_m1()?)?.clamp01()
 }

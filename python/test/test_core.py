@@ -205,9 +205,26 @@ def test_privacy_guarantee_profile_representation_is_distinct():
         PrivacyGuarantee(profile=lambda _eps: 0.0)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
         PrivacyGuarantee(profile)  # type: ignore[call-arg, misc]
-    with pytest.raises(TypeError, match="expected `profile=PrivacyProfile"):
+    with pytest.raises(TypeError, match="expected at least one privacy representation"):
         PrivacyGuarantee()
     assert guarantee.delta(1.0) == pytest.approx(profile.delta(1.0))
+
+
+def test_privacy_guarantee_tradeoff_queries():
+    from opendp.mod import PrivacyGuarantee
+    from opendp.measures import _privacy_guarantee_with_approxDP_tradeoff
+
+    guarantee = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+    assert guarantee.beta(alpha=0.3) == 0.7
+    assert guarantee.alpha(beta=0.7) == 0.3
+
+    symmetric = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+    assert symmetric.beta(alpha=0.3) == 0.7
+
+    point_profile = dp.PrivacyProfile(approxDP=[(1.0, 0.1), (2.0, 0.0)])
+    point_guarantee = PrivacyGuarantee(profile=point_profile)
+    certified = _privacy_guarantee_with_approxDP_tradeoff(point_guarantee)
+    assert certified.beta(alpha=0.3) >= 0.0
 
 
 def test_member():

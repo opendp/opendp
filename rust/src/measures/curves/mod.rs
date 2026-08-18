@@ -5,7 +5,14 @@ use crate::{
     utilities::search::{Above, fallible_binary_search_by},
 };
 
+mod approxdp;
 pub(crate) mod logspace;
+mod profile_to_tradeoff;
+mod tradeoff;
+
+#[cfg(feature = "ffi")]
+mod tradeoff_ffi;
+
 use logspace::{
     check_delta, check_log_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked,
     log_to_delta_upper,
@@ -32,6 +39,7 @@ pub struct PrivacyProfile {
 #[derive(Clone, Default)]
 pub struct PrivacyGuarantee {
     profile: Option<PrivacyProfile>,
+    tradeoff: Option<TradeoffRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -54,20 +62,225 @@ impl PrivacyGuarantee {
         Self::new().with_profile(profile)
     }
 
-    /// Evaluate the profile component at `epsilon`.
-    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
-        self.profile
+    /// Attach the certified symmetric tradeoff implied by point-backed
+    /// ApproxDP information already present on this guarantee.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(dead_code, non_snake_case)]
+    pub(crate) fn with_approxDP_tradeoff_trusted(mut self) -> Fallible<Self> {
+        let points = self
+            .profile
             .as_ref()
-            .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))?
-            .delta(epsilon)
+            .and_then(PrivacyProfile::approxDP_points)
+            .ok_or_else(|| {
+                err!(
+                    FailedMap,
+                    "certified ApproxDP-to-tradeoff conversion requires point-backed ApproxDP information"
+                )
+            })?
+            .to_vec();
+
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(move |alpha| approxdp::beta_via_approxDP(&points, alpha)),
+            symmetric: true,
+        });
+        Ok(self)
     }
 
-    /// Query the smallest `epsilon` whose profile delta is at most `delta`.
+    /// Attach an f-DP tradeoff representation.
+    ///
+    /// The callback is assumed to be functionally pure and to return finite
+    /// values in `[0, 1]` that are nonincreasing and convex on `[0, 1]`.
+    /// Numerically approximate callbacks must be downward-conservative. These
+    /// properties are part of the honest-but-curious callback contract and are
+    /// not validated at runtime.
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(beta),
+            symmetric: false,
+        });
+        Ok(self)
+    }
+
+    /// Attach a symmetric f-DP tradeoff representation.
+    ///
+    /// The callback is assumed to be functionally pure and to return finite
+    /// values in `[0, 1]` that are nonincreasing and convex on `[0, 1]`.
+    /// Numerically approximate callbacks must be downward-conservative. Use
+    /// this constructor only when the supplied tradeoff curve is genuinely
+    /// symmetric; that assertion is part of the honest-but-curious callback
+    /// contract and is not validated at runtime.
+    #[cfg(feature = "honest-but-curious")]
+    pub fn with_symmetric_tradeoff(
+        mut self,
+        beta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+    ) -> Fallible<Self> {
+        self.tradeoff = Some(TradeoffRepresentation {
+            beta: Arc::new(beta),
+            symmetric: true,
+        });
+        Ok(self)
+    }
+
+    /// Return the explicitly supplied symmetric tradeoff representation.
+    ///
+    /// This does not derive a tradeoff view from another representation: some
+    /// consumers, such as canonical noise, require the caller to attest that
+    /// the supplied curve is symmetric.
+    #[cfg(feature = "honest-but-curious")]
+    pub(crate) fn symmetric_tradeoff(&self) -> Fallible<Arc<TradeoffFn>> {
+        match &self.tradeoff {
+            Some(TradeoffRepresentation {
+                beta,
+                symmetric: true,
+            }) => Ok(beta.clone()),
+            Some(TradeoffRepresentation {
+                symmetric: false, ..
+            }) => fallible!(
+                FailedMap,
+                "privacy guarantee requires an explicitly symmetric tradeoff representation"
+            ),
+            None => fallible!(
+                FailedMap,
+                "privacy guarantee requires an explicitly supplied symmetric tradeoff representation"
+            ),
+        }
+    }
+
+    /// Evaluate the tightest successfully available conservative delta bound.
+    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        check_epsilon(epsilon)?;
+        let mut best = None;
+        let mut first_error = None;
+
+        if let Some(profile) = &self.profile {
+            match profile.delta(epsilon) {
+                Ok(delta) => best = Some(delta),
+                Err(error) => first_error = Some(error),
+            }
+        }
+        if let Some(TradeoffRepresentation { beta, symmetric }) = &self.tradeoff {
+            match tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon) {
+                Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+
+        match best {
+            Some(delta) => check_delta(delta).map(|_| delta),
+            None => first_error.map_or_else(
+                || fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
+                Err,
+            ),
+        }
+    }
+
+    /// Query the tightest successfully available conservative epsilon bound.
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
-        self.profile
-            .as_ref()
-            .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))?
-            .epsilon(delta)
+        check_delta(delta)?;
+        if delta == 1.0 {
+            return Ok(0.0);
+        }
+
+        let mut best = None;
+        let mut first_error = None;
+        if let Some(profile) = &self.profile {
+            match profile.epsilon(delta) {
+                Ok(epsilon) => best = Some(epsilon),
+                Err(error) => first_error = Some(error),
+            }
+        }
+        if let Some(TradeoffRepresentation { beta, symmetric }) = &self.tradeoff {
+            match invert_decreasing_callback(
+                |epsilon| tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon),
+                delta,
+            ) {
+                Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+
+        match best {
+            Some(epsilon) => Ok(epsilon),
+            None => first_error.map_or_else(
+                || fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
+                Err,
+            ),
+        }
+    }
+
+    /// Return the strongest successfully available conservative lower bound on
+    /// `beta(alpha)`.
+    pub fn beta(&self, alpha: f64) -> Fallible<f64> {
+        check_alpha(alpha)?;
+        if alpha == 1.0 {
+            return Ok(0.0);
+        }
+
+        let mut best = None;
+        let mut first_error = None;
+        if let Some(profile) = &self.profile {
+            match profile_to_tradeoff::beta_via_profile(profile, alpha) {
+                Ok(beta) => best = Some(beta),
+                Err(error) => first_error = Some(error),
+            }
+        }
+        if let Some(tradeoff) = &self.tradeoff {
+            match (tradeoff.beta)(alpha).and_then(|beta| check_beta(beta).map(|_| beta)) {
+                Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+
+        match best {
+            Some(beta) => check_beta(beta).map(|_| beta),
+            None => first_error.map_or_else(
+                || fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
+                Err,
+            ),
+        }
+    }
+
+    /// Return the strongest successfully available conservative lower bound on
+    /// `alpha(beta)`.
+    pub fn alpha(&self, beta: f64) -> Fallible<f64> {
+        check_beta(beta)?;
+        if beta == 1.0 {
+            return Ok(0.0);
+        }
+
+        let mut best = None;
+        let mut first_error = None;
+        if let Some(profile) = &self.profile {
+            match invert_decreasing_callback(
+                |alpha| profile_to_tradeoff::beta_via_profile(profile, alpha),
+                beta,
+            ) {
+                Ok(alpha) => best = Some(alpha),
+                Err(error) => first_error = Some(error),
+            }
+        }
+        if let Some(TradeoffRepresentation { beta: beta_fn, .. }) = &self.tradeoff {
+            match invert_beta_callback(beta_fn.as_ref(), beta) {
+                Ok(alpha) => best = Some(best.map_or(alpha, |value: f64| value.max(alpha))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+
+        match best {
+            Some(alpha) => check_alpha(alpha).map(|_| alpha),
+            None => first_error.map_or_else(
+                || fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
+                Err,
+            ),
+        }
     }
 
     pub(crate) fn profile(&self) -> Option<&PrivacyProfile> {
@@ -79,9 +292,18 @@ impl std::fmt::Debug for PrivacyGuarantee {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrivacyGuarantee")
             .field("profile", &self.profile.is_some())
+            .field("tradeoff", &self.tradeoff.is_some())
             .finish()
     }
 }
+
+#[derive(Clone)]
+struct TradeoffRepresentation {
+    beta: Arc<TradeoffFn>,
+    symmetric: bool,
+}
+
+type TradeoffFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 
 #[derive(Clone)]
 enum PrivacyProfileRepr {
@@ -100,6 +322,9 @@ type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 pub(crate) struct ApproxDPPoint {
     epsilon: f64,
     delta: f64,
+    one_minus_delta: dashu::rational::RBig,
+    exp_eps_up: dashu::rational::RBig,
+    exp_neg_eps_down: dashu::rational::RBig,
 }
 
 impl PrivacyProfile {
@@ -154,20 +379,22 @@ impl PrivacyProfile {
 
         let mut canonical: Vec<ApproxDPPoint> = Vec::with_capacity(points.len());
         for (epsilon, delta) in points {
-            let epsilon = crate::traits::CInterval::point(epsilon)?.upper_f64()?;
+            let point = ApproxDPPoint::build((epsilon, delta))?;
             if let Some(last) = canonical.last_mut() {
-                if last.epsilon == epsilon {
+                if last.epsilon == point.epsilon {
                     // At a repeated epsilon, retain the tightest bound.
-                    last.delta = last.delta.min(delta);
+                    if point.delta < last.delta {
+                        *last = point;
+                    }
                     continue;
                 }
                 // A point that is no tighter than the preceding point is
                 // dominated (including plateau points) and can be removed.
-                if delta >= last.delta {
+                if point.delta >= last.delta {
                     continue;
                 }
             }
-            canonical.push(ApproxDPPoint { epsilon, delta });
+            canonical.push(point);
         }
 
         self.repr = PrivacyProfileRepr::Points(Arc::from(canonical.into_boxed_slice()));
@@ -286,8 +513,28 @@ impl PrivacyProfile {
         };
         Ok(epsilon)
     }
+
+    #[allow(non_snake_case)]
+    pub(crate) fn approxDP_points(&self) -> Option<&[ApproxDPPoint]> {
+        match &self.repr {
+            PrivacyProfileRepr::Points(points) => Some(points),
+            PrivacyProfileRepr::Function { .. } => None,
+        }
+    }
+
+    /// Evaluate the canonical log-delta representation for an internal
+    /// conversion without exposing how the profile is materialized.
+    pub(crate) fn log_delta(&self, epsilon: f64) -> Fallible<f64> {
+        match &self.repr {
+            PrivacyProfileRepr::Points(_) => delta_to_log_upper_unchecked(self.delta(epsilon)?),
+            PrivacyProfileRepr::Function { log_delta, .. } => {
+                eval_log_profile(log_delta.as_ref(), epsilon)
+            }
+        }
+    }
 }
 
+#[cfg(feature = "honest-but-curious")]
 fn log_delta_from_delta(delta: Arc<DeltaFn>) -> Arc<LogProfileFn> {
     Arc::new(move |epsilon| {
         let value = eval_delta_profile(delta.as_ref(), epsilon)?;
@@ -359,6 +606,25 @@ fn invert_decreasing_callback(
     }
 
     fallible_binary_search_by(compare, Above(0.0))
+}
+
+fn invert_beta_callback(beta: &TradeoffFn, target: f64) -> Fallible<f64> {
+    invert_decreasing_callback(|alpha| beta(alpha), target)
+}
+
+fn check_alpha(alpha: f64) -> Fallible<()> {
+    check_unit_interval(alpha, "alpha")
+}
+
+fn check_beta(beta: f64) -> Fallible<()> {
+    check_unit_interval(beta, "beta")
+}
+
+fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
+    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+        return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {

@@ -161,6 +161,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if isinstance(value, PrivacyGuarantee):
             return value.guarantee
         if isinstance(value, ctypes.POINTER(AnyObject)):
+            # Keep the existing pointer wrapper. ctypes.cast would manufacture
+            # a second AnyObjectPtr owner whose finalizer double-frees the
+            # Rust allocation after the FFI call.
             return value
 
         from opendp._data import slice_as_object
@@ -665,11 +668,16 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['PrivacyProfile', 'f64']:
-        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
+    if inner_type_names in (['PrivacyProfile', 'f64'], ['PrivacyGuarantee', 'f64']):
+        pointer = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        return PrivacyProfile(_ptr=curve), delta.contents.value
-    
+        wrapper = (
+            PrivacyProfile(_ptr=pointer)
+            if inner_type_names[0] == 'PrivacyProfile'
+            else PrivacyGuarantee(_ptr=pointer)
+        )
+        return wrapper, delta.contents.value
+
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
