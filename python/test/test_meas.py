@@ -431,9 +431,12 @@ def test_gaussian_threshold_float(constructor):
 
 def test_canonical_noise():
     space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=(1.0, 1e-6))
+    privacy = dp.PrivacyGuarantee(
+        profile=dp.PrivacyProfile(approxDP=[(1.0, 1e-6)])
+    )
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=privacy)
 
-    assert m_cnd.map(1.0) == (1.0, 1e-6)
+    assert m_cnd.map(1.0).delta(1.0) <= 1.1e-6
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
 

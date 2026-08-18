@@ -53,9 +53,9 @@ mod randomized_response_bitvec;
 #[cfg(feature = "contrib")]
 pub use randomized_response_bitvec::*;
 
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "honest-but-curious"))]
 mod canonical_noise;
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "honest-but-curious"))]
 pub use canonical_noise::*;
 
 #[cfg(all(feature = "idealized-numerics", feature = "contrib"))]

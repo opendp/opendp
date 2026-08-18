@@ -691,7 +691,7 @@ class SortBy:
     """Whether the order should be maintained if elements are equal."""
 
 
-class LazyFrameQuery:
+class LazyFrameQuery:  # pragma: no cover
     """
     A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,

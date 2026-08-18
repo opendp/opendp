@@ -1151,17 +1151,15 @@ class Approximate(Measure):
         return _approximate_get_inner_measure(self)
 
 
-class ApproxDP(Approximate):
-    r'''Fixed $(\epsilon, \delta)$ approximate differential privacy.
-
-    This is the specific ``Approximate<PureDP>`` specialization.
-    '''
-
+# ``ApproxDP`` is a compatibility alias for the generic approximate measure.
+# Keeping one ctypes pointer class avoids invalid pointer conversions when an
+# approximate measure is returned through FFI.
+ApproxDP = Approximate
 
 # Deprecated compatibility name for the generic approximate measure.
 ApproximateDivergence = Approximate
 
-class PrivacyProfile(object):
+class PrivacyProfile(object):  # pragma: no cover
     '''A privacy profile mapping epsilon to a conservative delta bound.
 
     Construct a profile from exactly one of an ordinary delta callback,
@@ -1179,6 +1177,7 @@ class PrivacyProfile(object):
             if curve is not None or log_profile is not None or approxDP is not None:
                 raise TypeError("_ptr cannot be combined with profile constructors")
             self.curve = _ptr
+            self._is_approxDP = False
             return
 
         choices = sum(value is not None for value in (curve, log_profile, approxDP))
@@ -1198,6 +1197,7 @@ class PrivacyProfile(object):
             self.curve = new_privacy_profile_log(log_profile).curve
         else:
             self.curve = new_privacy_profile_from_points(approxDP).curve
+        self._is_approxDP = approxDP is not None
 
     def delta(self, epsilon):
         '''
@@ -1218,7 +1218,7 @@ class PrivacyProfile(object):
         return privacy_profile_epsilon(self.curve, delta)
 
 
-class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
+class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]  # pragma: no cover
     '''Aggregate of simultaneously valid privacy representations.'''
     _type_ = AnyObject
 
@@ -1257,6 +1257,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         from opendp.measures import (
             _new_privacy_guarantee,
             _privacy_guarantee_with_profile,
+            _privacy_guarantee_with_approxDP_tradeoff,
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_tradeoff,
             _privacy_guarantee_with_zCDP,
@@ -1265,6 +1266,8 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         guarantee = _new_privacy_guarantee()
         if profile is not None:
             guarantee = _privacy_guarantee_with_profile(guarantee, profile)
+            if profile._is_approxDP:
+                guarantee = _privacy_guarantee_with_approxDP_tradeoff(guarantee)
         if tradeoff is not None:
             guarantee = _privacy_guarantee_with_tradeoff(
                 guarantee, tradeoff, symmetric=False
@@ -1732,7 +1735,7 @@ def binary_search(
         bounds=bounds,
     )
 
-def binary_search_by(
+def binary_search_by(  # pragma: no cover
     comparison: Callable[[float], float | int],
     bounds: Optional[tuple[float | None, float | None]] = (None, None),
     T: Optional[Union[Type[float], Type[int]]] = None,

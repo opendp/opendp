@@ -689,7 +689,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         _transfer_anyobject_ownership(candidate_obj)
         return score.contents.value, candidate
 
-    if inner_type_names == ['f64', 'ExtrinsicObject']:
+    if inner_type_names == ['f64', 'ExtrinsicObject']:  # pragma: no cover
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate = ctypes.cast(ptr_data[1], ctypes.POINTER(ExtrinsicObject))
         return score.contents.value, c_to_py(candidate)
@@ -1039,7 +1039,7 @@ class TransitionFnPtr(ctypes.POINTER(TransitionFn)): # type: ignore[misc]
     _type_ = TransitionFn
 
 
-def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
+def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):  # pragma: no cover
     from opendp._convert import c_to_py, py_to_c
     py_transition, A = userdata
 

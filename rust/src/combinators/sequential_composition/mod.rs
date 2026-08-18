@@ -119,6 +119,9 @@ impl CompositionMeasure for Approximate<PureDP> {
     }
 }
 
+/// `Approximate<zCDP>` uses OpenDP's existing distance semantics:
+/// `(rho, delta)` is an approximate-zCDP guarantee, so sequential
+/// composition adds both the rho parameters and their source deltas.
 #[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproxZCDP.tex")]
 impl CompositionMeasure for Approximate<zCDP> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {

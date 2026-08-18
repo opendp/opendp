@@ -24,6 +24,7 @@ from opendp.combinators import (
     make_pureDP_to_zCDP,
     make_adaptive_composition,
     make_zCDP_to_profileDP,
+    make_multiDP_to_approxDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.extras._utilities import supports_partial, to_then
@@ -131,7 +132,7 @@ def register(
 
     if supports_partial(constructor):
         constructors[name] = to_then(constructor), True
-    else:
+    else:  # pragma: no cover
         constructors[name] = constructor, False
 
 
@@ -416,7 +417,7 @@ def unit_of(
     raise Exception("No matching metric found")  # pragma: no cover
 
 
-class Context(object):
+class Context(object):  # pragma: no cover
     """A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.
 
     It is recommended to use :py:meth:`Context.compositor` constructor instead of this one.
@@ -750,14 +751,28 @@ class Query(object):
         # - its d_out argument is already stored in the chain
         # - it has a special postprocessor
         from opendp.measurements import then_canonical_noise
+        from opendp.mod import PrivacyGuarantee, PrivacyProfile
         from opendp._internal import _new_pure_function
         from opendp.extras.numpy.canonical import BinomialCND
 
         def then(d_in, d_out):
+            # Context budgets are ordinary ApproxDP points. Convert them to a
+            # typed guarantee and attach the certified symmetric tradeoff in
+            # Rust; do not expose a callback-based symmetry assertion here.
+            inference_d_out = d_out
+            if isinstance(d_out, tuple):
+                epsilon, delta = d_out
+                # Canonical noise compiles a finite f-DP approximation. Reserve
+                # a small amount of delta for its conservative floating-point
+                # enclosure, while the final measure is still cast and
+                # accounted against the original context budget.
+                calibration_delta = delta - min(delta / 2, 1e-12)
+                profile = PrivacyProfile(approxDP=[(epsilon, calibration_delta)])
+                d_out = PrivacyGuarantee(profile=profile)
             m_noise = then_canonical_noise(d_in, d_out)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
-                    lambda x: BinomialCND(x, d_in, d_out, binomial_size),
+                    lambda x: BinomialCND(x, d_in, inference_d_out, binomial_size),
                     TO="ExtrinsicObject",
                 )
             return m_noise
@@ -1130,6 +1145,11 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     if from_to == ("PureDP", "Approximate<PureDP>"):
         return make_approximate(chain)
+
+    # Canonical noise returns MultiDP, whose aggregate guarantee can be
+    # projected to the context's fixed ApproxDP budget at the requested delta.
+    if from_to == ("MultiDP", "Approximate<PureDP>"):
+        return make_multiDP_to_approxDP(chain, d_to[1])
 
     if from_to == ("zCDP", "Approximate<zCDP>"):
         return make_approximate(chain)

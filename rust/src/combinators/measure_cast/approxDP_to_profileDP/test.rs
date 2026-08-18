@@ -1,3 +1,5 @@
+use std::ops::{Mul, Neg, Sub};
+
 use crate::{
     domains::{AtomDomain, MapDomain},
     measurements::make_laplace_threshold,
