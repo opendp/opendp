@@ -117,6 +117,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         return value
 
     if c_type == CallbackFnPtr:
+        if not callable(value):
+            raise TypeError(f"expected a callable callback, got {type(value).__name__}")
         return _wrap_py_func(value, type_name)
 
     if c_type == TransitionFnPtr:
@@ -153,6 +155,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
+        if isinstance(value, PrivacyProfile):
+            return value.curve
         if isinstance(value, ctypes.POINTER(AnyObject)):
             return value
 
@@ -192,7 +196,7 @@ def c_to_py(value: Any) -> Any:
         obj_type = object_type(value)
 
         if obj_type == PrivacyProfile.__name__:
-            return PrivacyProfile(value)
+            return PrivacyProfile(_ptr=cast(AnyObjectPtr, value))
         
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)
@@ -658,7 +662,7 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     if inner_type_names == ['PrivacyProfile', 'f64']:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        return PrivacyProfile(curve), delta.contents.value
+        return PrivacyProfile(_ptr=curve), delta.contents.value
     
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))

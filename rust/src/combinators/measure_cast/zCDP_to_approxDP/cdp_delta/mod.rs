@@ -61,11 +61,11 @@ pub(crate) mod test;
 /// For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
 /// or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
-    if rho.is_sign_negative() {
+    if rho < 0.0 {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
 
-    if eps.is_sign_negative() {
+    if eps < 0.0 {
         return fallible!(FailedMap, "epsilon ({}) must be non-negative", eps);
     }
 

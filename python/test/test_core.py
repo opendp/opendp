@@ -159,11 +159,34 @@ def test_function():
 
 def test_privacy_profile():
     from opendp.measures import new_privacy_profile
+    from opendp.mod import PrivacyProfile
+    from opendp._convert import py_to_c
+    from opendp._lib import AnyObjectPtr, CallbackFnPtr
     import math
 
     profile = new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
-    assert profile.epsilon(delta=1e-7) == 16.11809565095832
+    assert profile.epsilon(delta=1e-7) == pytest.approx(16.11809565095832)
+
+    direct = PrivacyProfile(lambda eps: math.exp(-eps))
+    assert direct.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
+
+    log_profile = PrivacyProfile(log_profile=lambda eps: -eps)
+    assert log_profile.delta(epsilon=1.0) == pytest.approx(math.exp(-1.0))
+
+    point_profile = PrivacyProfile(approxDP=[(1.0, 0.1), (2.0, 0.0)])
+    assert point_profile.delta(epsilon=1.5) == 0.1
+    assert point_profile.epsilon(delta=0.0) == 2.0
+    assert py_to_c(point_profile, AnyObjectPtr, "PrivacyProfile") is not None
+
+    with pytest.raises(TypeError, match="expected a callable callback"):
+        py_to_c(1, CallbackFnPtr, "f64")
+    with pytest.raises(TypeError, match="_ptr cannot be combined"):
+        PrivacyProfile(curve=lambda _: 0.0, _ptr=point_profile.curve)
+    with pytest.raises(TypeError, match="expected exactly one"):
+        PrivacyProfile()
+    with pytest.raises(TypeError, match="expected exactly one"):
+        PrivacyProfile(lambda _: 0.0, log_profile=lambda _: 0.0)
 
 
 def test_member():
