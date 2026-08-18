@@ -419,6 +419,45 @@ new_privacy_profile_internal <- function(ptr) {
   privacy_profile
 }
 
+#' New privacy guarantee
+#'
+#' @concept mod
+#' @param ptr a pointer to a privacy guarantee
+new_privacy_guarantee_internal <- function(ptr) {
+  privacy_guarantee <- function(attr, epsilon, delta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
+      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+    }
+
+    if (!missing(epsilon)) {
+      return(privacy_guarantee_delta(privacy_guarantee, epsilon))
+    }
+
+    if (!missing(delta)) {
+      return(privacy_guarantee_epsilon(privacy_guarantee, delta))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(privacy_guarantee) <- "privacy_guarantee"
+  privacy_guarantee
+}
+
+#' Construct a privacy guarantee from an existing privacy profile.
+#'
+#' @param profile A PrivacyProfile object.
+#' @export
+privacy_guarantee <- function(profile) {
+  if (missing(profile)) {
+    stop("expected profile", call. = FALSE)
+  }
+  guarantee <- `_new_privacy_guarantee`()
+  `_privacy_guarantee_with_profile`(guarantee, profile)
+}
+
 #' new queryable
 #'
 #' @concept mod
