@@ -12,7 +12,7 @@ The members of this module will then be accessible at ``dp.sql``.
 
 .. caution::
 
-    This is a very early release, and is intended primarily to solicit feedback.
+    This is an early release, and is intended primarily to solicit feedback.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
 """
@@ -49,7 +49,7 @@ def scan_database(connection, table_name: str):
     :param connection: A connection object
     :param table_name: The name of the database table to scan
     """
-    from polars_to_ibis import scan_database  # type: ignore[import-not-found]
+    from polars_to_ibis import scan_database  # type: ignore[import-untyped]
 
     # Avoid a direct polars_to_ibis call in user code.
     return scan_database(connection, table_name)
@@ -97,7 +97,7 @@ def execute_on_database(query, connection, table_name: str):
     """
     import opendp.prelude as dp
 
-    from polars_to_ibis import split_polars_on_ffi
+    from polars_to_ibis import split_polars_on_ffi  # type: ignore[import-untyped]
 
     query_lf = query.release().lazy()
 
