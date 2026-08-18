@@ -1,4 +1,4 @@
-use std::ffi::c_double;
+use std::ffi::{c_char, c_double};
 
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt, MetricSpace},
@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
     measurements::{TopKMeasure, make_private_quantile},
-    measures::{PureDP, zCDP},
+    measures::{MultiDP, PureDP, zCDP},
     traits::Number,
     transformations::traits::UnboundedMetric,
 };
@@ -19,11 +19,16 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
     candidates: *const AnyObject,
     alpha: c_double,
     scale: c_double,
+    distribution: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
     let output_measure = try_as_ref!(output_measure);
     let candidates = try_as_ref!(candidates);
+    let distribution = try_!(crate::ffi::util::to_option_str(distribution))
+        .map(crate::measurements::SelectionDistribution::try_from)
+        .transpose();
+    let distribution = try_!(distribution);
 
     fn monomorphize<MI, MO, TIA>(
         input_domain: &AnyDomain,
@@ -32,6 +37,7 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
         candidates: &AnyObject,
         alpha: f64,
         scale: f64,
+        distribution: Option<crate::measurements::SelectionDistribution>,
     ) -> Fallible<AnyMeasurement>
     where
         MI: 'static + UnboundedMetric,
@@ -52,6 +58,12 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
             candidates,
             alpha,
             scale,
+            distribution.map(|d| match d {
+                crate::measurements::SelectionDistribution::Exponential => {
+                    "exponential".to_string()
+                }
+                crate::measurements::SelectionDistribution::Gumbel => "gumbel".to_string(),
+            }),
         )
         .into_any()
     }
@@ -60,8 +72,8 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
     let TIA = try_!(input_domain.type_.get_atom());
     dispatch!(monomorphize, [
         (MI, @dataset_metrics),
-        (MO, [PureDP, zCDP]),
+        (MO, [PureDP, zCDP, MultiDP]),
         (TIA, @numbers)
-    ], (input_domain, input_metric, output_measure, candidates, alpha, scale))
+    ], (input_domain, input_metric, output_measure, candidates, alpha, scale, distribution))
     .into()
 }

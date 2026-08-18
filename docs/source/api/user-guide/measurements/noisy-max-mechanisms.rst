@@ -63,12 +63,12 @@ position.
 Distribution: Exponential vs. Gumbel
 ------------------------------------
 
-Based on the choice of privacy measure passed into ``report_noisy_max``,
-the OpenDP Library chooses the corresponding distribution to maximize
-utility:
+By default, the OpenDP Library infers the selection distribution from the
+requested output measure. Pass ``distribution`` explicitly to select the
+mechanism independently from privacy accounting:
 
 +------------------------------------+
-| ``privacy_measure`` | distribution |
+| ``output_measure`` | distribution |
 +====================================+
 | ``dp.pure_dp()``    | exponential  |
 +------------------------------------+

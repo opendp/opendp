@@ -13,8 +13,8 @@ use crate::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, Downcast},
         util::{c_bool, to_bool, to_str},
     },
-    measurements::{Optimize, make_noisy_max, noisy_top_k::TopKMeasure},
-    measures::{PureDP, zCDP},
+    measurements::{Optimize, SelectionDistribution, make_noisy_max, noisy_top_k::TopKMeasure},
+    measures::{MultiDP, PureDP, zCDP},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
@@ -26,6 +26,7 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
     output_measure: *const AnyMeasure,
     scale: f64,
     negate: c_bool,
+    distribution: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
@@ -34,6 +35,10 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
     let MO = output_measure.type_.clone();
 
     let negate = to_bool(negate);
+    let distribution = try_!(crate::ffi::util::to_option_str(distribution))
+        .map(SelectionDistribution::try_from)
+        .transpose();
+    let distribution = try_!(distribution);
 
     fn monomorphize<MO, TIA>(
         input_domain: &AnyDomain,
@@ -41,6 +46,7 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
         output_measure: &AnyMeasure,
         scale: f64,
         negate: bool,
+        distribution: Option<SelectionDistribution>,
     ) -> Fallible<AnyMeasurement>
     where
         MO: 'static + TopKMeasure,
@@ -53,19 +59,55 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
             .clone();
         let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
-        make_noisy_max::<MO, TIA>(input_domain, input_metric, output_measure, scale, negate)
-            .into_any()
+        make_noisy_max::<MO, TIA>(
+            input_domain,
+            input_metric,
+            output_measure,
+            scale,
+            negate,
+            distribution.map(|d| match d {
+                SelectionDistribution::Exponential => "exponential".to_string(),
+                SelectionDistribution::Gumbel => "gumbel".to_string(),
+            }),
+        )
+        .into_any()
     }
 
     dispatch!(
         monomorphize,
         [
-            (MO, [PureDP, zCDP]),
+            (MO, [PureDP, zCDP, MultiDP]),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
-        (input_domain, input_metric, output_measure, scale, negate)
+        (
+            input_domain,
+            input_metric,
+            output_measure,
+            scale,
+            negate,
+            distribution
+        )
     )
     .into()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measurements__make_report_noisy_max(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    scale: f64,
+    negate: c_bool,
+    distribution: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    opendp_measurements__make_noisy_max(
+        input_domain,
+        input_metric,
+        output_measure,
+        scale,
+        negate,
+        distribution,
+    )
 }
 
 #[unsafe(no_mangle)]

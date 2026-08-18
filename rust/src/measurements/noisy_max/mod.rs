@@ -23,6 +23,7 @@ mod test;
     arguments(
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         negate(default = false),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null"),
     ),
     generics(MO(suppress), TIA(suppress))
 )]
@@ -41,9 +42,10 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`
 /// * `input_metric` - Metric on the input domain. Must be `LInfDistance`
-/// * `output_measure` - One of `PureDP`, `zCDP`
+/// * `output_measure` - Privacy measure used for accounting. One of `PureDP`, `zCDP`, or `MultiDP`.
 /// * `scale` - Scale for the noise distribution
 /// * `negate` - Set to true to return min
+/// * `distribution` - Optional selection distribution: `"exponential"` or `"gumbel"`.
 ///
 /// # Generics
 /// * `MO` - Output measure. One of `PureDP` or `zCDP`
@@ -54,18 +56,70 @@ pub fn make_noisy_max<MO: TopKMeasure, TIA>(
     output_measure: MO,
     scale: f64,
     negate: bool,
+    distribution: Option<String>,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, usize>>
 where
     TIA: Number + CastInternalRational,
     FBig: TryFrom<TIA> + TryFrom<f64>,
     f64: InfCast<TIA>,
 {
-    make_noisy_top_k(input_domain, input_metric, output_measure, 1, scale, negate)
-        >> Function::new_fallible(|arg: &Vec<usize>| {
-            arg.get(0)
-                .cloned()
-                .ok_or_else(|| err!(FailedFunction, "candidates set is empty"))
-        })
+    make_noisy_top_k(
+        input_domain,
+        input_metric,
+        output_measure,
+        1,
+        scale,
+        negate,
+        distribution,
+    ) >> Function::new_fallible(|arg: &Vec<usize>| {
+        arg.get(0)
+            .cloned()
+            .ok_or_else(|| err!(FailedFunction, "candidates set is empty"))
+    })
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        negate(default = false),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null"),
+    ),
+    generics(MO(suppress), TIA(suppress))
+)]
+/// Report the index selected by a private noisy-max mechanism.
+///
+/// This is an alias for [`make_noisy_max`] that makes the report-level API
+/// explicit while preserving the same accounting and distribution semantics.
+///
+/// # Arguments
+/// * `input_domain` - Domain of the input vector.
+/// * `input_metric` - Metric on the input domain.
+/// * `output_measure` - Privacy measure used for accounting.
+/// * `scale` - Scale for the selection distribution.
+/// * `negate` - Set to true to report the minimum index.
+/// * `distribution` - Optional selection distribution: `"exponential"` or `"gumbel"`.
+pub fn make_report_noisy_max<MO: TopKMeasure, TIA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: LInfDistance<TIA>,
+    output_measure: MO,
+    scale: f64,
+    negate: bool,
+    distribution: Option<String>,
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, usize>>
+where
+    TIA: Number + CastInternalRational,
+    FBig: TryFrom<TIA> + TryFrom<f64>,
+    f64: InfCast<TIA>,
+{
+    make_noisy_max(
+        input_domain,
+        input_metric,
+        output_measure,
+        scale,
+        negate,
+        distribution,
+    )
 }
 
 #[bootstrap(
@@ -110,6 +164,7 @@ where
         PureDP,
         scale,
         matches!(optimize, Optimize::Max),
+        None,
     )
 }
 

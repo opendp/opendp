@@ -462,6 +462,52 @@ def test_generic_noise_multidp_distribution_selection():
         dp.m.make_noise(*scalar, dp.pure_dp(), scale=1.0, distribution="gaussian")
 
 
+def test_multidp_selection_distribution_and_quantile_forwarding():
+    scores = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    metric = dp.linf_distance(T=float)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noisy_max(scores, metric, dp.multi_dp(), scale=1.0)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noisy_top_k(scores, metric, dp.multi_dp(), 1, scale=1.0)
+
+    for distribution in ["exponential", "gumbel"]:
+        assert isinstance(
+            dp.m.make_noisy_max(
+                scores, metric, dp.multi_dp(), scale=1.0, distribution=distribution
+            ).map(1.0),
+            dp.PrivacyGuarantee,
+        )
+
+    quantile = dp.m.make_private_quantile(
+        scores,
+        dp.symmetric_distance(),
+        dp.multi_dp(),
+        [0.0, 1.0],
+        0.5,
+        1.0,
+        distribution="gumbel",
+    )
+    assert isinstance(quantile.map(1), dp.PrivacyGuarantee)
+
+    report_max = dp.m.make_report_noisy_max(
+        scores,
+        metric,
+        dp.multi_dp(),
+        scale=1.0,
+        distribution="exponential",
+    )
+    report_top_k = dp.m.make_report_noisy_top_k(
+        scores,
+        metric,
+        dp.multi_dp(),
+        1,
+        scale=1.0,
+        distribution="gumbel",
+    )
+    assert isinstance(report_max.map(1.0), dp.PrivacyGuarantee)
+    assert isinstance(report_top_k.map(1.0), dp.PrivacyGuarantee)
+
+
 def test_multidp_noise_threshold_distribution_selection():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
     for metric, distribution in [

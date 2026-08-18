@@ -1,4 +1,5 @@
 use dashu::float::FBig;
+use std::ffi::c_char;
 
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt},
@@ -8,8 +9,8 @@ use crate::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, Downcast},
         util::{c_bool, to_bool},
     },
-    measurements::{TopKMeasure, make_noisy_top_k},
-    measures::{PureDP, zCDP},
+    measurements::{SelectionDistribution, TopKMeasure, make_noisy_top_k},
+    measures::{MultiDP, PureDP, zCDP},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
@@ -22,6 +23,7 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
     k: u32,
     scale: f64,
     negate: c_bool,
+    distribution: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
@@ -29,6 +31,10 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
     let TIA_ = try_!(input_domain.type_.get_atom());
     let MO = output_measure.type_.clone();
     let k = k as usize;
+    let distribution = try_!(crate::ffi::util::to_option_str(distribution))
+        .map(SelectionDistribution::try_from)
+        .transpose();
+    let distribution = try_!(distribution);
 
     let negate = to_bool(negate);
 
@@ -39,6 +45,7 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
         k: usize,
         scale: f64,
         negate: bool,
+        distribution: Option<SelectionDistribution>,
     ) -> Fallible<AnyMeasurement>
     where
         MO: 'static + TopKMeasure,
@@ -51,17 +58,57 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
             .clone();
         let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
-        make_noisy_top_k::<MO, TIA>(input_domain, input_metric, output_measure, k, scale, negate)
-            .into_any()
+        make_noisy_top_k::<MO, TIA>(
+            input_domain,
+            input_metric,
+            output_measure,
+            k,
+            scale,
+            negate,
+            distribution.map(|d| match d {
+                SelectionDistribution::Exponential => "exponential".to_string(),
+                SelectionDistribution::Gumbel => "gumbel".to_string(),
+            }),
+        )
+        .into_any()
     }
 
     dispatch!(
         monomorphize,
         [
-            (MO, [PureDP, zCDP]),
+            (MO, [PureDP, zCDP, MultiDP]),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
-        (input_domain, input_metric, output_measure, k, scale, negate)
+        (
+            input_domain,
+            input_metric,
+            output_measure,
+            k,
+            scale,
+            negate,
+            distribution
+        )
     )
     .into()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    k: u32,
+    scale: f64,
+    negate: c_bool,
+    distribution: *const c_char,
+) -> FfiResult<*mut AnyMeasurement> {
+    opendp_measurements__make_noisy_top_k(
+        input_domain,
+        input_metric,
+        output_measure,
+        k,
+        scale,
+        negate,
+        distribution,
+    )
 }

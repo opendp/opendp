@@ -9,7 +9,7 @@ use crate::traits::{CastInternalRational, InfCast, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
-    core::{Function, Measurement},
+    core::{Function, Measure, Measurement},
     error::Fallible,
 };
 use dashu::float::FBig;
@@ -43,7 +43,10 @@ mod test;
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
 /// * `global_scale` - (Re)scale the noise distribution
-pub(crate) fn make_expr_noisy_max<MI: 'static + UnboundedMetric, MO: 'static + TopKMeasure>(
+pub(crate) fn make_expr_noisy_max<
+    MI: 'static + UnboundedMetric,
+    MO: 'static + TopKMeasure + Measure<Distance = f64>,
+>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
@@ -120,6 +123,10 @@ where
         }
     };
 
+    let distribution = MO::legacy_distribution()
+        .ok_or_else(|| err!(MakeMeasurement, "distribution is required for noisy max"))?;
+    let replacement = MO::replacement(distribution)?;
+
     let m_rnm = Measurement::<_, L0InfDistance<LInfDistance<f64>>, _, _>::new(
         middle_domain,
         middle_metric.clone(),
@@ -129,7 +136,7 @@ where
                 vec![input_expr],
                 expr.clone(),
                 NoisyMaxPlugin {
-                    replacement: MO::REPLACEMENT,
+                    replacement,
                     negate,
                     scale,
                 },
@@ -141,7 +148,7 @@ where
     t_prior >> m_rnm
 }
 
-fn rnm_privacy_map<T: Number, MO: TopKMeasure>(
+fn rnm_privacy_map<T: Number, MO: TopKMeasure + Measure<Distance = f64>>(
     array_domain: &ArrayDomain,
     scale: f64,
     negate: bool,
@@ -165,6 +172,7 @@ where
         MO::default(),
         scale,
         negate,
+        None,
     )?;
 
     Ok(PrivacyMap::new_fallible(
