@@ -8,7 +8,7 @@ use crate::{
 use super::*;
 
 #[test]
-fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
+fn test_approxDP_to_profileDP() -> Fallible<()> {
     let meas_fixed = make_laplace_threshold(
         MapDomain::new(AtomDomain::<String>::default(), AtomDomain::new_non_nan()),
         L0PInfDistance::default(),
@@ -16,7 +16,7 @@ fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
         10,
         None,
     )?;
-    let meas_smooth = make_fixed_approxDP_to_approxDP(meas_fixed.clone())?;
+    let meas_smooth = make_approxDP_to_profileDP(meas_fixed.clone())?;
 
     let (eps, del) = meas_fixed.map(&(1, 1, 1))?;
 

@@ -17,7 +17,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
-        MaxDivergence,
+        PureDP,
         col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
@@ -38,7 +38,7 @@ fn test_make_expr_zcdp() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
-        ZeroConcentratedDivergence::default(),
+        zCDP::default(),
         col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
@@ -59,7 +59,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
-        ZeroConcentratedDivergence::default(),
+        zCDP::default(),
         col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
@@ -85,7 +85,7 @@ fn test_make_laplace_grouped() -> Fallible<()> {
     let m_lap = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.clone().group_by(["chunk_2_bool"]).agg([expr_exp]),
         Some(scale),
         None,
@@ -124,7 +124,7 @@ fn check_autocalibration(
         .make_private(
             expr_domain,
             L0PInfDistance(InsertDeleteDistance),
-            MaxDivergence,
+            PureDP,
             Some(1.),
         )?;
 

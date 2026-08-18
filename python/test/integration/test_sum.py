@@ -37,7 +37,7 @@ def test_sized_bounded_float_sum():
 
     gaussian_known_n_sum_from_dataframe = dp.binary_search_chain(
         lambda s: dp.c.make_fix_delta(
-            dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_gaussian(s)), 1e-5
+            dp.c.make_zCDP_to_profileDP(preprocess >> dp.m.then_gaussian(s)), 1e-5
         ),
         d_in=1,
         d_out=(1.0, 1e-5),
@@ -129,7 +129,7 @@ def test_bounded_float_sum():
 
     gaussian_sum_from_dataframe = dp.binary_search_chain(
         lambda s: dp.c.make_fix_delta(
-            dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_gaussian(s)), 1e-5
+            dp.c.make_zCDP_to_profileDP(preprocess >> dp.m.then_gaussian(s)), 1e-5
         ),
         d_in=1,
         d_out=(1.0, 1e-5),

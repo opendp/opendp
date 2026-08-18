@@ -16,7 +16,7 @@ use crate::{
         DiscreteLaplace, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
         NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
     },
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, PureDP},
     metrics::{AbsoluteDistance, L1Distance, L01InfDistance},
     traits::{InfPowI, InfSub, option_min},
 };
@@ -30,7 +30,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(threshold(c_type = "void *", rust_type = "TV"), k(default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "Approximate<MaxDivergence>")),
+    generics(DI(suppress), MI(suppress), MO(default = "Approximate<PureDP>")),
     derived_types(TV = "$get_value_type(get_carrier_type(input_domain))")
 )]
 /// Make a Measurement that uses propose-test-release to release a hashmap of counts.
@@ -105,16 +105,15 @@ where
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/laplace/NoiseThresholdPrivacyMap_for_ZExpFamily1.tex"
 )]
-impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>
+impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<PureDP>>
     for ZExpFamily<1>
 {
     fn noise_threshold_privacy_map(
         &self,
         _input_metric: &L01InfDistance<AbsoluteDistance<RBig>>,
-        output_measure: &Approximate<MaxDivergence>,
+        output_measure: &Approximate<PureDP>,
         threshold: UBig,
-    ) -> Fallible<PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>>
-    {
+    ) -> Fallible<PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<PureDP>>> {
         let noise_privacy_map =
             self.noise_privacy_map(&L1Distance::default(), &output_measure.0)?;
         let ZExpFamily { scale } = self.clone();

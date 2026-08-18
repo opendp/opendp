@@ -10,27 +10,27 @@ These combinators are used to cast the output measure of a Measurement.
    * - Input Measure
      - Output Measure
      - Constructor
-   * - ``MaxDivergence``
-     - ``Approximate<MaxDivergence>``
+   * - ``PureDP``
+     - ``ApproxDP``
      - :func:`~opendp.combinators.make_approximate`
-   * - ``ZeroConcentratedDivergence``
-     - ``Approximate<ZeroConcentratedDivergence>``
+   * - ``zCDP``
+     - ``ApproxZCDP``
      - :func:`~opendp.combinators.make_approximate`
-   * - ``MaxDivergence``
-     - ``SmoothedMaxDivergence``
-     - :func:`~opendp.combinators.make_fixed_approxDP_to_approxDP`
-   * - ``MaxDivergence``
-     - ``ZeroConcentratedDivergence``
+   * - ``ApproxDP``
+     - ``ProfileDP``
+     - :func:`~opendp.combinators.make_approxDP_to_profileDP`
+   * - ``PureDP``
+     - ``zCDP``
      - :func:`~opendp.combinators.make_pureDP_to_zCDP`
-   * - ``ZeroConcentratedDivergence``
-     - ``SmoothedMaxDivergence``
-     - :func:`~opendp.combinators.make_zCDP_to_approxDP`
-   * - ``SmoothedMaxDivergence``
-     - ``Approximate<MaxDivergence>``
+   * - ``zCDP``
+     - ``ProfileDP``
+     - :func:`~opendp.combinators.make_zCDP_to_profileDP`
+   * - ``ProfileDP``
+     - ``ApproxDP``
      - :func:`~opendp.combinators.make_fix_delta`
 
-:func:`~opendp.combinators.make_approximate` is used for casting an output measure from ``MaxDivergence`` to ``Approximate<MaxDivergence>``.
-This is useful if you want to compose pure-DP measurements with approximate-DP measurements.
+:func:`~opendp.combinators.make_approximate` is useful when you want to compose pure-DP measurements with approximate-DP measurements,
+or zCDP measurements with approx-zCDP measurements.
 
 .. tab-set::
 
@@ -42,16 +42,16 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
         ...     T=float, nan=False
         ... ), dp.absolute_distance(T=float)
         >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.0)
-        >>> # convert the output measure to `Approximate<MaxDivergence>`
+        >>> # convert the output measure to `ApproxDP`
         >>> meas_fixed_approxDP = dp.c.make_approximate(meas_pureDP)
-        >>> # `Approximate<MaxDivergence>` distances are (ε, δ) tuples
+        >>> # `ApproxDP` distances are (ε, δ) tuples
         >>> meas_fixed_approxDP.map(d_in=1.0)
         (0.1, 0.0)
 
-The combinator can also be used on measurements with a ``ZeroConcentratedDivergence`` privacy measure.
+The combinator can also be used on measurements with a ``zCDP`` privacy measure.
 
-:func:`~opendp.combinators.make_pureDP_to_zCDP` is used for casting an output measure from ``MaxDivergence`` to ``ZeroConcentratedDivergence``.
-:func:`~opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
+:func:`~opendp.combinators.make_pureDP_to_zCDP` is used for casting an output measure from ``PureDP`` to ``zCDP``.
+:func:`~opendp.combinators.make_zCDP_to_profileDP` casts an output measure from ``zCDP`` to ``ProfileDP``.
 
 .. tab-set::
 
@@ -60,15 +60,18 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
     .. code:: pycon
 
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
-        >>> # convert the output measure to `SmoothedMaxDivergence`
-        >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
-        >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
-        >>> profile = meas_approxDP.map(d_in=1.0)
-        >>> profile.epsilon(delta=1e-6)
+        >>> # convert the output measure to `ProfileDP`
+        >>> meas_profileDP = dp.c.make_zCDP_to_profileDP(meas_zCDP)
+        >>> # ProfileDP distances are PrivacyGuarantees
+        >>> guarantee = meas_profileDP.map(d_in=1.0)
+        >>> guarantee.epsilon(delta=1e-6)
         11.688596249354896
 
-:func:`~opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
-It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``Approximate<MaxDivergence>`` measurements.
+A ``PrivacyGuarantee`` contains multiple simultaneously valid privacy
+representations for the same mechanism and neighboring relation.
+
+:func:`~opendp.combinators.make_fix_delta` changes the output measure from ``ProfileDP`` to ``ApproxDP``.
+It fixes delta when querying the guarantee so that the resulting measurement can be composed with other ``ApproxDP`` measurements.
 
 .. tab-set::
 
@@ -76,12 +79,13 @@ It fixes the delta parameter in the curve, so that the resulting measurement can
 
     .. code:: pycon
 
-        >>> # convert the output measure to `FixedSmoothedMaxDivergence`
+        >>> # convert the output measure to `ApproxDP`
         >>> meas_fixed_approxDP = dp.c.make_fix_delta(
-        ...     meas_approxDP, delta=1e-8
+        ...     meas_profileDP, delta=1e-8
         ... )
-        >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
+        >>> # `ApproxDP` distances are (ε, δ) tuples
         >>> meas_fixed_approxDP.map(d_in=1.0)
         (13.3861046488579, 1e-08)
 
-These last two combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
+These last two combinators allow you to retain a zCDP representation in a
+``PrivacyGuarantee`` and later query an (ε, δ)-DP bound.

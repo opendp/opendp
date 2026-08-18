@@ -1,10 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{
-        Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
-        zcdp::zcdp_delta,
-    },
+    measures::{Approximate, PrivacyProfile, ProfileDP, zCDP, zcdp::zcdp_delta},
 };
 
 #[cfg(feature = "ffi")]
@@ -14,7 +11,7 @@ mod ffi;
 mod test;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+/// is casted from `zCDP` to `ProfileDP`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
@@ -24,7 +21,7 @@ mod test;
 /// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `MO` - Privacy Measure
-pub fn make_zCDP_to_approxDP<DI, MI, MO, TO>(
+pub fn make_zCDP_to_profileDP<DI, MI, MO, TO>(
     meas: Measurement<DI, MI, MO, TO>,
 ) -> Fallible<Measurement<DI, MI, MO::ApproxMeasure, TO>>
 where
@@ -47,14 +44,29 @@ where
     )
 }
 
+#[deprecated(since = "0.15.0", note = "Use `make_zCDP_to_profileDP` instead.")]
+/// Deprecated compatibility alias for [`make_zCDP_to_profileDP`].
+#[allow(non_snake_case)]
+pub fn make_zCDP_to_approxDP<DI, MI, MO, TO>(
+    meas: Measurement<DI, MI, MO, TO>,
+) -> Fallible<Measurement<DI, MI, MO::ApproxMeasure, TO>>
+where
+    DI: Domain,
+    MI: 'static + Metric,
+    MO: 'static + ConcentratedMeasure,
+    (DI, MI): MetricSpace,
+{
+    make_zCDP_to_profileDP(meas)
+}
+
 pub trait ConcentratedMeasure: Measure {
     type ApproxMeasure: Measure;
 
     fn convert(d_mid: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance>;
 }
 
-impl ConcentratedMeasure for ZeroConcentratedDivergence {
-    type ApproxMeasure = SmoothedMaxDivergence;
+impl ConcentratedMeasure for zCDP {
+    type ApproxMeasure = ProfileDP;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         Ok(PrivacyProfile::new(move |epsilon: f64| {
@@ -63,8 +75,8 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     }
 }
 
-impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
-    type ApproxMeasure = Approximate<SmoothedMaxDivergence>;
+impl ConcentratedMeasure for Approximate<zCDP> {
+    type ApproxMeasure = Approximate<ProfileDP>;
 
     fn convert(
         (rho, delta): Self::Distance,

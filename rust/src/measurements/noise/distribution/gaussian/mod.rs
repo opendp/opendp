@@ -5,7 +5,7 @@ use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily, noise::nature::Nature},
-    measures::ZeroConcentratedDivergence,
+    measures::zCDP,
     metrics::L2Distance,
     traits::InfCast,
 };
@@ -19,7 +19,7 @@ pub(crate) mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(k(default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "ZeroConcentratedDivergence"))
+    generics(DI(suppress), MI(suppress), MO(default = "zCDP"))
 )]
 /// Make a Measurement that adds noise from the Gaussian(`scale`) distribution to the input.
 ///
@@ -39,7 +39,7 @@ pub(crate) mod ffi;
 /// # Generics
 /// * `DI` - Domain of the data to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MI` - Input Metric to measure distances between members of the input domain.
-/// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
+/// * `MO` - Output Measure. The only valid measure is `zCDP`.
 pub fn make_gaussian<DI: Domain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
@@ -76,12 +76,12 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/gaussian/NoisePrivacyMap_for_ZExpFamily2.tex"
 )]
-impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamily<2> {
+impl NoisePrivacyMap<L2Distance<RBig>, zCDP> for ZExpFamily<2> {
     fn noise_privacy_map(
         &self,
         _input_metric: &L2Distance<RBig>,
-        _outut_measure: &ZeroConcentratedDivergence,
-    ) -> Fallible<PrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence>> {
+        _outut_measure: &zCDP,
+    ) -> Fallible<PrivacyMap<L2Distance<RBig>, zCDP>> {
         let ZExpFamily { scale } = self.clone();
         if scale < RBig::ZERO {
             return fallible!(MakeMeasurement, "scale ({scale}) must be non-negative");

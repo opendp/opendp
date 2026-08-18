@@ -6,7 +6,7 @@ use polars::{
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     measurements::make_private_lazyframe,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::SymmetricDistance,
 };
 
@@ -30,7 +30,7 @@ fn test_dp_quantile() -> Fallible<()> {
     let m_quant = make_private_lazyframe(
         lf_domain,
         SymmetricDistance,
-        MaxDivergence,
+        PureDP,
         lf.clone().select([col("A").dp().median(candidates, None)]),
         Some(1.),
         None,

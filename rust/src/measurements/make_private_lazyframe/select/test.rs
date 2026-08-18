@@ -2,7 +2,7 @@ use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
 use crate::measurements::make_private_lazyframe;
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
 
@@ -20,7 +20,7 @@ fn test_select_no_margin() -> Fallible<()> {
     let m_select = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.clone().select(&[len().dp().noise(Some(0.))]),
         Some(1.),
         None,
@@ -44,7 +44,7 @@ fn test_select() -> Fallible<()> {
     let m_select = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.clone().select(&[
             col("A").dp().sum((lit(0), lit(3)), Some(0.)),
             len().dp().noise(Some(0.)),
@@ -69,7 +69,7 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
     let error_variant_res = make_private_select::<_, _>(
         lf_domain,
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         // this expression cannot be parsed into a measurement
         lf.select(&[col("A").sum()]).logical_plan,
         Some(1.),

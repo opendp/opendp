@@ -1,5 +1,5 @@
 use crate::{
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
@@ -42,7 +42,7 @@ fn test_index_candidates_expr() -> Fallible<()> {
         .make_private(
             lf_domain.select(),
             L0PInfDistance(SymmetricDistance),
-            MaxDivergence,
+            PureDP,
             None,
         )?;
 

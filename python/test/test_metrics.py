@@ -56,7 +56,7 @@ def test_user_metric_total_cmp_equal_values():
     m_comp = dp.c.make_adaptive_composition(
         input_domain=dp.atom_domain(T=bool),
         input_metric=dp.user_distance("user distance"),
-        output_measure=dp.max_divergence(),
+        output_measure=dp.pure_dp(),
         d_in=1,
         d_mids=[1.0],
     )
@@ -67,7 +67,7 @@ def test_user_metric_total_cmp_native_distance():
     m_comp = dp.c.make_adaptive_composition(
         input_domain=dp.atom_domain(T=bool),
         input_metric=dp.user_distance("user distance"),
-        output_measure=dp.max_divergence(),
+        output_measure=dp.pure_dp(),
         d_in=1,
         d_mids=[1.0],
     )
@@ -90,7 +90,7 @@ def test_user_metric_total_cmp_opendp_exception():
     m_comp = dp.c.make_adaptive_composition(
         input_domain=dp.atom_domain(T=bool),
         input_metric=dp.user_distance("user distance"),
-        output_measure=dp.max_divergence(),
+        output_measure=dp.pure_dp(),
         d_in=Dist(),
         d_mids=[1.0],
     )
@@ -106,7 +106,7 @@ def test_user_metric_total_cmp_custom_distance():
     m_comp = dp.c.make_adaptive_composition(
         input_domain=dp.atom_domain(T=bool),
         input_metric=dp.user_distance("user distance", ["other", "data"]),
-        output_measure=dp.max_divergence(),
+        output_measure=dp.pure_dp(),
         d_in=Dist(),
         d_mids=[1.0],
     )

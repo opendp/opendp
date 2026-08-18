@@ -40,7 +40,7 @@ def test_algorithm_err_elements(algorithm):
         algorithm.make_marginals(
             dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=int))]),
             dp.frame_distance(dp.symmetric_distance()),
-            dp.zero_concentrated_divergence(),
+            dp.zcdp(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
             marginals={},
@@ -54,21 +54,21 @@ def test_algorithm_err_elements(algorithm):
                 [dp.series_domain("A", dp.atom_domain(bounds=(0, 10)))]
             ),
             dp.discrete_distance(),
-            dp.zero_concentrated_divergence(),
+            dp.zcdp(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
             marginals={},
             model=model,
         )
 
-    msg = "output_measure (RenyiDivergence) must be max_divergence() or zero_concentrated_divergence()"
+    msg = "output_measure (RenyiDP) must be pure_dp() or zcdp()"
     with pytest.raises(ValueError, match=re.escape(msg)):
         algorithm.make_marginals(
             dp.lazyframe_domain(
                 [dp.series_domain("A", dp.atom_domain(bounds=(0, 10)))]
             ),
             dp.frame_distance(dp.symmetric_distance()),
-            dp.renyi_divergence(),
+            dp.renyi_dp(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
             marginals={},
@@ -81,7 +81,7 @@ def test_algorithm_err_elements(algorithm):
                 [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 1)))]
             ),
             dp.frame_distance(dp.symmetric_distance()),
-            dp.max_divergence(),
+            dp.pure_dp(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=1.0,
             marginals={},
@@ -115,7 +115,7 @@ def test_aim_exhaustion():
             [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 1)))]
         ),
         dp.frame_distance(dp.symmetric_distance()),
-        dp.max_divergence(),
+        dp.pure_dp(),
         d_in=[dp.polars.Bound(per_group=1)],
         d_out=1.0,
         marginals={},

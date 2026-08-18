@@ -3,6 +3,8 @@ from inspect import signature
 
 from opendp._lib import *
 from opendp.mod import (
+    Approximate,
+    ApproxDP,
     ApproximateDivergence,
     ChangeOneIdDistance,
     Domain,
@@ -19,8 +21,8 @@ from opendp.mod import (
     OpenDPException,
     Transformation,
     Measurement,
-    PrivacyProfile,
     PrivacyGuarantee,
+    PrivacyProfile,
     Queryable,
     OdometerQueryable,
     Function,

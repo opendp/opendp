@@ -2,13 +2,13 @@
 \input{../../lib.sty}
 \allowdisplaybreaks
 
-\title{\texttt{impl TopKMeasure for MaxDivergence}}
+\title{\texttt{impl TopKMeasure for PureDP}}
 \author{\TudorCebereAuthor \and \MichaelShoemateAuthor}
 \begin{document}
 \maketitle
 \contrib
 
-This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} for \texttt{MaxDivergence} in \asOfCommit{mod.rs}{e62b0aa2}.
+This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} for \texttt{PureDP} in \asOfCommit{mod.rs}{e62b0aa2}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -30,7 +30,7 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKM
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_MaxDivergence.py}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_PureDP.py}
 
 \subsection*{Postcondition}
 \begin{theorem}

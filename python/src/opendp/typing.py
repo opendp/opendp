@@ -398,10 +398,19 @@ L1Distance: SensitivityMetric = SensitivityMetric('L1Distance')
 L2Distance: SensitivityMetric = SensitivityMetric('L2Distance')
 
 
-MaxDivergence = 'MaxDivergence'
-SmoothedMaxDivergence = 'SmoothedMaxDivergence'
-FixedSmoothedMaxDivergence = 'FixedSmoothedMaxDivergence'
-ZeroConcentratedDivergence = 'ZeroConcentratedDivergence'
+PureDP = 'PureDP'
+ProfileDP = 'ProfileDP'
+Approximate: Any = 'Approximate'
+ApproxDP: Any = 'ApproxDP'
+zCDP = 'zCDP'
+RenyiDP = 'RenyiDP'
+
+# Deprecated compatibility names.
+MaxDivergence = PureDP
+SmoothedMaxDivergence = ProfileDP
+FixedSmoothedMaxDivergence = ApproxDP
+ZeroConcentratedDivergence = zCDP
+RenyiDivergence = RenyiDP
 
 class Carrier(RuntimeType):
     def __getitem__(self, subdomains):
