@@ -6,6 +6,13 @@ use crate::{
 };
 
 mod approxdp;
+#[cfg(feature = "idealized-numerics")]
+use self::gaussiandp::{beta_via_gaussianDP, delta_via_gaussianDP};
+
+#[cfg(feature = "idealized-numerics")]
+mod gaussiandp;
+#[cfg(all(feature = "ffi", feature = "idealized-numerics"))]
+mod gaussiandp_ffi;
 pub(crate) mod logspace;
 mod profile_to_tradeoff;
 mod renyidp;
@@ -44,6 +51,8 @@ pub struct PrivacyProfile {
 #[derive(Clone, Default)]
 pub struct PrivacyGuarantee {
     profile: Option<PrivacyProfile>,
+    #[cfg(feature = "idealized-numerics")]
+    gaussian: Option<GaussianDPRepresentation>,
     tradeoff: Option<TradeoffRepresentation>,
     renyi: Option<RenyiRepresentation>,
     zcdp: Option<ZCDPRepresentation>,
@@ -90,6 +99,15 @@ impl PrivacyGuarantee {
             beta: Arc::new(move |alpha| approxdp::beta_via_approxDP(&points, alpha)),
             symmetric: true,
         });
+        Ok(self)
+    }
+
+    /// Attach a Gaussian-DP representation with parameter `mu`.
+    #[cfg(feature = "idealized-numerics")]
+    #[allow(non_snake_case)]
+    pub fn with_gaussianDP(mut self, mu: f64) -> Fallible<Self> {
+        check_mu(mu)?;
+        self.gaussian = Some(GaussianDPRepresentation { mu });
         Ok(self)
     }
 
@@ -216,6 +234,14 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(GaussianDPRepresentation { mu }) = self.gaussian {
+            match delta_via_gaussianDP(mu, epsilon) {
+                Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
         if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
             match renyidp::delta_via_zCDP(rho, source_delta, epsilon) {
                 Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
@@ -264,6 +290,14 @@ impl PrivacyGuarantee {
                 |epsilon| tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon),
                 delta,
             ) {
+                Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(GaussianDPRepresentation { mu }) = self.gaussian {
+            match invert_decreasing_callback(|epsilon| delta_via_gaussianDP(mu, epsilon), delta) {
                 Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
@@ -323,6 +357,14 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(GaussianDPRepresentation { mu }) = self.gaussian {
+            match beta_via_gaussianDP(mu, alpha) {
+                Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
         if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
             match renyidp::beta_via_zCDP(rho, source_delta, alpha) {
                 Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
@@ -377,6 +419,14 @@ impl PrivacyGuarantee {
                 Err(_) => {}
             }
         }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(GaussianDPRepresentation { mu }) = self.gaussian {
+            match invert_decreasing_callback(|alpha| beta_via_gaussianDP(mu, alpha), beta) {
+                Ok(alpha) => best = Some(best.map_or(alpha, |value: f64| value.max(alpha))),
+                Err(error) if first_error.is_none() => first_error = Some(error),
+                Err(_) => {}
+            }
+        }
         if let Some(ZCDPRepresentation { rho, source_delta }) = self.zcdp {
             match invert_decreasing_callback(
                 |alpha| renyidp::beta_via_zCDP(rho, source_delta, alpha),
@@ -418,8 +468,11 @@ impl PrivacyGuarantee {
 
 impl std::fmt::Debug for PrivacyGuarantee {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PrivacyGuarantee")
-            .field("profile", &self.profile.is_some())
+        let mut debug = f.debug_struct("PrivacyGuarantee");
+        debug.field("profile", &self.profile.is_some());
+        #[cfg(feature = "idealized-numerics")]
+        debug.field("gaussian", &self.gaussian.is_some());
+        debug
             .field("tradeoff", &self.tradeoff.is_some())
             .field("renyi", &self.renyi.is_some())
             .field("zcdp", &self.zcdp.is_some())
@@ -440,6 +493,12 @@ type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 struct RenyiRepresentation {
     curve: Arc<RenyiFn>,
     source_delta: f64,
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[derive(Clone, Copy)]
+struct GaussianDPRepresentation {
+    mu: f64,
 }
 
 #[derive(Clone, Copy)]
@@ -776,6 +835,17 @@ fn check_rho(rho: f64) -> Fallible<()> {
     }
     if rho < 0.0 {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
+    }
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+fn check_mu(mu: f64) -> Fallible<()> {
+    if mu.is_nan() {
+        return fallible!(FailedMap, "mu must not be NaN");
+    }
+    if !mu.is_finite() || mu.is_sign_negative() {
+        return fallible!(FailedMap, "mu ({mu}) must be a finite non-negative number");
     }
     Ok(())
 }

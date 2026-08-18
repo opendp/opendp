@@ -421,7 +421,6 @@ new_privacy_profile_internal <- function(ptr) {
 
 #' New privacy guarantee
 #'
-#' @concept mod
 #' @param ptr a pointer to a privacy guarantee
 new_privacy_guarantee_internal <- function(ptr) {
   privacy_guarantee <- function(attr, epsilon, delta, alpha, beta) {
@@ -463,9 +462,10 @@ new_privacy_guarantee_internal <- function(ptr) {
 #' @param renyiDP_delta Source delta for approximate RDP.
 #' @param zCDP zCDP parameter rho.
 #' @param zCDP_delta Source delta for approximate zCDP.
+#' @param gaussianDP Gaussian-DP parameter mu.
 #' @export
-privacy_guarantee <- function(profile = NULL, tradeoff = NULL, symmetric_tradeoff = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0) {
-  if (is.null(profile) && is.null(tradeoff) && is.null(symmetric_tradeoff) && is.null(renyiDP) && is.null(zCDP)) {
+privacy_guarantee <- function(profile = NULL, tradeoff = NULL, symmetric_tradeoff = NULL, renyiDP = NULL, renyiDP_delta = 0, zCDP = NULL, zCDP_delta = 0, gaussianDP = NULL) {
+  if (is.null(profile) && is.null(tradeoff) && is.null(symmetric_tradeoff) && is.null(renyiDP) && is.null(zCDP) && is.null(gaussianDP)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!is.null(profile) && !inherits(profile, "privacy_profile")) {
@@ -493,6 +493,9 @@ privacy_guarantee <- function(profile = NULL, tradeoff = NULL, symmetric_tradeof
   }
   if (!is.null(zCDP)) {
     guarantee <- `_privacy_guarantee_with_zCDP`(guarantee, zCDP, zCDP_delta)
+  }
+  if (!is.null(gaussianDP)) {
+    guarantee <- `_privacy_guarantee_with_gaussianDP`(guarantee, gaussianDP)
   }
   guarantee
 }

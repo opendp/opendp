@@ -1218,6 +1218,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         renyiDP_delta: float = 0.0,
         zCDP: Optional[float] = None,
         zCDP_delta: float = 0.0,
+        gaussianDP: Optional[float] = None,
         _ptr=None,
     ):
         if _ptr is not None:
@@ -1229,6 +1230,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
             and symmetric_tradeoff is None
             and renyiDP is None
             and zCDP is None
+            and gaussianDP is None
         ):
             raise TypeError("expected at least one privacy representation")
         if renyiDP is None and renyiDP_delta != 0.0:
@@ -1244,6 +1246,7 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_tradeoff,
             _privacy_guarantee_with_zCDP,
+            _privacy_guarantee_with_gaussianDP,
         )
         guarantee = _new_privacy_guarantee()
         if profile is not None:
@@ -1263,6 +1266,10 @@ class PrivacyGuarantee(ctypes.POINTER(AnyObject)): # type: ignore[misc]
         if zCDP is not None:
             guarantee = _privacy_guarantee_with_zCDP(
                 guarantee, zCDP, zCDP_delta
+            )
+        if gaussianDP is not None:
+            guarantee = _privacy_guarantee_with_gaussianDP(
+                guarantee, gaussianDP
             )
         self.guarantee = guarantee.guarantee
 
