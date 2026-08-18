@@ -16,6 +16,7 @@ from opendp.mod import (
     SeriesDomain,
     SymmetricIdDistance,
     UnknownTypeException,
+    OpenDPException,
     Transformation,
     Measurement,
     PrivacyProfile,
@@ -66,6 +67,12 @@ INT_SIZES = {
     )
 }
 _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
+
+
+def _transfer_anyobject_ownership(ptr: AnyObjectPtr) -> Any:
+    """Transfer responsibility for an AnyObject allocation to its caller."""
+    ptr.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment, misc]
+    return ptr
 
 
 def _check_and_cast_scalar(expected, value):
@@ -549,7 +556,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
         # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
         for elem in array:
-            elem.__class__ = ctypes.POINTER(AnyObject)
+            _transfer_anyobject_ownership(elem)
         return res
 
     if inner_type_name == 'ExtrinsicObject':
@@ -617,9 +624,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     if inner_type_names == ['f64', 'ExtrinsicObject']:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
-        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1])))
-
-        cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
+        cand_ptr = py_to_c(val[1], c_type=AnyObjectPtr, type_name="ExtrinsicObject")
         array = (ctypes.c_void_p * 2)(
             ctypes.cast(score_ptr, ctypes.c_void_p), 
             ctypes.cast(cand_ptr, ctypes.c_void_p), 
@@ -658,9 +663,16 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     if inner_type_names == ['f64', 'AnyObject']:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
-        candidate = c_to_py(c_to_py(candidate_obj))
-        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        candidate = c_to_py(candidate_obj)
+        # The candidate pointer is owned by the returned tuple/object. Do not
+        # let its temporary ctypes wrapper free it a second time.
+        _transfer_anyobject_ownership(candidate_obj)
         return score.contents.value, candidate
+
+    if inner_type_names == ['f64', 'ExtrinsicObject']:
+        score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
+        candidate = ctypes.cast(ptr_data[1], ctypes.POINTER(ExtrinsicObject))
+        return score.contents.value, c_to_py(candidate)
 
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
@@ -718,8 +730,8 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
     # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
     # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
     # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
-    keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
-    vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+    _transfer_anyobject_ownership(keys)
+    _transfer_anyobject_ownership(vals)
     return result
 
 
@@ -929,8 +941,8 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
     ret = c_to_py(obj)
     # don't free obj, because it is owned by Rust
     # c_to_py cares that the type is AnyObject, so this needs to happen after c_to_py
-    obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
-    
+    _transfer_anyobject_ownership(obj)
+
     return ret
 
 
@@ -946,7 +958,7 @@ def _invoke_py_callback(c_arg, userdata):
         # 1. convert AnyObject to Python type
         py_arg = c_to_py(c_arg)
         # don't free c_arg, because it is owned by Rust
-        c_arg.__class__ = ctypes.POINTER(AnyObject)
+        _transfer_anyobject_ownership(c_arg)
 
         # 2. invoke the user-supplied function
         py_out = func(py_arg)
@@ -954,20 +966,30 @@ def _invoke_py_callback(c_arg, userdata):
         # 3. convert back to an AnyObject
         c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
         # don't free c_out, because we are giving ownership to Rust
-        c_out.__class__ = ctypes.POINTER(AnyObject)
+        _transfer_anyobject_ownership(c_out)
 
         # 4. pack up into an FfiResult
         lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
         lib.ffiresult_ok.restype = ctypes.c_void_p
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    except Exception:
+    except OpenDPException as err:
         import traceback
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-            ctypes.c_char_p(traceback.format_exc().encode()),
+            err.variant.encode(),
+            str(err).encode(),
+            traceback.format_exc().encode(),
+        )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            b"FFI",
+            b"Exception in user-defined function",
+            traceback.format_exc().encode(),
         )
 
 
@@ -1006,7 +1028,7 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         py_query = c_to_py(c_query)
         py_is_internal = c_is_internal
         # don't free c_arg, because it is owned by Rust
-        c_query.__class__ = ctypes.POINTER(AnyObject)
+        _transfer_anyobject_ownership(c_query)
 
         # 2. invoke the user-supplied function
         py_out = py_transition(py_query, py_is_internal)
@@ -1014,20 +1036,30 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         # 3. convert back to an AnyObject
         c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
         # don't free c_out, because we are giving ownership to Rust
-        c_out.__class__ = ctypes.POINTER(AnyObject)
+        _transfer_anyobject_ownership(c_out)
 
         # 4. pack up into an FfiResult
         lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
         lib.ffiresult_ok.restype = ctypes.c_void_p
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    except Exception:
+    except OpenDPException as err:
         import traceback
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
         lib.ffiresult_err.restype = ctypes.c_void_p
         return lib.ffiresult_err(
-            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-            ctypes.c_char_p(traceback.format_exc().encode()),
+            err.variant.encode(),
+            str(err).encode(),
+            traceback.format_exc().encode(),
+        )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            b"FFI",
+            b"Exception in user-defined function",
+            traceback.format_exc().encode(),
         )
 
 
