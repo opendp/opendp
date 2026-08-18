@@ -3,25 +3,23 @@
 Limitations
 ===========
 
-OpenDP is early in its development history.
-We aim to work with the community to make it *the* trustworthy implementation of differential privacy algorithms, but that will take some time.
-OpenDP already can be used to build some applications, but please be aware of the following limitations when deploying it.
+Please be aware of the following limitations when using OpenDP.
 
 Privacy Concerns
 ----------------
 
-As a work in progress, OpenDP has some known privacy concerns.
-These vulnerabilities may have an impact on some applications, depending on how they operate.
+The DP literature sometimes does not consider the limitations of physical computers.
+Two particular areas to be aware of are **idealized numerics** and **side-channel attacks**.
 
-* **Idealized numerics issues:** Some OpenDP Transformations and Measurements assume an idealized model of real-number arithmetic
+* **Idealized numerics:** Some OpenDP Transformations and Measurements assume an idealized model of real-number arithmetic
   (as is common in the differential privacy research literature).
   Implementations using finite data types like floating-point numbers have `known issues <https://salil.seas.harvard.edu/publications/widespread-underestimation-sensitivity-differentially-private-libraries-and-how>`_,
-  where the differential privacy property is not satisfied due to discrepancies between real-number arithmetic and finite arithmetic.
-  These APIs are surfaced behind the ``idealized-numerics`` feature flag.
+  where differential privacy is not satisfied due to discrepancies between real-number arithmetic and finite arithmetic.
+  To use these less secure APIs, the ``idealized-numerics`` flag must be enabled.
   Through the ongoing process of vetting privacy proofs (see below), we clearly distinguish such mechanisms from ones
   whose concrete implementations faithfully satisfy differential privacy.
-* **Side-channel attacks:** OpenDP has not yet been hardened against side-channel attacks.
-  These include things like timing attacks, cache effects, etc.
+* **Side-channel attacks:** OpenDP has not been hardened against side-channel attacks.
+  These include timing attacks, cache effects, etc.
   These may make it possible for an attacker who interacts with the system running OpenDP software to obtain information outside
   the intended interfaces, potentially violating differential privacy.
 
@@ -34,24 +32,19 @@ An important element of the OpenDP Project is a formal vetting process that all 
 This process involves supplying mathematical proofs of the privacy properties of all algorithms and validating that all code faithfully implements
 the specified algorithms.
 
-This vetting process is currently underway for the code in the OpenDP Library.
 Through the vetting process, we expect to uncover bugs in code and proofs and make corrections to components to ensure they satisfy the specified
 privacy-relevant properties.
-As components complete the vetting process, they will drop the ``contrib`` feature flag, and will be accessible without explicitly opting into
-unvetted components.
+As components complete the vetting process, they will no longer require the ``contrib`` flag.
 
 API Stability
 -------------
 
-The APIs of OpenDP are still in flux, and subject to change.
-We've iterated a lot on these interfaces, and feel like the general shape is working well, but it's likely that many details will change in backwards-incompatible ways.
-This early flexibility is important to evolve the library, and we appreciate your understanding and feedback on improvements.
-
-When we release OpenDP 1.0.0, we'll begin to offer API stability within `major versions <https://semver.org>`_.
-Until then, please don't depend on interfaces remaining the same across releases of OpenDP.
+OpenDP follows `semantic versioning <https://semver.org>`_,
+and until we release version 1.0.0, OpenDP APIs are subject to change.
+Release notes will include migration instructions, when we do make backwards-incompatible changes.
+As the API continues to evolve, we appreciate your feedback about what does and doesn't work.
 
 Software Quality
 ----------------
 
-Like any software project, OpenDP likely has bugs.
-We strive to make high quality software, but if you encounter issues, `please let us know <https://github.com/opendp/opendp/issues>`_.
+Like any software project, OpenDP has bugs. If you encounter problems, `please let us know <https://github.com/opendp/opendp/issues>`_, and we will respond quickly.
