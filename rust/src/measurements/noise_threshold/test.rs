@@ -2,7 +2,10 @@ use core::f64;
 
 use super::*;
 use crate::{
-    domains::VectorDomain, metrics::SymmetricDistance, traits::InfCast,
+    domains::VectorDomain,
+    measures::{Approximate, PureDP},
+    metrics::SymmetricDistance,
+    traits::InfCast,
     transformations::make_count_by,
 };
 
@@ -22,7 +25,8 @@ fn test_count_by_threshold() -> Fallible<()> {
         SymmetricDistance::default(),
     )?;
     let (dom, met) = t_count.output_space();
-    let m_noise = make_laplace_threshold(dom, met, scale, threshold, None)?;
+    let m_noise =
+        make_laplace_threshold::<_, _, Approximate<PureDP>>(dom, met, scale, threshold, None)?;
     let m_count = (t_count >> m_noise)?;
     let ret = m_count.invoke(&vec![
         'a', 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b', 'b', 'b',

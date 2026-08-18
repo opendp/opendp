@@ -1,4 +1,8 @@
-use crate::metrics::AbsoluteDistance;
+use crate::{
+    measurements::MakeNoiseThreshold,
+    measures::{Approximate, PureDP},
+    metrics::AbsoluteDistance,
+};
 
 use super::*;
 
@@ -13,16 +17,22 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        FloatExpFamily::<1> { scale: 1.0, k: 0 }
-            .make_noise_threshold(space.clone(), 10.0)
-            .is_ok()
+        <FloatExpFamily<1> as MakeNoiseThreshold<_, _, Approximate<PureDP>>>::make_noise_threshold(
+            FloatExpFamily::<1> { scale: 1.0, k: 0 },
+            space.clone(),
+            10.0,
+        )
+        .is_ok()
     );
     assert!(
-        FloatExpFamily::<1> {
-            scale: f64::NAN,
-            k: 0
-        }
-        .make_noise_threshold(space.clone(), 10.0)
+        <FloatExpFamily<1> as MakeNoiseThreshold<_, _, Approximate<PureDP>>>::make_noise_threshold(
+            FloatExpFamily::<1> {
+                scale: f64::NAN,
+                k: 0,
+            },
+            space.clone(),
+            10.0,
+        )
         .is_err()
     );
     let space = (
@@ -33,20 +43,26 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
         L0PInfDistance(AbsoluteDistance::<f64>::default()),
     );
     assert!(
-        FloatExpFamily::<2> {
-            scale: 1.0,
-            k: i32::MIN
-        }
-        .make_noise_threshold(space.clone(), 10.0)
+        <FloatExpFamily<2> as MakeNoiseThreshold<_, _, Approximate<crate::measures::zCDP>>>::make_noise_threshold(
+            FloatExpFamily::<2> {
+                scale: 1.0,
+                k: i32::MIN,
+            },
+            space.clone(),
+            10.0,
+        )
         .is_err()
     );
 
     assert!(
-        FloatExpFamily::<2> {
-            scale: 1.0,
-            k: i32::MAX
-        }
-        .make_noise_threshold(space.clone(), 10.0)
+        <FloatExpFamily<2> as MakeNoiseThreshold<_, _, Approximate<crate::measures::zCDP>>>::make_noise_threshold(
+            FloatExpFamily::<2> {
+                scale: 1.0,
+                k: i32::MAX,
+            },
+            space.clone(),
+            10.0,
+        )
         .is_ok()
     );
 

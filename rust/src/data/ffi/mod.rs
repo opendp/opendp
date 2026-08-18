@@ -34,7 +34,7 @@ use crate::ffi::any::{
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
-use crate::measures::PrivacyProfile;
+use crate::measures::{PrivacyGuarantee, PrivacyProfile};
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
@@ -798,6 +798,18 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+
+    fn tuple_guarantee_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let (guarantee, delta) = obj.downcast_ref::<(PrivacyGuarantee, f64)>()?;
+
+        Ok(FfiSlice::new(
+            util::into_raw([
+                AnyObject::new_raw(guarantee.clone()) as *const c_void,
+                util::into_raw(*delta) as *const c_void,
+            ]) as *mut c_void,
+            2,
+        ))
+    }
     match &obj.type_.contents {
         TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
         TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
@@ -849,6 +861,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 2 => {
                     if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
                         return tuple_curve_f64_to_raw(obj).into();
+                    }
+                    if types == vec![Type::of::<PrivacyGuarantee>(), Type::of::<f64>()] {
+                        return tuple_guarantee_f64_to_raw(obj).into();
                     }
                     if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
                         return tuple2_to_raw::<f64, AnyObject>(obj).into();

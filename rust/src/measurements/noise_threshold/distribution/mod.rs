@@ -6,10 +6,13 @@ pub use gaussian::*;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measurement, Metric, MetricSpace},
+    core::{Measure, Measurement, Metric, MetricSpace},
     error::Fallible,
-    measurements::{MakeNoiseThreshold, NoiseDomain, NoiseMeasure},
-    measures::Approximate,
+    measurements::{
+        DiscreteGaussian, DiscreteLaplace, MakeNoiseThreshold, NoiseDistribution, NoiseDomain,
+        NoiseMetric,
+    },
+    measures::{Approximate, MultiDP, PureDP, zCDP},
 };
 
 #[cfg(feature = "ffi")]
@@ -24,6 +27,7 @@ mod test;
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         threshold(c_type = "void *", rust_type = "TV"),
         k(default = b"null"),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null"),
     ),
     generics(DI(suppress), MI(suppress), MO(suppress)),
     derived_types(TV = "$get_value_type(get_carrier_type(input_domain))")
@@ -57,28 +61,235 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
-/// * `output_measure` - Privacy measure. Either `PureDP` or `zCDP`.
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+/// * `output_measure` - Privacy measure used for accounting. `PureDP` and `zCDP` preserve their historical distribution inference; `MultiDP` requires either an explicit distribution or an unambiguous metric.
+/// * `scale` - Noise scale parameter.
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
+/// * `distribution` - Optional distribution: `"laplace"` or `"gaussian"`.
 ///
 /// # Generics
 /// * `DI` - Input Domain.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Measure.
-pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric, MO: NoiseMeasure>(
+pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric + NoiseMetric, MO: NoiseThresholdMeasure>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: Approximate<MO>,
+    output_measure: MO,
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, MI, Approximate<MO>, DI::Carrier>>
+    distribution: Option<String>,
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
-    MO::Distribution: MakeNoiseThreshold<DI, MI, Approximate<MO>, Threshold = DI::Atom>,
+    MO: NoiseThresholdMeasureFor<DI, MI>,
     (DI, MI): MetricSpace,
 {
-    (output_measure.0)
-        .new_distribution(scale, k)
-        .make_noise_threshold((input_domain, input_metric), threshold)
+    let distribution = distribution
+        .as_deref()
+        .map(NoiseDistribution::try_from)
+        .transpose()?
+        .or_else(|| MO::legacy_distribution().or_else(|| MI::multidp_distribution()))
+        .ok_or_else(|| {
+            err!(
+                MakeMeasurement,
+                "distribution is required when it cannot be inferred"
+            )
+        })?;
+
+    output_measure.make_noise_threshold(
+        (input_domain, input_metric),
+        threshold,
+        scale,
+        k,
+        distribution,
+    )
+}
+
+pub trait NoiseThresholdMeasure: Measure + 'static {
+    fn legacy_distribution() -> Option<NoiseDistribution>;
+}
+
+impl NoiseThresholdMeasure for Approximate<PureDP> {
+    fn legacy_distribution() -> Option<NoiseDistribution> {
+        Some(NoiseDistribution::Laplace)
+    }
+}
+
+impl NoiseThresholdMeasure for Approximate<zCDP> {
+    fn legacy_distribution() -> Option<NoiseDistribution> {
+        Some(NoiseDistribution::Gaussian)
+    }
+}
+
+impl NoiseThresholdMeasure for Approximate<MultiDP> {
+    fn legacy_distribution() -> Option<NoiseDistribution> {
+        None
+    }
+}
+
+pub trait NoiseThresholdMeasureFor<DI: NoiseDomain, MI: Metric>:
+    NoiseThresholdMeasure + Sized
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+        distribution: NoiseDistribution,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>>
+    where
+        (DI, MI): MetricSpace;
+}
+
+impl<DI: NoiseDomain, MI: Metric> NoiseThresholdMeasureFor<DI, MI> for Approximate<PureDP>
+where
+    (DI, MI): MetricSpace,
+    DiscreteLaplace: MakeNoiseThreshold<DI, MI, Approximate<PureDP>, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+        distribution: NoiseDistribution,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>> {
+        match distribution {
+            NoiseDistribution::Laplace => {
+                crate::measurements::noise_threshold::distribution::laplace::make_laplace_threshold(
+                    input_space.0,
+                    input_space.1,
+                    scale,
+                    threshold,
+                    k,
+                )
+            }
+            NoiseDistribution::Gaussian => {
+                fallible!(
+                    MakeMeasurement,
+                    "gaussian distribution is incompatible with ApproxDP"
+                )
+            }
+        }
+    }
+}
+
+impl<DI: NoiseDomain, MI: Metric> NoiseThresholdMeasureFor<DI, MI> for Approximate<zCDP>
+where
+    (DI, MI): MetricSpace,
+    DiscreteGaussian: MakeNoiseThreshold<DI, MI, Approximate<zCDP>, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+        distribution: NoiseDistribution,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>> {
+        match distribution {
+            NoiseDistribution::Gaussian => crate::measurements::noise_threshold::distribution::gaussian::make_gaussian_threshold(
+                input_space.0, input_space.1, scale, threshold, k,
+            ),
+            NoiseDistribution::Laplace => {
+                fallible!(MakeMeasurement, "laplace distribution is incompatible with ApproxZCDP")
+            }
+        }
+    }
+}
+
+impl<DI: NoiseDomain, Q: 'static + crate::traits::Number>
+    NoiseThresholdMeasureFor<
+        DI,
+        crate::metrics::L01InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+    > for Approximate<MultiDP>
+where
+    (
+        DI,
+        crate::metrics::L01InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+    ): MetricSpace,
+    DiscreteLaplace: MakeNoiseThreshold<
+            DI,
+            crate::metrics::L01InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+            Approximate<MultiDP>,
+            Threshold = DI::Atom,
+        >,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (
+            DI,
+            crate::metrics::L01InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+        ),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+        distribution: NoiseDistribution,
+    ) -> Fallible<
+        Measurement<
+            DI,
+            crate::metrics::L01InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+            Self,
+            DI::Carrier,
+        >,
+    > {
+        match distribution {
+            NoiseDistribution::Laplace => {
+                crate::measurements::noise_threshold::distribution::laplace::make_laplace_threshold(
+                    input_space.0,
+                    input_space.1,
+                    scale,
+                    threshold,
+                    k,
+                )
+            }
+            NoiseDistribution::Gaussian => fallible!(
+                MakeMeasurement,
+                "gaussian distribution is incompatible with L01InfDistance"
+            ),
+        }
+    }
+}
+
+impl<DI: NoiseDomain, Q: 'static + crate::traits::Number>
+    NoiseThresholdMeasureFor<
+        DI,
+        crate::metrics::L02InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+    > for Approximate<MultiDP>
+where
+    (
+        DI,
+        crate::metrics::L02InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+    ): MetricSpace,
+    DiscreteGaussian: MakeNoiseThreshold<
+            DI,
+            crate::metrics::L02InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+            Approximate<MultiDP>,
+            Threshold = DI::Atom,
+        >,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (
+            DI,
+            crate::metrics::L02InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+        ),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+        distribution: NoiseDistribution,
+    ) -> Fallible<
+        Measurement<
+            DI,
+            crate::metrics::L02InfDistance<crate::metrics::AbsoluteDistance<Q>>,
+            Self,
+            DI::Carrier,
+        >,
+    > {
+        match distribution {
+            NoiseDistribution::Gaussian => crate::measurements::noise_threshold::distribution::gaussian::make_gaussian_threshold(input_space.0, input_space.1, scale, threshold, k),
+            NoiseDistribution::Laplace => fallible!(MakeMeasurement, "laplace distribution is incompatible with L02InfDistance"),
+        }
+    }
 }

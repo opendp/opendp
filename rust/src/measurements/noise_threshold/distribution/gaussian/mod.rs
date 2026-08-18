@@ -13,7 +13,7 @@ use crate::{
         DiscreteGaussian, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
         NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
     },
-    measures::{Approximate, zCDP},
+    measures::{Approximate, MultiDP, PrivacyGuarantee, zCDP},
     metrics::{AbsoluteDistance, L2Distance, L02InfDistance},
     traits::{InfPowI, InfSqrt, InfSub},
 };
@@ -102,6 +102,29 @@ where
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/gaussian/NoiseThresholdPrivacyMap_for_ZExpFamily2.tex"
 )]
+impl NoiseThresholdPrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<MultiDP>>
+    for ZExpFamily<2>
+{
+    fn noise_threshold_privacy_map(
+        &self,
+        input_metric: &L02InfDistance<AbsoluteDistance<RBig>>,
+        _output_measure: &Approximate<MultiDP>,
+        threshold: UBig,
+    ) -> Fallible<PrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<MultiDP>>> {
+        let zcdp_map = <Self as NoiseThresholdPrivacyMap<
+            L02InfDistance<AbsoluteDistance<RBig>>,
+            Approximate<zCDP>,
+        >>::noise_threshold_privacy_map(
+            self, input_metric, &Approximate(zCDP), threshold
+        )?;
+
+        Ok(PrivacyMap::new_fallible(move |distance| {
+            let (rho, delta) = zcdp_map.eval(distance)?;
+            Ok((PrivacyGuarantee::new().with_zCDP(rho, 0.0)?, delta))
+        }))
+    }
+}
+
 impl NoiseThresholdPrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<zCDP>>
     for ZExpFamily<2>
 {

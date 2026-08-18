@@ -8,7 +8,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents, as_ref};
 use crate::measurements::nature::Nature;
 use crate::measurements::{MakeNoiseThreshold, make_gaussian_threshold};
-use crate::measures::{Approximate, zCDP};
+use crate::measures::{Approximate, MultiDP, zCDP};
 use crate::metrics::{AbsoluteDistance, L02InfDistance};
 use crate::traits::{Hashable, Number};
 
@@ -74,7 +74,7 @@ pub extern "C" fn opendp_measurements__make_gaussian_threshold(
     let k = as_ref(k as *const i32).map(Clone::clone);
 
     dispatch!(monomorphize, [
-        (MO, [Approximate<zCDP>]),
+        (MO, [Approximate<zCDP>, Approximate<MultiDP>]),
         (TK, @hashable),
         (TV, @numbers),
         (QI, @numbers)
