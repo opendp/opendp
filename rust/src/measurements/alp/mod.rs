@@ -1,3 +1,5 @@
+// We do not have a CLA on file for Christian Lebeda, so he retains copyright on her contributions in this file.
+// See: https://github.com/opendp/opendp/pull/388
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
