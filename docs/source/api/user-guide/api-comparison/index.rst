@@ -3,7 +3,7 @@ API Comparison
 
 OpenDP has two APIs:
 
-* The **Context API** is simpler and helps to enforce best practices. Currently available only for Python, it is used in the :doc:`../../../getting-started/index` documentation.
+* The **Context API** is simpler and helps enforce best practices. Currently available only for Python, it is used in the :doc:`../../../getting-started/index` documentation.
 * The **Framework API** is lower-level. Available for Python, R and Rust, it directly implements the :doc:`OpenDP Programming Framework <../../../theory/a-framework-to-understand-dp>`.
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
