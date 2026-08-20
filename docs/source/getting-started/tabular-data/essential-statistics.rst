@@ -134,7 +134,7 @@ release the query:
             len: ...
 
 Other variations of counting queries are discussed in the
-`Aggregation section <../../api/user-guide/polars/expressions/aggregation>`.
+:doc:`Aggregation section <../../api/user-guide/polars/expressions/aggregation>`.
 
 Bounds Estimation
 -----------------
