@@ -14,6 +14,7 @@ from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
     get_associated_metric,
+    get_scale,
     make_noise_marginal,
     make_stable_marginals,
     prior,
@@ -267,6 +268,7 @@ def _make_aim_marginal(
         model=model,
         d_in=d_in,
         d_out=d_select,
+        d_measure=d_measure,
         max_size=max_size,
     )
 
@@ -333,6 +335,7 @@ def _make_aim_select(
     output_measure: Measure,
     d_in,
     d_out,
+    d_measure,
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
@@ -360,9 +363,14 @@ def _make_aim_select(
     if not candidates:
         return None
 
+    # penalize candidates by the expected error of the upcoming MEASURE step,
+    # not of this SELECT step
+    sensitivity = max(d_in[q.by] for q in candidates)
+    expectation = get_scale(output_measure, d_measure, sensitivity) * to_mu
+
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
-            input_domain, input_metric, candidates, scale * to_mu, model
+            input_domain, input_metric, candidates, expectation, model
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
