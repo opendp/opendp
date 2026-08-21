@@ -142,10 +142,10 @@ class MST(Algorithm):
         d_measure = d_out * self.measure_split
         d_select = prior(prior(d_out - d_measure))
 
-        lp_metric = get_associated_metric(output_measure)
+        get_associated_metric(output_measure)
         edges = list(itertools.combinations(input_domain.columns, 2))
 
-        t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
+        t_marginals = make_stable_marginals(input_domain, input_metric, edges)
         d_marginals = t_marginals.map(d_in)
 
         def function(
@@ -296,5 +296,5 @@ def _make_mst_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in.values()),
+        stability_map=lambda d_in: max(distance[1] for distance in d_in.values()),
     )
