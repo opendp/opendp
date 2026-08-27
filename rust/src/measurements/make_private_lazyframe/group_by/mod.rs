@@ -286,10 +286,6 @@ where
         if margin.invariant.is_some() || is_join {
             ()
         } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
-            if li >= *threshold_value {
-                return fallible!(FailedMap, "threshold must be greater than {:?}", li);
-            }
-
             let d_instability = threshold_value.neg_inf_sub(&li)?;
             let delta_single =
                 integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
