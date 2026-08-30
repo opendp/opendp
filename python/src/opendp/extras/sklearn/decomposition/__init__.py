@@ -1,4 +1,4 @@
-'''
+"""
 This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
@@ -8,10 +8,10 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The members of this module will then be accessible at ``dp.sklearn.decomposition``.    
+The members of this module will then be accessible at ``dp.sklearn.decomposition``.
 
 See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
-'''
+"""
 
 from __future__ import annotations
 from typing import Optional, TYPE_CHECKING, Sequence
@@ -20,24 +20,27 @@ from opendp.extras.numpy import then_np_clamp
 from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
-from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
+from opendp.extras.sklearn._make_eigendecomposition import (
+    then_private_np_eigendecomposition,
+)
 from opendp.mod import Domain, Measurement, Metric
 from opendp._lib import import_optional_dependency
 from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 
-if TYPE_CHECKING: # pragma: no cover
-    import numpy # type: ignore[import-not-found]
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy  # type: ignore[import-not-found]
 
 
 @dataclass(kw_only=True, frozen=True)
 class PCAEpsilons:
-    '''
+    """
     Tuple used to describe the ε-expenditure per changed record in the input data
-    '''
+    """
+
     eigvals: float
-    '''ε-expenditure to estimate the eigenvalues'''
+    """ε-expenditure to estimate the eigenvalues"""
     eigvecs: Sequence[float]
-    '''ε-expenditure to estimate the eigenvectors'''
+    """ε-expenditure to estimate the eigenvectors"""
     mean: Optional[float]
     """ε-expenditure to estimate the mean.
 
@@ -70,7 +73,8 @@ def make_private_pca(
     :return: a Measurement that computes a tuple of (mean, S, Vt)
     """
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
+
+    np = import_optional_dependency("numpy")
 
     dp.assert_features("contrib", "idealized-numerics")
 
@@ -104,16 +108,22 @@ def make_private_pca(
         )
 
     if not isinstance(unit_epsilon, PCAEpsilons):
-        raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
+        raise ValueError(
+            "epsilon must be a float or instance of PCAEpsilons"
+        )  # pragma: no cover
 
     def _make_eigdecomp(norm, origin):
         if not isinstance(unit_epsilon, PCAEpsilons):
-            raise ValueError("expected epsilon to be PCAEpsilons at this point")  # pragma: no cover
+            raise ValueError(
+                "expected epsilon to be PCAEpsilons at this point"
+            )  # pragma: no cover
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)
             >> then_center()
-            >> then_private_np_eigendecomposition(unit_epsilon.eigvals, unit_epsilon.eigvecs)
+            >> then_private_np_eigendecomposition(
+                unit_epsilon.eigvals, unit_epsilon.eigvecs
+            )
             >> _new_pure_function(
                 lambda out: PCAResult(
                     mean=origin,
@@ -125,13 +135,16 @@ def make_private_pca(
 
     if input_desc.norm is not None:
         if unit_epsilon.mean is not None:
-            raise ValueError("unit_epsilon.mean should be zero because origin is known")  # pragma: no cover
+            raise ValueError(
+                "unit_epsilon.mean should be zero because origin is known"
+            )  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
         return _make_eigdecomp(norm, input_desc.origin)
     elif norm is None:
-        raise ValueError("must have either bounded `input_domain` or specify `norm`")  # pragma: no cover
-
+        raise ValueError(
+            "must have either bounded `input_domain` or specify `norm`"
+        )  # pragma: no cover
 
     # make releases under the assumption that d_in is 2.
     unit_d_in = 2
@@ -175,19 +188,20 @@ register(make_private_pca)
 
 
 class PCA:
-    '''
+    """
     DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
     This implementation is based on `Differentially Private Covariance Estimation <https://papers.nips.cc/paper_files/paper/2019/hash/4158f6d19559955bae372bb00f6204e4-Abstract.html>`_ by Kareem Amin, et al.
 
     Trying to create an instance without sklearn installed will raise an ``ImportError``.
-    
+
     See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
 
     :param whiten: Mirrors the corresponding sklearn parameter:
         When ``True`` (``False`` by default) the ``components_`` vectors are multiplied
         by the square root of n_samples and then divided by the singular values
         to ensure uncorrelated outputs with unit component-wise variances.
-    '''
+    """
+
     def __init__(
         self,
         *,
@@ -200,7 +214,7 @@ class PCA:
         whiten: bool = False,
     ) -> None:  # pragma: no cover
         # Error if constructor called without dependency:
-        import_optional_dependency('sklearn.decomposition')
+        import_optional_dependency("sklearn.decomposition")
         # used for mypy typing
         self.n_samples_ = None
         self.components_ = None
@@ -211,23 +225,22 @@ class PCA:
 
     @property
     def n_features(self):
-        '''
+        """
         Number of features
-        '''
+        """
         ...
 
     def fit(self, X, y=None):
-        '''
+        """
         Fit the model with X.
 
         :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
         :param y: Ignored
-        '''
+        """
         ...
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
-    def _fit(self, X):
-        ...
+    def _fit(self, X): ...
 
     def _prepare_fitter(self) -> Measurement:  # type: ignore[empty-body]
         """Returns a measurement that computes the mean and eigendecomposition,
@@ -242,12 +255,12 @@ class PCA:
         """Return a measurement that releases a fitted model."""
         ...
 
-    def _validate_params(*args, **kwargs):
-        ...
+    def _validate_params(*args, **kwargs): ...
 
 
-_decomposition = import_optional_dependency('sklearn.decomposition', False)
+_decomposition = import_optional_dependency("sklearn.decomposition", False)
 if _decomposition is not None:
+
     class PCA(_decomposition.PCA):  # type: ignore  # noqa: F811
         def __init__(
             self,
@@ -272,21 +285,21 @@ if _decomposition is not None:
 
         @property
         def n_features(self):
-            '''
+            """
             Number of features
-            '''
+            """
             return self.n_features_in_
 
         # This isn't strictly necessary, since we just call the superclass method,
         # but this lets us document a frequently used method,
         # and avoids a number of mypy warnings.
         def fit(self, X, y=None):
-            '''
+            """
             Fit the model with X.
 
             :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
             :param y: Ignored
-            '''
+            """
             return super().fit(X)
 
         # this overrides the scikit-learn method to instead use the opendp-core constructor
@@ -299,7 +312,9 @@ if _decomposition is not None:
             import opendp.prelude as dp
 
             if hasattr(self, "components_"):
-                raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
+                raise ValueError(
+                    "DP-PCA model has already been fitted"
+                )  # pragma: no cover
 
             input_domain = dp.numpy.array2_domain(
                 num_columns=self.n_features_in_, size=self.n_samples, T=float
@@ -312,19 +327,22 @@ if _decomposition is not None:
                 else self.n_features_in_
             )
 
-            return make_private_pca(
-                input_domain,
-                input_metric,
-                self.epsilon / self.n_changes * 2,
-                norm=self.row_norm,
-                num_components=n_estimated_components,
-            ) >> self._postprocess
+            return (
+                make_private_pca(
+                    input_domain,
+                    input_metric,
+                    self.epsilon / self.n_changes * 2,
+                    norm=self.row_norm,
+                    num_components=n_estimated_components,
+                )
+                >> self._postprocess
+            )
 
         def _postprocess(self, values):
             """A function that applies a release of the mean and eigendecomposition to self"""
-            np = import_optional_dependency('numpy')
-            from sklearn.utils.extmath import svd_flip # type: ignore[import]
-            from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
+            np = import_optional_dependency("numpy")
+            from sklearn.utils.extmath import svd_flip  # type: ignore[import]
+            from sklearn.decomposition._pca import _infer_dimension  # type: ignore[import]
 
             self.mean_, S, Vt = astuple(values)
             U = Vt.T
@@ -341,7 +359,7 @@ if _decomposition is not None:
             explained_variance_ = (S**2) / (n_samples - 1)
             total_var = np.sum(explained_variance_)
             explained_variance_ratio_ = explained_variance_ / total_var
-            singular_values_ = S # Store the singular values. 
+            singular_values_ = S  # Store the singular values.
 
             # Postprocess the number of components required
             if n_components == "mle":
@@ -354,7 +372,9 @@ if _decomposition is not None:
                 # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
                 explained_variance_ratio_np = explained_variance_ratio_
                 ratio_cumsum = np.cumsum(explained_variance_ratio_np)
-                n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
+                n_components = (
+                    np.searchsorted(ratio_cumsum, n_components, side="right") + 1
+                )
 
             # Compute noise covariance using Probabilistic PCA model
             # The sigma2 maximum likelihood (cf. eq. 12.46)
@@ -381,11 +401,9 @@ if _decomposition is not None:
             pass
 
 
-
-        
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
 
     if v < 0:
         raise ValueError("expected non-negative value")  # pragma: no cover
@@ -407,7 +425,8 @@ def _split_pca_epsilon_evenly(unit_epsilon, num_eigvec_releases, estimate_mean=F
 
 def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
+
+    np = import_optional_dependency("numpy")
 
     dp.assert_features("contrib", "idealized-numerics")
 

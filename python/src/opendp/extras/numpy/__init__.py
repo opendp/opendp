@@ -1,4 +1,4 @@
-'''
+"""
 This module requires extra installs: ``pip install 'opendp[numpy]'``
 
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
@@ -8,23 +8,29 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The members of this module will then be accessible at ``dp.numpy``.    
-'''
+The members of this module will then be accessible at ``dp.numpy``.
+"""
 
 from __future__ import annotations
 from typing import Literal, Optional
 from dataclasses import dataclass, asdict
 
 from opendp.mod import Domain
-from opendp.typing import RuntimeType, RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
+from opendp.typing import (
+    RuntimeType,
+    RuntimeTypeDescriptor,
+    _ELEMENTARY_TYPES,
+    _PRIMITIVE_TYPES,
+)
 from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
 import typing
-from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
+from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp  # noqa: F401
 
 
-if typing.TYPE_CHECKING: # pragma: no cover
-    import numpy # type: ignore[import-not-found]
+if typing.TYPE_CHECKING:  # pragma: no cover
+    import numpy  # type: ignore[import-not-found]
+
 
 def _check_norm_and_p(norm: float | None, p: int | None):
     """Checks that a scalar L`p` `norm` is well-defined"""
@@ -77,7 +83,7 @@ def array2_domain(
     :param cardinalities: cardinalities of the categorical columns
     :param T: atom type
     """
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
     _check_norm_and_p(norm, p)
@@ -87,7 +93,9 @@ def array2_domain(
         origin = origin if origin is not None else 0.0
 
     if norm is None and origin is not None:
-        raise ValueError("origin may only be set if data has bounded norm")  # pragma: no cover
+        raise ValueError(
+            "origin may only be set if data has bounded norm"
+        )  # pragma: no cover
 
     if isinstance(origin, (int, float)):
         # normalize origin to a 1d-ndarray
@@ -128,25 +136,31 @@ def array2_domain(
     if isinstance(cardinalities, np.ndarray):
         if cardinalities.ndim != 1:
             raise ValueError(f"cardinalities ndim ({cardinalities.ndim}) must be one")
-        
+
         if not np.issubdtype(cardinalities.dtype, np.integer):
-            raise ValueError(f"cardinalities dtype ({cardinalities.dtype}) must be integer")
-        
+            raise ValueError(
+                f"cardinalities dtype ({cardinalities.dtype}) must be integer"
+            )
+
         if any(c <= 0 for c in cardinalities):
             raise ValueError(f"cardinalities ({cardinalities}) must be positive")
-        
+
         if num_columns is None:
             num_columns = len(cardinalities)
 
         if len(cardinalities) != num_columns:
-            raise ValueError(f"cardinalities length ({len(cardinalities)}) must match num_columns ({num_columns})")
-    
+            raise ValueError(
+                f"cardinalities length ({len(cardinalities)}) must match num_columns ({num_columns})"
+            )
+
     elif cardinalities is not None:
         raise ValueError("cardinalities must be a list, ndarray or None")
-    
+
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
-        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
+        raise ValueError(
+            "must specify T, the type of data in the array"
+        )  # pragma: no cover
     T = dp.RuntimeType.parse(T)
     if T not in _PRIMITIVE_TYPES:
         raise ValueError(f"T ({T}) must be a primitive type")
@@ -164,7 +178,7 @@ def array2_domain(
             raise ValueError("must be a 2-dimensional array")
         if num_columns is not None and x.shape[1] != num_columns:
             raise ValueError(f"must have {num_columns} columns")
-        
+
         if T in {"f32", "f64"} and not nan and np.isnan(x).any():
             raise ValueError("must not contain NaN values")
 
@@ -174,13 +188,13 @@ def array2_domain(
             raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
-        
+
         if cardinalities is not None:
             n_unique = np.array([len(np.unique(x_i)) for x_i in x.T])
             if any(cardinalities < n_unique):
                 msg = f"unique values in data ({n_unique}) must not exceed cardinalities ({cardinalities})"
                 raise ValueError(msg)
-        
+
         return True
 
     desc = NPArray2Domain(
@@ -200,21 +214,21 @@ def array2_domain(
 @dataclass(kw_only=True, frozen=True)
 class NPArray2Domain:
     origin: numpy.ndarray | None
-    '''center of the norm region'''
+    """center of the norm region"""
     norm: float | None
-    '''each row in x is bounded by the norm'''
+    """each row in x is bounded by the norm"""
     p: Literal[1, 2, None]
-    '''designates L`p` norm'''
+    """designates L`p` norm"""
     size: int | None
-    '''number of rows in data'''
+    """number of rows in data"""
     num_columns: int | None
-    '''number of columns in the data'''
+    """number of columns in the data"""
     nan: bool
-    '''whether NaN values are allowed'''
+    """whether NaN values are allowed"""
     cardinalities: numpy.ndarray | None
-    '''cardinalities of the categorical columns'''
+    """cardinalities of the categorical columns"""
     T: str | RuntimeType
-    '''atom type'''
+    """atom type"""
 
 
 def arrayd_domain(
@@ -227,7 +241,7 @@ def arrayd_domain(
     :param shape: shape of the array
     :param T: atom type
     """
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
     if not isinstance(shape, tuple):
@@ -236,7 +250,9 @@ def arrayd_domain(
         raise ValueError(f"shape ({shape}) must be a tuple of positive integers")
 
     if T is None:
-        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
+        raise ValueError(
+            "must specify T, the type of data in the array"
+        )  # pragma: no cover
     T = dp.RuntimeType.parse(T)
     if T not in _PRIMITIVE_TYPES:
         raise ValueError(f"T ({T}) must be a primitive type")
@@ -247,7 +263,7 @@ def arrayd_domain(
         T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
             raise ValueError(f"must have data of type {T}, got {T_actual}")
-        
+
         if x.shape != shape:
             raise ValueError(f"must have shape {shape}")
         return True
@@ -260,13 +276,12 @@ def arrayd_domain(
     return _extrinsic_domain(f"NPArrayDDomain({_fmt_attrs(desc)})", _member, desc)
 
 
-
 @dataclass(kw_only=True, frozen=True)
 class NPArrayDDomain:
     shape: tuple[int, ...]
-    '''shape of the array'''
+    """shape of the array"""
     T: str | RuntimeType
-    '''atom type'''
+    """atom type"""
 
 
 def _sscp_domain(
@@ -289,7 +304,8 @@ def _sscp_domain(
     :param T: the type of data elements in the array
     """
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
+
+    np = import_optional_dependency("numpy")
 
     _check_norm_and_p(norm, p)
     _check_nonnegative_int(size, "size")

@@ -19,11 +19,11 @@ def make_private_eigenvector(
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
-    
+
     np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
 
@@ -72,15 +72,17 @@ def make_private_eigenvector(
             # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
             #  - Mult normal does not have an invertible cdf
             #  - Could try:
-            #    1. a "conservative" Cholesky decomposition of Omega_inv 
+            #    1. a "conservative" Cholesky decomposition of Omega_inv
             #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
             #       sample with sufficient precision where all components round to same float
-            
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr] 
-            # u is a sample from the angular central gaussian distribution, 
+
+            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr]
+            # u is a sample from the angular central gaussian distribution,
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
-            if np_csprng.random() < np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
+            if np_csprng.random() < np.exp(-u.T @ A @ u) / (
+                M * (u.T @ Omega @ u) ** (d / 2)
+            ):
                 return u
 
     return _make_measurement(
@@ -141,15 +143,18 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 def make_private_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: Sequence[float]
 ) -> Measurement:
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
-    linalg = import_optional_dependency('scipy.linalg')
+
+    linalg = import_optional_dependency("scipy.linalg")
 
     dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
     if input_desc.p != 2:
-        raise ValueError("input_domain must have bounded L2 row norm")  # pragma: no cover
+        raise ValueError(
+            "input_domain must have bounded L2 row norm"
+        )  # pragma: no cover
 
     if len(unit_epsilons) > input_desc.num_features - 1:
         raise ValueError(

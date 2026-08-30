@@ -1,7 +1,7 @@
-'''
+"""
 This module requires extra installs: ``pip install 'opendp[mbi]'``
 
-``mbi`` is short for "marginal-based inference", 
+``mbi`` is short for "marginal-based inference",
 and is the name of the `Private-PGM <https://github.com/ryan112358/private-pgm>`_ package.
 OpenDP uses Private-PGM to postprocess DP releases made with the OpenDP Library.
 
@@ -13,7 +13,7 @@ We suggest importing under the conventional name ``dp``:
     >>> import opendp.prelude as dp
 
 The members of this module will then be accessible at ``dp.mbi``.
-'''
+"""
 
 from ._aim import AIM
 from ._fixed import Fixed

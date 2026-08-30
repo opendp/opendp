@@ -16,7 +16,7 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
 
     if not str(input_domain).startswith("NPArray2Domain"):
         raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
-    
+
     size = input_domain.descriptor.size
 
     if input_metric != dp.symmetric_distance():
@@ -27,8 +27,8 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
         input_metric,
         dp.atom_domain(T=int),
         dp.absolute_distance(T=int),
-        lambda x: (x.shape[0] if size is None else size),
-        lambda d_in: (d_in if size is None else 0),
+        lambda x: x.shape[0] if size is None else size,
+        lambda d_in: d_in if size is None else 0,
     )
 
 

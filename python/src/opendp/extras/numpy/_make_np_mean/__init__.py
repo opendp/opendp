@@ -29,7 +29,8 @@ def make_private_np_mean(
     :return: a Measurement that computes the DP mean
     """
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
+
+    np = import_optional_dependency("numpy")
 
     dp.assert_features("contrib", "idealized-numerics")
 
