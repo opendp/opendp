@@ -115,8 +115,17 @@
     numbersep=5pt,                  
     showspaces=false,                
     showstringspaces=false,
-    showtabs=false,                  
-    tabsize=2
+    showtabs=false,
+    tabsize=2,
+    % add utf-8 support for greek alphabet
+    extendedchars=true,
+    inputencoding=utf8,
+    literate=
+      {α}{{$\alpha$}}1  {γ}{{$\gamma$}}1  {δ}{{$\delta$}}1  {ε}{{$\epsilon$}}1
+      {λ}{{$\lambda$}}1 {μ}{{$\mu$}}1     {π}{{$\pi$}}1     {ρ}{{$\rho$}}1
+      {σ}{{$\sigma$}}1  {τ}{{$\tau$}}1    {Δ}{{$\Delta$}}1  {∞}{{$\infty$}}1
+      {≤}{{$\le$}}1     {≥}{{$\ge$}}1     {≠}{{$\ne$}}1     {×}{{$\times$}}1
+      {·}{{$\cdot$}}1   {∈}{{$\in$}}1
 }
 
 \lstset{style=mystyle}
