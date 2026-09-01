@@ -180,8 +180,9 @@ jobs:
           - 'numpy'
           - 'scikit-learn'
           - 'polars'
-          - 'sql'
+          - 'ibis'
           - 'mbi'
+          - 'ibis,mbi' # Install both. Unlike the others, these are not stacked.
 
     steps:
       - name: Checkout repository
@@ -229,15 +230,16 @@ jobs:
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
           NOT_SYNTH="not contingency and not synthetic"
-          NOT_SQL="$NOT_SYNTH and not sql"
-          NOT_POLARS="$NOT_SQL and not lazyframe and not polars and not pca and not rst"
+          NOT_IBIS="not ibis"
+          NOT_POLARS="not lazyframe and not polars and not pca and not rst"
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "$NOT_POLARS";;
-            numpy)                pytest -v -k "$NOT_POLARS";;
-            scikit-learn)         pytest -v -k "$NOT_POLARS";;
-            polars)               pytest -v -k "$NOT_SQL";;
-            sql)                  pytest -v -k "$NOT_SYNTH";;
-            mbi)                  coverage run -m pytest -v;;
+            PLACEHOLDER)          pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            numpy)                pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            scikit-learn)         pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            polars)               pytest -v -k "$NOT_IBIS and $NOT_SYNTH";;
+            ibis)                 pytest -v -k "$NOT_SYNTH";;
+            mbi)                  pytest -v -k "$NOT_IBIS";;
+            ibis,mbi)             coverage run -m pytest -v;;
 
             *)                    print "unexpected extra-install"; exit 1;;
           esac

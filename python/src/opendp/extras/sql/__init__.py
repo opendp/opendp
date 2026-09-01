@@ -1,5 +1,5 @@
 """
-This module requires extra installs: ``pip install 'opendp[sql]'``
+This module requires extra installs: ``pip install 'opendp[ibis]'``
 
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The members of this module will then be accessible at ``dp.sql``.
+The members of this module will then be accessible at ``dp.ibis``.
 
 .. caution::
 

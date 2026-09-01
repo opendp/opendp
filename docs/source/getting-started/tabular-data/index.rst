@@ -124,7 +124,7 @@ In practice you will load from a local CSV, or preferably use
     or reference the database directly,
     either `reading a database table into memory <https://docs.pola.rs/user-guide/io/database/>`_,
     or (experimental feature) executing your query on the database
-    with :py:func:`~opendp.extras.sql.execute_on_database`. 
+    with :py:func:`~opendp.extras.ibis.execute_on_database`. 
     
     If you do stick with ``scan_csv``,
     using ``ignore_errors=True`` avoids some parsing failures, 
