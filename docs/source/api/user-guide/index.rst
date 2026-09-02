@@ -75,7 +75,7 @@ See also the :ref:`comprehensive listing of features for Rust<rust-feature-listi
 
    limitations
    api-comparison/index
-   programming-framework/index
+   framework-api/index
    transformations/index
    measurements/index
    combinators/index
