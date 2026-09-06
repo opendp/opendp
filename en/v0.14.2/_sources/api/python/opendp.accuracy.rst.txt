@@ -1,0 +1,7 @@
+opendp.accuracy module
+======================
+
+.. automodule:: opendp.accuracy
+   :members:
+   :undoc-members:
+   :show-inheritance:

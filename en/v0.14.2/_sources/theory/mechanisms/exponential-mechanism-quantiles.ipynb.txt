@@ -1,0 +1,420 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "DUH4x54XXVbI"
+      },
+      "source": [
+        "# Exponential Mechanism Quantiles\n",
+        "\n",
+        "This section explains the algorithm used to release a differentially private quantile using the exponential mechanism in the OpenDP Library.\n",
+        "\n",
+        "Our data will just be 1000 samples from the gaussian distribution."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import numpy as np\n",
+        "data = np.random.normal(scale=10, size=1000)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The following algorithm approximately chooses the candidate nearest to the alpha-quantile."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "0.0"
+            ]
+          },
+          "execution_count": 2,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "import opendp.prelude as dp\n",
+        "dp.enable_features(\"contrib\", \"honest-but-curious\")\n",
+        "\n",
+        "space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance()\n",
+        "candidates = np.linspace(-50, 50, 101).tolist()\n",
+        "\n",
+        "m_median = space >> dp.m.then_private_quantile(\n",
+        "    dp.max_divergence(),\n",
+        "    candidates=candidates,\n",
+        "    alpha=0.5,\n",
+        "    scale=1.0\n",
+        ")\n",
+        "m_median(data)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The algorithm breaks down into three smaller steps:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 3,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "0.0"
+            ]
+          },
+          "execution_count": 3,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "m_median = (\n",
+        "    space\n",
+        "    # 1. transformation: compute a score for each candidate\n",
+        "    >> dp.t.then_quantile_score_candidates(candidates, alpha=0.5)\n",
+        "    # 2. measurement: privately select the index of the best score\n",
+        "    >> dp.m.then_noisy_max(dp.max_divergence(), scale=1.0, negate=True)\n",
+        "    # 3. postprocessor: return the candidate with the selected index\n",
+        "    >> (lambda i: candidates[i])\n",
+        ")\n",
+        "\n",
+        "m_median(data)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "6XSkx3kiXVbO"
+      },
+      "source": [
+        "## 1. Score Each Candidate\n",
+        "\n",
+        "The `quantile_score_candidates` transformation assigns scores to each candidate by the number of records between the candidate and true quantile.\n",
+        "The scoring is similar to golf, where scores closer to zero are considered better."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "image/png": "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YaEmTpyoWbNmqaqqSgMDA0HluNZj9+ijj+q8886TzWbT/Pnz1dTUlOgqmVpNTY0uu+wyZWVlKTc3V9ddd52OHDkSVKavr0+VlZWaPn26pkyZoqVLl6qzszNBNU4NGzZskMVi0Zo1awLHuM7hIcCkie985zsqKCgYctzj8ejqq6/W5z73OTU3N+tHP/qR/umf/knbtm1LQC3N69VXX5XP59Njjz2mQ4cO6cEHH9TWrVv13e9+N1CGaz12v/jFL7R27VpVVVWppaVFX/rSl7R48WJ1dXUlumqmtW/fPlVWVuqll17S7t27derUKV199dX68MMPA2XuuOMO1dfX66mnntK+fft04sQJ3XDDDQmstbkdOHBAjz32mL74xS8GHec6h8lAyvvtb39rXHTRRcahQ4cMScaf/vSnwLktW7YY06ZNM/r7+wPH7r77buPCCy9MQE1Ty6ZNm4zCwsLAc6712BUXFxuVlZWB516v1ygoKDBqamoSWKvU0tXVZUgy9u3bZxiGYfT09Bjjx483nnrqqUCZw4cPG5KMxsbGRFXTtHp7e43zzz/f2L17t/GXf/mXxu23324YBtc5ErTApLjOzk6tWrVK//7v/65JkyYNOd/Y2Kgrr7xSEyZMCBxbvHixjhw5ovfffz+eVU05brdbOTk5gedc67EZGBhQc3OzSktLA8esVqtKS0vV2NiYwJqlFrfbLUmB925zc7NOnToVdN0vuugizZw5k+segcrKSi1ZsiToekpc50gQYFKYYRi66aab9M1vflPz5s0btozL5VJeXl7QMf9zl8sV8zqmqjfeeEMPP/yw/uEf/iFwjGs9Nu+99568Xu+w15DrFx0+n09r1qzRggULVFRUJGnwvTlhwgRNnTo1qCzXPXw7d+5US0uLampqhpzjOoePAGNC99xzjywWy6c+Xn31VT388MPq7e3VunXrEl1l0wr1Wp/pnXfeUVlZmb72ta9p1apVCao5EL7Kykq1trZq586dia5Kyjl+/Lhuv/12/exnP5PNZkt0dVLCuERXAOG78847ddNNN31qmc9//vPau3evGhsbh+yvMW/ePC1fvlw7duyQw+EYMsrd/9zhcES13mYU6rX2O3HihK666ipdccUVQwbncq3H5pxzzlFGRsaw15DrN3arV6/Wrl279Pzzz+vcc88NHHc4HBoYGFBPT09Q6wDXPTzNzc3q6urSnDlzAse8Xq+ef/55PfLII/rd737HdQ5XogfhIHbeeust4+DBg4HH7373O0OS8ctf/tI4fvy4YRifDCwdGBgIvG7dunUMLI3A22+/bZx//vnGsmXLjNOnTw85z7Ueu+LiYmP16tWB516v1/jsZz/LIN4x8Pl8RmVlpVFQUGC89tprQ877B5f+8pe/DBx79dVXGVwaJo/HE/R5fPDgQWPevHnGihUrjIMHD3KdI0CASSPt7e1DZiH19PQYeXl5xo033mi0trYaO3fuNCZNmmQ89thjiauoCb399tvGF77wBeMrX/mK8fbbbxsdHR2Bhx/Xeux27txpZGZmGtu3bzfa2tqMW2+91Zg6darhcrkSXTXTqqioMOx2u/Hcc88FvW8/+uijQJlvfvObxsyZM429e/caf/zjH42SkhKjpKQkgbVODWfOQjIMrnO4CDBpZLgAYxiG8ec//9lYuHChkZmZaXz2s581NmzYkJgKmtgTTzxhSBr2cSau9dg9/PDDxsyZM40JEyYYxcXFxksvvZToKpnaSO/bJ554IlDm448/Nr71rW8Z06ZNMyZNmmRcf/31QeEckTk7wHCdw2MxDMOIe78VAADAGDALCQAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmA4BBgAAmM7/B9i+SPXlA+9HAAAAAElFTkSuQmCC",
+            "text/plain": [
+              "<Figure size 640x480 with 1 Axes>"
+            ]
+          },
+          "metadata": {},
+          "output_type": "display_data"
+        }
+      ],
+      "source": [
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "# make the transformation get discrete scores per candidate\n",
+        "t_median_scores = dp.t.make_quantile_score_candidates(\n",
+        "    dp.vector_domain(dp.atom_domain(T=float, nan=False)), \n",
+        "    dp.symmetric_distance(), \n",
+        "    candidates, \n",
+        "    alpha=0.5)\n",
+        "\n",
+        "# plot the scores\n",
+        "scores = t_median_scores(data)\n",
+        "plt.scatter(candidates, scores);"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Since the data was sampled with a mean of 50, candidates nearer to 50 get better scores.\n",
+        "The scores increase quickly away from 50 because the data is concentrated at 50.\n",
+        "\n",
+        "The scoring transformation is considered stable because each score can change by no more than one, when one record is added or removed.\n",
+        "That is, when one new record is added, the number of records between a candidate and the true quantile can change by at most one."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 5,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "1"
+            ]
+          },
+          "execution_count": 5,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "t_median_scores.map(d_in=1)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The sensitivity of the score vector is based on the $L_\\infty$ sensitivity, or the max change of any one score."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "IBR9c79rXVbP"
+      },
+      "source": [
+        "## 2. Report Noisy Min"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "kr-MK9JCXVbP"
+      },
+      "source": [
+        "We now pass the scores to the `make_noisy_max` measurement (which can be configured to report noisy min). \n",
+        "The measurement adds exponential noise to each score, then returns index of the best score.\n",
+        "In our case, since better scores are smaller, we configure the mechanism to choose the min, \n",
+        "not the max, by setting `negate=True`."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 6,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "50"
+            ]
+          },
+          "execution_count": 6,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)\n",
+        "m_select_score = dp.m.make_noisy_max(*input_space, dp.max_divergence(), scale=1.0, negate=True)\n",
+        "\n",
+        "#pass the discrete scores to the measurement\n",
+        "noisy_index = m_select_score(scores)\n",
+        "noisy_index"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 7,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "2.0"
+            ]
+          },
+          "execution_count": 7,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "m_select_score.map(d_in=1)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The mechanism satisfies $\\epsilon = 2$ when the $L_\\infty$ sensitivity is one.\n",
+        "The mechanism is a specialized version of the exponential mechanism,\n",
+        "and accounts for the case where, for example, \n",
+        "all scores increase by the sensitivity, except for one score that decreases by the sensitivity.\n",
+        "Since scores can change in different directions, it makes it twice as easy to distinguish between two adjacent datasets of scores."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 8,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "50"
+            ]
+          },
+          "execution_count": 8,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "m_select_score = dp.m.make_noisy_max(*input_space, dp.zero_concentrated_divergence(), scale=1.0, negate=True)\n",
+        "\n",
+        "#pass the discrete scores to the measurement\n",
+        "noisy_index = m_select_score(scores)\n",
+        "noisy_index"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "The mechanism operates similarly, but adds noise from the gumbel distribution to each score.\n",
+        "Report noisy max with gumbel noise is exactly equivalent to the exponential mechanism.\n",
+        "This results in the following tradeoffs:\n",
+        "* The variance of the gumbel distribution is higher than the exponential distribution, which decreases the utility\n",
+        "* Gumbel noise satisfies $\\frac{\\eta^2}{8}$-zCDP, whereas exponential noise only satisfies $\\frac{\\epsilon^2}{2}$-zCDP. Therefore, consider parameterizing the mechanism with `dp.zero_concentrated_divergence()` (gumbel noise) when answering a large number of queries."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Ug-FYwAhXVbP"
+      },
+      "source": [
+        "## 3. Index Candidates\n",
+        "\n",
+        "Remember that this DP release is the index of the chosen candidate, _not_ the candidate itself.\n",
+        "In this case, since the fiftieth candidate should be right around zero.\n",
+        "\n",
+        "We now create a postprocessor that maps the index to its corresponding candidate. "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 9,
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "postprocessor = lambda i: candidates[i]"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Floating-Point Attack Mitigation\n",
+        "\n",
+        "The example above chose fortunate constants that made the analysis simple.\n",
+        "However, when the choice of alpha is more complex, the sensitivity gets much larger.\n",
+        "Take, for instance, if alpha is $1 / \\sqrt{2}$."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 10,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "7071"
+            ]
+          },
+          "execution_count": 10,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "# make the transformation get discrete scores per candidate\n",
+        "t_median_scores = dp.t.make_quantile_score_candidates(\n",
+        "    dp.vector_domain(dp.atom_domain(T=float, nan=False)), \n",
+        "    dp.symmetric_distance(), \n",
+        "    candidates, \n",
+        "    alpha=1 / np.sqrt(2))\n",
+        "t_median_scores.map(d_in=1)"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "In order to protect against floating-point attacks, OpenDP rationalizes alpha and multiplies the scores and the sensitivity by the denominator.\n",
+        "Notice how the sensitivity follows the first digits of alpha:"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 11,
+      "metadata": {},
+      "outputs": [
+        {
+          "data": {
+            "text/plain": [
+              "0.7071067811865475"
+            ]
+          },
+          "execution_count": 11,
+          "metadata": {},
+          "output_type": "execute_result"
+        }
+      ],
+      "source": [
+        "float(1 / np.sqrt(2))"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "Since both the scores and the sensitivity are scaled up by the same amount, \n",
+        "this mitigation has no effect on the utility of the algorithm.\n",
+        "On the other hand, this could make interpreting the scale parameter trickier.\n",
+        "\n",
+        "Since the mitigation is not material to the interpretation of the algorithm,\n",
+        "`then_private_quantile` multiplies the scale parameter by the appropriate factor to conceal this mitigation.\n"
+      ]
+    }
+  ],
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "display_name": ".venv",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.13.2"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 0
+}

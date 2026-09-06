@@ -1,0 +1,7 @@
+opendp.core module
+==================
+
+.. automodule:: opendp.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
