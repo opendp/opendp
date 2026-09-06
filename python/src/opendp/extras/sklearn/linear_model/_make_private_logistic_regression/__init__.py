@@ -31,7 +31,7 @@ def log_regression_train(
     learning_rate,
     l2_penalty,
 ):
-    dp.assert_features("contrib", "idealized-numerics")
+    dp.assert_features("contrib", "honest-but-curious", "idealized-numerics")
 
     np = import_optional_dependency("numpy")
     theta = np.zeros(d + 1)

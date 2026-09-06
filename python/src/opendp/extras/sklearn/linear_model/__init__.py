@@ -176,8 +176,8 @@ class LogisticRegression(DPEstimator):
         :param X: a Context query whose data has the binary target as its final column
         :param y: accepted for sklearn compatibility; ignored (the target must already be the last column of ``X``)
         :param fit_params: not supported; any fit metadata raises
-        :raises TypeError: if any ``fit_params`` are supplied
         :return: the input query ``X`` unchanged
+        :raises TypeError: if any ``fit_params`` are supplied
         """
 
         self._reject_fit_params(fit_params)

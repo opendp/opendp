@@ -43,11 +43,11 @@ def test_sklearn_estimator_is_abstract():
     with pytest.raises(NotImplementedError):
         DPEstimator.make(
             _DummyEstimator(),
-            None,
-            None,
-            None,
+            None,  # type: ignore[arg-type]
+            None,  # type: ignore[arg-type]
+            None,  # type: ignore[arg-type]
             1,
-            1,  # type: ignore[arg-type]
+            1,
         )
     with pytest.raises(NotImplementedError):
         DPEstimator._ingest_release(_DummyEstimator(), None)
