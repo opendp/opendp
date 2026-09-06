@@ -1,0 +1,20 @@
+library(opendp)
+
+test_that("rt_parse-vec", {
+  rtype <- getFromNamespace("rt_parse", "opendp")("Vec<i32>")
+  expect_equal(rtype$origin, "Vec")
+  expect_equal(rtype$args[[1]], i32)
+})
+
+test_that("rt_parse-tuple", {
+  rtype <- getFromNamespace("rt_parse", "opendp")("(f64, i32)")
+  expect_equal(rtype$origin, "Tuple")
+  expect_equal(rtype$args[[1]], f64)
+  expect_equal(rtype$args[[2]], i32)
+})
+
+test_that("rt_infer is strict by default on unknown objects", {
+  rt_infer <- getFromNamespace("rt_infer", "opendp")
+  expect_error(rt_infer(environment()), "unable to infer type")
+  expect_equal(rt_infer(environment(), allow_extrinsic = TRUE), ExtrinsicObject)
+})
