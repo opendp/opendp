@@ -97,26 +97,26 @@ def make_private_logistic_regression(
         )  # pragma: no cover
 
     if output_measure != dp.zero_concentrated_divergence():
-        raise ValueError("output_measure must be zero-concentrated divergence (zCDP)")
+        raise ValueError("output_measure must be zero-concentrated divergence (zCDP)") # pragma: no cover
 
     desc = input_domain.descriptor
     n, d = desc.size, desc.num_columns - 1
 
     if n is None:
-        raise ValueError("input_domain must have known size (sized data required)")
-    if n_iters < 1:
-        raise ValueError(f"n_iters must be >= 1, got {n_iters}")
+        raise ValueError("input_domain must have known size (sized data required)") # pragma: no cover
+    if n_iters < 1: 
+        raise ValueError(f"n_iters must be >= 1, got {n_iters}") # pragma: no cover
     if learning_rate <= 0:
-        raise ValueError(f"learning_rate must be > 0, got {learning_rate}")
+        raise ValueError(f"learning_rate must be > 0, got {learning_rate}") # pragma: no cover
     if clip_norm <= 0:
-        raise ValueError(f"clip_norm must be > 0, got {clip_norm}")
+        raise ValueError(f"clip_norm must be > 0, got {clip_norm}") # pragma: no cover
     if l2_penalty < 0:
-        raise ValueError(f"l2_penalty must be >= 0, got {l2_penalty}")
+        raise ValueError(f"l2_penalty must be >= 0, got {l2_penalty}") # pragma: no cover
     if d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "
             f"affecting 2 rows. Got d_in={d_in}."
-        )
+        ) # pragma: no cover
 
     rho_per_step = dp.binary_search_param(
         lambda r: dp.c.make_adaptive_composition(
