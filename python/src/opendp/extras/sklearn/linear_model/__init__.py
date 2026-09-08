@@ -20,8 +20,12 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
 )  # noqa: F401
 from opendp._lib import import_optional_dependency
 from opendp.mod import Measure
+from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
+    make_private_logistic_regression as _make_private_logistic_regression,
+)
+from opendp.extras.sklearn._estimator import DPEstimator
 
-__all__ = ["LinearRegression"]
+__all__ = ["LinearRegression", "LogisticRegression"]
 
 
 class LinearRegression:
@@ -54,7 +58,7 @@ class LinearRegression:
         if len(x_bounds) != 1:
             msg = f"For now, the x_bounds array must consist of a single tuple, not {x_bounds}"
             raise Exception(msg)
-        
+
         self.measurement = _make_private_theil_sen(
             output_measure=output_measure,
             x_bounds=x_bounds[0],
@@ -131,3 +135,80 @@ class LinearRegression:
         :raises NotImplementedError: This method is included only for documention.
         """
         raise NotImplementedError("Included only for documentation")  # pragma: no cover
+
+
+class LogisticRegression(DPEstimator):
+    """
+    DP Logistic Regression
+
+    The interface is parallel to that offered by sklearn's
+    `LogisticRegression <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html>`_.
+    Fitting is performed with differentially private stochastic gradient descent (DP-SGD):
+    each iteration clips per-example gradients to an L2 norm bound, sums them under Gaussian
+    noise, and takes a gradient step, with the privacy budget split across iterations under
+    zero-concentrated differential privacy. After ``fit``, the model exposes ``coef_``,
+    ``intercept_``, and ``classes_``, and supports ``predict`` and ``predict_proba``.
+
+    Data is expected as a single 2-dimensional array whose last column is the binary target
+    and whose remaining columns are the features.
+
+    :param n_iters: Number of DP-SGD iterations. Also controls the budget split: the total privacy budget is divided across this many gradient steps, so more iterations means more noise per step.
+    :param learning_rate: Step size for the gradient update applied to the weights each iteration.
+    :param clip_norm: Per-example gradient clipping bound. Each example's gradient is scaled to have L2 norm at most this value, bounding one record's influence on the update. Larger values distort gradients less but require more noise.
+    :param l2_penalty: Strength of optional L2 regularization added to the gradient update. Defaults to 0.0 (no regularization).
+    """
+
+    def __init__(self, n_iters=100, learning_rate=0.1, clip_norm=1.0, l2_penalty=0.0):
+        self.n_iters = n_iters
+        self.learning_rate = learning_rate
+        self.clip_norm = clip_norm
+        self.l2_penalty = l2_penalty
+
+    def _prepare_fit_query(self, X, y=None, **fit_params):
+        """Normalize fit arguments into a single input query.
+
+        This estimator expects the target to already be the **last column** of the
+        query's data, with the preceding columns as features. The target is not passed
+        separately: ``y`` is accepted for scikit-learn signature compatibility but is not
+        used to relocate or attach a target column, and supplying it has no effect on the
+        released model. Fit metadata (``fit_params``) is not supported and is rejected.
+
+        :param X: a Context query whose data has the binary target as its final column
+        :param y: accepted for sklearn compatibility; ignored (the target must already be the last column of ``X``)
+        :param fit_params: not supported; any fit metadata raises
+        :return: the input query ``X`` unchanged
+        :raises TypeError: if any ``fit_params`` are supplied
+        """
+
+        self._reject_fit_params(fit_params)
+        return X  # we are assuming that the last column is the target (open design question)
+
+    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+        return _make_private_logistic_regression(
+            input_domain,
+            input_metric,
+            output_measure,
+            d_in,
+            d_out,
+            n_iters=self.n_iters,
+            learning_rate=self.learning_rate,
+            clip_norm=self.clip_norm,
+            l2_penalty=self.l2_penalty,
+        )
+
+    def _ingest_release(self, release):
+        np = import_optional_dependency("numpy")
+        theta = np.asarray(release)
+        self.coef_ = theta[:-1]
+        self.intercept_ = theta[-1]
+        self.classes_ = np.array([0, 1])
+
+    def predict_proba(self, X):
+        np = import_optional_dependency("numpy")
+        special = import_optional_dependency("scipy.special")
+        Xb = np.hstack([np.asarray(X), np.ones((len(X), 1))])
+        p = special.expit(Xb @ np.concatenate([self.coef_, [self.intercept_]]))
+        return np.column_stack([1 - p, p])
+
+    def predict(self, X):
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
