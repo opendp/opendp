@@ -7,11 +7,12 @@ from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.extras.mbi._utilities import (
     get_associated_metric,
+    get_cardinalities,
     then_noise_marginals,
-    weight_marginals,
     make_stable_marginals,
     Algorithm,
     Count,
+    Marginals,
     OnewayType,
     ONEWAY_UNKEYED
 )
@@ -41,6 +42,13 @@ class Fixed(Algorithm):
     not all unknown first-order marginals.
     """
 
+    @property
+    def needs_model(self) -> bool:
+        # Fixed workloads are predetermined and do not need a model for
+        # workload selection. The fixed release supplies the constraint used
+        # to fit the final model.
+        return False
+
     def __post_init__(self):
         super().__post_init__()
 
@@ -58,7 +66,7 @@ class Fixed(Algorithm):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: Marginals,
         model: Any,  # MarkovRandomField
     ):
         """Implements a "Fixed" algorithm over ordinal data.
@@ -74,9 +82,9 @@ class Fixed(Algorithm):
         :param model: warm-start fit of MarkovRandomField
         """
         import_optional_dependency("mbi")
-        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from mbi import Domain, MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
-        if not isinstance(model, MarkovRandomField):
+        if model is not None and not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
         lp_metric = get_associated_metric(output_measure)
@@ -94,13 +102,20 @@ class Fixed(Algorithm):
 
         def function(
             new_releases: list,
-        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
-            all_marginals = weight_marginals(marginals, *new_releases)
+        ) -> tuple[Marginals, MarkovRandomField]:
+            all_marginals = marginals.add(*new_releases)
+
+            if model is None:
+                model_domain = Domain.fromdict(get_cardinalities(input_domain))
+                potentials = None
+            else:
+                model_domain = model.domain
+                potentials = model.potentials
 
             new_model = self.estimator(
-                model.domain,
-                list(all_marginals.values()),
-                potentials=model.potentials.expand(list(all_marginals.keys())),
+                model_domain,
+                all_marginals.flatten(),
+                potentials=potentials,
             )
             return all_marginals, new_model
 
