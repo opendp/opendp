@@ -14,7 +14,7 @@ from opendp.extras.mbi._utilities import (
     Count,
     Marginals,
     OnewayType,
-    ONEWAY_UNKEYED
+    ONEWAY_UNKEYED,
 )
 from opendp.mod import (
     FrameDistance,
@@ -87,14 +87,13 @@ class Fixed(Algorithm):
         if model is not None and not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        lp_metric = get_associated_metric(output_measure)
+        get_associated_metric(output_measure)
         cliques = [q.by for q in self.queries]
         weights = [q.weight for q in self.queries]
+        t_marginals = make_stable_marginals(input_domain, input_metric, cliques)
 
         def make(scale: float) -> Measurement:
-            return make_stable_marginals(
-                input_domain, input_metric, lp_metric, cliques  # type: ignore[arg-type]
-            ) >> then_noise_marginals(
+            return t_marginals >> then_noise_marginals(
                 output_measure, cliques, scale, weights
             )  # type: ignore[return-type]
 
