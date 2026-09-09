@@ -1,17 +1,11 @@
 Theory
 ======
 
-This section gets into the details of differential privacy:
-What are the problems with other approaches to "privatizing" data,
-and what is different about differential privacy?
-The examples use OpenDP, but this is not intended as an introduction to the library:
-For that, see :doc:`../getting-started/index` or :doc:`../api/index`.
+This last section re-examines the math behind differential privacy,
+and explains how OpenDP's Framework API helps users implement DP correctly.
 
 .. toctree::
   :titlesonly:
 
   a-framework-to-understand-dp
   dp-with-opendp
-  accuracy-pitfalls
-  attacks/index
-  mechanisms/index
