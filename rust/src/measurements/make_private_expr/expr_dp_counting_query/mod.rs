@@ -4,7 +4,7 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail, polars_err},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, Expr},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
@@ -47,7 +47,10 @@ macro_rules! new_make_expr_counting_query {
             }
 
             fn get_field(&self, _: &polars::prelude::Schema, fields: &[polars::prelude::Field]) -> PolarsResult<polars::prelude::Field> {
-                <&[polars::prelude::Field; 1]>::try_from(fields).map_err(|_| polars_err!(InvalidOperation: "{} expects one column", Self::NAME)).map(|[x]| x.clone())
+                let [input, _scale, _signed] = <&[Field; 3]>::try_from(fields)
+                    .map_err(|_| polars_err!(InvalidOperation: "{} expects three arguments", Self::NAME))?;
+
+                Ok(Field::new(input.name().clone(), DataType::UInt32))
             }
         }
 
@@ -71,11 +74,23 @@ macro_rules! new_make_expr_counting_query {
             Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
             (ExprDomain, MO::Metric): MetricSpace,
         {
-            let Some([input, scale]) = match_shim::<$plugin, _>(&expr)? else {
+            let Some([input, scale, signed]) = match_shim::<$plugin, 3>(&expr)? else {
                 return fallible!(MakeMeasurement, "Expected {} function", $plugin::NAME);
             };
 
-            apply_plugin(vec![input.$stable_method(), scale], expr, NoiseShim).make_private(
+            let signed = match signed {
+                Expr::Literal(lit) => lit.bool().unwrap_or(false),
+                _ => return fallible!(MakeMeasurement, "signed argument must be a literal bool"),
+            };
+
+            let aggregate = input.$stable_method();
+            let aggregate = if signed {
+                aggregate.cast(DataType::Int64)
+            } else {
+                aggregate
+            };
+
+            apply_plugin(vec![aggregate, scale], expr, NoiseShim).make_private(
                 input_domain.clone(),
                 input_metric,
                 output_measure,
@@ -91,6 +106,9 @@ macro_rules! new_make_expr_counting_query {
 
     }
 }
+
+#[cfg(test)]
+mod test;
 
 new_make_expr_counting_query!(DPLenShim, "dp_len", len, dp_len, make_expr_dp_len);
 new_make_expr_counting_query!(DPCountShim, "dp_count", count, dp_count, make_expr_dp_count);
