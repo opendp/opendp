@@ -78,7 +78,7 @@ A side-by-side comparison may make the differences more clear.
 
 .. tab-set::
 
-    .. tab-item:: Python
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -109,7 +109,7 @@ A side-by-side comparison may make the differences more clear.
 
 .. tab-set::
 
-    .. tab-item:: Python
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -149,7 +149,7 @@ A side-by-side comparison may make the differences more clear.
 
 .. tab-set::
 
-    .. tab-item:: Python
+    .. tab-item:: Context API (Python)
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
