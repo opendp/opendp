@@ -15,8 +15,8 @@ from opendp.extras.mbi._utilities import (
     make_noise_marginals,
     prior,
     make_stable_marginals,
-    weight_marginals,
     Algorithm,
+    Marginals,
 )
 from opendp.measurements import make_noisy_max
 from opendp.metrics import linf_distance
@@ -120,7 +120,7 @@ class MST(Algorithm):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: Marginals,
         model: Any,  # MarkovRandomField
     ) -> Measurement:
         """Implements MST (Minimum Spanning Tree) over ordinal data.
@@ -150,7 +150,7 @@ class MST(Algorithm):
 
         def function(
             qbl: Queryable,
-        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField]:
 
             # SELECT a set of queries that best reduces the error
             m_select = _make_mst_select(
@@ -178,13 +178,13 @@ class MST(Algorithm):
                 T=float,
             )
 
-            all_marginals = weight_marginals(marginals, *qbl(m_measure))
+            all_marginals = marginals.add(*qbl(m_measure))
 
             # GENERATE (fit a MarkovRandomField)
             new_model = self.estimator(
                 model.domain,
-                list(all_marginals.values()),
-                potentials=model.potentials.expand(model.cliques + selected_cliques),
+                all_marginals.flatten(),
+                potentials=model.potentials,
             )
             return all_marginals, new_model
 
