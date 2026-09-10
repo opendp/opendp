@@ -180,8 +180,7 @@ Alternatively, ``split_by_weights`` lets you give more of your budget to more im
 
 Later examples in this tutorial will also introduce the idea of "margins".
 
-See the Polars section in the :doc:`OpenDP User Guide <../../api/user-guide/polars/index>`
-for more information on any of these topics.
+See :ref:`polars-user-guide` in API User Guide for more information on any of these topics.
 
 .. toctree::
   :maxdepth: 1
