@@ -7,7 +7,7 @@ This notebook brings together two threads:
    basic DP ideas like *sensitivity* and *epsilon*, as well as terms
    that have particular meaning in OpenDP: *transformations*,
    *measures*, *measurements*, and *stability*.
--  The :doc:`User Guide <../api/user-guide/programming-framework/index>`
+-  The :doc:`User Guide <../api/user-guide/framework-api/index>`
    introduced the Framework API, without diving into the
    mathematics.
 
