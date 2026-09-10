@@ -85,11 +85,11 @@ def test_single_backticks(rst_path: Path):
             continue
         m = re.search(
             r"""
-            ([^`:]|^)   # Non-backtick or start of line
-            `           # backtick
+            ([^`:]|^)    # Non-backtick or start of line
+            `            # backtick
             ([^`<>_:]+?) # content, excluding RST links and tags
-            `           # backtick
-            ([^`]|$)    # Non-backtick or end of line
+            `            # backtick
+            ([^`]|$)     # Non-backtick or end of line
         """,
             line,
             re.VERBOSE,
