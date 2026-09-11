@@ -80,7 +80,9 @@ INT_SIZES = {
         "usize",
     )
 }
-_ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
+
+
+_INFERRED_TYPE_ERROR_URL = "https://docs.opendp.org/en/stable/getting-started/trouble-shooting.html#inferred-type-is-xxx-expected-yyy"
 
 
 def _check_and_cast_scalar(expected, value):
@@ -101,7 +103,7 @@ def _check_and_cast_scalar(expected, value):
 
     if expected not in ATOM_EQUIVALENCE_CLASSES.get(inferred, [inferred]):
         raise TypeError(
-            f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}"
+            f"inferred type is {inferred}, expected {expected}. See {_INFERRED_TYPE_ERROR_URL}"
         )
 
     if expected in INT_SIZES:
