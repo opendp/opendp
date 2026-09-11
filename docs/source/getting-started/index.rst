@@ -15,4 +15,5 @@ This is an overview of OpenDP's Python and R APIs.
   tabular-data/index
   statistical-modeling/index
   utility
+  trouble-shooting
   next-steps
