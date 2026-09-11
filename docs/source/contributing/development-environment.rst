@@ -47,7 +47,7 @@ Make sure you are on the latest Rust version:
     rustup update
 
 Now run ``cargo build`` in the ``rust`` subdirectory of the repo.
-(There will be warnings: They can safely be ignored. `Cleaning them up is tech debt. <https://github.com/opendp/opendp/issues/2476>`)
+(There will be warnings: They can safely be ignored. `Cleaning them up is tech debt. <https://github.com/opendp/opendp/issues/2476>`_)
 
 .. code-block:: bash
 

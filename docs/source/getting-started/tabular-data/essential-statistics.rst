@@ -20,8 +20,8 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-To get started, we’ll load data and recreate the Context from the `tabular data
-introduction <index.rst>`__.
+To get started, we’ll load data and recreate the Context from the
+:doc:`tabular data introduction <index>`.
 
 .. tab-set::
 
@@ -133,8 +133,8 @@ release the query:
             ... )  # doctest: +ELLIPSIS
             len: ...
 
-Other variations of counting queries are discussed in the `Aggregation
-section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
+Other variations of counting queries are discussed in the
+:doc:`Aggregation section <../../api/user-guide/polars/expressions/aggregation>`.
 
 Bounds Estimation
 -----------------

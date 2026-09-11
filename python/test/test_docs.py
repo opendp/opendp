@@ -85,11 +85,11 @@ def test_single_backticks(rst_path: Path):
             continue
         m = re.search(
             r"""
-            ([^`:]|^)   # Non-backtick or start of line
-            `           # backtick
-            ([^`<>_:]+) # content, excluding RST links and tags
-            `           # backtick
-            ([^`]|$)    # Non-backtick or end of line
+            ([^`:]|^)    # Non-backtick or start of line
+            `            # backtick
+            ([^`<>_:]+?) # content, excluding RST links and tags
+            `            # backtick
+            ([^`]|$)     # Non-backtick or end of line
         """,
             line,
             re.VERBOSE,
@@ -98,6 +98,23 @@ def test_single_backticks(rst_path: Path):
             content = m.group(2)
             errors.append(
                 f'line {i + 1}: "{content}" will be italicized: add double-backticks, or change to "*".'
+            )
+
+        m = re.search(
+            r"""
+            ([^`:]|^)            # Non-backtick or start of line
+            `                    # backtick
+            ([^`<>_:]+?<[^<>]+>) # content, INCLUDING possible link
+            `                    # backtick
+            ([^`_]|$)            # Not backtick or underscore, or end of line
+        """,
+            line,
+            re.VERBOSE,
+        )
+        if m:
+            content = m.group(2)
+            errors.append(
+                f'line {i + 1}: "{content}" will be italicized: add double-backticks for code format, or asterisk for emphasis, or fix link syntax.'
             )
     assert not errors, "\n".join(errors)
 
