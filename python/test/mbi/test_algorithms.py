@@ -129,6 +129,57 @@ def test_aim_exhaustion():
     m_aim(pl.LazyFrame({"A": [0]}))
 
 
+def test_aim_selects_correlated_pairs():
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    # eight columns in four perfectly correlated pairs: B{i} == A{i}
+    n = 20_000
+    rng = np.random.default_rng(1)
+    columns = [f"{letter}{i}" for i in range(4) for letter in "AB"]
+    data = {}
+    for i in range(4):
+        data[f"A{i}"] = rng.integers(0, 4, n)
+        data[f"B{i}"] = data[f"A{i}"].copy()
+    df = pl.DataFrame({c: data[c] for c in columns})
+
+    context = dp.Context.compositor(
+        data=df.lazy(),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=0.002),
+    )
+    table = (
+        context.query(rho=0.002)
+        .select(*columns)
+        .contingency_table(
+            keys={c: [0, 1, 2, 3] for c in columns},
+            algorithm=dp.mbi.AIM(queries=2),
+        )
+        .release()
+    )
+
+    selected = {frozenset(clique) for clique in table.marginals}
+    found = sum(frozenset((f"A{i}", f"B{i}")) in selected for i in range(4))
+    assert found >= 3, f"only {found}/4 correlated pairs selected"
+
+    # mean total variation distance over all two-way marginals;
+    # the independence model scores ~0.107 here
+    synthetic = table.synthesize().drop_nulls()
+    errors = []
+    for i, left in enumerate(columns):
+        for right in columns[i + 1 :]:
+            p = np.bincount(
+                df[left].to_numpy() * 4 + df[right].to_numpy(), minlength=16
+            ) / len(df)
+            q = np.bincount(
+                synthetic[left].to_numpy() * 4 + synthetic[right].to_numpy(),
+                minlength=16,
+            ) / len(synthetic)
+            errors.append(0.5 * np.abs(p - q).sum())
+    assert np.mean(errors) < 0.04
+
+
 @pytest.mark.parametrize(
     "kwargs,message",
     [
