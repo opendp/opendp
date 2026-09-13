@@ -1,0 +1,7 @@
+opendp.extras.polars.contingency\_table module
+==============================================
+
+.. automodule:: opendp.extras.polars.contingency_table
+   :members:
+   :undoc-members:
+   :show-inheritance:

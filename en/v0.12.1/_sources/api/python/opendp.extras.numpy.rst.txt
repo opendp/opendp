@@ -1,0 +1,10 @@
+opendp.extras.numpy package
+===========================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.numpy
+   :members:
+   :undoc-members:
+   :show-inheritance:

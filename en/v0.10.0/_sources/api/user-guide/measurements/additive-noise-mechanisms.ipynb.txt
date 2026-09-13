@@ -1,0 +1,644 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Additive Noise Mechanisms\n",
+    "\n",
+    "This notebook documents the variations on additive noise mechanisms in OpenDP:\n",
+    "\n",
+    "* Distribution: Laplace vs. Gaussian\n",
+    "* Support: float vs. integer\n",
+    "* Domain: scalar vs. vector\n",
+    "* Bit-depth"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "----\n",
+    "Any constructors that have not completed the proof-writing and vetting process may still be accessed if you opt-in to \"contrib\".\n",
+    "Please contact us if you are interested in proof-writing. Thank you!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import opendp.prelude as dp\n",
+    "dp.enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Distribution: Laplace vs. Gaussian\n",
+    "\n",
+    "The Laplace mechanism is a ubiquitous algorithm in the DP ecosystem that is used to privatize an aggregate, like a sum or mean.\n",
+    "\n",
+    "An instance of the Laplace mechanism is captured by a _measurement_ containing the following five elements:\n",
+    "\n",
+    "<details>\n",
+    "  <summary>Elements of a Laplace Measurement</summary>\n",
+    "\n",
+    "1. We first define the **function** $f(\\cdot)$, that applies the Laplace mechanism to some argument $x$. This function simply samples from the Laplace distribution centered at $x$, with a fixed noise scale.\n",
+    "\n",
+    "$$f(x) = Laplace(\\mu=x, b=scale)$$\n",
+    "\n",
+    "2. Importantly, $f(\\cdot)$ is only well-defined for any finite float input. This set of permitted inputs is described by the **input domain** (denoted `AtomDomain<f64>`).\n",
+    "\n",
+    "3. The Laplace mechanism has a privacy guarantee in terms of epsilon. \n",
+    "This guarantee is represented by a **privacy map**, a function that computes the privacy loss $\\epsilon$ for any choice of sensitivity $\\Delta$.\n",
+    "\n",
+    "$$map(\\Delta) = \\Delta / scale <= \\epsilon$$\n",
+    "\n",
+    "4. This map only promises that the privacy loss will be at most $\\epsilon$ if inputs from any two neighboring datasets may differ by no more than some quantity $\\Delta$ under the absolute distance **input metric** (`AbsoluteDistance<f64>`).\n",
+    "\n",
+    "5. We similarly describe units on the output ($\\epsilon$) via the **output measure** (`MaxDivergence<f64>`).\n",
+    "</details>\n",
+    "\n",
+    "\n",
+    "The `make_laplace` constructor function returns the equivalent of the Laplace measurement described above."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: 0.8418214435677124\n",
+      "epsilon: 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement `base_lap`\n",
+    "input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)\n",
+    "base_lap = dp.m.make_laplace(*input_space, scale=2.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample Laplace(x, 1.) noise\n",
+    "aggregated = 0.\n",
+    "print(\"noisy aggregate:\", base_lap(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1.\n",
+    "print(\"epsilon:\", base_lap.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The analogous constructor for gaussian noise is `make_gaussian`: "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: 2.322023365796082\n",
+      "rho: 0.125\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement `gauss`\n",
+    "input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)\n",
+    "gauss = dp.m.make_gaussian(*input_space, scale=2.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample Gaussian(x, 1.) noise\n",
+    "aggregated = 0.\n",
+    "print(\"noisy aggregate:\", gauss(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1.\n",
+    "print(\"rho:\", gauss.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that `base_lap` measures privacy with epsilon (in the `MaxDivergence` measure), and `base_gauss` measures privacy with rho (in the `ZeroConcentratedDivergence` measure).\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Support: Float vs. Integer\n",
+    "\n",
+    "There are also discrete analogues of the continuous Laplace and Gaussian measurements.\n",
+    "The continuous measurements accept and emit floats, while the discrete measurements accept and emit integers.\n",
+    "Measurements with distributions supported on the integers expect integer sensitivities by default.\n",
+    "\n",
+    "`make_laplace` on a discrete support is equivalent to the geometric mechanism:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: 1\n",
+      "epsilon: 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement `base_discrete_lap`\n",
+    "input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)\n",
+    "base_discrete_lap = dp.m.make_laplace(*input_space, scale=1.)\n",
+    "\n",
+    "# invoke the measurement on some integer aggregate x, to sample DiscreteLaplace(x, 1.) noise\n",
+    "aggregated = 0\n",
+    "print(\"noisy aggregate:\", base_discrete_lap(aggregated))\n",
+    "\n",
+    "# in this case, the sensitivity is integral:\n",
+    "sensitivity = 1\n",
+    "print(\"epsilon:\", base_discrete_lap.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`make_gaussian` on a discrete support is the analogous measurement for Gaussian noise:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: -1\n",
+      "rho: 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement `base_discrete_gauss`\n",
+    "input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)\n",
+    "base_discrete_gauss = dp.m.make_gaussian(*input_space, scale=1.)\n",
+    "\n",
+    "# invoke the measurement on some aggregate x, to sample DiscreteGaussian(x, 1.) noise\n",
+    "aggregated = 0\n",
+    "print(\"noisy aggregate:\", base_discrete_gauss(aggregated))\n",
+    "\n",
+    "# we must know the sensitivity of `aggregated` to determine epsilon\n",
+    "sensitivity = 1\n",
+    "print(\"rho:\", base_discrete_gauss.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The continuous mechanisms use these discrete samplers internally.\n",
+    "More information on this can be found at the end of this notebook."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Domain: Scalar vs. Vector"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Measurements covered thus far have accepted scalar inputs and emitted scalar outputs, \n",
+    "and sensitivities have been expressed in terms of the absolute distance.\n",
+    "\n",
+    "The noise addition mechanisms can similarly operate over metric spaces consisting of vectors, \n",
+    "and where the distance between any two vectors is computed via the L1 or L2 distance."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Expected type is Vec<f64> but input data is not a list.\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call again, but this time indicate that the measurement should operate over a vector domain\n",
+    "input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l1_distance(T=float)\n",
+    "base_lap_vec = dp.m.make_laplace(*input_space, scale=1.)\n",
+    "\n",
+    "aggregated = 1.\n",
+    "# If we try to pass the wrong data type into our vector laplace measurement, \n",
+    "# the error shows that our float argument should be a vector of floats.\n",
+    "try:\n",
+    "    print(\"noisy aggregate:\", base_lap_vec(aggregated))\n",
+    "except TypeError as e:\n",
+    "    # The error messages will often point to a discussion page with more info.\n",
+    "    print(e)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy aggregate: [-1.249922018362259, 1.5557446543831857, -1.620935690993615]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# actually pass a vector-valued input, as expected\n",
+    "aggregated = [0., 2., 2.]\n",
+    "print(\"noisy aggregate:\", base_lap_vec(aggregated))\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The resulting measurement expects sensitivity in terms of the appropriate Lp-distance: the vector Laplace measurement expects sensitivity in terms of an `\"l1_distance(T=f64)\"`, while the vector Gaussian measurement expects a sensitivity in terms of an `\"l2_distance(T=f64)\"`. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "epsilon: 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "sensitivity = 1.\n",
+    "print(\"epsilon:\", base_lap_vec.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The documentation for each constructor also reflects the relationship between `D` and the resulting input metric in a table:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Help on function make_laplace in module opendp.measurements:\n",
+      "\n",
+      "make_laplace(input_domain: opendp.mod.Domain, input_metric: opendp.mod.Metric, scale, k=None, QO: Union[ForwardRef('RuntimeType'), str, Type[Union[List[Any], Tuple[Any, Any], int, float, str, bool]], Tuple[ForwardRef('RuntimeTypeDescriptor'), ...], _GenericAlias, types.GenericAlias] = 'float') -> opendp.mod.Measurement\n",
+      "    Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.\n",
+      "    \n",
+      "    Valid inputs for `input_domain` and `input_metric` are:\n",
+      "    \n",
+      "    | `input_domain`                  | input type   | `input_metric`         |\n",
+      "    | ------------------------------- | ------------ | ---------------------- |\n",
+      "    | `atom_domain(T)` (default)      | `T`          | `absolute_distance(T)` |\n",
+      "    | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l1_distance(T)`       |\n",
+      "    \n",
+      "    Internally, all sampling is done using the discrete Laplace distribution.\n",
+      "    \n",
+      "    [make_laplace in Rust documentation.](https://docs.rs/opendp/latest/opendp/measurements/fn.make_laplace.html)\n",
+      "    \n",
+      "    **Citations:**\n",
+      "    \n",
+      "    * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)\n",
+      "    * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)\n",
+      "    \n",
+      "    **Supporting Elements:**\n",
+      "    \n",
+      "    * Input Domain:   `D`\n",
+      "    * Output Type:    `D::Carrier`\n",
+      "    * Input Metric:   `D::InputMetric`\n",
+      "    * Output Measure: `MaxDivergence<QO>`\n",
+      "    \n",
+      "    :param input_domain: Domain of the data type to be privatized.\n",
+      "    :type input_domain: Domain\n",
+      "    :param input_metric: Metric of the data type to be privatized.\n",
+      "    :type input_metric: Metric\n",
+      "    :param scale: Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).\n",
+      "    :param k: The noise granularity in terms of 2^k, only valid for domains over floats.\n",
+      "    :param QO: Data type of the output distance and scale. `f32` or `f64`.\n",
+      "    :type QO: :py:ref:`RuntimeTypeDescriptor`\n",
+      "    :rtype: Measurement\n",
+      "    :raises TypeError: if an argument's type differs from the expected type\n",
+      "    :raises UnknownTypeException: if a type argument fails to parse\n",
+      "    :raises OpenDPException: packaged error from the core OpenDP library\n",
+      "\n"
+     ]
+    }
+   ],
+   "source": [
+    "help(dp.m.make_laplace)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The discrete Gaussian mechanism allows for the type of the input sensitivity to be a float.\n",
+    "This is because there is often a square root in the sensitivity calculations for vector-valued queries."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.999698"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# call again, but this time indicate that the measurement should operate over a vector domain\n",
+    "input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l2_distance(T=float)\n",
+    "base_gauss_vec = dp.m.make_gaussian(*input_space, scale=1.)\n",
+    "\n",
+    "base_gauss_vec.map(d_in=1.414)\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Bit depth\n",
+    "\n",
+    "By default, all floating-point data types default to 64-bit double-precision (denoted `\"f64\"`), and all integral data types default to 32-bit (denoted `\"i32\"`).\n",
+    "The atomic data type expected by the function and privacy units can be further configured to operate over specific bit-depths by explicitly specifying `\"f32\"` instead of `\"float\"`, or `\"i64\"` instead of `\"int\"`. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# explicitly specify that the...\n",
+    "# * computation should be handled with 32-bit integers, and the\n",
+    "# * privacy analysis be conducted with 64-bit floats\n",
+    "base_discrete_lap_i32 = dp.m.make_laplace(\n",
+    "    dp.atom_domain(T=\"i32\"), dp.absolute_distance(T=\"i32\"),\n",
+    "    scale=1., QO=\"f64\"\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "More information on acceptable data types can be found in the _Utilities > Typing_ section of the User Guide."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Desideratum: Floating-Point Granularity\n",
+    "\n",
+    "The \"continuous\" Laplace and Gaussian measurements convert their float arguments to a rational representation, and then add integer noise to the numerator via the respective discrete distribution. \n",
+    "In the OpenDP Library's default configuration, this rational representation of a float is exact.\n",
+    "Therefore the privacy analysis is as tight as if you were to sample truly continuous noise and then postprocess by rounding to the nearest float. \n",
+    "\n",
+    "For most use-cases the sampling algorithm is sufficiently fast when the rational representation is exact.\n",
+    "That is, when noise is sampled with a granularity of $2^{-1074}$, the same granularity as the distance between subnormal 64-bit floats.\n",
+    "However, the granularity can be adjusted to $2^k$, for some choice of k, for a faster runtime.\n",
+    "Adjusting this parameter comes with a small penalty to the sensitivity (to account for rounding to the nearest rational), and subsequently, to the privacy parameters.\n",
+    "\n",
+    "The following plot shows the resulting distribution for some large choices of k:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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RERkGtrpslJ4eDi6du2KmJgYREVF8ewrEZmUDh06oKCgAFVVVcjOzkZ8fDw8PT0xdOhQlfWlUimkUmnLBklERERGRacrTsXFxYiLi8PWrVvh6emJsLAwfPbZZ6itrdV3fEREDXJycoK5uTlKS0sVyktLS+Hi4tLgemZmZujZsyd8fHzwf//3f3jqqaeQnJzc3OESERGRCdMpcXJycsKMGTNQUFCA/fv345577sHUqVPh5uaGl156CYcPH9Z3nERESiwsLODr64vs7GyxTC6XIzs7G4MHD9a4HblcjpqamuYIkYiIiFqJJk8Ocd999yEhIQFxcXGoqqpCZmYmfH19ERQUhD///FMfMRIRNSg+Ph4ZGRlYv349jh07hilTpuD69euIiYkBAEycOBEJCQli/eTkZOzZswd///03jh07huXLl+Ojjz7Cs88+a6hdIKJmps2z3v7880+MHj0aMpkMEokEaWlpSnXmzZsHiUSisHh7ezfjHhCRMdA5cbp16xa2bt2KRx55BN27d8fu3buxatUqlJaW4tSpU+jevTsiIyP1GSsRkZKxY8ciNTUViYmJ8PHxQUFBAbKyssQJI86dO4eLFy+K9a9fv46pU6eib9++uP/++/H555/j448/xvPPP2+oXSCiZqTts96qq6vh6emJlJSURof89u3bFxcvXhSXxh5pQEStg06TQ0yfPh2ffvopBEHAhAkTsHTpUvTr109838bGBqmpqXBzc9NboEREDYmLi0NcXJzK93JzcxVeL1q0CIsWLWqBqIjIGNz9rDcASE9Px86dO5GZmYk5c+Yo1ff394e/vz8AqHy/Xrt27RpNrIio9dEpcTp69ChWrlyJJ598ssGZppycnDhtORERERlM/bPe7h6uq82z3hpz8uRJuLm5wdLSEoMHD0ZycjK6deumsm5NTY3CfZR8iDaRadJpqF5SUhIiIyOVkqbbt2/jxx9/BHDnTExwcHDTIyQiIiLSga7PelMnMDAQ69atQ1ZWFtasWYMzZ84gKCgI165dU1mfD9Emah10uuIUEhKCixcvokuXLgrlFRUVCAkJQV1dnV6CIyIiIjI2I0aMEP89YMAABAYGonv37vjss88wadIkpfoJCQmIj48XX1dWVjJ5aqVkc3aqLC9MGdnCkVBz0ClxEgQBEolEqfzy5cuwsbFpclBERERETaXrs9601bFj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V17B/fffj379+umlTaK2jL91Impp2vY7zd3nsL8xXkycqEXNmTMHEomk0eX48eMK6xQXFyM8PByRkZGIjY01UOSqTZs2DX/88Qc2bdpk6FCIjAp/60TU0lpLv8P+xni1M3QA1Lb83//9H6Kjoxut4+npKf77woULCAkJwZAhQ/D+++9rtS0nJyeYm5ujtLRUoby0tBQuLi5ataVKXFwcvv76a/z444/o2rVrk9sjak34WyeiltZS/U5z9jnsb4wbEydqUZ07d0bnzp01qltcXIyQkBD4+vpi7dq1MDPT7gKphYUFfH19kZ2djYiICAB3Ln9nZ2cjLi5O29BFgiBg+vTp2L59O3Jzc9GjRw+d2yJqrfhbJ6KW1lL9TnP0OexvTAMTJzJKxcXFGDp0KLp3747U1FSUlZWJ72lzNic+Ph5RUVHw8/NDQEAA0tLScP36dcTExOgc27Rp0/DJJ5/giy++QIcOHcTxzPb29rCystK5XaK2iL91Impp+uh39N3nsL8xEQKREVq7dq0AQOWirZUrVwrdunUTLCwshICAAGHfvn1Niq2huNauXdukdonaIv7Wiail6avf0Wefw/7GNPA5TkRERERERGpwVj0iIiIiIiI1mDgRERERERGpwcSJiIiIiIhIDSZOREREREREajBxIiIiIiIiUoOJExERERERkRpMnIiIiIiIiNRg4kRERERERKQGEyciIiIiIiI1mDgRERERERGpwcSJiIiIiIhIjf8HF+a4WMt2jOYAAAAASUVORK5CYII=",
+      "text/plain": [
+       "<Figure size 1000x300 with 3 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "num_samples = 10_000\n",
+    "space = dp.vector_domain(dp.atom_domain(T=float), num_samples), dp.l1_distance(T=float)\n",
+    "\n",
+    "fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 3))\n",
+    "fig.subplots_adjust(top=0.8)\n",
+    "for axis, k in zip(axes, [1, 0, -1]):\n",
+    "    base_lap_vec = dp.m.make_laplace(*space, scale=1., k=k)\n",
+    "    support, counts = np.unique(base_lap_vec([0.] * num_samples), return_counts=True)\n",
+    "    axis.bar(support, counts / num_samples)\n",
+    "    axis.set_xticks([-2, 0, 2])\n",
+    "    axis.set_title(f\"k = {k}; gap = {2**k}\")\n",
+    "axes[0].set_ylabel(\"density\")\n",
+    "fig.suptitle('make_laplace for different choices of k', y=0.95);"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The distribution becomes increasingly smooth as k approaches the default value (`-1074`).\n",
+    "\n",
+    "The privacy map still adds a penalization when the sensitivity is zero. \n",
+    "The following table uses this behavior to show the increase in epsilon for some choices of k:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>ε penalty</th>\n",
+       "      <th>detail</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>k</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>-1074</th>\n",
+       "      <td>0.000000e+00</td>\n",
+       "      <td>no penalty</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-1073</th>\n",
+       "      <td>4.940656e-324</td>\n",
+       "      <td>~min float</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-100</th>\n",
+       "      <td>7.888609e-31</td>\n",
+       "      <td>~2^-100</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>-1</th>\n",
+       "      <td>5.000000e-01</td>\n",
+       "      <td>~2^-1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>1.000000e+00</td>\n",
+       "      <td>~2^0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>2.000000e+00</td>\n",
+       "      <td>~2^1</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "           ε penalty      detail\n",
+       "k                               \n",
+       "-1074   0.000000e+00  no penalty\n",
+       "-1073  4.940656e-324  ~min float\n",
+       "-100    7.888609e-31     ~2^-100\n",
+       "-1      5.000000e-01       ~2^-1\n",
+       " 0      1.000000e+00        ~2^0\n",
+       " 1      2.000000e+00        ~2^1"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "k = [-1074, -1073, -100, -1, 0, 1]\n",
+    "space = dp.atom_domain(T=float), dp.absolute_distance(T=float)\n",
+    "ε_penalty = [dp.m.make_laplace(*space, scale=1., k=k_i).map(d_in=0.) for k_i in k]\n",
+    "detail = [\"no penalty\", \"~min float\", \"~2^-100\", \"~2^-1\", \"~2^0\", \"~2^1\"]\n",
+    "\n",
+    "import pandas as pd\n",
+    "pd.DataFrame({\"k\": k, \"ε penalty\": ε_penalty, \"detail\": detail}).set_index(\"k\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "psi",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.7"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "3220da548452ac41acb293d0d6efded0f046fab635503eb911c05f743e930f34"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
