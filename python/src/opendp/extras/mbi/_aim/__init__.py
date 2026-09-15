@@ -35,6 +35,7 @@ from opendp.mod import (
     Queryable,
     Transformation,
     binary_search_chain,
+    binary_search_param,
 )
 from opendp._internal import _make_transformation, _new_pure_function
 
@@ -168,12 +169,10 @@ class AIM(Algorithm):
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
 
-        lp_metric = get_associated_metric(output_measure)
+        get_associated_metric(output_measure)
         cliques = [query.by for query in queries]
 
-        t_marginals = make_stable_marginals(
-            input_domain, input_metric, lp_metric, cliques
-        )
+        t_marginals = make_stable_marginals(input_domain, input_metric, cliques)
         d_marginals = t_marginals.map(d_in)
 
         T = algorithm.rounds or (16 * len(input_domain.columns))
@@ -266,6 +265,7 @@ def _make_aim_marginal(
         d_in=d_in,
         d_out=d_select,
         max_size=max_size,
+        d_measure=d_measure,
     )
 
     if not m_select:
@@ -334,15 +334,18 @@ def _make_aim_select(
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
+    d_measure: float,
 ) -> Optional[Measurement]:
     """Make a measurement that selects a set of marginal query that will minimize error."""
     import mbi
 
-    # factor to convert scale -> half-distribution expectation
+    # factor to convert a mechanism scale to expected absolute noise
     if output_measure == max_divergence():
         to_mu = 1.0
     elif output_measure == zero_concentrated_divergence():
         to_mu = sqrt(2 / pi)
+    else:  # pragma: no cover - callers validate the supported measures
+        raise ValueError(f"unsupported output measure: {output_measure}")
 
     model = cast(mbi.MarkovRandomField, model)
 
@@ -358,12 +361,31 @@ def _make_aim_select(
     if not candidates:
         return None
 
-    def make(scale: float) -> Measurement:
-        return _make_aim_scores(
-            input_domain, input_metric, candidates, scale * to_mu, model
-        ) >> then_noisy_max(output_measure=output_measure, scale=scale)
-
     try:
+        # AIM's penalty estimates the error of measuring each candidate, not
+        # the noise used to select it. Candidate sensitivities may differ.
+        expectations = [
+            binary_search_param(
+                lambda scale, clique=query.by: make_noise_marginal(
+                    input_domain,
+                    input_metric,
+                    output_measure,
+                    clique=clique,
+                    scale=scale,
+                ),
+                d_in=d_in,
+                d_out=d_measure,
+                T=float,
+            )
+            * to_mu
+            for query in candidates
+        ]
+
+        def make(scale: float) -> Measurement:
+            return _make_aim_scores(
+                input_domain, input_metric, candidates, expectations, model
+            ) >> then_noisy_max(output_measure=output_measure, scale=scale)
+
         return binary_search_chain(
             make, d_in=d_in, d_out=d_out, T=float
         ) >> _new_pure_function(lambda idx: candidates[idx].by)
@@ -377,7 +399,7 @@ def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
     queries: list[Count],
-    expectation: float,
+    expectations: list[float],
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
@@ -390,7 +412,7 @@ def _make_aim_scores(
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
-    def score_query(query: Count, exact: np.ndarray):
+    def score_query(query: Count, exact: np.ndarray, expectation: float):
         penalty = expectation * prod(exact.shape)
         synth = model.project(query.by).values
 
@@ -402,9 +424,10 @@ def _make_aim_scores(
         output_domain=vector_domain(atom_domain(T="f64", nan=False)),
         output_metric=linf_distance(T="f64", monotonic=False),
         function=lambda exact_tabs: [
-            score_query(query, exact_tabs[query.by]) for query in queries
+            score_query(query, exact_tabs[query.by], expectation)
+            for query, expectation in zip(queries, expectations)
         ],
-        stability_map=lambda d_in: max(d_in[q.by] * q.weight for q in queries),
+        stability_map=lambda d_in: max(d_in[q.by][1] * q.weight for q in queries),
     )
 
 

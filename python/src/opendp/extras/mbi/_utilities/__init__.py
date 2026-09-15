@@ -16,7 +16,9 @@ from opendp.measurements import then_noise
 from opendp.measures import max_divergence, zero_concentrated_divergence
 from opendp.metrics import (
     _get_bound,
+    absolute_distance,
     frame_distance,
+    l01inf_distance,
     l1_distance,
     l2_distance,
     symmetric_distance,
@@ -223,10 +225,13 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
 def make_stable_marginals(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    output_inner_metric: Metric,
     cliques: list[tuple[str, ...]],
 ) -> Transformation:
-    """Return a transformation that computes all marginals in a workload."""
+    """Return a transformation that computes all marginals in a workload.
+
+    Each marginal retains its ``(L0, L1, Linf)`` contribution geometry so that
+    downstream consumers can choose the norm required by their mechanism.
+    """
     from opendp.extras.numpy import arrayd_domain
     from opendp.extras.polars import Bound
     import polars as pl  # type: ignore[import-not-found]
@@ -237,12 +242,6 @@ def make_stable_marginals(
         raise ValueError(message)
 
     cardinalities = get_cardinalities(input_domain)
-
-    metrics = {l1_distance(T="u32"): 1, l2_distance(T="u32"): 2}
-    if output_inner_metric not in metrics:
-        message = f"inner_output_metric ({output_inner_metric}) must be in {set(metrics.keys())}"
-        raise ValueError(message)
-    p = metrics[output_inner_metric]
 
     def shape(by: tuple[str, ...]) -> tuple[int, ...]:
         return tuple(cardinalities[c] for c in by)
@@ -260,15 +259,20 @@ def make_stable_marginals(
         dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques])
         return {c: pivot(m, c) for m, c in zip(dfs, cliques)}
 
-    def count_sensitivity(bounds: list[Bound], clique: tuple[str, ...]) -> float:
-        l1 = _get_bound(bounds, []).per_group
+    def count_sensitivity(
+        bounds: list[Bound], clique: tuple[str, ...]
+    ) -> tuple[int, int, int]:
+        total = _get_bound(bounds, []).per_group
+        if total is None:  # pragma: no cover - input bounds always contain this
+            raise ValueError("input bounds must specify total contributions")
 
         bound: Bound = _get_bound(bounds, [pl.col(c) for c in clique])
-        l0 = (bound.num_groups or l1) ** (1 / p)
-        li = bound.per_group or l1
-        return min(l1, l0 * li)
+        l0 = min(bound.num_groups if bound.num_groups is not None else total, total)
+        linf = min(bound.per_group if bound.per_group is not None else total, total)
+        l1 = min(total, l0 * linf)
+        return l0, l1, linf
 
-    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], float]:
+    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], tuple[int, int, int]]:
         return {clique: count_sensitivity(d_in, clique) for clique in cliques}
 
     return _make_transformation(
@@ -277,7 +281,7 @@ def make_stable_marginals(
         output_domain=typed_dict_domain(
             {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques}
         ),
-        output_metric=typed_dict_distance(output_inner_metric),
+        output_metric=typed_dict_distance(l01inf_distance(absolute_distance(T="i32"))),
         function=function,
         stability_map=stability_map,
     )
@@ -322,19 +326,27 @@ def make_noise_marginal(
 
     clique_domain.cast(NPArrayDDomain)
 
-    associated_metric = get_associated_metric(output_measure)
-
-    if inner_metric != associated_metric:
-        message = f"input_metric's inner metric ({inner_metric}) doesn't match the output_measure's associated metric ({associated_metric})"
+    structural_metric = l01inf_distance(absolute_distance(T="i32"))
+    if inner_metric != structural_metric:
+        message = (
+            f"input_metric's inner metric ({inner_metric}) must be {structural_metric}"
+        )
         raise ValueError(message)
+
+    associated_metric = get_associated_metric(output_measure)
+    if output_measure == max_divergence():
+        project_sensitivity = lambda distance: distance[1]
+    else:
+        associated_metric = l2_distance(T="f64")
+        project_sensitivity = _l2_from_l01inf
 
     t_marginal = _make_transformation(
         input_domain,
         input_metric,
         output_domain=vector_domain(atom_domain(T="i32")),
-        output_metric=inner_metric,
+        output_metric=associated_metric,
         function=lambda exact_tabs: exact_tabs[clique].astype(np.int32).flatten(),
-        stability_map=lambda d_in: d_in[clique],
+        stability_map=lambda d_in: project_sensitivity(d_in[clique]),
     )
 
     def function(x):
@@ -346,6 +358,12 @@ def make_noise_marginal(
         >> as_array()
         >> _new_pure_function(function)
     )
+
+
+def _l2_from_l01inf(distance: tuple[int, int, int]) -> float:
+    """Project an ``(L0, L1, Linf)`` bound to a conservative L2 bound."""
+    l0, l1, linf = distance
+    return min(l1, sqrt(l0) * linf)
 
 
 def row_major_order(keys: Iterator):
