@@ -66,6 +66,17 @@ Features that are available from Python and R:
    * - ``rust-stack-trace``
      - Enable to allow stack traces to include stack frames from Rust.
 
+Python-only features:
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name
+     - Description
+   * - ``disable-signed-count-warning``
+     - Suppress the warning emitted by Polars counting queries, whose default is now signed output.
+
 See also the :ref:`comprehensive listing of features for Rust<rust-feature-listing>`.
 
 
