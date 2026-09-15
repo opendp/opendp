@@ -65,6 +65,7 @@ def array2_domain(
     nan: Optional[bool] = None,
     cardinalities: list[int] | numpy.ndarray | None = None,
     T: RuntimeTypeDescriptor | None = None,
+    preserves_row_alignment: bool = False,
 ) -> Domain:
     """Construct a Domain representing 2-dimensional numpy arrays.
 
@@ -76,6 +77,8 @@ def array2_domain(
     :param nan: whether NaN values are allowed
     :param cardinalities: cardinalities of the categorical columns
     :param T: atom type
+    :param preserves_row_alignment: internal provenance that rows retain their
+        source correspondence
     """
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
@@ -192,6 +195,7 @@ def array2_domain(
         nan=nan,
         cardinalities=cardinalities,
         T=T,
+        preserves_row_alignment=preserves_row_alignment,
     )
 
     return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
@@ -215,6 +219,8 @@ class NPArray2Domain:
     '''cardinalities of the categorical columns'''
     T: str | RuntimeType
     '''atom type'''
+    preserves_row_alignment: bool = False
+    '''whether rows retain a known source correspondence'''
 
 
 def arrayd_domain(
