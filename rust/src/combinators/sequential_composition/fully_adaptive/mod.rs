@@ -10,6 +10,7 @@ use crate::{
     },
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
+    traits::AlertingAdd,
 };
 
 #[cfg(test)]
@@ -147,10 +148,10 @@ where
                     *enforce_sequentiality.borrow_mut() = true;
 
                     // we've now increased our privacy spend. This is our only state modification
-                    num_queries += 1;
+                    num_queries = num_queries.alerting_add(&1)?;
                     // each query joins the group of queries sharing its privacy map
                     match (privacy_maps.iter_mut()).find(|(map, _)| map == &meas.privacy_map) {
-                        Some((_, k)) => *k += 1,
+                        Some((_, k)) => *k = k.alerting_add(&1)?,
                         None => privacy_maps.push((meas.privacy_map.clone(), 1)),
                     }
 
