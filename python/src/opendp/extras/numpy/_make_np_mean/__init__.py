@@ -1,5 +1,5 @@
 from __future__ import annotations
-from opendp.extras.numpy import make_np_clamp
+from opendp.extras.numpy import make_np_clip
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.mod import Domain, Metric, Measurement
@@ -34,8 +34,8 @@ def make_private_np_mean(
     dp.assert_features("contrib", "idealized-numerics")
 
     if norm is not None:
-        t_clamp = make_np_clamp(input_domain, input_metric, norm, p, origin)
-        input_domain, input_metric = t_clamp.output_space
+        t_clip = make_np_clip(input_domain, input_metric, norm, p, origin)
+        input_domain, input_metric = t_clip.output_space
 
     input_desc = input_domain.descriptor
     size = input_desc.size
@@ -51,7 +51,7 @@ def make_private_np_mean(
         input_domain, input_metric, privacy_measure, scale * size
     )
     if norm is not None:
-        t_sum = t_clamp >> t_sum
+        t_sum = t_clip >> t_sum
 
     return t_sum >> _new_pure_function(lambda sums: np.array(sums) / size)
 
