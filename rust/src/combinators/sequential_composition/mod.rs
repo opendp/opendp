@@ -130,8 +130,7 @@ impl CompositionMeasure for RenyiDivergence {
     }
 
     fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        // equal curves are merged into a single group,
-        // so that each distinct curve is evaluated once, not once per copy
+        // merge equal curves so that each is evaluated once, not once per copy
         let mut groups: HashMap<Self::Distance, u32> = HashMap::new();
         for (d_mid, k_i) in d_mids {
             let k = groups.entry(d_mid).or_default();
