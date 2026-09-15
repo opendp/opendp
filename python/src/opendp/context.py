@@ -12,7 +12,16 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
-from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping
+from typing import (
+    Any,
+    Callable,
+    NoReturn,
+    Optional,
+    Sequence,
+    Type,
+    Union,
+    MutableMapping,
+)
 import importlib
 from inspect import signature
 from functools import partial
@@ -693,10 +702,23 @@ class Query(object):
     d_in           = {self._d_in},
     d_out          = {self._d_out}{context})"""
 
+    @staticmethod
+    def _raise_data_access() -> NoReturn:
+        raise TypeError(
+            "Query is symbolic and does not contain accessible data; "
+            "compose an OpenDP operation or call release()"
+        )
+
+    def __array__(self, dtype=None, copy=None):
+        """Prevent accidental NumPy coercion of a symbolic query."""
+        self._raise_data_access()
+
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
+        if name == "sklearn":
+            return self._sklearn
 
         if name not in constructors:
             raise AttributeError(
@@ -776,6 +798,38 @@ class Query(object):
             )
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
+
+    def _sklearn(self, estimator):
+        """Chain an OpenDP scikit-learn-style estimator onto the current query.
+
+        This is the generic bridge for every ``opendp.extras.sklearn`` estimator: the
+        estimator carries only algorithm hyperparameters, while the Context supplies
+        the input domain/metric (from the current chain), the output measure, and the
+        ``d_in``/``d_out`` distances.  It mirrors ``_canonical_noise``:
+        ``d_in`` is the stability of the prior chain and ``d_out`` is the query's
+        privacy allowance.
+        """
+        from opendp.extras.sklearn import DPEstimator
+
+        if not isinstance(estimator, DPEstimator):
+            raise ValueError(
+                "sklearn(...) expects an opendp.extras.sklearn.DPEstimator instance"
+            )
+        if isinstance(self._chain, tuple):
+            d_mid = self._d_in
+        elif isinstance(self._chain, Transformation):
+            d_mid = self._chain.map(self._d_in)
+        elif isinstance(self._chain, PartialChain):
+            raise ValueError(
+                "sklearn(...) requires all arguments in the input query to be specified."
+            )
+        else:
+            raise ValueError(  # pragma: no cover
+                f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
+            )
+
+        partial = estimator.then(self._output_measure, d_mid, self._d_out)
+        return self.new_with(chain=self._chain >> partial)
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
