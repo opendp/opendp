@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
 
@@ -10,6 +10,7 @@ use crate::{
     },
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
+    traits::AlertingAdd,
 };
 
 #[cfg(test)]
@@ -32,8 +33,11 @@ mod ffi;
 ///
 /// # Runtime
 /// Constructing the odometer is `O(1)`.
-/// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement,
-/// while a privacy-loss query over `m` prior invocations costs `O(m)`.
+/// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement.
+/// Queries sharing a privacy map are tracked as one `(map, k)` group,
+/// so a privacy-loss query evaluates each distinct privacy map once, not once per invocation.
+/// Groups are composed in an unspecified order, which is sound because
+/// composition rounds up at every step.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
@@ -93,7 +97,11 @@ where
         Composability::Sequential
     );
 
-    let mut privacy_maps: Vec<PrivacyMap<MI, MO>> = vec![];
+    // queries sharing a privacy map are stored as one (map, k) group, keyed by map identity
+    let mut privacy_maps: HashMap<PrivacyMap<MI, MO>, u32> = HashMap::new();
+
+    // the number of successfully answered invoke queries,
+    let mut num_queries: usize = 0;
 
     Queryable::new(
         move |self_: &OdometerQueryable<
@@ -118,14 +126,16 @@ where
 
                     let seq_wrapper = require_sequentiality.then(|| {
                         // Wrap any spawned queryables with a check that no new queries have been asked.
-                        let child_id = privacy_maps.len();
+                        let child_id = num_queries;
                         let mut self_ = self_.clone();
 
                         Wrapper::new_recursive_pre_hook(enclose!(
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    // no ? operator: it would make inference expect a Result answer payload,
+                                    // implementation now matches adaptive/mod.rs
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
@@ -140,15 +150,19 @@ where
                     *enforce_sequentiality.borrow_mut() = true;
 
                     // we've now increased our privacy spend. This is our only state modification
-                    privacy_maps.push(meas.privacy_map.clone());
+                    num_queries = num_queries.alerting_add(&1)?;
+                    // each query joins the group of queries sharing its privacy map
+                    let k = privacy_maps.entry(meas.privacy_map.clone()).or_default();
+                    *k = k.alerting_add(&1)?;
 
                     // done!
                     Answer::External(OdometerAnswer::Invoke(answer))
                 }
                 // evaluate external map query
                 Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                    // evaluate each distinct privacy map once, keeping the counts
                     let d_mids = (privacy_maps.iter())
-                        .map(|m| m.eval(d_in))
+                        .map(|(map, k)| Ok((map.eval(d_in)?, *k)))
                         .collect::<Fallible<_>>()?;
 
                     let d_out = output_measure.compose(d_mids)?;
@@ -158,7 +172,7 @@ where
                     // check if the query is from a child queryable who is asking for permission to execute
                     if let Some(AskPermission(id)) = query.downcast_ref() {
                         // deny permission if the sequential odometer has moved on
-                        if *id + 1 != privacy_maps.len() {
+                        if *id + 1 != num_queries {
                             return fallible!(
                                 FailedFunction,
                                 "sequential odometer has received a new query"
