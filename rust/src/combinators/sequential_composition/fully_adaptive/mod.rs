@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
 
@@ -34,8 +34,10 @@ mod ffi;
 /// # Runtime
 /// Constructing the odometer is `O(1)`.
 /// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement.
-/// Queries sharing a privacy map are tracked as one `(map, k)` group in first-submission order,
+/// Queries sharing a privacy map are tracked as one `(map, k)` group,
 /// so a privacy-loss query evaluates each distinct privacy map once, not once per invocation.
+/// Groups are composed in an unspecified order, which is sound because
+/// composition rounds up at every step.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
@@ -95,8 +97,8 @@ where
         Composability::Sequential
     );
 
-    // queries sharing a privacy map are stored as one (map, k) group, in first-submission order
-    let mut privacy_maps: Vec<(PrivacyMap<MI, MO>, u32)> = vec![];
+    // queries sharing a privacy map are stored as one (map, k) group, keyed by map identity
+    let mut privacy_maps: HashMap<PrivacyMap<MI, MO>, u32> = HashMap::new();
 
     // the number of successfully answered invoke queries,
     let mut num_queries: usize = 0;
@@ -150,10 +152,8 @@ where
                     // we've now increased our privacy spend. This is our only state modification
                     num_queries = num_queries.alerting_add(&1)?;
                     // each query joins the group of queries sharing its privacy map
-                    match (privacy_maps.iter_mut()).find(|(map, _)| map == &meas.privacy_map) {
-                        Some((_, k)) => *k = k.alerting_add(&1)?,
-                        None => privacy_maps.push((meas.privacy_map.clone(), 1)),
-                    }
+                    let k = privacy_maps.entry(meas.privacy_map.clone()).or_default();
+                    *k = k.alerting_add(&1)?;
 
                     // done!
                     Answer::External(OdometerAnswer::Invoke(answer))

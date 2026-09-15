@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[cfg(feature = "contrib")]
 mod non_adaptive;
 #[cfg(feature = "contrib")]
@@ -21,7 +23,7 @@ use crate::{
     core::{Function, Measure},
     error::Fallible,
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
-    traits::{InfAdd, InfMul},
+    traits::{AlertingAdd, InfAdd, InfMul},
 };
 
 #[derive(Debug)]
@@ -49,6 +51,7 @@ pub enum Composability {
 /// where each parameter `d_mid_i` is charged with multiplicity `k_i`,
 /// is bounded above by `self.compose(d_mids)` under `adaptivity` adaptivity and `out`-composability.
 /// Otherwise returns an error.
+/// Composition is commutative, so this bound holds for any ordering of `d_mids`.
 pub trait CompositionMeasure: Measure {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
     fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance>;
@@ -127,14 +130,12 @@ impl CompositionMeasure for RenyiDivergence {
     }
 
     fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        // equal curves are merged into a single group, in first-occurrence order,
+        // equal curves are merged into a single group,
         // so that each distinct curve is evaluated once, not once per copy
-        let mut groups: Vec<(Self::Distance, u32)> = Vec::new();
+        let mut groups: HashMap<Self::Distance, u32> = HashMap::new();
         for (d_mid, k_i) in d_mids {
-            match (groups.iter_mut()).find(|(curve, _)| curve == &d_mid) {
-                Some((_, k)) => *k += k_i,
-                None => groups.push((d_mid, k_i)),
-            }
+            let k = groups.entry(d_mid).or_default();
+            *k = k.alerting_add(&k_i)?;
         }
         Ok(Function::new_fallible(move |alpha| {
             groups

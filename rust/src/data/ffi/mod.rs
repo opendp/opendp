@@ -1232,7 +1232,6 @@ impl Clone for AnyObject {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
                     }
                 } else if *name == "Function" {
-                    // privacy curves, e.g. Rényi divergence distances; a Function clone shares the allocation
                     dispatch!(clone_plain, [(self.type_, [Function<f64, f64>])], (self))
                 } else {
                     unimplemented!("unrecognized generic {:?}", name)
