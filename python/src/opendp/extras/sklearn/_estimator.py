@@ -1,25 +1,17 @@
-"""Base class shared by OpenDP scikit-learn-style differentially private estimators.
+"""Base classes for OpenDP scikit-learn-style differentially private estimators.
 
-An estimator instance carries *only algorithm hyperparameters* (e.g. ``n_clusters``,
-``n_components``).  Everything privacy- or data-related -- the input domain, input
-metric, output measure, and the ``d_in``/``d_out`` distances -- is supplied later,
-either by the Context API or by an explicit call.  This keeps one estimator instance
-reusable across contexts and lets all of the following hit a single code path:
+Estimators carry algorithm parameters (for example, ``n_clusters`` or
+``n_components``). The input domain, input metric, output measure, and
+``d_in``/``d_out`` are supplied when constructing the measurement.
 
-    # via a Context query (the Context fills domain/metric/measure/d_in/d_out):
     est.fit(context.query(rho=0.5))
     context.query(rho=0.5).sklearn(est).release()
 
-    # directly, supplying the pieces yourself:
     measurement = est.make(input_domain, input_metric, output_measure, d_in, d_out)
     release = measurement(data)
 
-Subclasses implement :meth:`make`, which must follow the calibrated
-constructor convention ``make_*(input_domain, input_metric, output_measure, d_in,
-d_out, *, <algorithm params>)`` -- the units of ``d_in`` are defined by the input
-metric and the units of ``d_out`` by the output measure.  The estimator computes its
-own internal noise so that ``measurement.map(d_in) <= d_out``; there is no ``scale``
-or ``epsilon``/``rho`` parameter on the estimator surface.
+Subclasses implement :meth:`make` following the calibrated constructor convention:
+``measurement.map(d_in) <= d_out``.
 """
 
 from __future__ import annotations
@@ -46,12 +38,8 @@ _BaseEstimator = (
 )
 
 
-class DPEstimator(_BaseEstimator, ABC):  # type: ignore
-    """Base class for OpenDP scikit-learn-style DP estimators.
-
-    This is the type accepted by the Context API's ``.sklearn(...)`` query method.
-    Subclasses must implement :meth:`make` and :meth:`_ingest_release`.
-    """
+class _DPFitMixin(ABC):
+    """Shared OpenDP fitting behavior for sklearn-style estimators."""
 
     @abstractmethod
     def make(
@@ -62,16 +50,10 @@ class DPEstimator(_BaseEstimator, ABC):  # type: ignore
         d_in,
         d_out,
     ) -> "Measurement":
-        """Construct the measurement that releases a fitted model.
+        """Construct the OpenDP measurement used to fit this estimator.
 
-        Subclasses implement this following the calibrated-mechanism convention; the
-        returned measurement must satisfy ``map(d_in) <= d_out``.
-
-        :param input_domain: domain of the input dataset
-        :param input_metric: metric of the input dataset
-        :param output_measure: measure in whose units ``d_out`` is expressed
-        :param d_in: upper bound on the distance between adjacent input datasets
-        :param d_out: privacy budget, in the units of ``output_measure``
+        This method must not mutate ``self``. The returned measurement must satisfy
+        ``map(d_in) <= d_out``.
         """
         raise NotImplementedError
 
@@ -81,16 +63,7 @@ class DPEstimator(_BaseEstimator, ABC):  # type: ignore
         d_in,
         d_out,
     ) -> "_PartialConstructor":
-        """Partially apply :meth:`make`, deferring ``input_domain`` and ``input_metric``.
-
-        Used by the Context API's ``.sklearn(...)`` query method to chain the estimator
-        onto the current query space.
-
-        :param output_measure: measure in whose units ``d_out`` is expressed
-        :param d_in: upper bound on the distance between adjacent input datasets
-        :param d_out: privacy budget, in the units of ``output_measure``
-        :return: a partial constructor awaiting ``(input_domain, input_metric)``
-        """
+        """Partially apply ``make``, deferring the input domain and metric."""
         from opendp.mod import _PartialConstructor
 
         return _PartialConstructor(
@@ -101,10 +74,7 @@ class DPEstimator(_BaseEstimator, ABC):  # type: ignore
 
     @abstractmethod
     def _ingest_release(self, release) -> None:
-        """Store the released model on ``self`` (sets the fitted ``*_`` attributes).
-
-        :param release: the value produced by the fitted measurement
-        """
+        """Populate fitted sklearn attributes from a measurement release."""
         raise NotImplementedError
 
     @staticmethod
@@ -126,12 +96,13 @@ class DPEstimator(_BaseEstimator, ABC):  # type: ignore
         self._reject_fit_params(fit_params)
         return X
 
-    def fit(self, X: "Query", y=None, **fit_params) -> "DPEstimator":
+    def fit(self, X: "Query", y=None, **fit_params) -> "_DPFitMixin":
         """Fit the estimator by releasing it through a Context query.
 
         The Context supplies the input domain/metric, output measure, ``d_in`` and
-        ``d_out``; this method calibrates and releases, then stores the fitted model on
-        ``self``. The ``X, y=None, **fit_params`` signature follows the scikit-learn estimator
+        ``d_out``. It releases the measurement, postprocesses the estimator-specific
+        release into fitted attributes, and returns ``self``. The ``X, y=None,
+        **fit_params`` signature follows the scikit-learn estimator
         convention, but ``X`` must be a symbolic OpenDP Query rather than an array.
         Subclasses normalize or reject ``y`` and fit metadata in the
         ``_prepare_fit_query`` hook.
@@ -153,6 +124,8 @@ class DPEstimator(_BaseEstimator, ABC):  # type: ignore
         if not isinstance(query, Query):
             raise TypeError("_prepare_fit_query() must return an OpenDP Query")
 
-        release = query.sklearn(self).release()
-        self._ingest_release(release)
-        return self
+        return query.sklearn(self).release()
+
+
+class _DPEstimator(_DPFitMixin, _BaseEstimator):  # type: ignore
+    pass
