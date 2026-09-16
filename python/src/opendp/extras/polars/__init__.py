@@ -693,9 +693,32 @@ class SortBy:
 
 class LazyFrameQuery:
     """
-    A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
-    It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
-    but makes a few additions and changes as documented below."""
+    A ``LazyFrameQuery`` is returned by :py:func:`~opendp.context.Context.query`.
+    It wraps a
+    `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
+    and supports the same methods, unless they have been overridden. 
+    
+    :example:
+
+        .. code:: pycon
+
+            >>> import polars as pl
+            >>> data = pl.LazyFrame([pl.Series("active", [0, 1] * 50, dtype=pl.Int32)])
+
+            >>> context = dp.Context.compositor(
+            ...     data=data,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
+            ... )
+
+            >>> lf_query = context.query()
+            >>> dict(lf_query.collect_schema())
+            {'active': Int32}
+
+    Added and modified methods are listed below.
+    """
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
@@ -1135,7 +1158,8 @@ class LazyGroupByQuery:
     """
     A ``LazyGroupByQuery`` is returned by :py:func:`~opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
-    but only supports APIs documented below."""
+    but only supports APIs documented below.
+    """
 
     def __init__(self, lgb_plan, query):
         self._lgb_plan = lgb_plan

@@ -12,7 +12,7 @@ on:
   pull_request:
 
 jobs:
-  rust-build:
+  ci-rust-build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -127,8 +127,8 @@ jobs:
           name: r_bindings
           path: R/opendp/
 
-  rust-test:
-    needs: rust-build
+  ci-rust-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -164,8 +164,8 @@ jobs:
       - name: Run docs example
         run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
 
-  python-test:
-    needs: rust-build
+  ci-python-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -257,8 +257,8 @@ jobs:
           name: coverage-report
           path: /tmp/coverage.txt
 
-  confirm-coverage:
-    needs: python-test
+  ci-confirm-coverage:
+    needs: ci-python-test
     runs-on: ubuntu-22.04
     steps:
       - name: Download coverage
@@ -267,8 +267,8 @@ jobs:
         with:
           name: coverage-report
 
-  docs-links:
-    needs: rust-build
+  ci-docs-links:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -302,8 +302,8 @@ jobs:
       - name: Check links
         run: linkchecker -f linkchecker.cfg build/html/index.html
 
-  python-notebooks:
-    needs: rust-build
+  ci-python-notebooks:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -354,8 +354,8 @@ jobs:
           shopt -s globstar
           pytest --nbmake source/**/*.ipynb -n=auto
 
-  r-test:
-    needs: rust-build
+  ci-r-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs

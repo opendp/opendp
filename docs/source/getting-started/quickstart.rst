@@ -107,7 +107,7 @@ This demonstrates a number of low-level OpenDP patterns:
 OpenDP has two APIs and we'll demonstrate how to use both:
 
 * The **Context API** is simpler and helps to enforce best practices. Currently available only for Python.
-* The **Framework API** is lower-level. Available for Python, R and Rust, it directly implements the `OpenDP Programming Framework <../theory/a-framework-to-understand-dp.html>`_.
+* The **Framework API** is lower-level. Available for Python, R and Rust, it implements the system described in the paper `A Programming Framework for OpenDP <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
 All calls ultimately pass through the Framework API.

@@ -1,20 +1,20 @@
-.. _programming-framework:
+.. _framework-api:
 
-Programming Framework
-=====================
+Framework API
+=============
 
 OpenDP is based on a conceptual model that defines the characteristics of privacy-preserving operations and provides a way for components to be assembled into programs with desired behavior. 
-This model, known as the OpenDP Programming Framework, is described in the paper `A Programming Framework for OpenDP <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_. 
-The framework is designed with a precise and verifiable means of capturing the privacy-relevant aspects of an algorithm, while remaining highly flexible and extensible.
-OpenDP (the software library) is intended to be a faithful implementation of that approach. 
+This model, described in the paper `A Programming Framework for OpenDP <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_, 
+is designed with a precise and verifiable means of capturing the privacy-relevant aspects of an algorithm, while remaining highly flexible and extensible.
+The OpenDP Framework API is intended to be a faithful implementation of this model. 
 Because OpenDP is based on a well-defined model, users can create applications with rigorous privacy properties.
 
 Summary
 -------
 
-The OpenDP Programming Framework consists of a set of high-level conceptual elements. 
+The OpenDP Framework API consists of a set of high-level conceptual elements. 
 We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming. 
-If you're interested in more of the details and motivations behind the framework, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
+If you're interested in more of the details and motivations behind the API, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
 There is also an illustrative notebook `A Framework to Understand DP <../../../theory/a-framework-to-understand-dp.html>`_.
 
 * :ref:`Measurements <measurements-user-guide>` are randomized mappings from a private, 
@@ -49,16 +49,16 @@ There is also an illustrative notebook `A Framework to Understand DP <../../../t
   Maps capture the notion of closeness in a very general way, allowing the extension of OpenDP to different definitions of privacy.
 
 As you can see, these elements are interdependent and support each other. 
-The interaction of these elements is what gives the OpenDP Programming Framework its flexibility and expressiveness.
+The interaction of these elements is what gives the Framework API its flexibility and expressiveness.
 
 Key Points
 ----------
 
-You don't need to know all the details of the Programming Framework to write OpenDP applications, but it helps understand some of the key points:
+You don't need to know all the details of the Framework API to write OpenDP applications, but it helps understand some of the key points:
 
 * OpenDP calculations are built by assembling a measurement from a number of constituent transformations and measurements, typically through chaining or composition.
 * Measurements don't have a static privacy loss specified when constructing the measurement. 
-  Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the framework as a whole.
+  Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the Framework API as a whole.
 
 .. toctree::
   :hidden:

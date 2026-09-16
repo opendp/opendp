@@ -20,9 +20,8 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-We will use `sample
-data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
-from the Labour Force Survey in France.
+To get started, we’ll load data and recreate the Context from the `tabular data
+introduction <index.rst>`__.
 
 .. tab-set::
 
@@ -35,18 +34,6 @@ from the Labour Force Survey in France.
             >>> import opendp.prelude as dp
 
             >>> dp.enable_features("contrib")
-
-
-To get started, we’ll load data and recreate the Context from the `tabular data
-introduction <index.rst>`__.
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
             >>> lazyframe = pl.scan_csv(dp.examples.get_france_lfs_path())
             >>> context = dp.Context.compositor(
             ...     data=lazyframe,
@@ -55,28 +42,10 @@ introduction <index.rst>`__.
             ...     split_evenly_over=5,
             ... )
 
-.. note::
-
-    Loading data is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
-    CSV schema inference is data-dependent:
-    private values can affect both the inferred types and whether parsing succeeds. 
-    In a trusted environment, however, a parsing error can be useful,
-    since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
-
-    If the success or failure of ``scan_csv`` has effects outside a trusted environment,
-    this information leak may violate differential privacy.
-    Instead, use a schema-bearing source such as Parquet or a database table, 
-    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    Using ``ignore_errors=True`` avoids some parsing failures, 
-    but it may silently change the loaded data and reduce utility, 
-    so it should be used deliberately rather than by default. 
-    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
-    for more schema and error-handling options.
-
 Count
 -----
 
-The simplest query is a count of the number of records in a dataset.
+The simplest query is a count of records in a dataset.
 
 .. tab-set::
 
@@ -174,7 +143,7 @@ All the operations which follow require some information about
 the expected range of values: sum and mean need upper and lower bounds,
 while median and quantile take a set of candidate values.
 If you set bounds too wide, the additional noise will mean less accurate results;
-If you set bounds too narrow, clipping may produced biased results.
+If you set bounds too narrow, clipping may produce biased results.
 
 In some cases, for instance age in a demographic dataset, you will have prior
 knowledge that allows you to set bounds. In others, there may be a comparable
@@ -187,7 +156,7 @@ values to estimate the 5th and 95th percentiles (see :ref:`quantile`),
 or you could estimate a histogram using exponentially increasing bin widths.
 
 There are several good options;
-The only bad option is look at the data to determine bounds.
+The only bad option is to look at the data to determine bounds.
 
 
 Sum
@@ -253,7 +222,7 @@ about the data to a potential adversary, the library is able to ensure
 that overflow and/or numerical instability won’t undermine privacy
 guarantees.
 
-Now that you’ve become acquainted with margins, lets release some
+Now that you’ve become acquainted with margins, let's release some
 queries that make use of it. We start by releasing the total number of
 work hours across responses.
 
@@ -467,7 +436,7 @@ filtered data, as shown above.
 
 When ``invariant="lengths"`` is set, the number of records in the data
 is not protected (for those familiar with DP terminology, this is
-equivalent to bounded-DP). Therefore when computing the mean, a noisy
+equivalent to bounded-DP). Therefore, when computing the mean, a noisy
 sum is released and subsequently divided by the exact length. This
 behavior can be observed in the query summary:
 

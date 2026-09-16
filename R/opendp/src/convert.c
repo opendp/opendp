@@ -133,8 +133,12 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
         output = output_str;
     }
     else if (str_equal(c_rust_type, "f64"))
-        output = REAL(input);
-
+    {
+        double *output_f64 = (double *)R_alloc(LENGTH(input), sizeof(double));
+        for (int i = 0; i < LENGTH(input); i++)
+            output_f64[i] = REAL(input)[i];
+        output = output_f64;
+    }
     else if (str_equal(c_rust_type, "f32"))
     {
         float *output_f32 = (float *)R_alloc(LENGTH(input), sizeof(float));
@@ -144,8 +148,12 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
     }
 
     else if (str_equal(c_rust_type, "i32"))
-        output = INTEGER(input);
-
+    {
+        int *output_i32 = (int *)R_alloc(LENGTH(input), sizeof(int));
+        for (int i = 0; i < LENGTH(input); i++)
+            output_i32[i] = INTEGER(input)[i];
+        output = output_i32;
+    }
     else if (str_equal(c_rust_type, "i16"))
     {
         short *output_i16 = (short *)R_alloc(LENGTH(input), sizeof(short));
@@ -685,8 +693,11 @@ char *rt_to_string(SEXP type_name)
     if (errorOccurred)
         error("failed to parse type");
 
+    const char *c_string = sexp_to_charptr(string_type_name);
+    char *output = (char *)R_alloc(strlen(c_string) + 1, sizeof(char));
+    strcpy(output, c_string);
     UNPROTECT(3);
-    return (char *)sexp_to_charptr(string_type_name);
+    return output;
 }
 
 SEXP parse_runtime_type(const char *type_name)

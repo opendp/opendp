@@ -1,10 +1,9 @@
 OpenDP Rust Initiation
 ======================
 
-This notebook is an introduction to the Rust internals of the OpenDP
-framework. I’m assuming you have already read about the programming
-framework in the user guide, and you have some familiarity with the
-library interfaces.
+This notebook is an introduction to the Rust internals of OpenDP.
+It assumes you have already read about the :ref:`framework-api`,
+and you have some familiarity with the library interfaces.
 
 If you have not worked with Rust before, `a great place to get started
 is the Rust
