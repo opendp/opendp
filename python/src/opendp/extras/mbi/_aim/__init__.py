@@ -363,12 +363,14 @@ def _make_aim_select(
 
     # penalize candidates by the expected error of the upcoming MEASURE step,
     # not of this SELECT step
-    sensitivity = max(d_in[q.by] for q in candidates)
-    expectation = get_scale(output_measure, d_measure, sensitivity) * to_mu
+    expectations = {
+        q.by: get_scale(output_measure, d_measure, d_in[q.by]) * to_mu
+        for q in candidates
+    }
 
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
-            input_domain, input_metric, candidates, expectation, model
+            input_domain, input_metric, candidates, expectations, model
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
@@ -385,7 +387,7 @@ def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
     queries: list[Count],
-    expectation: float,
+    expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
@@ -399,7 +401,7 @@ def _make_aim_scores(
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
     def score_query(query: Count, exact: np.ndarray):
-        penalty = expectation * prod(exact.shape)
+        penalty = expectations[query.by] * prod(exact.shape)
         synth = model.project(query.by).values
 
         return (np.linalg.norm((exact - synth).flatten(), 1) - penalty) * query.weight
