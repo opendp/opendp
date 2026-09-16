@@ -189,6 +189,7 @@ def test_logistic_regression_matches_sklearn_regularized():
 
     np = pytest.importorskip("numpy")
     pytest.importorskip("scipy")
+    pytest.importorskip("sklearn")
     from sklearn.linear_model import LogisticRegression as SkLR
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
@@ -208,7 +209,7 @@ def test_logistic_regression_matches_sklearn_regularized():
     )
 
     Xb = np.hstack([X, np.ones((100, 1))])
-    sk = SkLR(l1_ratio=0, C=1.0, fit_intercept=False, max_iter=10000).fit(Xb, y)
+    sk = SkLR(C=1.0, fit_intercept=False, max_iter=10000).fit(Xb, y)
 
     print("DP:", np.round(theta_dp, 3), "sklearn:", np.round(sk.coef_[0], 3))
     assert np.max(np.abs(theta_dp - sk.coef_[0])) < 0.5
