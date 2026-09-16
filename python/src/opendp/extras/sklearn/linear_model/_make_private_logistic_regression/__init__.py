@@ -79,7 +79,7 @@ def make_private_logistic_regression(
     clip_norm: float,
     penalty: str = "l2",
     C: float = 1.0,
-    l1_ratio: float | None = None ,
+    l1_ratio: float | None = None,
 ) -> dp.Measurement:
 
     import opendp.prelude as dp
@@ -134,6 +134,7 @@ def make_private_logistic_regression(
     elif penalty == "l1":
         l1_coef, l2_coef = reg, 0.0
     elif penalty == "elasticnet":
+        assert l1_ratio is not None
         l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg
 
     if n is None:
