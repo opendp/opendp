@@ -79,7 +79,7 @@ def make_private_logistic_regression(
     clip_norm: float,
     penalty: str = "l2",
     C: float = 1.0,
-    l1_ratio: float = None,
+    l1_ratio: float | None = None ,
 ) -> dp.Measurement:
 
     import opendp.prelude as dp
