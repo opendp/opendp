@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 
 #[cfg(feature = "contrib")]
 mod non_adaptive;
@@ -18,6 +19,9 @@ use opendp_derive::proven;
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(test)]
+mod test;
 
 use crate::{
     core::{Function, Measure},
@@ -44,6 +48,47 @@ pub enum Composability {
     Sequential,
     /// Previous interactive mechanisms are not locked when a new query is submitted.
     Concurrent,
+}
+
+/// `(key, k)` groups in the order keys are first added.
+///
+/// We use a Vec for order and HashMap for o(1) lookup.
+/// Order improves consistency for testing with an o(n) memory cost.
+pub(crate) struct OrderedCounts<K: Clone + Eq + Hash> {
+    groups: Vec<(K, u32)>,
+    // index into groups by key identity
+    indices: HashMap<K, usize>,
+}
+
+impl<K: Clone + Eq + Hash> OrderedCounts<K> {
+    pub fn new() -> Self {
+        OrderedCounts {
+            groups: Vec::new(),
+            indices: HashMap::new(),
+        }
+    }
+
+    /// charge `k` to the group for `key`, starting a new group if there isn't one
+    pub fn add(&mut self, key: K, k: u32) -> Fallible<()> {
+        let OrderedCounts { groups, indices } = self;
+        let i = *(indices.entry(key.clone())).or_insert_with(|| {
+            groups.push((key, 0));
+            groups.len() - 1
+        });
+        let count = &mut groups[i].1;
+        *count = count.alerting_add(&k)?;
+        Ok(())
+    }
+
+    /// error if charging `k` to the group for `key` would overflow
+    pub fn check_add(&self, key: &K, k: u32) -> Fallible<()> {
+        let count = (self.indices.get(key)).map_or(0, |&i| self.groups[i].1);
+        count.alerting_add(&k).map(|_| ())
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &(K, u32)> {
+        self.groups.iter()
+    }
 }
 
 /// # Proof Definition
@@ -131,14 +176,12 @@ impl CompositionMeasure for RenyiDivergence {
 
     fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
         // merge equal curves so that each is evaluated once, not once per copy
-        let mut groups: HashMap<Self::Distance, u32> = HashMap::new();
+        let mut groups = OrderedCounts::new();
         for (d_mid, k_i) in d_mids {
-            let k = groups.entry(d_mid).or_default();
-            *k = k.alerting_add(&k_i)?;
+            groups.add(d_mid, k_i)?;
         }
         Ok(Function::new_fallible(move |alpha| {
-            groups
-                .iter()
+            (groups.iter())
                 .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
