@@ -17,6 +17,8 @@ def new_fully_adaptive_composition_queryable(
         self_: OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance],
         query: Query[OdometerQuery[Measurement[DI, MI, MO, TO]]],
     ):
+        nonlocal num_queries
+
         # this queryable and wrapped children communicate via an AskPermission query
         # defined here, where no-one else can access the type
         @dataclass
