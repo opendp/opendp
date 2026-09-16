@@ -146,8 +146,9 @@ class LogisticRegression(DPEstimator):
     Fitting is performed with differentially private stochastic gradient descent (DP-SGD):
     each iteration clips per-example gradients to an L2 norm bound, sums them under Gaussian
     noise, and takes a gradient step, with the privacy budget split across iterations under
-    zero-concentrated differential privacy. After ``fit``, the model exposes ``coef_``,
-    ``intercept_``, and ``classes_``, and supports ``predict`` and ``predict_proba``.
+    zero-concentrated differential privacy. Regularization is applied as post-processing on
+    the noised gradient, so it adds no privacy cost. After ``fit``, the model exposes
+    ``coef_``, ``intercept_``, and ``classes_``, and supports ``predict`` and ``predict_proba``.
 
     Data is expected as a single 2-dimensional array whose last column is the binary target
     and whose remaining columns are the features.
@@ -155,14 +156,26 @@ class LogisticRegression(DPEstimator):
     :param n_iters: Number of DP-SGD iterations. Also controls the budget split: the total privacy budget is divided across this many gradient steps, so more iterations means more noise per step.
     :param learning_rate: Step size for the gradient update applied to the weights each iteration.
     :param clip_norm: Per-example gradient clipping bound. Each example's gradient is scaled to have L2 norm at most this value, bounding one record's influence on the update. Larger values distort gradients less but require more noise.
-    :param l2_penalty: Strength of optional L2 regularization added to the gradient update. Defaults to 0.0 (no regularization).
+    :param penalty: Regularization type, following scikit-learn: ``'l2'`` (default), ``'l1'``, ``'elasticnet'``, or ``None``. The intercept is not regularized.
+    :param C: Inverse of regularization strength; must be positive. Following scikit-learn, smaller values specify stronger regularization. Defaults to 1.0.
+    :param l1_ratio: Elastic-net mixing parameter in [0, 1], used only when ``penalty='elasticnet'``. ``l1_ratio=1`` is equivalent to L1, ``l1_ratio=0`` to L2. Defaults to ``None``.
     """
 
-    def __init__(self, n_iters=100, learning_rate=0.1, clip_norm=1.0, l2_penalty=0.0):
+    def __init__(
+        self,
+        n_iters=100,
+        learning_rate=0.1,
+        clip_norm=1.0,
+        penalty="l2",
+        C=1.0,
+        l1_ratio=None,
+    ):
         self.n_iters = n_iters
         self.learning_rate = learning_rate
         self.clip_norm = clip_norm
-        self.l2_penalty = l2_penalty
+        self.penalty = penalty
+        self.C = C
+        self.l1_ratio = l1_ratio
 
     def _prepare_fit_query(self, X, y=None, **fit_params):
         """Normalize fit arguments into a single input query.
@@ -193,7 +206,9 @@ class LogisticRegression(DPEstimator):
             n_iters=self.n_iters,
             learning_rate=self.learning_rate,
             clip_norm=self.clip_norm,
-            l2_penalty=self.l2_penalty,
+            penalty=self.penalty,
+            C=self.C,
+            l1_ratio=self.l1_ratio,
         )
 
     def _ingest_release(self, release):

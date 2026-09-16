@@ -29,7 +29,8 @@ def log_regression_train(
     d,
     clip_norm,
     learning_rate,
-    l2_penalty,
+    l1_coef,
+    l2_coef,
 ):
     dp.assert_features("contrib", "honest-but-curious", "idealized-numerics")
 
@@ -60,7 +61,9 @@ def log_regression_train(
             bounds=(0.0, 1e6),
         )
         noised_sum = np.asarray(queryable(step))
-        theta = theta - learning_rate * (noised_sum / n + l2_penalty * theta)
+        penalty_grad = l1_coef * np.sign(theta) + l2_coef * theta
+        penalty_grad[-1] = 0.0
+        theta = theta - learning_rate * (noised_sum / n + penalty_grad)
     return theta
 
 
@@ -74,7 +77,9 @@ def make_private_logistic_regression(
     n_iters: int,
     learning_rate: float,
     clip_norm: float,
-    l2_penalty: float = 0.0,
+    penalty: str = "l2",
+    C: float = 1.0,
+    l1_ratio: float = None,
 ) -> dp.Measurement:
 
     import opendp.prelude as dp
@@ -97,26 +102,59 @@ def make_private_logistic_regression(
         )  # pragma: no cover
 
     if output_measure != dp.zero_concentrated_divergence():
-        raise ValueError("output_measure must be zero-concentrated divergence (zCDP)") # pragma: no cover
+        raise ValueError(
+            "output_measure must be zero-concentrated divergence (zCDP)"
+        )  # pragma: no cover
+
+    if penalty not in ("l1", "l2", "elasticnet", None):
+        raise ValueError(
+            f"penalty must be 'l1', 'l2', 'elasticnet', or None, got {penalty}"
+        )  # pragma: no cover
+
+    if C <= 0:
+        raise ValueError(f"C must be > 0, got {C}")  # pragma: no cover
+    if penalty == "elasticnet" and l1_ratio is None:
+        raise ValueError(
+            "l1_ratio required when penalty='elasticnet'"
+        )  # pragma: no cover
+    if l1_ratio is not None and not (0 <= l1_ratio <= 1):
+        raise ValueError(
+            f"l1_ratio must be in [0, 1], got {l1_ratio}"
+        )  # pragma: no cover
 
     desc = input_domain.descriptor
     n, d = desc.size, desc.num_columns - 1
 
+    reg = 1.0 / (C * n)
+
+    if penalty is None:
+        l1_coef, l2_coef = 0.0, 0.0
+    elif penalty == "l2":
+        l1_coef, l2_coef = 0.0, reg
+    elif penalty == "l1":
+        l1_coef, l2_coef = reg, 0.0
+    elif penalty == "elasticnet":
+        l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg
+
     if n is None:
-        raise ValueError("input_domain must have known size (sized data required)") # pragma: no cover
-    if n_iters < 1: 
-        raise ValueError(f"n_iters must be >= 1, got {n_iters}") # pragma: no cover
+        raise ValueError(
+            "input_domain must have known size (sized data required)"
+        )  # pragma: no cover
+    if n_iters < 1:
+        raise ValueError(f"n_iters must be >= 1, got {n_iters}")  # pragma: no cover
     if learning_rate <= 0:
-        raise ValueError(f"learning_rate must be > 0, got {learning_rate}") # pragma: no cover
+        raise ValueError(
+            f"learning_rate must be > 0, got {learning_rate}"
+        )  # pragma: no cover
     if clip_norm <= 0:
-        raise ValueError(f"clip_norm must be > 0, got {clip_norm}") # pragma: no cover
-    if l2_penalty < 0:
-        raise ValueError(f"l2_penalty must be >= 0, got {l2_penalty}") # pragma: no cover
+        raise ValueError(f"clip_norm must be > 0, got {clip_norm}")  # pragma: no cover
+    if penalty not in ("l1", "l2", "elasticnet", None):
+        raise ValueError(...)  # pragma: no cover
     if d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "
             f"affecting 2 rows. Got d_in={d_in}."
-        ) # pragma: no cover
+        )  # pragma: no cover
 
     rho_per_step = dp.binary_search_param(
         lambda r: dp.c.make_adaptive_composition(
@@ -143,6 +181,7 @@ def make_private_logistic_regression(
             d=d,
             clip_norm=clip_norm,
             learning_rate=learning_rate,
-            l2_penalty=l2_penalty,
+            l1_coef=l1_coef,
+            l2_coef=l2_coef,
         )
     )
