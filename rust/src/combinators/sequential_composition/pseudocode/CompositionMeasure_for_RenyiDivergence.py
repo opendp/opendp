@@ -5,23 +5,15 @@ class CompositionMeasure(RenyiDivergence):
     ) -> Composability:
         return Composability.Concurrent
 
-    def compose(self, d_mids: Vec[Self_Distance]) -> Self_Distance:
+    def compose(self, d_mids: Vec[tuple[Self_Distance, u32]]) -> Self_Distance:
         # merge equal curves so that each is evaluated once, not once per copy
-        groups = []  # Vec<(Self_Distance, u32)> |\label{line:groups}|
-        for d_mid in d_mids:
-            group = next(
-                (group for group in groups
-                 if Arc.ptr_eq(group[0].function, d_mid.function)),
-                None,
-            )
-            if group is not None:
-                group[1] += 1
-            else:
-                groups.push((d_mid, 1))
+        groups = OrderedCounts()  # |\label{line:groups}|
+        for d_mid, k_i in d_mids:
+            groups.add(d_mid, k_i)
 
         def curve(alpha: float) -> float:  # |\label{line:curve}|
             epsilons = [
-                d_mid(alpha).inf_mul(k)  # |\label{line:inf-mul}|
+                d_mid(alpha).inf_mul(f64.from_(k))  # |\label{line:inf-mul}|
                 for d_mid, k in groups
             ]
 
