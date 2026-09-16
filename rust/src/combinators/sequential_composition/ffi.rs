@@ -22,10 +22,10 @@ impl CompositionMeasure for AnyMeasure {
             (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, adaptivity))
     }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_i: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
         fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
-            d_i: Vec<AnyObject>,
+            d_i: Vec<(AnyObject, u32)>,
         ) -> Fallible<AnyObject>
         where
             M::Distance: Clone,
@@ -34,8 +34,8 @@ impl CompositionMeasure for AnyMeasure {
                 .downcast_ref::<M>()?
                 .compose(
                     d_i.iter()
-                        .map(|d_i| d_i.downcast_ref::<M::Distance>().map(Clone::clone))
-                        .collect::<Fallible<Vec<M::Distance>>>()?,
+                        .map(|(d_i, k_i)| Ok((d_i.downcast_ref::<M::Distance>()?.clone(), *k_i)))
+                        .collect::<Fallible<Vec<(M::Distance, u32)>>>()?,
                 )
                 .map(AnyObject::new)
         }
