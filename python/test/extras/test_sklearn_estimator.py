@@ -143,3 +143,104 @@ def test_direct_measurement_and_context_fit_share_estimator_path():
     )
     assert estimator.fit(context.query()) is estimator  # type: ignore[arg-type]
     assert isinstance(estimator.count_, int)
+
+
+def test_logistic_regression_fit_through_context():
+    import opendp.prelude as dp
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+
+    rng = np.random.default_rng(0)
+    X = rng.standard_normal((100, 3))
+    y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
+    data = np.hstack([X, y[:, None]])
+
+    domain = dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
+    metric = dp.symmetric_distance()
+    estimator = LogisticRegression(n_iters=50, learning_rate=0.3, clip_norm=5.0)
+
+    measurement = estimator.make(
+        domain, metric, dp.zero_concentrated_divergence(), 2, 1.0
+    )
+    assert measurement.map(2) <= 1.0
+
+    context = dp.Context.compositor(
+        data=data,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=2),
+        privacy_loss=dp.loss_of(rho=1.0),
+        split_evenly_over=1,
+    )
+    assert estimator.fit(context.query()) is estimator  # type: ignore[arg-type]
+    assert estimator.coef_.shape == (3,)
+    assert list(estimator.classes_) == [0, 1]
+
+    features = data[:, :-1]
+    proba = estimator.predict_proba(features)
+    assert proba.shape == (100, 2)
+    preds = estimator.predict(features)
+    assert set(np.unique(preds)).issubset({0, 1})
+
+
+def test_logistic_regression_matches_sklearn_regularized():
+    import opendp.prelude as dp
+
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    from sklearn.linear_model import LogisticRegression as SkLR
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    rng = np.random.default_rng(0)
+    X = rng.standard_normal((100, 3))
+    y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
+    data = np.hstack([X, y[:, None]])
+    dom = dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
+
+    est = LogisticRegression(
+        n_iters=2000, learning_rate=0.5, clip_norm=100.0, penalty="l2", C=1.0
+    )
+    theta_dp = np.asarray(
+        est.make(
+            dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
+        )(data)
+    )
+
+    Xb = np.hstack([X, np.ones((100, 1))])
+    sk = SkLR(l1_ratio=0, C=1.0, fit_intercept=False, max_iter=10000).fit(Xb, y)
+
+    print("DP:", np.round(theta_dp, 3), "sklearn:", np.round(sk.coef_[0], 3))
+    assert np.max(np.abs(theta_dp - sk.coef_[0])) < 0.5
+
+
+def test_logistic_regression_l1_sparsity():
+    import opendp.prelude as dp
+
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("scipy")
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    rng = np.random.default_rng(0)
+    X = rng.standard_normal((200, 3))
+    y = (X[:, 0] + 0.3 * rng.standard_normal(200) > 0).astype(float)
+    data = np.hstack([X, y[:, None]])
+    dom = dp.numpy.array2_domain(num_columns=4, size=200, nan=False, T=float)
+    est = LogisticRegression(
+        n_iters=2000,
+        learning_rate=0.5,
+        clip_norm=100.0,
+        penalty="l1",
+        C=0.05,
+    )
+    theta = np.asarray(
+        est.make(
+            dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
+        )(data)
+    )
+
+    coef = theta[:-1]
+    assert abs(coef[0]) > abs(coef[1])
+    assert abs(coef[0]) > abs(coef[2])
+    assert abs(coef[1]) < 0.1  # check that noisy features are close to 0
+    assert abs(coef[2]) < 0.1
