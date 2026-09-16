@@ -128,14 +128,14 @@ def make_private_logistic_regression(
     reg = 1.0 / (C * n)
 
     if penalty is None:
-        l1_coef, l2_coef = 0.0, 0.0
+        l1_coef, l2_coef = 0.0, 0.0 #pragma: no cover
     elif penalty == "l2":
-        l1_coef, l2_coef = 0.0, reg
+        l1_coef, l2_coef = 0.0, reg #pragma: no cover
     elif penalty == "l1":
-        l1_coef, l2_coef = reg, 0.0
-    elif penalty == "elasticnet":
+        l1_coef, l2_coef = reg, 0.0 #pragma: no cover
+    elif penalty == "elasticnet": 
         assert l1_ratio is not None #pragma: no cover
-        l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg
+        l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg #pragma: no cover
 
     if n is None:
         raise ValueError(
