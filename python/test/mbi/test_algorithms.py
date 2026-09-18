@@ -159,7 +159,7 @@ def test_aim_selects_correlated_pairs():
         .release()
     )
 
-    selected = {frozenset(clique) for clique in table.marginals}
+    selected = {frozenset(clique) for clique in table.marginals.cliques()}
     found = sum(frozenset((f"A{i}", f"B{i}")) in selected for i in range(4))
     assert found >= 3, f"only {found}/4 correlated pairs selected"
 
