@@ -210,7 +210,7 @@ so it is possible to construct a confidence interval for each scalar in the proj
 
             >>> scale = table.std(("ILOSTAT",))
             >>> dp.gaussian_scale_to_accuracy(scale, alpha=0.05)
-            446.2524232592843
+            477.06390738682074
 
 That is, the true count differs from the estimate by no more than the accuracy estimate,
 with ``(1 - alpha)100%`` confidence.

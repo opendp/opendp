@@ -1,6 +1,6 @@
 """
 The ``mod`` module provides the classes which implement the
-`OpenDP Programming Framework <../../api/user-guide/programming-framework/index.html>`_,
+:doc:`Framework API <../../api/user-guide/framework-api/index>`,
 as well as utilities for enabling features and finding parameter values.
 
 The classes here correspond to other top-level modules: For example,
@@ -90,8 +90,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):  # type: ignore[misc]
     The function releases a differentially-private release.
     The privacy relation maps from an input metric to an output measure.
 
-    See the `Measurement <../../api/user-guide/programming-framework/core-structures.html#measurement>`_
-    section in the Programming Framework docs for more context.
+    See the `Measurement <../../api/user-guide/framework-api/core-structures.html#measurement>`_
+    section in the Framework API docs for more context.
 
     Functions for creating measurements are in :py:mod:`opendp.measurements`.
 
@@ -454,8 +454,8 @@ class Transformation(ctypes.POINTER(AnyTransformation)):  # type: ignore[misc]
     The function maps from an input domain to an output domain.
     The stability relation maps from an input metric to an output metric.
 
-    See the `Transformation <../../api/user-guide/programming-framework/core-structures.html#transformation>`_
-    section in the Programming Framework docs for more context.
+    See the `Transformation <../../api/user-guide/framework-api/core-structures.html#transformation>`_
+    section in the Framework API docs for more context.
 
     Functions for creating transformations are in :py:mod:`opendp.transformations`.
 
@@ -768,7 +768,7 @@ class OdometerQueryable:
 
 class Function(ctypes.POINTER(AnyFunction)):  # type: ignore[misc]
     """
-    See the `Function <../../api/user-guide/programming-framework/supporting-elements.html#function>`_
+    See the `Function <../../api/user-guide/framework-api/supporting-elements.html#function>`_
     section in the Programming Framework docs for more context.
     """
 
@@ -798,7 +798,7 @@ D = TypeVar("D")
 
 class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
     """
-    See the `Domain <../../api/user-guide/programming-framework/supporting-elements.html#domain>`_
+    See the `Domain <../../api/user-guide/framework-api/supporting-elements.html#domain>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating domains are in :py:mod:`opendp.domains`.
@@ -1033,7 +1033,7 @@ class ExtrinsicDomain(Domain):
 
 class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
     """
-    See the `Metric <../../api/user-guide/programming-framework/supporting-elements.html#metric>`_
+    See the `Metric <../../api/user-guide/framework-api/supporting-elements.html#metric>`_
     section in the Programming Framework docs for more context.
 
     Functions for creating metrics are in :py:mod:`opendp.metrics`.
@@ -1164,7 +1164,7 @@ class ChangeOneIdDistance(Metric):
 
 class Measure(ctypes.POINTER(AnyMeasure)):  # type: ignore[misc]
     """
-    See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
+    See the `Measure <../../api/user-guide/framework-api/supporting-elements.html#measure>`_
     section in the Programming Framework docs for more context.
 
     Measures should be created with the functions in :py:mod:`opendp.measures`

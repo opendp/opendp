@@ -30,7 +30,7 @@ There is a symmetric structure to the additive noise measurements:
 By passing the appropriate input space,
 you can construct either scalar or vector-valued mechanisms.
 
-More details on `laplacian and gaussian noise mechanisms here <additive-noise-mechanisms.html>`_.
+More details on :doc:`laplacian and gaussian noise mechanisms here <additive-noise-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -92,7 +92,7 @@ Under :math:`(\epsilon, \delta)`-DP,
 the canonical noise distribution follows the Tulap distribution,
 which is a combination of discrete laplace noise and continuous uniform noise.
 
-More details on `the canonical noise mechanism here <canonical-noise-mechanism.html>`_.
+More details on :doc:`the canonical noise mechanism here <canonical-noise-mechanism>`.
 
 .. toctree::
   :hidden:
@@ -118,7 +118,7 @@ Just like the additive noise mechanisms, the thresholded noise mechanisms have a
    * - ``L02InfDistance<AbsoluteDistance<T>>``
      - :func:`~opendp.measurements.make_gaussian_threshold`
 
-More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms.html>`_.
+More details on :doc:`thresholded noise mechanisms here <thresholded-noise-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -209,7 +209,7 @@ and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergenc
 
 Report noisy max is a special case of noisy top k when k equals one.
 
-More details on `noisy max mechanisms here <noisy-max-mechanisms.html>`_.
+More details on :doc:`noisy max mechanisms here <noisy-max-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -240,7 +240,7 @@ These measurements are used to randomize an individual's response to a query in 
      - ``DiscreteDistance``
      - ``MaxDivergence``
 
-More details on `randomized response here <randomized-response.html>`_.
+More details on :doc:`randomized response here <randomized-response>`.
 
 .. toctree::
   :hidden:

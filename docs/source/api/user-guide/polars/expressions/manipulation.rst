@@ -648,4 +648,4 @@ expression to retrieve the bin indices of the ``.cut`` expression.
 
 In the case of categorical data types, OpenDP only allows this
 expression if the encoding is data-independent. More information can be
-found in `Data Types <../data-types.ipynb>`__.
+found in :doc:`Data Types <../data-types>`.

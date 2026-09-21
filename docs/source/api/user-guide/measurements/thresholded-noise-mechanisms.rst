@@ -386,13 +386,13 @@ the function and privacy units can be further configured to operate over
 specific bit-depths by explicitly specifying ``"f32"`` instead of
 ``"float"``, or ``"i64"`` instead of ``"int"``.
 
-More information on acceptable data types can be found in the `Typing
-section of the User Guide <../utilities/typing.rst>`__.
+More information on acceptable data types can be found in the
+:doc:`Typing section of the User Guide <../utilities/typing>`.
 
 Desideratum: Floating-Point Granularity
 ---------------------------------------
 
-Quoting from `Additive Noise Mechanisms <additive-noise-mechanisms.html#Desideratum:-Floating-Point-Granularity>`__:
+Quoting from :doc:`Additive Noise Mechanisms <additive-noise-mechanisms>`:
 
     The “continuous” Laplace and Gaussian measurements convert their float
     values to a rational representation, and then add integer noise to the
