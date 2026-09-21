@@ -29,30 +29,21 @@ After noticing this gap, we asked past contributors to sign the CLA, noting howe
 
 These users have signed the CLA, but under a different username than that shown by `git blame`:
 
-| real name | CLA signature | git blame |
-|---|---|---|
-| Phil Durbin | pdurbin | philip_durbin | 
-| Raman Prasad | raprasad | raman_prasad |
-| Ethan Cowan | ecowan | ethan24 |
-| Damien Desfontaines | TedTed | damienbfs |
-| Maxine Park | maxine-park | maxinempark |
+| CLA signature | git blame |
+|---|---|
+| pdurbin | philip_durbin | 
+| raprasad | raman_prasad |
+| ecowan | ethan24 |
+| TedTed | damienbfs |
+| maxine-park | maxinempark |
 
 ## Institution rather than contributor
 
-For Christian Janos Lebeda's work on sparse histogram ALP ([commit](https://github.com/opendp/opendp/commit/f7095caadbe3fe57a6f3cebea0ccaf8da7c902ff)/[PR](https://github.com/opendp/opendp/pull/388)), the CLA was signed by an instutional representative.
-
-> I believe that I already filled out a CLA.
-> I specifically remember doing so because I could not sign the CLA myself due to Danish university rules for intellectual property.
-> 
-> The document was either signed by the head of department (Peter Sestoft) or the director of the university (Martin Zachariasen/Jens Christian Godskesen depending on the date).
->
-> I cannot verify that I send the agreement, because I no longer have access to my old university email. Please check if you received a signed document from chle@itu.dk.
-
-We have not located this email. A note has been added to his contribution in the source code.
+For ChristianLebeda's work on sparse histogram ALP ([commit](https://github.com/opendp/opendp/commit/f7095caadbe3fe57a6f3cebea0ccaf8da7c902ff)/[PR](https://github.com/opendp/opendp/pull/388)), the CLA was signed by an instutional representative, but we do not have access to the email.
 
 ## No CLA
 
-There a few contributors who we have not been able to contact.
+There a few contributors with small contributions we have not been able to reach.
 
 | git blame | user name | contribution |
 |---|---|---|
