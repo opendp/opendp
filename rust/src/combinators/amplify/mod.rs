@@ -55,7 +55,8 @@ impl AmplifiableMeasure for Approximate<MaxDivergence> {
 
 /// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
 /// This measurement does not perform any sampling.
-/// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
+/// It is useful when you have a dataset on-hand that is a simple random sample
+/// without replacement from a larger population.
 ///
 /// The `DIA`, `DO`, `MI` and `MO` between the input measurement and amplified output measurement all match.
 ///
