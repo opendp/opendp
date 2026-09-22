@@ -37,7 +37,7 @@ from dataclasses import dataclass, replace
 import math
 from operator import index
 from math import sqrt
-from typing import Any, Literal, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 import opendp.prelude as dp
 from opendp._internal import (
@@ -53,9 +53,6 @@ from opendp.mod import Domain, Measure, Measurement, Metric, Transformation
 
 if TYPE_CHECKING:  # pragma: no cover
     from scipy import sparse  # type: ignore[import-untyped]
-
-
-Distance = Literal["cosine", "jaccard", "hamming"]
 
 
 def _np() -> Any:
@@ -115,7 +112,6 @@ class SphericalKMeansConfig:
     :param max_active: Per-row bound on nonzero features; each row is clipped to this
         many, bounding the per-release L2 sensitivity to ``sqrt(max_active)``.
     :param init_active: Number of nonzero features in each random initial center.
-    :param distance: Assignment distance; ``"cosine"`` is recommended for binary data.
     :param seed: Public seed for the (public) initialization and center updates.
     """
 
@@ -123,7 +119,6 @@ class SphericalKMeansConfig:
     center_active: int = 96
     max_active: int = 128
     init_active: int = 96
-    distance: Distance = "cosine"
     seed: int = 0
 
 
@@ -147,7 +142,6 @@ def make_cluster_feature_sums(
     *,
     centers,
     max_active: int,
-    distance: Distance = "cosine",
 ) -> Transformation:
     """Construct a Transformation that sums each cluster's assigned rows feature-wise.
 
@@ -162,16 +156,12 @@ def make_cluster_feature_sums(
     :param input_metric: instance of ``symmetric_distance()``
     :param centers: public cluster centers, an ``(n_clusters, n_features)`` matrix
     :param max_active: per-row bound on nonzero features; rows are clipped to this many
-    :param distance: assignment distance, one of ``"cosine"``, ``"jaccard"``, ``"hamming"``
     :return: a Transformation from the dataset to the flattened per-cluster feature sums
     """
     _check_symmetric_distance(input_metric)
-    _validate_distance(distance)
     np = _np()
     n_features = _n_features_from_domain(input_domain)
-    centers = (
-        _as_csr_center(centers) if distance == "cosine" else _ensure_csr_binary(centers)
-    )
+    centers = _as_csr_center(centers)
     if centers.shape[0] == 0:  # pragma: no cover
         raise ValueError("centers must be nonempty")
     if centers.shape[1] != n_features:  # pragma: no cover
@@ -189,7 +179,7 @@ def make_cluster_feature_sums(
         # Apply the contribution bound before both assignment and aggregation so
         # each iteration is Lloyd's method on one well-defined clipped dataset.
         xc_binary = _clip_rows(x, L)
-        labels = nearest_center_labels(xc_binary, centers, distance=distance)
+        labels = nearest_center_labels(xc_binary, centers)
         # Sum in exact integer arithmetic. Float32 accumulation can jump by more
         # than one above 2**24, invalidating the sensitivity bound.
         xc = xc_binary.astype(np.int64)
@@ -290,7 +280,6 @@ def make_private_spherical_kmeans(
                 input_metric,
                 centers=centers,
                 max_active=L,
-                distance=cfg.distance,
             )
             >> then_gaussian(scale)
             >> dp.as_array()  # type: ignore[operator]
@@ -319,44 +308,19 @@ then_private_spherical_kmeans = to_then(make_private_spherical_kmeans)
 
 
 # sparse math
-def _validate_distance(distance: Distance) -> None:
-    if distance not in ("cosine", "jaccard", "hamming"):
-        raise ValueError("distance must be 'cosine', 'jaccard', or 'hamming'")
-
-
-def _center_distances(x, centers, distance: Distance):
-    """Dense ``(n_rows, n_centers)`` distance from each row of ``x`` to each center.
-
-    ``cosine`` uses the centers' real-valued weights (cluster directions); the set
-    distances ``jaccard`` and ``hamming`` treat centers as binary.
-    """
-    _validate_distance(distance)
+def _center_distances(x, centers):
+    """Dense cosine distances from each row of ``x`` to each center."""
     np = _np()
     x = _ensure_csr_binary(x)
-    if distance == "cosine":
-        centers = _as_csr_center(centers)
-        sims = _l2_normalize_rows(x).dot(_l2_normalize_rows(centers).T)
-        sims = sims.toarray() if _sp().issparse(sims) else np.asarray(sims)
-        return 1.0 - sims
-    centers = _ensure_csr_binary(centers)
-    inter = x.dot(centers.T)
-    inter = inter.toarray() if _sp().issparse(inter) else np.asarray(inter)
-    x_sizes = np.diff(x.indptr)[:, None]
-    c_sizes = np.diff(centers.indptr)[None, :]
-    if distance == "hamming":
-        return x_sizes + c_sizes - 2.0 * inter
-    return 1.0 - inter / np.maximum(x_sizes + c_sizes - inter, 1e-12)  # jaccard
+    centers = _as_csr_center(centers)
+    sims = _l2_normalize_rows(x).dot(_l2_normalize_rows(centers).T)
+    sims = sims.toarray() if _sp().issparse(sims) else np.asarray(sims)
+    return 1.0 - sims
 
 
-def nearest_center_labels(x, centers, *, distance: Distance = "cosine"):
-    """Assign each row of ``x`` to its nearest ``center`` under ``distance``.
-
-    :param x: sparse binary matrix of rows to label
-    :param centers: cluster centers (real-valued for ``"cosine"``, treated as binary otherwise)
-    :param distance: one of ``"cosine"``, ``"jaccard"``, ``"hamming"``
-    :return: a NumPy array of nearest-center indices, one per row of ``x``
-    """
-    return _center_distances(x, centers, distance).argmin(axis=1).astype(_np().int32)
+def nearest_center_labels(x, centers):
+    """Assign each row of ``x`` to its nearest cosine center."""
+    return _center_distances(x, centers).argmin(axis=1).astype(_np().int32)
 
 
 def _project_centers_topm(noisy_sums, m: int):
@@ -519,7 +483,6 @@ def _validate_config(
         raise ValueError("max_active must be positive")
     if config.init_active <= 0:  # pragma: no cover
         raise ValueError("init_active must be positive")
-    _validate_distance(config.distance)
     return replace(
         config,
         max_active=min(config.max_active, n_features),
@@ -609,7 +572,6 @@ class SphericalKMeans(_DPEstimator):
         self.config_ = release.config
         self.n_features_in_ = int(self.cluster_centers_.shape[1])
         self.n_clusters_ = int(self.cluster_centers_.shape[0])
-        self.distance_ = self.config_.distance
         self.n_iter_ = int(self.config_.iterations)
 
     # Postprocessing over caller-held data (the released centers are public).
@@ -617,20 +579,16 @@ class SphericalKMeans(_DPEstimator):
     # are provided separately for users composing OpenDP operations.
     def _fitted_space(self):
         n_features = getattr(self, "n_features_in_", None)
-        if getattr(self, "cluster_centers_", None) is None or n_features is None:  # pragma: no cover
+        if (
+            getattr(self, "cluster_centers_", None) is None or n_features is None
+        ):  # pragma: no cover
             raise ValueError("model has not been fitted")
         return sparse_binary_domain(n_features), dp.symmetric_distance()
-
-    def _fit_distance_value(self):
-        if hasattr(self, "distance_"):
-            return self.distance_
-        config = self.config or SphericalKMeansConfig()  # pragma: no cover
-        return config.distance  # pragma: no cover
 
     def transform(self, X):
         """Return distances from caller-held rows to each fitted center."""
         self._fitted_space()
-        return _center_distances(X, self.cluster_centers_, self._fit_distance_value())
+        return _center_distances(X, self.cluster_centers_)
 
     def predict(self, X):
         """Return the nearest fitted-center label for each caller-held row."""
@@ -646,13 +604,12 @@ class SphericalKMeans(_DPEstimator):
         """Return an OpenDP transformation for explicit composition."""
         input_domain, input_metric = self._fitted_space()
         centers = self.cluster_centers_
-        distance = self._fit_distance_value()
         return _make_transformation(
             input_domain,
             input_metric,
             dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
             dp.symmetric_distance(),
-            lambda x: _center_distances(x, centers, distance),
+            lambda x: _center_distances(x, centers),
             lambda d_in: d_in,
         )
 
@@ -671,15 +628,13 @@ class SphericalKMeans(_DPEstimator):
     def make_score(self):
         """Return an OpenDP transformation for explicit score composition."""
         np = _np()
-        n_features = self.n_features_in_ or 0
-        row_bound = n_features if self._fit_distance_value() == "hamming" else 1
         return self.make_transform() >> _make_transformation(
             dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
             dp.symmetric_distance(),
             dp.atom_domain(T=dp.f64, nan=False),
             dp.absolute_distance(T=dp.f64),
             lambda dists: -float(np.sum(np.min(dists, axis=1))),
-            lambda d_in: float(d_in) * row_bound,
+            lambda d_in: float(d_in),
         )
 
     # -- separately-accounted DP diagnostics, released through a Context query --
