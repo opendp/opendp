@@ -10,30 +10,30 @@ private realization.
 Mechanism (zero-concentrated DP)
 --------------------------------
 Initialization is public (``k`` random sparse unit centers) and therefore free of
-privacy cost.  Each of ``T`` Lloyd iterations releases the per-cluster feature-sum
-matrix ``S`` (shape ``k x n_features``, integer feature counts) once, via the
-discrete Gaussian mechanism:
+privacy cost. Each of ``max_iter`` Lloyd iterations releases the per-cluster
+feature-sum matrix ``S`` (shape ``n_clusters x n_features``, integer feature
+counts) once, via the discrete Gaussian mechanism:
 
   * Assigning each row to its cosine-nearest center is postprocessing of the
     already-private centers and carries no privacy cost.
   * Under add/remove adjacency (``dp.symmetric_distance``), one row is assigned to a
-    single cluster and contributes at most ``max_active`` nonzeros to that cluster's
-    block, so the L2 sensitivity of the flattened ``S`` is ``sqrt(max_active)`` --
-    independent of ``k`` and ``n_features``.  Each row is clipped to ``max_active``
-    nonzero features (a fixed, public, data-independent bound) to enforce that.
-  * Each new center is the L2-normalized top-``center_active`` features of its noisy
-    sum.  Projecting to a few hundred features removes the ``n_features``-scale
+    single cluster and contributes at most ``max_features_per_record`` nonzeros to
+    that cluster's block, so the L2 sensitivity of the flattened ``S`` is
+    ``sqrt(max_features_per_record)`` -- independent of the cluster and feature
+    counts. Each row is clipped to this fixed public bound to enforce that.
+  * Each new center is the L2-normalized top-``max_features_per_center`` features
+    of its noisy sum. Projecting to a few hundred features removes the ``n_features``-scale
     Gaussian-noise accumulation that would otherwise dominate a dense center.
 
-The ``T`` releases are composed with adaptive composition.  No cluster-size release
-is performed: the cosine center direction is ``normalize(sum)`` and does not require
-the count.  To release cluster sizes, run a separate DP count primitive over
-assignments to the released centers and account for it separately.
+The ``max_iter`` releases are composed with adaptive composition. No cluster-size
+release is performed by the core mechanism: the cosine center direction is
+``normalize(sum)`` and does not require the count. Cluster sizes can be released
+separately over the already released centers and accounted for independently.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 import math
 from operator import index
 from math import sqrt
@@ -104,35 +104,14 @@ def sparse_binary_domain(n_features: int) -> Domain:
 
 
 @dataclass(frozen=True)
-class SphericalKMeansConfig:
-    """Algorithm hyperparameters for DP spherical k-means.
+class _SphericalKMeansParams:
+    """Validated algorithm parameters retained only while constructing a measurement."""
 
-    :param iterations: Number of Lloyd iterations ``T`` (one DP release each).
-    :param center_active: Number of nonzero features kept per center (top-m).
-    :param max_active: Per-row bound on nonzero features; each row is clipped to this
-        many, bounding the per-release L2 sensitivity to ``sqrt(max_active)``.
-    :param init_active: Number of nonzero features in each random initial center.
-    :param seed: Public seed for the (public) initialization and center updates.
-    """
-
-    iterations: int = 5
-    center_active: int = 96
-    max_active: int = 128
-    init_active: int = 96
-    seed: int = 0
-
-
-@dataclass(frozen=True)
-class SphericalKMeansRelease:
-    """Immutable private release of spherical k-means.
-
-    The effective configuration is retained with the centers so an estimator can
-    derive fitted state from the model that was released, independently of any
-    later changes to its constructor parameters.
-    """
-
-    centers: Any
-    config: SphericalKMeansConfig
+    n_clusters: int
+    max_iter: int
+    max_features_per_record: int
+    max_features_per_center: int
+    random_state: int | None
 
 
 # stable transformation: per-cluster feature sums
@@ -219,73 +198,64 @@ def make_private_spherical_kmeans(
     d_in: int,
     d_out: float,
     *,
-    n_clusters: int,
-    config: SphericalKMeansConfig | None = None,
+    n_clusters: int = 8,
+    max_iter: int = 5,
+    max_features_per_record: int = 128,
+    max_features_per_center: int = 96,
+    random_state: int | None = None,
 ) -> Measurement:
     """Construct a Measurement that releases spherical (cosine) k-means centers.
 
-    Follows the calibrated-mechanism convention
-    ``(input_domain, input_metric, output_measure, d_in, d_out, *, <algorithm params>)``:
-    the units of ``d_in`` are defined by ``input_metric`` and those of ``d_out`` by
-    ``output_measure``. The per-release discrete-Gaussian scale is chosen analytically
-    so the composed measurement satisfies ``map(d_in) <= d_out``; there is no
-    noise-scale knob to search.
-
-    Each of ``config.iterations`` cluster-sum releases (see
-    ``make_cluster_feature_sums``) is composed with adaptive composition;
-    initialization and center updates (top-m projection) are public postprocessing.
-    ``n_features`` is read from ``input_domain``.
-
-    Currently narrowed to add/remove adjacency
-    (``input_metric == symmetric_distance()``) and zero-concentrated DP
-    (``output_measure == zero_concentrated_divergence()``, so ``d_out`` is a scalar ρ).
+    The calibrated constructor follows ``(input_domain, input_metric,
+    output_measure, d_in, d_out, *, <algorithm params>)``. ``d_in`` is measured
+    by ``input_metric`` and ``d_out`` by ``output_measure``. Each of ``max_iter``
+    cluster-sum releases is adaptively composed; initialization and center updates
+    are public postprocessing.
 
     :param input_domain: instance of ``sparse_binary_domain(n_features=_)``
     :param input_metric: instance of ``symmetric_distance()``
     :param output_measure: instance of ``zero_concentrated_divergence()``
-    :param d_in: upper bound on the number of records that may be added or removed
+    :param d_in: upper bound on added or removed records
     :param d_out: privacy budget ρ (zero-concentrated DP)
     :param n_clusters: number of cluster directions to release
-    :param config: algorithm hyperparameters, an instance of :class:`SphericalKMeansConfig`
-    :return: a Measurement releasing :class:`SphericalKMeansRelease` with the
-        ``(n_clusters, n_features)`` CSR matrix of L2-normalized centers and its
-        validated effective configuration
+    :param max_iter: number of Lloyd iterations (one DP release each)
+    :param max_features_per_record: contribution bound for nonzero row features
+    :param max_features_per_center: top features retained in every center
+    :param random_state: public seed for initialization, or ``None`` for fresh entropy
+    :return: a Measurement releasing an ``(n_clusters, n_features)`` CSR center matrix
     """
     _check_symmetric_distance(input_metric)
     d_in, rho = _check_zcdp_budget(output_measure, d_in, d_out)
     n_features = _n_features_from_domain(input_domain)
-    cfg = _validate_config(
-        config or SphericalKMeansConfig(), n_clusters=n_clusters, n_features=n_features
+    params = _validate_params(
+        n_clusters=n_clusters,
+        max_iter=max_iter,
+        max_features_per_record=max_features_per_record,
+        max_features_per_center=max_features_per_center,
+        random_state=random_state,
+        n_features=n_features,
     )
-    n_clusters = int(n_clusters)
-    L = int(cfg.max_active)
-    T = int(cfg.iterations)
+    k = params.n_clusters
+    L = params.max_features_per_record
+    T = params.max_iter
 
-    # Analytic calibration.  One release has L2 sensitivity ``d_in * sqrt(L)``, so its
-    # zCDP loss is ``d_in**2 * L / (2 * scale**2)``.  Requiring the T-fold composition
-    # to spend exactly ``rho`` gives ``scale = d_in * sqrt(L * T / (2 * rho))``.
-    # Rounding scale up keeps each release at or below ``rho / T``, so the composed map
-    # stays at or below ``rho``.
+    # One release has L2 sensitivity ``d_in * sqrt(L)``. Rounding the scale up
+    # preserves the composed zCDP bound despite finite precision.
     scale = _scale_with_slack(float(d_in) * sqrt(L * T / (2.0 * rho)))
-
     init_centers = _random_unit_centers(
-        n_clusters, n_features, cfg.init_active, cfg.seed
+        k, n_features, params.max_features_per_center, params.random_state
     )
 
     def m_sum_for(centers):
-        # ``dp.as_array`` keeps the noisy sums as a NumPy array across the FFI boundary.
         return (
             make_cluster_feature_sums(
-                input_domain,
-                input_metric,
-                centers=centers,
-                max_active=L,
+                input_domain, input_metric, centers=centers, max_active=L
             )
             >> then_gaussian(scale)
             >> dp.as_array()  # type: ignore[operator]
         )
 
-    step_budget = m_sum_for(init_centers).map(d_in)  # type: ignore[attr-defined]  # <= rho / T
+    step_budget = m_sum_for(init_centers).map(d_in)  # type: ignore[attr-defined]
     comp = dp.c.make_adaptive_composition(
         input_domain=input_domain,
         input_metric=input_metric,
@@ -296,10 +266,10 @@ def make_private_spherical_kmeans(
 
     def postprocess(qbl):
         centers = init_centers
-        for _iteration in range(T):
-            noisy = qbl(m_sum_for(centers)).reshape(n_clusters, n_features)
-            centers = _project_centers_topm(noisy, cfg.center_active)
-        return SphericalKMeansRelease(centers=centers, config=cfg)
+        for _ in range(T):
+            noisy = qbl(m_sum_for(centers)).reshape(k, n_features)
+            centers = _project_centers_topm(noisy, params.max_features_per_center)
+        return centers
 
     return comp >> _new_pure_function(postprocess, TO="ExtrinsicObject")
 
@@ -336,7 +306,7 @@ def _project_centers_topm(noisy_sums, m: int):
     return _sp().csr_matrix(sums / np.where(norms > 0, norms, 1.0), dtype=np.float32)
 
 
-def _random_unit_centers(k: int, d: int, active: int, seed: int):
+def _random_unit_centers(k: int, d: int, active: int, seed: int | None):
     """Public random init: ``k`` L2-normalized rows, each with ``active`` random nonzeros."""
     np = _np()
     rng = np.random.default_rng(seed)
@@ -468,26 +438,55 @@ def _check_zcdp_budget(output_measure, d_in, d_out) -> tuple[int, float]:
     return d_in, rho
 
 
-def _validate_config(
-    config: SphericalKMeansConfig, *, n_clusters: int, n_features: int
-) -> SphericalKMeansConfig:
-    if n_clusters <= 0:  # pragma: no cover
-        raise ValueError("n_clusters must be positive")
+def _positive_int(value, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer")
+    try:
+        value = index(value)
+    except TypeError:
+        raise TypeError(f"{name} must be a positive integer") from None
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def _nonnegative_int(value, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a nonnegative integer")
+    try:
+        value = index(value)
+    except TypeError:
+        raise TypeError(f"{name} must be a nonnegative integer") from None
+    if value < 0:
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return value
+
+
+def _validate_params(
+    *,
+    n_clusters,
+    max_iter,
+    max_features_per_record,
+    max_features_per_center,
+    random_state,
+    n_features: int,
+) -> _SphericalKMeansParams:
     if n_features <= 0:  # pragma: no cover
         raise ValueError("n_features must be positive")
-    if config.iterations <= 0:  # pragma: no cover
-        raise ValueError("iterations must be positive")
-    if config.center_active <= 0:  # pragma: no cover
-        raise ValueError("center_active must be positive")
-    if config.max_active <= 0:  # pragma: no cover
-        raise ValueError("max_active must be positive")
-    if config.init_active <= 0:  # pragma: no cover
-        raise ValueError("init_active must be positive")
-    return replace(
-        config,
-        max_active=min(config.max_active, n_features),
-        center_active=min(config.center_active, n_features),
-        init_active=min(config.init_active, n_features),
+    if random_state is not None:
+        random_state = _nonnegative_int(random_state, "random_state")
+    return _SphericalKMeansParams(
+        n_clusters=_positive_int(n_clusters, "n_clusters"),
+        max_iter=_positive_int(max_iter, "max_iter"),
+        max_features_per_record=min(
+            _positive_int(max_features_per_record, "max_features_per_record"),
+            n_features,
+        ),
+        max_features_per_center=min(
+            _positive_int(max_features_per_center, "max_features_per_center"),
+            n_features,
+        ),
+        random_state=random_state,
     )
 
 
@@ -498,59 +497,79 @@ def _scale_with_slack(scale: float) -> float:
     return float(np.nextafter(float(scale), np.inf))
 
 
+def make_private_cluster_sizes(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    d_in: int,
+    d_out: float,
+    *,
+    centers,
+) -> Measurement:
+    """Construct a Measurement releasing noisy nearest-center cluster sizes.
+
+    This is a separately-accounted diagnostic over fixed, already released centers.
+    """
+    np = _np()
+    _check_symmetric_distance(input_metric)
+    d_in, rho = _check_zcdp_budget(output_measure, d_in, d_out)
+    n_features = _n_features_from_domain(input_domain)
+    centers = _as_csr_center(centers)
+    if centers.shape[0] <= 0:
+        raise ValueError("centers must be nonempty")
+    if centers.shape[1] != n_features:
+        raise ValueError(
+            f"centers must have {n_features} columns, got {centers.shape[1]}"
+        )
+    k = int(centers.shape[0])
+    # Keep labelling and counting in one transformation. The sparse-binary input
+    # domain makes this function total; exposing an intermediate unconstrained i32
+    # label vector would not, because np.bincount rejects negative labels.
+    counts = _make_transformation(
+        input_domain,
+        input_metric,
+        dp.vector_domain(dp.atom_domain(T=dp.i32), size=k),
+        dp.l2_distance(T=dp.f64),
+        lambda data: np.bincount(
+            nearest_center_labels(
+                _ensure_csr_binary(data, n_features=n_features), centers
+            ),
+            minlength=k,
+        ).astype(np.int32),
+        # Adding or removing one row changes exactly one histogram bucket by one.
+        lambda distance: float(distance),
+    )
+    scale = _scale_with_slack(float(d_in) * sqrt(1.0 / (2.0 * rho)))
+    return counts >> then_gaussian(scale) >> dp.as_array()  # type: ignore[operator]
+
+
 class SphericalKMeans(_DPEstimator):
     """Differentially private spherical (cosine) k-means for sparse binary data.
 
-    A scikit-learn-style estimator over :func:`make_private_spherical_kmeans`.  The
-    instance carries only algorithm hyperparameters; the privacy budget, input
-    domain/metric and output measure are supplied by a Context at fit time::
-
-        est = SphericalKMeans(n_clusters=16)
-        est.fit(context.query(rho=0.5))     # Context fills domain/metric/measure/d_in/d_out
-        centers = est.cluster_centers_
-        labels = est.predict(my_rows)       # postprocessing of the released centers
-
-    Equivalently: ``context.query(rho=0.5).sklearn(est).release()``.  Or without a
-    Context, supplying the pieces directly::
-
-        m = est.make(input_domain, input_metric, output_measure, d_in, d_out)
-        release = m(data)
-        centers = release.centers
-
-    No labels for the fitted (private) data are produced; assign rows with
-    :meth:`predict` on data you hold (postprocessing of the released centers).
-
-    :param n_clusters: Number of cluster directions to release.
-    :param config: A :class:`SphericalKMeansConfig` of algorithm hyperparameters.
-    :param random_state: Public seed for initialization and center updates.
+    The estimator's hyperparameters are ordinary sklearn constructor parameters.
+    Privacy accounting and the sparse binary domain are supplied by a Context query
+    at fit time. Fitted behavior depends solely on ``cluster_centers_``.
     """
 
     def __init__(
         self,
-        *,
         n_clusters: int = 8,
-        config: SphericalKMeansConfig | None = None,
+        *,
+        max_iter: int = 5,
+        max_features_per_record: int = 128,
+        max_features_per_center: int = 96,
         random_state: int | None = None,
     ):
-        # Keep constructor parameters unchanged for sklearn introspection and clone.
-        # Validation and public-seed normalization happen when the domain and budget
-        # are available in make.
+        # Keep parameters unchanged for sklearn clone/get_params/set_params.
         self.n_clusters = n_clusters
+        self.max_iter = max_iter
+        self.max_features_per_record = max_features_per_record
+        self.max_features_per_center = max_features_per_center
         self.random_state = random_state
-        self.config = config
 
     def make(
         self, input_domain, input_metric, output_measure, d_in, d_out
     ) -> Measurement:
-        """Construct the measurement via :func:`make_private_spherical_kmeans`.
-
-        See :meth:`_DPEstimator.make` for the argument convention.
-
-        :return: a Measurement releasing :class:`SphericalKMeansRelease`
-        """
-        config = self.config or SphericalKMeansConfig()
-        if self.random_state is not None:
-            config = replace(config, seed=int(self.random_state))
         return make_private_spherical_kmeans(
             input_domain,
             input_metric,
@@ -558,45 +577,41 @@ class SphericalKMeans(_DPEstimator):
             d_in,
             d_out,
             n_clusters=self.n_clusters,
-            config=config,
+            max_iter=self.max_iter,
+            max_features_per_record=self.max_features_per_record,
+            max_features_per_center=self.max_features_per_center,
+            random_state=self.random_state,
         )
 
     def _prepare_fit_query(self, X, y=None, **fit_params):
-        """Accept sklearn's optional ``y`` argument, which clustering ignores."""
         self._reject_fit_params(fit_params)
         return X
 
-    def _ingest_release(self, release: SphericalKMeansRelease) -> None:
-        """Populate fitted state solely from the immutable model release."""
-        self.cluster_centers_ = release.centers
-        self.config_ = release.config
-        self.n_features_in_ = int(self.cluster_centers_.shape[1])
-        self.n_clusters_ = int(self.cluster_centers_.shape[0])
-        self.n_iter_ = int(self.config_.iterations)
+    def _ingest_release(self, centers) -> None:
+        self.cluster_centers_ = centers
+        self.n_features_in_ = int(centers.shape[1])
 
-    # Postprocessing over caller-held data (the released centers are public).
-    # These are ordinary sklearn methods; explicit transformation constructors
-    # are provided separately for users composing OpenDP operations.
     def _fitted_space(self):
         n_features = getattr(self, "n_features_in_", None)
-        if (
-            getattr(self, "cluster_centers_", None) is None or n_features is None
-        ):  # pragma: no cover
+        if getattr(self, "cluster_centers_", None) is None or n_features is None:
             raise ValueError("model has not been fitted")
         return sparse_binary_domain(n_features), dp.symmetric_distance()
 
+    def _n_fitted_clusters(self) -> int:
+        self._fitted_space()
+        return int(self.cluster_centers_.shape[0])
+
     def transform(self, X):
-        """Return distances from caller-held rows to each fitted center."""
+        """Return cosine distances from caller-held rows to fitted centers."""
         self._fitted_space()
         return _center_distances(X, self.cluster_centers_)
 
     def predict(self, X):
         """Return the nearest fitted-center label for each caller-held row."""
-        np = _np()
-        return np.argmin(self.transform(X), axis=1).astype(np.int32)
+        return nearest_center_labels(X, self.cluster_centers_)
 
     def score(self, X, y=None):
-        """Return the negative sum of distances to the assigned centers."""
+        """Return the negative sum of distances to assigned fitted centers."""
         np = _np()
         return -float(np.sum(np.min(self.transform(X), axis=1)))
 
@@ -607,121 +622,53 @@ class SphericalKMeans(_DPEstimator):
         return _make_transformation(
             input_domain,
             input_metric,
-            dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
+            dp.numpy.array2_domain(T=float, num_columns=self._n_fitted_clusters()),
             dp.symmetric_distance(),
-            lambda x: _center_distances(x, centers),
-            lambda d_in: d_in,
+            lambda data: _center_distances(data, centers),
+            lambda distance: distance,
         )
 
     def make_predict(self):
         """Return an OpenDP transformation for explicit label composition."""
         np = _np()
+        k = self._n_fitted_clusters()
         return self.make_transform() >> _make_transformation(
-            dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
+            dp.numpy.array2_domain(T=float, num_columns=k),
             dp.symmetric_distance(),
             dp.vector_domain(dp.atom_domain(T=dp.i32)),
             dp.symmetric_distance(),
-            lambda dists: np.argmin(dists, axis=1).astype(np.int32),
-            lambda d_in: d_in,
+            lambda distances: np.argmin(distances, axis=1).astype(np.int32),
+            lambda distance: distance,
         )
 
     def make_score(self):
         """Return an OpenDP transformation for explicit score composition."""
         np = _np()
+        k = self._n_fitted_clusters()
         return self.make_transform() >> _make_transformation(
-            dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
+            dp.numpy.array2_domain(T=float, num_columns=k),
             dp.symmetric_distance(),
             dp.atom_domain(T=dp.f64, nan=False),
             dp.absolute_distance(T=dp.f64),
-            lambda dists: -float(np.sum(np.min(dists, axis=1))),
-            lambda d_in: float(d_in),
+            lambda distances: -float(np.sum(np.min(distances, axis=1))),
+            lambda distance: float(distance),
         )
 
-    # -- separately-accounted DP diagnostics, released through a Context query --
     def release_cluster_sizes(self, query):
-        """Release DP cluster sizes over the fitted centers, on ``query``'s budget.
-
-        Postprocesses :attr:`predict` (nearest-center labels) into per-cluster counts,
-        then adds discrete Gaussian noise. One row falls in one cluster, so the counts
-        are ``d_in``-stable. This is a separate release from :meth:`fit` and consumes
-        its own share of the budget.
-
-        :param query: a Context query, e.g. ``context.query(rho=...)``
-        :return: a length-``n_clusters`` NumPy array of noisy cluster sizes
-        """
-        adapter = _MeasurementRelease(self._cluster_sizes)
-        adapter.fit(query)
-        return adapter.release_
-
-    def cluster_sizes(self, query):
-        """Deprecated alias for :meth:`release_cluster_sizes`."""
-        return self.release_cluster_sizes(query)
-
-    def release_silhouette(self, query):
-        """Release a DP center-based silhouette score over the fitted centers.
-
-        Postprocesses :attr:`transform` (distances to each center) into the simplified
-        silhouette ``s = (b - a) / max(a, b) in [0, 1]`` per row -- ``a``/``b`` being the
-        nearest/second-nearest center distances -- then releases the noisy mean. This
-        is the cheap center-based variant, not the O(n^2) pairwise silhouette. Separate
-        release; consumes its own share of the budget.
-
-        :param query: a Context query, e.g. ``context.query(rho=...)``
-        :return: the mean silhouette in ``[0, 1]``
-        """
-        adapter = _MeasurementRelease(self._silhouette)
-        adapter.fit(query)
-        return adapter.release_
-
-    def silhouette(self, query):
-        """Deprecated alias for :meth:`release_silhouette`."""
-        return self.release_silhouette(query)
-
-    def _cluster_sizes(self, output_measure, d_in, d_out) -> Measurement:
-        np = _np()
-        d_in, rho = _check_zcdp_budget(output_measure, d_in, d_out)
-        k = self.n_clusters_
-        # one row -> one bucket, so the label histogram has L2 sensitivity 1 per row.
-        scale = _scale_with_slack(float(d_in) * sqrt(1.0 / (2.0 * rho)))
-        counts = _make_transformation(
-            dp.vector_domain(dp.atom_domain(T=dp.i32)),
-            dp.symmetric_distance(),
-            dp.vector_domain(dp.atom_domain(T=dp.i32), size=k),
-            dp.l2_distance(T=dp.f64),
-            lambda labels: np.bincount(labels, minlength=k).astype(np.int32),
-            lambda d_in_: float(d_in_),
-        )
-        return self.make_predict() >> counts >> then_gaussian(scale) >> dp.as_array()  # type: ignore[operator]
-
-    def _silhouette(self, output_measure, d_in, d_out) -> Measurement:
-        np = _np()
-        d_in, rho = _check_zcdp_budget(output_measure, d_in, d_out)
-        if self.n_clusters_ < 2:
-            raise ValueError("silhouette requires at least 2 clusters")
-        # per row the statistic is (s, 1) with s in [0, 1], so the L2 sensitivity is sqrt(2).
-        scale = _scale_with_slack(float(d_in) * sqrt(2.0) / sqrt(2.0 * rho))
-
-        def reduce_(dists):
-            two_nearest = np.partition(dists, 1, axis=1)[:, :2]
-            a, b = two_nearest[:, 0], two_nearest[:, 1]
-            s = np.where(b > 0, (b - a) / b, 0.0)  # max(a, b) == b since b >= a >= 0
-            return np.array([float(s.sum()), float(dists.shape[0])], dtype=np.float64)
-
-        reduce_t = _make_transformation(
-            dp.numpy.array2_domain(T=float, num_columns=self.n_clusters_),
-            dp.symmetric_distance(),
-            dp.vector_domain(dp.atom_domain(T=dp.f64, nan=False), size=2),
-            dp.l2_distance(T=dp.f64),
-            reduce_,
-            lambda d_in_: float(d_in_) * sqrt(2.0),
-        )
-        noisy = self.make_transform() >> reduce_t >> then_gaussian(scale) >> dp.as_array()  # type: ignore[operator]
-        # postprocess: mean = sum(s) / count, clamped to the valid silhouette range [0, 1]
-        return noisy >> _new_pure_function(  # type: ignore[operator]
-            lambda pair: (
-                float(min(1.0, max(0.0, pair[0] / pair[1]))) if pair[1] > 0 else 0.0
+        """Release DP cluster sizes over the fitted centers on ``query``'s budget."""
+        self._fitted_space()
+        adapter = _MeasurementRelease(
+            lambda input_domain, input_metric, output_measure, d_in, d_out: make_private_cluster_sizes(
+                input_domain,
+                input_metric,
+                output_measure,
+                d_in,
+                d_out,
+                centers=self.cluster_centers_,
             )
         )
+        adapter.fit(query)
+        return adapter.release_
 
 
 class _MeasurementRelease(_DPFitMixin):
@@ -733,7 +680,7 @@ class _MeasurementRelease(_DPFitMixin):
     def make(
         self, input_domain, input_metric, output_measure, d_in, d_out
     ) -> Measurement:
-        return self._build(output_measure, d_in, d_out)
+        return self._build(input_domain, input_metric, output_measure, d_in, d_out)
 
     def _ingest_release(self, release) -> None:
         self.release_ = release

@@ -1,35 +1,35 @@
 from __future__ import annotations
 
-from dataclasses import replace
 import math
 
 import pytest
 
 import opendp.prelude as dp
 from opendp.extras.sklearn._estimator import _DPEstimator
-from opendp.mod import UnknownTypeException
 from opendp.extras.sklearn.cluster import (
     SphericalKMeans,
-    SphericalKMeansConfig,
-    SphericalKMeansRelease,
-    sparse_binary_domain,
-    make_cluster_feature_sums,
     make_private_spherical_kmeans,
+    sparse_binary_domain,
 )
 from opendp.extras.sklearn.cluster._spherical_lloyd_binary import (
     _check_zcdp_budget,
     _clip_rows,
     _ensure_csr_binary,
+    make_cluster_feature_sums,
+    make_private_cluster_sizes,
 )
+from opendp.mod import UnknownTypeException
 
 np = pytest.importorskip("numpy")
 sparse = pytest.importorskip("scipy.sparse")
 
-# The mechanism must work with only "contrib" -- it must NOT require honest-but-curious.
 dp.enable_features("contrib")
 
-_TINY_CFG = SphericalKMeansConfig(
-    iterations=4, center_active=3, max_active=3, init_active=3
+_TINY_PARAMS = dict(
+    max_iter=4,
+    max_features_per_center=3,
+    max_features_per_record=3,
+    random_state=0,
 )
 
 
@@ -49,106 +49,94 @@ def _two_blob_data(reps=1):
     return sparse.csr_matrix(np.tile(block, (reps, 1)))
 
 
-# --------------------------------------------------------------------------
-# constructor convention + calibration
-# --------------------------------------------------------------------------
-def test_constructor_calibrates_map_below_d_out():
-    x = _two_blob_data()
-    domain = sparse_binary_domain(6)
-    m = make_private_spherical_kmeans(
+def _measurement(domain, *, d_in=1, rho=0.5, **params):
+    return make_private_spherical_kmeans(
         domain,
         dp.symmetric_distance(),
         dp.zero_concentrated_divergence(),
-        1,
-        0.5,
-        n_clusters=2,
-        config=_TINY_CFG,
+        d_in,
+        rho,
+        **({"n_clusters": 2, **_TINY_PARAMS, **params}),
     )
+
+
+# --------------------------------------------------------------------------
+# framework constructors + calibration
+# --------------------------------------------------------------------------
+def test_constructor_calibrates_and_releases_only_centers():
+    x = _two_blob_data()
+    m = _measurement(sparse_binary_domain(6))
     assert m.map(1) <= 0.5
     assert m.map(1) == pytest.approx(0.5, rel=1e-9)
-
-    estimator = SphericalKMeans(n_clusters=2, config=_TINY_CFG)
-    measurement = estimator.make(
-        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 1, 0.5
-    )
-    assert measurement.map(1) <= 0.5
     release = m(x)
-    assert isinstance(release, SphericalKMeansRelease)
-    assert release.config == _TINY_CFG
-    assert sparse.issparse(release.centers)
-    assert release.centers.shape == (2, 6)
+    assert sparse.issparse(release)
+    assert release.shape == (2, 6)
 
 
-def test_reads_n_features_from_domain():
+def test_framework_parameters_are_explicit_and_initialization_uses_center_bound():
     domain = sparse_binary_domain(6)
-    m = make_private_spherical_kmeans(
-        domain,
-        dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
-        1,
-        0.5,
-        n_clusters=2,
-        config=_TINY_CFG,
+    m = _measurement(
+        domain, max_iter=2, max_features_per_record=4, max_features_per_center=1
     )
-    assert m(_two_blob_data()).centers.shape[1] == 6
+    assert m(_two_blob_data()).shape == (2, 6)
+    with pytest.raises(TypeError, match="config"):
+        _measurement(domain, config=object())
+
+
+@pytest.mark.parametrize(
+    ("params", "error"),
+    [
+        ({"n_clusters": 0}, ValueError),
+        ({"max_iter": 0}, ValueError),
+        ({"max_features_per_record": 0}, ValueError),
+        ({"max_features_per_center": 0}, ValueError),
+        ({"random_state": -1}, ValueError),
+    ],
+)
+def test_framework_validates_algorithm_parameters(params, error):
+    domain = sparse_binary_domain(6)
+    defaults = dict(
+        n_clusters=2,
+        max_iter=2,
+        max_features_per_record=3,
+        max_features_per_center=3,
+        random_state=1,
+    )
+    defaults.update(params)
+    with pytest.raises(error, match="positive integer|nonnegative integer"):
+        make_private_spherical_kmeans(
+            domain,
+            dp.symmetric_distance(),
+            dp.zero_concentrated_divergence(),
+            1,
+            0.5,
+            **defaults,
+        )
 
 
 def test_group_privacy_scales_with_d_in():
     domain = sparse_binary_domain(6)
-    m1 = make_private_spherical_kmeans(
-        domain,
-        dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
-        1,
-        0.5,
-        n_clusters=2,
-        config=_TINY_CFG,
-    )
-    m2 = make_private_spherical_kmeans(
-        domain,
-        dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
-        2,
-        0.5,
-        n_clusters=2,
-        config=_TINY_CFG,
-    )
+    m1 = _measurement(domain, d_in=1)
+    m2 = _measurement(domain, d_in=2)
     assert m1.map(1) <= 0.5
     assert m2.map(2) <= 0.5
     assert m2.map(1) <= m2.map(2)
 
 
-def test_requires_symmetric_distance():
+def test_requires_symmetric_distance_and_zcdp():
     domain = sparse_binary_domain(6)
     with pytest.raises(ValueError, match="add/remove"):
         make_private_spherical_kmeans(
-            domain,
-            dp.l1_distance(T=int),
-            dp.zero_concentrated_divergence(),
-            1,
-            0.5,
-            n_clusters=2,
-            config=_TINY_CFG,
+            domain, dp.l1_distance(T=int), dp.zero_concentrated_divergence(), 1, 0.5
         )
-
-
-def test_requires_zcdp():
-    domain = sparse_binary_domain(6)
     with pytest.raises(ValueError, match="zero_concentrated"):
         make_private_spherical_kmeans(
-            domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            1,
-            0.5,
-            n_clusters=2,
-            config=_TINY_CFG,
+            domain, dp.symmetric_distance(), dp.max_divergence(), 1, 0.5
         )
 
 
 @pytest.mark.parametrize(
-    ("d_in", "error"),
-    [(1.5, TypeError), (True, ValueError), (0, ValueError)],
+    ("d_in", "error"), [(1.5, TypeError), (True, ValueError), (0, ValueError)]
 )
 def test_rejects_invalid_privacy_distance(d_in, error):
     with pytest.raises(error, match="positive integer"):
@@ -167,125 +155,92 @@ def test_cluster_feature_sums_stability_and_output_shape():
         np.array([[1, 1, 1, 0, 0, 0], [0, 0, 0, 1, 1, 1]], dtype=np.float32)
     )
     t = make_cluster_feature_sums(
-        domain,
-        dp.symmetric_distance(),
-        centers=centers,
-        max_active=4,
+        domain, dp.symmetric_distance(), centers=centers, max_active=4
     )
     assert t.map(1) == pytest.approx(math.sqrt(4))
     assert t.map(3) == pytest.approx(3 * math.sqrt(4))
     out = np.asarray(t(_two_blob_data()))
-    assert out.shape == (2 * 6,)
+    assert out.shape == (12,)
     assert np.issubdtype(out.dtype, np.integer)
-    # rows 0-2 assign to center 0 (features 0,1,2); their sums land in the first block
-    assert out[:6].sum() > 0 and out[6:].sum() > 0
 
 
-def test_domain_has_no_max_active():
+# --------------------------------------------------------------------------
+# sparse binary domain
+# --------------------------------------------------------------------------
+def test_domain_has_no_max_features_per_record():
     domain = sparse_binary_domain(6)
     assert not hasattr(domain.descriptor, "max_active")
     assert domain.descriptor.n_features == 6
     assert domain.descriptor.max_rows == 2**31 - 1
 
 
-def test_dense_binary_conversion_and_clipping():
+def test_binary_conversion_and_clipping():
     dense = _ensure_csr_binary(np.array([1, 0, 1]), n_features=3)
     assert _ensure_csr_binary(np.array([1, 0])).shape == (2, 1)
-    clipped = _clip_rows(dense, 1)
-    assert clipped.nnz == 1
-
-
-def test_binary_conversion_accepts_dense_and_sparse_binary_data():
-    dense = np.array([[1, 0, 1], [0, 1, 0]], dtype=np.float32)
-    sparse_data = sparse.csr_matrix(dense)
+    assert _clip_rows(dense, 1).nnz == 1
+    sparse_data = sparse.csr_matrix(np.array([[1, 0, 1], [0, 1, 0]], dtype=np.float32))
     assert np.array_equal(
-        _ensure_csr_binary(dense).toarray(), _ensure_csr_binary(sparse_data).toarray()
+        _ensure_csr_binary(sparse_data).toarray(), sparse_data.toarray()
     )
-    domain = sparse_binary_domain(3)
-    assert domain.member(dense)
-    assert domain.member(sparse_data)
 
 
 @pytest.mark.parametrize("value", [2.0, -1.0, 0.5, float("nan"), float("inf")])
-def test_binary_conversion_rejects_invalid_dense_and_sparse_data(value):
-    dense = np.array([[value, 0.0, 1.0]])
-    sparse_data = sparse.csr_matrix(dense)
-    for data in (dense, sparse_data):
+def test_binary_conversion_rejects_invalid_data(value):
+    for data in (np.array([[value, 0.0, 1.0]]), sparse.csr_matrix([[value, 0.0, 1.0]])):
         with pytest.raises(ValueError, match="finite|0/1"):
             _ensure_csr_binary(data)
         assert not sparse_binary_domain(3).member(data)
 
 
-def test_binary_conversion_rejects_duplicate_sparse_values():
+def test_sparse_domain_rejects_duplicate_or_weighted_values():
     duplicate = sparse.csr_matrix(
-        (np.array([1.0, 1.0], dtype=np.float32), np.array([0, 0]), np.array([0, 2])),
-        shape=(1, 3),
+        (np.array([1.0, 1.0]), np.array([0, 0]), np.array([0, 2])), shape=(1, 3)
     )
     with pytest.raises(ValueError, match="0/1"):
         _ensure_csr_binary(duplicate)
-
-
-def test_sparse_explicit_zeros_remain_inactive():
-    x = sparse.csr_matrix(
-        (np.array([0.0]), np.array([4]), np.array([0, 1])), shape=(1, 6)
-    )
-    domain = sparse_binary_domain(6)
-    centers = sparse.csr_matrix([[1, 0, 0, 0, 0, 0]], dtype=np.float32)
-    t = make_cluster_feature_sums(
-        domain,
-        dp.symmetric_distance(),
-        centers=centers,
-        max_active=1,
-    )
-    assert domain.member(x)
-    assert np.asarray(t(x)).sum() == 0
-
-
-def test_sparse_domain_rejects_nonbinary_values():
-    domain = sparse_binary_domain(3)
-    for value in (2.0, -1.0, 0.5):
-        weighted = sparse.csr_matrix([[value, 0.0, 0.0]])
-        assert not domain.member(weighted)
+    assert not sparse_binary_domain(3).member(sparse.csr_matrix([[2.0, 0.0, 0.0]]))
 
 
 # --------------------------------------------------------------------------
-# estimator + Context bridge
+# sklearn estimator + Context bridge
 # --------------------------------------------------------------------------
-def test_estimator_is_sklearn_estimator():
+def test_estimator_has_flat_sklearn_parameters():
     from sklearn.base import BaseEstimator, clone
 
     assert issubclass(SphericalKMeans, _DPEstimator)
     assert issubclass(SphericalKMeans, BaseEstimator)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG)
-    assert est.n_clusters == 2
-    assert not hasattr(est, "cluster_centers_")
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    assert est.get_params(deep=False) == {"n_clusters": 2, **_TINY_PARAMS}
     cloned = clone(est)
-    assert cloned.n_clusters == est.n_clusters
-    assert cloned.config == est.config
+    assert cloned.get_params(deep=False) == est.get_params(deep=False)
+    est.set_params(max_iter=2, max_features_per_record=2)
+    assert est.max_iter == 2
+    assert est.max_features_per_record == 2
+    assert not hasattr(est, "config")
+
+
+def test_removed_public_api_is_not_exported():
+    import opendp.extras.sklearn.cluster as cluster
+
+    assert set(cluster.__all__) == {
+        "SphericalKMeans",
+        "sparse_binary_domain",
+        "make_private_spherical_kmeans",
+        "then_private_spherical_kmeans",
+    }
+    for name in (
+        "SphericalKMeansConfig",
+        "SphericalKMeansRelease",
+        "nearest_center_labels",
+        "make_cluster_feature_sums",
+        "then_cluster_feature_sums",
+    ):
+        assert not hasattr(cluster, name)
 
 
 def test_sklearn_estimator_is_abstract():
     with pytest.raises(TypeError, match="abstract"):
         _DPEstimator()
-
-
-def test_estimator_make_does_not_mutate_state():
-    domain = sparse_binary_domain(6)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    initial_state = est.__dict__.copy()
-
-    measurement = est.make(
-        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 1, 0.5
-    )
-
-    assert isinstance(measurement, dp.Measurement)
-    assert est.__dict__ == initial_state
-
-
-def test_estimator_fit_requires_context_query():
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG)
-    with pytest.raises(TypeError, match="X to be a Query from an OpenDP Context"):
-        est.fit(_two_blob_data())
 
 
 def _context(x, rho=0.5, split=None):
@@ -309,166 +264,97 @@ def test_context_requires_explicit_sparse_binary_domain():
         )
 
 
-def test_context_query_sklearn_release():
+def test_estimator_make_does_not_mutate_state():
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    state = est.__dict__.copy()
+    measurement = est.make(
+        sparse_binary_domain(6),
+        dp.symmetric_distance(),
+        dp.zero_concentrated_divergence(),
+        1,
+        0.5,
+    )
+    assert isinstance(measurement, dp.Measurement)
+    assert est.__dict__ == state
+
+
+def test_context_fit_release_and_postprocessing():
     x = _two_blob_data()
     ctx = _context(x, rho=0.5, split=2)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    fitted = ctx.query().sklearn(est).release()
-    assert fitted is est
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    assert est.fit(ctx.query(), y=object()) is est
     assert sparse.issparse(est.cluster_centers_)
     assert est.cluster_centers_.shape == (2, 6)
-
-
-def test_context_query_with_rho_kwarg():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5)  # filter; allocate per query
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    fitted = ctx.query(rho=0.3).sklearn(est).release()
-    assert fitted is est
-    assert est.cluster_centers_.shape == (2, 6)
-
-
-def test_estimator_fit_query_and_predict():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=2)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    fitted = est.fit(ctx.query())
-    assert fitted is est
-    assert est.cluster_centers_.shape == (2, 6)
     assert est.n_features_in_ == 6
-    assert est.n_iter_ == 4
-    # predict/transform/score are ordinary sklearn methods over caller-held data.
+    assert not hasattr(est, "config_")
+    assert not hasattr(est, "n_clusters_")
+    assert not hasattr(est, "n_iter_")
     assert np.asarray(est.predict(x)).shape == (x.shape[0],)
     assert est.transform(x).shape == (x.shape[0], 2)
     assert est.make_transform()(x).shape == est.transform(x).shape
     assert np.array_equal(est.make_predict()(x), est.predict(x))
     assert np.isfinite(est.score(x))
-    # no labels for the fitted (private) data are stored
-    assert est.__dict__.get("labels_") is None
 
 
-def test_release_describes_model_constructed_before_set_params():
-    """Fitted state comes from the immutable release, not mutable parameters."""
+def test_fitted_centers_remain_authoritative_after_set_params():
     x = _two_blob_data()
-    domain = sparse_binary_domain(6)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    measurement = est.make(
-        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 1, 0.5
-    )
-
-    changed_config = SphericalKMeansConfig(
-        iterations=1, center_active=1, max_active=1, init_active=1
-    )
-    est.set_params(n_clusters=3, config=changed_config)
-    release = measurement(x)
-    est._ingest_release(release)
-
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    est.fit(_context(x, split=1).query())
+    before = est.transform(x)
+    est.set_params(n_clusters=3, max_iter=1, max_features_per_center=1)
     assert est.n_clusters == 3
-    assert est.n_clusters_ == 2
-    assert est.n_features_in_ == 6
-    assert est.config_ == replace(_TINY_CFG, seed=1)
-    assert est.n_iter_ == _TINY_CFG.iterations
-
-
-def test_pending_query_uses_parameters_at_measurement_construction():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=1)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    pending = ctx.query().sklearn(est)
-    changed_config = SphericalKMeansConfig(
-        iterations=1, center_active=1, max_active=1, init_active=1
-    )
-    est.set_params(n_clusters=3, config=changed_config, random_state=None)
-
-    assert pending.release() is est
-    assert est.n_clusters_ == 2
-    assert est.n_features_in_ == 6
-    assert est.config_ == replace(_TINY_CFG, seed=1)
-    assert est.n_iter_ == _TINY_CFG.iterations
-
-
-def test_fitted_configuration_is_used_after_set_params():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=2)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    est.fit(ctx.query())
-
-    public = _two_blob_data(reps=1)
-    before = est.transform(public)
-    est.set_params(
-        n_clusters=3,
-        config=SphericalKMeansConfig(
-            iterations=1, center_active=1, max_active=1, init_active=1
-        ),
-    )
-    assert est.n_clusters == 3
-    assert est.n_clusters_ == 2
-    assert np.allclose(est.transform(public), before)
+    assert est.transform(x).shape == (x.shape[0], 2)
+    assert np.allclose(est.transform(x), before)
     assert est.make_transform().output_domain.descriptor.num_columns == 2
 
 
-def test_estimator_fit_accepts_ignored_y():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=1)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=1)
-    assert est.fit(ctx.query(), y=object()) is est
-
-
-def test_estimator_fit_rejects_unsupported_metadata():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=1)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG)
+def test_fit_requires_query_and_rejects_unknown_metadata():
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    with pytest.raises(TypeError, match="X to be a Query"):
+        est.fit(_two_blob_data())
     with pytest.raises(TypeError, match="Unexpected fit parameters: sample_weight"):
-        est.fit(ctx.query(), sample_weight=object())
+        est.fit(_context(_two_blob_data(), split=1).query(), sample_weight=object())
 
 
-def test_sklearn_rejects_non_estimator():
-    x = _two_blob_data()
-    ctx = _context(x, rho=0.5, split=1)
-    with pytest.raises(ValueError, match="OpenDP fitting capability"):
-        ctx.query().sklearn(object())
-
-
-def test_cluster_sizes_and_silhouette_methods():
-    # sizes/silhouette are explicit private releases on their own budget.
-    x = _two_blob_data(reps=100)  # 600 rows, ~300 per blob
-    ctx = _context(x, rho=1.5, split=3)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=0)
-    est.fit(ctx.query())
-
-    sizes = np.asarray(est.cluster_sizes(ctx.query()))
-    assert sizes.shape == (2,)
-    assert abs(int(sizes.sum()) - 600) < 60  # noisy counts sum to ~n
-
-    sil = est.release_silhouette(ctx.query())
-    assert 0.0 <= float(sil) <= 1.0  # clamped to the valid silhouette range
-    assert float(sil) > 0.7  # well-separated blobs score high
-    assert (
-        len(ctx.current_privacy_loss()) == 3
-    )  # fit, sizes, silhouette use separate budgets
-
-
-def test_silhouette_requires_two_clusters():
-    x = _two_blob_data(reps=10)
+def test_cluster_sizes_are_a_lower_level_measurement_and_context_wrapper():
+    x = _two_blob_data(reps=100)
     ctx = _context(x, rho=1.0, split=2)
-    est = SphericalKMeans(
-        n_clusters=1,
-        config=SphericalKMeansConfig(
-            iterations=2, center_active=3, max_active=3, init_active=3
-        ),
-        random_state=0,
-    )
+    est = SphericalKMeans(2, **_TINY_PARAMS)
     est.fit(ctx.query())
-    with pytest.raises(ValueError, match="at least 2 clusters"):
-        est.silhouette(ctx.query())
+    sizes = np.asarray(est.release_cluster_sizes(ctx.query()))
+    assert sizes.shape == (2,)
+    assert abs(int(sizes.sum()) - 600) < 60
+    assert not hasattr(est, "cluster_sizes")
+    assert not hasattr(est, "silhouette")
+    assert not hasattr(est, "release_silhouette")
+
+    measurement = make_private_cluster_sizes(
+        sparse_binary_domain(6),
+        dp.symmetric_distance(),
+        dp.zero_concentrated_divergence(),
+        1,
+        0.5,
+        centers=est.cluster_centers_,
+    )
+    assert measurement.map(1) <= 0.5
+    assert measurement.map(2) <= 2.0
+    assert np.asarray(measurement(x)).shape == (2,)
+    with pytest.raises(ValueError, match="columns"):
+        make_private_cluster_sizes(
+            sparse_binary_domain(5),
+            dp.symmetric_distance(),
+            dp.zero_concentrated_divergence(),
+            1,
+            0.5,
+            centers=est.cluster_centers_,
+        )
 
 
 def test_recovers_two_blobs_with_enough_budget():
-    x = _two_blob_data(reps=200)  # 1200 rows
-    ctx = _context(x, rho=50.0, split=1)
-    est = SphericalKMeans(n_clusters=2, config=_TINY_CFG, random_state=0)
-    est.fit(ctx.query())
-    labels = np.asarray(est.predict(_two_blob_data(reps=1)))
+    x = _two_blob_data(reps=200)
+    est = SphericalKMeans(2, **_TINY_PARAMS)
+    est.fit(_context(x, rho=50.0, split=1).query())
+    labels = np.asarray(est.predict(_two_blob_data()))
     assert len(set(labels[:3])) == 1
     assert len(set(labels[3:])) == 1
     assert labels[0] != labels[3]
