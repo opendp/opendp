@@ -25,3 +25,14 @@ def test_clamp_empty():
     trans = space >> then_np_clamp(norm=1.0, p=2)
     np = pytest.importorskip("numpy")
     assert trans(np.zeros((0, 2))).shape == (0, 2)
+
+
+def test_clamp_zero_length():
+    with optional_dependency("numpy"):
+        domain = dp.numpy.array2_domain(T=float)
+    space = domain, dp.symmetric_distance()
+    trans = space >> then_np_clamp(norm=1.0, p=2)
+    np = pytest.importorskip("numpy")
+    empty = np.zeros((0, 2))
+    assert domain.member(empty)
+    trans(empty)
