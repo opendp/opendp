@@ -61,9 +61,8 @@ def _get_opendp_polars_lib_path():
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
         warn(
-            "The default for counting queries will change to signed=True in a future "
-            "release. Pass signed=True to preserve negative noisy counts as Int64, "
-            "or signed=False to retain the current unsigned behavior.",
+            "The default value is currently signed=False, and counts are clamped at zero, "
+            "consistent with past releases, but the default will be changing to signed=True. ",
             FutureWarning,
             stacklevel=3,
         )
