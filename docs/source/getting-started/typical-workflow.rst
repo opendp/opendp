@@ -1,6 +1,12 @@
 Typical Workflow
 ================
 
+.. note::
+
+    The rest of this tutorial will focus exclusively on the Context API in Python,
+    but OpenDP also offers a lower-level Framework API for both Python and R.
+    See :doc:`../api/user-guide/api-comparison/index` for more details.
+
 A differentially private analysis in OpenDP typically has the following steps:
 
 1. Identify the unit of privacy
@@ -28,29 +34,12 @@ then the unit of privacy corresponds to one row contribution.
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: unit-of-privacy
-            :end-before: /unit-of-privacy
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: unit-of-privacy
-            :end-before: /unit-of-privacy
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
@@ -76,29 +65,12 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: privacy-loss
-            :end-before: /privacy-loss
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: privacy-loss
-            :end-before: /privacy-loss
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
@@ -117,29 +89,12 @@ Frequently we'll specify bounds on data, based on prior knowledge of the domain.
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: public-info
-            :end-before: /public-info
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: public-info
-            :end-before: /public-info
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
             :start-after: public-info
             :end-before: /public-info
 
@@ -154,7 +109,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
@@ -165,29 +120,6 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         ``dp.Context.compositor`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``context``, in the form of measurements.
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: mediate
-            :end-before: /mediate
-
-        ``dp.c.make_adaptive_composition`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``queryable``, in the form of measurements.
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
-            :start-after: mediate
-            :end-before: /mediate
-
-        ``make_adaptive_composition`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``queryable``, in the form of measurements.
 
 Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
@@ -200,29 +132,12 @@ Here's a differentially private count:
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: count
-            :end-before: /count
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: count
-            :end-before: /count
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
             :start-after: count
             :end-before: /count
 
@@ -230,29 +145,12 @@ Here's a differentially private mean:
 
 .. tab-set::
 
-    .. tab-item:: Context API (Python)
+    .. tab-item:: Python
         :sync: context
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: mean
-            :end-before: /mean
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: mean
-            :end-before: /mean
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
             :start-after: mean
             :end-before: /mean
 

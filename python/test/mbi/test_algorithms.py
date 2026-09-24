@@ -4,6 +4,7 @@ from opendp.extras.mbi import (
     Count,
     AIM,
     MST,
+    Marginals,
     Sequential,
 )
 import opendp.prelude as dp
@@ -43,7 +44,7 @@ def test_algorithm_err_elements(algorithm):
             dp.zero_concentrated_divergence(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
-            marginals={},
+            marginals=Marginals(),
             model=model,
         )
 
@@ -57,7 +58,7 @@ def test_algorithm_err_elements(algorithm):
             dp.zero_concentrated_divergence(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
-            marginals={},
+            marginals=Marginals(),
             model=model,
         )
 
@@ -71,7 +72,7 @@ def test_algorithm_err_elements(algorithm):
             dp.renyi_divergence(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=0.5,
-            marginals={},
+            marginals=Marginals(),
             model=model,
         )
 
@@ -84,8 +85,11 @@ def test_algorithm_err_elements(algorithm):
             dp.max_divergence(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=1.0,
-            marginals={},
-            model=None,
+            marginals=Marginals(),
+            # Fixed can intentionally start without a model because its fixed
+            # workload provides the first model constraint. Pass an invalid
+            # non-None value so every algorithm still exercises validation.
+            model=object(),
         )
 
 
@@ -118,7 +122,7 @@ def test_aim_exhaustion():
         dp.max_divergence(),
         d_in=[dp.polars.Bound(per_group=1)],
         d_out=1.0,
-        marginals={},
+        marginals=Marginals(),
         model=dp.mbi.mirror_descent(mbi.Domain(("A",), (2,)), []),
     )
 
