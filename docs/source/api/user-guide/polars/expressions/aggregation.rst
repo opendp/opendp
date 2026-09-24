@@ -163,7 +163,7 @@ result in one more, or one less, unique value.
 
 
 These examples use ``signed=True`` to preserve negative noisy counts as
-``Int64`` values. With ``signed=False``, negative noisy counts may be
+``Int64`` values. With ``signed=False``, negative noisy counts will be
 returned as zero.
 
 This release tells us that the number of null values is relatively
@@ -172,15 +172,13 @@ small.
 Signed Counts
 -------------
 
-Pass ``signed=True`` to cast the exact count to a signed ``Int64`` before
-noise is added, so negative noisy outputs are preserved instead of being
-clamped to zero. This applies to all counting queries (``dp.len``, expression
+Pass ``signed=True`` to return counts as an ``Int64``, 
+which allows negative noisy outputs that are not clamped to zero. 
+This applies to all counting queries (``dp.len``, expression
 ``len``, ``count``, ``null_count`` and ``n_unique``).
 
 For now, omitting ``signed`` (or passing ``None``) retains unsigned output
 and emits a warning. The default will change to ``True`` in a future release.
-Pass ``signed=True`` to opt in now, or ``signed=False`` to explicitly retain
-unsigned output. Neither explicit boolean emits a warning.
 
 For example:
 
