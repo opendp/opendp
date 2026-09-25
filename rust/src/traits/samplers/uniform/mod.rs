@@ -40,20 +40,23 @@ pub fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<
 /// Sample an integer uniformly from `[0, upper)`
 ///
 /// # Proof Definition
-/// For any setting of `upper`,
+/// For any positive setting of `upper`,
 /// return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
 pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: usize>(
     upper: T,
 ) -> Fallible<T> {
-    let threshold = T::MAX_FINITE - T::MAX_FINITE % upper;
+    // reject the first `2^N % upper` samples. the remaining `2^N - (2^N % upper)`
+    // values evenly partition into congruence classes modulo `upper`.
+    let reject_below = (T::MAX_FINITE % upper + T::one()) % upper;
 
     Ok(loop {
         // algorithm is only valid when sample is non-negative, which is why T: Unsigned
         let sample = sample_from_uniform_bytes::<T, N>()?;
-        if sample < threshold {
-            // sample % upper is unbiased for any v < MAX_FINITE - MAX_FINITE % upper, because
-            // MAX_FINITE - MAX_FINITE % upper evenly folds into [0, upper), MAX_FINITE // upper times
+        if sample >= reject_below {
+            // sample % upper is unbiased after rejecting the first `2^N % upper` samples, because
+            // the remaining `2^N - (2^N % upper)` values evenly fold into [0, upper),
+            // `(2^N - (2^N % upper)) / upper` times
             break sample % upper;
         }
     })
