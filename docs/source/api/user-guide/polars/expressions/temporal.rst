@@ -88,14 +88,14 @@ the dates.
             ...         MONTH=pl.col.DATE.dt.month(),
             ...     )
             ...     .group_by("YEAR", "MONTH")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query.release().collect().sort("YEAR", "MONTH")
             shape: (36, 3)
             ┌──────┬───────┬────────┐
             │ YEAR ┆ MONTH ┆ len    │
             │ ---  ┆ ---   ┆ ---    │
-            │ i32  ┆ i8    ┆ u32    │
+            │ i32  ┆ i8    ┆ i64    │
             ╞══════╪═══════╪════════╡
             │ 2005 ┆ ... ┆ ... │
             │ 2005 ┆ ... ┆ ... │
