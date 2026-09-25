@@ -3,10 +3,7 @@ use dashu::float::{
     round::mode::{Down, Up},
 };
 
-use crate::{
-    error::Fallible,
-    traits::{InfCast, cast::ToFloatRounded},
-};
+use crate::{error::Fallible, traits::InfCast};
 
 #[allow(dead_code)]
 enum Diff {
@@ -68,47 +65,28 @@ fn test_f64_f32() {
 }
 
 #[test]
-fn test_subnormal_fail() -> Fallible<()> {
-    let min = FBig::<Up>::try_from(f32::from_bits(1))?;
-    let half: FBig<Up> = min / 2;
-    // this behavior is wrong. The conversion should be conducted with rounding up, but is not
-    // If this test fails, then check to see if the bug has been fixed in dashu:
-    // https://github.com/cmpute/dashu/issues/53
-
-    // When Dashu is fixed, you should be able to replace `to_fxx_rounded()` with `to_fxx().value()`.
-    // This PR introduced these changes:
-    // https://github.com/opendp/opendp/pull/1998
-    assert_eq!(half.to_f32().value(), 0.);
-
-    // valid subnormals still convert exactly, as expected
-    let min = FBig::<Up>::try_from(f32::from_bits(1))?;
-    assert_eq!(min.to_f32().value(), f32::from_bits(1));
-    Ok(())
-}
-
-#[test]
 fn test_to_native_subnormal() -> Fallible<()> {
     // a number smaller than subnormal should convert to the smallest subnormal when converting to float
 
     // f32 positive
     let min = FBig::<Up>::try_from(f32::from_bits(1))?;
     let half: FBig<Up> = min / 2;
-    assert_eq!(half.to_f32_rounded(), f32::from_bits(1));
+    assert_eq!(half.to_f32().value(), f32::from_bits(1));
 
     // f32 negative
     let min = -FBig::<Down>::try_from(f32::from_bits(1))?;
     let half: FBig<Down> = min / 2;
-    assert_eq!(half.to_f32_rounded(), -f32::from_bits(1));
+    assert_eq!(half.to_f32().value(), -f32::from_bits(1));
 
     // f64 positive
     let min = FBig::<Up>::try_from(f64::from_bits(1))?;
     let half: FBig<Up> = min / 2;
-    assert_eq!(half.to_f64_rounded(), f64::from_bits(1));
+    assert_eq!(half.to_f64().value(), f64::from_bits(1));
 
     // f64 negative
     let min = -FBig::<Down>::try_from(f64::from_bits(1))?;
     let half: FBig<Down> = min / 2;
-    assert_eq!(half.to_f64_rounded(), -f64::from_bits(1));
+    assert_eq!(half.to_f64().value(), -f64::from_bits(1));
 
     Ok(())
 }
@@ -116,8 +94,8 @@ fn test_to_native_subnormal() -> Fallible<()> {
 #[test]
 fn test_to_native_zero() -> Fallible<()> {
     // rounding should not take next up or down
-    assert_eq!(FBig::<Up>::try_from(0f32)?.to_f32_rounded(), 0f32);
-    assert_eq!(FBig::<Up>::try_from(0f64)?.to_f64_rounded(), 0f64);
+    assert_eq!(FBig::<Up>::try_from(0f32)?.to_f32().value(), 0f32);
+    assert_eq!(FBig::<Up>::try_from(0f64)?.to_f64().value(), 0f64);
     Ok(())
 }
 
@@ -128,22 +106,22 @@ fn test_to_native_inf() -> Fallible<()> {
     // f32 positive
     let max = FBig::<Down>::try_from(f32::MAX)?;
     let double: FBig<Down> = max * 2;
-    assert_eq!(double.to_f32_rounded(), f32::MAX);
+    assert_eq!(double.to_f32().value(), f32::MAX);
 
     // f32 negative
     let min = FBig::<Up>::try_from(f32::MIN)?;
     let double: FBig<Up> = min * 2;
-    assert_eq!(double.to_f32_rounded(), f32::MIN);
+    assert_eq!(double.to_f32().value(), f32::MIN);
 
     // f64 positive
     let max = FBig::<Down>::try_from(f64::MAX)?;
     let double: FBig<Down> = max * 2;
-    assert_eq!(double.to_f64_rounded(), f64::MAX);
+    assert_eq!(double.to_f64().value(), f64::MAX);
 
     // f64 negative
     let min = FBig::<Up>::try_from(f64::MIN)?;
     let double: FBig<Up> = min * 2;
-    assert_eq!(double.to_f64_rounded(), f64::MIN);
+    assert_eq!(double.to_f64().value(), f64::MIN);
 
     Ok(())
 }

@@ -39,7 +39,7 @@ num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 
-dashu = { version = "0.5.0", features = ["num-traits_v02"] }
+dashu = { version = "0.6.1", features = ["num-traits_v02"] }
 
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
