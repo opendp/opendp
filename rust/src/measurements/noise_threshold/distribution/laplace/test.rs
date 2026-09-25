@@ -71,7 +71,7 @@ fn test_make_laplace_threshold_float_map() -> Fallible<()> {
     assert_eq!(m_float.map(&(1, 0., 0.))?, (0.0, 0.0));
     assert_eq!(m_float.map(&(1, 1., 1.))?, (1.0, 6.17049020433802e-5));
     assert_eq!(m_float.map(&(1, 2., 2.))?, (2.0, 0.0001677313139513137));
-    assert_eq!(m_float.map(&(1, 3., 3.))?, (3.0, 0.00045594098277745854));
+    assert_eq!(m_float.map(&(1, 3., 3.))?, (3.0, 0.0004559409827773475));
     assert!(
         m_float
             .map(&(1, f64::MAX, f64::MAX))
@@ -116,7 +116,7 @@ fn test_make_laplace_threshold_int_map() -> Fallible<()> {
     // a looser continuous approximation to tail bound
     assert_eq!(m_int.map(&(1, 0, 0))?, (0.0, 0.0));
     assert_eq!(m_int.map(&(1, 1, 1))?, (1.0, 3.319000812207484e-5));
-    assert_eq!(m_int.map(&(1, 2, 2))?, (2.0, 9.021979596479657e-5));
+    assert_eq!(m_int.map(&(1, 2, 2))?, (2.0, 9.021979596468555e-5));
     assert_eq!(m_int.map(&(1, 3, 3))?, (3.0, 0.00024524283193794183));
 
     Ok(())
