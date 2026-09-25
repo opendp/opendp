@@ -280,6 +280,48 @@ def test_filter(measure, signed):
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expected)
 
 
+@pytest.mark.parametrize("signed", [False, True], ids=["unsigned", "signed"])
+def test_signed_counting_queries(signed):
+    """Zero-noise dtype and value check for all five counting query APIs."""
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    dp.enable_features("contrib")
+
+    lf = pl.LazyFrame({"A": [1, 2, None, 2]})
+    lf_domain = dp.lazyframe_domain(
+        [dp.series_domain("A", dp.option_domain(dp.atom_domain(T="i64")))]
+    )
+    plan = lf.select(
+        [
+            dp.len(scale=0.0, signed=signed).alias("frame_len"),
+            pl.col.A.dp.len(scale=0.0, signed=signed).alias("expr_len"),
+            pl.col.A.dp.count(scale=0.0, signed=signed).alias("count"),
+            pl.col.A.dp.null_count(scale=0.0, signed=signed).alias("null_count"),
+            pl.col.A.dp.n_unique(scale=0.0, signed=signed).alias("n_unique"),
+        ]
+    )
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        plan,
+        0.0,
+    )
+    result = measurement(lf).collect()
+
+    dtype = pl.Int64 if signed else pl.UInt32
+    expected = pl.DataFrame(
+        {
+            "frame_len": pl.Series([4], dtype=dtype),
+            "expr_len": pl.Series([4], dtype=dtype),
+            "count": pl.Series([3], dtype=dtype),
+            "null_count": pl.Series([1], dtype=dtype),
+            "n_unique": pl.Series([3], dtype=dtype),
+        }
+    )
+    pl_testing.assert_frame_equal(result, expected)
+
+
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
@@ -1357,8 +1399,8 @@ def test_zero_budget():
     context.query().select(pl.len()).release().collect()
 
 
-def test_unbiased_groupby_len():
-    """Tests that dp.len() can return counts centered on zero."""
+def test_signed_groupby_len_preserves_negative_noise():
+    """Tests that dp.len(signed=True) preserves negative noisy counts."""
     pl = pytest.importorskip("polars")
     dp.enable_features("contrib")
 
