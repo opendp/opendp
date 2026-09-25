@@ -209,7 +209,7 @@ print.runtime_type <- function(x, ...) print(rt_to_string(x), ...)
 
 # nolint start: cyclocomp_linter
 rt_assert_is_similar <- function(expected, inferred) {
-  ERROR_URL_298 <- "https://github.com/opendp/opendp/discussions/298"
+  INFERRED_TYPE_ERROR_URL <- "https://docs.opendp.org/en/stable/getting-started/trouble-shooting.html#inferred-type-is-xxx-expected-yyy"
 
   if (!inherits(expected, "runtime_type")) {
     expected <- rt_parse(expected)
@@ -243,12 +243,12 @@ rt_assert_is_similar <- function(expected, inferred) {
 
     if (inferred$origin %in% names(ATOM_EQUIVALENCE_CLASSES)) {
       if (!(expected$origin %in% ATOM_EQUIVALENCE_CLASSES[[inferred$origin]])) {
-        stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
+        stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", INFERRED_TYPE_ERROR_URL), call. = FALSE)
       }
     } else if (expected$origin == inferred$origin) {
       return()
     } else {
-      stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
+      stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", INFERRED_TYPE_ERROR_URL), call. = FALSE)
     }
   } else if (!is.null(expected$args) && !is.null(inferred$args)) {
     if (expected$origin == "Vec" && inferred$origin == "Tuple") {
@@ -264,10 +264,10 @@ rt_assert_is_similar <- function(expected, inferred) {
       }
     }
     if (expected$origin != inferred$origin) {
-      stop(paste0("inferred type is ", inferred$origin, ", expected ", expected$origin, ". See ", ERROR_URL_298), call. = FALSE)
+      stop(paste0("inferred type is ", inferred$origin, ", expected ", expected$origin, ". See ", INFERRED_TYPE_ERROR_URL), call. = FALSE)
     }
     if (length(expected$args) != length(inferred$args)) {
-      stop(paste0("inferred type has ", length(inferred$args), " arg(s), expected ", length(expected$args), " arg(s). See ", ERROR_URL_298), call. = FALSE)
+      stop(paste0("inferred type has ", length(inferred$args), " arg(s), expected ", length(expected$args), " arg(s). See ", INFERRED_TYPE_ERROR_URL), call. = FALSE)
     }
 
     for (pair in mapply(list, expected$args, inferred$args, SIMPLIFY = FALSE)) {
@@ -275,7 +275,7 @@ rt_assert_is_similar <- function(expected, inferred) {
     }
   } else {
     # inferred type differs in structure
-    stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
+    stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", INFERRED_TYPE_ERROR_URL), call. = FALSE)
   }
 }
 # nolint end
