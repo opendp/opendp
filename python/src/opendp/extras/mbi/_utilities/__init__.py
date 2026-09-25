@@ -182,6 +182,16 @@ def get_std(measure: Measure, scale: float) -> float:
     raise ValueError(message)
 
 
+def get_scale(measure: Measure, d_out: float, sensitivity: float) -> float:
+    """Returns the noise scale that spends ``d_out`` on a query of ``sensitivity``."""
+    if measure == max_divergence():
+        return sensitivity / d_out
+    if measure == zero_concentrated_divergence():
+        return sensitivity / sqrt(2 * d_out)
+    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    raise ValueError(message)
+
+
 def get_associated_metric(measure: Measure) -> Metric:
     if measure == max_divergence():
         return l1_distance(T="u32")

@@ -7,6 +7,7 @@ from opendp.extras.mbi._utilities import (
     Marginals,
     SelectPrefixQuery,
     get_cardinalities,
+    get_scale,
     get_std,
     identity_query_precision,
     make_noise_marginal,
@@ -51,6 +52,15 @@ def test_get_std():
     message = "output_measure (RenyiDivergence) must be"
     with pytest.raises(ValueError, match=re.escape(message)):
         get_std(dp.renyi_divergence(), 1.0)
+
+
+def test_get_scale():
+    assert get_scale(dp.max_divergence(), 4.0, 2.0) == 0.5
+    assert get_scale(dp.zero_concentrated_divergence(), 8.0, 4.0) == 1.0
+
+    message = "output_measure (RenyiDivergence) must be"
+    with pytest.raises(ValueError, match=re.escape(message)):
+        get_scale(dp.renyi_divergence(), 1.0, 1.0)
 
 
 @pytest.mark.parametrize(
