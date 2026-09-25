@@ -310,7 +310,7 @@ def test_signed_counting_queries(signed_kwargs):
         assert len(caught) == 5
         for warning in caught:
             assert warning.category is FutureWarning
-            assert "will change to signed=True" in str(warning.message)
+            assert "default will be changing to signed=True" in str(warning.message)
             assert warning.filename == __file__
     else:
         assert not caught
