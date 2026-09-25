@@ -1231,6 +1231,8 @@ impl Clone for AnyObject {
                     } else {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
                     }
+                } else if *name == "Function" {
+                    dispatch!(clone_plain, [(self.type_, [Function<f64, f64>])], (self))
                 } else {
                     unimplemented!("unrecognized generic {:?}", name)
                 }
