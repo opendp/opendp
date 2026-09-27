@@ -1,0 +1,10 @@
+opendp.extrinsics package
+=========================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extrinsics
+   :members:
+   :undoc-members:
+   :show-inheritance:

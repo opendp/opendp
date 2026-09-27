@@ -1,0 +1,22 @@
+opendp.extras package
+=====================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 3
+
+   opendp.extras.examples
+   opendp.extras.mbi
+   opendp.extras.numpy
+   opendp.extras.polars
+   opendp.extras.sklearn
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras
+   :members:
+   :undoc-members:
+   :show-inheritance:

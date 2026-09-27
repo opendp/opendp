@@ -1,0 +1,703 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# First Look at DP\n",
+    "\n",
+    "Differential privacy (DP) is a technique used to release information about a population\n",
+    "in a way that limits the exposure of any one individual's personal information.\n",
+    "\n",
+    "In this notebook, we'll conduct a differentially-private analysis on a teacher survey (a tabular dataset).\n",
+    "\n",
+    "The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Why Differential Privacy?\n",
+    "\n",
+    "Protecting the privacy of individuals while sharing information is nontrivial.\n",
+    "Lets say I naively \"anonymized\" the teacher survey by removing the person's name."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "df = pd.read_csv(\"../data/teacher_survey/teacher_survey.csv\")\n",
+    "df.columns = ['name',\n",
+    "              'sex',\n",
+    "              'age',\n",
+    "              'maritalStatus',\n",
+    "              'hasChildren',\n",
+    "              'highestEducationLevel',\n",
+    "              'sourceOfStress',\n",
+    "              'smoker',\n",
+    "              'optimism',\n",
+    "              'lifeSatisfaction',\n",
+    "              'selfEsteem']\n",
+    "\n",
+    "# naively \"anonymize\" by removing the name column\n",
+    "del df[\"name\"]"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "It would still be very easy to re-identify individuals via quasi-identifiers.\n",
+    "Say I was curious about my non-binary co-worker Chris, and I knew their age (27)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>sex</th>\n",
+       "      <th>age</th>\n",
+       "      <th>maritalStatus</th>\n",
+       "      <th>smoker</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>2251</th>\n",
+       "      <td>3</td>\n",
+       "      <td>27</td>\n",
+       "      <td>3</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      sex  age  maritalStatus smoker\n",
+       "2251    3   27              3      1"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "chris = df.loc[(df['sex'] == 3) & (df['age'] == 27)]\n",
+    "chris[[\"sex\", \"age\", \"maritalStatus\", \"smoker\"]] # print a few columns of interest"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In a dataset of 7,000 records, these two identifiers alone uniquely identified my coworker, allowing me to see their responses— they are unmarried, but living with their partner. \n",
+    "In addition I can also see that they are a smoker.\n",
+    "\n",
+    "In other situations there are more nuanced techniques that can be used to determine if an individual exists in a dataset (called a membership attack)\n",
+    "or reconstruct parts of, or even the entire dataset, from summary statistics.\n",
+    "\n",
+    "Giving strong formal privacy guarantees requires the rigorous mathematical grounding that differential privacy provides.\n",
+    "\n",
+    "## Steps of a DP Analysis\n",
+    "\n",
+    "A differentially private analysis is usually conducted in the following steps:\n",
+    "\n",
+    "1. Identify the unit of privacy\n",
+    "2. Consider privacy risk \n",
+    "3. Collect public information\n",
+    "4. Construct a measurement\n",
+    "5. Make a DP release\n",
+    "\n",
+    "It is common to return to prior steps to make further releases."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "### 1. Identify the Unit of Privacy\n",
+    "We first need to isolate exactly what we're protecting.\n",
+    "\n",
+    "In the teacher survey, the unit of privacy is the addition or removal of one teacher. \n",
+    "Since each teacher contributes at most one row to the dataset, \n",
+    "the unit of privacy corresponds to defining the maximum number of row contributions to be one."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "max_contributions = 1"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We will use this bound to tune our methods such that data releases are quantifiably indistinguishable \n",
+    "upon the addition or removal of any one teacher from any input dataset.\n",
+    "\n",
+    "Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy.\n",
+    "In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.\n",
+    "\n",
+    "The unit of privacy may also be more general or more precise than a single individual.\n",
+    "In the data analysis conducted in this notebook, we'll refer to an individual and the unit of privacy interchangeably, \n",
+    "because in this example we've defined the unit of privacy to be one individual. "
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2. Consider Privacy Risk\n",
+    "The next step is to consider the risk of disclosing information about your sensitive dataset.\n",
+    "\n",
+    "If the dataset is available to the public, then differentially private methods are not necessary.\n",
+    "Whereas, if the dataset could place individuals at severe risk of harm, then you should reconsider making any data release at all.\n",
+    "Differentially private methods are used to make releases on data with a risk profile somewhere between these two extremes.\n",
+    "\n",
+    "The level of privacy afforded to individuals in a dataset under analysis is quantified by _privacy parameters_.\n",
+    "One such privacy parameter is epsilon ($\\epsilon$), a non-negative number, where larger values afford less privacy.\n",
+    "$\\epsilon$ can be viewed as a proxy to quantify the worst-case risk to any individual.\n",
+    "It is customary to refer to a data release with such bounded risk as $\\epsilon$-DP.\n",
+    "\n",
+    "A common rule-of-thumb is to limit your overall $\\epsilon$ spend to 1.0.\n",
+    "However, this limit will vary depending on the risk profile associated with the disclosure of information.\n",
+    "In many cases, the privacy parameters are not finalized until the data owner is preparing to make a disclosure."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "### 3. Collect Public Information\n",
+    "The next step is to identify public information about the dataset.\n",
+    "\n",
+    "* information that is invariant across all potential input datasets (may include column names and per-column categories)\n",
+    "* information that is publicly available from other sources\n",
+    "* information from other DP releases\n",
+    "\n",
+    "For convenience, I've collected metadata from the teacher survey dataset codebook [into a JSON file](../data/teacher_survey/public_metadata.json)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['name',\n",
+       " 'sex',\n",
+       " 'age',\n",
+       " 'maritalStatus',\n",
+       " 'hasChildren',\n",
+       " 'highestEducationLevel',\n",
+       " 'sourceOfStress',\n",
+       " 'smoker',\n",
+       " 'optimism',\n",
+       " 'lifeSatisfaction',\n",
+       " 'selfEsteem']"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import json\n",
+    "metadata = json.load(open(\"../data/teacher_survey/public_metadata.json\"))\n",
+    "metadata[\"column_names\"]"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this case (and in most cases), we consider column names public/invariant to the data because they weren't picked in response to the data, they were \"fixed\" before collecting the data.\n",
+    "\n",
+    "A data invariant is information about your dataset that you are explicitly choosing not to protect,\n",
+    "under the basis that it does not contain sensitive information. \n",
+    "Be careful because, if an invariant does, indeed, contain sensitive information,\n",
+    "then you expose individuals in the dataset to unbounded privacy loss.\n",
+    "\n",
+    "This public metadata will significantly improve the utility of our results."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 4. Construct a Measurement\n",
+    "\n",
+    "A measurement is a randomized function that takes a dataset and returns a differentially private release.\n",
+    "The OpenDP Library provides building-blocks that can be functionally composed (called \"chaining\")."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Building blocks that do not yet privatize the output are called \"transformations\" instead of \"measurements\".\n",
+    "Transformations are how we compute statistical summaries in a way that can be privatized.\n",
+    "They roughly correspond to the kind of operations you'd expect of pandas dataframes or NumPy arrays. \n",
+    "\n",
+    "The following transformation loads the age column from a CSV:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from opendp.mod import enable_features\n",
+    "enable_features(\"contrib\")\n",
+    "\n",
+    "from opendp.transformations import make_split_dataframe, make_select_column\n",
+    "# the `>>` operator denotes the functional composition \n",
+    "# takes a csv string input and emits a vector of strings\n",
+    "age_trans = (\n",
+    "    make_split_dataframe(separator=\",\", col_names=metadata[\"column_names\"]) >>\n",
+    "    make_select_column(\"age\", str)\n",
+    ")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The next cell will chain this `age_trans` transformation with a count transformation, and then privatize the count with a measurement.\n",
+    "\n",
+    "In this case we add noise from a discretized version of the Laplace distribution. \n",
+    "All differentially private measurements involve sampling from a carefully-calibrated probability distribution that is concentrated around the quantity of interest."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from opendp.transformations import then_count\n",
+    "from opendp.measurements import then_laplace\n",
+    "\n",
+    "count_meas = age_trans >> then_count() >> then_laplace(scale=2.)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Each invocation of a measurement incurs some privacy loss, and we can use the privacy map to tell us how much.\n",
+    "Recalling the \"Unit of Privacy\" section, we know that each teacher contributed at most one row to the survey.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.5"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "count_meas.map(d_in=max_contributions)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The privacy map tells us that passing data through this transformation will incur an $\\epsilon = 0.5$ privacy spend to any individual in a dataset passed in.\n",
+    "The privacy spend is based on how noisy this distribution is, and how sensitive the transformation is to changes to the input data.\n",
+    "\n",
+    "In this case, the sensitivity of the count is simple: if a teacher contributes at most one row, then the additional or removal of a teacher can change the count by at most one.\n",
+    "The mathematics for this distribution work out such that the epsilon expenditure (0.5) is the sensitivity (1) divided by the noise scale (2)."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 5. Make a DP Release\n",
+    "\n",
+    "At this point, we still haven't touched the sensitive dataset we're analyzing.\n",
+    "This is the first and only point where we access the sensitive dataset in this process.\n",
+    "In order to obtain accurate privacy guarantees, the OpenDP Library should mediate all access to the sensitive dataset.\n",
+    "\n",
+    "We now invoke the measurement on our dataset, and consume $\\epsilon = 0.5$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "7000"
+      ]
+     },
+     "execution_count": 22,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "csv_data = open(\"../data/teacher_survey/teacher_survey.csv\").read()\n",
+    "dp_count = count_meas(csv_data)\n",
+    "dp_count"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The result is a random draw from the discrete Laplace distribution, centered at the true count of the number of records in the underlying dataset.\n",
+    "\n",
+    "We can also give a $(1 - \\alpha)100$% confidence interval for this release:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "6.42960493986766"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from opendp.accuracy import discrete_laplacian_scale_to_accuracy\n",
+    "discrete_laplacian_scale_to_accuracy(scale=2., alpha=0.05)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When the discrete Laplace distribution's scale is 2, the DP estimate differs from the exact estimate by no more than 6.43, at a 95% confidence level.\n",
+    "\n",
+    "This concludes the process of making a DP release.\n",
+    "\n",
+    "Lets repeat this process more briefly for estimating the mean age.\n",
+    "This time we benefit from having a DP count estimate in our public information:\n",
+    "It is used to help calibrate the privacy guarantees for the mean."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from opendp.transformations import then_cast_default, then_clamp, then_resize, then_mean\n",
+    "from opendp.measurements import then_base_laplace\n",
+    "from opendp.domains import atom_domain\n",
+    "age_bounds = (18., 70.) # a best-guess based on public information\n",
+    "def make_mean_age(scale):\n",
+    "    return (\n",
+    "        age_trans >>\n",
+    "        then_cast_default(float) >>\n",
+    "        then_clamp(bounds=age_bounds) >>\n",
+    "        then_resize(size=dp_count, constant=42.) >>\n",
+    "        then_mean() >>\n",
+    "        then_base_laplace(scale=scale)\n",
+    "    )"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This measurement involves more preprocessing than the count did (clamping, and dataset resize).\n",
+    "The purpose of this preprocessing is to bound the sensitivity of the mean: \n",
+    "the mean should only change by a limited amount when any teacher is added or removed from the dataset. \n",
+    "\n",
+    "`make_mean_age` allows the scale parameter to vary.\n",
+    "Before we choose a scale parameter, lets take a closer look at the privacy vs. utility tradeoff."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Privacy vs. Utility\n",
+    "\n",
+    "There is a tradeoff between privacy and utility in all differentially private methods.\n",
+    "Greater privacy corresponds to lower utility.\n",
+    "\n",
+    "It is a good practice to explore this tradeoff before making a differentially private release.\n",
+    "Had we done this before releasing the DP count, we may have decided to use a larger noise scale so as to preserve more of the $\\epsilon$ budget for later use.\n",
+    "\n",
+    "Generally speaking, you never want to make a release with a greater level of accuracy than you need, because you can never \"un-spend\" an epsilon.\n",
+    "If you later decide you need to improve the accuracy, you can usually do so by taking the weighted average of multiple DP estimates of the same quantity. \n",
+    "\n",
+    "The following plot shows how this privacy/utility tradeoff looks for the mean:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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",
+      "text/plain": [
+       "<Figure size 640x480 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "from opendp.accuracy import laplacian_scale_to_accuracy\n",
+    "\n",
+    "scales = np.linspace(0.01, 1., num=100)\n",
+    "epsilons = [make_mean_age(s).map(max_contributions) for s in scales]\n",
+    "accuracies = [laplacian_scale_to_accuracy(scale=s, alpha=0.05) for s in scales]\n",
+    "plt.plot(epsilons, accuracies)\n",
+    "plt.title(\"Epsilon vs. Accuracy at 95% confidence\")\n",
+    "plt.xlabel(\"epsilon\")\n",
+    "plt.ylabel(\"accuracy\");"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When the privacy guarantees become looser, the confidence intervals for your estimate become tighter.\n",
+    "Your needs will determine the ideal tradeoff between privacy and utility.\n",
+    "The OpenDP Library provides methods that make this tradeoff as tight as possible.\n",
+    "\n",
+    "Lets commit to a noise scale of 0.05."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "mean_age_meas = make_mean_age(scale=0.05)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.1485714285796542"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# what would the epsilon expenditure be, if the scale were 0.05?\n",
+    "mean_age_meas.map(d_in=max_contributions)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.14978661367769955"
+      ]
+     },
+     "execution_count": 28,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# what would the accuracy be, if the scale were 0.05?\n",
+    "laplacian_scale_to_accuracy(scale=0.05, alpha=0.05)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When the Laplace distribution's scale is 0.05, the DP estimate will differ from the exact estimate by no more than 0.15, at a 95% confidence level.\n",
+    "This accuracy estimate doesn't include potential bias incurred by the preprocessing: in this case, the clamping (and resize) may bias the the exact estimate away from the true mean in a way that isn't characterized by this accuracy estimate."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Composition\n",
+    "\n",
+    "When you make multiple releases on the same dataset, the epsilons for each release \"add up\".\n",
+    "\n",
+    "The total epsilon spend is the sum of the epsilon consumption of each measurement we make on the sensitive dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.6485714285796542"
+      ]
+     },
+     "execution_count": 29,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "count_meas.map(max_contributions) + mean_age_meas.map(max_contributions)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "With this release, the overall privacy expenditure will become $\\epsilon = 0.65$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "37.35189240747976"
+      ]
+     },
+     "execution_count": 30,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "mean_age_meas(csv_data)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The mean age of individuals in the sensitive dataset is 37.35."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "base",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.3"
+  },
+  "orig_nbformat": 4
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
