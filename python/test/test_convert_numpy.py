@@ -1,3 +1,9 @@
+import pytest
+
+import opendp.prelude as dp
+
+np = pytest.importorskip("numpy")
+
 @pytest.mark.parametrize(
     "value,type_name,dtype",
     [
@@ -9,22 +15,17 @@
     ],
 )
 def test_numpy_data(value, type_name, dtype):
-    np = pytest.importorskip("numpy")
     array = np.array(value, dtype=dtype) if dtype is not None else np.array(value)
     assert c_to_py(py_to_c(array, AnyObjectPtr, type_name=type_name)) == value
 
 
 def test_as_array():
-    np = pytest.importorskip("numpy")
-    import opendp.prelude as dp
-
     result = dp.as_array()(np.array([1, 2], dtype=np.int32))
     assert isinstance(result, np.ndarray)
     assert np.array_equal(result, np.array([1, 2], dtype=np.int32))
 
 
 def test_numpy_string_vector_roundtrip():
-    np = pytest.importorskip("numpy")
     # `Vec<String>` still goes through the standard vector path, not the atomic ndarray fast path.
     assert c_to_py(
         py_to_c(np.array(["A", "B"]), AnyObjectPtr, type_name="Vec<String>")
@@ -32,7 +33,6 @@ def test_numpy_string_vector_roundtrip():
 
 
 def test_numpy_ndarray_roundtrip():
-    np = pytest.importorskip("numpy")
     type_name = RuntimeType("NDArray", ["i32"])
 
     raw = _py_to_slice(np.array([1, 2, 3], dtype=np.int32), type_name)
@@ -43,7 +43,6 @@ def test_numpy_ndarray_roundtrip():
 
 
 def test_numpy_vec_input_uses_ndarray_loader():
-    np = pytest.importorskip("numpy")
     type_name = RuntimeType("Vec", ["i32"])
 
     raw = _vector_to_slice(np.array([1, 2, 3], dtype=np.int32), type_name)
@@ -53,7 +52,6 @@ def test_numpy_vec_input_uses_ndarray_loader():
 
 
 def test_numpy_ndarray_validation():
-    np = pytest.importorskip("numpy")
     type_name = RuntimeType("NDArray", ["i32"])
 
     with pytest.raises(ValueError, match="unrecognized numpy dtype"):
@@ -70,9 +68,6 @@ def test_numpy_ndarray_validation():
 
 
 def test_numpy_trans():
-    np = pytest.importorskip("numpy")
-    import opendp.prelude as dp
-
     assert (
         dp.t.make_sum(
             dp.vector_domain(dp.atom_domain(bounds=(0, 10))),
@@ -83,9 +78,6 @@ def test_numpy_trans():
 
 
 def test_numpy_vector_output_from_rust_transformation():
-    np = pytest.importorskip("numpy")
-    import opendp.prelude as dp
-
     trans = dp.t.make_clamp(
         dp.vector_domain(dp.atom_domain(T=int)),
         dp.symmetric_distance(),
@@ -99,8 +91,6 @@ def test_numpy_vector_output_from_rust_transformation():
 
 
 def test_bitvec():
-    np = pytest.importorskip("numpy")
-
     for i in range(1, 20):
         data = np.packbits([1] * i)
         obj = py_to_c(data.tobytes(), AnyObjectPtr, "BitVector")

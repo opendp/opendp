@@ -2,10 +2,10 @@ import opendp.prelude as dp
 import pytest
 import re
 
+pl = pytest.importorskip("polars")
+
 
 def test_lazyframe_bounded_dp_truncation():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(changes=1, identifier="id"),
@@ -25,8 +25,6 @@ def test_lazyframe_bounded_dp_truncation():
 
 
 def test_unnecessary_lazyframe_truncation():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1),
@@ -42,8 +40,6 @@ def test_unnecessary_lazyframe_truncation():
 
 
 def test_frame_distance():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": range(300)}),
         privacy_unit=dp.unit_of(
@@ -68,8 +64,6 @@ def test_frame_distance():
 
 @pytest.mark.parametrize("keep", ["first", "last", "sample"])
 def test_truncate_per_group(keep):
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1, identifier="id"),
@@ -108,8 +102,6 @@ def test_truncate_per_group(keep):
 
 
 def test_truncate_per_group_sort_by():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame(
             {
@@ -132,8 +124,6 @@ def test_truncate_per_group_sort_by():
 
 
 def test_truncate_error_messages():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame(
             {
@@ -171,8 +161,6 @@ def test_truncate_error_messages():
 
 @pytest.mark.parametrize("keep", ["first", "last"])
 def test_truncate_num_groups(keep):
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1, identifier="id"),
@@ -191,7 +179,6 @@ def test_truncate_num_groups(keep):
 
 
 def test_truncation_contingency():
-    pl = pytest.importorskip("polars")
     synth_context = dp.Context.compositor(
         data=pl.scan_csv(
             dp.examples.get_france_lfs_path(), encoding="utf8-lossy"
