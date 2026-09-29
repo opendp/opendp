@@ -1,6 +1,8 @@
 import opendp.prelude as dp
 import pytest
 
+np = pytest.importorskip("numpy")
+
 
 def test_private_selection_threshold_composition():
     bounds = 0.0, 100.0
@@ -28,7 +30,6 @@ def test_private_selection_threshold_composition():
         m_scored_candidate, threshold=threshold, stop_probability=0
     )
 
-    np = pytest.importorskip("numpy")
     data = np.random.default_rng(seed=42).normal(10, 5, 20)
 
     score, candidate = m_private_selection(data)
@@ -39,7 +40,6 @@ def test_private_selection_threshold_composition():
 
 
 def test_private_selection_threshold_plugin():
-    np = pytest.importorskip("numpy")
     threshold = 23
 
     space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
@@ -65,7 +65,6 @@ def test_private_selection_threshold_plugin():
 
 
 def test_private_selection_no_answer():
-    np = pytest.importorskip("numpy")
     threshold = 10_000
 
     space = dp.atom_domain(T=float), dp.absolute_distance(T=float)

@@ -3,10 +3,12 @@ import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from ..helpers import optional_dependency
 
+from opendp.extras.sklearn.decomposition import then_private_pca
+
+np = import_optional_dependency("numpy")
+
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
-    np = import_optional_dependency("numpy")
-
     cov = cov or sample_covariance(num_columns)
     microdata = np.random.multivariate_normal(
         np.zeros(cov.shape[0]), cov, size=num_rows or 100_000
@@ -16,57 +18,47 @@ def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
 
 
 def sample_covariance(num_features):
-    np = import_optional_dependency("numpy")
-
     A = np.random.uniform(0, num_features, size=(num_features, num_features))
     return A.T @ A
 
 
-def test_pca():
-    from opendp.extras.sklearn.decomposition import then_private_pca
-
+def test_pca():    
     num_columns = 4
     num_rows = 10_000
-    with optional_dependency("numpy"):
-        space = (
-            dp.numpy.array2_domain(
-                norm=1,
-                p=2,
-                origin=0,
-                num_columns=num_columns,
-                size=num_rows,
-                nan=False,
-                T=float,
-            ),
-            dp.symmetric_distance(),
-        )
-    with optional_dependency("scipy.linalg"):
-        m_pca = space >> then_private_pca(unit_epsilon=1.0)
+    space = (
+        dp.numpy.array2_domain(
+            norm=1,
+            p=2,
+            origin=0,
+            num_columns=num_columns,
+            size=num_rows,
+            nan=False,
+            T=float,
+        ),
+        dp.symmetric_distance(),
+    )
+    m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
-    with optional_dependency("randomgen"):
-        print(
-            "m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))",
-            m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)),
-        )
+    print(
+        "m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))",
+        m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)),
+    )
     assert m_pca.check(2, 1.0)
 
 
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
-    with optional_dependency("numpy"):
-        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    with optional_dependency("sklearn"):
-        model = dp.sklearn.decomposition.PCA(
-            epsilon=1.0,
-            row_norm=1.0,
-            n_samples=num_rows,
-            n_features=4,
-        )
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=1.0,
+        row_norm=1.0,
+        n_samples=num_rows,
+        n_features=4,
+    )
 
-    with optional_dependency("randomgen"):
-        model.fit(data)
+    model.fit(data)
     assert (
         str(model)
         == "PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)"
@@ -98,7 +90,6 @@ def test_pca_skl():
 
 
 def flip_row_signs(a, b):
-    np = pytest.importorskip("numpy")
     signs = np.equal(np.sign(a[:, 0]), np.sign(b[:, 0])) * 2 - 1
     return a, b * signs[:, None]
 
@@ -106,16 +97,14 @@ def flip_row_signs(a, b):
 def flaky_assert_pca_compare_sklearn():
     num_columns = 4
     num_rows = 1_000_000
-    with optional_dependency("numpy"):
-        data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
 
-    with optional_dependency("sklearn"):
-        model_odp = dp.sklearn.decomposition.PCA(
-            epsilon=1_000_000.0,
-            row_norm=64.0,
-            n_samples=num_rows,
-            n_features=4,
-        )
+    model_odp = dp.sklearn.decomposition.PCA(
+        epsilon=1_000_000.0,
+        row_norm=64.0,
+        n_samples=num_rows,
+        n_features=4,
+    )
     model_odp.fit(data)
 
     sklearn = pytest.importorskip("sklearn")
@@ -128,7 +117,6 @@ def flaky_assert_pca_compare_sklearn():
     print("sk-learn object", model_skl)
     print("sk-learn singular values", model_skl.singular_values_)
 
-    np = pytest.importorskip("numpy")
     assert np.allclose(
         model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
     )
