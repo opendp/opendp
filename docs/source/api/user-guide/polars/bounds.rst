@@ -151,7 +151,7 @@ each quarter, you can take this into account in your annalysis.
             ...     )  # each identifier may affect up to 5 groups
             ...     .group_by(quarterly)
             ...     .agg(
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )
