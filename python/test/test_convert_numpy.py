@@ -1,8 +1,22 @@
 import pytest
 
 import opendp.prelude as dp
+from opendp._convert import (
+    py_to_c,
+    c_to_py,
+    _py_to_slice,
+    _slice_to_numpy,
+    _vector_to_slice,
+    _slice_to_vector,
+    _numpy_dtype_for_rust_type,
+    _numpy_to_slice,
+)
+from opendp.typing import RuntimeType
+
+from .test_convert import AnyObjectPtr
 
 np = pytest.importorskip("numpy")
+
 
 @pytest.mark.parametrize(
     "value,type_name,dtype",

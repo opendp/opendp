@@ -1,10 +1,11 @@
 import pytest
 
-from opendp._convert import (
-    py_to_c,
-    c_to_py)
+from opendp._convert import py_to_c, c_to_py
+
+from .test_convert import AnyObjectPtr
 
 pl = pytest.importorskip("polars")
+
 
 def test_polars_dataframe():
     val_in = pl.DataFrame(

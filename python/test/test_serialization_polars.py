@@ -1,7 +1,11 @@
-
 import pytest
+import opendp.prelude as dp
+from opendp.extras.polars import Margin
 
 pl = pytest.importorskip("polars")
+
+
+atom = dp.atom_domain(bounds=(0.0, 10.0), nan=False)
 
 
 def test_deserialize_polars_plan_error():
@@ -52,6 +56,7 @@ def test_serializable_domain(dp_domain, in_value, out_value):
     assert deserialized.member(in_value)
     assert not deserialized.member(out_value)
 
+
 @pytest.mark.parametrize(
     "dp_measurement,value,output_type",
     [
@@ -61,6 +66,7 @@ def test_serializable_domain(dp_domain, in_value, out_value):
 )
 def test_serializable_measurement(dp_measurement, value, output_type):
     assert isinstance(dp_measurement(value), output_type)
+
 
 lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 lf_domain = dp.lazyframe_domain(
@@ -78,6 +84,7 @@ context = dp.Context.compositor(
     split_evenly_over=10,
 )
 query = context.query().select(dp.len(signed=True))
+
 
 @pytest.mark.parametrize(
     "dp_obj",
@@ -104,6 +111,7 @@ def test_serializable_polars(dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     assert serialized == dp.serialize(deserialized)
+
 
 @pytest.mark.parametrize(
     "dp_obj",

@@ -17,6 +17,7 @@ from opendp._convert import (
     _vector_to_slice,
 )
 from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
+from opendp.extras.polars import Margin, Bound
 
 
 @pytest.mark.parametrize(
@@ -105,8 +106,6 @@ def test_hashmap():
     assert c_to_py(any) == data
 
 
-
-
 def test_overflow():
     with pytest.raises(ValueError):
         py_to_c(-1, AnyObjectPtr, u8)
@@ -116,8 +115,6 @@ def test_overflow():
 
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
-
-
 
 
 def test_check_and_cast_scalar():
@@ -168,6 +165,7 @@ def test_check_and_cast_scalar():
 def test_extras_object(val_in, type_name):
     from opendp._convert import py_to_c, c_to_py
     from opendp._lib import AnyObjectPtr
+
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
     assert val_out == val_in
