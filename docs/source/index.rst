@@ -45,7 +45,7 @@ Some of the applications of OpenDP in healthcare, government, and tech include:
 * Researchers at `Microsoft <https://microsoft.com>`_ used OpenDP to construct a `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
 * Researchers at `Harvard Business School <https://www.hbs.edu/>`_ and `Microsoft <https://microsoft.com>`_ used OpenDP to create `a detailed atlas of internet usage in the US <https://www.nber.org/papers/w32932>`_ and found substantial disparities between urban and rural areas, and even within cities.
 * `LiveRamp <https://liveramp.com>`_ used OpenDP to `support COVID research <https://www.linkedin.com/posts/keng-he_activity-6789741749498605568-Y3hW/>`_.
-* Researchers with the `Christchurch Call Initiative on Algorithmic Outcomes <https://www.christchurchcall.org/christchurch-call-initiative-on-algorithmic-outcomes/>`_ used OpenDP to `audit recommender algorithms <https://www.christchurchcall.org/content/files/2024/11/Christchurch-Call-AI-Transparency-in-Practice-Report-October-2024-1.pdf>`_.
+* Researchers with the `Christchurch Call Initiative on Algorithmic Outcomes <https://www.christchurchcall.org/cciao/>`_ used OpenDP to `audit recommender algorithms <https://www.christchurchcall.org/api/media/file/Christchurch-Call-AI-Transparency-in-Practice-Report-October-2024-1.pdf>`_.
 
 Let us know if you have an example to add!
 
