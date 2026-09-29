@@ -27,7 +27,6 @@ def approx_trials(n, prob=1, alpha=0):
 def sample_tulap_fast(n, shift, d_in, d_out):
     """Fast inexact sampling from the Tulap distribution"""
     epsilon, delta = d_out
-    stats = pytest.importorskip("scipy.stats")
     b = math.exp(-epsilon)
     q = (2 * delta * b) / (1 - b + 2 * delta * b)
 

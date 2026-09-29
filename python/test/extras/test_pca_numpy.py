@@ -1,11 +1,11 @@
 import pytest
 import opendp.prelude as dp
-from opendp._lib import import_optional_dependency
 from ..helpers import optional_dependency
 
 from opendp.extras.sklearn.decomposition import then_private_pca
 
-np = import_optional_dependency("numpy")
+np = pytest.importorskip("numpy")
+sklearn = pytest.importorskip("sklearn")
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
@@ -107,7 +107,6 @@ def flaky_assert_pca_compare_sklearn():
     )
     model_odp.fit(data)
 
-    sklearn = pytest.importorskip("sklearn")
     model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 

@@ -45,6 +45,7 @@ class MST(Algorithm):
     MST then releases all of the selected marginals.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
     

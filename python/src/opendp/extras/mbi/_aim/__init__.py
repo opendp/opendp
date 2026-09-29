@@ -57,6 +57,7 @@ class AIM(Algorithm):
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
     ..
+    
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
 
