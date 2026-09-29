@@ -1,4 +1,5 @@
 import pytest
+import opendp.prelude as dp
 
 np = pytest.importorskip("numpy")
 
