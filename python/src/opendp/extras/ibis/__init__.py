@@ -123,8 +123,8 @@ def run_on_database(query, connection, table_name: str):
 
     # Use param_dicts:
 
-    # TODO: Probably replace with https://github.com/google/saferpickle
-    # ... but that is work that can be done in opendp, after porting.
+    # TODO: Would like to replace with https://github.com/google/saferpickle
+    # but not available on github: https://github.com/google/saferpickle/issues/19
     import pickle
 
     unpickled_kwargs = []
