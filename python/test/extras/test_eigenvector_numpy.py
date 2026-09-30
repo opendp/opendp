@@ -1,10 +1,10 @@
 import opendp.prelude as dp
 from opendp.extras.numpy import _sscp_domain
 import pytest
-from ..helpers import optional_dependency
 
 np = pytest.importorskip("numpy")
-
+pytest.importorskip("randomgen")
+pytest.importorskip("scipy.linalg")
 
 def test_private_eigenvector():
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
@@ -61,9 +61,7 @@ def test_eigenvectors():
         dp.symmetric_distance(),
     )
     sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
-    with optional_dependency("scipy.linalg"):
-        meas = sp_sscp >> then_private_eigenvectors([1.0] * 3)
+    meas = sp_sscp >> then_private_eigenvectors([1.0] * 3)
 
     data = np.random.normal(size=(1000, num_columns))
-    with optional_dependency("randomgen"):
-        print("meas(data)", meas(data))
+    print("meas(data)", meas(data))
