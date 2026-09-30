@@ -1,11 +1,11 @@
 Getting Started
 ===============
 
-This is an overview of OpenDP's Python and R APIs.
+This is a quick introduction to the OpenDP Library.
 
-* To interactively build OpenDP examples, try `DP Wizard <https://mccalluc-dp-wizard.share.connect.posit.cloud/>`_.
-* For a more conceptual overview of differential privacy see the :doc:`../theory/index` section.
-* For Python, R, and Rust library references see the :doc:`../api/index` documentation.
+* If you learn better from examples, check out the `OpenDP Cookbook <https://cookbook.opendp.org/>`_.
+* To interactively build OpenDP notebooks, try `DP Wizard <https://mccalluc-dp-wizard.share.connect.posit.cloud/>`_.
+* For Python, R, and Rust library references see the :doc:`../api/index`.
 
 .. toctree::
   :titlesonly:
