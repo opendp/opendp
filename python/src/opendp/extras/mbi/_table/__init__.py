@@ -269,10 +269,10 @@ def make_contingency_table(
 
     if cuts_pl:
         plan = plan.with_columns(
-            pl.col(c).cut(cutset, labels=get_categories(cutset))
+            pl.col(c).cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
             for c, cutset in cuts_pl.items()
             if c in schema
-        )  # type: ignore[arg-type]
+        )
 
     if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
         raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")

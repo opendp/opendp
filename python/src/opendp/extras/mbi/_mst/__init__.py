@@ -146,8 +146,11 @@ class MST(Algorithm):
         edges = list(itertools.combinations(input_domain.columns, 2))
 
         t_marginals = make_stable_marginals(
-            input_domain, input_metric, lp_metric, edges
-        )  # type: ignore[arg-type]
+            input_domain,
+            input_metric,
+            lp_metric,
+            edges,  # type: ignore[arg-type]
+        )
         d_marginals = t_marginals.map(d_in)
 
         def function(
