@@ -97,10 +97,12 @@ class ContingencyTable:
                 raise ValueError(msg)
 
         if isinstance(self.marginals, dict):
-            self.marginals = Marginals({
-                tuple(clique): [measurement]
-                for clique, measurement in self.marginals.items()
-            })
+            self.marginals = Marginals(
+                {
+                    tuple(clique): [measurement]
+                    for clique, measurement in self.marginals.items()
+                }
+            )
 
     def synthesize(
         self, rows: Optional[int] = None, method: Literal["round", "sample"] = "round"
@@ -247,7 +249,9 @@ def make_contingency_table(
 
     # add cut bin labels to keys
     def get_categories(cutset):
-        labels = [f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])]
+        labels = [
+            f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])
+        ]
         return pl.Series(cutset.name, labels)
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
@@ -264,7 +268,11 @@ def make_contingency_table(
         thresholds = {}
 
     if cuts_pl:
-        plan = plan.with_columns(pl.col(c).cut(cutset, labels=get_categories(cutset)) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
+        plan = plan.with_columns(
+            pl.col(c).cut(cutset, labels=get_categories(cutset))
+            for c, cutset in cuts_pl.items()
+            if c in schema
+        )  # type: ignore[arg-type]
 
     if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
         raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")
@@ -373,7 +381,7 @@ def make_contingency_table(
                 .clip(0, len(stable_keys[c]) - 1)
                 for c in input_domain.columns
             ),
-            MO="FrameDistance<SymmetricDistance>"
+            MO="FrameDistance<SymmetricDistance>",
         )
 
         m_marginals = algorithm.make_marginals(
@@ -492,10 +500,7 @@ def _make_oneway_marginals(
             if name not in keys or not unknown_only
         ]
 
-        will_release_full_identity = any(
-            name in keys
-            for name in names
-        )
+        will_release_full_identity = any(name in keys for name in names)
 
         # An algorithm that selects its workload needs a total constraint
         # before that selection. A fixed workload does not: its own identity

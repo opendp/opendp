@@ -13,6 +13,7 @@ We suggest importing under the conventional name ``dp``:
 
 The members of this module will then be accessible at ``dp.polars``.
 """
+
 from __future__ import annotations
 
 import os
@@ -53,10 +54,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
 # Exposed as global for testing.
-_KEY_SIZE_THRESHOLD_MB = 2 ** 10
+_KEY_SIZE_THRESHOLD_MB = 2**10
+
 
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
+
 
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
@@ -84,6 +87,7 @@ def _size_warning(keys):
             "read it in via scan_parquet.",
             stacklevel=3,
         )
+
 
 class DPExpr(object):
     """
@@ -150,7 +154,10 @@ class DPExpr(object):
             is_elementwise=True,
         )
 
-    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.")
+    @deprecated(
+        version="0.14.1",
+        reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.",
+    )
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
@@ -160,7 +167,10 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.")
+    @deprecated(
+        version="0.14.1",
+        reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.",
+    )
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
@@ -465,8 +475,10 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         if isinstance(scale, tuple):  # pragma: no cover
-            raise ValueError("OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
-                             "Individually estimate sum and len to tune budget distribution.")
+            raise ValueError(
+                "OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
+                "Individually estimate sum and len to tune budget distribution."
+            )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -475,7 +487,6 @@ class DPExpr(object):
             returns_scalar=True,
             changes_length=True,
         )
-
 
     def quantile(
         self, alpha: float, candidates: list[float], scale: float | None = None
@@ -514,7 +525,7 @@ class DPExpr(object):
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import lit, Series # type: ignore[import-not-found]
+        from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -749,8 +760,8 @@ class LazyFrameQuery:
     A ``LazyFrameQuery`` is returned by :py:func:`~opendp.context.Context.query`.
     It wraps a
     `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
-    and supports the same methods, unless they have been overridden. 
-    
+    and supports the same methods, unless they have been overridden.
+
     :example:
 
         .. code:: pycon
@@ -1157,7 +1168,6 @@ class LazyFrameQuery:
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
-        
     def contingency_table(
         self,
         *,
@@ -1203,7 +1213,7 @@ class LazyFrameQuery:
             output_measure=query._output_measure,
             context=query._context,
             oneway_scale=oneway_scale,
-            oneway_threshold=oneway_threshold
+            oneway_threshold=oneway_threshold,
         )
 
 
@@ -1286,7 +1296,7 @@ class Margin:
     @property
     @deprecated(
         version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
+        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
     )
     def max_num_partitions(self):
         return self.max_groups  # pragma: no cover
@@ -1294,7 +1304,7 @@ class Margin:
     @max_num_partitions.setter
     @deprecated(
         version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
+        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
     )
     def max_num_partitions(self, value):
         self.max_groups = value  # pragma: no cover
@@ -1302,7 +1312,7 @@ class Margin:
     @property
     @deprecated(
         version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
+        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
     )
     def public_info(self):
         return self.invariant  # pragma: no cover
@@ -1310,7 +1320,7 @@ class Margin:
     @public_info.setter
     @deprecated(
         version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
+        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
     )
     def public_info(self, value):
         self.invariant = value  # pragma: no cover
