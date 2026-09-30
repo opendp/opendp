@@ -16,7 +16,7 @@ The members of this module will then be accessible at ``dp.ibis``.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
 """
-__all__ = ['execute_on_database', 'get_connection', 'scan_database']
+__all__ = ['run_on_database', 'get_connection', 'scan_database']
 
 
 def get_connection(database_name: str, **kwargs):
@@ -55,11 +55,11 @@ def scan_database(connection, table_name: str):
     return scan_database(connection, table_name)
 
 
-def execute_on_database(query, connection, table_name: str):
+def run_on_database(query, connection, table_name: str):
     """
     Translates the provided query to SQL,
     targets the given database connection and table,
-    executes the query on the database,
+    runs the query on the database,
     and returns the result.
 
     :param query: A Polars query be translated to SQL.
@@ -90,57 +90,77 @@ def execute_on_database(query, connection, table_name: str):
         ...     ],
         ... )
         >>> query = context.query().select(dp.len())
-        >>> import warnings  # TODO: Silence warning upstream.
+        >>> # TODO: Silence warning upstream.
+        >>> # https://github.com/opendp/polars-to-ibis/issues/167
+        >>> import warnings
         >>> with warnings.catch_warnings():
         ...     warnings.simplefilter("ignore")
-        ...     result = execute_on_database(query, connection, table_name)
+        ...     result = run_on_database(query, connection, table_name)
+        >>> print("DP result:", result)
+        DP result: [...]
+    
     """
     import opendp.prelude as dp
 
-    from polars_to_ibis import split_polars_on_ffi  # type: ignore[import-untyped]
+    from polars_to_ibis import split_polars_on_ffi
 
     query_lf = query.release().lazy()
 
-    ibis_table, plugin_parameters = split_polars_on_ffi(
+    ibis_table, param_dicts = split_polars_on_ffi(
         query_lf,
         table_name=table_name,
+        backend=connection,
         # In the future, add a parameter to specify the plugin to split on?
     )
 
     # Use ibis_table:
 
     private_result = connection.to_polars(ibis_table).to_dict(as_series=False)
-    private_item = next(iter(private_result.items()))[1][0]
+    # For now, assume result dataframe is only a single row,
+    # so pull out single values with [0],
+    # but I'm not sure that will always be true.
+    private_items = [v[0] for v in private_result.values()]
 
-    # Use plugin_parameters:
+    # Use param_dicts:
 
     # TODO: Probably replace with https://github.com/google/saferpickle
     # ... but that is work that can be done in opendp, after porting.
     import pickle
 
-    kwargs = pickle.loads(bytes(plugin_parameters["kwargs"]))
+    unpickled_kwargs = []
+    for param_dict in param_dicts:
+        unpickled_kwargs.append(pickle.loads(bytes(param_dict["kwargs"])))
 
-    match kwargs["support"]:
-        case "Integer":
-            support = int
-        case "Float":  # pragma: no cover
-            support = float  # type: ignore[assignment]
-        case _:  # pragma: no cover
-            raise ValueError(
-                f"Expected 'Integer' or 'Float', not {kwargs['support']}"
-            )
-    input_space = dp.atom_domain(T=support, nan=False), dp.absolute_distance(
-        T=support
-    )
+    dp_results = []
+    for private_item, kwargs in zip(private_items, unpickled_kwargs):
+        match kwargs["support"]:
+            case "Integer":
+                support = int
+            case "Float":
+                support = float
+            case _:
+                raise ValueError(
+                    f"Expected 'Integer' or 'Float', not {kwargs['support']}"
+                )
+        input_space = (
+            dp.atom_domain(T=support, nan=False),
+            dp.absolute_distance(T=support),
+        )
 
-    match kwargs["distribution"]:
-        case "Laplace":
-            make = dp.m.make_laplace
-        case "Gaussian":  # pragma: no cover
-            make = dp.m.make_gaussian
-        case _:  # pragma: no cover
-            raise ValueError(
-                f"Expected 'Laplace' or 'Gaussian', not {kwargs['distribution']}"
-            )
-    measurement = make(*input_space, scale=kwargs["scale"])
-    return measurement(private_item)
+        match kwargs["distribution"]:
+            case "Laplace":
+                make = dp.m.make_laplace
+            case "Gaussian":  # pragma: no cover
+                # TODO: Add a test case that uses gaussian.
+                # https://github.com/opendp/polars-to-ibis/issues/166
+                make = dp.m.make_gaussian
+            case _:
+                raise ValueError(
+                    "Expected 'Laplace' or 'Gaussian', "
+                    f"not {kwargs['distribution']}"
+                )
+        measurement = make(*input_space, scale=kwargs["scale"])
+        
+        dp_results.append(measurement(private_item))
+
+    return dp_results
