@@ -1,14 +1,9 @@
-API
-===
-
-If you're new to OpenDP, please go back to :doc:`../getting-started/index`.
-
-API documentation entry points:
+API Reference
+=============
 
 .. toctree::
    :maxdepth: 1
 
-   API User Guide <user-guide/index>
    Python API Reference <python/index>
    R API Reference <https://docs.opendp.org/en/stable/api/r>
    Rust API Reference <https://docs.rs/opendp>
