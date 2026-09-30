@@ -20,8 +20,8 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-To get started, we’ll load data and recreate the Context from the `tabular data
-introduction <index.rst>`__.
+To get started, we’ll load data and recreate the Context from the
+:doc:`tabular data introduction <index>`.
 
 .. tab-set::
 
@@ -54,7 +54,9 @@ The simplest query is a count of records in a dataset.
 
         .. code:: pycon
 
-            >>> query_num_responses = context.query().select(dp.len())
+            >>> query_num_responses = context.query().select(
+            ...     dp.len(signed=True)
+            ... )
 
 
 If you have not used Polars before, please familiarize yourself with the
@@ -133,8 +135,8 @@ release the query:
             ... )  # doctest: +ELLIPSIS
             len: ...
 
-Other variations of counting queries are discussed in the `Aggregation
-section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
+Other variations of counting queries are discussed in the
+:doc:`Aggregation section <../../api/user-guide/polars/expressions/aggregation>`.
 
 Bounds Estimation
 -----------------
@@ -333,7 +335,7 @@ estimates.
             ...         # if the imputation is omitted,
             ...         # a midpoint imputation is inserted (40)
             ...         pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)),
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...     )
             ... )
 
@@ -371,7 +373,7 @@ means on different columns.
             ┌──────────┬─────────┬───────────┐
             │ HWUSUAL  ┆ len     ┆ mean      │
             │ ---      ┆ ---     ┆ ---       │
-            │ i64      ┆ u32     ┆ f64       │
+            │ i64      ┆ i64     ┆ f64       │
             ╞══════════╪═════════╪═══════════╡
             │ ...      ┆ ...     ┆ ...       │
             └──────────┴─────────┴───────────┘

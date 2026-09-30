@@ -131,7 +131,7 @@ where
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;
 
         let p = 1f64.neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
-        if !(0.0..=1.0).contains(&p) {
+        if !(p > 0.0 && p <= 1.0) {
             return fallible!(
                 MakeMeasurement,
                 "p ({p}) must be in (0, 1]. This is likely because the noise scale is so large that conservative arithmetic causes the probability of termination to go negative"

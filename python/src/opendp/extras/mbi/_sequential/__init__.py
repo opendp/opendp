@@ -10,6 +10,7 @@ from opendp.extras.mbi._utilities import (
     Algorithm,
     get_associated_metric,
     get_cardinalities,
+    Marginals,
 )
 from opendp.metrics import frame_distance, symmetric_distance
 from opendp.mod import (
@@ -63,7 +64,7 @@ class Sequential(Algorithm):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: Marginals,
         model: Any,  # MarkovRandomField
     ):
         """Implements a "Sequential" algorithm over ordinal data.
@@ -105,7 +106,7 @@ class Sequential(Algorithm):
 
         def function(
             qbl: Queryable,
-        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField]:
             all_marginals = marginals.copy()
             current_model = model
             for algo, d_mid in zip(self.algorithms, d_mids):

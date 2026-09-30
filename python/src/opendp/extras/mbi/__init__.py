@@ -20,7 +20,7 @@ from ._fixed import Fixed
 from ._mst import MST
 from ._sequential import Sequential
 from ._table import make_contingency_table, ContingencyTable
-from ._utilities import Algorithm, Count, mirror_descent
+from ._utilities import Algorithm, Count, Marginals, mirror_descent
 
 __all__ = [
     "AIM",
@@ -31,5 +31,6 @@ __all__ = [
     "ContingencyTable",
     "Algorithm",
     "Count",
+    "Marginals",
     "mirror_descent",
 ]

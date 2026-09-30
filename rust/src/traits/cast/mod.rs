@@ -5,7 +5,7 @@ use dashu::{
     float::{
         FBig,
         round::{
-            Round, Rounding,
+            Round,
             mode::{Down, HalfEven, Up},
         },
     },
@@ -371,68 +371,20 @@ impl NextFloat for f32 {
     }
 }
 
-/// Wrapper around Dashu's FBig::to_f32 and FBig::to_f32 that guarantees correct rounding, even in edge cases
-pub trait ToFloatRounded {
-    fn to_f32_rounded(self) -> f32;
-    fn to_f64_rounded(self) -> f64;
-}
-
-impl ToFloatRounded for FBig<Up> {
-    fn to_f32_rounded(self) -> f32 {
-        match self.to_f32() {
-            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::AddOne) => v,
-            Approximation::Inexact(v, Rounding::SubOne)
-            | Approximation::Inexact(v, Rounding::NoOp) => v.next_up_(),
-        }
-    }
-
-    fn to_f64_rounded(self) -> f64 {
-        match self.to_f64() {
-            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::AddOne) => v,
-            Approximation::Inexact(v, Rounding::SubOne)
-            | Approximation::Inexact(v, Rounding::NoOp) => v.next_up_(),
-        }
-    }
-}
-
-impl ToFloatRounded for FBig<Down> {
-    fn to_f32_rounded(self) -> f32 {
-        match self.to_f32() {
-            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::SubOne) => v,
-            Approximation::Inexact(v, Rounding::AddOne)
-            | Approximation::Inexact(v, Rounding::NoOp) => v.next_down_(),
-        }
-    }
-
-    fn to_f64_rounded(self) -> f64 {
-        match self.to_f64() {
-            Approximation::Exact(v) | Approximation::Inexact(v, Rounding::SubOne) => v,
-            Approximation::Inexact(v, Rounding::AddOne)
-            | Approximation::Inexact(v, Rounding::NoOp) => v.next_down_(),
-        }
-    }
-}
-
 /// Convert from an FBig to a native type `Self` with controlled rounding
 trait FromFBig<R: Round> {
     fn from_fbig(value: FBig<R>) -> Self;
 }
 
-impl<R: Round> FromFBig<R> for f32
-where
-    FBig<R>: ToFloatRounded,
-{
+impl<R: Round> FromFBig<R> for f32 {
     fn from_fbig(value: FBig<R>) -> Self {
-        value.to_f32_rounded()
+        value.to_f32().value()
     }
 }
 
-impl<R: Round> FromFBig<R> for f64
-where
-    FBig<R>: ToFloatRounded,
-{
+impl<R: Round> FromFBig<R> for f64 {
     fn from_fbig(value: FBig<R>) -> Self {
-        value.to_f64_rounded()
+        value.to_f64().value()
     }
 }
 
@@ -669,21 +621,21 @@ impl<R: Round> InfCast<f64> for FBig<R> {
 
 impl<R: Round> InfCast<FBig<R>> for f32 {
     fn inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Up>().to_f32_rounded())
+        Ok(v.with_rounding::<Up>().to_f32().value())
     }
 
     fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Down>().to_f32_rounded())
+        Ok(v.with_rounding::<Down>().to_f32().value())
     }
 }
 
 impl<R: Round> InfCast<FBig<R>> for f64 {
     fn inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Up>().to_f64_rounded())
+        Ok(v.with_rounding::<Up>().to_f64().value())
     }
 
     fn neg_inf_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<Down>().to_f64_rounded())
+        Ok(v.with_rounding::<Down>().to_f64().value())
     }
 }
 
