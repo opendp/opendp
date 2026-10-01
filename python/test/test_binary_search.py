@@ -8,9 +8,9 @@ def test_binary_search_fail():
         dp.binary_search(lambda _: bool(1 / 0), T=float)
     if hasattr(e.value, "add_note"):
         assert (
-            e.value.__notes__[0]
+            e.value.__notes__[0]  # type: ignore[attr-defined]
             == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
-        )  # type: ignore[attr-defined]
+        )
 
 
 def test_binary_search_overflow():

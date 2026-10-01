@@ -1,5 +1,4 @@
 import opendp.prelude as dp
-import numpy as np  # type: ignore[import]
 from opendp.extras.numpy.canonical import (
     BinomialCND,
     _cnd_cdf,
@@ -9,9 +8,12 @@ from opendp.extras.numpy.canonical import (
 import math
 import pytest
 
+np = pytest.importorskip("numpy")
+stats = pytest.importorskip("scipy.stats")
+scipy = pytest.importorskip("scipy")
+
 
 def approx_trials(n, prob=1, alpha=0):
-    stats = pytest.importorskip("scipy.stats")
     # solve a quadratic form for this
     a = prob**2
     b = -((2 * n * prob) + ((stats.norm.ppf(q=alpha) ** 2) * prob * (1 - prob)))
@@ -25,8 +27,6 @@ def approx_trials(n, prob=1, alpha=0):
 def sample_tulap_fast(n, shift, d_in, d_out):
     """Fast inexact sampling from the Tulap distribution"""
     epsilon, delta = d_out
-    np = pytest.importorskip("numpy")
-    stats = pytest.importorskip("scipy.stats")
     b = math.exp(-epsilon)
     q = (2 * delta * b) / (1 - b + 2 * delta * b)
 
@@ -114,14 +114,12 @@ def test__tulap_cdf_array_input():
 
 def test__tulap_cdf_inf_handling():
     """Test to ensure infinities are handled correctly"""
-    pytest.importorskip("numpy")
     with pytest.warns():
         result = _cnd_cdf(np.array([np.inf]), shift=0.0, d_in=1.0, d_out=(0.1, 1e-8))
     assert not np.isinf(result).any(), "Result should not contain infinities"
 
 
 def test_confidence_interval():
-    pytest.importorskip("scipy")
     Z = 100.0
     d_in = 1.0
     d_out = 0.1, 1e-8
@@ -152,7 +150,6 @@ def test_confidence_interval():
 
 
 def test_oneside_pvalue():
-    pytest.importorskip("scipy")
     tulap = BinomialCND(5.0, d_in=1.0, d_out=(0.1, 1e-6), size=10)
     assert (
         str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
@@ -168,7 +165,6 @@ def test_oneside_pvalue():
 
 
 def test_twoside_pvalue():
-    pytest.importorskip("scipy")
     tulap = BinomialCND(1.0, d_in=1.0, d_out=(0.5, 1e-8), size=10)
     assert np.allclose(tulap.p_value(theta=0.5), 0.1841407488015684)
 
