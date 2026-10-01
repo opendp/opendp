@@ -2,25 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.mod import Domain, Measure, Measurement, Metric
+from opendp.extras.sklearn._aligned import Aligned, AlignedDomain
+from opendp.mod import Domain, Measure, Measurement, Metric, VectorDomain
 
 
 def _numpy():
     return import_optional_dependency("numpy")
 
 
-def pairwise_predict(data, x_cuts):
-    """Return randomized pairwise line predictions at ``x_cuts``."""
+def pairwise_predict(data: Aligned, x_cuts):
+    """Return randomized pairwise line predictions at ``x_cuts``.
+
+    Features and targets are indexed together so every pair retains its source
+    row correspondence without materializing an intermediate ``[X, y]`` table.
+    """
     np = _numpy()
-    data = np.array(data, copy=True)[: len(data) // 2 * 2]
-    np.random.shuffle(data)
-    p1, p2 = np.array_split(data, 2)
-    dx, dy = (p2 - p1).T
-    x_bar, y_bar = (p1 + p2).T / 2
+    X = np.asarray(data.X)
+    y = np.asarray(data.y)
+    indices = np.arange(len(X))[: len(X) // 2 * 2]
+    np.random.shuffle(indices)
+    first, second = np.array_split(indices, 2)
+    x1, x2 = X[first, 0], X[second, 0]
+    y1, y2 = y[first], y[second]
+    dx, dy = x2 - x1, y2 - y1
+    x_bar, y_bar = (x1 + x2) / 2, (y1 + y2) / 2
     points = dy / dx * (x_cuts[None].T - x_bar) + y_bar
     return points.T[dx != 0]
 
@@ -101,9 +108,17 @@ def _make_private_theil_sen_with_scale(
     import opendp.prelude as dp
 
     np = _numpy()
-    desc = input_domain.descriptor
-    if getattr(desc, "num_columns", None) != 2:
-        raise ValueError("TheilSenRegressor requires a two-column input domain")  # pragma: no cover
+    desc = getattr(input_domain, "descriptor", None)
+    if not isinstance(desc, AlignedDomain):
+        raise ValueError("TheilSenRegressor requires an Aligned input domain")
+    if desc.y is None:
+        raise ValueError("TheilSenRegressor requires an Aligned input domain with y")
+    if desc.sample_weight is not None or desc.groups is not None:
+        raise ValueError("TheilSenRegressor supports only Aligned.X and Aligned.y")
+    if getattr(getattr(desc.X, "descriptor", None), "num_columns", None) != 1:
+        raise ValueError("TheilSenRegressor requires exactly one feature column")
+    if not isinstance(desc.y, VectorDomain):
+        raise ValueError("TheilSenRegressor requires a vector target domain")
     if input_metric != dp.symmetric_distance():
         raise ValueError("TheilSenRegressor supports symmetric_distance() only")  # pragma: no cover
     if len(x_bounds) != 1:
@@ -154,7 +169,7 @@ def make_private_theil_sen(
     candidates_count: int = 100,
     fraction_bounds=(0.25, 0.75),
 ) -> Measurement:
-    """Construct a calibrated Theil-Sen measurement over paired ``[x, y]`` rows."""
+    """Construct a calibrated Theil-Sen measurement over ``Aligned(X, y)`` rows."""
     import opendp.prelude as dp
 
     if d_in <= 0 or d_out <= 0:

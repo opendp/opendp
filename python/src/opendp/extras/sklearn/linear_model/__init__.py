@@ -40,7 +40,8 @@ __all__ = ["TheilSenRegressor", "make_private_theil_sen"]
 class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
-    The private training query contains paired rows ``[x, y]``.  Privacy
+    The private training query contains an :class:`~opendp.extras.sklearn.Aligned`
+    value with one feature column in ``X`` and a target vector in ``y``. Privacy
     allocation and the input domain are supplied by an OpenDP Context.
     """
 
@@ -79,12 +80,6 @@ class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
             candidates_count=self.candidates_count,
             fraction_bounds=self.fraction_bounds,
         )
-
-    def _prepare_fit_query(self, X, y=None, **fit_params):
-        if y is not None:
-            raise TypeError("y must be included as the second column of the private query")
-        self._reject_fit_params(fit_params)
-        return X
 
     def _ingest_release(self, release):
         np = import_optional_dependency("numpy")
