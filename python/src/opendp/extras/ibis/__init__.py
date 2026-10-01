@@ -16,7 +16,8 @@ The members of this module will then be accessible at ``dp.ibis``.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
 """
-__all__ = ['run_on_database', 'get_connection', 'scan_database']
+
+__all__ = ["run_on_database", "get_connection", "scan_database"]
 
 
 def get_connection(database_name: str, **kwargs):
@@ -98,7 +99,7 @@ def run_on_database(query, connection, table_name: str):
         ...     result = run_on_database(query, connection, table_name)
         >>> print("DP result:", result)
         DP result: [...]
-    
+
     """
     import opendp.prelude as dp
 
@@ -131,6 +132,12 @@ def run_on_database(query, connection, table_name: str):
     for param_dict in param_dicts:
         unpickled_kwargs.append(pickle.loads(bytes(param_dict["kwargs"])))
 
+    if len(private_items) != len(unpickled_kwargs):
+        raise dp.OpenDPException(
+            "Some operations (like dp.mean) are not currently supported "
+            "because the plugin-parameters are not 1-1 with the private values."
+        )
+
     dp_results = []
     for private_item, kwargs in zip(private_items, unpickled_kwargs):
         match kwargs["support"]:
@@ -156,11 +163,10 @@ def run_on_database(query, connection, table_name: str):
                 make = dp.m.make_gaussian
             case _:
                 raise ValueError(
-                    "Expected 'Laplace' or 'Gaussian', "
-                    f"not {kwargs['distribution']}"
+                    f"Expected 'Laplace' or 'Gaussian', not {kwargs['distribution']}"
                 )
         measurement = make(*input_space, scale=kwargs["scale"])
-        
+
         dp_results.append(measurement(private_item))
 
     return dp_results
