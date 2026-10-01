@@ -43,7 +43,7 @@ For ChristianLebeda's work on sparse histogram ALP ([commit](https://github.com/
 
 ## No CLA
 
-There a few contributors with small contributions we have not been able to reach.
+There are a few contributors with small contributions we have not been able to reach.
 
 | git blame | user name | contribution |
 |---|---|---|
