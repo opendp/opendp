@@ -17,3 +17,11 @@ def test_clamp_nan_inf():
     trans = space >> then_np_clamp(norm=1.0, p=2)
     data = np.array([[np.inf, 0.0], [np.inf, np.inf], [1.0, 1.0], [np.nan, 0.0]])
     assert trans.output_domain.member(trans(data))
+
+
+def test_clamp_empty():
+    with optional_dependency("numpy"):
+        space = dp.numpy.array2_domain(num_columns=2, T=float), dp.symmetric_distance()
+    trans = space >> then_np_clamp(norm=1.0, p=2)
+    np = pytest.importorskip("numpy")
+    assert trans(np.zeros((0, 2))).shape == (0, 2)
