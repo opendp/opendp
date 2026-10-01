@@ -2,16 +2,22 @@ Linear Regression
 ==========================
 
 Theil-Sen regression is documented with examples in the API Reference
-(:py:mod:`opendp.extras.sklearn.linear_model`). Private training data is
-represented as paired ``[x, y]`` rows and fitted through an OpenDP context::
+(:py:mod:`opendp.extras.sklearn.linear_model`). Private feature and target data
+are represented by :class:`opendp.extras.sklearn.Aligned`, which preserves their
+row correspondence while a whole aligned row remains one adjacency event::
 
-    import numpy as np
     import opendp.prelude as dp
 
-    training = np.column_stack([X[:, 0], y])
+    training = dp.sklearn.Aligned(X=X[:, :1], y=y)
+    domain = dp.sklearn.aligned_domain(
+        X=dp.numpy.array2_domain(
+            num_columns=1, size=len(training.X), T=float, nan=False
+        ),
+        y=dp.vector_domain(dp.atom_domain(T=float, nan=False), size=len(training.y)),
+    )
     context = dp.Context.compositor(
         data=training,
-        domain=dp.numpy.array2_domain(num_columns=2, size=len(training), T=float),
+        domain=domain,
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
