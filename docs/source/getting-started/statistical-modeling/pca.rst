@@ -163,8 +163,9 @@ allocated to estimating each eigenvector internally.
             ... )
 
 
-The measurement returns a :class:`~PCARelease`; fitting through a query
-consumes the release and stores sklearn fitted attributes on ``model``:
+The measurement returns a :class:`~PCARelease` and does not fit or mutate
+``model``. Fitting through a query consumes the release and stores sklearn fitted
+attributes on ``model``:
 
 .. tab-set::
 
