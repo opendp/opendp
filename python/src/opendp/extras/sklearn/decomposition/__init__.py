@@ -27,7 +27,7 @@ from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.numpy import then_np_clip
-from opendp.extras.sklearn._estimator import DPEstimator
+from opendp.extras.sklearn._estimator import _DPEstimator
 from opendp.extras.sklearn._make_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
@@ -44,6 +44,8 @@ class PCARelease:
     mean: numpy.ndarray
     singular_values: numpy.ndarray
     components: numpy.ndarray
+    n_samples: int | None = None
+    n_features: int | None = None
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -53,6 +55,20 @@ class PCAEpsilons:
     eigvals: float
     eigvecs: Sequence[float]
     mean: Optional[float]
+
+
+def _with_fit_shape(measurement: Measurement, input_domain: Domain) -> Measurement:
+    """Attach public domain shape metadata needed to ingest a PCA release."""
+    desc = input_domain.descriptor
+    return measurement >> _new_pure_function(
+        lambda release: PCARelease(
+            mean=release.mean,
+            singular_values=release.singular_values,
+            components=release.components,
+            n_samples=desc.size,
+            n_features=desc.num_columns,
+        )
+    )
 
 
 def _make_private_pca_with_unit_epsilon(
@@ -214,7 +230,7 @@ then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA(DPEstimator):
+class PCA(_DPEstimator):
     """Differentially private PCA with a sklearn estimator interface."""
 
     def __init__(
@@ -320,13 +336,16 @@ class PCA(DPEstimator):
             and not isinstance(self.n_components, bool)
             else None
         )
-        return make_private_pca(
+        return _with_fit_shape(
+            make_private_pca(
+                input_domain,
+                input_metric,
+                output_measure,
+                d_in,
+                d_out,
+                num_components=num_components,
+            ),
             input_domain,
-            input_metric,
-            output_measure,
-            d_in,
-            d_out,
-            num_components=num_components,
         )
 
     @staticmethod
@@ -394,9 +413,9 @@ class PCA(DPEstimator):
     def _prepare_fit_query(self, X, y=None, **fit_params):
         # Validate sklearn before the query consumes any privacy budget.
         self._preflight_sklearn()
-        # PCA ignores y, as sklearn's PCA does.
-        self._reject_fit_params(fit_params)
-        return X
+        # Private fit inputs are entirely represented by X's Query. PCA has no
+        # separate target or metadata inputs.
+        return super()._prepare_fit_query(X, y=y, **fit_params)
 
     def _make_legacy_measurement(self) -> Measurement:
         if hasattr(self, "components_"):
@@ -416,12 +435,15 @@ class PCA(DPEstimator):
             T=float,
         )
         unit_epsilon = self.epsilon / self.n_changes * 2
-        return _make_private_pca_with_unit_epsilon(
+        return _with_fit_shape(
+            _make_private_pca_with_unit_epsilon(
+                input_domain,
+                dp.symmetric_distance(),
+                unit_epsilon,
+                row_norm=self.row_norm,
+                num_components=n_estimated_components,
+            ),
             input_domain,
-            dp.symmetric_distance(),
-            unit_epsilon,
-            row_norm=self.row_norm,
-            num_components=n_estimated_components,
         )
 
     def _fit_legacy(self, X, y=None, **fit_params):
@@ -445,8 +467,6 @@ class PCA(DPEstimator):
         if X.ndim != 2 or X.shape != expected_shape:
             raise ValueError(f"X must have shape {expected_shape}")
 
-        self._fit_n_samples = self.n_samples
-        self._fit_n_features = self.n_features
         release = self._make_legacy_measurement()(X)
         self._ingest_release(release)
         return self
@@ -469,8 +489,6 @@ class PCA(DPEstimator):
         measurement = self._make_legacy_measurement()
 
         def ingest_and_return(release):
-            self._fit_n_samples = self.n_samples
-            self._fit_n_features = self.n_features
             self._ingest_release(release)
             return self
 
@@ -483,8 +501,10 @@ class PCA(DPEstimator):
         if not isinstance(release, PCARelease):
             raise TypeError("PCA expected a PCARelease")
 
-        n_samples = self._fit_n_samples
-        n_features = self._fit_n_features
+        n_samples = release.n_samples
+        n_features = release.n_features
+        if n_samples is None or n_features is None:
+            raise ValueError("PCARelease is missing fit shape metadata")
         if n_samples <= 1:
             raise ValueError("PCA requires at least two samples")
 
@@ -537,23 +557,6 @@ class PCA(DPEstimator):
         )
         self.n_samples_ = n_samples
         self.n_features_in_ = n_features
-        del self._fit_n_samples
-        del self._fit_n_features
-
-    def then(self, output_measure, d_in, d_out):
-        # Capture public shape metadata for the release postprocessor without
-        # putting dataset dimensions in the estimator constructor.
-        def make(input_domain, input_metric):
-            desc = input_domain.descriptor
-            self._fit_n_samples = desc.size
-            self._fit_n_features = desc.num_columns
-            return self.make(
-                input_domain, input_metric, output_measure, d_in, d_out
-            )
-
-        from opendp.mod import _PartialConstructor
-
-        return _PartialConstructor(make)
 
     def _check_is_fitted(self):
         if not hasattr(self, "components_"):
