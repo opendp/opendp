@@ -204,11 +204,16 @@ def test_pca_release_dimensionality_matches_component_mode():
         estimator = dp.sklearn.decomposition.PCA(
             n_components=n_components,
         )
+        initial_state = estimator.__dict__.copy()
         measurement = estimator.make(
             domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
         )
+        assert estimator.__dict__ == initial_state
         release = measurement(data)
+        assert estimator.__dict__ == initial_state
         assert release.components.shape == (expected_rows, 4)
+        assert release.n_samples == 20
+        assert release.n_features == 4
 
 
 def test_pca_dependency_preflight_happens_before_release(monkeypatch):
@@ -282,8 +287,6 @@ def test_pca_fitted_methods_and_error_paths():
     with pytest.raises(NotImplementedError, match="fit_transform would release"):
         estimator.fit_transform(public)
 
-    estimator._fit_n_samples = 10
-    estimator._fit_n_features = 3
     with pytest.raises(TypeError, match="expected a PCARelease"):
         estimator._ingest_release(object())  # type: ignore[arg-type]
     estimator._ingest_release(
@@ -291,6 +294,8 @@ def test_pca_fitted_methods_and_error_paths():
             mean=np.zeros(3),
             singular_values=np.ones(3),
             components=np.eye(3),
+            n_samples=10,
+            n_features=3,
         )
     )
     assert estimator.components_.shape == (2, 3)
@@ -309,61 +314,48 @@ def test_pca_ingest_release_error_paths():
     pytest.importorskip("sklearn")
     from opendp.extras.sklearn.decomposition import PCA, PCARelease
 
-    release = PCARelease(
-        mean=np.zeros(3),
-        singular_values=np.ones(3),
-        components=np.eye(3),
-    )
+    def release(*, n_samples, n_features=3):
+        return PCARelease(
+            mean=np.zeros(3),
+            singular_values=np.ones(3),
+            components=np.eye(3),
+            n_samples=n_samples,
+            n_features=n_features,
+        )
 
-    estimator = PCA()
-    estimator._fit_n_samples = 1
-    estimator._fit_n_features = 3
     with pytest.raises(ValueError, match="at least two samples"):
-        estimator._ingest_release(release)
+        PCA()._ingest_release(release(n_samples=1))
 
-    estimator = PCA(n_components="mle")
-    estimator._fit_n_samples = 2
-    estimator._fit_n_features = 3
     with pytest.raises(ValueError, match="n_samples >= n_features"):
-        estimator._ingest_release(release)
+        PCA(n_components="mle")._ingest_release(release(n_samples=2))
 
-    estimator = PCA(n_components=1.0)
-    estimator._fit_n_samples = 10
-    estimator._fit_n_features = 3
     with pytest.raises(ValueError, match=r"in \(0, 1\)"):
-        estimator._ingest_release(release)
+        PCA(n_components=1.0)._ingest_release(release(n_samples=10))
 
-    estimator = PCA(n_components=0)
-    estimator._fit_n_samples = 10
-    estimator._fit_n_features = 3
     with pytest.raises(ValueError, match="between 1"):
-        estimator._ingest_release(release)
+        PCA(n_components=0)._ingest_release(release(n_samples=10))
 
-    estimator = PCA(n_components="invalid")
-    estimator._fit_n_samples = 10
-    estimator._fit_n_features = 3
     with pytest.raises(ValueError, match="None, an integer"):
-        estimator._ingest_release(release)
+        PCA(n_components="invalid")._ingest_release(release(n_samples=10))
 
-    estimator = PCA()
-    estimator._fit_n_samples = 10
-    estimator._fit_n_features = 3
     short_release = PCARelease(
         mean=np.zeros(3),
         singular_values=np.ones(1),
         components=np.ones((1, 3)),
+        n_samples=10,
+        n_features=3,
     )
     with pytest.raises(ValueError, match="incompatible"):
-        estimator._ingest_release(short_release)
+        PCA()._ingest_release(short_release)
 
     valid_release = PCARelease(
         mean=np.zeros(3),
         singular_values=np.array([3.0, 2.0, 1.0]),
         components=np.eye(3),
+        n_samples=10,
+        n_features=3,
     )
     for estimator in (PCA(n_components="mle"), PCA(n_components=0.8)):
-        estimator._fit_n_samples = 10
-        estimator._fit_n_features = 3
         estimator._ingest_release(valid_release)
         assert estimator.n_components_ >= 1
 
@@ -575,13 +567,34 @@ def test_pca_parameter_introspection_and_component_modes():
     assert model.get_params()["n_components"] == "mle"
 
 
-def test_pca_context_fit_with_query_clipping():
+def test_pca_fit_and_query_sklearn_release_are_equivalent():
     pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     data = sample_microdata(num_columns=3, num_rows=30)
-    context, model = _context(data)
-    model.fit(context.query().np_clip(p=2, norm=2.0))
-    assert model.mean_.shape == (3,)
+    fit_context, fit_model = _context(data)
+    release_context, release_model = _context(data)
+
+    assert fit_model.fit(fit_context.query().np_clip(p=2, norm=2.0)) is fit_model
+
+    release_query = release_context.query().np_clip(p=2, norm=2.0)
+    initial_state = release_model.__dict__.copy()
+    fitted_query = release_query.sklearn(release_model)
+    assert release_model.__dict__ == initial_state
+    assert fitted_query.release() is release_model
+    assert fit_model.mean_.shape == release_model.mean_.shape == (3,)
+    assert fit_model.components_.shape == release_model.components_.shape
+
+
+def test_pca_rejects_separate_target_before_release(monkeypatch):
+    pytest.importorskip("numpy")
+    pytest.importorskip("sklearn")
+    from opendp.context import Query
+
+    released = []
+    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
+    with pytest.raises(TypeError, match="does not accept y"):
+        dp.sklearn.decomposition.PCA().fit(_standalone_pca_query(), y=[0] * 10)
+    assert released == []
 
 
 def test_pca_covariance_matches_sklearn_ppca():
