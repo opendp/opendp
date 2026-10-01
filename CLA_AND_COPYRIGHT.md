@@ -4,7 +4,7 @@ Currently, our [clabot](https://github.com/opendp/clabot-config/) confirms that 
 
 ## Post-hoc signature
 
-After noticing this gap, we asked past contributors to sign the CLA, noting however that the CLA does not cover past contributions:
+After noticing this gap, we asked past contributors to sign the CLA. However, the CLA does not cover past contributions:
 
 > Contributor accepts and agrees to the terms and conditions of this CLA, which govern any present or future original work of authorship
 
