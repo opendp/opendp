@@ -140,31 +140,19 @@ def run_on_database(query, connection, table_name: str):
 
     dp_results = []
     for private_item, kwargs in zip(private_items, unpickled_kwargs):
-        match kwargs["support"]:
-            case "Integer":
-                support = int
-            case "Float":
-                support = float
-            case _:
-                raise ValueError(
-                    f"Expected 'Integer' or 'Float', not {kwargs['support']}"
-                )
+        support = {
+            "Integer": int,
+            "Float": float,
+        }[kwargs["support"]]
         input_space = (
             dp.atom_domain(T=support, nan=False),
             dp.absolute_distance(T=support),
         )
 
-        match kwargs["distribution"]:
-            case "Laplace":
-                make = dp.m.make_laplace
-            case "Gaussian":  # pragma: no cover
-                # TODO: Add a test case that uses gaussian.
-                # https://github.com/opendp/polars-to-ibis/issues/166
-                make = dp.m.make_gaussian
-            case _:
-                raise ValueError(
-                    f"Expected 'Laplace' or 'Gaussian', not {kwargs['distribution']}"
-                )
+        make = {
+            "Laplace": dp.m.make_laplace,
+            "Gaussian": dp.m.make_gaussian,
+        }[kwargs["distribution"]]
         measurement = make(*input_space, scale=kwargs["scale"])
 
         dp_results.append(measurement(private_item))
