@@ -251,6 +251,19 @@ def test_query():
     assert isinstance(query.release(10), int)
 
 
+def test_query_rejects_numpy_coercion():
+    np = pytest.importorskip("numpy")
+    query = dp.Query(
+        (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()),
+        dp.max_divergence(),
+        d_in=1,
+        d_out=1.0,
+    )
+
+    with pytest.raises(TypeError, match="Query is symbolic"):
+        np.asarray(query)
+
+
 def test_query_repr():
     context = dp.Context.compositor(
         data=[1, 2, 3],
