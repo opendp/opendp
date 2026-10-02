@@ -5,6 +5,7 @@ from ..helpers import optional_dependency
 
 np = pytest.importorskip("numpy")
 
+
 def test_clamp():
     space = dp.numpy.array2_domain(T=float), dp.symmetric_distance()
     trans = space >> then_np_clamp(norm=1.0, p=2)

@@ -55,4 +55,3 @@ def test_user_constructors():
     assert meas.map(1) == 10
 
     assert (meas >> (lambda x: x[0]))(2) == 2
-
