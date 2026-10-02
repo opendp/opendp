@@ -88,7 +88,7 @@ where
     // we'll iteratively pop from the end
     d_mids.reverse();
 
-    let d_out = output_measure.compose(d_mids.clone())?;
+    let d_out = output_measure.compose(d_mids.iter().cloned().map(|d| (d, 1)).collect())?;
 
     let require_sequentiality = matches!(
         output_measure.composability(Adaptivity::Adaptive)?,
