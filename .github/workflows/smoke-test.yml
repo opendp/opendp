@@ -251,14 +251,14 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
+        # "ibis,mbi" implies "polars" and "scikit-learn": see setup.cfg.
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
