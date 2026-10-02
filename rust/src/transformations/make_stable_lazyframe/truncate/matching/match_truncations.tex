@@ -4,12 +4,12 @@
 \title{\texttt{fn match\_truncations}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -18,7 +18,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 Types matching pseudocode.
 
 \subsubsection*{Caller-verified}
-None 
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -51,7 +51,7 @@ None
     By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation},
     if the group-by truncation is present, it will be returned as a tuple of
     \texttt{input}, (the execution plan with the group-by truncation removed),
-    \texttt{truncation}, (the group-by truncation) and 
+    \texttt{truncation}, (the group-by truncation) and
     \texttt{per\_id\_bounds} (the per-id bounds on row contributions).
     The state of the algorithm is then updated on lines \ref{line:match_group_by_truncation_start}-\ref{line:match_group_by_truncation_end},
     maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
@@ -63,10 +63,10 @@ None
     This limitation does not hinder expected use-cases, but is necessary to ensure that per-id bounds on contributions remain valid after the group-by truncation.
 
     If a group-by truncation is not present, no update is made to the state.
-    
+
     The algorithm then attempts to repeatedly parse filter truncations on line \ref{line:match_filter_truncation}.
     By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate} on line \ref{line:match_truncation_predicate},
-    the return is a list of per-id contribution bounds if the predicate consists solely of truncations, 
+    the return is a list of per-id contribution bounds if the predicate consists solely of truncations,
     otherwise none.
     This ensures that the algorithm rejects predicates that contain conditions that are not truncations.
 
@@ -76,7 +76,7 @@ None
     maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
     Finally, since the descent through the query plan is in reverse order,
     line \ref{line:truncations_reverse} ensures that the truncation order is correct.
-    Neither the check on line \ref{line:match_group_by_truncation_check} 
+    Neither the check on line \ref{line:match_group_by_truncation_check}
     nor the reversal on line \ref{line:bounds_reverse} are necessary to match the postcondition,
     but both are included to improve usability.
 

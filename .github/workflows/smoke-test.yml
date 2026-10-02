@@ -1,6 +1,6 @@
 name: Smoke Test
 
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
@@ -93,13 +93,13 @@ jobs:
       - name: Check sccache stats
         shell: bash
         run: sccache --show-stats
-      
+
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,polars-ffi
-      
+
       - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v7
         with:
@@ -108,13 +108,13 @@ jobs:
 
       - name: Build (static w/o Polars)
         run: cargo build --verbose --features untrusted,ffi
-      
+
       - name: Upload (static w/o Polars)
         uses: actions/upload-artifact@v7
         with:
           name: static_lib
           path: rust/target/debug/libopendp.a
-  
+
       - name: Upload Python bindings
         uses: actions/upload-artifact@v7
         with:
@@ -136,7 +136,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      
+
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -368,7 +368,7 @@ jobs:
       - name: Download libs
         uses: actions/download-artifact@v7
         with:
-          # R uses a static library build that doesn't include Polars 
+          # R uses a static library build that doesn't include Polars
           # (Polars currently links against Python)
           name: static_lib
           path: libs/

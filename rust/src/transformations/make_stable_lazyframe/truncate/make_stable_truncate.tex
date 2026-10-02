@@ -4,12 +4,12 @@
 \title{\texttt{fn make\_stable\_truncate}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -51,7 +51,7 @@ None
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 &\le \texttt{truncation.num\_groups},
     \end{align*}
     where $g$ denotes the group when partitioned by \texttt{truncation\_bound.by}.
-    
+
     The preconditions of \ref{line:truncate-id-bound} are satisfied on line \ref{line:id-bound-by}
     (\texttt{id\_bound.by} is equal to \texttt{truncation.by}),
     so by the postcondition of \texttt{truncate\_id\_bound},
