@@ -91,5 +91,3 @@ def test_version_mismatch_warning():
     )
     with pytest.warns(UserWarning, match=re.escape("(bad-version) != this version")):
         dp.deserialize(bad_serialized)
-
-

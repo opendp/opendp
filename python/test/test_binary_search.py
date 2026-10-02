@@ -80,7 +80,8 @@ def test_binary_search_one_sided_errors(bounds, message):
 
 def test_mixed_type_bounds():
     with pytest.raises(TypeError, match="bounds must share the same type"):
-        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.))
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.0))
+
 
 def test_binary_search_inferred_int():
     def predicate(v):

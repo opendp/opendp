@@ -6,6 +6,7 @@ np = pytest.importorskip("numpy")
 pytest.importorskip("randomgen")
 pytest.importorskip("scipy.linalg")
 
+
 def test_private_eigenvector():
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 
@@ -14,7 +15,7 @@ def test_private_eigenvector():
         dp.symmetric_distance(),
     )
     meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
-    
+
     data = np.random.normal(size=(4, 4))
     data += data.T
     noisy = meas(data)
