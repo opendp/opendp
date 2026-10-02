@@ -66,7 +66,7 @@ class ContingencyTable:
     model: Any  # MarkovRandomField
     """MarkovRandomField spanning the same columns as keys"""
     thresholds: dict[str, int] = field(default_factory=dict)
-    """Cut-off point for discovered stable keys. 
+    """Cut-off point for discovered stable keys.
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):

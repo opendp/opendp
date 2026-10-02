@@ -84,7 +84,7 @@ def test_domains():
 )
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
-    
+
     t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     pl_testing.assert_series_equal(t_ident(series), series)
 
@@ -384,7 +384,7 @@ def test_onceframe_lazy():
     ids=ids,
 )
 def test_mechanisms(measure):
-    
+
 
     lf_domain, lf = example_lf()
 
@@ -440,7 +440,7 @@ def test_polars_context():
 
 
 def test_polars_describe():
-    
+
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 
     context = dp.Context.compositor(
@@ -484,7 +484,7 @@ def test_polars_describe():
 
 
 def test_polars_accuracy_threshold():
-    
+
     context = dp.Context.compositor(
         data=pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String}),
         privacy_unit=dp.unit_of(contributions=1),
@@ -551,7 +551,7 @@ def test_polars_collect_early():
 
 
 def test_polars_threshold_epsilon():
-    
+
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
         schema={"A": pl.Int32, "B": pl.String},
@@ -607,7 +607,7 @@ def test_polars_threshold_epsilon():
 
 
 def test_polars_threshold_rho():
-    
+
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
         schema={"A": pl.Int32, "B": pl.String},
@@ -666,7 +666,7 @@ def test_polars_threshold_rho():
 def test_polars_grouped_quantile_max_groups_contribution_bound():
     # Regression test for https://github.com/opendp/opendp/issues/2640
     # A loose explicit max_groups should not dominate a tighter total contribution bound.
-    
+
     counts = {"first year": 485, "sophomore": 361, "junior": 85, "senior": 67}
     rows = []
     for group, n in counts.items():
@@ -834,7 +834,7 @@ def test_execute_shim():
 
 
 def test_cut():
-    
+
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
     by = [pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()]
     with warnings.catch_warnings():
@@ -1012,7 +1012,7 @@ def test_sort_usability():
 
 
 def test_count_queries():
-    
+
     lf_domain = dp.lazyframe_domain(
         [dp.series_domain("data", dp.atom_domain(T=dp.i64))]
     )
@@ -1048,7 +1048,7 @@ def test_count_queries():
 
 
 def test_explicit_grouping_keys():
-    
+
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     plan_right = (
@@ -1072,7 +1072,7 @@ def test_explicit_grouping_keys():
 
 
 def test_explicit_grouping_keys_context():
-    
+
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     context = dp.Context.compositor(
@@ -1185,7 +1185,7 @@ def test_temporal_domain():
 
 
 def test_replace():
-    
+
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
         data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 1000)),
