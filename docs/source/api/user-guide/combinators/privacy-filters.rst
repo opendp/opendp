@@ -36,10 +36,10 @@ that rejects any query that would cause the privacy loss to exceed 2.0:
             :start-after: privacy-filter
             :end-before: /privacy-filter
 
-Privacy filters are measurements, meaning that they can be passed into :func:`~opendp.combinators.make_composition`, 
+Privacy filters are measurements, meaning that they can be passed into :func:`~opendp.combinators.make_composition`,
 adaptive composition queryables, or into other combinators.
 However, they have the added benefit of not needing to specify privacy-loss parameters ahead-of-time.
-When the privacy filter (``meas_fully_adaptive_comp``) is invoked, 
+When the privacy filter (``meas_fully_adaptive_comp``) is invoked,
 it still returns an *odometer queryable*, but this time the queryable will limit the overall privacy loss.
 
 .. tab-set::
@@ -132,7 +132,7 @@ Since the privacy loss is capped at 2.0, any more queries will be rejected:
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException: 
+            opendp.mod.OpenDPException:
               FailedFunction("filter is now exhausted: pending privacy loss (3.0) would exceed privacy budget (2.0)")
 
     .. tab-item:: R

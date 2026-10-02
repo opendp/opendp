@@ -12,9 +12,9 @@ Synthetic data works in much the same way, but the query workload is no longer f
 
 All algorithms for differentially private contingency table estimation inherit from :py:class:`~opendp.extras.mbi.Algorithm`:
 
-* :py:class:`~opendp.extras.mbi.Fixed` (static, pre-defined workload) 
-* :py:class:`~opendp.extras.mbi.AIM` (synthetic data: adaptive and iterative mechanism) 
-* :py:class:`~opendp.extras.mbi.MST` (synthetic data: minimum spanning tree) 
+* :py:class:`~opendp.extras.mbi.Fixed` (static, pre-defined workload)
+* :py:class:`~opendp.extras.mbi.AIM` (synthetic data: adaptive and iterative mechanism)
+* :py:class:`~opendp.extras.mbi.MST` (synthetic data: minimum spanning tree)
 * :py:class:`~opendp.extras.mbi.Sequential` (run a sequence of algorithms)
 
 Let's get started by setting up the context for the Labor Force dataset.
@@ -58,7 +58,7 @@ We now release a contingency table via the :py:class:`~opendp.extras.mbi.AIM` al
             ...     .release()
             ... )
 
-Generation of synthetic data from a DP contingency table is considered postprocessing, 
+Generation of synthetic data from a DP contingency table is considered postprocessing,
 and thus does not affect the privacy budget.
 
 .. tab-set::
@@ -94,7 +94,7 @@ in a manner consistent with the input data types.
 Handling Null Values
 --------------------
 
-The underlying marginal-based inference algorithm 
+The underlying marginal-based inference algorithm
 requires that every column in the data has a statically defined key-set.
 The key-set may come from two sources:
 
@@ -102,7 +102,6 @@ The key-set may come from two sources:
 * Stable Keys: estimated with a portion of the privacy loss budget
 
 In both cases, the set of keys is not necessarily exhaustive:
-explicit keys (defined by the user) may not span all keys in the data, 
+explicit keys (defined by the user) may not span all keys in the data,
 and stable keys omits keys with low counts.
 OpenDP replaces all keys that are not present in the key-set with null.
-

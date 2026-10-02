@@ -1264,7 +1264,7 @@ class Margin:
     Some operations (for instance, for float sums) will error if `max_length` is not provided.
     This is used to resolve issues raised in the paper
     `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
-    
+
     If you don't know how many records are in the data, you can specify a very loose upper bound,
     for example, the size of the total population you are sampling from.
     """
@@ -1274,7 +1274,7 @@ class Margin:
 
     invariant: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered invariant.
-    
+
     * ``"keys"`` designates that keys are not protected
     * ``"lengths"`` designates that both keys and group lengths are not protected
 
@@ -1380,7 +1380,7 @@ class Bound(object):
 
     per_group: int | None = None
     """The greatest number of records an individual may contribute to any one group.
-    
+
     This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
     """
 

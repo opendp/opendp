@@ -4,12 +4,12 @@
 \title{\texttt{fn make\_stable\_group\_by}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/group_by/fn}{make\_stable\_group\_by} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/group_by/fn}{make\_stable\_group\_by}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -55,12 +55,12 @@ This can be extended in the future, but is sufficient for select queries.
 
 \begin{proof}[Stability guarantee]
     We first simplify the problem on line \ref{line:identifier} by only considering datasets that differ by rows, not by identifiers.
-    
+
     The only bound derived is when there are no grouping keys.
 
     We first retrieve optional upper bounds on the number of rows and groups an individual may contribute on lines \ref{line:total-contributions} and \ref{line:total-groups}.
     Both of these bounds directly correspond to the number of rows an individual may influence in the resulting dataset.
-    
+
     \begin{align}
         &\max_{x \sim x'} d_{\mathrm{FrameDistance<M>}}(\texttt{function}(x), \texttt{function}(x')) \\
         &\le \mathrm{option\_min}(\texttt{contributed\_rows}, \texttt{contributed\_groups}) \cdot 2

@@ -46,7 +46,7 @@ Types matching those in the pseudocode.
     with some adjustments that do not materially affect the privacy analysis.
 
     \begin{itemize}
-        \item When an odometer invokes $\mathcal{M}_{k+1}$, 
+        \item When an odometer invokes $\mathcal{M}_{k+1}$,
         the OpenDP Library implementation eagerly accounts for all future privacy loss of the child mechanism immediately (on line \ref{child-privacy-map}),
         even if the analyst never interacts with the spawned interactive mechanism.
         \item The OpenDP Library represents interactive mechanisms via queryables,
@@ -55,11 +55,11 @@ Types matching those in the pseudocode.
         By the definition of a valid interactive measurement, the view an adversary gains from this queryable has privacy loss $d_k$
         for some choice of \din.
         \item The queryable for child $k$ can be viewed as $\mathcal{M}_k$ together with $s_k$.
-        Since the queryable itself satisfies $d_k$-DP, the queryable can be returned to the user to provide query access, 
+        Since the queryable itself satisfies $d_k$-DP, the queryable can be returned to the user to provide query access,
         child queryables ($\mathcal{M}_k$ and $s_k$) can be removed from the odometer state,
         and the handling of child update queries $m = (j, q)$ can be removed while preserving equivalency with Algorithm~6.
         This equivalently reduces the odometer state to $(s, [d_1, ... d_k])$.
-        \item In addition to storing the dataset $x$, 
+        \item In addition to storing the dataset $x$,
         the state also contains the input domain, input metric and privacy measure.
         Each incoming mechanism must share these same supporting elements.
         This is an implicit requirement of the paper made explicit in the implementation.
@@ -71,23 +71,23 @@ Types matching those in the pseudocode.
     to form the state.
 
     First consider the case where the privacy measure satisfies concurrent composition.
-    Lines \ref{metric-check} and \ref{measure-check} are necessary to guarantee that the constructed odometer queryable 
+    Lines \ref{metric-check} and \ref{measure-check} are necessary to guarantee that the constructed odometer queryable
     gives valid privacy loss guarantees with respect to \texttt{input\_metric} and \texttt{output\_measure}.
     On line \ref{invoke}, the user-verified preconditions for invoking the measurement are met,
     by the precondition that the \texttt{data} is a member of \texttt{input\_domain}
     and the check that the measurement's input domain matches \texttt{input\_domain} on line \ref{domain-check}.
     Therefore by the definition of a valid measurement,
-    \texttt{answer} satisfies \texttt{measurement.privacy\_map}(\din)-DP, with respect to \texttt{output\_measure}, 
+    \texttt{answer} satisfies \texttt{measurement.privacy\_map}(\din)-DP, with respect to \texttt{output\_measure},
     for some choice of \din.
 
     Now consider the case where the privacy measure does not satisfy concurrent composition.
-    Then \texttt{seq\_wrapper} on line \ref{pre-hook} is a wrapper that will cause wrapped queryables 
+    Then \texttt{seq\_wrapper} on line \ref{pre-hook} is a wrapper that will cause wrapped queryables
     to send an \texttt{AskPermission} query with their self-reported id to this queryable before answering any query.
-    By line \ref{ask-permission-handler}, permission is only granted 
+    By line \ref{ask-permission-handler}, permission is only granted
     if the most recently spawned child is asking for permission to execute a query.
     This ensures that an adversary may only interact with the most recently spawned child mechanism.
-    
-    
+
+
     Now that we've shown a correspondence between the pseudocode and Algorithm~6 of \cite{haney2023concurrentcompositioninteractivedifferential},
     the proof from Appendix~B.1 shows that the pseudocode implements a valid $\mathcal{D}$ DP privacy loss accumulator for interactive mechanisms.
 

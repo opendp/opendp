@@ -4,12 +4,12 @@
 \title{\texttt{fn score\_candidates\_map}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_map} 
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_map}
 in \asOfCommit{mod.rs}{f5bb719}.
 \texttt{score\_candidates\_map} returns a specific function that can be used to prove stability of the quantile scoring transformation.
 
@@ -45,7 +45,7 @@ None
 
     This means that, for any two elements $x, x'$ in the \texttt{input\_domain},
         where $x, x'$ share the same length if \texttt{known\_length} is true,
-    and any pair $(\din, \dout)$, 
+    and any pair $(\din, \dout)$,
         where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric},
     then when $x, x'$ are \din-close under \texttt{input\_metric} and $\texttt{stability\_map}(\din) \leq \dout$,
     \function(x), \function(x') are \dout-close under \texttt{output\_metric}.
@@ -62,7 +62,7 @@ First, consider the case where the size is unknown.
 \end{lemma}
 
 \begin{proof}
-    Assume $d_{Sym}(x, x') = 1$. 
+    Assume $d_{Sym}(x, x') = 1$.
 
     \begin{align*}
         &d_\infty(\function(x)_i, \function(x')_i) \\
@@ -75,21 +75,21 @@ First, consider the case where the size is unknown.
             \\&\hspace{1cm}|\#(x' < C_i) - \alpha \cdot (|x| - \#(x' = C_i))|| \\
     \intertext{Consider each of the three cases of adding or removing an element in x.}
     \intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ added or removed.}
-        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1cm} - |(1 - \alpha) \cdot (\#(x < C_i) \pm 1) - \alpha \cdot \#(x > C_i)|| \\
         &\leq \alpha_{den} \cdot  \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm(1 - \alpha)|)| &&\text{by triangle inequality} \\
         &= \alpha_{den} \cdot \max\limits_{i} |1 - \alpha| &&\text{scores cancel}\\
         &= \alpha_{den} - \alpha_{num} &&\text{since } \alpha \leq 1
     \intertext{Case 2. Assume $x'$ is equal to $x$, but with some $x_j > C_i$ added or removed.}
-        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot (\#(x > C_i) \pm 1)|| \\
-        &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm\alpha|)| &&\text{by triangle inequality} \\
         &= \alpha_{den} \cdot \max\limits_{i} |\alpha| &&\text{scores cancel}\\
         &= \alpha_{num} &&\text{since } \alpha \geq 0
     \intertext{Case 3. Assume $x'$ is equal to $x$, but with some $x_j = C_i$ added or removed.}
-        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|| \\
         &= 0 &&\text{no change in score}
     \intertext{Take the union bound over all cases.}
@@ -107,7 +107,7 @@ Now consider the case where the dataset size is known.
 \end{lemma}
 
 \begin{proof}
-    Assume $d_{CO}(x, x') \le 1$. 
+    Assume $d_{CO}(x, x') \le 1$.
 
     \begin{align*}
         &d_\infty(\function(x), \function(x')) \\
@@ -123,7 +123,7 @@ Now consider the case where the dataset size is known.
     \begin{align*}
     \intertext{Consider each of the four cases of changing a row in x.}
     \intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ replaced with $x'_j > C_i$.}
-        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1.7cm} - |(1 - \alpha) \cdot (\#(x < C_i) - 1) - \alpha \cdot (\#(x > C_i) + 1)|| &&\text{by definition of }\function \\
         &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
             \\&\hspace{1.65cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |1|)| &&\text{by triangle inequality} \\
@@ -150,9 +150,9 @@ Now consider the case where the dataset size is known.
     and the postcondition of \function is satisfied.
 
     First, consider the case where the size is unknown.
-    Take any two members $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+    Take any two members $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$,
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
-    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.
 
     \begin{align*}
         \dout &= \max\limits_{s \sim s'} d_{\infty}(s, s') &&\text{where } s = \function(x)\\
@@ -165,9 +165,9 @@ Now consider the case where the dataset size is known.
     This formula matches the stability map in the case where the dataset size is unknown.
 
     Now, consider the case where the size is known.
-    Take any two elements $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+    Take any two elements $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$,
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
-    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.
 
     \begin{align*}
         \dout &= \max\limits_{s \sim s'} d_{\infty}(s, s') \\

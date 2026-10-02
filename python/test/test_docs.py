@@ -235,7 +235,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The members of this module will then be accessible at ``{expected_ns}``.    
+The members of this module will then be accessible at ``{expected_ns}``.
 """.strip()
     assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
 
@@ -255,6 +255,6 @@ def test_extras_docstring_installs(py_path):
     elif "examples" in namespace:
         pytest.skip("dp.examples does not need extra installs")
     expected = f"""
-This module requires extra installs: ``pip install 'opendp[{extra}]'``   
+This module requires extra installs: ``pip install 'opendp[{extra}]'``
 """.strip()
     assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"

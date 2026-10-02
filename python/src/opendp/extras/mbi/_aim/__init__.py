@@ -57,7 +57,7 @@ class AIM(Algorithm):
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
     ..
-    
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
 
@@ -118,7 +118,7 @@ class AIM(Algorithm):
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
     """Maximum memory constraint in MB for the marginal selection."""
