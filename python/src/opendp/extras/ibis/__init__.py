@@ -104,6 +104,7 @@ def run_on_database(query, connection, table_name: str):
 
         >>> print("DP result:", result)
         DP result: [...]
+        >>> connection.disconnect()
 
     """
     import opendp.prelude as dp
