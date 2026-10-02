@@ -90,13 +90,18 @@ def run_on_database(query, connection, table_name: str):
         ...         dp.polars.Margin(max_length=1_000_000),
         ...     ],
         ... )
-        >>> query = context.query().select(dp.len())
+
+        >>> # TODO: Support signed=True
+        >>> # https://github.com/opendp/polars-to-ibis/issues/175
+        >>> query = context.query().select(dp.len(signed=False))
+
         >>> # TODO: Silence warning upstream.
         >>> # https://github.com/opendp/polars-to-ibis/issues/167
         >>> import warnings
         >>> with warnings.catch_warnings():
         ...     warnings.simplefilter("ignore")
         ...     result = run_on_database(query, connection, table_name)
+
         >>> print("DP result:", result)
         DP result: [...]
 
