@@ -7,6 +7,20 @@ from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from opendp._internal import _make_measurement, _make_transformation
 
+
+def _optimal_b(A_eigvals, d: int) -> float:
+    import opendp.prelude as dp
+
+    # Differs from the Amin et al. in two ways:
+    # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
+    #   the equality is against 1 not 0
+    # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability,
+    #   and increase the upper bound, as b = d when A = 0 (for example, when the data is empty)
+    return dp.binary_search(
+        lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d) + 1.0)
+    )
+
+
 # planning to make this public, but may make more API changes
 
 
@@ -53,13 +67,7 @@ def make_private_eigenvector(
         # b is chosen optimally when the ACG is least entropic, but is still an envelope.
         # Criteria for being an envelope are given in 3.4 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf
 
-        # Differs from the Amin et al. in two ways:
-        # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
-        #   the equality is against 1 not 0
-        # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability
-        b = dp.binary_search(
-            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d))
-        )
+        b = _optimal_b(A_eigvals, d)
         Omega = np.eye(d) + 2 * A / b
 
         # (3)

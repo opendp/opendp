@@ -54,7 +54,7 @@ def make_np_clamp(
 
         # may have to run multiple times due to FP rounding
         current_norm = get_norm(arg)
-        while current_norm.max() > norm:
+        while current_norm.max(initial=0.0) > norm:
             with np.errstate(under="ignore", over="ignore"):
                 factor = current_norm / norm
             arg /= np.maximum(np.nan_to_num(factor), 1)

@@ -184,7 +184,7 @@ def array2_domain(
 
         if origin is not None:
             x = x - origin
-        if norm is not None and np.linalg.norm(x, ord=p, axis=1).max() > norm:
+        if norm is not None and np.linalg.norm(x, ord=p, axis=1).max(initial=0.0) > norm:
             raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
