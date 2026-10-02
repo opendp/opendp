@@ -67,11 +67,15 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
         "nan": False,
+        # Clamping changes values but neither sample count nor sample order.
+        # This is explicit provenance, not an inference from ``d_in -> d_in``.
+        "preserves_row_alignment": input_domain.preserves_row_alignment,
     }
+    output_domain = dp.numpy.array2_domain(**kwargs)
     return _make_transformation(
         input_domain,
         input_metric,
-        dp.numpy.array2_domain(**kwargs),
+        output_domain,
         input_metric,
         _function,
         lambda d_in: d_in,

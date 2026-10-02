@@ -809,11 +809,11 @@ class Query(object):
         ``d_in`` is the stability of the prior chain and ``d_out`` is the query's
         privacy allowance.
         """
-        from opendp.extras.sklearn import DPEstimator
+        from opendp.extras.sklearn._estimator import _DPFitMixin
 
-        if not isinstance(estimator, DPEstimator):
+        if not isinstance(estimator, _DPFitMixin):
             raise ValueError(
-                "sklearn(...) expects an opendp.extras.sklearn.DPEstimator instance"
+                "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
         if isinstance(self._chain, tuple):
             d_mid = self._d_in
@@ -829,7 +829,14 @@ class Query(object):
             )
 
         partial = estimator.then(self._output_measure, d_mid, self._d_out)
-        return self.new_with(chain=self._chain >> partial)
+
+        def _ingest_release(release):
+            estimator._ingest_release(release)
+            return estimator
+
+        return self.new_with(
+            chain=self._chain >> partial, wrap_release=_ingest_release
+        )
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
