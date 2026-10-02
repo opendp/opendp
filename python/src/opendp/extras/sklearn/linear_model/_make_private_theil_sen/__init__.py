@@ -70,7 +70,9 @@ def make_select_column(j, T=float):
     )
 
 
-def make_private_percentile_medians(output_measure, y_bounds, scale, candidates_count=100):
+def make_private_percentile_medians(
+    output_measure, y_bounds, scale, candidates_count=100
+):
     np = import_optional_dependency("numpy")
     # this median mechanism favors candidates closest to the true median
     m_median = dp.m.then_private_quantile(
