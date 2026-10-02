@@ -1,7 +1,8 @@
 import opendp.prelude as dp
 from opendp.extras.numpy import _sscp_domain
 import pytest
-from ..helpers import optional_dependency
+
+np = pytest.importorskip("numpy")
 
 
 def test_eigenvalues():
@@ -10,13 +11,11 @@ def test_eigenvalues():
         then_private_eigenvalues,
     )
 
-    with optional_dependency("numpy"):
-        space = (
-            _sscp_domain(num_features=4, norm=1.0, p=2, size=1000, T=float),
-            dp.symmetric_distance(),
-        )
+    space = (
+        _sscp_domain(num_features=4, norm=1.0, p=2, size=1000, T=float),
+        dp.symmetric_distance(),
+    )
     trans = space >> then_eigenvalues()
-    np = pytest.importorskip("numpy")
     data = np.random.normal(size=(4, 4))
     data += data.T
     assert np.array_equal(trans(data), np.linalg.eigvalsh(data))

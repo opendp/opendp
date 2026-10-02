@@ -182,5 +182,5 @@ postprocess the output.
             >>> print("epsilon:", dp_fraction_meas.map(1))
             epsilon: ...
 
-The same approaches are valid for the variance estimator. The `Resize preprocessing documentation <preprocess-resize.ipynb>`__
+The same approaches are valid for the variance estimator. The :doc:`Resize preprocessing documentation <preprocess-resize>`
 goes into greater detail on the tradeoffs of these approaches.

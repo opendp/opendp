@@ -68,7 +68,9 @@ class BinomialCND:
                 self.estimate, self.d_in, self.d_out, self.size, alpha, side
             )
 
-        raise ValueError(f"tail must be None, 'lower' or 'upper', not '{side}'")  # pragma: no cover
+        raise ValueError(
+            f"tail must be None, 'lower' or 'upper', not '{side}'"
+        )  # pragma: no cover
 
     def p_value(
         self, theta: float, tail: Literal["left", "right"] | None = None
@@ -94,13 +96,15 @@ class BinomialCND:
                 self.estimate, self.d_in, self.d_out, self.size, theta, tail
             )
 
-        raise ValueError(f"tail must be None, 'left' or 'right', not '{tail}'")  # pragma: no cover
+        raise ValueError(
+            f"tail must be None, 'left' or 'right', not '{tail}'"
+        )  # pragma: no cover
 
     def __repr__(self) -> str:
         return f"BinomialCND(estimate={self.estimate}, d_in={self.d_in}, d_out={self.d_out}, size={self.size})"
 
 
-# If the canonical noise mechanism is generalized beyond (ε, δ)-DP, 
+# If the canonical noise mechanism is generalized beyond (ε, δ)-DP,
 # then this needs to be updated, as it only considers the Tulap noise generated from this definition.
 def _cnd_cdf(t, shift, d_in: float, d_out: tuple[float, float]):
     """Computes the value of the cumulative density function Pr[T <= t] where T ~ Tulap(shift, b, q),
@@ -117,7 +121,7 @@ def _cnd_cdf(t, shift, d_in: float, d_out: tuple[float, float]):
     g = -math.log(b)
     l = math.log(1 + b)  # noqa
     k = 1 - b
-    
+
     with np.errstate(over="ignore"):
         negs = np.exp((r * g) - l + np.log(b + ((t - r + (1 / 2)) * k)))
         poss = 1 - np.exp((r * -g) - l + np.log(b + ((r - t + (1 / 2)) * k)))
@@ -183,7 +187,9 @@ def one_sided_confidence_interval(
     mle = max(min(Z / size, 1.0), 0.0)
     tail = {"lower": "left", "upper": "right"}.get(side)
     if tail is None:
-        raise ValueError(f"tail must be 'lower' or 'upper', not {tail}")  # pragma: no cover
+        raise ValueError(
+            f"tail must be 'lower' or 'upper', not {tail}"
+        )  # pragma: no cover
     pred = lambda B: one_sided_pvalue(B * size, d_in, d_out, size, mle, tail) > alpha  # type: ignore[arg-type]
     return float(binary_search(pred, bounds=(0.0, 1.0)))
 
@@ -252,12 +258,14 @@ def one_sided_pvalue(
     elif tail == "left":
         F = 1 - _cnd_cdf(values, Z, d_in=d_in, d_out=d_out)
     else:
-        raise ValueError(f"tail must be 'left' or 'right', not '{tail}'")  # pragma: no cover
+        raise ValueError(
+            f"tail must be 'left' or 'right', not '{tail}'"
+        )  # pragma: no cover
     return float(np.dot(F.T, B))
 
 
 def one_sided_uniformly_most_powerful_tests(
-    d_in: float, 
+    d_in: float,
     d_out: tuple[float, float],
     size: int,
     theta: float,
@@ -294,4 +302,6 @@ def one_sided_uniformly_most_powerful_tests(
     if tail == "right":
         return 1 - phi
 
-    raise ValueError(f"tail must be either 'left' or 'right', not '{tail}'")  # pragma: no cover
+    raise ValueError(
+        f"tail must be either 'left' or 'right', not '{tail}'"
+    )  # pragma: no cover

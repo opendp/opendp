@@ -14,7 +14,7 @@ First, create a measurement with the Polars API:
 ...     lf_domain,
 ...     dp.symmetric_distance(),
 ...     dp.max_divergence(),
-...     lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+...     lf.select([dp.len(signed=True), pl.col("A").dp.sum((0, 1))]),
 ...     global_scale=1.0
 ... )
 
