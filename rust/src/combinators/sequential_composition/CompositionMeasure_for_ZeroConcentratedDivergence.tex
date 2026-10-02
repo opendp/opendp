@@ -27,7 +27,8 @@ None
 
 \subsection*{Postcondition}
 \begin{theorem}
-  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids} 
+  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids},
+  where each \texttt{d\_mid} is charged \texttt{k} times,
   is bounded above by \texttt{self.compose(d\_mids)} under \texttt{adaptivity} adaptivity and \texttt{out}-composability.
   Otherwise returns an error.
 \end{theorem}
@@ -60,7 +61,7 @@ None
 \end{proof}
 
 \begin{proof}
-  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$.
+  By the postconditions of \rustdoc{traits/trait}{InfAdd} and \rustdoc{traits/trait}{InfMul} we have that $\sum_i k_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$.
 
   \begin{center}
     \begin{tabular}{ r | l l }

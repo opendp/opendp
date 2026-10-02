@@ -10,12 +10,15 @@ def new_fully_adaptive_composition_queryable(
         output_measure.composability(Adaptivity.FullyAdaptive), Composability.Sequential
     )
 
-    privacy_maps = []  # Vec<PrivacyMap<MI, MO>> `\label{mutable-state}`
+    privacy_maps = OrderedCounts()  # `\label{mutable-state}`
+    num_queries = 0
 
     def transition(  # `\label{transition}`
         self_: OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance],
         query: Query[OdometerQuery[Measurement[DI, MI, MO, TO]]],
     ):
+        nonlocal num_queries
+
         # this queryable and wrapped children communicate via an AskPermission query
         # defined here, where no-one else can access the type
         @dataclass
@@ -39,6 +42,10 @@ def new_fully_adaptive_composition_queryable(
                     MeasureMismatch, output_measure, meas.output_measure
                 )
 
+                # check the bookkeeping before spending privacy
+                num_queries.alerting_add(1)
+                privacy_maps.check_add(meas.privacy_map, 1)
+
                 enforce_sequentiality = False
 
                 if require_sequentiality:
@@ -47,7 +54,7 @@ def new_fully_adaptive_composition_queryable(
                     # This way, when the child gets a query it sends an AskPermission query
                     # to this parent queryable, giving this sequential odometer queryable
                     # a chance to deny the child permission to execute
-                    child_id = privacy_maps.len()
+                    child_id = num_queries
 
                     def callback():
                         if enforce_sequentiality:
@@ -67,13 +74,14 @@ def new_fully_adaptive_composition_queryable(
 
                 # We've now increased our privacy spend.
                 # This is our only state modification
-                privacy_maps.push(meas.privacy_map)  # `\label{child-privacy-map}`
+                num_queries = num_queries.alerting_add(1)
+                privacy_maps.add(meas.privacy_map, 1)  # `\label{child-privacy-map}`
 
                 return Answer.External(OdometerAnswer.Invoke(answer))
 
             # evaluate external privacy loss query
             case Query.External(OdometerQuery.PrivacyLoss(d_in)):
-                d_mids = [m.eval(d_in) for m in privacy_maps]
+                d_mids = [(m.eval(d_in), k) for m, k in privacy_maps]
                 d_out = output_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))
 
@@ -82,7 +90,7 @@ def new_fully_adaptive_composition_queryable(
                 #     who is asking for permission to execute
                 if isinstance(query, AskPermission):  # `\label{ask-permission-handler}`
                     # deny permission if the sequential odometer has moved on
-                    if query.id + 1 != privacy_maps.len():
+                    if query.id + 1 != num_queries:
                         raise ValueError("sequential odometer has received a new query")
 
                     # otherwise, return Ok to approve the change

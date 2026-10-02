@@ -67,7 +67,7 @@ Types matching those in the pseudocode.
 
     We now discuss how the pseudocode implements this equivalent algorithm.
     The input domain, input metric, privacy measure and data are moved into the transition function,
-    as well as a mutable list of privacy losses from line \ref{mutable-state},
+    as well as a mutable list of privacy maps and the number of times each is charged, from line \ref{mutable-state},
     to form the state.
 
     First consider the case where the privacy measure satisfies concurrent composition.
