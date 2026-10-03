@@ -97,8 +97,8 @@ class AlignedDomain:
                 return False
 
         try:
-            return len({len(field) for field in values.values()}) == 1
-        except TypeError:
+            return len({_value_row_count(field) for field in values.values()}) == 1
+        except (TypeError, IndexError):
             return False
 
 
@@ -186,6 +186,12 @@ then_project_X = to_then(make_project_X)
 then_lift_X = to_then(make_lift_X)
 register(make_project_X)
 register(make_lift_X)
+
+
+def _value_row_count(value: Any) -> int:
+    """Read sample count without relying on scipy sparse's ambiguous len()."""
+    shape = getattr(value, "shape", None)
+    return shape[0] if shape is not None else len(value)
 
 
 def _domain_row_count(domain: Domain) -> int | None:

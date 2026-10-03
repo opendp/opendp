@@ -883,8 +883,10 @@ class Query(object):
             )
         else:
             chain = self._chain
-        if not allow_transformations and isinstance(chain, Transformation):
-            raise ValueError("Query is not yet a measurement or odometer.")
+        if isinstance(chain, Transformation):
+            if not allow_transformations:
+                raise ValueError("Query is not yet a measurement or odometer.")
+            return chain
         return _cast_measure(chain, self._output_measure, self._d_out)
 
     def release(

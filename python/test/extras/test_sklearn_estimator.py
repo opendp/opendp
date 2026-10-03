@@ -253,3 +253,47 @@ def test_X_only_sklearn_bridge_leaves_natural_query_unchanged():
     estimator = _XOnlyEstimator()
     assert estimator.fit(_context().query()) is estimator
     assert estimator.release_ == 23
+
+
+def test_X_only_bridge_receives_preprocessed_X_and_upstream_stability():
+    import numpy as np
+    import opendp.prelude as dp
+    from opendp._internal import _make_transformation
+
+    dp.enable_features("contrib")
+    metric = dp.symmetric_distance()
+    X_domain = dp.numpy.array2_domain(T=float, num_columns=2, size=2)
+    domain = dp.sklearn.aligned_domain(X_domain)
+    duplicated_X = dp.numpy.array2_domain(T=float, num_columns=2, size=4)
+    duplicate = _make_transformation(
+        domain, metric, dp.sklearn.aligned_domain(duplicated_X), metric,
+        lambda data: dp.sklearn.Aligned(np.repeat(data.X, 2, axis=0)),
+        lambda distance: distance * 2,
+    )
+    clip = dp.numpy.make_np_clamp(duplicated_X, metric, norm=1.0, p=2)
+    data = dp.sklearn.Aligned(np.array([[3.0, 4.0], [0.0, 2.0]]))
+    expected = clip(np.repeat(data.X, 2, axis=0))
+
+    class CheckingEstimator(_DPXEstimator):
+        def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+            assert input_domain == clip.output_domain
+            assert d_in == 2
+
+            def release(X):
+                np.testing.assert_array_equal(X, expected)
+                return 23  # A constant release; assertions only validate routing.
+
+            return dp.m.make_user_measurement(
+                input_domain, input_metric, output_measure, release,
+                lambda distance: d_out * distance / d_in, TO=int,
+            )
+
+        def _ingest_release(self, release):
+            self.release_ = release
+
+    query = dp.Query(duplicate, dp.max_divergence(), d_in=1, d_out=1.0).lift_X(clip)
+    estimator = CheckingEstimator()
+    fitted_query = query.sklearn(estimator)
+    assert fitted_query.resolve().map(1) == 1.0
+    assert fitted_query.release(data=data) is estimator
+    assert estimator.release_ == 23

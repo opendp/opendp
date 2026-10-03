@@ -151,6 +151,10 @@ def test_lift_X_preserves_all_metadata_and_handles_empty_data(size):
         assert getattr(lift.output_domain.descriptor, name) == getattr(domain.descriptor, name)
     assert lift.output_domain.member(result)
     assert [lift.map(d) for d in (0, 1, 2)] == [0, 1, 2]
+    query = dp.Query(lift, dp.max_divergence(), d_in=1, d_out=1.0)
+    assert query.resolve(allow_transformations=True) is lift
+    with pytest.raises(ValueError, match="not yet a measurement"):
+        query.resolve()
 
 
 def test_lift_X_rejects_domain_provenance_and_X_only_stability_as_evidence():
@@ -199,3 +203,36 @@ def test_lift_X_checks_domain_and_metrics():
     )
     with pytest.raises(ValueError, match="X input and output"):
         dp.sklearn.make_lift_X(domain, metric, wrong_metric)
+
+
+def test_aligned_membership_counts_sparse_rows_without_len():
+    from opendp._internal import _extrinsic_domain
+
+    sparse = pytest.importorskip("scipy.sparse")
+    dp.enable_features("contrib")
+    X_domain = _extrinsic_domain(
+        "SparseMatrix", lambda value: sparse.issparse(value) and value.shape[1] == 2
+    )
+    y_domain = dp.vector_domain(dp.atom_domain(T=int))
+    domain = dp.sklearn.aligned_domain(X_domain, y_domain)
+    data = dp.sklearn.Aligned(sparse.csr_matrix(np.ones((2, 2))), [0, 1])
+    assert domain.member(data)
+    assert not domain.member(dp.sklearn.Aligned(data.X, [0]))
+    assert dp.sklearn.make_project_X(domain, dp.symmetric_distance())(data) is data.X
+
+
+def test_lifted_clamp_is_invariant_on_retained_rows_after_insertion():
+    dp.enable_features("contrib")
+    X_domain, y_domain, weight_domain = _domains(size=None)
+    domain = dp.sklearn.aligned_domain(X_domain, y_domain, weight_domain, y_domain)
+    clamp = dp.numpy.make_np_clamp(X_domain, dp.symmetric_distance(), norm=1.0, p=2)
+    lift = dp.sklearn.make_lift_X(domain, dp.symmetric_distance(), clamp)
+    before = dp.sklearn.Aligned(np.array([[0.5, 0.0], [3.0, 4.0]]), [0, 1], [0.5, 1.0], [2, 3])
+    after = dp.sklearn.Aligned(
+        np.vstack([before.X, [1e150, -1e150]]), [0, 1, 2], [0.5, 1.0, 1.5], [2, 3, 4]
+    )
+    out_before, out_after = lift(before), lift(after)
+    np.testing.assert_array_equal(out_before.X, out_after.X[:2])
+    for name in ("y", "sample_weight", "groups"):
+        assert getattr(out_before, name) == getattr(out_after, name)[:2]
+    assert lift.map(1) == 1
