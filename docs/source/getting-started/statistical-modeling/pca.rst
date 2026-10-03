@@ -196,6 +196,42 @@ with other OpenDP combinators. Ordinary inference methods such as
              [... ... ... ...]]
 
 
+Aligned sklearn workflows
+-------------------------
+
+``Aligned`` is a sklearn orchestration carrier, not PCA's framework input
+representation. It keeps private targets and metadata under one shared row
+adjacency. The sklearn fitting bridge projects X for PCA and leaves the original
+aligned query available for later steps:
+
+.. code-block:: python
+
+    aligned_domain = dp.sklearn.aligned_domain(
+        X=domain,
+        y=dp.vector_domain(dp.atom_domain(T=int), size=num_rows),
+    )
+    aligned_context = dp.Context.compositor(
+        data=dp.sklearn.Aligned(X=example_dataset, y=[0] * num_rows),
+        domain=aligned_domain,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    clip = dp.numpy.make_np_clip(domain, dp.symmetric_distance(), norm=1.0, p=2)
+    query = aligned_context.query().lift_X(clip)
+    model = dp.sklearn.decomposition.PCA(n_components=2)
+    model.fit(query)
+
+    # Keep transformed records private for subsequent pipeline measurements.
+    transform = model.make_transform(clip.output_domain)
+    next_query = query.lift_X(transform)
+
+``next_query`` still carries y (and any sample weights or groups), with only X
+replaced by its released PCA projection. Resolving this preprocessing chain as a
+transformation is not a private release of the transformed training rows.
+``lift_X`` accepts reviewed rowwise transformations, not arbitrary operations
+whose X-only stability map happens to be the identity.
+
 Please reach out on Slack if you need to a more tailored analysis: there
 are lower-level APIs for estimating *only* the eigenvalues or
 eigenvectors, or to avoid mean estimation when your data is already
