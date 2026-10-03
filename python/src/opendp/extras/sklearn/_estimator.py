@@ -137,12 +137,7 @@ class _DPEstimator(_DPFitMixin, _BaseEstimator):  # type: ignore
 
 
 class _DPXEstimator(_DPEstimator):
-    """Sklearn bridge for estimators whose framework measurement consumes X only.
-
-    ``make`` and ``then`` retain the algorithm's natural domain. Only the sklearn
-    query bridge projects aligned inputs; the caller's query remains intact for
-    subsequent pipeline steps.
-    """
+    """Sklearn bridge for estimators whose framework measurement consumes X only."""
 
     def _adapt_fit_query(self, query: "Query") -> "Query":
         from opendp.extras.sklearn._aligned import AlignedDomain, then_project_X

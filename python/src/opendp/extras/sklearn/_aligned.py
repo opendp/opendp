@@ -108,13 +108,7 @@ def aligned_domain(
     sample_weight: Domain | None = None,
     groups: Domain | None = None,
 ) -> ExtrinsicDomain:
-    """Construct a domain for one private, row-aligned sklearn dataset.
-
-    Pair the returned domain with :func:`opendp.metrics.symmetric_distance`.
-    An insertion/removal changes one aligned row regardless of how many of
-    ``X``, ``y``, ``sample_weight``, and ``groups`` are populated. Replacing one
-    row is the usual two symmetric-distance events.
-    """
+    """Construct a domain for one private, row-aligned sklearn dataset."""
     descriptor = AlignedDomain(X, y, sample_weight, groups)
     fields = ", ".join(descriptor._fields())
     return cast(

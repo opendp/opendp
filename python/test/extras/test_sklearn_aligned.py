@@ -236,3 +236,23 @@ def test_lifted_clamp_is_invariant_on_retained_rows_after_insertion():
     for name in ("y", "sample_weight", "groups"):
         assert getattr(out_before, name) == getattr(out_after, name)[:2]
     assert lift.map(1) == 1
+
+
+@pytest.mark.parametrize("dtype,T", [("int32", dp.i32), ("float32", dp.f32), ("float64", dp.f64)])
+def test_lifted_clamp_output_domain_handles_dtypes_and_cardinalities(dtype, T):
+    dp.enable_features("contrib")
+    X = np.array([[1, 1], [1, 0]], dtype=dtype)
+    X_domain = dp.numpy.array2_domain(T=T, size=2, num_columns=2, cardinalities=[1, 2])
+    y_domain = dp.vector_domain(dp.atom_domain(T=int), size=2)
+    domain = dp.sklearn.aligned_domain(X_domain, y_domain)
+    data = dp.sklearn.Aligned(X, [0, 1])
+    assert domain.member(data)
+    clamp = dp.numpy.make_np_clamp(X_domain, dp.symmetric_distance(), norm=1.0, p=2)
+    lift = dp.sklearn.make_lift_X(domain, dp.symmetric_distance(), clamp)
+    result = lift(data)
+    assert result.X.dtype == np.float64
+    assert len(np.unique(result.X[:, 0])) == 2
+    assert clamp.output_domain.descriptor.cardinalities is None
+    assert clamp.output_domain.member(result.X)
+    assert lift.output_domain.member(result)
+    np.testing.assert_array_equal(data.X, X)
