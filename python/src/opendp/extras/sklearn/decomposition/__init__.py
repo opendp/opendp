@@ -27,7 +27,7 @@ from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.numpy import then_np_clip
-from opendp.extras.sklearn._estimator import _DPEstimator
+from opendp.extras.sklearn._estimator import _DPXEstimator
 from opendp.extras.sklearn._make_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
@@ -230,8 +230,12 @@ then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA(_DPEstimator):
-    """Differentially private PCA with a sklearn estimator interface."""
+class PCA(_DPXEstimator):
+    """Differentially private PCA with a sklearn estimator interface.
+
+    Sklearn queries may carry Aligned inputs; fitting projects X without
+    consuming targets or metadata. The framework measurement remains X-only.
+    """
 
     def __init__(
         self,
@@ -577,6 +581,50 @@ class PCA(_DPEstimator):
         if self.whiten:
             transformed /= self._whitening_scale()
         return transformed
+
+    def make_transform(self, input_domain=None, input_metric=None):
+        """Construct a rowwise transformation from the released PCA state.
+
+        Pass the current X domain when composing with ``sklearn.make_lift_X``
+        to preserve targets, weights, and groups in an aligned pipeline.
+        Applying this transformation does not release private training rows.
+        """
+        import opendp.prelude as dp
+
+        np = import_optional_dependency("numpy")
+        self._check_is_fitted()
+        if input_domain is None:
+            input_domain = dp.numpy.array2_domain(T=float, num_columns=self.n_features_in_)
+        if input_metric is None:
+            input_metric = dp.symmetric_distance()
+        if input_metric != dp.symmetric_distance():
+            raise ValueError("PCA transform requires symmetric_distance()")
+        desc = input_domain.cast(dp.numpy.NPArray2Domain)
+        if desc.num_columns != self.n_features_in_:
+            raise ValueError("input_domain must match the fitted number of features")
+
+        # Snapshot only released parameters, never the private training data.
+        mean = self.mean_.copy()
+        components = self.components_.copy()
+        scale = self._whitening_scale().copy() if self.whiten else None
+
+        def transform(data):
+            result = (data - mean) @ components.T
+            if scale is not None:
+                result /= scale
+            return np.asarray(result, dtype=float)
+
+        transformation = _make_transformation(
+            input_domain, input_metric,
+            dp.numpy.array2_domain(
+                T=float, size=desc.size, num_columns=self.n_components_,
+                preserves_row_alignment=input_domain.preserves_row_alignment,
+            ),
+            input_metric, transform, lambda distance: distance,
+        )
+        # Released mean/components/whitening apply independently to each row.
+        transformation._preserves_aligned_rows = True
+        return transformation
 
     def inverse_transform(self, X):
         np = import_optional_dependency("numpy")
