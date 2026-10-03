@@ -130,8 +130,8 @@ def run_on_database(query, connection, table_name: str):
 
     # Use param_dicts:
 
-    # TODO: Would like to replace with https://github.com/google/saferpickle
-    # but not available on github: https://github.com/google/saferpickle/issues/19
+    # TODO: Find an alternative to pickle.
+    # https://github.com/opendp/opendp/issues/2989
     import pickle
 
     unpickled_kwargs = []
@@ -142,7 +142,7 @@ def run_on_database(query, connection, table_name: str):
         raise dp.OpenDPException(
             "Some operations (like dp.mean) are not currently supported "
             "because the plugin-parameters are not 1-1 with the private values."
-        )
+        )  # pragma: no cover
 
     dp_results = []
     for private_item, kwargs in zip(private_items, unpickled_kwargs):
