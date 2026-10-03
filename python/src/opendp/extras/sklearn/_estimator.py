@@ -72,6 +72,10 @@ class _DPFitMixin(ABC):
             )
         )
 
+    def _adapt_fit_query(self, query: "Query") -> "Query":
+        """Lower orchestration inputs to this estimator's natural input space."""
+        return query
+
     @abstractmethod
     def _ingest_release(self, release) -> None:
         """Populate fitted sklearn attributes from a measurement release."""
@@ -130,3 +134,28 @@ class _DPFitMixin(ABC):
 
 class _DPEstimator(_DPFitMixin, _BaseEstimator):  # type: ignore
     pass
+
+
+class _DPXEstimator(_DPEstimator):
+    """Sklearn bridge for estimators whose framework measurement consumes X only.
+
+    ``make`` and ``then`` retain the algorithm's natural domain. Only the sklearn
+    query bridge projects aligned inputs; the caller's query remains intact for
+    subsequent pipeline steps.
+    """
+
+    def _adapt_fit_query(self, query: "Query") -> "Query":
+        from opendp.extras.sklearn._aligned import AlignedDomain, then_project_X
+        from opendp.mod import Transformation
+
+        chain = query._chain
+        if isinstance(chain, tuple):
+            domain = chain[0]
+        elif isinstance(chain, Transformation):
+            domain = chain.output_domain
+        else:
+            return query  # The Query bridge diagnoses unfinished/invalid chains.
+
+        if isinstance(getattr(domain, "descriptor", None), AlignedDomain):
+            return query.new_with(chain=chain >> then_project_X())
+        return query

@@ -54,7 +54,7 @@ def make_np_clamp(
 
         # may have to run multiple times due to FP rounding
         current_norm = get_norm(arg)
-        while current_norm.max() > norm:
+        while current_norm.max(initial=0.0) > norm:
             with np.errstate(under="ignore", over="ignore"):
                 factor = current_norm / norm
             arg /= np.maximum(np.nan_to_num(factor), 1)
@@ -72,7 +72,7 @@ def make_np_clamp(
         "preserves_row_alignment": input_domain.preserves_row_alignment,
     }
     output_domain = dp.numpy.array2_domain(**kwargs)
-    return _make_transformation(
+    transformation = _make_transformation(
         input_domain,
         input_metric,
         output_domain,
@@ -80,6 +80,9 @@ def make_np_clamp(
         _function,
         lambda d_in: d_in,
     )
+    # Each retained row is clamped independently of all other rows.
+    transformation._preserves_aligned_rows = True
+    return transformation
 
 
 # generate then variant of the constructor

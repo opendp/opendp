@@ -815,11 +815,14 @@ class Query(object):
             raise ValueError(
                 "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
-        if isinstance(self._chain, tuple):
-            d_mid = self._d_in
-        elif isinstance(self._chain, Transformation):
-            d_mid = self._chain.map(self._d_in)
-        elif isinstance(self._chain, PartialChain):
+        # Only the sklearn bridge lowers compatibility carriers such as Aligned.
+        # Framework estimator.make/then continue to consume their natural domains.
+        query = estimator._adapt_fit_query(self)
+        if isinstance(query._chain, tuple):
+            d_mid = query._d_in
+        elif isinstance(query._chain, Transformation):
+            d_mid = query._chain.map(query._d_in)
+        elif isinstance(query._chain, PartialChain):
             raise ValueError(
                 "sklearn(...) requires all arguments in the input query to be specified."
             )
@@ -828,14 +831,14 @@ class Query(object):
                 f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
-        partial = estimator.then(self._output_measure, d_mid, self._d_out)
+        partial = estimator.then(query._output_measure, d_mid, query._d_out)
 
         def _ingest_release(release):
             estimator._ingest_release(release)
             return estimator
 
-        return self.new_with(
-            chain=self._chain >> partial, wrap_release=_ingest_release
+        return query.new_with(
+            chain=query._chain >> partial, wrap_release=_ingest_release
         )
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":

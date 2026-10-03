@@ -2,7 +2,7 @@ from typing import cast
 
 import pytest
 
-from opendp.extras.sklearn._estimator import _DPEstimator, _DPFitMixin
+from opendp.extras.sklearn._estimator import _DPEstimator, _DPFitMixin, _DPXEstimator
 from opendp.mod import Queryable
 
 
@@ -206,3 +206,50 @@ def test_query_sklearn_accepts_transformed_query_and_rejects_partial_chain():
     )
     with pytest.raises(ValueError, match="requires all arguments"):
         partial.sklearn(_ConstantEstimator())
+
+
+class _XOnlyEstimator(_ConstantEstimator, _DPXEstimator):
+    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+        import opendp.prelude as dp
+
+        assert not isinstance(getattr(input_domain, "descriptor", None), dp.sklearn.AlignedDomain)
+        return super().make(input_domain, input_metric, output_measure, d_in, d_out)
+
+
+@pytest.mark.parametrize("preprocess", [False, True])
+def test_X_only_sklearn_bridge_projects_without_changing_original_query(preprocess):
+    import numpy as np
+    import opendp.prelude as dp
+
+    dp.enable_features("contrib")
+    X_domain = dp.numpy.array2_domain(T=float, num_columns=2, size=2)
+    y_domain = dp.vector_domain(dp.atom_domain(T=int), size=2)
+    domain = dp.sklearn.aligned_domain(X_domain, y_domain)
+    data = dp.sklearn.Aligned(np.ones((2, 2)), [0, 1])
+    context = dp.Context.compositor(
+        data, dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0),
+        domain=domain, split_evenly_over=2,
+    )
+    query = context.query()
+    if preprocess:
+        clamp = dp.numpy.make_np_clamp(X_domain, dp.symmetric_distance(), norm=1.0, p=2)
+        query = query.lift_X(clamp)
+    original_chain = query._chain
+    estimator = _XOnlyEstimator()
+    fitted_query = query.sklearn(estimator)
+    measurement = fitted_query.resolve()
+    assert measurement.input_domain == domain
+    assert measurement.map(1) <= 0.5
+    assert fitted_query.release() is estimator
+    assert estimator.release_ == 23
+    second_estimator = _XOnlyEstimator()
+    assert second_estimator.fit(cast(dp.Query, query)) is second_estimator
+    assert second_estimator.release_ == 23
+    assert query._chain is original_chain
+    assert data.y == [0, 1]
+
+
+def test_X_only_sklearn_bridge_leaves_natural_query_unchanged():
+    estimator = _XOnlyEstimator()
+    assert estimator.fit(_context().query()) is estimator
+    assert estimator.release_ == 23

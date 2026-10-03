@@ -12,9 +12,16 @@ The members of this module will then be accessible at ``dp.sklearn``.
 Submodule organization will follow the conventions of `scikit-learn <https://scikit-learn.org/stable/api/index.html>`_.
 '''
 
-from opendp.extras.sklearn._aligned import Aligned, AlignedDomain, aligned_domain
+from opendp.extras.sklearn._aligned import (
+    Aligned, AlignedDomain, aligned_domain,
+    make_project_X, then_project_X, make_lift_X, then_lift_X,
+)
 
 import opendp.extras.sklearn.decomposition as decomposition
 import opendp.extras.sklearn.linear_model as linear_model
 
-__all__ = ["Aligned", "AlignedDomain", "aligned_domain", "decomposition", "linear_model"]
+__all__ = [
+    "Aligned", "AlignedDomain", "aligned_domain",
+    "make_project_X", "then_project_X", "make_lift_X", "then_lift_X",
+    "decomposition", "linear_model",
+]

@@ -8,13 +8,18 @@ are not independently adjacent datasets.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, cast
 
-from opendp._internal import _extrinsic_domain
-from opendp.mod import Domain, ExtrinsicDomain, VectorDomain
+from opendp._internal import _extrinsic_domain, _make_transformation
+from opendp.context import register
+from opendp.extras._utilities import to_then
+from opendp.mod import Domain, ExtrinsicDomain, Metric, Transformation, VectorDomain
 
-__all__ = ["Aligned", "AlignedDomain", "aligned_domain"]
+__all__ = [
+    "Aligned", "AlignedDomain", "aligned_domain",
+    "make_project_X", "then_project_X", "make_lift_X", "then_lift_X",
+]
 
 
 @dataclass
@@ -116,6 +121,71 @@ def aligned_domain(
         ExtrinsicDomain,
         _extrinsic_domain(f"AlignedDomain({fields})", descriptor.member, descriptor),
     )
+
+
+def make_project_X(input_domain: Domain, input_metric: Metric) -> Transformation:
+    """Project aligned sklearn inputs into an algorithm's natural X domain.
+
+    Dropping targets and metadata is 1-stable under the shared symmetric row
+    adjacency. The original :class:`Aligned` value is not modified.
+    """
+    descriptor = _aligned_descriptor(input_domain, input_metric)
+    return _make_transformation(
+        input_domain, input_metric, descriptor.X, input_metric,
+        lambda data: data.X, lambda distance: distance,
+    )
+
+
+def make_lift_X(
+    input_domain: Domain,
+    input_metric: Metric,
+    transformation: Transformation,
+) -> Transformation:
+    """Apply a rowwise X transformation, retaining all aligned metadata.
+
+    The transformation must retain sample count and order, and leave the output
+    of every retained row unchanged when other rows are inserted or removed.
+    This stronger, rowwise contract makes the *whole* aligned transformation
+    1-stable. A stability map or an output-domain alignment flag alone does not
+    establish it (for example, sorting X can be 1-stable but misalign y).
+
+    Only reviewed rowwise constructors attest this contract internally on the
+    transformation itself. Filtering, reordering, aggregation, data-dependent
+    cross-row operations, and arbitrary user transformations are not accepted.
+    """
+    descriptor = _aligned_descriptor(input_domain, input_metric)
+    if not isinstance(transformation, Transformation):
+        raise TypeError("transformation must be an OpenDP Transformation")
+    if transformation.input_domain != descriptor.X:
+        raise ValueError("transformation input domain must match AlignedDomain.X")
+    if (transformation.input_metric != input_metric
+            or transformation.output_metric != input_metric):
+        raise ValueError("lift_X requires symmetric_distance() on X input and output")
+    if not getattr(transformation, "_preserves_aligned_rows", False):
+        raise ValueError("lift_X requires an explicitly row-preserving transformation")
+
+    output_domain = aligned_domain(
+        **(descriptor._fields() | {"X": transformation.output_domain})
+    )
+    return _make_transformation(
+        input_domain, input_metric, output_domain, input_metric,
+        lambda data: replace(data, X=transformation(data.X)),
+        lambda distance: distance,
+    )
+
+
+def _aligned_descriptor(input_domain: Domain, input_metric: Metric) -> AlignedDomain:
+    from opendp.metrics import symmetric_distance
+
+    if input_metric != symmetric_distance():
+        raise ValueError("aligned adapters require symmetric_distance()")
+    return input_domain.cast(AlignedDomain)
+
+
+then_project_X = to_then(make_project_X)
+then_lift_X = to_then(make_lift_X)
+register(make_project_X)
+register(make_lift_X)
 
 
 def _domain_row_count(domain: Domain) -> int | None:
