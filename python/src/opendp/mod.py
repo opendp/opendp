@@ -874,6 +874,20 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
+    @property
+    def preserves_row_alignment(self) -> bool:
+        """Whether this domain retains a known input row correspondence.
+
+        This is provenance supplied by an aligned input or explicitly propagated
+        by a known preserving transformation. It is never inferred from a
+        transformation's stability relation.
+        """
+        if getattr(self, "_preserves_row_alignment", False):
+            return True
+        if isinstance(self, ExtrinsicDomain):
+            return bool(getattr(self.descriptor, "preserves_row_alignment", False))
+        return False
+
     def cast(self, type_: Type[D]) -> D:
         """Retrieve the descriptor as the prescribed type, or error."""
         if not (

@@ -12,6 +12,9 @@ def make_np_clamp(
 ) -> Transformation:
     """Construct a Transformation that clamps the norm of input data.
 
+    The output has f64 elements. Clamping can increase categorical cardinalities,
+    so any input cardinality constraints are dropped from the output domain.
+
     :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
     :param norm: clamp each row to this norm. Required if data is not already bounded
@@ -40,6 +43,7 @@ def make_np_clamp(
 
     if not np.all(np.isfinite(origin)):
         raise ValueError("origin must be finite")  # pragma: no cover
+    origin = np.asarray(origin, dtype=float)
 
     def get_norm(x):
         with np.errstate(over="ignore"):
@@ -49,12 +53,12 @@ def make_np_clamp(
     def _function(arg):
         with np.errstate(over="ignore"):
             # don't mutate the input array
-            arg = arg - origin
+            arg = np.asarray(arg, dtype=float) - origin
         arg = np.nan_to_num(arg)
 
         # may have to run multiple times due to FP rounding
         current_norm = get_norm(arg)
-        while current_norm.max() > norm:
+        while current_norm.max(initial=0.0) > norm:
             with np.errstate(under="ignore", over="ignore"):
                 factor = current_norm / norm
             arg /= np.maximum(np.nan_to_num(factor), 1)
@@ -67,15 +71,24 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
         "nan": False,
+        "T": float,
+        "cardinalities": None,
+        # Clamping changes values but neither sample count nor sample order.
+        # This is explicit provenance, not an inference from ``d_in -> d_in``.
+        "preserves_row_alignment": input_domain.preserves_row_alignment,
     }
-    return _make_transformation(
+    output_domain = dp.numpy.array2_domain(**kwargs)
+    transformation = _make_transformation(
         input_domain,
         input_metric,
-        dp.numpy.array2_domain(**kwargs),
+        output_domain,
         input_metric,
         _function,
         lambda d_in: d_in,
     )
+    # Each retained row is clamped independently of all other rows.
+    transformation._preserves_aligned_rows = True
+    return transformation
 
 
 # generate then variant of the constructor
