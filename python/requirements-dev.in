@@ -21,3 +21,4 @@ blacken-docs
 
 # Just needed for examples in documentation:
 pandas
+ibis-framework[sqlite]
