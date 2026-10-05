@@ -2,7 +2,7 @@
 
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison showing the source changes from the previous version.
 
-## [0.16.0](https://github.com/opendp/opendp/compare/v0.15.1...v0.16.0) - TBD
+## [0.16.0](https://github.com/opendp/opendp/compare/v0.15.1...v0.16.0) - 2026-10-05
 
 
 ### Features
@@ -111,7 +111,7 @@ This file documents the version history of OpenDP. The links on each version num
 
 
 
-## [0.15.1](https://github.com/opendp/opendp/compare/v0.15.0...v0.15.1) - 2026-10-05
+## [0.15.1](https://github.com/opendp/opendp/compare/v0.15.0...v0.15.1) - 2026-05-28
 
 
 
