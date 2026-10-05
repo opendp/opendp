@@ -55,14 +55,15 @@ What next?
 There are multiple tracks through the documentation:
 
 * New users of the library should begin with :doc:`getting-started/index`.
-* For Python, R, and Rust references, see the :doc:`api/index`.
-* If you want to understand how the fundamentals of DP are applied in OpenDP, see :doc:`api/user-guide/framework-api/a-framework-to-understand-dp`.
-* If you learn better from examples, skip over to the `OpenDP Cookbook <https://cookbook.opendp.org/>`_.
+* If you want to understand how the pieces provided by OpenDP work together, see :doc:`api/user-guide/index`
+* For Python, R, and Rust API references, see the :doc:`api/index`.
+* If you learn better from examples, check out the `OpenDP Cookbook <https://cookbook.opendp.org/>`_.
 * Finally, if you're joining the project, see :doc:`contributing/index`.
 
 .. toctree::
   :hidden:
 
   getting-started/index
+  api/user-guide/index
   api/index
   contributing/index
