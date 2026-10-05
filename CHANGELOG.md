@@ -2,130 +2,112 @@
 
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison showing the source changes from the previous version.
 
+## [0.16.0](https://github.com/opendp/opendp/compare/v0.15.1...v0.16.0) - TBD
 
 
+### Features
 
-
-### Feat
-
+- Signed counts:
+    - Deprecate unsigned defaults for counting queries [#2842](https://github.com/opendp/opendp/pull/2842)
+    - Add signed in all count apis [#2840](https://github.com/opendp/opendp/pull/2840)
+    - Support signed polars frame len via cast transformation [#2761](https://github.com/opendp/opendp/pull/2761)
 - Add `ibis` extra to bring in `polars-to-ibis` [#2892](https://github.com/opendp/opendp/pull/2892)
-- Deprecate unsigned defaults for counting queries [#2842](https://github.com/opendp/opendp/pull/2842)
-- Add signed in all count apis [#2840](https://github.com/opendp/opendp/pull/2840)
 - Model stable oneway marginals as linear constraints (synthetic data) [#2838](https://github.com/opendp/opendp/pull/2838)
 - Support one-sided binary-search bounds [#2846](https://github.com/opendp/opendp/pull/2846)
-- Support signed polars frame len via cast transformation [#2761](https://github.com/opendp/opendp/pull/2761)
+
 
 ### Docs
 
+
 - Remove several theory notebooks that are now in the cookbook [#2914](https://github.com/opendp/opendp/pull/2914)
 - Add troubleshooting page [#2917](https://github.com/opendp/opendp/pull/2917)
-- Update christchurch call links [#2970](https://github.com/opendp/opendp/pull/2970)
-- Add cm announcement banner [#2956](https://github.com/opendp/opendp/pull/2956)
 - Improve readability of getting-started [#2879](https://github.com/opendp/opendp/pull/2879)
 - Consistent usage of "framework api" [#2895](https://github.com/opendp/opendp/pull/2895)
 - Revise limitations page [#2897](https://github.com/opendp/opendp/pull/2897)
-- Change from slack invite link to contact email [#2877](https://github.com/opendp/opendp/pull/2877)
 - Add example for lazyframequery [#2809](https://github.com/opendp/opendp/pull/2809)
 - Move data loading discussion to previous page [#2808](https://github.com/opendp/opendp/pull/2808)
-- Update banner to announce that cm is postponed [#2830](https://github.com/opendp/opendp/pull/2830)
-- Add link to new audits paper [#2795](https://github.com/opendp/opendp/pull/2795)
 - Use feature listing rather than github discussion [#2810](https://github.com/opendp/opendp/pull/2810)
 - Tweak scan_csv note [#2815](https://github.com/opendp/opendp/pull/2815)
 - Remove references to `ignore_errors` [#2824](https://github.com/opendp/opendp/pull/2824)
-- Add known 403 urls [#2806](https://github.com/opendp/opendp/pull/2806)
 - Explain trade-offs in data loading [#2581](https://github.com/opendp/opendp/pull/2581)
-- Friendlier 404 page if it's a js redirect [#2785](https://github.com/opendp/opendp/pull/2785)
-- Update learning urls [#2769](https://github.com/opendp/opendp/pull/2769)
-- Add linkchecker ignore for slack.com [#2729](https://github.com/opendp/opendp/pull/2729)
 - Convert polars expression docs to rst [#2748](https://github.com/opendp/opendp/pull/2748)
-- Add community meeting banner [#2766](https://github.com/opendp/opendp/pull/2766)
 - Add fix for python linking errors on mac [#2757](https://github.com/opendp/opendp/pull/2757)
-- Add slack url to the linkchecker ignore list [#2754](https://github.com/opendp/opendp/pull/2754)
 - Add style guide [#2744](https://github.com/opendp/opendp/pull/2744)
-- Prune lists-of-links [#2751](https://github.com/opendp/opendp/pull/2751)
-- Update banner / fix dates in changelog [#2743](https://github.com/opendp/opendp/pull/2743)
 - Add tab wrapping where missing [#2745](https://github.com/opendp/opendp/pull/2745)
-
-### Chore
-
-- Add cla exceptions notes [#2903](https://github.com/opendp/opendp/pull/2903)
-- Ruff format extras [#2976](https://github.com/opendp/opendp/pull/2976)
-- Prefix all smoke-test jobs with "ci-" [#2894](https://github.com/opendp/opendp/pull/2894)
-- Ruff format src (excluding extras) [#2878](https://github.com/opendp/opendp/pull/2878)
-- Remove codeowners [#2865](https://github.com/opendp/opendp/pull/2865)
-- Configure and document precommit  [#2828](https://github.com/opendp/opendp/pull/2828)
-- Replace flake8 with ruff [#2826](https://github.com/opendp/opendp/pull/2826)
-
-### Build
-
-- Add retries and internal consistency check for flaky mbi test [#2990](https://github.com/opendp/opendp/pull/2990)
-- Minor doc related fix to avoid build failure from  09/28 rust release [#2979](https://github.com/opendp/opendp/pull/2979)
-- Patch latex build fails for utf-8 and file name mismatch [#2908](https://github.com/opendp/opendp/pull/2908)
-
-### Ruff
-
-- Format tests [#2984](https://github.com/opendp/opendp/pull/2984)
-- Format docs directory [#2822](https://github.com/opendp/opendp/pull/2822)
-
-### Add
-
 - A simple contributing.md, and change the doc order [#2982](https://github.com/opendp/opendp/pull/2982)
-
-### Testing
-
-- Fix importorskip clutter [#2967](https://github.com/opendp/opendp/pull/2967)
-- Expand unit test coverage in test_convert and test_convert_extras [#2767](https://github.com/opendp/opendp/pull/2767)
+- Typos and grammatical errors in essential-statistics [#2875](https://github.com/opendp/opendp/pull/2875)
+- Typos in opendp commons block [#2784](https://github.com/opendp/opendp/pull/2784)
+- URLs and links
+    - Add known 403 urls [#2806](https://github.com/opendp/opendp/pull/2806)
+    - Add link to new audits paper [#2795](https://github.com/opendp/opendp/pull/2795)
+    - Change from slack invite link to contact email [#2877](https://github.com/opendp/opendp/pull/2877)
+    - Prune lists-of-links [#2751](https://github.com/opendp/opendp/pull/2751)
+    - Add slack url to the linkchecker ignore list [#2754](https://github.com/opendp/opendp/pull/2754)
+    - Friendlier 404 page if it's a JS redirect [#2785](https://github.com/opendp/opendp/pull/2785)
+    - Update learning urls [#2769](https://github.com/opendp/opendp/pull/2769)
+    - Add linkchecker ignore for slack.com [#2729](https://github.com/opendp/opendp/pull/2729)
+    - Update Christchurch call links [#2970](https://github.com/opendp/opendp/pull/2970)
+- Banner updates
+    - Update banner / fix dates in changelog [#2743](https://github.com/opendp/opendp/pull/2743)
+    - Add community meeting banner [#2766](https://github.com/opendp/opendp/pull/2766)
+    - Update banner to announce that CM is postponed [#2830](https://github.com/opendp/opendp/pull/2830)
+    - Add Community Meeting announcement banner [#2956](https://github.com/opendp/opendp/pull/2956)
 
 ### Fix
 
 - Update to latest dashu for improved rounding [#2801](https://github.com/opendp/opendp/pull/2801)
 - Respect noisy max optimize argument [#2916](https://github.com/opendp/opendp/pull/2916)
-- Typos and grammatical errors in essential-statistics [#2875](https://github.com/opendp/opendp/pull/2875)
 - Clip counts before casting u32 to i32 in make_stable_marginals [#2837](https://github.com/opendp/opendp/pull/2837)
 - Unbiased one way marginals in synthetic data generation [#2825](https://github.com/opendp/opendp/pull/2825)
 - Allow test_subprocess to run from any dir [#2794](https://github.com/opendp/opendp/pull/2794)
-- Typos in opendp commons block [#2784](https://github.com/opendp/opendp/pull/2784)
 - One_sided_pvalue arange for scipy.stats.binom.pmf off by one bug [#2758](https://github.com/opendp/opendp/pull/2758)
-
-### Bug
-
 - Fix aim penalty penalize candidates by the expected error of the upcoming measure step [#2906](https://github.com/opendp/opendp/pull/2906)
 - Use r_alloc on the remaining vectors to avoid gc cleanup of epsilons [#2901](https://github.com/opendp/opendp/pull/2901)
 - Add alp fix and test for regression to scale.exp [#2805](https://github.com/opendp/opendp/pull/2805)
 - Fix cdp delta and introduce rounding util for testing [#2820](https://github.com/opendp/opendp/pull/2820)
 - Patch tail bounds exponent rounding [#2802](https://github.com/opendp/opendp/pull/2802)
+- Add warning for large keys in opendp.extras.polars.with_keys [#2775](https://github.com/opendp/opendp/pull/2775)
 
-### Maintenance
 
-- Ruff format python psuedocode in rust directory [#2819](https://github.com/opendp/opendp/pull/2819)
-- Ruff format two top-level files [#2823](https://github.com/opendp/opendp/pull/2823)
-- Ruff format the test directory [#2816](https://github.com/opendp/opendp/pull/2816)
-- Ruff format tools [#2821](https://github.com/opendp/opendp/pull/2821)
+### Chore and Maintenance
+
+- Add cla exceptions notes [#2903](https://github.com/opendp/opendp/pull/2903)
+- Prefix all smoke-test jobs with "ci-" [#2894](https://github.com/opendp/opendp/pull/2894)
+- Remove codeowners [#2865](https://github.com/opendp/opendp/pull/2865)
 - Disable r `unreachable_code_linter` [#2797](https://github.com/opendp/opendp/pull/2797)
 - Prefix helper workflows with ".", to distinguish them from the main ones [#2755](https://github.com/opendp/opendp/pull/2755)
 - Upgrade github actions [#2753](https://github.com/opendp/opendp/pull/2753)
+- Fix importorskip clutter [#2967](https://github.com/opendp/opendp/pull/2967)
+- Expand unit test coverage in test_convert and test_convert_extras [#2767](https://github.com/opendp/opendp/pull/2767)
+- Precommit and formatting
+    - Configure and document precommit  [#2828](https://github.com/opendp/opendp/pull/2828)
+    - Replace flake8 with ruff [#2826](https://github.com/opendp/opendp/pull/2826)
+    - Ruff: Format tests [#2984](https://github.com/opendp/opendp/pull/2984)
+    - Ruff: Format docs directory [#2822](https://github.com/opendp/opendp/pull/2822)
+    - Ruff format src (excluding extras) [#2878](https://github.com/opendp/opendp/pull/2878)
+    - Ruff format extras [#2976](https://github.com/opendp/opendp/pull/2976)
+    - Ruff format python psuedocode in rust directory [#2819](https://github.com/opendp/opendp/pull/2819)
+    - Ruff format two top-level files [#2823](https://github.com/opendp/opendp/pull/2823)
+    - Ruff format the test directory [#2816](https://github.com/opendp/opendp/pull/2816)
+    - Ruff format tools [#2821](https://github.com/opendp/opendp/pull/2821)
 
-### Ux
 
-- Add warning for large keys in opendp.extras.polars.with_keys [#2775](https://github.com/opendp/opendp/pull/2775)
+### Build and CI
+
+- Fix build errors due to numpy and dashu 06/21 releases [#2772](https://github.com/opendp/opendp/pull/2772)
+- Enable compiler caching with sccache [#2770](https://github.com/opendp/opendp/pull/2770)
+- Cache rust dependencies in ci [#2768](https://github.com/opendp/opendp/pull/2768)
+- Add retries and internal consistency check for flaky mbi test [#2990](https://github.com/opendp/opendp/pull/2990)
+- Minor doc related fix to avoid build failure from  09/28 rust release [#2979](https://github.com/opendp/opendp/pull/2979)
+- Patch latex build fails for utf-8 and file name mismatch [#2908](https://github.com/opendp/opendp/pull/2908)
 
 ### Refactor
 
 - Move polars accuracy implementation under polars/ + stub [#2779](https://github.com/opendp/opendp/pull/2779)
 
-### Ci
-
-- Fix build errors due to numpy and dashu 06/21 releases [#2772](https://github.com/opendp/opendp/pull/2772)
-- Enable compiler caching with sccache [#2770](https://github.com/opendp/opendp/pull/2770)
-- Cache rust dependencies in ci [#2768](https://github.com/opendp/opendp/pull/2768)
-
-### Review
+### Proof Review
 
 - Sample_geometric_exp_fast [#2117](https://github.com/opendp/opendp/pull/2117)
-
-## [0.16.0-dev](https://github.com/opendp/opendp/compare/v0.15.1...HEAD) - TBD
-
-
 
 
 
