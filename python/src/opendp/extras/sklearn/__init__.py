@@ -17,11 +17,12 @@ from opendp.extras.sklearn._aligned import (
     make_project_X, then_project_X, make_lift_X, then_lift_X,
 )
 
+import opendp.extras.sklearn.cluster as cluster
 import opendp.extras.sklearn.decomposition as decomposition
 import opendp.extras.sklearn.linear_model as linear_model
 
 __all__ = [
     "Aligned", "AlignedDomain", "aligned_domain",
     "make_project_X", "then_project_X", "make_lift_X", "then_lift_X",
-    "decomposition", "linear_model",
+    "cluster", "decomposition", "linear_model",
 ]
