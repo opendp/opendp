@@ -221,7 +221,7 @@ def _make_mst_select(
 
     model = cast(MarkovRandomField, model)
 
-    max_selections = len(model.domain.attrs) - 1
+    max_selections = len(model.domain.attributes) - 1
     num_selections = min(max(0, num_selections or max_selections), max_selections)
     d_select = prior(d_out / num_selections)
 
@@ -230,7 +230,7 @@ def _make_mst_select(
 
     def function(qbl: Queryable) -> list[tuple[str, str]]:
         selected_edges = []
-        components = DisjointSet(model.domain.attrs)
+        components = DisjointSet(model.domain.attributes)
 
         for _ in range(num_selections):
             # filter down to only include edges that aren't connected

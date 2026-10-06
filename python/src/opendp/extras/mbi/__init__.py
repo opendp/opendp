@@ -1,5 +1,6 @@
 """
 This module requires extra installs: ``pip install 'opendp[mbi]'``
+and Python 3.11 or later.
 
 ``mbi`` is short for "marginal-based inference",
 and is the name of the `Private-PGM <https://github.com/ryan112358/private-pgm>`_ package.
