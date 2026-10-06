@@ -1,0 +1,10 @@
+opendp.extras.sklearn.decomposition package
+===========================================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.sklearn.decomposition
+   :members:
+   :undoc-members:
+   :show-inheritance:

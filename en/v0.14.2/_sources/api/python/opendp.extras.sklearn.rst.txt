@@ -1,0 +1,19 @@
+opendp.extras.sklearn package
+=============================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 3
+
+   opendp.extras.sklearn.decomposition
+   opendp.extras.sklearn.linear_model
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.sklearn
+   :members:
+   :undoc-members:
+   :show-inheritance:

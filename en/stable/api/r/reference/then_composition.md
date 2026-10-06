@@ -1,0 +1,25 @@
+# partial composition constructor
+
+See documentation for
+[`make_composition()`](https://docs.opendp.org/reference/make_composition.md)
+for details.
+
+## Usage
+
+``` r
+then_composition(lhs, measurements)
+```
+
+## Arguments
+
+- lhs:
+
+  The prior transformation or metric space.
+
+- measurements:
+
+  A vector of Measurements to compose.
+
+## Value
+
+Measurement
