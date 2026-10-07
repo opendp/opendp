@@ -36,7 +36,7 @@ None
     the outcome of the function is the nearest representable float,
     and may saturate to positive or negative infinity.
     The precondition of \texttt{x\_mul\_2k} that $k$ is not \texttt{i32.MIN} is satisfied on line \ref{line:check-k}.
-    Since \texttt{TO.from\_rational} and \texttt{x\_mul\_2k} are both infallible, 
+    Since \texttt{TO.from\_rational} and \texttt{x\_mul\_2k} are both infallible,
     the function is infallible,
     meaning that the function cannot raise data-dependent errors.
     Therefore the function is a valid postprocessor.

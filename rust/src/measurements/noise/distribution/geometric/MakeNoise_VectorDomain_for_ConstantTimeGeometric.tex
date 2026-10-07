@@ -10,10 +10,10 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise}
 for \texttt{DiscreteLaplace} in \asOfCommit{mod.rs}{f5bb719}.
 
-This is an intermediary compile-time layer whose purpose is 
+This is an intermediary compile-time layer whose purpose is
 to dispatch to either the integer or floating-point variations of the mechanism,
 depending on the type of data in the input domain.
 
@@ -76,7 +76,7 @@ None
 
     This motivates the need for a clamping transformation.
     \begin{align}
-        &\max_{x \sim x'} |\texttt{clamp}(x, L, U) - \texttt{clamp}(x', L, U)|_1 \\ 
+        &\max_{x \sim x'} |\texttt{clamp}(x, L, U) - \texttt{clamp}(x', L, U)|_1 \\
         &\leq \max_{x \sim x'} |x - x'|_1 \\
         &= \texttt{d\_in}
     \end{align}
@@ -85,7 +85,7 @@ None
 
     Similarly the perturbed value also needs to be clamped:
     consider adjacent inputs at \texttt{L} and \texttt{L + 1},
-    then outputting \texttt{L - (U - L)} is a distinguishing event, 
+    then outputting \texttt{L - (U - L)} is a distinguishing event,
     due to the limited range of the noise distribution.
 
     Notice that the output distribution is equivalent to sampling from the discrete laplace distribution with infinite support,
