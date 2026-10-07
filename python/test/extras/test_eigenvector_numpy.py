@@ -6,6 +6,7 @@ np = pytest.importorskip("numpy")
 pytest.importorskip("randomgen")
 pytest.importorskip("scipy.linalg")
 
+
 def test_private_eigenvector():
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 

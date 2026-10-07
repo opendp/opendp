@@ -220,9 +220,7 @@ def test_marginal_measurements_add_preserves_atomic_queries():
         query=SelectPrefixQuery(1),
     )
     full = LinearMeasurement(np.array([2.0, 3.0]), clique=("A",), stddev=1.0)
-    repeated = LinearMeasurement(
-        np.array([4.0, 5.0]), clique=("A",), stddev=3.0
-    )
+    repeated = LinearMeasurement(np.array([4.0, 5.0]), clique=("A",), stddev=3.0)
     measurements = Marginals({("A",): [partial]}).add(full, repeated)
 
     # Independent observations sharing a clique remain separate, regardless

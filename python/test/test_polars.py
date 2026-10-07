@@ -84,7 +84,7 @@ def test_domains():
 )
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
-    
+
     t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     pl_testing.assert_series_equal(t_ident(series), series)
 
@@ -384,8 +384,6 @@ def test_onceframe_lazy():
     ids=ids,
 )
 def test_mechanisms(measure):
-    
-
     lf_domain, lf = example_lf()
 
     with pytest.warns(DeprecationWarning):
@@ -440,7 +438,7 @@ def test_polars_context():
 
 
 def test_polars_describe():
-    
+
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 
     context = dp.Context.compositor(
@@ -468,7 +466,11 @@ def test_polars_describe():
 
     summer = pl.col("A").dp.sum((0, 3))
 
-    query = context.query().group_by("B").agg(dp.len(signed=True), summer, summer.alias("B"))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), summer, summer.alias("B"))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -484,7 +486,7 @@ def test_polars_describe():
 
 
 def test_polars_accuracy_threshold():
-    
+
     context = dp.Context.compositor(
         data=pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String}),
         privacy_unit=dp.unit_of(contributions=1),
@@ -506,7 +508,11 @@ def test_polars_accuracy_threshold():
         schema_overrides={"threshold": pl.UInt32},
     )
 
-    query = context.query().group_by("B").agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -551,7 +557,7 @@ def test_polars_collect_early():
 
 
 def test_polars_threshold_epsilon():
-    
+
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
         schema={"A": pl.Int32, "B": pl.String},
@@ -607,7 +613,7 @@ def test_polars_threshold_epsilon():
 
 
 def test_polars_threshold_rho():
-    
+
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
         schema={"A": pl.Int32, "B": pl.String},
@@ -666,7 +672,7 @@ def test_polars_threshold_rho():
 def test_polars_grouped_quantile_max_groups_contribution_bound():
     # Regression test for https://github.com/opendp/opendp/issues/2640
     # A loose explicit max_groups should not dominate a tighter total contribution bound.
-    
+
     counts = {"first year": 485, "sophomore": 361, "junior": 85, "senior": 67}
     rows = []
     for group, n in counts.items():
@@ -743,7 +749,10 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0, signed=True)) == f"dyn float: 1.{__file__}:dp_frame_len([true])"
+    assert (
+        str(dp.len(scale=1.0, signed=True))
+        == f"dyn float: 1.{__file__}:dp_frame_len([true])"
+    )
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -834,7 +843,7 @@ def test_execute_shim():
 
 
 def test_cut():
-    
+
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
     by = [pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()]
     with warnings.catch_warnings():
@@ -845,7 +854,14 @@ def test_cut():
             split_evenly_over=1,
             margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
-    actual = context.query().group_by(*by).agg(dp.len(signed=True)).release().collect().sort("x")
+    actual = (
+        context.query()
+        .group_by(*by)
+        .agg(dp.len(signed=True))
+        .release()
+        .collect()
+        .sort("x")
+    )
     expected = pl.DataFrame(
         {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
         schema={"x": pl.UInt32, "len": pl.Int64},
@@ -1012,7 +1028,7 @@ def test_sort_usability():
 
 
 def test_count_queries():
-    
+
     lf_domain = dp.lazyframe_domain(
         [dp.series_domain("data", dp.atom_domain(T=dp.i64))]
     )
@@ -1048,7 +1064,7 @@ def test_count_queries():
 
 
 def test_explicit_grouping_keys():
-    
+
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     plan_right = (
@@ -1072,7 +1088,7 @@ def test_explicit_grouping_keys():
 
 
 def test_explicit_grouping_keys_context():
-    
+
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     context = dp.Context.compositor(
@@ -1185,7 +1201,7 @@ def test_temporal_domain():
 
 
 def test_replace():
-    
+
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
         data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 1000)),
@@ -1255,7 +1271,7 @@ def test_replace_strict():
 
 
 def test_cast_enum():
-        # this triggers construction of a lazyframe domain from the schema
+    # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
         data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
         privacy_unit=dp.unit_of(contributions=1),
@@ -1338,7 +1354,9 @@ def test_arithmetic():
         margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    context.query().filter(pl.col.data.truediv(2) > 1.5).select(dp.len(signed=True)).summarize()
+    context.query().filter(pl.col.data.truediv(2) > 1.5).select(
+        dp.len(signed=True)
+    ).summarize()
 
     observed = (
         context.query()

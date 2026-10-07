@@ -2,11 +2,117 @@
 
 This file documents the version history of OpenDP. The links on each version number will take you to a comparison showing the source changes from the previous version.
 
+## [0.16.0](https://github.com/opendp/opendp/compare/v0.15.1...v0.16.0) - 2026-10-05
 
+
+### Features
+
+- Signed counts:
+    - Deprecate unsigned defaults for counting queries [#2842](https://github.com/opendp/opendp/pull/2842)
+    - Add signed in all count apis [#2840](https://github.com/opendp/opendp/pull/2840)
+    - Support signed polars frame len via cast transformation [#2761](https://github.com/opendp/opendp/pull/2761)
+- Add `ibis` extra to bring in `polars-to-ibis` [#2892](https://github.com/opendp/opendp/pull/2892)
+- Model stable oneway marginals as linear constraints (synthetic data) [#2838](https://github.com/opendp/opendp/pull/2838)
+- Support one-sided binary-search bounds [#2846](https://github.com/opendp/opendp/pull/2846)
+
+
+### Docs
+
+
+- Remove several theory notebooks that are now in the cookbook [#2914](https://github.com/opendp/opendp/pull/2914)
+- Add troubleshooting page [#2917](https://github.com/opendp/opendp/pull/2917)
+- Improve readability of getting-started [#2879](https://github.com/opendp/opendp/pull/2879)
+- Consistent usage of "framework api" [#2895](https://github.com/opendp/opendp/pull/2895)
+- Revise limitations page [#2897](https://github.com/opendp/opendp/pull/2897)
+- Add example for lazyframequery [#2809](https://github.com/opendp/opendp/pull/2809)
+- Move data loading discussion to previous page [#2808](https://github.com/opendp/opendp/pull/2808)
+- Use feature listing rather than github discussion [#2810](https://github.com/opendp/opendp/pull/2810)
+- Tweak scan_csv note [#2815](https://github.com/opendp/opendp/pull/2815)
+- Remove references to `ignore_errors` [#2824](https://github.com/opendp/opendp/pull/2824)
+- Explain trade-offs in data loading [#2581](https://github.com/opendp/opendp/pull/2581)
+- Convert polars expression docs to rst [#2748](https://github.com/opendp/opendp/pull/2748)
+- Add fix for python linking errors on mac [#2757](https://github.com/opendp/opendp/pull/2757)
+- Add style guide [#2744](https://github.com/opendp/opendp/pull/2744)
+- Add tab wrapping where missing [#2745](https://github.com/opendp/opendp/pull/2745)
+- A simple contributing.md, and change the doc order [#2982](https://github.com/opendp/opendp/pull/2982)
+- Typos and grammatical errors in essential-statistics [#2875](https://github.com/opendp/opendp/pull/2875)
+- Typos in opendp commons block [#2784](https://github.com/opendp/opendp/pull/2784)
+- URLs and links
+    - Add known 403 urls [#2806](https://github.com/opendp/opendp/pull/2806)
+    - Add link to new audits paper [#2795](https://github.com/opendp/opendp/pull/2795)
+    - Change from slack invite link to contact email [#2877](https://github.com/opendp/opendp/pull/2877)
+    - Prune lists-of-links [#2751](https://github.com/opendp/opendp/pull/2751)
+    - Add slack url to the linkchecker ignore list [#2754](https://github.com/opendp/opendp/pull/2754)
+    - Friendlier 404 page if it's a JS redirect [#2785](https://github.com/opendp/opendp/pull/2785)
+    - Update learning urls [#2769](https://github.com/opendp/opendp/pull/2769)
+    - Add linkchecker ignore for slack.com [#2729](https://github.com/opendp/opendp/pull/2729)
+    - Update Christchurch call links [#2970](https://github.com/opendp/opendp/pull/2970)
+- Banner updates
+    - Update banner / fix dates in changelog [#2743](https://github.com/opendp/opendp/pull/2743)
+    - Add community meeting banner [#2766](https://github.com/opendp/opendp/pull/2766)
+    - Update banner to announce that CM is postponed [#2830](https://github.com/opendp/opendp/pull/2830)
+    - Add Community Meeting announcement banner [#2956](https://github.com/opendp/opendp/pull/2956)
+
+### Fix
+
+- Update to latest dashu for improved rounding [#2801](https://github.com/opendp/opendp/pull/2801)
+- Respect noisy max optimize argument [#2916](https://github.com/opendp/opendp/pull/2916)
+- Clip counts before casting u32 to i32 in make_stable_marginals [#2837](https://github.com/opendp/opendp/pull/2837)
+- Unbiased one way marginals in synthetic data generation [#2825](https://github.com/opendp/opendp/pull/2825)
+- Allow test_subprocess to run from any dir [#2794](https://github.com/opendp/opendp/pull/2794)
+- One_sided_pvalue arange for scipy.stats.binom.pmf off by one bug [#2758](https://github.com/opendp/opendp/pull/2758)
+- Fix aim penalty penalize candidates by the expected error of the upcoming measure step [#2906](https://github.com/opendp/opendp/pull/2906)
+- Use r_alloc on the remaining vectors to avoid gc cleanup of epsilons [#2901](https://github.com/opendp/opendp/pull/2901)
+- Add alp fix and test for regression to scale.exp [#2805](https://github.com/opendp/opendp/pull/2805)
+- Fix cdp delta and introduce rounding util for testing [#2820](https://github.com/opendp/opendp/pull/2820)
+- Patch tail bounds exponent rounding [#2802](https://github.com/opendp/opendp/pull/2802)
+- Add warning for large keys in opendp.extras.polars.with_keys [#2775](https://github.com/opendp/opendp/pull/2775)
+
+
+### Chore and Maintenance
+
+- Add cla exceptions notes [#2903](https://github.com/opendp/opendp/pull/2903)
+- Prefix all smoke-test jobs with "ci-" [#2894](https://github.com/opendp/opendp/pull/2894)
+- Remove codeowners [#2865](https://github.com/opendp/opendp/pull/2865)
+- Disable r `unreachable_code_linter` [#2797](https://github.com/opendp/opendp/pull/2797)
+- Prefix helper workflows with ".", to distinguish them from the main ones [#2755](https://github.com/opendp/opendp/pull/2755)
+- Upgrade github actions [#2753](https://github.com/opendp/opendp/pull/2753)
+- Fix importorskip clutter [#2967](https://github.com/opendp/opendp/pull/2967)
+- Expand unit test coverage in test_convert and test_convert_extras [#2767](https://github.com/opendp/opendp/pull/2767)
+- Precommit and formatting
+    - Configure and document precommit  [#2828](https://github.com/opendp/opendp/pull/2828)
+    - Replace flake8 with ruff [#2826](https://github.com/opendp/opendp/pull/2826)
+    - Ruff: Format tests [#2984](https://github.com/opendp/opendp/pull/2984)
+    - Ruff: Format docs directory [#2822](https://github.com/opendp/opendp/pull/2822)
+    - Ruff format src (excluding extras) [#2878](https://github.com/opendp/opendp/pull/2878)
+    - Ruff format extras [#2976](https://github.com/opendp/opendp/pull/2976)
+    - Ruff format python psuedocode in rust directory [#2819](https://github.com/opendp/opendp/pull/2819)
+    - Ruff format two top-level files [#2823](https://github.com/opendp/opendp/pull/2823)
+    - Ruff format the test directory [#2816](https://github.com/opendp/opendp/pull/2816)
+    - Ruff format tools [#2821](https://github.com/opendp/opendp/pull/2821)
+
+
+### Build and CI
+
+- Fix build errors due to numpy and dashu 06/21 releases [#2772](https://github.com/opendp/opendp/pull/2772)
+- Enable compiler caching with sccache [#2770](https://github.com/opendp/opendp/pull/2770)
+- Cache rust dependencies in ci [#2768](https://github.com/opendp/opendp/pull/2768)
+- Add retries and internal consistency check for flaky mbi test [#2990](https://github.com/opendp/opendp/pull/2990)
+- Minor doc related fix to avoid build failure from  09/28 rust release [#2979](https://github.com/opendp/opendp/pull/2979)
+- Patch latex build fails for utf-8 and file name mismatch [#2908](https://github.com/opendp/opendp/pull/2908)
+
+### Refactor
+
+- Move polars accuracy implementation under polars/ + stub [#2779](https://github.com/opendp/opendp/pull/2779)
+
+### Proof Review
+
+- Sample_geometric_exp_fast [#2117](https://github.com/opendp/opendp/pull/2117)
 
 
 
 ## [0.15.1](https://github.com/opendp/opendp/compare/v0.15.0...v0.15.1) - 2026-05-28
+
 
 
 ### Fix
@@ -310,7 +416,7 @@ There are a few changes in feature names to be aware of:
 ### Migration
 
 - We now default to the assumption that NaN values exist in float data in all settings. You’ll notice that you now need to specify `nan=False` in atom domains, [even when building the Laplace or Gaussian measurements](https://docs.opendp.org/en/v0.13.0/api/user-guide/measurements/additive-noise-mechanisms.html#Distribution:-Laplace-vs.-Gaussian).
-- The recommended format for margins in the Context API is now a list of margins containing group-by keys, instead of a dictionary of group-by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group-by keys to be arbitrary expressions. 
+- The recommended format for margins in the Context API is now a list of margins containing group-by keys, instead of a dictionary of group-by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group-by keys to be arbitrary expressions.
 
 ### Feat
 
@@ -929,7 +1035,7 @@ Testing:
     - for example, all data preprocessors now also work under bounded DP
 
 ### Changed
-- Changed constructor names: 
+- Changed constructor names:
     - `make_base_laplace`, `make_base_discrete_laplace` -> `make_laplace` [#736](https://github.com/opendp/opendp/pull/736)
     - `make_base_gaussian`, `make_base_discrete_gaussian` -> `make_gaussian` [#800](https://github.com/opendp/opendp/pull/800)
     - `make_sized_bounded_sum`, `make_bounded_sum` -> `make_sum` [#801](https://github.com/opendp/opendp/pull/801)
@@ -940,7 +1046,7 @@ Testing:
     - `dp.c.make_user_postprocessor` -> `dp.new_function` [#884](https://github.com/opendp/opendp/pull/884)
     - `make_base_ptr` -> `make_base_laplace_threshold` [#849](https://github.com/opendp/opendp/pull/849)
         - changed the privacy map to emit fixed (ε, δ) pairs
-- Reordered arguments to `make_user_transformation` and `make_user_measurement` 
+- Reordered arguments to `make_user_transformation` and `make_user_measurement`
     - `input_domain` and `input_metric` now leading to enable `then_*` variants
 - `make_identity` is now `honest-but-curious` in Python, but is general over all choices of domains/metrics [#814](https://github.com/opendp/opendp/pull/814)
 - (Rust-only) sparse histogram APIs have been updated to prepare for Python [#756](https://github.com/opendp/opendp/pull/756)
@@ -1042,7 +1148,7 @@ Testing:
     - `make_consistent_b_ary_tree` to retrieve consistent leaf node counts
     - `make_quantiles_from_counts` to retrieve quantile estimates
     - `make_cdf` to estimate a discretized cumulative distribution function
-- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations 
+- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations
     - used for simple dataframe subsetting
 - `make_chain_tm` combinator for postprocessing
 - Updates for proof-writing:
@@ -1082,7 +1188,7 @@ Testing:
     - Output measure is now always `ZeroConcentratedDivergence<Q>`, and output distance is in terms of rho
 - Add combinator to cast a measurement's output measure from `ZeroConcentratedDivergence<Q>` to `SmoothedMaxDivergence<Q>`
     - `meas_smd = opendp.comb.make_zCDP_to_approxDP(meas_zcd)`
-- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve: 
+- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve:
     - Can construct a curve by invoking the map: `curve = meas_smd.map(d_in)`
     - Can evaluate a curve at a given delta `epsilon = curve.epsilon(delta)`
 - Add `make_fix_delta` combinator to fix the delta parameter in a `SmoothedMaxDivergence<Q>` measure
@@ -1131,7 +1237,7 @@ Testing:
 ### Migration
 - `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
     - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
-    - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve. 
+    - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve.
     - Use `fadp_meas = opendp.comb.make_fix_delta(adp_meas)` to change output distance from an ε(δ) curve to an (ε, δ) tuple
         - `fadp_meas.check(d_in, (ε, δ))` is equivalent to the check on `make_base_gaussian` in 0.4
 - replace `make_base_analytic_gaussian` with `make_base_gaussian`
@@ -1145,7 +1251,7 @@ Testing:
 
 ### Added
 - `make_randomized_response_bool` and `make_randomized_response` for local differential privacy.
-- `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.  
+- `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.
 - `make_population_amplification` combinator for privacy amplification by subsampling.
 - `make_drop_null` transformation for dropping null values in nullish data.
 - `make_find`, `make_find_bin` and `make_index` transformations for categorical relabeling and binning.
@@ -1222,7 +1328,7 @@ Testing:
 - Binary search utilities in Python
 - `Vec<String>` and `HashMap<K, V>` data loaders
 - Resize transformation for making `VectorDomain<D>` sized
-- TotalOrd trait for consistency with proofs 
+- TotalOrd trait for consistency with proofs
 
 ### Changed
 - General renaming of library interfaces. [See issue #181](https://github.com/opendp/opendp/issues/181).
@@ -1258,6 +1364,6 @@ just add it by copying from those below.
 ### Security
 ### Migration
 
-When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link. 
+When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link.
 Then the script will generate a new Unreleased section for future work.
 Please keep the existing dummy heading and link as they are, so that things operate correctly. Thanks!

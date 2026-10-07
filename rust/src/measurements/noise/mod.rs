@@ -57,14 +57,14 @@ pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
 ///
 /// Otherwise, when P is one, represents a discrete laplace random variable.
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
 ///
 /// Otherwise, when P is two, represents a discrete gaussian random variable.
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```

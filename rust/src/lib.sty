@@ -8,7 +8,7 @@
 \usepackage{xcolor}
 \usepackage{xr}
 
-\usepackage{enumerate} 
+\usepackage{enumerate}
 \usepackage{physics}
 \usepackage{fancyhdr}
 \usepackage{hyperref}
@@ -28,7 +28,7 @@
 % macros to indicate relevant feature-flag requirements in proofs.
 \usepackage{tcolorbox}
 \newtcolorbox{warn_box}{colback=red!5!white,colframe=red!75!black}
-\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
+\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}}
 \newcommand{\honestButCurious}{{\begin{warn_box}This proof relies on caller-verified preconditions, so the corresponding API belongs behind the \textbf{``honest-but-curious''} feature flag.\end{warn_box}}}
 \newcommand{\idealizedNumerics}{{\begin{warn_box}This proof relies on an idealized model of numeric computation that ignores finite-machine limitations such as non-closure and overflow, so the corresponding API belongs behind the \textbf{``idealized-numerics''} feature flag.\end{warn_box}}}
 
@@ -101,19 +101,19 @@
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 
 \lstdefinestyle{mystyle}{
-    backgroundcolor=\color{backcolour},   
+    backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{magenta},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
     showstringspaces=false,
     showtabs=false,
     tabsize=2,
@@ -184,16 +184,16 @@
   \begin{enumerate}
       \item \textup{(Data-independent runtime errors).}
       For every pair of members $x$ and $x'$ in \texttt{input\_domain},
-      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error.
 
-      \item \textup{(Appropriate output domain).} 
+      \item \textup{(Appropriate output domain).}
       For every member $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime error.
-      
-      \item \textup{(Stability guarantee).} 
-      For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
-      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+
+      \item \textup{(Stability guarantee).}
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric},
       if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an error,
-      and $\texttt{stability\_map}(\din) = \dout$, 
+      and $\texttt{stability\_map}(\din) = \dout$,
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
 }
@@ -205,7 +205,7 @@
   \begin{enumerate}
       \item \textup{(Data-independent runtime errors).}
       For every pair of members $x$ and $x'$ in \texttt{input\_domain},
-      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error.
 
       \item \textup{(Privacy guarantee).}
       For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
@@ -222,19 +222,19 @@
   \begin{enumerate}
       \item \textup{(Data-independent errors).}
       For every pair of members $x$ and $x'$ in \texttt{input\_domain},
-      $\function(x), \function(x')$ either both raise the same error, 
+      $\function(x), \function(x')$ either both raise the same error,
       or neither raise an error.
   \end{enumerate}
 }
 
 \newcommand{\validOdometer}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an error (at compile time or run time) or returns a valid odometer. 
+  hold, #2 raises an error (at compile time or run time) or returns a valid odometer.
   A valid odometer has the following properties:
   \begin{enumerate}
       \item \textup{(Data-independent runtime errors).}
       For every pair of members $x$ and $x'$ in \texttt{input\_domain},
-      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error.
 
       \item \textup{(Valid odometer queryable).}
       For every member $x$ in \texttt{input\_domain},
@@ -245,19 +245,19 @@
 
 \newcommand{\validOdometerQueryable}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises a data-independent error or returns a valid odometer queryable (\texttt{queryable}). 
+  hold, #2 raises a data-independent error or returns a valid odometer queryable (\texttt{queryable}).
   A valid odometer queryable is an \rustdoc{core/type}{OdometerQueryable} with the following properties:
   \begin{enumerate}
     \item \textup{(Data-independent errors).}
     For every pair of members $x$ and $x'$ in \texttt{input\_domain}, and every query $q$,
-    $\texttt{queryable.invoke}_x(q)$ and $\texttt{queryable.invoke}_{x'}(q)$ either both return the same error or neither return an error. 
+    $\texttt{queryable.invoke}_x(q)$ and $\texttt{queryable.invoke}_{x'}(q)$ either both return the same error or neither return an error.
 
     \item \textup{(Privacy Guarantee).}
-    For every pair of members $x$ and $x'$ in \texttt{input\_domain}, 
-    every adversary $\mathcal{A}$, and for every pair $(\din, \dout)$, 
-    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure}, 
-    if $x$ and $x'$ are \din-close under \texttt{input\_metric}, $\texttt{queryable.eval(privacy\_loss)}$ does not return an error, 
-    and $\texttt{queryable.eval(privacy\_loss)} = \dout$, 
+    For every pair of members $x$ and $x'$ in \texttt{input\_domain},
+    every adversary $\mathcal{A}$, and for every pair $(\din, \dout)$,
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure},
+    if $x$ and $x'$ are \din-close under \texttt{input\_metric}, $\texttt{queryable.eval(privacy\_loss)}$ does not return an error,
+    and $\texttt{queryable.eval(privacy\_loss)} = \dout$,
     then $\texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_x), \texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_{x'})$ are $\dout$-close under \texttt{output\_measure},
     where $\texttt{queryable}_x$ denotes all messages received by $\mathcal{A}$ under $x$.
   \end{enumerate}
