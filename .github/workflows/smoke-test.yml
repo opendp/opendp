@@ -210,6 +210,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files
+
       - name: Download dynamic lib
         uses: actions/download-artifact@v7
         with:
