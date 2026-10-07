@@ -431,7 +431,7 @@ class Context(object):
 
     accountant: Union[Measurement, Odometer]
     """The accountant is the measurement used to spawn the queryable.
-    It contains information about the queryable, 
+    It contains information about the queryable,
     such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable."""
     queryable: Union[Queryable, OdometerQueryable]
     """The queryable executes the queries and tracks the privacy expenditure."""
@@ -663,7 +663,7 @@ class Query(object):
     _context: Optional["Context"]
     """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
-    """For internal use. A function that wraps the release of the query. 
+    """For internal use. A function that wraps the release of the query.
     Used to wrap the response of compositor/odometer queries in another ``Context``."""
 
     def __init__(

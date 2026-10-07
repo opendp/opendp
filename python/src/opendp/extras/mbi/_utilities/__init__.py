@@ -48,8 +48,8 @@ class Count:
     by: tuple[str, ...]
     """Columns to group by."""
     weight: float = 1.0
-    """Importance of this count query. 
-    
+    """Importance of this count query.
+
     - Used by AIM to prioritize cliques.
     - Used by Fixed to distribute privacy budget.
     """
@@ -93,7 +93,7 @@ class Algorithm(ABC):
     """Optimizer to use to fit a MarkovRandomField.
 
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
-    Any function matching the signature of ``mirror_descent`` 
+    Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
@@ -101,7 +101,7 @@ class Algorithm(ABC):
     """Fit one-way marginals for all columns, or only unkeyed columns."""
     oneway_split: Optional[float] = None
     """Proportion of budget to use for oneway release.
-    
+
     When ``oneway_split`` is not set, defaults to half of the budget.
 
     If oneway is ``unkeyed``, budget is further reduced by the proportion of columns with missing keys or cuts.

@@ -36,9 +36,9 @@ class Fixed(Algorithm):
     """Workload of queries."""
     oneway: OnewayType = ONEWAY_UNKEYED
     """Only fit one-way marginals for columns missing keys.
-    
+
     The fixed algorithm differs from other algorithms
-    in that it only estimates marginals with missing keys, 
+    in that it only estimates marginals with missing keys,
     not all unknown first-order marginals.
     """
 

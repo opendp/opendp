@@ -36,7 +36,7 @@ class Sequential(Algorithm):
     """Sequence of algorithms."""
     weights: Optional[list[float]] = None
     """Budget allocation amongst algorithms.
-    
+
     Defaults to equal budget for each algorithm."""
 
     def __post_init__(self):

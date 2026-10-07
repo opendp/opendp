@@ -384,7 +384,6 @@ def test_onceframe_lazy():
     ids=ids,
 )
 def test_mechanisms(measure):
-
     lf_domain, lf = example_lf()
 
     with pytest.warns(DeprecationWarning):

@@ -24,7 +24,7 @@ This functionality is not enabled by default.
     .. tab-item:: R
         :sync: r
 
-        OpenDP does not currently support Polars in R. 
+        OpenDP does not currently support Polars in R.
         For the current status of this, see `issue #1872 <https://github.com/opendp/opendp/issues/1872>`_.
 
     .. tab-item:: Rust
@@ -39,24 +39,24 @@ Dataset Description
 We will use a `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat
 for this tutorial, with some `additional preprocessing <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__.
 On a quarterly cadence Eurostat surveys the working hours of individuals in the European Union.
-The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
+The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise.
 
 
 .. dropdown:: Dataset Details
 
-  We chose this dataset for a few reasons: 
+  We chose this dataset for a few reasons:
 
   1. **Accessibility:** The dataset is accessible to users across various domains.
-  2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-  3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
+  2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat.
+  3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset.
 
-  For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
+  For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years.
 
   The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
-  for the dataset describes many variables. 
-  Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+  for the dataset describes many variables.
+  Our examples will use just a few. (Descriptions are copied from the User Guide.)
 
-  .. list-table:: 
+  .. list-table::
     :header-rows: 1
 
     * - Variable
@@ -114,34 +114,34 @@ We'll use ``scan_csv`` to load data, but Polars can also read a number of `other
 
     Data loading is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
     CSV schema inference is data-dependent:
-    private values can affect both the inferred types and whether parsing succeeds. 
+    private values can affect both the inferred types and whether parsing succeeds.
     In a trusted environment, however, a parsing error can be useful,
     since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
 
     If the success or failure of ``scan_csv`` has effects outside a trusted environment,
     this information leak may violate differential privacy.
     Instead, read from a schema-bearing source such as Parquet with
-    `scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_, 
-    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
-    
+    `scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_,
+    or load columns as strings via ``infer_schema=False`` and cast them explicitly.
+
     Another option is to reference the database directly,
     either `reading a database table into memory <https://docs.pola.rs/user-guide/io/database/>`_,
     or (experimental feature) running your query on the database
-    with :py:func:`~opendp.extras.ibis.run_on_database`. 
-    
-    Using ``ignore_errors=True`` avoids some parsing failures, 
+    with :py:func:`~opendp.extras.ibis.run_on_database`.
+
+    Using ``ignore_errors=True`` avoids some parsing failures,
     but it may silently change the loaded data and reduce utility,
-    so it should be used deliberately rather than by default. 
-    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
+    so it should be used deliberately rather than by default.
+    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_
     for more schema and error-handling options.
 
 
 Mediate access with ``Context``
 -------------------------------
 
-The ``Context`` is the foundation of our differentially private analysis. 
+The ``Context`` is the foundation of our differentially private analysis.
 It mediates access to the sensitive data,
-ensuring that queries you would like to release satisfy necessary privacy properties. 
+ensuring that queries you would like to release satisfy necessary privacy properties.
 
 .. tab-set::
 
@@ -166,10 +166,10 @@ A number of parameters define the ``Context``:
 
 The ``privacy_unit`` describes the greatest influence one individual may have on your dataset.
 In this case we have quarterly data across 9 years, and an individual can contribute up to one row per quarter,
-so an individual can contribute up to 36 rows. 
+so an individual can contribute up to 36 rows.
 If we were to analyze a particular quarter in a particular year,
-the unit of privacy would be 1 since each individual would contribute at most one row.   
-(Later in this tutorial we'll make this simpler by using the identifier column ``PIDENT`` 
+the unit of privacy would be 1 since each individual would contribute at most one row.
+(Later in this tutorial we'll make this simpler by using the identifier column ``PIDENT``
 to define the privacy unit.)
 
 The ``privacy_loss`` is the greatest privacy loss an individual in the dataset can experience.

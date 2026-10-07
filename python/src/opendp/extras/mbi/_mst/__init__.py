@@ -97,11 +97,11 @@ class MST(Algorithm):
 
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     num_selections: Optional[int] = None
     """Number of second-order marginals to estimate.
-    
+
     Defaults to one fewer than the number of columns in the data."""
 
     def __post_init__(self):

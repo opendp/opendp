@@ -14,7 +14,7 @@ After noticing this gap, we asked past contributors to sign the CLA. However, th
 | orespo |
 | abigail-gentle |
 | silviacasac |
-| PaulineMauryL | 
+| PaulineMauryL |
 | aramasethu |
 | shlomihod |
 | maxine-park |
@@ -31,7 +31,7 @@ These users have signed the CLA, but under a different username than that shown 
 
 | CLA signature | git blame |
 |---|---|
-| pdurbin | philip_durbin | 
+| pdurbin | philip_durbin |
 | raprasad | raman_prasad |
 | ecowan | ethan24 |
 | TedTed | damienbfs |
@@ -47,6 +47,6 @@ There are a few contributors with small contributions we have not been able to r
 
 | git blame | user name | contribution |
 |---|---|---|
-| abuahchu | chikeabuah | [shell syntax fix](https://github.com/opendp/opendp/pull/1406) and [internal renaming](https://github.com/opendp/opendp/pull/1362) | 
+| abuahchu | chikeabuah | [shell syntax fix](https://github.com/opendp/opendp/pull/1406) and [internal renaming](https://github.com/opendp/opendp/pull/1362) |
 | roykoand | roykoand| [fix misspellings and typos](https://github.com/opendp/opendp/pull/2161) |
 | fefealzueta | devfernandoa | [shell syntax fix](https://github.com/opendp/opendp/pull/2138) |

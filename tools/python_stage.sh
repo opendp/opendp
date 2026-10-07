@@ -2,7 +2,7 @@
 
 # copies rust sources into Python package
 # (but not target)
-# 
+#
 # vendors dependencies
 
 # exit immediately upon failure, unset vars
@@ -48,7 +48,7 @@ function source_dir() {
   run mkdir -p python/src/opendp/rust
   run cp -r rust python/src/opendp
   [ -d "target" ] && mv target rust/target || true
-  
+
   log "Copy README.md"
   run cp README.md python/README.md
 }
