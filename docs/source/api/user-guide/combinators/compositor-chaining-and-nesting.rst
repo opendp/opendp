@@ -283,13 +283,13 @@ Now the privacy budget of both queryables have been exhausted:
             >>> qbl_adaptive_comp(meas_count_approxDP)
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException:
+            opendp.mod.OpenDPException:...
               FailedFunction("out of queries")
 
             >>> qbl_adaptive_comp_zCDP(make_sum_zCDP(dg_scale))
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException:
+            opendp.mod.OpenDPException:...
               FailedFunction("out of queries")
 
 In conclusion, OpenDP provides several compositors with different

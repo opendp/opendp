@@ -108,7 +108,7 @@ This is extremely powerful!
     ...     d_in=2,
     ...     d_out=1.0,
     ... )
-    0.3535533897700931
+    0.353553389770093...
 
 The API documentation on these functions have more specific usage examples.
 

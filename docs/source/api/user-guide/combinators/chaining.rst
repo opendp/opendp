@@ -86,7 +86,7 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
         >>> sum_trans >> lap_meas
         Traceback (most recent call last):
         ...
-        opendp.mod.OpenDPException:
+        opendp.mod.OpenDPException:...
           DomainMismatch("Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
             output_domain: AtomDomain(T=f64)
             input_domain:  AtomDomain(T=i32)

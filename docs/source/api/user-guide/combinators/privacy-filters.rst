@@ -132,7 +132,7 @@ Since the privacy loss is capped at 2.0, any more queries will be rejected:
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException:
+            opendp.mod.OpenDPException:...
               FailedFunction("filter is now exhausted: pending privacy loss (3.0) would exceed privacy budget (2.0)")
 
     .. tab-item:: R
