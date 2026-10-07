@@ -172,8 +172,8 @@ small.
 Signed Counts
 -------------
 
-Pass ``signed=True`` to return counts as an ``Int64``, 
-which allows negative noisy outputs that are not clamped to zero. 
+Pass ``signed=True`` to return counts as an ``Int64``,
+which allows negative noisy outputs that are not clamped to zero.
 This applies to all counting queries (``dp.len``, expression
 ``len``, ``count``, ``null_count`` and ``n_unique``).
 

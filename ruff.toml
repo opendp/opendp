@@ -105,5 +105,5 @@ lint.ignore = [
 "UP035", # `typing.Tuple` is deprecated, use `tuple` instead
 "UP035", # `typing.Type` is deprecated, use `type` instead
 "UP037", # Remove quotes from type annotation
-"UP045", # Use `X | None` for type annotations    
+"UP045", # Use `X | None` for type annotations
 ]

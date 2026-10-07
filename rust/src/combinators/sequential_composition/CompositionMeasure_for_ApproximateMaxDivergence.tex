@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
+Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure}
 for \texttt{Approximate<MaxDivergence>} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -27,7 +27,7 @@ None
 
 \subsection*{Postcondition}
 \begin{theorem}
-  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids} 
+  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids}
   is bounded above by \texttt{self.compose(d\_mids)} under \texttt{adaptivity} adaptivity and \texttt{out}-composability.
   Otherwise returns an error.
 \end{theorem}
@@ -38,9 +38,9 @@ None
 
   \begin{center}
     \begin{tabular}{ r | l l }
-      Adaptivity & Sequential & Concurrent \\ 
+      Adaptivity & Sequential & Concurrent \\
       \hline
-      Non-Adaptive & Theorem~1\cite{dwork2006gaussian} & Theorem~1.3\cite{vadhan2023concurrent} \\  
+      Non-Adaptive & Theorem~1\cite{dwork2006gaussian} & Theorem~1.3\cite{vadhan2023concurrent} \\
       Adaptive & Theorem~1\cite{dwork2006gaussian} & Theorem~1.3\cite{vadhan2023concurrent} \\
       Fully-Adaptive & Lemma~3.5\cite{rogers2021payasyougo} & Theorem~1.3\cite{vadhan2023concurrent}
     \end{tabular}
@@ -50,7 +50,7 @@ None
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.
   \end{center}
-  
+
 \end{proof}
 
 \bibliographystyle{alpha}
