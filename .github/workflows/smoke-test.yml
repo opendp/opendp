@@ -53,7 +53,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install minimal dependencies
         run: pip install ruff pre-commit
@@ -173,7 +173,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.10'
+          - '3.11'
           - '3.13'
         extra-install:
           - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
@@ -331,7 +331,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Get pip cache dir
         id: pip-cache
