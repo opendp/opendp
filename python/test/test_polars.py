@@ -384,8 +384,6 @@ def test_onceframe_lazy():
     ids=ids,
 )
 def test_mechanisms(measure):
-
-
     lf_domain, lf = example_lf()
 
     with pytest.warns(DeprecationWarning):
@@ -468,7 +466,11 @@ def test_polars_describe():
 
     summer = pl.col("A").dp.sum((0, 3))
 
-    query = context.query().group_by("B").agg(dp.len(signed=True), summer, summer.alias("B"))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), summer, summer.alias("B"))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -506,7 +508,11 @@ def test_polars_accuracy_threshold():
         schema_overrides={"threshold": pl.UInt32},
     )
 
-    query = context.query().group_by("B").agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -743,7 +749,10 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0, signed=True)) == f"dyn float: 1.{__file__}:dp_frame_len([true])"
+    assert (
+        str(dp.len(scale=1.0, signed=True))
+        == f"dyn float: 1.{__file__}:dp_frame_len([true])"
+    )
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -845,7 +854,14 @@ def test_cut():
             split_evenly_over=1,
             margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
-    actual = context.query().group_by(*by).agg(dp.len(signed=True)).release().collect().sort("x")
+    actual = (
+        context.query()
+        .group_by(*by)
+        .agg(dp.len(signed=True))
+        .release()
+        .collect()
+        .sort("x")
+    )
     expected = pl.DataFrame(
         {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
         schema={"x": pl.UInt32, "len": pl.Int64},
@@ -1255,7 +1271,7 @@ def test_replace_strict():
 
 
 def test_cast_enum():
-        # this triggers construction of a lazyframe domain from the schema
+    # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
         data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
         privacy_unit=dp.unit_of(contributions=1),
@@ -1338,7 +1354,9 @@ def test_arithmetic():
         margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    context.query().filter(pl.col.data.truediv(2) > 1.5).select(dp.len(signed=True)).summarize()
+    context.query().filter(pl.col.data.truediv(2) > 1.5).select(
+        dp.len(signed=True)
+    ).summarize()
 
     observed = (
         context.query()

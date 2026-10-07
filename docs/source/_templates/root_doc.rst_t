@@ -4,8 +4,8 @@
   uses the top heading level for the second section, which causes problems when
   included in the parent toc.)
 
-Python API Documentation
-========================
+Python API Reference
+====================
 
 .. toctree::
    :maxdepth: {{ mastertocmaxdepth }}

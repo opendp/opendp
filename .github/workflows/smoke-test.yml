@@ -180,7 +180,9 @@ jobs:
           - 'numpy'
           - 'scikit-learn'
           - 'polars'
+          - 'ibis'
           - 'mbi'
+          - 'ibis,mbi' # Install both. Unlike the others, these are not stacked.
 
     steps:
       - name: Checkout repository
@@ -208,6 +210,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files
+
       - name: Download dynamic lib
         uses: actions/download-artifact@v7
         with:
@@ -227,14 +232,19 @@ jobs:
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
+          NOT_SYNTH="not contingency and not synthetic"
+          NOT_IBIS="not ibis"
+          NOT_POLARS="not lazyframe and not polars and not pca and not rst"
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            polars)               pytest -v -k "not contingency and not synthetic";;
-            mbi)  coverage run -m pytest -v;;
+            PLACEHOLDER)          pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            numpy)                pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            scikit-learn)         pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            polars)               pytest -v -k "$NOT_IBIS and $NOT_SYNTH";;
+            ibis)                 pytest -v -k "$NOT_SYNTH";;
+            mbi)                  pytest -v -k "$NOT_IBIS";;
+            ibis,mbi)             coverage run -m pytest -v;;
 
-            *)    print "unexpected extra-install"; exit 1;;
+            *)                    print "unexpected extra-install"; exit 1;;
           esac
 
       - name: Test replace-binary-path
@@ -244,14 +254,14 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
+        # "ibis,mbi" implies "polars" and "scikit-learn": see setup.cfg.
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report

@@ -13,9 +13,6 @@ Summary
 -------
 
 The OpenDP Framework API consists of a set of high-level conceptual elements.
-We'll cover the highlights here, which should be enough for you to get acquainted with OpenDP programming.
-If you're interested in more of the details and motivations behind the API, you're encouraged to read `the paper <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_.
-There is also an illustrative notebook :doc:`A Framework to Understand DP <../../../theory/a-framework-to-understand-dp>`.
 
 * :ref:`Measurements <measurements-user-guide>` are randomized mappings from a private,
   potentially sensitive dataset or value to an arbitrary output value that is safe to release.
@@ -61,7 +58,8 @@ You don't need to know all the details of the Framework API to write OpenDP appl
   Instead, measurements are typically constructed by specifying the scale of noise, and the loss is bounded by the resulting privacy relation. This requires some extra work compared to specifying the loss directly, but OpenDP provides some utilities to make this easier on the programmer, and the benefit is greatly increased flexibility of the Framework API as a whole.
 
 .. toctree::
-  :hidden:
 
+  a-framework-to-understand-dp
+  dp-with-opendp
   core-structures
   supporting-elements
