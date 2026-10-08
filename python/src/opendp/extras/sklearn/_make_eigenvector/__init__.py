@@ -14,10 +14,12 @@ def _optimal_b(A_eigvals, d: int) -> float:
     # Differs from the Amin et al. in two ways:
     # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
     #   the equality is against 1 not 0
-    # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability,
-    #   and increase the upper bound, as b = d when A = 0 (for example, when the data is empty)
+    # 2. Instead of using bounds of (1, d), widen both bounds by a margin,
+    #   as the boundary may lie on a bound: numerically at 1, and exactly at d when A = 0
+    margin = 0.1
     return dp.binary_search(
-        lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d) + 1.0)
+        lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1,
+        bounds=(1.0 - margin, float(d) + margin),
     )
 
 
