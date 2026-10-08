@@ -70,8 +70,7 @@ def mirror_descent(
 
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
-    import_optional_dependency("mbi")
-    import jax  # type: ignore[import-not-found]
+    jax = import_optional_dependency("jax")
 
     # mbi<2 enabled x64 on import; mbi>=2 only warns.
     # Estimates must be f64 to pass through the OpenDP FFI.
