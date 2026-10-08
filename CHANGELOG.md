@@ -4,6 +4,14 @@ This file documents the version history of OpenDP. The links on each version num
 
 ## [0.16.0](https://github.com/opendp/opendp/compare/v0.15.1...v0.16.0) - 2026-10-05
 
+### Migration
+
+This release adds signed counts. All counting operations (`dp.len`, expression `len`, `count`, `null_count`, and `n_unique`) now have an optional `signed` kwarg.
+- Omitting `signed` (or passing `signed=None`) will maintain the previous behavior of clipping at zero, except there will also be a warning message that the default behavior will change in a future release.
+- Using `signed=False` explicitly will clip results now and in the future, without a warning.
+- Using `signed=True` will opt-in to the new behavior, and in a future release this will become the default.
+
+With this release, users of AIM may experience a slowdown. This is the result of a bug fix, and doing the calculation correctly is unavoidably slower.
 
 ### Features
 
