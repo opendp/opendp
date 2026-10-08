@@ -53,7 +53,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install minimal dependencies
         run: pip install ruff pre-commit
@@ -98,6 +98,9 @@ jobs:
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
+        # Allow for pyo3 to run against multiple python versions
+        env:
+          PYO3_BUILD_EXTENSION_MODULE: "1"
         run: cargo build --verbose --features untrusted,polars-ffi
 
       - name: Upload (dynamic w/ polars)
@@ -173,7 +176,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.10'
+          - '3.11'
           - '3.13'
         extra-install:
           - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
@@ -331,7 +334,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Get pip cache dir
         id: pip-cache

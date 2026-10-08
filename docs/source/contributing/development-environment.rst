@@ -64,8 +64,8 @@ This will compile a debug build of the OpenDP shared library, placing it in the 
 
     .. code-block:: bash
 
-        brew install python@3.10
-        PYO3_PYTHON=$(which python3.10)
+        brew install python@3.11
+        PYO3_PYTHON=$(which python3.11)
         cargo build --all-features
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
@@ -149,7 +149,7 @@ If you only need to regenerate the Python bindings, this is sufficient:
 
     cargo check --all-features
 
-If you have not already, install `Python version 3.10 or higher <https://www.python.org>`_.
+If you have not already, install `Python version 3.11 or higher <https://www.python.org>`_.
 
 You can install a local Python package that uses your new OpenDP binary.
 
