@@ -258,7 +258,7 @@ def test_make_contingency_table_invalid_d_out():
 def get_model(domain: dict[str, int]):
     from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
 
-    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], arrays={})
+    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], tables={})
     return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)
 
 

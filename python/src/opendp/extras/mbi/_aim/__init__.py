@@ -352,7 +352,7 @@ def _make_aim_select(
 
     def is_small(clique: tuple[str, ...]) -> bool:
         model_size = mbi.junction_tree.hypothetical_model_size(
-            model.domain, cliques=model.cliques + [clique]
+            model.domain, cliques=[*model.cliques, clique]
         )
         return model_size <= max_size
 

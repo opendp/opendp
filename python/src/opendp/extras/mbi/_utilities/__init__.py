@@ -22,6 +22,7 @@ from opendp.metrics import (
     symmetric_distance,
 )
 from opendp.core import as_array
+from opendp._lib import import_optional_dependency
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -69,9 +70,14 @@ def mirror_descent(
 
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
-    from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
+    jax = import_optional_dependency("jax")
 
-    return _mirror_descent(domain, loss_fn, potentials=potentials)
+    # mbi<2 enabled x64 on import; mbi>=2 only warns.
+    # Estimates must be f64 to pass through the OpenDP FFI.
+    jax.config.update("jax_enable_x64", True)
+    from mbi.estimation import MirrorDescent  # type: ignore
+
+    return MirrorDescent().estimate(domain, loss_fn, warm_start=potentials)
 
 
 OnewayType = Literal["all", "unkeyed"]
@@ -381,25 +387,15 @@ class SelectPrefixQuery:
         return factor.datavector()[: self.length]
 
 
-def _queries_equal(left: Callable, right: Callable) -> bool:
-    if left is right:
-        return True
-    try:
-        result = left == right
-        return result if isinstance(result, bool) else False
-    except Exception:  # pragma: no cover - defensive for user-defined queries
-        return False
-
-
 def identity_query_precision(measurement) -> float:
     """Return precision contributed by a full-datavector observation.
 
     Partial queries do not provide a uniform uncertainty estimate for every
     cell in a marginal, so they contribute zero precision.
     """
-    from mbi import Factor  # type: ignore[import-untyped,import-not-found]
+    from mbi import DatavectorQuery  # type: ignore[import-untyped,import-not-found]
 
-    if _queries_equal(measurement.query, Factor.datavector):
+    if isinstance(measurement.query, DatavectorQuery):
         return 1 / measurement.stddev**2
     return 0.0
 
