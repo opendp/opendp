@@ -20,19 +20,13 @@ def test_clamp_nan_inf():
     assert trans.output_domain.member(trans(data))
 
 
-def test_clamp_empty():
-    space = dp.numpy.array2_domain(num_columns=2, T=float), dp.symmetric_distance()
-    trans = space >> then_np_clamp(norm=1.0, p=2)
-    np = pytest.importorskip("numpy")
-    assert trans(np.zeros((0, 2))).shape == (0, 2)
-
-
-def test_clamp_zero_length():
+@pytest.mark.parametrize("num_columns", [None, 2])
+def test_clamp_zero_length(num_columns):
     with optional_dependency("numpy"):
-        domain = dp.numpy.array2_domain(T=float)
+        domain = dp.numpy.array2_domain(num_columns=num_columns, T=float)
     space = domain, dp.symmetric_distance()
     trans = space >> then_np_clamp(norm=1.0, p=2)
     np = pytest.importorskip("numpy")
     empty = np.zeros((0, 2))
     assert domain.member(empty)
-    trans(empty)
+    assert trans(empty).shape == (0, 2)
