@@ -98,6 +98,9 @@ jobs:
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
+        # Allow for pyo3 to run against multiple python versions
+        env:
+          PYO3_BUILD_EXTENSION_MODULE: "1"
         run: cargo build --verbose --features untrusted,polars-ffi
 
       - name: Upload (dynamic w/ polars)
