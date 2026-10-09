@@ -66,3 +66,10 @@ def test_eigenvectors():
 
     data = np.random.normal(size=(1000, num_columns))
     print("meas(data)", meas(data))
+
+
+def test_optimal_b_zero():
+    from opendp.extras.sklearn._make_eigenvector import _optimal_b
+
+    # A = 0 when the data is empty
+    assert _optimal_b(np.zeros(4), 4) == pytest.approx(4)

@@ -64,6 +64,11 @@ def test_array2_domain_member():
         domain.member(np.array([[1.0, 0.0]]))
     assert domain.member(np.array([[1.0, 0.0], [1.0, 0.0]]))
 
+    empty_domain = dp.numpy.array2_domain(
+        norm=1, p=1, nan=False, num_columns=2, T=float
+    )
+    assert empty_domain.member(np.zeros((0, 2)))
+
 
 def test_array2_domain_cardinalities():
     with pytest.raises(ValueError, match="cardinalities ndim"):
