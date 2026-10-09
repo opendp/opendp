@@ -65,6 +65,15 @@ def test_impute_uniform():
     assert -1.0 <= caster([float("nan")])[0] <= 2.0
 
 
+def test_impute_uniform_infinite_width():
+    with pytest.raises(dp.OpenDPException, match="must be finite"):
+        dp.t.make_impute_uniform_float(
+            dp.vector_domain(dp.atom_domain(T=float, nan=True)),
+            dp.symmetric_distance(),
+            bounds=(0.0, float("inf")),
+        )
+
+
 def test_int_identity():
     space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     transformation = dp.t.make_identity(*space)
