@@ -43,7 +43,7 @@ None
     \texttt{RBig.try\_from} is infallible when the input is non-nan.
     The precondition for \texttt{find\_nearest\_multiple\_of\_2k} is satisfied by line \ref{line:check-k},
     so \texttt{find\_nearest\_multiple\_of\_2k} is infallible.
-    There are no other sources of error in the function, 
+    There are no other sources of error in the function,
     so the function cannot raise data-dependent errors.
 
     The function also always returns a hashmap with the same keys, and IBig values,
@@ -64,7 +64,7 @@ None
             & = \max_{x \sim x'} d_{Lp}(x, x') + \Delta_0^{1/p} (2^{k} - 2^{k_{min}})\\
             & = \texttt{d\_in} + \Delta_0^{1/p} (2^{k} - 2^{k_{min}})
         \end{align}
-    
+
         This increase in the sensitivity is reflected on line \ref{line:lp-x-mul-2k},
         which, by the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_rounding\_distance},
         returns the maximum increase in sensitivity due to rounding.
@@ -83,10 +83,10 @@ None
             where the sensitivity is multiplied by $2^{-k}$.
     \end{itemize}
 
-    For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
-    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+    For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric},
     if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
-    and $\texttt{stability\_map}(\din) \leq \dout$, 
+    and $\texttt{stability\_map}(\din) \leq \dout$,
     then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
 \end{proof}
 

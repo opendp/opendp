@@ -53,7 +53,7 @@ use opendp_derive::bootstrap;
 /// # Arguments
 /// * `raw` - A pointer to the slice with data.
 /// * `T` - The type of the data in the slice.
-/// 
+///
 /// # Returns
 /// An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
 #[unsafe(no_mangle)]

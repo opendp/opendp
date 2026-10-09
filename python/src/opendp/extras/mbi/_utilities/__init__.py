@@ -22,6 +22,7 @@ from opendp.metrics import (
     symmetric_distance,
 )
 from opendp.core import as_array
+from opendp._lib import import_optional_dependency
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -47,8 +48,8 @@ class Count:
     by: tuple[str, ...]
     """Columns to group by."""
     weight: float = 1.0
-    """Importance of this count query. 
-    
+    """Importance of this count query.
+
     - Used by AIM to prioritize cliques.
     - Used by Fixed to distribute privacy budget.
     """
@@ -69,9 +70,14 @@ def mirror_descent(
 
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
-    from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
+    jax = import_optional_dependency("jax")
 
-    return _mirror_descent(domain, loss_fn, potentials=potentials)
+    # mbi<2 enabled x64 on import; mbi>=2 only warns.
+    # Estimates must be f64 to pass through the OpenDP FFI.
+    jax.config.update("jax_enable_x64", True)
+    from mbi.estimation import MirrorDescent  # type: ignore
+
+    return MirrorDescent().estimate(domain, loss_fn, warm_start=potentials)
 
 
 OnewayType = Literal["all", "unkeyed"]
@@ -86,7 +92,7 @@ class Algorithm(ABC):
     """Optimizer to use to fit a MarkovRandomField.
 
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
-    Any function matching the signature of ``mirror_descent`` 
+    Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
@@ -94,7 +100,7 @@ class Algorithm(ABC):
     """Fit one-way marginals for all columns, or only unkeyed columns."""
     oneway_split: Optional[float] = None
     """Proportion of budget to use for oneway release.
-    
+
     When ``oneway_split`` is not set, defaults to half of the budget.
 
     If oneway is ``unkeyed``, budget is further reduced by the proportion of columns with missing keys or cuts.
@@ -178,6 +184,16 @@ def get_std(measure: Measure, scale: float) -> float:
         return scale * sqrt(2)
     if measure == zero_concentrated_divergence():
         return scale
+    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    raise ValueError(message)
+
+
+def get_scale(measure: Measure, d_out: float, sensitivity: float) -> float:
+    """Returns the noise scale that spends ``d_out`` on a query of ``sensitivity``."""
+    if measure == max_divergence():
+        return sensitivity / d_out
+    if measure == zero_concentrated_divergence():
+        return sensitivity / sqrt(2 * d_out)
     message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
     raise ValueError(message)
 
@@ -371,25 +387,15 @@ class SelectPrefixQuery:
         return factor.datavector()[: self.length]
 
 
-def _queries_equal(left: Callable, right: Callable) -> bool:
-    if left is right:
-        return True
-    try:
-        result = left == right
-        return result if isinstance(result, bool) else False
-    except Exception:  # pragma: no cover - defensive for user-defined queries
-        return False
-
-
 def identity_query_precision(measurement) -> float:
     """Return precision contributed by a full-datavector observation.
 
     Partial queries do not provide a uniform uncertainty estimate for every
     cell in a marginal, so they contribute zero precision.
     """
-    from mbi import Factor  # type: ignore[import-untyped,import-not-found]
+    from mbi import DatavectorQuery  # type: ignore[import-untyped,import-not-found]
 
-    if _queries_equal(measurement.query, Factor.datavector):
+    if isinstance(measurement.query, DatavectorQuery):
         return 1 / measurement.stddev**2
     return 0.0
 

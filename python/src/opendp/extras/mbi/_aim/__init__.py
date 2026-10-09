@@ -14,6 +14,7 @@ from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
     get_associated_metric,
+    get_scale,
     make_noise_marginal,
     make_stable_marginals,
     prior,
@@ -56,6 +57,7 @@ class AIM(Algorithm):
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
 
@@ -116,7 +118,7 @@ class AIM(Algorithm):
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
     """Maximum memory constraint in MB for the marginal selection."""
@@ -265,6 +267,7 @@ def _make_aim_marginal(
         model=model,
         d_in=d_in,
         d_out=d_select,
+        d_measure=d_measure,
         max_size=max_size,
     )
 
@@ -331,6 +334,7 @@ def _make_aim_select(
     output_measure: Measure,
     d_in,
     d_out,
+    d_measure,
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
@@ -348,7 +352,7 @@ def _make_aim_select(
 
     def is_small(clique: tuple[str, ...]) -> bool:
         model_size = mbi.junction_tree.hypothetical_model_size(
-            model.domain, cliques=model.cliques + [clique]
+            model.domain, cliques=[*model.cliques, clique]
         )
         return model_size <= max_size
 
@@ -358,9 +362,16 @@ def _make_aim_select(
     if not candidates:
         return None
 
+    # penalize candidates by the expected error of the upcoming MEASURE step,
+    # not of this SELECT step
+    expectations = {
+        q.by: get_scale(output_measure, d_measure, d_in[q.by]) * to_mu
+        for q in candidates
+    }
+
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
-            input_domain, input_metric, candidates, scale * to_mu, model
+            input_domain, input_metric, candidates, expectations, model
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
@@ -377,7 +388,7 @@ def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
     queries: list[Count],
-    expectation: float,
+    expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
@@ -391,7 +402,7 @@ def _make_aim_scores(
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
     def score_query(query: Count, exact: np.ndarray):
-        penalty = expectation * prod(exact.shape)
+        penalty = expectations[query.by] * prod(exact.shape)
         synth = model.project(query.by).values
 
         return (np.linalg.norm((exact - synth).flatten(), 1) - penalty) * query.weight

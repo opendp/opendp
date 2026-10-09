@@ -4,7 +4,7 @@ Compositor Chaining and Nesting
 Chaining
 --------
 
-Since non-adaptive compositors, adaptive compositors, and privacy filters are just "plain-old-measurements," 
+Since non-adaptive compositors, adaptive compositors, and privacy filters are just "plain-old-measurements,"
 they also support chaining.
 
 .. tab-set::
@@ -91,7 +91,7 @@ the output distance from the previous transformation:
             ...         d_mids=[2.0, 1.0],
             ...     )
             ... )
-    
+
     .. tab-item:: R
         :sync: r
 
@@ -283,13 +283,13 @@ Now the privacy budget of both queryables have been exhausted:
             >>> qbl_adaptive_comp(meas_count_approxDP)
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException: 
+            opendp.mod.OpenDPException:...
               FailedFunction("out of queries")
 
             >>> qbl_adaptive_comp_zCDP(make_sum_zCDP(dg_scale))
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException: 
+            opendp.mod.OpenDPException:...
               FailedFunction("out of queries")
 
 In conclusion, OpenDP provides several compositors with different

@@ -24,7 +24,7 @@ perhaps on a remote server.
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(dp.len())
+        >>> query = context.query().select(dp.len(signed=True))
         >>> serialized_plan = query.polars_plan.serialize()
 
         >>> new_context = (

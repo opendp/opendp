@@ -1,7 +1,7 @@
 """High-level mechanism for applying mbi mechanisms to dataframes with mixed types."""
 
 from math import sqrt
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     Iterator,
@@ -66,7 +66,7 @@ class ContingencyTable:
     model: Any  # MarkovRandomField
     """MarkovRandomField spanning the same columns as keys"""
     thresholds: dict[str, int] = field(default_factory=dict)
-    """Cut-off point for discovered stable keys. 
+    """Cut-off point for discovered stable keys.
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):
@@ -97,10 +97,12 @@ class ContingencyTable:
                 raise ValueError(msg)
 
         if isinstance(self.marginals, dict):
-            self.marginals = Marginals({
-                tuple(clique): [measurement]
-                for clique, measurement in self.marginals.items()
-            })
+            self.marginals = Marginals(
+                {
+                    tuple(clique): [measurement]
+                    for clique, measurement in self.marginals.items()
+                }
+            )
 
     def synthesize(
         self, rows: Optional[int] = None, method: Literal["round", "sample"] = "round"
@@ -115,9 +117,9 @@ class ContingencyTable:
 
         model = cast(MarkovRandomField, self.model)
 
-        indices = model.synthetic_data(rows, method).df
+        indices = model.synthetic_data(rows, method).data
         data = {
-            c: _deindex(indices[c].to_numpy(), self.keys[c], cuts=self.cuts.get(c))
+            c: _deindex(indices[c], self.keys[c], cuts=self.cuts.get(c))
             for c in self.keys
         }
         return pl.DataFrame(data)
@@ -247,7 +249,9 @@ def make_contingency_table(
 
     # add cut bin labels to keys
     def get_categories(cutset):
-        labels = [f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])]
+        labels = [
+            f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])
+        ]
         return pl.Series(cutset.name, labels)
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
@@ -264,7 +268,11 @@ def make_contingency_table(
         thresholds = {}
 
     if cuts_pl:
-        plan = plan.with_columns(pl.col(c).cut(cutset, labels=get_categories(cutset)) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
+        plan = plan.with_columns(
+            pl.col(c).cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
+            for c, cutset in cuts_pl.items()
+            if c in schema
+        )
 
     if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
         raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")
@@ -348,9 +356,7 @@ def make_contingency_table(
 
         potentials = None
         if isinstance(model, mbi.MarkovRandomField):
-            import attr  # type: ignore[import-not-found]
-
-            potentials = attr.evolve(model.potentials, domain=mbi_domain)
+            potentials = replace(model.potentials, domain=mbi_domain)
 
         current_model = (
             algorithm.estimator(
@@ -373,7 +379,7 @@ def make_contingency_table(
                 .clip(0, len(stable_keys[c]) - 1)
                 for c in input_domain.columns
             ),
-            MO="FrameDistance<SymmetricDistance>"
+            MO="FrameDistance<SymmetricDistance>",
         )
 
         m_marginals = algorithm.make_marginals(
@@ -492,10 +498,7 @@ def _make_oneway_marginals(
             if name not in keys or not unknown_only
         ]
 
-        will_release_full_identity = any(
-            name in keys
-            for name in names
-        )
+        will_release_full_identity = any(name in keys for name in names)
 
         # An algorithm that selects its workload needs a total constraint
         # before that selection. A fixed workload does not: its own identity

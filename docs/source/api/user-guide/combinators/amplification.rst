@@ -47,7 +47,7 @@ The function on the amplified measurement is identical to the standard measureme
   .. tab-item:: Python
 
     .. code:: pycon
-      
+
       >>> amplified = dp.c.make_population_amplification(
       ...     meas, population_size=100
       ... )
@@ -71,4 +71,3 @@ is a simple sample of individuals from a theoretical larger dataset that capture
         >>> assert amplified.check(2, 0.4941)
 
 The efficacy of this combinator improves as n gets larger.
-

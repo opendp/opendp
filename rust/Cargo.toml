@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.15.1-dev"
+version = "0.16.0-dev"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
@@ -33,25 +33,22 @@ rust-version.workspace = true
 exclude = ["windows/*"]
 
 [dependencies]
-opendp_derive = { path = "opendp_derive", version = "0.15.1-dev" }
+opendp_derive = { path = "opendp_derive", version = "0.16.0-dev" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 
-dashu = { version = "0.4.0", features = ["num-traits_v02"] }
-# TODO: Remove the pin to fix https://github.com/opendp/opendp/issues/2773
-# Pin dashu-float: 0.4.5 breaks the build, so hold at 0.4.4.
-dashu-float = "=0.4.4"
+dashu = { version = "0.6.1", features = ["num-traits_v02"] }
 
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.1-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.16.0-dev" }
 readonly = "0.2"
 bitvec = "1.0"
 
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
-# If you change the version of Polars, 
+# If you change the version of Polars,
 # be sure to also change the Python package version requirement and test binary compatibility.
 #
 # The features track the features enabled in the Rust build for the Polars Python crate.
@@ -61,16 +58,16 @@ bitvec = "1.0"
 polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "row_hash"], optional = true }
 polars-python = { version = "=0.52.0", optional = true }
 
-# these crates are implicit in the tree behind polars, 
+# these crates are implicit in the tree behind polars,
 # or have symbols we need that aren't in the prelude
 polars-expr = { version = "=0.52.0", features = ["json"], optional = true }
 polars-plan = { version = "=0.52.0", optional = true }
 polars-utils = { version = "=0.52.0", optional = true }
 polars-arrow = { version = "=0.52.0", optional = true }
 pyo3-polars = { version = "=0.25.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "lazy"], optional = true }
-pyo3 = { version = "=0.26.0", features = ["abi3-py310"], optional = true }
+pyo3 = { version = "=0.26.0", features = ["abi3-py311"], optional = true } # 3.11
 
-# matches the version specified in Polars: 
+# matches the version specified in Polars:
 #   https://github.com/pola-rs/polars/blob/main/Cargo.toml
 chrono = { version = "=0.4.41", default-features = false, features = ["std"], optional = true }
 serde = { version = "1.0", optional = true }
@@ -80,7 +77,7 @@ lazy_static = { version = "1.4.0", optional = true }
 
 [build-dependencies]
 autocfg = "1.4"
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.1-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.16.0-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.28.0", optional = true }
@@ -126,12 +123,12 @@ polars = [
     "dep:chrono",
 ]
 polars-ffi = [
-    "polars", 
+    "polars",
     "ffi",
     "dep:polars-python",
     "dep:pyo3",
     "dep:pyo3-polars",
-    "polars-plan/ffi_plugin", 
+    "polars-plan/ffi_plugin",
     "polars-plan/python"
 ]
 use-openssl = ["openssl", "dep:openssl-src"]
@@ -156,7 +153,7 @@ features = ["use-openssl", "derive", "untrusted"]
 rustdoc-args = [
     # so that latex renders
     "--html-in-header", "katex.html",
-    
+
     # so that proof documents are visible
     "--document-private-items"
 ]

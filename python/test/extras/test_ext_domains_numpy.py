@@ -3,9 +3,10 @@ import opendp.prelude as dp
 import pytest
 import re
 
+np = pytest.importorskip("numpy")
+
 
 def test_array2_domain():
-    np = pytest.importorskip("numpy")
     # missing norm
     with pytest.raises(ValueError):
         dp.numpy.array2_domain(p=2, T=float)
@@ -42,7 +43,6 @@ def test_array2_domain():
 
 
 def test_array2_domain_member():
-    np = pytest.importorskip("numpy")
     # missing norm
     domain = dp.numpy.array2_domain(
         norm=1, p=1, nan=False, size=2, num_columns=2, T=float
@@ -66,7 +66,6 @@ def test_array2_domain_member():
 
 
 def test_array2_domain_cardinalities():
-    np = pytest.importorskip("numpy")
     with pytest.raises(ValueError, match="cardinalities ndim"):
         dp.numpy.array2_domain(cardinalities=np.array(2), T=int)
     with pytest.raises(ValueError, match="cardinalities dtype"):
@@ -92,8 +91,6 @@ def test_array2_domain_cardinalities():
 
 
 def test_sscp_domain():
-    np = pytest.importorskip("numpy")
-
     with pytest.raises(ValueError):
         _sscp_domain(T=bool)
 
@@ -118,8 +115,6 @@ def test_sscp_domain():
 
 
 def test_arrayd_domain():
-    np = pytest.importorskip("numpy")
-
     with pytest.raises(ValueError, match="must be a tuple"):
         arrayd_domain(shape=None, T=bool)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="must be a tuple of positive integers"):

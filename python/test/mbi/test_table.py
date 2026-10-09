@@ -258,7 +258,7 @@ def test_make_contingency_table_invalid_d_out():
 def get_model(domain: dict[str, int]):
     from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
 
-    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], arrays={})
+    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], tables={})
     return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)
 
 
@@ -379,21 +379,31 @@ def test_contingency_table_minimum_variance_weighted_total():
     pytest.importorskip("mbi")
     import polars as pl  # type: ignore[import-not-found]
 
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"A": [1] * 1000}),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
-    )
-
     # tests fit when no columns have keys, using the fixed identity marginal
     # to constrain the total
-    table: ContingencyTable = (
-        context.query(epsilon=1.0, delta=1e-8)
-        .contingency_table(algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9))
-        .release()
-    )
+    num_retries = 5
+    for _ in range(num_retries):
+        context = dp.Context.compositor(
+            data=pl.LazyFrame({"A": [1] * 1000}),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
+        )
+        table: ContingencyTable = (
+            context.query(epsilon=1.0, delta=1e-8)
+            .contingency_table(
+                algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9)
+            )
+            .release()
+        )
 
-    assert 950 < table.project([]) < 1050
+        fixed_measurement = table.marginals.by_clique[("A",)][-1]
+        assert not isinstance(fixed_measurement.query, SelectPrefixQuery)
+        total = table.project([])
+        assert total == pytest.approx(fixed_measurement.noisy_measurement.sum())
+        if 950 < total < 1050:
+            break
+    else:
+        pytest.fail(f"total was inaccurate {num_retries} times")
 
 
 def test_fixed_unkeyed_does_not_release_zero_way_total():

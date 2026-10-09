@@ -36,7 +36,7 @@ class Sequential(Algorithm):
     """Sequence of algorithms."""
     weights: Optional[list[float]] = None
     """Budget allocation amongst algorithms.
-    
+
     Defaults to equal budget for each algorithm."""
 
     def __post_init__(self):
@@ -46,7 +46,9 @@ class Sequential(Algorithm):
             raise ValueError("algorithms must contain at least one element")
 
         if any(not isinstance(a, Algorithm) for a in self.algorithms):
-            raise ValueError(f"algorithms ({self.algorithms}) must be instances of Algorithm")
+            raise ValueError(
+                f"algorithms ({self.algorithms}) must be instances of Algorithm"
+            )
 
         if self.weights is not None:
             if len(self.weights) != len(self.algorithms):

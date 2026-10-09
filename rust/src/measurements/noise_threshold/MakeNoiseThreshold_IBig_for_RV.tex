@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold} 
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}
 for \texttt{RV} over hashmaps of big integers in \asOfCommit{mod.rs}{f5bb719}.
 
 This is the core implementation of all variations of the thresholded gaussian or laplace mechanism.
@@ -50,7 +50,7 @@ None
     The postcondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} guarantees that the function only ever returns an error independently of the data.
 \end{proof}
 
-For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}, 
+For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>},
 which has an associated function \texttt{noise\_privacy\_map} called on line~\ref{line:privacy-map}.
 \begin{lemma}[Postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}]
     \label{lemma:new-privacy-map}
@@ -75,7 +75,7 @@ which has an associated function \texttt{noise\_privacy\_map} called on line~\re
 \begin{proof}[Proof of privacy guarantee]
     Assuming line~\ref{line:privacy-map} does not fail,
     then the returned privacy map is subject to Theorem~\ref{lemma:new-privacy-map}.
-    The privacy guarantee applies when the pseudocode matches the algorithm specification, 
+    The privacy guarantee applies when the pseudocode matches the algorithm specification,
     where $Z_i$ are iid samples from \texttt{self}.
     In this case \texttt{self} describes the noise distribution.
 

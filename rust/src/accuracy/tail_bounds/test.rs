@@ -185,7 +185,7 @@ fn test_tail_bounds_reject_invalid_arguments() {
 ///                              49923
 #[test]
 fn test_continuous_laplace_tail_rounding_direction() -> Fallible<()> {
-    use crate::traits::{InfDiv, ToFloatRounded};
+    use crate::traits::InfDiv;
     use dashu::float::{
         FBig,
         round::mode::{Down, Up},
@@ -205,14 +205,16 @@ fn test_continuous_laplace_tail_rounding_direction() -> Fallible<()> {
     let true_lower: f64 = (FBig::<Down>::try_from(-5121.0)?.with_precision(150).value()
         / FBig::<Down>::try_from(10.0)?)
     .exp()
-    .to_f64_rounded()
+    .to_f64()
+    .value()
     .neg_inf_div(&2.0)?;
 
     // an over precise upper for comparison
     let true_upper: f64 = (FBig::<Up>::try_from(-5121.0)?.with_precision(150).value()
         / FBig::<Up>::try_from(10.0)?)
     .exp()
-    .to_f64_rounded()
+    .to_f64()
+    .value()
     .inf_div(&2.0)?;
     assert!(true_lower <= true_upper);
 
