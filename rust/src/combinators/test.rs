@@ -28,15 +28,15 @@ pub fn make_test_odometer<T: 'static + Clone + CheckAtom>() -> Fallible<
             Queryable::new_external(
                 move |query: &OdometerQuery<
                     Measurement<VectorDomain<AtomDomain<T>>, SymmetricDistance, MaxDivergence, T>,
-                    u32,
                 >| {
                     Ok(match query {
                         OdometerQuery::Invoke(meas) => OdometerAnswer::Invoke(meas.invoke(&data)?),
-                        OdometerQuery::PrivacyLoss(_) => OdometerAnswer::PrivacyLoss(1.),
+                        OdometerQuery::PrivacyLoss => OdometerAnswer::PrivacyLoss(1.),
                     })
                 },
             )
         }),
+        1,
     )
 }
 

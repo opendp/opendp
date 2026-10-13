@@ -5,9 +5,11 @@ use crate::{
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
 };
 
-use super::{Adaptivity, CompositionMeasure};
+use super::{Adaptivity, CompositionMeasure, MapKey};
 
 impl CompositionMeasure for AnyMeasure {
+    type Acc = AnyObject;
+
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
         fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
@@ -42,5 +44,55 @@ impl CompositionMeasure for AnyMeasure {
         dispatch!(monomorphize, [
             (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
+    }
+
+    fn new_acc(&self) -> Fallible<Self::Acc> {
+        fn monomorphize<M: 'static + CompositionMeasure>(
+            self_: &AnyMeasure,
+        ) -> Fallible<AnyObject> {
+            self_.downcast_ref::<M>()?.new_acc().map(AnyObject::new)
+        }
+        dispatch!(monomorphize, [
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+        ], (self))
+    }
+
+    fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
+        fn monomorphize<M: 'static + CompositionMeasure>(
+            self_: &AnyMeasure,
+            acc: &AnyObject,
+        ) -> Fallible<AnyObject> {
+            self_
+                .downcast_ref::<M>()?
+                .compose_acc(acc.downcast_ref::<M::Acc>()?)
+                .map(AnyObject::new)
+        }
+        dispatch!(monomorphize, [
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+        ], (self, acc))
+    }
+
+    fn accumulate_keyed(
+        &self,
+        acc: &mut Self::Acc,
+        key: MapKey,
+        eval: impl FnOnce() -> Fallible<Self::Distance>,
+    ) -> Fallible<()> {
+        fn monomorphize<M: 'static + CompositionMeasure>(
+            self_: &AnyMeasure,
+            acc: &mut AnyObject,
+            key: MapKey,
+            eval: Box<dyn FnOnce() -> Fallible<AnyObject> + '_>,
+        ) -> Fallible<()> {
+            self_
+                .downcast_ref::<M>()?
+                .accumulate_keyed(acc.downcast_mut::<M::Acc>()?, key, || {
+                    eval()?.downcast::<M::Distance>()
+                })
+        }
+        let eval: Box<dyn FnOnce() -> Fallible<AnyObject> + '_> = Box::new(eval);
+        dispatch!(monomorphize, [
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+        ], (self, acc, key, eval))
     }
 }
