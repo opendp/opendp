@@ -52,7 +52,8 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
 
     cov = np.array([[1.0, 0.75, 0.0], [0.75, 1.0, 0.0], [0.0, 0.0, 1.0]])
 
-    data_np = np.random.multivariate_normal(mean=[0.0] * 3, cov=cov, size=10_000)
+    rng = np.random.default_rng(1)
+    data_np = rng.multivariate_normal(mean=[0.0] * 3, cov=cov, size=10_000)
 
     categories_B = list("abcdef")
     edges_B = np.linspace(-2, 2, num=5)
@@ -69,10 +70,14 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     lookup_B = {"a": -2.5, "b": -1.5, "c": -0.5, "d": 0.5, "e": 1.5, "f": 2.5, None: 0}
     lookup_C = dict(zip(range(8), np.linspace(-3.5, 3.5, 8)))
     lookup_C[None] = np.float64(0)  # type: ignore[index]
+    # synthesize() resamples A uniformly within its bins, which inflates var(A) by ~0.15,
+    # so compare A at bin midpoints on both sides, like B and C
+    midpoints_A = np.linspace(-2.5, 2.5, 6)
+    to_mid_A = lambda a: midpoints_A[np.digitize(a, cuts["A"], right=True)]
 
     roundtrip_np = np.stack(
         [
-            data_dict["A"],
+            to_mid_A(data_dict["A"]),
             [lookup_B[i] for i in data_dict["B"]],
             [lookup_C[i] for i in data_dict["C"]],
         ]
@@ -106,17 +111,18 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         synthetic_df = table.synthesize()
 
     synthetic_list = [
-        synthetic_df["A"],
+        to_mid_A(synthetic_df["A"]),
         [lookup_B[c] for c in synthetic_df["B"]],
         [lookup_C[c] for c in synthetic_df["C"]],
     ]
     cov_syn = np.cov(np.stack(synthetic_list))
+    cov_ref = np.cov(roundtrip_np)
 
     def test_cov(clique):
         idx = {"A": 0, "B": 1, "C": 2}
         i, j = idx[clique[0]], idx[clique[-1]]
-        assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
-            f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
+        assert abs(cov_ref[i, j] - cov_syn[i, j]) < 0.2, (
+            f"{clique} cov drifted: {cov_ref[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
         )
 
     # in an MRF, a missing 2-way marginal does not imply independence
