@@ -20,6 +20,28 @@ fn test_impute_uniform() -> Fallible<()> {
 }
 
 #[test]
+fn test_impute_uniform_infinite_width() {
+    fn assert_rejected<TA: Float + SampleUniform>(bounds: (TA, TA)) {
+        let message = make_impute_uniform_float(
+            VectorDomain::new(AtomDomain::default()),
+            SymmetricDistance,
+            bounds,
+        )
+        .unwrap_err()
+        .message
+        .unwrap_or_default();
+        assert!(message.contains("must be finite"), "{bounds:?}: {message}");
+    }
+
+    assert_rejected((0.0, f64::INFINITY));
+    assert_rejected((f64::NEG_INFINITY, 0.0));
+    assert_rejected((f64::NEG_INFINITY, f64::INFINITY));
+    // finite bounds, but the width overflows
+    assert_rejected((f64::MIN, f64::MAX));
+    assert_rejected((f32::MIN, f32::MAX));
+}
+
+#[test]
 fn test_impute_constant_option() -> Fallible<()> {
     let imputer = make_impute_constant(
         VectorDomain::new(OptionDomain::new(AtomDomain::default())),
