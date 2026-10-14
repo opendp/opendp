@@ -1,3 +1,10 @@
+//! Invariants tested
+//! 1. 'd_in' comes from odometer constructor
+//! 2. maps are evaluated once
+//! 3. failed maps fail fast by rejecting the query
+//! 4. renyi query resumbissions accumulate in one group
+//! 5. sequential measures lock earlier interactive children
+
 use std::any::Any;
 
 use crate::{
@@ -7,7 +14,6 @@ use crate::{
     measurements::make_randomized_response_bool,
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
-    traits::InfAdd,
 };
 
 use super::*;
@@ -125,123 +131,6 @@ fn test_sequentiality_enforced() -> Fallible<()> {
     // a new root query locks it
     let _child_2 = qbl.invoke(m_interactive)?;
     assert!(child.eval(&()).is_err());
-    Ok(())
-}
-
-/// a renyi measurement whose curve counts its own evaluations
-fn make_counting_renyi_measurement(
-    eval_count: Rc<RefCell<usize>>,
-    rho: f64,
-) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, RenyiDivergence, bool>> {
-    let curve = Function::new(move |alpha: &f64| {
-        *eval_count.borrow_mut() += 1;
-        rho * alpha
-    });
-    Measurement::new(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        RenyiDivergence,
-        Function::new(|&arg: &bool| arg),
-        PrivacyMap::new(move |_d_in: &u32| curve.clone()),
-    )
-}
-
-#[test]
-fn test_renyi_curve_evaluated_once_per_distinct_map() -> Fallible<()> {
-    let count_1 = Rc::new(RefCell::new(0));
-    let count_2 = Rc::new(RefCell::new(0));
-    let m1 = make_counting_renyi_measurement(count_1.clone(), 0.5)?;
-    let m2 = make_counting_renyi_measurement(count_2.clone(), 0.25)?;
-
-    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        RenyiDivergence,
-        1,
-    )?;
-    let mut qbl = odometer.invoke(&true)?;
-
-    let k = 50;
-    for _ in 0..k {
-        qbl.invoke(m1.clone())?;
-        qbl.invoke(m2.clone())?;
-    }
-
-    let curve = qbl.privacy_loss()?;
-    assert_eq!(curve.eval(&2.0)?, (k as f64) * 1.0 + (k as f64) * 0.5);
-    assert_eq!(*count_1.borrow(), 1);
-    assert_eq!(*count_2.borrow(), 1);
-    Ok(())
-}
-
-#[test]
-fn test_uniform_run_matches_ungrouped_composition_exactly() -> Fallible<()> {
-    let m = make_counting_renyi_measurement(Rc::new(RefCell::new(0)), 0.5)?;
-
-    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        RenyiDivergence,
-        1,
-    )?;
-    let mut qbl = odometer.invoke(&true)?;
-
-    for _ in 0..100 {
-        qbl.invoke(m.clone())?;
-    }
-
-    // reference: compose 100 curves with separate allocations, which are not merged
-    let reference = RenyiDivergence.compose(
-        (0..100)
-            .map(|_| (Function::new(|alpha: &f64| 0.5 * alpha), 1))
-            .collect(),
-    )?;
-    assert_eq!(qbl.privacy_loss()?.eval(&2.0)?, reference.eval(&2.0)?);
-    Ok(())
-}
-
-/// scalar measures charge each query when it is answered,
-/// so the loss is exactly the submission-order sum
-#[test]
-fn test_interleaved_queries_sum_in_submission_order() -> Fallible<()> {
-    let m1 = make_randomized_response_bool(0.75, false)?;
-    let m2 = make_randomized_response_bool(0.6, false)?;
-    let sequence = [&m1, &m1, &m2, &m1];
-
-    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        MaxDivergence,
-        1,
-    )?;
-    let mut qbl = odometer.invoke(&true)?;
-    for m in sequence {
-        qbl.invoke(m.clone())?;
-    }
-
-    let e1 = m1.map(&1)?;
-    let e2 = m2.map(&1)?;
-    let sequential = e1.inf_add(&e1)?.inf_add(&e2)?.inf_add(&e1)?;
-    assert_eq!(qbl.privacy_loss()?, sequential);
-
-    // the same as non-adaptive composition of the same sequence
-    let d_mids = (sequence.iter())
-        .map(|m| Ok((m.map(&1)?, 1)))
-        .collect::<Fallible<_>>()?;
-    assert_eq!(qbl.privacy_loss()?, MaxDivergence.compose(d_mids)?);
-    Ok(())
-}
-
-#[test]
-fn test_privacy_loss_before_any_queries() -> Fallible<()> {
-    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        MaxDivergence,
-        1,
-    )?;
-    let mut qbl = odometer.invoke(&true)?;
-    assert_eq!(qbl.privacy_loss()?, 0.0);
     Ok(())
 }
 

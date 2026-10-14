@@ -34,9 +34,6 @@ mod ffi;
 /// to reject any query that would increase the total privacy loss
 /// above the privacy guarantee of the mechanism.
 ///
-/// The privacy loss is tracked at the `d_in` of the odometer,
-/// so the privacy guarantee holds for input distances up to the odometer's `d_in`.
-///
 /// # Citations
 /// * [RRUV21 Privacy Odometers and Filters: Pay-as-you-Go Composition](https://arxiv.org/abs/1605.08294v1)
 /// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)

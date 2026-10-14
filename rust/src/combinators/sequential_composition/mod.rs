@@ -52,62 +52,20 @@ pub enum Composability {
     Concurrent,
 }
 
-/// `(value, k)` groups, indexed by key, in the order keys are first added.
-///
-/// We use a Vec for order and HashMap for o(1) lookup.
-/// Order improves consistency for testing with an o(n) memory cost.
-pub(crate) struct OrderedCounts<K: Eq + Hash, V> {
-    groups: Vec<(V, u32)>,
-    // index into groups by key identity
-    indices: HashMap<K, usize>,
-}
-
-impl<K: Eq + Hash, V> OrderedCounts<K, V> {
-    pub fn new() -> Self {
-        OrderedCounts {
-            groups: Vec::new(),
-            indices: HashMap::new(),
-        }
-    }
-
-    /// charge `k` to the group for `key`, starting a new group with `value()` if there isn't one
-    ///
-    /// On error, the counts are unchanged.
-    pub fn add(&mut self, key: K, k: u32, value: impl FnOnce() -> Fallible<V>) -> Fallible<()> {
-        let OrderedCounts { groups, indices } = self;
-        let i = match indices.entry(key) {
-            Entry::Occupied(entry) => *entry.get(),
-            Entry::Vacant(entry) => {
-                groups.push((value()?, 0));
-                *entry.insert(groups.len() - 1)
-            }
-        };
-        // a new group starts at zero, so only a charge to an existing group can overflow
-        let count = &mut groups[i].1;
-        *count = count.alerting_add(&k)?;
-        Ok(())
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &(V, u32)> {
-        self.groups.iter()
-    }
-}
-
 /// # Proof Definition
-/// `composability` returns `Ok(out)` if the composition of a vector of privacy parameters `d_mids`,
-/// where each parameter `d_mid_i` is charged with multiplicity `k_i`,
+/// `composability` returns `Ok(out)` if the composition of a vector of privacy parameters `d_mids`
 /// is bounded above by `self.compose(d_mids)` under `adaptivity` adaptivity and `out`-composability.
 /// Otherwise returns an error.
 /// Composition is commutative, so this bound holds for any ordering of `d_mids`.
 ///
-/// Starting from `self.new_acc()` and charging privacy parameters one at a time via `self.accumulate_keyed`,
+/// Starting from `self.new_acc()` and charging privacy parameters one at a time via `self.accumulate`,
 /// `self.compose_acc(acc)` is bounded above by the composition of all privacy parameters charged to `acc`.
 pub trait CompositionMeasure: Measure {
     /// The state of a composition that is built up one privacy parameter at a time.
     type Acc;
 
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance>;
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 
     /// Returns the state of a composition of no privacy parameters.
     fn new_acc(&self) -> Fallible<Self::Acc>;
@@ -177,40 +135,6 @@ impl Hash for MapKey {
     }
 }
 
-/// A privacy parameter that composes by addition.
-///
-/// Additive measures don't need to remember individual charges,
-/// so their composition state is just the running total.
-pub(crate) trait AdditiveDistance: Copy {
-    /// The privacy parameter of a composition of no queries.
-    const ZERO: Self;
-
-    /// Returns `self + d * k`, rounded up.
-    ///
-    /// Returns a new value, so `self` is unchanged on error.
-    fn add_scaled(&self, d: &Self, k: u32) -> Fallible<Self>;
-}
-
-impl AdditiveDistance for f64 {
-    const ZERO: Self = 0.0;
-    fn add_scaled(&self, d: &Self, k: u32) -> Fallible<Self> {
-        self.inf_add(&d.inf_mul(&f64::from(k))?)
-    }
-}
-
-impl AdditiveDistance for (f64, f64) {
-    const ZERO: Self = (0.0, 0.0);
-    fn add_scaled(&self, d: &Self, k: u32) -> Fallible<Self> {
-        // each component composes independently
-        Ok((self.0.add_scaled(&d.0, k)?, self.1.add_scaled(&d.1, k)?))
-    }
-}
-
-/// Sums `d_mids`, each `d_i` charged `k_i` times.
-fn compose_additive<D: AdditiveDistance>(d_mids: Vec<(D, u32)>) -> Fallible<D> {
-    (d_mids.iter()).try_fold(D::ZERO, |sum, (d_i, k_i)| sum.add_scaled(d_i, *k_i))
-}
-
 #[proven(
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
 )]
@@ -220,12 +144,12 @@ impl CompositionMeasure for MaxDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        compose_additive(d_mids)
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 
     fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(AdditiveDistance::ZERO)
+        self.compose(vec![])
     }
     fn accumulate_keyed(
         &self,
@@ -233,7 +157,7 @@ impl CompositionMeasure for MaxDivergence {
         _key: MapKey,
         eval: impl FnOnce() -> Fallible<Self::Distance>,
     ) -> Fallible<()> {
-        *acc = acc.add_scaled(&eval()?, 1)?;
+        *acc = self.compose(vec![*acc, eval()?])?;
         Ok(())
     }
     fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
@@ -250,12 +174,12 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        compose_additive(d_mids)
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 
     fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(AdditiveDistance::ZERO)
+        self.compose(vec![])
     }
     fn accumulate_keyed(
         &self,
@@ -263,7 +187,7 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
         _key: MapKey,
         eval: impl FnOnce() -> Fallible<Self::Distance>,
     ) -> Fallible<()> {
-        *acc = acc.add_scaled(&eval()?, 1)?;
+        *acc = self.compose(vec![*acc, eval()?])?;
         Ok(())
     }
     fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
@@ -280,12 +204,16 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        compose_additive(d_mids)
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids
+            .iter()
+            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
+                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+            })
     }
 
     fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(AdditiveDistance::ZERO)
+        self.compose(vec![])
     }
     fn accumulate_keyed(
         &self,
@@ -293,7 +221,7 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
         _key: MapKey,
         eval: impl FnOnce() -> Fallible<Self::Distance>,
     ) -> Fallible<()> {
-        *acc = acc.add_scaled(&eval()?, 1)?;
+        *acc = self.compose(vec![*acc, eval()?])?;
         Ok(())
     }
     fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
@@ -310,12 +238,16 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Sequential)
     }
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        compose_additive(d_mids)
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids
+            .iter()
+            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
+                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+            })
     }
 
     fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(AdditiveDistance::ZERO)
+        self.compose(vec![])
     }
     fn accumulate_keyed(
         &self,
@@ -323,7 +255,7 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
         _key: MapKey,
         eval: impl FnOnce() -> Fallible<Self::Distance>,
     ) -> Fallible<()> {
-        *acc = acc.add_scaled(&eval()?, 1)?;
+        *acc = self.compose(vec![*acc, eval()?])?;
         Ok(())
     }
     fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
@@ -341,16 +273,20 @@ impl CompositionMeasure for RenyiDivergence {
         Ok(Composability::Concurrent)
     }
 
-    fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         Ok(Function::new_fallible(move |alpha| {
-            (d_mids.iter())
-                .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
+            d_mids
+                .iter()
+                .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
     }
 
     fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(RenyiAcc(OrderedCounts::new()))
+        Ok(RenyiAcc {
+            groups: Vec::new(),
+            indices: HashMap::new(),
+        })
     }
 
     fn accumulate_keyed(
@@ -359,14 +295,30 @@ impl CompositionMeasure for RenyiDivergence {
         key: MapKey,
         eval: impl FnOnce() -> Fallible<Self::Distance>,
     ) -> Fallible<()> {
+        let RenyiAcc { groups, indices } = acc;
         // charges of the same privacy map share a group,
         // so the map is evaluated once, not once per charge
-        acc.0.add(key, 1, eval)
+        let i = match indices.entry(key) {
+            Entry::Occupied(entry) => *entry.get(),
+            Entry::Vacant(entry) => {
+                groups.push((eval()?, 0));
+                *entry.insert(groups.len() - 1)
+            }
+        };
+        // a new group starts at zero, so only a charge to an existing group can overflow
+        let k = &mut groups[i].1;
+        *k = k.alerting_add(&1)?;
+        Ok(())
     }
 
     fn compose_acc(&self, acc: &Self::Acc) -> Fallible<Self::Distance> {
         // O(m) in the number of distinct privacy maps
-        self.compose(acc.0.iter().cloned().collect())
+        let groups = acc.groups.clone();
+        Ok(Function::new_fallible(move |alpha| {
+            (groups.iter())
+                .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
+                .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
+        }))
     }
 }
 
@@ -375,4 +327,10 @@ impl CompositionMeasure for RenyiDivergence {
 ///
 /// Charges are grouped by privacy map, so memory grows with the number of distinct privacy maps,
 /// not the number of charges.
-pub struct RenyiAcc(OrderedCounts<MapKey, Function<f64, f64>>);
+/// Groups are kept in the order their privacy maps were first charged,
+/// so the composed curve sums in a consistent order.
+pub struct RenyiAcc {
+    groups: Vec<(Function<f64, f64>, u32)>,
+    // index into groups by privacy map identity
+    indices: HashMap<MapKey, usize>,
+}

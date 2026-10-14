@@ -1,3 +1,10 @@
+//! Invariants
+//! 1. scalar accumulators match `compose` of the same privacy parameters
+//! 2. a failed charge leaves the accumulator unchanged
+//! 3. renyi charges group by privacy map identity, evaluating each map once
+//! 4. a renyi read is a snapshot, unaffected by later charges
+//! 5. renyi group counts can't silently overflow
+
 use std::{cell::RefCell, rc::Rc};
 
 use crate::core::PrivacyMap;
@@ -5,57 +12,6 @@ use crate::error::Fallible;
 use crate::metrics::DiscreteDistance;
 
 use super::*;
-
-/// counts accumulate per key, and keys keep the order they were first added in
-#[test]
-fn test_ordered_counts_groups_in_order() -> Fallible<()> {
-    let mut counts = OrderedCounts::new();
-    // enough keys that an unordered collection is unlikely to match by chance
-    for key in ["e", "d", "c", "b", "a", "e"] {
-        counts.add(key, 1, || Ok(key))?;
-    }
-    counts.add("c", 3, || Ok("c"))?;
-
-    let groups = counts.iter().cloned().collect::<Vec<_>>();
-    assert_eq!(
-        groups,
-        vec![("e", 2), ("d", 1), ("c", 4), ("b", 1), ("a", 1)]
-    );
-    Ok(())
-}
-
-#[test]
-fn test_ordered_counts_is_empty_before_any_add() {
-    let counts = OrderedCounts::<u32, u32>::new();
-    assert_eq!(counts.iter().next(), None);
-}
-
-/// the value of a group is computed when the group starts, and never again
-#[test]
-fn test_ordered_counts_computes_value_once() -> Fallible<()> {
-    let mut counts = OrderedCounts::new();
-    counts.add("a", 1, || Ok(1))?;
-    counts.add("a", 1, || -> Fallible<i32> { panic!("value recomputed") })?;
-    // a failed value starts no group
-    assert!(
-        counts
-            .add("b", 1, || fallible!(FailedFunction, "no value"))
-            .is_err()
-    );
-
-    assert_eq!(counts.iter().cloned().collect::<Vec<_>>(), vec![(1, 2)]);
-    Ok(())
-}
-
-/// counts are checked, so a group can't silently wrap
-#[test]
-fn test_ordered_counts_detects_overflow() -> Fallible<()> {
-    let mut counts = OrderedCounts::new();
-    counts.add("a", u32::MAX, || Ok(()))?;
-    assert!(counts.add("a", 1, || Ok(())).is_err());
-    assert_eq!(counts.iter().next(), Some(&((), u32::MAX)));
-    Ok(())
-}
 
 /// a privacy map that always returns `d_mid`
 fn constant_map<MO: 'static + Measure>(d_mid: MO::Distance) -> PrivacyMap<DiscreteDistance, MO>
@@ -74,7 +30,7 @@ fn test_scalar_acc_matches_compose() -> Fallible<()> {
     for d_mid in d_mids {
         MaxDivergence.accumulate(&mut acc, &constant_map(d_mid), &1)?;
     }
-    let composed = MaxDivergence.compose(d_mids.iter().map(|d| (*d, 1)).collect())?;
+    let composed = MaxDivergence.compose(d_mids.to_vec())?;
     assert_eq!(MaxDivergence.compose_acc(&acc)?, composed);
     Ok(())
 }
@@ -102,7 +58,7 @@ fn test_renyi_acc_unchanged_on_failing_map() -> Fallible<()> {
 
     let mut acc = RenyiDivergence.new_acc()?;
     assert!(RenyiDivergence.accumulate(&mut acc, &failing, &1).is_err());
-    assert_eq!(acc.0.iter().count(), 0);
+    assert!(acc.groups.is_empty());
     Ok(())
 }
 
@@ -127,7 +83,7 @@ fn test_renyi_acc_groups_by_map_identity() -> Fallible<()> {
     RenyiDivergence.accumulate(&mut acc, &twin, &1)?;
 
     // clones of one map share a group; an identical-but-separate map does not
-    let ks = acc.0.iter().map(|(_, k)| *k).collect::<Vec<_>>();
+    let ks = acc.groups.iter().map(|(_, k)| *k).collect::<Vec<_>>();
     assert_eq!(ks, vec![3, 1]);
     assert_eq!(*evals.borrow(), 1);
     assert_eq!(RenyiDivergence.compose_acc(&acc)?.eval(&2.0)?, 4.0);
@@ -146,5 +102,19 @@ fn test_renyi_acc_snapshot_is_independent() -> Fallible<()> {
 
     assert_eq!(before.eval(&2.0)?, 1.0);
     assert_eq!(RenyiDivergence.compose_acc(&acc)?.eval(&2.0)?, 2.0);
+    Ok(())
+}
+
+/// counts are checked, so a group can't silently wrap
+#[test]
+fn test_renyi_acc_detects_overflow() -> Fallible<()> {
+    let map = constant_map::<RenyiDivergence>(Function::new(|alpha: &f64| 0.5 * alpha));
+
+    let mut acc = RenyiDivergence.new_acc()?;
+    RenyiDivergence.accumulate(&mut acc, &map, &1)?;
+    // as if the map had already been charged u32::MAX times
+    acc.groups[0].1 = u32::MAX;
+    assert!(RenyiDivergence.accumulate(&mut acc, &map, &1).is_err());
+    assert_eq!(acc.groups[0].1, u32::MAX);
     Ok(())
 }

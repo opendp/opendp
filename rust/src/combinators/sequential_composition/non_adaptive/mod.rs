@@ -114,7 +114,7 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             output_measure.compose(
                 maps.iter()
-                    .map(|map| Ok((map.eval(d_in)?, 1)))
+                    .map(|map| map.eval(d_in))
                     .collect::<Fallible<_>>()?,
             )
         }),
