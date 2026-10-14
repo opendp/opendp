@@ -342,13 +342,8 @@ impl CompositionMeasure for RenyiDivergence {
     }
 
     fn compose(&self, d_mids: Vec<(Self::Distance, u32)>) -> Fallible<Self::Distance> {
-        // merge equal curves so that each is evaluated once, not once per copy
-        let mut groups = OrderedCounts::new();
-        for (d_mid, k_i) in d_mids {
-            groups.add(d_mid.clone(), k_i, || Ok(d_mid))?;
-        }
         Ok(Function::new_fallible(move |alpha| {
-            (groups.iter())
+            (d_mids.iter())
                 .map(|(curve, k)| curve.eval(alpha)?.inf_mul(&f64::from(*k)))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))

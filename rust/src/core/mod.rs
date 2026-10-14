@@ -81,23 +81,6 @@ impl<TI, TO> Clone for Function<TI, TO> {
     }
 }
 
-/// Functions are compared by identity:
-/// two functions are equal iff they share the same allocation.
-/// Equal functions always return the same output on the same input,
-/// but the converse does not hold.
-impl<TI, TO> PartialEq for Function<TI, TO> {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.function, &other.function)
-    }
-}
-impl<TI, TO> Eq for Function<TI, TO> {}
-
-impl<TI, TO> std::hash::Hash for Function<TI, TO> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (Arc::as_ptr(&self.function) as *const ()).hash(state)
-    }
-}
-
 impl<TI, TO> Function<TI, TO> {
     pub fn new(function: impl Fn(&TI) -> TO + 'static) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))

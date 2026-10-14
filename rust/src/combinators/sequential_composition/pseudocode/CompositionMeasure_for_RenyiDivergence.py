@@ -6,15 +6,10 @@ class CompositionMeasure(RenyiDivergence):
         return Composability.Concurrent
 
     def compose(self, d_mids: Vec[tuple[Self_Distance, u32]]) -> Self_Distance:
-        # merge equal curves so that each is evaluated once, not once per copy
-        groups = OrderedCounts()  # |\label{line:groups}|
-        for d_mid, k_i in d_mids:
-            groups.add(d_mid, k_i, lambda: d_mid)
-
         def curve(alpha: f64) -> f64:  # |\label{line:curve}|
             epsilons = [
                 d_mid(alpha).inf_mul(f64(k))  # |\label{line:inf-mul}|
-                for d_mid, k in groups.iter()
+                for d_mid, k in d_mids
             ]
 
             d_out = 0.0
