@@ -59,7 +59,7 @@ pub enum Composability {
 /// Composition is commutative, so this bound holds for any ordering of `d_mids`.
 ///
 /// Starting from `self.new_acc()` and charging privacy parameters one at a time via `self.accumulate`,
-/// `self.compose_acc(acc)` is bounded above by the composition of all privacy parameters charged to `acc`.
+/// the composition of all privacy parameters charged to `acc` is bounded above by `self.compose_acc(acc)`.
 pub trait CompositionMeasure: Measure {
     /// The state of a composition that is built up one privacy parameter at a time.
     type Acc;
@@ -67,7 +67,7 @@ pub trait CompositionMeasure: Measure {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 
-    /// Returns the state of a composition of no privacy parameters.
+    /// Returns an empty accumulator.
     fn new_acc(&self) -> Fallible<Self::Acc>;
 
     /// Charges the privacy parameter of `map` at `d_in` to `acc` once.
