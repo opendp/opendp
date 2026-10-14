@@ -165,9 +165,9 @@ class AIM(Algorithm):
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
-        #import GemPlus
-        # if not isinstance(model, MarkovRandomField):
-        #     raise ValueError("model must be a MarkovRandomField")
+        from opendp.extras.mbi._gem import GemPlusModel
+        if not isinstance(model, (MarkovRandomField, GemPlusModel)):
+            raise ValueError("model must be a MarkovRandomField")
 
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
