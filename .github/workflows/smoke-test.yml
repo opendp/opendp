@@ -40,6 +40,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+          cache-workspaces: rust
           components: rustfmt
 
       - name: Check Rust version
@@ -157,6 +158,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+          cache-workspaces: rust
 
       - name: Test (default)
         run: cargo test --verbose
@@ -247,7 +249,7 @@ jobs:
             mbi)                  pytest -v -k "$NOT_IBIS";;
             ibis,mbi)             coverage run -m pytest -v;;
 
-            *)                    print "unexpected extra-install"; exit 1;;
+            *)                    echo "unexpected extra-install"; exit 1;;
           esac
 
       - name: Test replace-binary-path
