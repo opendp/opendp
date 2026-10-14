@@ -303,26 +303,6 @@ def _make_aim_marginal(
 
         all_marginals = marginals.add(new_marginal)
 
-        # new_model: MarkovRandomField = algorithm.estimator(
-        #     model.domain,
-        #     all_marginals.flatten(),
-        #     potentials=model.potentials,
-        # )
-
-        if isinstance(model, MarkovRandomField):
-            new_model = algorithm.estimator(
-                model.domain,
-                all_marginals.flatten(),
-                potentials=model.potentials,
-            )
-        else:
-            # Gem+ continues training the previous generator.
-            new_model = algorithm.estimator(
-                model.domain,
-                all_marginals.flatten(),
-                potentials=model.potentials,  # placeholder, always None
-                warm_start=model,
-            )
 
         if isinstance(model, MarkovRandomField):
             new_model = algorithm.estimator(
