@@ -328,7 +328,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)):  # type: ignore[misc]
     ...     input_domain=meas_rr.input_domain,
     ...     input_metric=meas_rr.input_metric,
     ...     output_measure=meas_rr.output_measure,
-    ...     d_in=1,  # Input dataset may differ by discrete distance 1.
+    ...     d_in=1,
     ... )
     ...
     >>> # invoke the odometer to get a queryable

@@ -1,4 +1,4 @@
-//! Invariants
+//! Invariants tested
 //! 1. scalar accumulators match `compose` of the same privacy parameters
 //! 2. a failed charge leaves the accumulator unchanged
 //! 3. renyi charges group by privacy map identity, evaluating each map once
@@ -16,7 +16,7 @@ use super::*;
 /// a privacy map that always returns `d_mid`
 fn constant_map<MO: 'static + Measure>(d_mid: MO::Distance) -> PrivacyMap<DiscreteDistance, MO>
 where
-    MO::Distance: 'static + Clone,
+    MO::Distance: Clone,
 {
     PrivacyMap::new(move |_| d_mid.clone())
 }
