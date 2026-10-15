@@ -1,6 +1,6 @@
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{AtomDomain, VectorDomain},
+    domains::{AtomDomain, Bounds, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, SymmetricDistance},
     traits::{CheckAtom, ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
@@ -48,6 +48,10 @@ where
             ddof
         );
     }
+    // Validate each coordinate: tuple bounds would only be checked lexicographically.
+    Bounds::new_closed(bounds_0)?;
+    Bounds::new_closed(bounds_1)?;
+
     let _size = S::Item::exact_int_cast(size)?;
     let _ddof = S::Item::exact_int_cast(ddof)?;
     let (lower_0, upper_0) = bounds_0;
