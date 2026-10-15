@@ -5,10 +5,7 @@
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
 
-# TODO: restore "-W": Treat warnings as errors.
-# https://github.com/opendp/opendp/issues/2509
-# https://github.com/opendp/opendp/issues/2508
-SPHINXOPTS    = --keep-going
+SPHINXOPTS    = -W --keep-going
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
