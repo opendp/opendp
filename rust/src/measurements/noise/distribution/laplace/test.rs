@@ -117,6 +117,29 @@ fn test_make_laplace_map() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_laplace_rejects_negative_distance_with_granularity() -> Fallible<()> {
+    let scalar = make_laplace(
+        AtomDomain::<f64>::new_non_nan(),
+        AbsoluteDistance::<f64>::default(),
+        1.,
+        Some(0),
+    )?;
+    let error = scalar.map(&-0.5).unwrap_err();
+    assert!(error.message.unwrap().contains("-0.5"));
+
+    let vector = make_laplace(
+        VectorDomain::new(AtomDomain::<f64>::new_non_nan()).with_size(16),
+        L1Distance::<f64>::default(),
+        1.,
+        Some(0),
+    )?;
+    let error = vector.map(&-15.5).unwrap_err();
+    assert!(error.message.unwrap().contains("-15.5"));
+
+    Ok(())
+}
+
+#[test]
 fn test_make_laplace_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
     let meas = make_laplace(
