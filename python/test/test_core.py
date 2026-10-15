@@ -433,3 +433,30 @@ def test_erfc():
     from opendp._data import erfc
 
     assert erfc(0.5) == 0.4795001222363462
+
+
+@pytest.mark.xfail(
+    reason="https://github.com/opendp/opendp/issues/2924",
+)
+def test_b_ary_tree_l2():
+    import math
+
+    dp.enable_features("contrib")
+
+    tree = dp.t.make_b_ary_tree(
+        dp.vector_domain(dp.atom_domain(T=int), size=4),
+        dp.l2_distance(T=int),
+        leaf_count=4,
+        branching_factor=4,
+    )
+    x = [0, 0, 0, 0]
+    y = [1, 1, 1, 1]  # L2 distance 2
+
+    assert math.dist(x, y) == 2
+    assert tree(x) == [0, 0, 0, 0, 0]
+    assert tree(y) == [4, 1, 1, 1, 1]
+
+    l2_sensitivity = tree.map(2)
+    l2_distance = math.dist(tree(x), tree(y))
+    assert l2_sensitivity > l2_distance
+    # TODO: Assert explicit value of sensitivity.
