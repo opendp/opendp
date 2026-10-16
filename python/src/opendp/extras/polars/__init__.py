@@ -1356,10 +1356,6 @@ class Margin:
         self.invariant = value  # pragma: no cover
 
     @property
-    @deprecated(
-        version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
-    )
     def max_partition_contributions(self):
         """
         .. deprecated:: 0.13.0
