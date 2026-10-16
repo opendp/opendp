@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.extras.sklearn._aligned import Aligned, AlignedDomain
+from opendp.extras.sklearn._aligned import SklearnFit, SklearnFitDomain
 from opendp.mod import Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
@@ -13,7 +13,7 @@ def _numpy():
     return import_optional_dependency("numpy")
 
 
-def pairwise_predict(data: Aligned, x_cuts):
+def pairwise_predict(data: SklearnFit, x_cuts):
     """Return randomized pairwise line predictions at ``x_cuts``.
 
     Features and targets are indexed together so every pair retains its source
@@ -125,12 +125,12 @@ def _make_private_theil_sen_with_scale(
 
     np = _numpy()
     desc = getattr(input_domain, "descriptor", None)
-    if not isinstance(desc, AlignedDomain):
-        raise ValueError("TheilSenRegressor requires an Aligned input domain")
+    if not isinstance(desc, SklearnFitDomain):
+        raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
     if desc.y is None:
-        raise ValueError("TheilSenRegressor requires an Aligned input domain with y")
+        raise ValueError("TheilSenRegressor requires a SklearnFit input domain with y")
     if desc.sample_weight is not None or desc.groups is not None:
-        raise ValueError("TheilSenRegressor supports only Aligned.X and Aligned.y")
+        raise ValueError("TheilSenRegressor supports only SklearnFit.X and SklearnFit.y")
     if getattr(getattr(desc.X, "descriptor", None), "num_columns", None) != 1:
         raise ValueError("TheilSenRegressor requires exactly one feature column")
     if not isinstance(desc.y, VectorDomain):
@@ -185,7 +185,7 @@ def make_private_theil_sen(
     candidates_count: int = 100,
     fraction_bounds=(0.25, 0.75),
 ) -> Measurement:
-    """Construct a calibrated Theil-Sen measurement over ``Aligned(X, y)`` rows."""
+    """Construct a calibrated Theil-Sen measurement over ``SklearnFit(X, y)`` rows."""
     import opendp.prelude as dp
 
     if d_in <= 0 or d_out <= 0:

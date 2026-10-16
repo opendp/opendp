@@ -40,7 +40,7 @@ __all__ = ["TheilSenRegressor", "make_private_theil_sen"]
 class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
-    The private training query contains an :class:`~opendp.extras.sklearn.Aligned`
+    The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
     value with one feature column in ``X`` and a target vector in ``y``. Privacy
     allocation and the input domain are supplied by an OpenDP Context.
     """
