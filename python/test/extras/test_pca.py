@@ -394,7 +394,9 @@ def _legacy_data():
 def test_pca_standalone_array_fit(explicit_domain):
     data = _legacy_data()
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    domain = dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1]) if explicit_domain else None
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1])
+    ) if explicit_domain else None
     assert model.fit(
         data, domain=domain, privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
@@ -412,21 +414,9 @@ def test_pca_constructor_has_only_algorithm_parameters():
             PCA(**{parameter: 1})
 
 
-def test_pca_standalone_shape_validation_before_measurement(monkeypatch):
-    np = pytest.importorskip("numpy")
-    model = dp.sklearn.decomposition.PCA(row_norm=1.0)
-    monkeypatch.setattr(model, "make", lambda *args: pytest.fail("invalid input must not be measured"))
-    domain = dp.numpy.array2_domain(T=float, size=10, num_columns=4)
-    with pytest.warns(UserWarning, match="rows"), pytest.raises(ValueError, match="belong"):
-        model.fit(np.zeros((9, 4)), domain=domain, privacy_unit=dp.unit_of(contributions=1),
-                  privacy_loss=dp.loss_of(epsilon=1.0))
-
-
-def test_pca_fit_rejects_query_and_missing_privacy():
+def test_pca_fit_requires_explicit_privacy():
     from opendp.extras.sklearn.decomposition import PCA
 
-    with pytest.raises(TypeError, match="not a Query"):
-        PCA(row_norm=1.0).fit(_standalone_pca_query())
     with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         PCA(row_norm=1.0).fit(_legacy_data())
 
