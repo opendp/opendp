@@ -41,6 +41,11 @@ def make_np_clamp(
     if not np.all(np.isfinite(origin)):
         raise ValueError("origin must be finite")  # pragma: no cover
 
+    if isinstance(origin, np.ndarray) and origin.ndim == 1 and origin.size == 1:
+        raise ValueError(
+            "origin must have more than one value, otherwise it silently broadcasts"
+        )
+
     def get_norm(x):
         with np.errstate(over="ignore"):
             current_norm = np.linalg.norm(x, ord=p, axis=1, keepdims=True)
@@ -67,6 +72,8 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
         "nan": False,
+        # clamping is not injective, so it can create new distinct values
+        "cardinalities": None,
     }
     return _make_transformation(
         input_domain,
