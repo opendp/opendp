@@ -40,6 +40,7 @@ def _context(data, *, n_components=None, whiten=False):
     model = dp.sklearn.decomposition.PCA(
         n_components=n_components,
         whiten=whiten,
+        row_norm=1.0,
     )
     return context, model
 
@@ -182,33 +183,32 @@ def test_pca_context_requires_bounded_domain_before_release(monkeypatch):
     assert released == []
 
 
-def test_pca_context_rejects_row_norm_before_release(monkeypatch):
+def test_pca_context_rejects_invalid_row_norm_before_release(monkeypatch):
     pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     from opendp.context import Query
 
     released = []
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    with pytest.raises(TypeError, match="np_clamp"):
+    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=0.0)
+    with pytest.raises(ValueError, match="positive"):
         model.fit(_standalone_pca_query())
     assert released == []
 
 
-def test_pca_make_rejects_row_norm_in_context_mode():
-    pytest.importorskip("numpy")
-    domain = dp.numpy.array2_domain(
-        norm=1.0,
-        p=2,
-        size=10,
-        num_columns=4,
-        nan=False,
-        T=float,
-    )
-    with pytest.raises(TypeError, match="np_clamp"):
-        dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0).make(
-            domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
-        )
+def test_pca_make_clips_X_internally():
+    np = pytest.importorskip("numpy")
+    domain = dp.numpy.array2_domain(size=10, num_columns=4, nan=False, T=float)
+    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
+    measurement = model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
+    assert measurement.input_domain == domain
+    assert measurement.map(1) <= 1.0
+    data = np.full((10, 4), 100.0)
+    release = measurement(data)
+    assert release.components.shape == (2, 4)
+    assert release.n_samples == 10
+    np.testing.assert_array_equal(data, np.full((10, 4), 100.0))
+    assert not hasattr(model, "components_")
 
 
 def test_pca_release_dimensionality_matches_component_mode():
@@ -385,6 +385,19 @@ def test_pca_ingest_release_error_paths():
     for estimator in (PCA(n_components="mle"), PCA(n_components=0.8)):
         estimator._ingest_release(valid_release)
         assert estimator.n_components_ >= 1
+
+
+def test_pca_zero_released_variance():
+    np = pytest.importorskip("numpy")
+    from opendp.extras.sklearn.decomposition import PCARelease
+
+    model = dp.sklearn.decomposition.PCA(n_components=1, whiten=True)
+    model._ingest_release(PCARelease(
+        mean=np.zeros(2), singular_values=np.zeros(2),
+        components=np.eye(2), n_samples=10, n_features=2,
+    ))
+    np.testing.assert_array_equal(model.explained_variance_ratio_, [0.0])
+    assert np.isfinite(model.transform(np.ones((1, 2)))).all()
 
 
 def test_pca_component_validation():
@@ -570,7 +583,7 @@ def test_pca_context_fit_and_methods():
     assert not hasattr(model, "components_")
     with warnings.catch_warnings():
         warnings.simplefilter("error", FutureWarning)
-        assert model.fit(context.query().np_clamp(p=2, norm=1.0)) is model
+        assert model.fit(context.query()) is model
     assert model.components_.shape == (2, 4)
     assert model.n_features_in_ == 4
 
@@ -601,9 +614,9 @@ def test_pca_fit_and_query_sklearn_release_are_equivalent():
     fit_context, fit_model = _context(data)
     release_context, release_model = _context(data)
 
-    assert fit_model.fit(fit_context.query().np_clip(p=2, norm=2.0)) is fit_model
+    assert fit_model.fit(fit_context.query()) is fit_model
 
-    release_query = release_context.query().np_clip(p=2, norm=2.0)
+    release_query = release_context.query()
     initial_state = release_model.__dict__.copy()
     fitted_query = release_query.sklearn(release_model)
     assert release_model.__dict__ == initial_state
@@ -647,25 +660,24 @@ def test_pca_covariance_and_precision_require_fit():
 
 @pytest.mark.parametrize("use_fit", [False, True])
 @pytest.mark.parametrize("whiten", [False, True])
-def test_pca_aligned_fitting_and_lifted_transform(use_fit, whiten):
+def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     np = pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     pytest.importorskip("scipy.linalg")
-    data = _legacy_data()
+    data = _legacy_data() * 100  # Clipping is part of fitting, not a prior query step.
     size, n_features = data.shape
     X_domain = dp.numpy.array2_domain(T=float, size=size, num_columns=n_features)
     y_domain = dp.vector_domain(dp.atom_domain(T=int), size=size)
     weight_domain = dp.vector_domain(dp.atom_domain(T=float), size=size)
-    domain = dp.sklearn.aligned_domain(X_domain, y_domain, weight_domain, y_domain)
-    aligned = dp.sklearn.Aligned(data.copy(), list(range(size)), [0.5] * size, list(range(size)))
+    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain, weight_domain, y_domain)
+    aligned = dp.sklearn.SklearnFit(data.copy(), list(range(size)), [0.5] * size, list(range(size)))
     context = dp.Context.compositor(
         aligned, dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0),
         domain=domain, split_evenly_over=1,
     )
-    clamp = dp.numpy.make_np_clamp(X_domain, dp.symmetric_distance(), norm=1.0, p=2)
-    query = context.query().lift_X(clamp)
+    query = context.query()
     original_chain = query._chain
-    model = dp.sklearn.decomposition.PCA(n_components=2, whiten=whiten)
+    model = dp.sklearn.decomposition.PCA(n_components=2, whiten=whiten, row_norm=1.0)
     if use_fit:
         assert model.fit(query) is model
     else:
@@ -675,20 +687,16 @@ def test_pca_aligned_fitting_and_lifted_transform(use_fit, whiten):
     assert query._chain is original_chain
     assert model.n_features_in_ == n_features
 
-    # The framework constructor still consumes the natural ndarray domain.
-    measurement = model.make(clamp.output_domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
-    assert measurement.input_domain == clamp.output_domain
+    # The sklearn constructor also retains support for natural X-only inputs.
+    measurement = model.make(X_domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
+    assert measurement.input_domain == X_domain
 
-    released_transform = model.make_transform(clamp.output_domain)
-    assert isinstance(original_chain, dp.Transformation)
-    lifted = dp.sklearn.make_lift_X(
-        original_chain.output_domain, dp.symmetric_distance(), released_transform
-    )
-    result = (original_chain >> lifted)(aligned)
-    np.testing.assert_allclose(result.X, model.transform(clamp(data)))
+    transform = model.make_transform(domain)
+    result = transform(aligned)
+    np.testing.assert_allclose(result.X, model.transform(data))
     assert result.X.shape == (size, 2)
-    assert lifted.output_domain.member(result)
-    assert lifted.map(1) == 1
+    assert transform.output_domain.member(result)
+    assert transform.map(1) == 1
     for name in ("y", "sample_weight", "groups"):
         assert getattr(result, name) is getattr(aligned, name)
     np.testing.assert_array_equal(aligned.X, data)
@@ -696,7 +704,7 @@ def test_pca_aligned_fitting_and_lifted_transform(use_fit, whiten):
     # Once constructed, the transformation depends on the released snapshot,
     # not on subsequent estimator parameter changes.
     model.set_params(whiten=not whiten)
-    np.testing.assert_allclose((original_chain >> lifted)(aligned).X, result.X)
+    np.testing.assert_allclose(transform(aligned).X, result.X)
 
 
 def test_pca_make_transform_validation_and_empty_data():
@@ -717,3 +725,49 @@ def test_pca_make_transform_validation_and_empty_data():
         model.make_transform(input_metric=dp.change_one_distance())
     with pytest.raises(ValueError, match="number of features"):
         model.make_transform(dp.numpy.array2_domain(T=float, num_columns=3))
+
+
+@pytest.mark.parametrize("supervised", [False, True])
+def test_pca_sklearn_transform_composes_with_next_private_estimator(supervised):
+    np = pytest.importorskip("numpy")
+    data = _legacy_data()
+    X_domain = dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1])
+    y_domain = dp.vector_domain(dp.atom_domain(T=int), size=len(data)) if supervised else None
+    fit_domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain)
+    inputs = dp.sklearn.SklearnFit(data.copy(), [0] * len(data) if supervised else None)
+    context = dp.Context.compositor(
+        inputs, dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0),
+        domain=fit_domain, split_evenly_over=2,
+    )
+    first = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
+    first.fit(context.query())
+    transform = first.make_transform(fit_domain)
+    second_query = context.query().new_with(chain=transform)
+    second = dp.sklearn.decomposition.PCA(n_components=1, row_norm=1.0)
+    assert second_query.sklearn(second).release() is second
+    assert second.n_features_in_ == 2
+    assert second.components_.shape == (1, 2)
+    assert transform(inputs).y is inputs.y
+    np.testing.assert_array_equal(inputs.X, data)
+
+
+def test_pca_sklearn_transform_leaves_retained_complete_rows_unchanged():
+    np = pytest.importorskip("numpy")
+    from opendp.extras.sklearn.decomposition import PCARelease
+
+    model = dp.sklearn.decomposition.PCA(n_components=1)
+    model._ingest_release(PCARelease(
+        mean=np.array([0.5, 0.0]), singular_values=np.array([2.0, 1.0]),
+        components=np.eye(2), n_samples=10, n_features=2,
+    ))
+    X_domain = dp.numpy.array2_domain(T=float, num_columns=2)
+    y_domain = dp.vector_domain(dp.atom_domain(T=int))
+    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain, groups=y_domain)
+    transform = model.make_transform(domain)
+    before = dp.sklearn.SklearnFit(np.array([[1.0, 2.0]]), [0], groups=[10])
+    after = dp.sklearn.SklearnFit(np.array([[1.0, 2.0], [100.0, 200.0]]), [0, 1], groups=[10, 11])
+    out_before, out_after = transform(before), transform(after)
+    np.testing.assert_array_equal(out_before.X, out_after.X[:1])
+    assert out_before.y == out_after.y[:1]
+    assert out_before.groups == out_after.groups[:1]
+    assert transform.map(1) == 1

@@ -91,6 +91,7 @@ akin to scikit-learn:
             ... )
             >>> model = dp.sklearn.decomposition.PCA(
             ...     n_components=2,
+            ...     row_norm=1.0,
             ... )
 
 
@@ -103,17 +104,12 @@ A private release occurs when you fit the model to the data.
 
         .. code:: pycon
 
-            >>> model.fit(
-            ...     context.query().np_clamp(
-            ...         p=2,
-            ...         norm=1.0,
-            ...     )
-            ... ) is model
+            >>> model.fit(context.query()) is model
             True
 
-PCA requires an L2 norm bound. ``np_clamp`` projects each row onto an L2
-ball as part of the query preprocessing chain; the estimator itself contains
-only PCA parameters.
+PCA requires an L2 norm bound. ``row_norm`` clips X internally before fitting;
+no separate preprocessing query is needed. If the input domain is already
+L2-bounded, ``row_norm`` may be omitted.
 
 The fitted model can then be introspected just like Scikit-Learn’s
 non-private PCA:
@@ -145,17 +141,9 @@ allocated to estimating each eigenvector internally.
 
         .. code:: pycon
 
-            >>> bounded_domain = dp.numpy.array2_domain(
-            ...     norm=1.0,
-            ...     p=2,
-            ...     size=num_rows,
-            ...     num_columns=num_columns,
-            ...     nan=False,
-            ...     T=float,
-            ... )
-            >>> model = dp.sklearn.decomposition.PCA(n_components=2)
+            >>> model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
             >>> measurement = model.make(
-            ...     bounded_domain,
+            ...     domain,
             ...     dp.symmetric_distance(),
             ...     dp.max_divergence(),
             ...     1,
@@ -196,41 +184,38 @@ with other OpenDP combinators. Ordinary inference methods such as
              [... ... ... ...]]
 
 
-Aligned sklearn workflows
--------------------------
+Supervised sklearn workflows
+----------------------------
 
-``Aligned`` is a sklearn orchestration carrier, not PCA's framework input
-representation. It keeps private targets and metadata under one shared row
-adjacency. The sklearn fitting bridge projects X for PCA and leaves the original
-aligned query available for later steps:
+``SklearnFit`` carries private targets and metadata under one shared row
+adjacency. PCA's sklearn constructors handle it directly; the framework PCA
+mechanism still consumes only X. Clipping remains internal to fitting:
 
 .. code-block:: python
 
-    aligned_domain = dp.sklearn.aligned_domain(
+    fit_domain = dp.sklearn.sklearn_fit_domain(
         X=domain,
         y=dp.vector_domain(dp.atom_domain(T=int), size=num_rows),
     )
-    aligned_context = dp.Context.compositor(
-        data=dp.sklearn.Aligned(X=example_dataset, y=[0] * num_rows),
-        domain=aligned_domain,
+    fit_context = dp.Context.compositor(
+        data=dp.sklearn.SklearnFit(X=example_dataset, y=[0] * num_rows),
+        domain=fit_domain,
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
     )
-    clip = dp.numpy.make_np_clip(domain, dp.symmetric_distance(), norm=1.0, p=2)
-    query = aligned_context.query().lift_X(clip)
-    model = dp.sklearn.decomposition.PCA(n_components=2)
-    model.fit(query)
+    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
+    model.fit(fit_context.query())
 
-    # Keep transformed records private for subsequent pipeline measurements.
-    transform = model.make_transform(clip.output_domain)
-    next_query = query.lift_X(transform)
+    # Compose with subsequent private measurements; do not release these rows.
+    transform = model.make_transform(fit_domain)
 
-``next_query`` still carries y (and any sample weights or groups), with only X
-replaced by its released PCA projection. Resolving this preprocessing chain as a
-transformation is not a private release of the transformed training rows.
-``lift_X`` accepts reviewed rowwise transformations, not arbitrary operations
-whose X-only stability map happens to be the identity.
+``transform`` consumes and returns ``SklearnFit``, retaining y (and any sample
+weights or groups) while applying the released PCA projection to X. Each output
+row depends only on that input row and the released parameters, giving identity
+stability under the shared symmetric row adjacency. No generic lifting or
+projection combinator is needed. Clipping is used for fitting, not ordinary
+inference with the released projection.
 
 Please reach out on Slack if you need to a more tailored analysis: there
 are lower-level APIs for estimating *only* the eigenvalues or
