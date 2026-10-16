@@ -11,11 +11,11 @@ def _training_data(size=20):
     np = pytest.importorskip("numpy")
     X = np.arange(size, dtype=float).reshape(-1, 1)
     y = 2.0 * X[:, 0] + 1.0
-    domain = dp.sklearn.aligned_domain(
+    domain = dp.sklearn.sklearn_fit_domain(
         X=dp.numpy.array2_domain(num_columns=1, size=size, T=float, nan=False),
         y=dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size),
     )
-    return dp.sklearn.Aligned(X=X, y=y), domain
+    return dp.sklearn.SklearnFit(X=X, y=y), domain
 
 
 def _estimator():
@@ -40,7 +40,7 @@ def test_private_theil_sen_measurement_consumes_aligned_data():
     )
     assert measurement.map(1) <= 1.0
     assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.AlignedDomain), dp.sklearn.AlignedDomain
+        measurement.input_domain.cast(dp.sklearn.SklearnFitDomain), dp.sklearn.SklearnFitDomain
     )
     slope, intercept = measurement(data)
     assert np.asarray(slope).shape == ()
@@ -107,7 +107,7 @@ def test_pairwise_prediction_keeps_features_and_targets_aligned(monkeypatch):
         pairwise_predict,
     )
 
-    data = dp.sklearn.Aligned(
+    data = dp.sklearn.SklearnFit(
         X=np.array([[0.0], [1.0], [3.0], [6.0]]),
         y=np.array([0.0, 1.0, 9.0, 36.0]),
     )
@@ -187,7 +187,7 @@ def test_theil_sen_framework_make_is_non_mutating():
     )
     assert measurement.map(1) <= 1.0
     assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.AlignedDomain), dp.sklearn.AlignedDomain
+        measurement.input_domain.cast(dp.sklearn.SklearnFitDomain), dp.sklearn.SklearnFitDomain
     )
     assert estimator.__dict__ == initial_state
     slope, intercept = measurement(data)
@@ -217,6 +217,7 @@ def test_theil_sen_fitted_methods_and_error_paths():
 
 
 def test_theil_sen_constructor_and_aligned_domain_validation():
+    np = pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     from sklearn.base import clone
 
@@ -229,7 +230,7 @@ def test_theil_sen_constructor_and_aligned_domain_validation():
     assert estimator.get_params()["x_bounds"] == bounds
     assert estimator.set_params(runs=2) is estimator
 
-    with pytest.raises(ValueError, match="Aligned input domain"):
+    with pytest.raises(ValueError, match="SklearnFit input domain"):
         estimator.make(
             dp.numpy.array2_domain(num_columns=2, size=10, T=float),
             dp.symmetric_distance(),
@@ -239,17 +240,16 @@ def test_theil_sen_constructor_and_aligned_domain_validation():
         )
 
     X_domain = dp.numpy.array2_domain(num_columns=1, size=10, T=float)
-    without_y = dp.sklearn.aligned_domain(X=X_domain)
+    without_y = dp.sklearn.sklearn_fit_domain(X=X_domain)
     with pytest.raises(ValueError, match="with y"):
         estimator.make(
             without_y, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
         )
 
-    with pytest.raises(ValueError, match="matching row counts"):
-        dp.sklearn.aligned_domain(
-            X=X_domain,
-            y=dp.vector_domain(dp.atom_domain(T=float), size=9),
-        )
+    mismatched = dp.sklearn.sklearn_fit_domain(
+        X=X_domain, y=dp.vector_domain(dp.atom_domain(T=float), size=9),
+    )
+    assert not mismatched.member(dp.sklearn.SklearnFit(np.zeros((10, 1)), np.zeros(9)))
 
 
 def test_theil_sen_scale_is_not_bounded_by_response_range():
@@ -294,7 +294,7 @@ def test_theil_sen_fit_rejects_aligned_input_without_target_before_release(monke
 
     X_domain = dp.numpy.array2_domain(num_columns=1, size=10, T=float)
     query = dp.Query(
-        (dp.sklearn.aligned_domain(X=X_domain), dp.symmetric_distance()),
+        (dp.sklearn.sklearn_fit_domain(X=X_domain), dp.symmetric_distance()),
         dp.max_divergence(),
         d_in=1,
         d_out=1.0,
