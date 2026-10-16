@@ -18,7 +18,7 @@ PCA parameters; privacy and dataset information are supplied by an OpenDP
 from __future__ import annotations
 
 import warnings
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Optional, Sequence, TYPE_CHECKING
 
 from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
@@ -27,11 +27,12 @@ from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.numpy import then_np_clip
-from opendp.extras.sklearn._estimator import _DPXEstimator
+from opendp.extras.sklearn._aligned import SklearnFitDomain, sklearn_fit_domain
+from opendp.extras.sklearn._estimator import _DPEstimator
 from opendp.extras.sklearn._make_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
-from opendp.mod import Domain, Measurement, Metric
+from opendp.mod import Domain, Measurement, Metric, Transformation
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy
@@ -230,11 +231,11 @@ then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA(_DPXEstimator):
+class PCA(_DPEstimator):
     """Differentially private PCA with a sklearn estimator interface.
 
-    Sklearn queries may carry Aligned inputs; fitting projects X without
-    consuming targets or metadata. The framework measurement remains X-only.
+    Fits X-only or SklearnFit queries. ``row_norm`` clips X internally before
+    fitting; targets and metadata are not used. Framework PCA remains X-only.
     """
 
     def __init__(
@@ -322,13 +323,9 @@ class PCA(_DPXEstimator):
         d_in,
         d_out,
     ) -> Measurement:
-        if self.row_norm is not None and not self._legacy_mode:
-            raise TypeError(
-                "Apply norm clipping to the input domain or query with "
-                "np_clip(p=2, norm=...) instead of setting row_norm."
-            )
-
-        desc = input_domain.descriptor
+        fit_desc = input_domain.descriptor
+        X_domain = fit_desc.X if isinstance(fit_desc, SklearnFitDomain) else input_domain
+        desc = X_domain.descriptor
         if getattr(desc, "size", None) is None or getattr(desc, "num_columns", None) is None:
             raise ValueError("PCA requires known input-domain size and num_columns")
         self._validate_n_components(self.n_components, desc.size, desc.num_columns)
@@ -340,16 +337,21 @@ class PCA(_DPXEstimator):
             and not isinstance(self.n_components, bool)
             else None
         )
-        return _with_fit_shape(
-            make_private_pca(
-                input_domain,
-                input_metric,
-                output_measure,
-                d_in,
-                d_out,
-                num_components=num_components,
-            ),
-            input_domain,
+        # Clipping is internal X preprocessing, not a SklearnFit pipeline step.
+        space: tuple[Domain, Metric] | Transformation = (X_domain, input_metric)
+        if self.row_norm is not None:
+            space = space >> then_np_clip(norm=self.row_norm, p=2)
+        m_X = _with_fit_shape(
+            space >> then_private_pca(output_measure, d_in, d_out, num_components=num_components),
+            X_domain,
+        )
+        if not isinstance(fit_desc, SklearnFitDomain):
+            return m_X
+        # Removing one complete sklearn row removes at most one X row. Thus
+        # this estimator-specific wrapper has the same privacy map as m_X.
+        return _make_measurement(
+            input_domain, input_metric, m_X.output_measure,
+            lambda data: m_X(data.X), m_X.map,
         )
 
     @staticmethod
@@ -389,12 +391,6 @@ class PCA(_DPXEstimator):
                     "Do not provide epsilon, n_samples, or n_features when fitting "
                     "PCA through an OpenDP Context"
                 )
-            if self.row_norm is not None:
-                raise TypeError(
-                    "row_norm is only supported by the deprecated array-based PCA "
-                    "API. Apply norm clipping to the query instead, for example "
-                    "context.query().np_clip(p=2, norm=...)."
-                )
             return super().fit(X, y=y, **fit_params)
 
         if not self._legacy_mode:
@@ -406,9 +402,7 @@ class PCA(_DPXEstimator):
 
         warnings.warn(
             "Passing an array directly to PCA.fit() is deprecated. "
-            "Construct PCA with algorithm parameters only and fit a bounded "
-            "query, for example PCA(...).fit(context.query().np_clip(p=2, "
-            "norm=...)).",
+            "Use PCA(row_norm=...).fit(context.query()) instead.",
             FutureWarning,
             stacklevel=2,
         )
@@ -520,7 +514,10 @@ class PCA(_DPXEstimator):
 
         explained_variance = singular_values**2 / (n_samples - 1)
         total_variance = np.sum(explained_variance)
-        explained_variance_ratio = explained_variance / total_variance
+        explained_variance_ratio = (
+            explained_variance / total_variance
+            if total_variance > 0 else np.zeros_like(explained_variance)
+        )
 
         n_components = self.n_components
         if n_components is None:
@@ -583,11 +580,12 @@ class PCA(_DPXEstimator):
         return transformed
 
     def make_transform(self, input_domain=None, input_metric=None):
-        """Construct a rowwise transformation from the released PCA state.
+        """Construct a transformation from the released PCA state.
 
-        Pass the current X domain when composing with ``sklearn.make_lift_X``
-        to preserve targets, weights, and groups in an aligned pipeline.
-        Applying this transformation does not release private training rows.
+        A SklearnFit input domain retains targets, weights, and groups unchanged.
+        Each output row depends only on that input X row and released parameters,
+        so the complete sklearn rows have identity symmetric-distance stability.
+        This transformation does not release private training rows.
         """
         import opendp.prelude as dp
 
@@ -599,7 +597,9 @@ class PCA(_DPXEstimator):
             input_metric = dp.symmetric_distance()
         if input_metric != dp.symmetric_distance():
             raise ValueError("PCA transform requires symmetric_distance()")
-        desc = input_domain.cast(dp.numpy.NPArray2Domain)
+        fit_desc = input_domain.descriptor
+        X_domain = fit_desc.X if isinstance(fit_desc, SklearnFitDomain) else input_domain
+        desc = X_domain.cast(dp.numpy.NPArray2Domain)
         if desc.num_columns != self.n_features_in_:
             raise ValueError("input_domain must match the fitted number of features")
 
@@ -614,17 +614,20 @@ class PCA(_DPXEstimator):
                 result /= scale
             return np.asarray(result, dtype=float)
 
-        transformation = _make_transformation(
-            input_domain, input_metric,
-            dp.numpy.array2_domain(
-                T=float, size=desc.size, num_columns=self.n_components_,
-                preserves_row_alignment=input_domain.preserves_row_alignment,
-            ),
-            input_metric, transform, lambda distance: distance,
+        output_domain = dp.numpy.array2_domain(
+            T=float, size=desc.size, num_columns=self.n_components_,
         )
-        # Released mean/components/whitening apply independently to each row.
-        transformation._preserves_aligned_rows = True
-        return transformation
+        if isinstance(fit_desc, SklearnFitDomain):
+            output_domain = sklearn_fit_domain(
+                output_domain, fit_desc.y, fit_desc.sample_weight, fit_desc.groups,
+            )
+            function = lambda data: replace(data, X=transform(data.X))
+        else:
+            function = transform
+        return _make_transformation(
+            input_domain, input_metric, output_domain, input_metric,
+            function, lambda distance: distance,
+        )
 
     def inverse_transform(self, X):
         np = import_optional_dependency("numpy")
