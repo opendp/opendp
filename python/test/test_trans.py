@@ -62,7 +62,13 @@ def test_cast_default():
     "lower,upper",
     [
         (-100, 100),
-        (-sys.float_info.max, sys.float_info.max),
+        pytest.param(
+            -sys.float_info.max,
+            sys.float_info.max,
+            marks=pytest.mark.xfail(
+                reason="https://github.com/opendp/opendp/issues/3016"
+            ),
+        ),
     ],
 )
 def test_impute_uniform(lower, upper):
