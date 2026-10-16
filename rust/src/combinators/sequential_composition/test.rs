@@ -26,9 +26,10 @@ where
 fn test_scalar_acc_matches_compose() -> Fallible<()> {
     let d_mids = [0.1, 0.2, 0.3, 0.1];
 
-    let mut acc = MaxDivergence.new_acc()?;
+    let mut acc = 0.0;
     for d_mid in d_mids {
-        MaxDivergence.accumulate(&mut acc, &constant_map(d_mid), &1)?;
+        let map = constant_map::<MaxDivergence>(d_mid);
+        MaxDivergence.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
     }
     let composed = MaxDivergence.compose(d_mids.to_vec())?;
     assert_eq!(MaxDivergence.compose_acc(&acc)?, composed);
@@ -39,12 +40,16 @@ fn test_scalar_acc_matches_compose() -> Fallible<()> {
 #[test]
 fn test_approximate_acc_unchanged_on_error() -> Fallible<()> {
     let measure = Approximate(MaxDivergence);
-    let map = constant_map((1.0, f64::MAX));
+    let map = constant_map::<Approximate<MaxDivergence>>((1.0, f64::MAX));
 
-    let mut acc = measure.new_acc()?;
-    measure.accumulate(&mut acc, &map, &1)?;
+    let mut acc = (0.0, 0.0);
+    measure.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
     // epsilon would add fine, but delta overflows
-    assert!(measure.accumulate(&mut acc, &map, &1).is_err());
+    assert!(
+        measure
+            .accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))
+            .is_err()
+    );
     assert_eq!(measure.compose_acc(&acc)?, (1.0, f64::MAX));
     Ok(())
 }
@@ -56,8 +61,12 @@ fn test_renyi_acc_unchanged_on_failing_map() -> Fallible<()> {
         fallible!(FailedMap, "map fails")
     });
 
-    let mut acc = RenyiDivergence.new_acc()?;
-    assert!(RenyiDivergence.accumulate(&mut acc, &failing, &1).is_err());
+    let mut acc = RenyiAcc::default();
+    assert!(
+        RenyiDivergence
+            .accumulate(&mut acc, MapKey::new(&failing), || failing.eval(&1))
+            .is_err()
+    );
     assert!(acc.groups.is_empty());
     Ok(())
 }
@@ -76,11 +85,11 @@ fn test_renyi_acc_groups_by_map_identity() -> Fallible<()> {
         Function::new(|alpha: &f64| 0.5 * alpha)
     });
 
-    let mut acc = RenyiDivergence.new_acc()?;
+    let mut acc = RenyiAcc::default();
     for _ in 0..3 {
-        RenyiDivergence.accumulate(&mut acc, &map, &1)?;
+        RenyiDivergence.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
     }
-    RenyiDivergence.accumulate(&mut acc, &twin, &1)?;
+    RenyiDivergence.accumulate(&mut acc, MapKey::new(&twin), || twin.eval(&1))?;
 
     // clones of one map share a group; an identical-but-separate map does not
     let ks = acc.groups.iter().map(|(_, k)| *k).collect::<Vec<_>>();
@@ -95,10 +104,10 @@ fn test_renyi_acc_groups_by_map_identity() -> Fallible<()> {
 fn test_renyi_acc_snapshot_is_independent() -> Fallible<()> {
     let map = constant_map::<RenyiDivergence>(Function::new(|alpha: &f64| 0.5 * alpha));
 
-    let mut acc = RenyiDivergence.new_acc()?;
-    RenyiDivergence.accumulate(&mut acc, &map, &1)?;
+    let mut acc = RenyiAcc::default();
+    RenyiDivergence.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
     let before = RenyiDivergence.compose_acc(&acc)?;
-    RenyiDivergence.accumulate(&mut acc, &map, &1)?;
+    RenyiDivergence.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
 
     assert_eq!(before.eval(&2.0)?, 1.0);
     assert_eq!(RenyiDivergence.compose_acc(&acc)?.eval(&2.0)?, 2.0);
@@ -110,11 +119,15 @@ fn test_renyi_acc_snapshot_is_independent() -> Fallible<()> {
 fn test_renyi_acc_detects_overflow() -> Fallible<()> {
     let map = constant_map::<RenyiDivergence>(Function::new(|alpha: &f64| 0.5 * alpha));
 
-    let mut acc = RenyiDivergence.new_acc()?;
-    RenyiDivergence.accumulate(&mut acc, &map, &1)?;
+    let mut acc = RenyiAcc::default();
+    RenyiDivergence.accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))?;
     // as if the map had already been charged u32::MAX times
     acc.groups[0].1 = u32::MAX;
-    assert!(RenyiDivergence.accumulate(&mut acc, &map, &1).is_err());
+    assert!(
+        RenyiDivergence
+            .accumulate(&mut acc, MapKey::new(&map), || map.eval(&1))
+            .is_err()
+    );
     assert_eq!(acc.groups[0].1, u32::MAX);
     Ok(())
 }

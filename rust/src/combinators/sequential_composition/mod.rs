@@ -58,40 +58,22 @@ pub enum Composability {
 /// Otherwise returns an error.
 /// Composition is commutative, so this bound holds for any ordering of `d_mids`.
 ///
-/// Starting from `self.new_acc()` and charging privacy parameters one at a time via `self.accumulate`,
+/// Starting from `Self::Acc::default()` and charging privacy parameters one at a time via `self.accumulate`,
 /// the composition of all privacy parameters charged to `acc` is bounded above by `self.compose_acc(acc)`.
 pub trait CompositionMeasure: Measure {
     /// The state of a composition that is built up one privacy parameter at a time.
-    type Acc;
+    /// The default is the empty composition.
+    type Acc: Default;
 
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 
-    /// Returns an empty accumulator.
-    fn new_acc(&self) -> Fallible<Self::Acc>;
-
-    /// Charges the privacy parameter of `map` at `d_in` to `acc` once.
-    ///
-    /// Every call on the same `acc` must use the same `d_in`,
-    /// as implementations may reuse the privacy parameter from an earlier charge of the same `map`.
-    /// On error, the composition represented by `acc` is unchanged.
-    fn accumulate<MI: 'static + Metric>(
-        &self,
-        acc: &mut Self::Acc,
-        map: &PrivacyMap<MI, Self>,
-        d_in: &MI::Distance,
-    ) -> Fallible<()>
-    where
-        Self: 'static,
-    {
-        self.accumulate_keyed(acc, MapKey::new(map), || map.eval(d_in))
-    }
-
     /// Charges the privacy parameter `eval()` of the privacy map identified by `key` to `acc` once.
     ///
-    /// `MapKey`s can only be constructed in this crate, so call `accumulate` instead.
+    /// Every call on the same `acc` must evaluate the privacy map at the same `d_in`,
+    /// as implementations may reuse the privacy parameter from an earlier charge of the same key.
     /// On error, the composition represented by `acc` is unchanged.
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         key: MapKey,
@@ -148,10 +130,7 @@ impl CompositionMeasure for MaxDivergence {
         d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 
-    fn new_acc(&self) -> Fallible<Self::Acc> {
-        self.compose(vec![])
-    }
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         _key: MapKey,
@@ -178,10 +157,7 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
         d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 
-    fn new_acc(&self) -> Fallible<Self::Acc> {
-        self.compose(vec![])
-    }
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         _key: MapKey,
@@ -212,10 +188,7 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
             })
     }
 
-    fn new_acc(&self) -> Fallible<Self::Acc> {
-        self.compose(vec![])
-    }
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         _key: MapKey,
@@ -246,10 +219,7 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
             })
     }
 
-    fn new_acc(&self) -> Fallible<Self::Acc> {
-        self.compose(vec![])
-    }
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         _key: MapKey,
@@ -282,14 +252,7 @@ impl CompositionMeasure for RenyiDivergence {
         }))
     }
 
-    fn new_acc(&self) -> Fallible<Self::Acc> {
-        Ok(RenyiAcc {
-            groups: Vec::new(),
-            indices: HashMap::new(),
-        })
-    }
-
-    fn accumulate_keyed(
+    fn accumulate(
         &self,
         acc: &mut Self::Acc,
         key: MapKey,
@@ -329,6 +292,7 @@ impl CompositionMeasure for RenyiDivergence {
 /// not the number of charges.
 /// Groups are kept in the order their privacy maps were first charged,
 /// so the composed curve sums in a consistent order.
+#[derive(Default)]
 pub struct RenyiAcc {
     groups: Vec<(Function<f64, f64>, u32)>,
     // index into groups by privacy map identity

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use opendp_derive::{bootstrap, proven};
 
 use crate::{
-    combinators::{Adaptivity, Composability, CompositionMeasure, assert_elements_match},
+    combinators::{Adaptivity, Composability, CompositionMeasure, MapKey, assert_elements_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable,
@@ -103,7 +103,7 @@ where
         Composability::Sequential
     );
 
-    let mut acc = output_measure.new_acc()?;
+    let mut acc = MO::Acc::default();
 
     let mut num_queries: usize = 0;
 
@@ -126,7 +126,9 @@ where
 
                     // charge before the measurement runs, so a failing privacy map releases nothing.
                     // This and num_queries are our only state modifications
-                    output_measure.accumulate(&mut acc, &meas.privacy_map, &d_in)?;
+                    output_measure.accumulate(&mut acc, MapKey::new(&meas.privacy_map), || {
+                        meas.privacy_map.eval(&d_in)
+                    })?;
 
                     let enforce_sequentiality = Rc::new(RefCell::new(false));
 
