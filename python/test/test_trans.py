@@ -63,10 +63,18 @@ def test_cast_default():
     [
         (-100, 100),
         pytest.param(
+            1,
+            1 + 1e-10,
+            marks=pytest.mark.xfail(
+                reason="Runs VERY slowly: https://github.com/opendp/opendp/issues/3015",
+                run=False,
+            ),
+        ),
+        pytest.param(
             -sys.float_info.max,
             sys.float_info.max,
             marks=pytest.mark.xfail(
-                reason="https://github.com/opendp/opendp/issues/3016"
+                reason="Only returns negatives: https://github.com/opendp/opendp/issues/3016"
             ),
         ),
     ],
@@ -79,9 +87,10 @@ def test_impute_uniform(lower, upper):
     )
     imputed = impute([math.nan] * 10_000)
     assert all(lower <= x <= upper for x in imputed)
-    neg_count = sum(1 for x in imputed if x < 0)
-    pos_count = sum(1 for x in imputed if x > 0)
-    assert pos_count / neg_count == pytest.approx(1, abs=0.1)
+    if lower < 0:
+        neg_count = sum(1 for x in imputed if x < 0)
+        pos_count = sum(1 for x in imputed if x > 0)
+        assert pos_count / neg_count == pytest.approx(upper / -lower, abs=0.1)
 
 
 def test_int_identity():
