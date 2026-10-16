@@ -1,5 +1,3 @@
-import warnings
-
 import pytest
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
@@ -179,7 +177,7 @@ def test_pca_context_requires_bounded_domain_before_release(monkeypatch):
     released = []
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
     with pytest.raises(ValueError, match="requires an L2-bounded input domain"):
-        dp.sklearn.decomposition.PCA(n_components=2).fit(_standalone_pca_query())
+        _standalone_pca_query().sklearn(dp.sklearn.decomposition.PCA(n_components=2))
     assert released == []
 
 
@@ -192,7 +190,7 @@ def test_pca_context_rejects_invalid_row_norm_before_release(monkeypatch):
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=0.0)
     with pytest.raises(ValueError, match="positive"):
-        model.fit(_standalone_pca_query())
+        _standalone_pca_query().sklearn(model)
     assert released == []
 
 
@@ -260,14 +258,8 @@ def test_pca_dependency_preflight_happens_before_release(monkeypatch):
         d_in=1,
         d_out=1.0,
     )
-    released = []
+    released: list[bool] = []
 
-    class FakeQuery:
-        def release(self):
-            released.append(True)
-            return object()
-
-    monkeypatch.setattr(Query, "_sklearn", lambda self, estimator: FakeQuery())
     import_dependency = decomposition.import_optional_dependency
 
     def fail_sklearn(name, *args, **kwargs):
@@ -277,7 +269,7 @@ def test_pca_dependency_preflight_happens_before_release(monkeypatch):
 
     monkeypatch.setattr(decomposition, "import_optional_dependency", fail_sklearn)
     with pytest.raises(ImportError, match="sklearn is unavailable"):
-        dp.sklearn.decomposition.PCA().fit(query)
+        query.sklearn(dp.sklearn.decomposition.PCA())
     assert released == []
 
 
@@ -425,155 +417,61 @@ def _legacy_data():
     return data
 
 
-def test_pca_legacy_array_fit():
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    pytest.importorskip("scipy.linalg")
-    data = _legacy_data()
-    model = dp.sklearn.decomposition.PCA(
-        epsilon=1.0,
-        row_norm=1.0,
-        n_samples=len(data),
-        n_features=data.shape[1],
-        n_components=2,
-    )
-
-    with pytest.warns(FutureWarning):
-        assert model.fit(data) is model
-    assert model.components_.shape == (2, data.shape[1])
-    with pytest.warns(FutureWarning), pytest.raises(ValueError, match="already been fitted"):
-        model.fit(data)
-
-
-def test_pca_legacy_measurement():
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    pytest.importorskip("scipy.linalg")
-    data = _legacy_data()
-    model = dp.sklearn.decomposition.PCA(
-        epsilon=1.0,
-        row_norm=1.0,
-        n_samples=len(data),
-        n_features=data.shape[1],
-        n_components=2,
-    )
-
-    with pytest.warns(FutureWarning):
-        measurement = model.measurement()
-    assert measurement(data) is model
-    assert model.components_.shape == (2, data.shape[1])
-
-
-def test_pca_legacy_mode_tracks_set_params():
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    pytest.importorskip("scipy.linalg")
+@pytest.mark.parametrize("explicit_domain", [False, True])
+def test_pca_standalone_array_fit(explicit_domain):
     data = _legacy_data()
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    model.set_params(
-        epsilon=1.0,
-        n_samples=len(data),
-        n_features=data.shape[1],
-    )
+    domain = dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1]) if explicit_domain else None
+    assert model.fit(
+        data, domain=domain, privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    ) is model
+    assert model.components_.shape == (2, data.shape[1])
+    assert model.n_samples_ == len(data)
 
-    with pytest.warns(FutureWarning):
-        assert model.fit(data) is model
 
-
-def test_pca_incomplete_legacy_mode_after_set_params_fails_before_measurement(
-    monkeypatch,
-):
-    np = pytest.importorskip("numpy")
+def test_pca_constructor_has_only_algorithm_parameters():
     from opendp.extras.sklearn.decomposition import PCA
 
-    model = PCA(
-        epsilon=1.0,
-        n_samples=10,
-        n_features=4,
-        row_norm=1.0,
-    )
-    model.set_params(epsilon=None)
-    monkeypatch.setattr(
-        model,
-        "_make_legacy_measurement",
-        lambda: pytest.fail("measurement should not be constructed"),
-    )
-
-    with pytest.raises(
-        TypeError,
-        match="requires epsilon, n_samples, and n_features together",
-    ):
-        model.fit(np.zeros((10, 4)))
-
-
-def test_pca_legacy_constructor_validation():
-    from opendp.extras.sklearn.decomposition import PCA
-
-    for parameter in ("epsilon", "n_samples", "n_features"):
-        with pytest.raises(TypeError, match="requires epsilon"):
+    assert set(PCA().get_params()) == {"n_components", "row_norm", "whiten"}
+    for parameter in ("epsilon", "n_samples", "n_features", "n_changes"):
+        with pytest.raises(TypeError, match="unexpected keyword"):
             PCA(**{parameter: 1})
-    with pytest.raises(ValueError, match="epsilon must be positive"):
-        PCA(epsilon=0, n_samples=10, n_features=4)
-    with pytest.raises(ValueError, match="n_samples must be greater"):
-        PCA(epsilon=1, n_samples=1, n_features=4)
-    with pytest.raises(ValueError, match="n_features must be at least"):
-        PCA(epsilon=1, n_samples=10, n_features=0)
-    with pytest.raises(ValueError, match="n_changes must be at least"):
-        PCA(epsilon=1, n_samples=10, n_features=4, n_changes=0)
 
 
-def test_pca_legacy_shape_validation_before_measurement(monkeypatch):
+def test_pca_standalone_shape_validation_before_measurement(monkeypatch):
     np = pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    model = dp.sklearn.decomposition.PCA(
-        epsilon=1.0,
-        row_norm=1.0,
-        n_samples=10,
-        n_features=4,
-    )
-    monkeypatch.setattr(
-        model,
-        "_make_legacy_measurement",
-        lambda: pytest.fail("measurement should not be constructed"),
-    )
-    with pytest.warns(FutureWarning), pytest.raises(ValueError, match="shape"):
-        model.fit(np.zeros((9, 4)))
+    model = dp.sklearn.decomposition.PCA(row_norm=1.0)
+    monkeypatch.setattr(model, "make", lambda *args: pytest.fail("invalid input must not be measured"))
+    domain = dp.numpy.array2_domain(T=float, size=10, num_columns=4)
+    with pytest.warns(UserWarning, match="rows"), pytest.raises(ValueError, match="belong"):
+        model.fit(np.zeros((9, 4)), domain=domain, privacy_unit=dp.unit_of(contributions=1),
+                  privacy_loss=dp.loss_of(epsilon=1.0))
 
 
-def test_pca_legacy_and_context_api_are_not_mixed():
-    np = pytest.importorskip("numpy")
-    from opendp.context import Query
+def test_pca_fit_rejects_query_and_missing_privacy():
     from opendp.extras.sklearn.decomposition import PCA
 
-    domain = dp.numpy.array2_domain(size=10, num_columns=4, T=float, nan=False)
-    query = Query(
-        chain=(domain, dp.symmetric_distance()),
-        output_measure=dp.max_divergence(),
-        d_in=1,
-        d_out=1.0,
-    )
-    model = PCA(epsilon=1.0, n_samples=10, n_features=4, row_norm=1.0)
-    with pytest.raises(TypeError, match="Do not provide epsilon"):
-        model.fit(query)
-
-    with pytest.raises(TypeError, match="expects an OpenDP Context query"):
-        PCA(row_norm=1.0).fit(np.zeros((10, 4)))
+    with pytest.raises(TypeError, match="not a Query"):
+        PCA(row_norm=1.0).fit(_standalone_pca_query())
+    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
+        PCA(row_norm=1.0).fit(_legacy_data())
 
 
-def test_pca_sklearn_introspection_in_legacy_mode():
-    pytest.importorskip("sklearn")
+def test_pca_fitted_model_pickle_preserves_inference():
+    import pickle
+    import numpy as np
     from sklearn.base import clone
 
-    model = dp.sklearn.decomposition.PCA(
-        epsilon=1.0,
-        n_samples=100,
-        n_features=4,
-        n_changes=2,
-        n_components=2,
-        row_norm=1.0,
-    )
-    cloned = clone(model)
-    assert cloned.get_params() == model.get_params()
+    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
+    data = _legacy_data()
+    fitted = _context(data)[0].query().sklearn(model).release()
+    restored = pickle.loads(pickle.dumps(fitted))
+    np.testing.assert_allclose(restored.transform(data), fitted.transform(data))
+    np.testing.assert_allclose(restored.get_covariance(), fitted.get_covariance())
+    assert clone(fitted).get_params() == model.get_params()
+    assert not hasattr(clone(fitted), "components_")
+    assert not hasattr(model, "components_")
 
 
 def test_pca_context_fit_and_methods():
@@ -583,9 +481,10 @@ def test_pca_context_fit_and_methods():
     context, model = _context(data, n_components=2, whiten=True)
 
     assert not hasattr(model, "components_")
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", FutureWarning)
-        assert model.fit(context.query()) is model
+    template = model
+    model = context.query().sklearn(template).release()
+    assert model is not template
+    assert not hasattr(template, "components_")
     assert model.components_.shape == (2, 4)
     assert model.n_features_in_ == 4
 
@@ -613,30 +512,32 @@ def test_pca_fit_and_query_sklearn_release_are_equivalent():
     pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     data = sample_microdata(num_columns=3, num_rows=30)
-    fit_context, fit_model = _context(data)
+    _, fit_model = _context(data)
     release_context, release_model = _context(data)
 
-    assert fit_model.fit(fit_context.query()) is fit_model
+    assert fit_model.fit(
+        data, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1.0),
+    ) is fit_model
 
     release_query = release_context.query()
     initial_state = release_model.__dict__.copy()
     fitted_query = release_query.sklearn(release_model)
     assert release_model.__dict__ == initial_state
-    assert fitted_query.release() is release_model
-    assert fit_model.mean_.shape == release_model.mean_.shape == (3,)
-    assert fit_model.components_.shape == release_model.components_.shape
+    fitted_model = fitted_query.release()
+    assert fitted_model is not release_model
+    assert not hasattr(release_model, "components_")
+    assert fit_model.mean_.shape == fitted_model.mean_.shape == (3,)
+    assert fit_model.components_.shape == fitted_model.components_.shape
 
 
-def test_pca_rejects_separate_target_before_release(monkeypatch):
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    from opendp.context import Query
-
-    released = []
-    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-    with pytest.raises(TypeError, match="does not accept y"):
-        dp.sklearn.decomposition.PCA().fit(_standalone_pca_query(), y=[0] * 10)
-    assert released == []
+def test_pca_standalone_accepts_private_unused_targets():
+    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
+    data = _legacy_data()
+    assert model.fit(
+        data, [0] * len(data), privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    ) is model
+    assert model.components_.shape == (2, data.shape[1])
 
 
 def test_pca_covariance_matches_sklearn_ppca():
@@ -681,11 +582,17 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     original_chain = query._chain
     model = dp.sklearn.decomposition.PCA(n_components=2, whiten=whiten, row_norm=1.0)
     if use_fit:
-        assert model.fit(query) is model
+        assert model.fit(
+            aligned.X, aligned.y, sample_weight=aligned.sample_weight, groups=aligned.groups,
+            domain=domain, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1.0),
+        ) is model
     else:
         fitted_query = query.sklearn(model)
         assert fitted_query.resolve().map(1) <= 1.0
-        assert fitted_query.release() is model
+        template = model
+        model = fitted_query.release()
+        assert model is not template
+        assert not hasattr(template, "components_")
     assert query._chain is original_chain
     assert model.n_features_in_ == n_features
 
@@ -742,13 +649,14 @@ def test_pca_sklearn_transform_composes_with_next_private_estimator(supervised):
         domain=fit_domain, split_evenly_over=2,
     )
     first = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    first.fit(context.query())
+    first = context.query().sklearn(first).release()
     transform = first.make_transform(fit_domain)
     second_query = context.query().new_with(chain=transform)
     second = dp.sklearn.decomposition.PCA(n_components=1, row_norm=1.0)
-    assert second_query.sklearn(second).release() is second
-    assert second.n_features_in_ == 2
-    assert second.components_.shape == (1, 2)
+    fitted = second_query.sklearn(second).release()
+    assert not hasattr(second, "components_")
+    assert fitted.n_features_in_ == 2
+    assert fitted.components_.shape == (1, 2)
     assert transform(inputs).y is inputs.y
     np.testing.assert_array_equal(inputs.X, data)
 

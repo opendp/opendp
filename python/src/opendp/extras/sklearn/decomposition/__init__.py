@@ -17,7 +17,6 @@ PCA parameters; privacy and dataset information are supplied by an OpenDP
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import asdict, dataclass, replace
 from typing import Optional, Sequence, TYPE_CHECKING
 
@@ -238,82 +237,10 @@ class PCA(_DPEstimator):
     fitting; targets and metadata are not used. Framework PCA remains X-only.
     """
 
-    def __init__(
-        self,
-        n_components=None,
-        *,
-        whiten=False,
-        row_norm=None,
-        epsilon=None,
-        n_samples=None,
-        n_features=None,
-        n_changes=1,
-    ):
+    def __init__(self, n_components=None, *, whiten=False, row_norm=None):
         self.n_components = n_components
         self.whiten = whiten
         self.row_norm = row_norm
-
-        # Removal target: OpenDP 0.16.0. Remove epsilon, n_samples,
-        # n_features, n_changes, raw-array fit, measurement(), _legacy_mode,
-        # and _make_legacy_measurement() together.
-        self.epsilon = epsilon
-        self.n_samples = n_samples
-        self.n_features = n_features
-        self.n_changes = n_changes
-
-        legacy_values = (epsilon, n_samples, n_features)
-        if any(value is not None for value in legacy_values) and not all(
-            value is not None for value in legacy_values
-        ):
-            raise TypeError(
-                "Legacy PCA requires epsilon, n_samples, and n_features together"
-            )
-
-        if epsilon is not None and not epsilon > 0:
-            raise ValueError("epsilon must be positive")
-        if n_samples is not None and not n_samples > 1:
-            raise ValueError("n_samples must be greater than 1")
-        if n_features is not None and not n_features >= 1:
-            raise ValueError("n_features must be at least 1")
-        if not n_changes >= 1:
-            raise ValueError("n_changes must be at least 1")
-
-        if all(value is not None for value in legacy_values):
-            self._validate_n_components(n_components, n_samples, n_features)
-
-    @property
-    def _legacy_mode(self) -> bool:
-        legacy_values = (
-            self.epsilon,
-            self.n_samples,
-            self.n_features,
-        )
-
-        if any(value is not None for value in legacy_values) and not all(
-            value is not None for value in legacy_values
-        ):
-            raise TypeError(
-                "Legacy PCA requires epsilon, n_samples, and n_features together"
-            )
-
-        if not all(value is not None for value in legacy_values):
-            return False
-
-        if self.epsilon <= 0:
-            raise ValueError("epsilon must be positive")
-        if self.n_samples <= 1:
-            raise ValueError("n_samples must be greater than 1")
-        if self.n_features < 1:
-            raise ValueError("n_features must be at least 1")
-        if self.n_changes < 1:
-            raise ValueError("n_changes must be at least 1")
-
-        self._validate_n_components(
-            self.n_components,
-            self.n_samples,
-            self.n_features,
-        )
-        return True
 
     def make(
         self,
@@ -323,6 +250,7 @@ class PCA(_DPEstimator):
         d_in,
         d_out,
     ) -> Measurement:
+        self._preflight_sklearn()
         fit_desc = input_domain.descriptor
         X_domain = fit_desc.X if isinstance(fit_desc, SklearnFitDomain) else input_domain
         desc = X_domain.descriptor
@@ -381,116 +309,6 @@ class PCA(_DPEstimator):
         from sklearn.utils.extmath import svd_flip
 
         return _infer_dimension, svd_flip
-
-    def fit(self, X, y=None, **fit_params):
-        from opendp.context import Query
-
-        if isinstance(X, Query):
-            if self._legacy_mode:
-                raise TypeError(
-                    "Do not provide epsilon, n_samples, or n_features when fitting "
-                    "PCA through an OpenDP Context"
-                )
-            return super().fit(X, y=y, **fit_params)
-
-        if not self._legacy_mode:
-            raise TypeError(
-                "PCA.fit() expects an OpenDP Context query. "
-                "The deprecated array-based API requires epsilon, n_samples, "
-                "and n_features in the constructor."
-            )
-
-        warnings.warn(
-            "Passing an array directly to PCA.fit() is deprecated. "
-            "Use PCA(row_norm=...).fit(context.query()) instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self._fit_legacy(X, y=y, **fit_params)
-
-    def _prepare_fit_query(self, X, y=None, **fit_params):
-        # Validate sklearn before the query consumes any privacy budget.
-        self._preflight_sklearn()
-        # Private fit inputs are entirely represented by X's Query. PCA has no
-        # separate target or metadata inputs.
-        return super()._prepare_fit_query(X, y=y, **fit_params)
-
-    def _make_legacy_measurement(self) -> Measurement:
-        if hasattr(self, "components_"):
-            raise ValueError("DP-PCA model has already been fitted")
-
-        import opendp.prelude as dp
-
-        n_estimated_components = (
-            self.n_components
-            if isinstance(self.n_components, int)
-            and not isinstance(self.n_components, bool)
-            else self.n_features
-        )
-        input_domain = dp.numpy.array2_domain(
-            num_columns=self.n_features,
-            size=self.n_samples,
-            T=float,
-        )
-        unit_epsilon = self.epsilon / self.n_changes * 2
-        return _with_fit_shape(
-            _make_private_pca_with_unit_epsilon(
-                input_domain,
-                dp.symmetric_distance(),
-                unit_epsilon,
-                row_norm=self.row_norm,
-                num_components=n_estimated_components,
-            ),
-            input_domain,
-        )
-
-    def _fit_legacy(self, X, y=None, **fit_params):
-        if not self._legacy_mode:
-            raise TypeError(
-                "PCA.fit() expects an OpenDP Context query. "
-                "The deprecated array-based API requires epsilon, n_samples, "
-                "and n_features in the constructor."
-            )
-
-        np = import_optional_dependency("numpy")
-
-        self._reject_fit_params(fit_params)
-        self._preflight_sklearn()
-
-        if hasattr(self, "components_"):
-            raise ValueError("DP-PCA model has already been fitted")
-
-        X = np.asarray(X)
-        expected_shape = (self.n_samples, self.n_features)
-        if X.ndim != 2 or X.shape != expected_shape:
-            raise ValueError(f"X must have shape {expected_shape}")
-
-        release = self._make_legacy_measurement()(X)
-        self._ingest_release(release)
-        return self
-
-    def measurement(self):
-        if not self._legacy_mode:
-            raise TypeError(
-                "measurement() is only available for the deprecated PCA "
-                "constructor. Use make(...) or fit(context.query())."
-            )
-
-        warnings.warn(
-            "PCA.measurement() is deprecated. Use PCA.make(...) or fit an "
-            "OpenDP Context query instead.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-        self._preflight_sklearn()
-        measurement = self._make_legacy_measurement()
-
-        def ingest_and_return(release):
-            self._ingest_release(release)
-            return self
-
-        return measurement >> _new_pure_function(ingest_and_return)
 
     def _ingest_release(self, release: PCARelease) -> None:
         np = import_optional_dependency("numpy")
