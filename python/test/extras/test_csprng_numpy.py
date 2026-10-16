@@ -34,7 +34,7 @@ def buffered_rng(monkeypatch):
     import opendp._lib as lib
 
     pid = [100]
-    fills = []
+    fills: list[int] = []
 
     def fill_bytes(pointer, length):
         values = ctypes.cast(pointer, ctypes.POINTER(ctypes.c_uint64))
