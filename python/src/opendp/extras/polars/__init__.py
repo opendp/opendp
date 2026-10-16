@@ -1286,11 +1286,21 @@ class Margin:
     @property
     @deprecated(version="0.13.0", reason="Use max_length instead.")
     def max_partition_length(self):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`max_length` instead!
+        """
         return self.max_length  # pragma: no cover
 
     @max_partition_length.setter
-    @deprecated(reason="Use max_length instead.")
+    @deprecated(version="0.13.0", reason="Use max_length instead.")
     def max_partition_length(self, value):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`max_length` instead.
+        """
         self.max_length = value  # pragma: no cover
 
     @property
@@ -1299,6 +1309,11 @@ class Margin:
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
     )
     def max_num_partitions(self):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`max_groups` instead. Renamed to be consistent with Polars terminology
+        """
         return self.max_groups  # pragma: no cover
 
     @max_num_partitions.setter
@@ -1307,6 +1322,11 @@ class Margin:
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
     )
     def max_num_partitions(self, value):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`max_groups` instead. Renamed to be consistent with Polars terminology
+        """
         self.max_groups = value  # pragma: no cover
 
     @property
@@ -1315,6 +1335,11 @@ class Margin:
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
     )
     def public_info(self):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`invariant` instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".
+        """
         return self.invariant  # pragma: no cover
 
     @public_info.setter
@@ -1323,28 +1348,57 @@ class Margin:
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
     )
     def public_info(self, value):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`invariant` instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".
+        """
         self.invariant = value  # pragma: no cover
 
     @property
+    @deprecated(
+        version="0.13.0",
+        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
+    )
     def max_partition_contributions(self):
+        """
+        .. deprecated:: 0.13.0
+
+            Use :func:`invariant` instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".
+        """
         raise NotImplementedError(
             "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
         )  # pragma: no cover
 
     @max_partition_contributions.setter
     def max_partition_contributions(self, value):
+        """
+        .. deprecated:: 0.13.0
+
+            Use ``dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])`` instead.
+        """
         raise NotImplementedError(
             "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
         )  # pragma: no cover
 
     @property
     def max_influenced_partitions(self):
+        """
+        .. deprecated:: 0.13.0
+
+            Use ``dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])`` instead.
+        """
         raise NotImplementedError(
             "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
         )  # pragma: no cover
 
     @max_influenced_partitions.setter
     def max_influenced_partitions(self, value):
+        """
+        .. deprecated:: 0.13.0
+
+            Use ``dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])`` instead.
+        """
         raise NotImplementedError(
             "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
         )  # pragma: no cover
