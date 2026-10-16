@@ -7,7 +7,8 @@ Fully Adaptive Composition and Odometers
 Where adaptive composition allows for queries to be chosen adaptively,
 *fully* adaptive composition also allows for the *privacy loss* of queries to be chosen adaptively.
 The API for fully adaptive composition matches that of adaptive composition,
-but drops the ``d_mids`` argument, as these will be chosen as you go.
+but drops the ``d_mids`` argument, as these will be chosen as you go, and
+the odometer tracks privacy loss with respect to the ``d_in`` it is constructed with.
 
 .. tab-set::
 
@@ -23,6 +24,7 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
             ...         ),
             ...         input_metric=dp.symmetric_distance(),
             ...         output_measure=dp.max_divergence(),
+            ...         d_in=1,
             ...     )
             ... )
 
@@ -68,7 +70,7 @@ Since no queries have been submitted yet, the privacy loss is 0.
 
         .. code:: pycon
 
-            >>> qbl_fully_adaptive_comp.privacy_loss(1)
+            >>> qbl_fully_adaptive_comp.privacy_loss()
             0.0
 
     .. tab-item:: R
@@ -126,7 +128,7 @@ Now that we have submitted two queries, we can see that the privacy loss has inc
 
         .. code:: pycon
 
-            >>> qbl_fully_adaptive_comp.privacy_loss(1)
+            >>> qbl_fully_adaptive_comp.privacy_loss()
             3.0
 
     .. tab-item:: R
