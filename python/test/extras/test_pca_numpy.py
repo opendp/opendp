@@ -387,16 +387,18 @@ def test_pca_ingest_release_error_paths():
         assert estimator.n_components_ >= 1
 
 
-def test_pca_zero_released_variance():
+@pytest.mark.parametrize("n_components,expected", [(1, 1), (0.8, 1), (None, 2)])
+def test_pca_zero_released_variance(n_components, expected):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn.decomposition import PCARelease
 
-    model = dp.sklearn.decomposition.PCA(n_components=1, whiten=True)
+    model = dp.sklearn.decomposition.PCA(n_components=n_components, whiten=True)
     model._ingest_release(PCARelease(
         mean=np.zeros(2), singular_values=np.zeros(2),
         components=np.eye(2), n_samples=10, n_features=2,
     ))
-    np.testing.assert_array_equal(model.explained_variance_ratio_, [0.0])
+    assert model.n_components_ == expected
+    np.testing.assert_array_equal(model.explained_variance_ratio_, np.zeros(expected))
     assert np.isfinite(model.transform(np.ones((1, 2)))).all()
 
 
