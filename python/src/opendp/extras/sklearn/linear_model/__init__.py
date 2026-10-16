@@ -15,29 +15,18 @@ Differentially private sklearn-style linear models.
 
 from __future__ import annotations
 
+from sklearn.base import RegressorMixin
+
 from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._estimator import _DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
 )
 
-_sklearn_base = import_optional_dependency("sklearn.base", raise_error=False)
-
-
-class _FallbackRegressorMixin:
-    """Minimal fallback used when scikit-learn is not installed."""
-
-
-_RegressorMixin = (
-    _sklearn_base.RegressorMixin
-    if _sklearn_base is not None
-    else _FallbackRegressorMixin
-)
-
 __all__ = ["TheilSenRegressor", "make_private_theil_sen"]
 
 
-class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
+class TheilSenRegressor(RegressorMixin, _DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
     The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
