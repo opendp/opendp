@@ -7,6 +7,7 @@ We suggest importing under the conventional name ``dp``:
 .. code:: pycon
 
     >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
 
 The members of this module will then be accessible at ``dp.ibis``.
 
@@ -63,6 +64,8 @@ def run_on_database(query, connection, table_name: str):
     runs the query on the database,
     and returns the result.
 
+    The ``contrib`` feature must be enabled until we are confident in this code.
+
     :param query: A Polars query be translated to SQL.
     :param table_name: The name of the database table.
     :param connection: A connection object.
@@ -110,6 +113,8 @@ def run_on_database(query, connection, table_name: str):
     import opendp.prelude as dp
 
     from polars_to_ibis import split_polars_on_ffi
+
+    dp.assert_features("contrib")
 
     query_lf = query.release().lazy()
 
