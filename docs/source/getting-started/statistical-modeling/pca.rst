@@ -116,7 +116,7 @@ Alternatively, standalone sklearn-style fitting mutates and returns the estimato
 
     model.fit(
         example_dataset,
-        domain=domain,
+        domain=dp.sklearn.sklearn_fit_domain(domain),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
