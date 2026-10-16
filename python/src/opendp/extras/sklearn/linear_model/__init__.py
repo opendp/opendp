@@ -15,36 +15,21 @@ Differentially private sklearn-style linear models.
 
 from __future__ import annotations
 
+from sklearn.base import RegressorMixin
+
 from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._estimator import _DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
 )
 
-# Keep low-level constructors importable without sklearn. Autodoc can supply
-# its mocked sklearn dependency here to document the estimator as well.
-if import_optional_dependency("sklearn", raise_error=False) is not None:
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
-    )
-
-_sklearn_base = import_optional_dependency("sklearn.base", raise_error=False)
-
-
-class _FallbackRegressorMixin:
-    """Minimal fallback used when scikit-learn is not installed."""
-
-
-_RegressorMixin = (
-    _sklearn_base.RegressorMixin
-    if _sklearn_base is not None
-    else _FallbackRegressorMixin
-)
+# Keep the root logistic estimator available alongside Theil-Sen.
+from opendp.extras.sklearn.linear_model._logistic_regression import LogisticRegression
 
 __all__ = ["TheilSenRegressor", "make_private_theil_sen", "LogisticRegression"]
 
 
-class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
+class TheilSenRegressor(RegressorMixin, _DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
     The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
