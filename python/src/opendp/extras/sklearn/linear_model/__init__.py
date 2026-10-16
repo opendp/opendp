@@ -42,7 +42,8 @@ class TheilSenRegressor(_RegressorMixin, _DPEstimator):  # type: ignore
 
     The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
     value with one feature column in ``X`` and a target vector in ``y``. Privacy
-    allocation and the input domain are supplied by an OpenDP Context.
+    allocation and the input domain are supplied to standalone ``fit(X, y, ...)``
+    or by an OpenDP Context via ``query.sklearn(model).release()``.
     """
 
     def __init__(
