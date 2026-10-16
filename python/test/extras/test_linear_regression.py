@@ -63,6 +63,52 @@ def test_pairwise_prediction_keeps_features_and_targets_aligned(monkeypatch):
     )
 
 
+def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
+    from collections import Counter
+    from itertools import permutations
+    import numpy as np
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import pairwise_predict
+
+    X, y = np.array([[0.0], [1.0], [3.0]]), np.array([0.0, 1.0, 9.0])
+    distributions = []
+    for row_order in permutations(range(3)):
+        data = dp.sklearn.SklearnFit(X[list(row_order)], y[list(row_order)])
+        outcomes = []
+        for shuffle_order in permutations(range(3)):
+            def shuffle(indices):
+                assert len(indices) == 3  # omit only after randomizing all rows
+                indices[:] = shuffle_order
+            monkeypatch.setattr(np.random, "shuffle", shuffle)
+            outcomes.append(tuple(pairwise_predict(data, np.array([0.0, 1.0])).ravel()))
+        distributions.append(Counter(outcomes))
+    assert all(distribution == distributions[0] for distribution in distributions)
+    assert len(distributions[0]) == 3
+
+
+@pytest.mark.parametrize("runs", [1, 3])
+def test_pairwise_variable_size_stability_allows_replacing_a_pair(runs, monkeypatch):
+    from collections import Counter
+    import numpy as np
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_pairwise_predict
+
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, num_columns=1),
+        dp.vector_domain(dp.atom_domain(T=float)),
+    )
+    transform = make_pairwise_predict(
+        domain, dp.symmetric_distance(), np.array([0.0, 1.0]), runs=runs,
+    )
+    assert transform.map(1) == 2 * runs
+    assert transform.map(2) == 4 * runs
+    monkeypatch.setattr(np.random, "shuffle", lambda indices: indices.__setitem__(slice(None), indices[::-1]))
+    before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
+    after = dp.sklearn.SklearnFit(np.array([[0.0], [1.0], [3.0]]), [0.0, 1.0, 9.0])
+    old_rows = Counter(map(tuple, transform(before)))
+    new_rows = Counter(map(tuple, transform(after)))
+    distance = sum((old_rows - new_rows).values()) + sum((new_rows - old_rows).values())
+    assert distance == 2 * runs == transform.map(1)
+
+
 def test_theil_sen_estimator_context_fit_and_methods():
     pytest.importorskip("numpy")
     sklearn = pytest.importorskip("sklearn")
