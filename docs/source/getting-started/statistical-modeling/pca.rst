@@ -95,7 +95,7 @@ akin to scikit-learn:
             ... )
 
 
-A private release occurs when you fit the model to the data.
+Context fitting releases a newly fitted model, leaving the supplied estimator unchanged.
 
 .. tab-set::
 
@@ -104,12 +104,27 @@ A private release occurs when you fit the model to the data.
 
         .. code:: pycon
 
-            >>> model.fit(context.query()) is model
-            True
+            >>> model = context.query().sklearn(model).release()
 
 PCA requires an L2 norm bound. ``row_norm`` clips X internally before fitting;
 no separate preprocessing query is needed. If the input domain is already
 L2-bounded, ``row_norm`` may be omitted.
+
+Alternatively, standalone sklearn-style fitting mutates and returns the estimator:
+
+.. code-block:: python
+
+    model.fit(
+        example_dataset,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+
+Standalone fitting requires explicit privacy assumptions; each call incurs its own
+privacy loss. ``fit`` never accepts a Context query. Ordinary sklearn pipeline
+routing does not account for end-to-end privacy: per-record ``transform`` outputs
+must not be passed to a nonprivate downstream estimator as if they were releases.
 
 The fitted model can then be introspected just like Scikit-Learn’s
 non-private PCA:
@@ -205,7 +220,7 @@ mechanism still consumes only X. Clipping remains internal to fitting:
         split_evenly_over=1,
     )
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    model.fit(fit_context.query())
+    model = fit_context.query().sklearn(model).release()
 
     # Compose with subsequent private measurements; do not release these rows.
     transform = model.make_transform(fit_domain)
