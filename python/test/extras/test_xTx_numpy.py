@@ -1,3 +1,5 @@
+from typing import Any
+
 import opendp.prelude as dp
 import pytest
 from opendp.extras.numpy._make_np_sscp import make_np_sscp, then_np_sscp
@@ -48,7 +50,7 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
     "origin_kind", ["unbounded", "default", "scalar_zero", "zero_vector", "signed_zero"]
 )
 def test_zero_or_unbounded_origin_preserves_sscp(T, dtype, origin_kind):
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     if origin_kind != "unbounded":
         kwargs.update(norm=1.0, p=2)
     if origin_kind == "scalar_zero":
