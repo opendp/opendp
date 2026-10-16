@@ -7,8 +7,8 @@ Fully Adaptive Composition and Odometers
 Where adaptive composition allows for queries to be chosen adaptively,
 *fully* adaptive composition also allows for the *privacy loss* of queries to be chosen adaptively.
 The API for fully adaptive composition matches that of adaptive composition,
-but drops the ``d_mids`` argument, as these will be chosen as you go.
-The odometer tracks privacy loss with respect to the ``d_in`` it is constructed with.
+but drops the ``d_mids`` argument, as these will be chosen as you go, and
+the odometer tracks privacy loss with respect to the ``d_in`` it is constructed with.
 
 .. tab-set::
 
