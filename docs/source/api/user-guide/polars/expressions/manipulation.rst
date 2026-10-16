@@ -355,6 +355,17 @@ Fill Null
 ``.fill_nan``. All data types in Polars may be null. The output data is
 only considered non-null if the fill expression is non-null.
 
+Filling nulls does not remove NaN values. A floating-point output may
+contain NaN if the input may contain NaN, or if a fill expression that may
+contain NaN can replace null input values.
+Apply ``.fill_nan`` after filling nulls if the fill expression may introduce
+NaN and a subsequent operation requires non-NaN input.
+
+Numeric and Boolean inputs and fill expressions may have different
+types. The output domain follows Polars' resulting type, including its
+coercion of dynamic literals. Other mixed input and fill types are not
+supported; cast them to a common type before filling nulls.
+
 In common use throughout the documentation, the fill value has been
 simply a single scalar, but more complicated expressions are valid:
 
@@ -368,7 +379,7 @@ simply a single scalar, but more complicated expressions are valid:
             >>> (
             ...     context.query()
             ...     # prepare actual work hours as a valid fill column
-            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0.0))
+            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0))
             ...     # prepare usual work hours with actual work hours as a fill
             ...     .with_columns(
             ...         pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL)
