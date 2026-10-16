@@ -24,8 +24,9 @@ def pairwise_predict(data: SklearnFit, x_cuts):
     y = np.asarray(data.y, dtype=np.float64)
     indices = np.arange(len(X))
     np.random.shuffle(indices)
-    indices = indices[: len(X) // 2 * 2]
-    first, second = np.array_split(indices, 2)
+    # Randomize the omitted row too, so odd-sized inputs remain invariant to
+    # row order under symmetric distance.
+    first, second = np.array_split(indices[: len(X) // 2 * 2], 2)
     x1, x2 = X[first, 0], X[second, 0]
     y1, y2 = y[first], y[second]
     dx, dy = x2 - x1, y2 - y1
@@ -35,7 +36,18 @@ def pairwise_predict(data: SklearnFit, x_cuts):
 
 
 def make_pairwise_predict(input_domain, input_metric, x_cuts, runs: int = 1, T=float):
-    """Make the public pairwise-prediction transformation."""
+    """Make the randomized pairwise-prediction transformation.
+
+    Uniform shuffling gives a uniform matching, with a uniformly omitted row
+    when the input size is odd. Couple insertion into an even-sized input by
+    uniformly choosing the omitted row: omit the new row and keep the old
+    matching, or replace an omitted old row with the new row in its pair.
+    At most one prediction is replaced (two symmetric edits). For an odd-sized
+    input, pair the previously omitted row with the new row, adding at most one
+    prediction. These couplings have the correct uniform matching marginals.
+    Each run is therefore 2-stable under insertion/removal; composing runs adds
+    their bounds. Permutations do not change the output distribution.
+    """
     import opendp.prelude as dp
 
     np = _numpy()
