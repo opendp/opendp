@@ -176,6 +176,32 @@ def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
     assert isinstance(release_estimator.intercept_, float)
 
 
+def test_pca_transform_retains_private_targets_for_theil_sen():
+    np = pytest.importorskip("numpy")
+    data, original_domain = _training_data()
+    X = np.column_stack([data.X[:, 0], np.ones(len(data.X))])
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=len(X), num_columns=2),
+        original_domain.cast(dp.sklearn.SklearnFitDomain).y,
+    )
+    inputs = dp.sklearn.SklearnFit(X.copy(), data.y)
+    context = dp.Context.compositor(
+        inputs, dp.unit_of(contributions=1), dp.loss_of(epsilon=2.0),
+        domain=domain, split_evenly_over=2,
+    )
+    pca = dp.sklearn.decomposition.PCA(n_components=1, row_norm=1.0)
+    pca.fit(context.query())
+    transform = pca.make_transform(domain)
+    assert transform(inputs).y is inputs.y
+    estimator = dp.sklearn.linear_model.TheilSenRegressor(
+        x_bounds=((-30.0, 30.0),), y_bounds=(-10.0, 60.0),
+    )
+    next_query = context.query().new_with(chain=transform)
+    assert next_query.sklearn(estimator).release() is estimator
+    assert estimator.coef_.shape == (1,)
+    np.testing.assert_array_equal(inputs.X, X)
+
+
 def test_theil_sen_framework_make_is_non_mutating():
     np = pytest.importorskip("numpy")
     data, domain = _training_data()
