@@ -1,6 +1,5 @@
 import pytest
 import opendp.prelude as dp
-from opendp._lib import import_optional_dependency
 
 
 def _training_data(size=20):
@@ -80,7 +79,10 @@ def test_theil_sen_estimator_context_fit_and_methods():
     estimator = _estimator()
 
     assert not hasattr(estimator, "coef_")
-    assert estimator.fit(context.query()) is estimator
+    template = estimator
+    estimator = context.query().sklearn(template).release()
+    assert estimator is not template
+    assert not hasattr(template, "coef_")
     assert estimator.coef_.shape == (1,)
     assert isinstance(estimator.intercept_, float)
     assert estimator.n_features_in_ == 1
@@ -92,13 +94,6 @@ def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
     pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     data, domain = _training_data()
-    fit_context = dp.Context.compositor(
-        data=data,
-        domain=domain,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
-    )
     release_context = dp.Context.compositor(
         data=data,
         domain=domain,
@@ -108,14 +103,19 @@ def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
     )
     fit_estimator, release_estimator = _estimator(), _estimator()
 
-    assert fit_estimator.fit(fit_context.query()) is fit_estimator
+    assert fit_estimator.fit(
+        data.X, data.y, domain=domain, privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    ) is fit_estimator
 
     initial_state = release_estimator.__dict__.copy()
     fitted_query = release_context.query().sklearn(release_estimator)
     assert release_estimator.__dict__ == initial_state
-    assert fitted_query.release() is release_estimator
-    assert fit_estimator.coef_.shape == release_estimator.coef_.shape == (1,)
-    assert isinstance(release_estimator.intercept_, float)
+    fitted = fitted_query.release()
+    assert fitted is not release_estimator
+    assert not hasattr(release_estimator, "coef_")
+    assert fit_estimator.coef_.shape == fitted.coef_.shape == (1,)
+    assert isinstance(fitted.intercept_, float)
 
 
 def test_pca_transform_retains_private_targets_for_theil_sen():
@@ -132,16 +132,56 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
         domain=domain, split_evenly_over=2,
     )
     pca = dp.sklearn.decomposition.PCA(n_components=1, row_norm=1.0)
-    pca.fit(context.query())
+    pca = context.query().sklearn(pca).release()
     transform = pca.make_transform(domain)
     assert transform(inputs).y is inputs.y
     estimator = dp.sklearn.linear_model.TheilSenRegressor(
         x_bounds=((-30.0, 30.0),), y_bounds=(-10.0, 60.0),
     )
     next_query = context.query().new_with(chain=transform)
-    assert next_query.sklearn(estimator).release() is estimator
-    assert estimator.coef_.shape == (1,)
+    fitted = next_query.sklearn(estimator).release()
+    assert fitted is not estimator
+    assert fitted.coef_.shape == (1,)
     np.testing.assert_array_equal(inputs.X, X)
+
+
+@pytest.mark.parametrize("domain_kind", ["infer", "X", "fit"])
+def test_theil_sen_standalone_and_serialization(domain_kind):
+    import pickle
+    import numpy as np
+    from sklearn.base import clone
+
+    data, fit_domain = _training_data()
+    domain = {"infer": None, "X": fit_domain.descriptor.X, "fit": fit_domain}[domain_kind]
+    estimator = _estimator()
+    assert estimator.fit(
+        data.X, data.y, domain=domain, privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    ) is estimator
+    restored = pickle.loads(pickle.dumps(estimator))
+    np.testing.assert_allclose(restored.predict(data.X), estimator.predict(data.X))
+    assert clone(estimator).get_params() == estimator.get_params()
+    assert not hasattr(clone(estimator), "coef_")
+
+
+def test_theil_sen_sklearn_fit_constructs_private_targets():
+    import numpy as np
+
+    data, _ = _training_data()
+    rows = np.column_stack([data.X[:, 0], data.y])
+    domain = dp.numpy.array2_domain(T=float, num_columns=2, size=len(rows), nan=False)
+    context = dp.Context.compositor(
+        rows, dp.unit_of(contributions=1), dp.loss_of(epsilon=1),
+        domain=domain, split_evenly_over=1,
+    )
+    template = _estimator()
+    query = context.query().sklearn_fit(X=[0], y=1).sklearn(template)
+    assert context.current_privacy_loss() == []
+    assert not hasattr(template, "coef_")
+    fitted = query.release()
+    assert fitted.coef_.shape == (1,)
+    assert not hasattr(template, "coef_")
+    assert context.current_privacy_loss() == [1.0]
 
 
 def test_theil_sen_framework_make_is_non_mutating():
@@ -249,9 +289,9 @@ def test_theil_sen_rejects_separate_targets_and_weights_before_release(monkeypat
     released = []
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
 
-    with pytest.raises(TypeError, match="does not accept y"):
+    with pytest.raises(TypeError, match="not a Query"):
         estimator.fit(query, [1.0] * 10)
-    with pytest.raises(TypeError, match="Unexpected fit parameters"):
+    with pytest.raises(TypeError, match="not a Query"):
         estimator.fit(query, sample_weight=[1.0] * 10)
     assert released == []
 
@@ -271,5 +311,5 @@ def test_theil_sen_fit_rejects_aligned_input_without_target_before_release(monke
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
 
     with pytest.raises(ValueError, match="with y"):
-        _estimator().fit(query)
+        query.sklearn(_estimator())
     assert released == []
