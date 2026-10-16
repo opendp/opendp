@@ -27,3 +27,26 @@ def test_clamp_zero_length(num_columns):
     empty = np.zeros((0, 2))
     assert domain.member(empty)
     assert trans(empty).shape == (0, 2)
+
+
+def test_clamp_drops_cardinalities():
+    # clamping is not injective, so the output domain must not claim the
+    # input's cardinalities
+    domain = dp.numpy.array2_domain(num_columns=2, T=float, cardinalities=[3, 3])
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2)
+    assert trans.output_domain.descriptor.cardinalities is None
+
+
+def test_clamp_rejects_length_one_origin():
+    # a length-1 origin silently broadcasts over wider data
+    with pytest.raises(ValueError, match="origin must have more than one value"):
+        then_np_clamp(norm=1.0, p=2, origin=np.array([1.0]))
+
+
+def test_clamp_origin():
+    domain = dp.numpy.array2_domain(num_columns=2, T=float)
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(
+        norm=1.0, p=2, origin=np.array([0.5, -0.5])
+    )
+    data = np.random.normal(size=(1000, 2))
+    assert trans.output_domain.member(trans(data))
