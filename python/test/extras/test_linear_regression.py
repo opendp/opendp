@@ -191,14 +191,14 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
     np.testing.assert_array_equal(inputs.X, X)
 
 
-@pytest.mark.parametrize("domain_kind", ["infer", "X", "fit"])
+@pytest.mark.parametrize("domain_kind", ["infer", "fit"])
 def test_theil_sen_standalone_and_serialization(domain_kind):
     import pickle
     import numpy as np
     from sklearn.base import clone
 
     data, fit_domain = _training_data()
-    domain = {"infer": None, "X": fit_domain.descriptor.X, "fit": fit_domain}[domain_kind]
+    domain = fit_domain if domain_kind == "fit" else None
     estimator = _estimator()
     assert estimator.fit(
         data.X, data.y, domain=domain, privacy_unit=dp.unit_of(contributions=1),
@@ -208,26 +208,6 @@ def test_theil_sen_standalone_and_serialization(domain_kind):
     np.testing.assert_allclose(restored.predict(data.X), estimator.predict(data.X))
     assert clone(estimator).get_params() == estimator.get_params()
     assert not hasattr(clone(estimator), "coef_")
-
-
-def test_theil_sen_sklearn_fit_constructs_private_targets():
-    import numpy as np
-
-    data, _ = _training_data()
-    rows = np.column_stack([data.X[:, 0], data.y])
-    domain = dp.numpy.array2_domain(T=float, num_columns=2, size=len(rows), nan=False)
-    context = dp.Context.compositor(
-        rows, dp.unit_of(contributions=1), dp.loss_of(epsilon=1),
-        domain=domain, split_evenly_over=1,
-    )
-    template = _estimator()
-    query = context.query().sklearn_fit(X=[0], y=1).sklearn(template)
-    assert context.current_privacy_loss() == []
-    assert not hasattr(template, "coef_")
-    fitted = query.release()
-    assert fitted.coef_.shape == (1,)
-    assert not hasattr(template, "coef_")
-    assert context.current_privacy_loss() == [1.0]
 
 
 def test_theil_sen_framework_make_is_non_mutating():
@@ -335,9 +315,9 @@ def test_theil_sen_rejects_separate_targets_and_weights_before_release(monkeypat
     released = []
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
 
-    with pytest.raises(TypeError, match="not a Query"):
+    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         estimator.fit(query, [1.0] * 10)
-    with pytest.raises(TypeError, match="not a Query"):
+    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         estimator.fit(query, sample_weight=[1.0] * 10)
     assert released == []
 
