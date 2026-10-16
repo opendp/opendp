@@ -46,6 +46,28 @@ def test_pca():
     assert m_pca.check(2, 1.0)
 
 
+@pytest.mark.parametrize("T, dtype", [(dp.f32, np.float32), (dp.f64, np.float64)])
+def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
+    from opendp.extras.sklearn.decomposition import _make_center
+
+    origin = np.array([10.0, -20.0], dtype=dtype)
+    domain = dp.numpy.array2_domain(
+        norm=1.0, p=2, origin=origin, num_columns=2, size=2, nan=False, T=T
+    )
+    data = origin + np.array([[0.5, 0.0], [0.5, 0.5]], dtype=dtype)
+    centered = _make_center(domain, dp.symmetric_distance())
+    sscp = centered >> then_np_sscp()
+
+    assert domain.member(data)
+    assert np.all(centered.output_domain.descriptor.origin == 0)
+    assert np.array_equal(sscp(data), (data - origin).T @ (data - origin))
+    # Debug native libraries only support f64 in the full PCA constructor.
+    if T == dp.f64:
+        pca = (domain, dp.symmetric_distance()) >> then_private_pca(unit_epsilon=1.0)
+        assert pca.check(2, 1.0)
+
+
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
