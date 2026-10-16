@@ -529,11 +529,13 @@ class PCA(_DPEstimator):
         elif isinstance(n_components, float):
             if not 0 < n_components < 1:
                 raise ValueError("n_components must be in (0, 1) when fractional")
+            # With no released variance, one component is sufficient for any
+            # requested fraction; searching an all-zero cumulative sum is not.
             n_components = (
+                1 if total_variance == 0 else
                 np.searchsorted(
                     np.cumsum(explained_variance_ratio), n_components, side="right"
-                )
-                + 1
+                ) + 1
             )
         elif isinstance(n_components, int) and not isinstance(n_components, bool):
             if not 1 <= n_components <= min(n_samples, n_features):
