@@ -164,6 +164,10 @@ class DPExpr(object):
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
+
+        .. deprecated:: 0.14.1
+
+            Use :func:`noise` instead. This will now apply gaussian noise if your privacy definition is zCDP.
         """
         return self.noise(scale=scale)
 
@@ -177,6 +181,10 @@ class DPExpr(object):
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``
+
+        .. deprecated:: 0.14.1
+
+            Use :func:`noise` instead. This will now apply laplace noise if your privacy definition is pure-DP.
         """
         return self.noise(scale=scale)
 
@@ -185,7 +193,7 @@ class DPExpr(object):
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
-        When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+        When ``signed=True``, the exact UInt32 count is cast to Int64 before noise is added,
         so negative noisy outputs are preserved.
 
         Omitting signed (or passing None) currently uses False and emits a warning.
