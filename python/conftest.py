@@ -10,6 +10,7 @@ if find_spec("sklearn") is None:
         "src/opendp/extras/sklearn/_estimator.py",
         "src/opendp/extras/sklearn/linear_model/_logistic_regression.py",
         "src/opendp/extras/sklearn/decomposition",
+        "src/opendp/extras/sklearn/linear_model",
     ]
 
 
