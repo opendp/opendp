@@ -127,8 +127,7 @@ def test_theil_sen_estimator_context_fit_and_methods():
     assert not hasattr(estimator, "coef_")
     template = estimator
     estimator = context.query().sklearn(template).release()
-    assert estimator is not template
-    assert not hasattr(template, "coef_")
+    assert estimator is template
     assert estimator.coef_.shape == (1,)
     assert isinstance(estimator.intercept_, float)
     assert estimator.n_features_in_ == 1
@@ -158,8 +157,7 @@ def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
     fitted_query = release_context.query().sklearn(release_estimator)
     assert release_estimator.__dict__ == initial_state
     fitted = fitted_query.release()
-    assert fitted is not release_estimator
-    assert not hasattr(release_estimator, "coef_")
+    assert fitted is release_estimator
     assert fit_estimator.coef_.shape == fitted.coef_.shape == (1,)
     assert isinstance(fitted.intercept_, float)
 
@@ -186,7 +184,7 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
     )
     next_query = context.query().new_with(chain=transform)
     fitted = next_query.sklearn(estimator).release()
-    assert fitted is not estimator
+    assert fitted is estimator
     assert fitted.coef_.shape == (1,)
     np.testing.assert_array_equal(inputs.X, X)
 
@@ -303,7 +301,7 @@ def test_theil_sen_scale_is_not_bounded_by_response_range():
     assert measurement.map(1) <= 1e-6
 
 
-def test_theil_sen_rejects_separate_targets_and_weights_before_release(monkeypatch):
+def test_theil_sen_fit_requires_privacy_and_rejects_unsupported_parameters(monkeypatch):
     pytest.importorskip("sklearn")
     from opendp.context import Query
 
@@ -317,9 +315,101 @@ def test_theil_sen_rejects_separate_targets_and_weights_before_release(monkeypat
 
     with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         estimator.fit(query, [1.0] * 10)
-    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
-        estimator.fit(query, sample_weight=[1.0] * 10)
+    with pytest.raises(TypeError, match="unexpected keyword argument 'sample_weight'"):
+        estimator.fit(  # type: ignore[call-arg]
+            [[1.0]] * 10, [1.0] * 10, sample_weight=[1.0] * 10,
+            privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1),
+        )
     assert released == []
+
+
+@pytest.mark.parametrize("route", ["standalone", "context"])
+def test_theil_sen_refitting_replaces_learned_state(route):
+    import numpy as np
+
+    data, domain = _training_data()
+    model = _estimator()
+    context = dp.Context.compositor(
+        data, dp.unit_of(contributions=1), dp.loss_of(epsilon=2),
+        domain=domain, split_evenly_over=2,
+    )
+
+    def fit():
+        if route == "context":
+            return context.query().sklearn(model).release()
+        return model.fit(data.X, data.y, domain=domain,
+                         privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1))
+
+    assert fit() is model
+    old_coef = model.coef_
+    model.coef_[:] = 1e6
+    model.intercept_ = -1e6
+    assert fit() is model
+    assert model.coef_ is not old_coef
+    assert np.isfinite(model.predict(data.X)).all()
+    assert abs(model.coef_[0]) <= 5.0 + 1e-10
+    assert abs(model.intercept_) < 100
+    if route == "context":
+        assert context.current_privacy_loss() == [1.0, 1.0]
+
+
+def test_theil_sen_query_snapshots_mutable_configuration_and_is_lazy(monkeypatch):
+    import numpy as np
+    from opendp.extras.sklearn.linear_model import _make_private_theil_sen as framework
+
+    data, domain = _training_data()
+    x_bounds, y_bounds, fractions = np.array([[-3.0, 25.0]]), [-10.0, 60.0], [0.25, 0.75]
+    model = dp.sklearn.linear_model.TheilSenRegressor(
+        x_bounds=x_bounds, y_bounds=y_bounds, fraction_bounds=fractions,
+    )
+    model._ingest_release((2.0, 1.0))
+    old_coef = model.coef_
+    context = dp.Context.compositor(
+        data, dp.unit_of(contributions=1), dp.loss_of(epsilon=1),
+        domain=domain, split_evenly_over=1,
+    )
+    cuts = []
+    original = framework.pairwise_predict
+
+    def predict(data, x_cuts):
+        cuts.append(x_cuts.copy())
+        return original(data, x_cuts)
+
+    monkeypatch.setattr(framework, "pairwise_predict", predict)
+    query = context.query().sklearn(model)
+    query.resolve()
+    assert cuts == [] and context.current_privacy_loss() == []
+    assert model.coef_ is old_coef and model.intercept_ == 1.0
+    x_bounds[:] = [[1000.0, 2000.0]]
+    y_bounds[:] = [10000.0, 20000.0]
+    fractions[:] = [0.1, 0.9]
+    model.set_params(runs=3, candidates_count=2)
+    assert query.release() is model
+    assert len(cuts) == 1
+    np.testing.assert_array_equal(cuts[0], [4.0, 18.0])
+    predictions = model.predict([[4.0], [18.0]])
+    assert np.all(predictions >= -10.0 - 1e-10) and np.all(predictions <= 60.0 + 1e-10)
+    assert model.coef_ is not old_coef
+    assert context.current_privacy_loss() == [1.0]
+    state = model.coef_.copy(), model.intercept_
+    with pytest.raises(dp.OpenDPException, match="out of queries"):
+        query.release()
+    np.testing.assert_array_equal(model.coef_, state[0])
+    assert model.intercept_ == state[1] and len(cuts) == 1
+
+
+def test_pairwise_constructor_snapshots_mutable_cuts(monkeypatch):
+    import numpy as np
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_pairwise_predict
+
+    data, domain = _training_data()
+    monkeypatch.setattr(np.random, "shuffle", lambda indices: None)
+    cuts = np.array([4.0, 18.0])
+    transform = make_pairwise_predict(domain, dp.symmetric_distance(), cuts)
+    before = transform(data)
+    cuts[:] = [1000.0, 2000.0]
+    np.testing.assert_allclose(transform(data), before)
+    assert transform.map(1) == 2
 
 
 def test_theil_sen_fit_rejects_aligned_input_without_target_before_release(monkeypatch):
