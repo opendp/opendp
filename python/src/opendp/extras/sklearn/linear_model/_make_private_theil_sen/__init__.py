@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.extras.sklearn._aligned import SklearnFit, SklearnFitDomain
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDomain
 from opendp.mod import Domain, Measure, Measurement, Metric, VectorDomain
 
 
@@ -50,6 +50,7 @@ def make_pairwise_predict(input_domain, input_metric, x_cuts, runs: int = 1, T=f
     import opendp.prelude as dp
 
     np = _numpy()
+    x_cuts = np.array(x_cuts, copy=True)
     output_domain = dp.numpy.array2_domain(num_columns=2, T=T)
     return dp.t.make_user_transformation(
         input_domain=input_domain,
@@ -128,8 +129,6 @@ def _make_private_theil_sen_with_scale(
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
     if desc.y is None:
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain with y")
-    if desc.sample_weight is not None or desc.groups is not None:
-        raise ValueError("TheilSenRegressor supports only SklearnFit.X and SklearnFit.y")
     if getattr(getattr(desc.X, "descriptor", None), "num_columns", None) != 1:
         raise ValueError("TheilSenRegressor requires exactly one feature column")
     if not isinstance(desc.y, VectorDomain):
