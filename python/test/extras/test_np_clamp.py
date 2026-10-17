@@ -1,22 +1,22 @@
 import opendp.prelude as dp
-from opendp.extras.numpy import then_np_clip
+from opendp.extras.numpy import then_np_clamp
 import pytest
 from ..helpers import optional_dependency
 
 
-def test_clip():
+def test_clamp():
     with optional_dependency("numpy"):
         space = dp.numpy.array2_domain(T=float), dp.symmetric_distance()
-    trans = space >> then_np_clip(norm=1.0, p=2)
+    trans = space >> then_np_clamp(norm=1.0, p=2)
     np = pytest.importorskip("numpy")
     data = np.random.normal(size=(100_000, 10))
     assert trans.output_domain.member(trans(data))
 
 
-def test_clip_nan_inf():
+def test_clamp_nan_inf():
     with optional_dependency("numpy"):
         space = dp.numpy.array2_domain(T=float), dp.symmetric_distance()
-    trans = space >> then_np_clip(norm=1.0, p=2)
+    trans = space >> then_np_clamp(norm=1.0, p=2)
     np = pytest.importorskip("numpy")
     data = np.array([[np.inf, 0.0], [np.inf, np.inf], [1.0, 1.0], [np.nan, 0.0]])
     assert trans.output_domain.member(trans(data))
@@ -27,7 +27,7 @@ def test_clamp_output_dtype_and_cardinalities(dtype, T):
     np = pytest.importorskip("numpy")
     data = np.array([[1, 1], [1, 0]], dtype=dtype)
     domain = dp.numpy.array2_domain(T=T, size=2, num_columns=2, cardinalities=[1, 2])
-    trans = (domain, dp.symmetric_distance()) >> then_np_clip(norm=1.0, p=2)
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2)
     result = trans(data)
     assert result.dtype == np.float64
     assert len(np.unique(result[:, 0])) == 2
@@ -38,13 +38,13 @@ def test_clamp_output_dtype_and_cardinalities(dtype, T):
 def test_clamp_empty_data():
     np = pytest.importorskip("numpy")
     domain = dp.numpy.array2_domain(T=float, size=0, num_columns=2)
-    trans = (domain, dp.symmetric_distance()) >> then_np_clip(norm=1.0, p=2)
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2)
     result = trans(np.zeros((0, 2)))
     assert result.shape == (0, 2)
     assert trans.output_domain.member(result)
 
 
-def test_clip_projects_rows_and_updates_domain():
+def test_clamp_projects_rows_and_updates_domain():
     np = pytest.importorskip("numpy")
     domain = dp.numpy.array2_domain(
         size=1,
@@ -55,10 +55,23 @@ def test_clip_projects_rows_and_updates_domain():
     transformation = (
         domain,
         dp.symmetric_distance(),
-    ) >> then_np_clip(norm=1.0, p=2)
+    ) >> then_np_clamp(norm=1.0, p=2)
 
     assert np.allclose(transformation(np.array([[3.0, 4.0]])), [[0.6, 0.8]])
     descriptor = transformation.output_domain.descriptor
     assert descriptor.norm == 1.0
     assert descriptor.p == 2
     assert descriptor.nan is False
+
+
+def test_clamp_context_registration():
+    np = pytest.importorskip("numpy")
+    domain = dp.numpy.array2_domain(T=float, size=1, num_columns=2)
+    query = dp.Query(
+        chain=(domain, dp.symmetric_distance()),
+        output_measure=dp.max_divergence(), d_in=2, d_out=1.0,
+    )
+    transformation = query.np_clamp(norm=1.0, p=2).resolve(allow_transformations=True)
+    assert isinstance(transformation, dp.Transformation)
+    np.testing.assert_allclose(transformation(np.array([[3.0, 4.0]])), [[0.6, 0.8]])
+    assert transformation.map(2) == 2

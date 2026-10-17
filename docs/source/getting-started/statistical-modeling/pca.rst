@@ -1,238 +1,136 @@
 .. _dp-pca:
 
 Differentially Private PCA
-==========================
+=========================
 
-This notebook documents making a differentially private PCA release.
+Fit a private PCA model
+-----------------------
 
---------------
+OpenDP's :class:`~opendp.extras.sklearn.decomposition.PCA` follows sklearn's
+fitting conventions. Privacy assumptions belong to ``fit``, not the estimator
+constructor. Install ``opendp[scikit-learn]`` to use this interface.
 
-Any functions that have not completed the proof-writing and vetting
-process may still be accessed if you opt-in to “contrib”. Please contact
-us if you are interested in proof-writing. Thank you!
+.. code:: pycon
 
-.. tab-set::
+    >>> import numpy as np
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib", "idealized-numerics", "honest-but-curious")
+    >>> public_size = 100
+    >>> X = np.random.default_rng(0).normal(size=(public_size, 4))
 
-    .. tab-item:: Python
-        :sync: python
+Here X stands in for private training data. Its dtype, feature width, and exact
+sample count must be public. NumPy domain inference supplies dtype and width,
+but intentionally leaves the number of rows unspecified. The current PCA
+mechanism needs an exact public sample count, so supply it explicitly:
 
-        .. code:: pycon
+.. code:: pycon
 
-            >>> import opendp.prelude as dp
-            >>> dp.enable_features(
-            ...     "contrib", "idealized-numerics", "honest-but-curious"
-            ... )
+    >>> schema = dp.domain_of(X, infer=True).descriptor
+    >>> X_domain = dp.numpy.array2_domain(
+    ...     T=schema.T, num_columns=schema.num_columns, size=public_size,
+    ... )
+    >>> fit_domain = dp.sklearn.sklearn_fit_domain(X_domain)
 
-            >>> import numpy as np
+For this fixed-size domain, protect **one row replacement**: under symmetric
+distance, replacing one row costs two edits (one removal and one addition).
+Thus use ``contributions=2``, not ``contributions=1``. An add/remove-only adjacency
+at distance one has no distinct neighbors within an exact-size domain.
+Use an externally fixed public size, not a private row count or a noisy released
+count: this domain requires the exact sample count.
 
-            >>> def sample_microdata(
-            ...     *, num_columns=None, num_rows=None, cov=None
-            ... ):
-            ...     cov = cov or sample_covariance(num_columns)
-            ...     microdata = np.random.multivariate_normal(
-            ...         np.zeros(cov.shape[0]),
-            ...         cov,
-            ...         size=num_rows or 100_000,
-            ...     )
-            ...     microdata -= microdata.mean(axis=0)
-            ...     return microdata
-            ...
+.. code:: pycon
 
-            >>> def sample_covariance(num_features):
-            ...     A = np.random.uniform(
-            ...         0, num_features, size=(num_features, num_features)
-            ...     )
-            ...     return A.T @ A
-            ...
+    >>> model = dp.sklearn.decomposition.PCA(n_components=2, clip_norm=1.0)
+    >>> model.fit(
+    ...     X, domain=fit_domain,
+    ...     privacy_unit=dp.unit_of(contributions=2),
+    ...     privacy_loss=dp.loss_of(epsilon=1),
+    ... ) is model
+    True
+    >>> model.components_.shape, model.singular_values_.shape
+    ((2, 4), (2,))
+    >>> public_rows = np.zeros((3, 4))
+    >>> model.transform(public_rows).shape
+    (3, 2)
 
+``clip_norm`` clips rows to a public L2 ball around the input domain's origin,
+or zero when unspecified. It may be omitted when the domain supplies an L2
+bound. If both provide bounds, the tighter radius applies at the same origin.
 
-In this notebook we’ll be working with an example dataset generated from
-a random covariance matrix.
+By default, ``center=None`` privately estimates the mean of these L2-clipped
+rows, projects the noisy mean into the public ball, and centers around that
+release. The Laplace mean uses a conservative L1 bound of at least
+:math:`\sqrt{d}R`, without further truncating the rows. Before eigendecomposition,
+rows are reclipped around the released center using the same radius :math:`R`.
+One third of the budget goes to the mean and two thirds to eigendecomposition.
 
-.. tab-set::
+Preserving the L2-clipped observations avoids additional L1-truncation bias,
+but the larger L1 sensitivity bound can require more Laplace noise, especially
+in higher dimensions. Neither mean strategy uniformly improves utility:
+comparisons should examine mean error and PCA subspace error across dimensions,
+public sample sizes, privacy budgets, and data distributions.
 
-    .. tab-item:: Python
-        :sync: python
+Alternatively, ``center="origin"`` subtracts the public ball origin and spends
+no budget on a mean. This uses a public reference point; it does **not** assert
+that the dataset's empirical mean equals that point. To use a publicly known
+mean, supply a domain whose ball is centered there and choose ``center="origin"``.
+Both centering modes work with either domain bounds or explicit clipping.
+Eigendecomposition divides its budget equally between eigenvalues and Bingham
+samples, or assigns it all to eigenvalues if no sampling is needed.
 
-        .. code:: pycon
+``n_components`` also accepts a variance fraction, ``'mle'``, or None;
+``whiten=True`` scales projections using the released variances.
+This implementation currently supports pure epsilon-DP.
 
-            >>> num_columns = 4
-            >>> num_rows = 10_000
-            >>> example_dataset = sample_microdata(
-            ...     num_columns=num_columns, num_rows=num_rows
-            ... )
+Fit within a Context
+--------------------
 
+A Context supplies and accounts for the privacy budget. Its release fits the
+original estimator in place, just like standalone ``fit``:
 
-Recommended API
----------------
+.. code:: pycon
 
-The Context-based workflow is the recommended public API and has an API
-akin to scikit-learn:
+    >>> context = dp.Context.compositor(
+    ...     dp.sklearn.SklearnFit(X), domain=fit_domain,
+    ...     privacy_unit=dp.unit_of(contributions=2),
+    ...     privacy_loss=dp.loss_of(epsilon=1), split_evenly_over=1,
+    ... )
+    >>> context.query().sklearn(model).release() is model
+    True
+    >>> model.components_.shape
+    (2, 4)
+    >>> context.current_privacy_loss()
+    [1.0]
 
-.. tab-set::
+These are alternative fitting routes. Running both examples on the same private
+data spends their composed privacy loss, here epsilon 2. The Context does not
+track the earlier standalone fit. Refitting replaces learned state; it does not
+reuse a previous fit's privacy budget.
 
-    .. tab-item:: Python
-        :sync: python
+Advanced composition
+--------------------
 
-        .. code:: pycon
+For lower-level composition, ``make`` constructs an OpenDP
+:class:`~opendp.mod.Measurement` without executing a fit or updating the estimator:
 
-            >>> domain = dp.numpy.array2_domain(
-            ...     size=num_rows,
-            ...     num_columns=num_columns,
-            ...     nan=False,
-            ...     T=float,
-            ... )
-            >>> context = dp.Context.compositor(
-            ...     data=dp.sklearn.SklearnFit(example_dataset),
-            ...     domain=dp.sklearn.sklearn_fit_domain(domain),
-            ...     privacy_unit=dp.unit_of(contributions=1),
-            ...     privacy_loss=dp.loss_of(epsilon=1.0),
-            ...     split_evenly_over=1,
-            ... )
-            >>> model = dp.sklearn.decomposition.PCA(
-            ...     n_components=2,
-            ...     row_norm=1.0,
-            ... )
+.. code:: pycon
 
+    >>> measurement = model.make(
+    ...     fit_domain, dp.symmetric_distance(), dp.max_divergence(),
+    ...     d_in=2, d_out=1.0,
+    ... )
+    >>> measurement.check(2, 1.0)
+    True
 
-Context fitting populates and returns the supplied estimator.
+This measurement consumes ``SklearnFit`` and releases
+:class:`~opendp.extras.sklearn.decomposition.PCARelease`. See the
+:mod:`~opendp.combinators` API for composition and
+:func:`~opendp.extras.sklearn.decomposition.make_private_pca` for the natural
+X-only framework mechanism.
 
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> model = context.query().sklearn(model).release()
-
-PCA requires an L2 norm bound. ``row_norm`` clips X internally before fitting;
-no separate preprocessing query is needed. If the input domain is already
-L2-bounded, ``row_norm`` may be omitted.
-
-Alternatively, standalone sklearn-style fitting mutates and returns the estimator:
-
-.. code-block:: python
-
-    model.fit(
-        example_dataset,
-        domain=dp.sklearn.sklearn_fit_domain(domain),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-    )
-
-Standalone fitting requires explicit privacy assumptions; each call incurs its own
-privacy loss. ``fit`` never accepts a Context query. Ordinary sklearn pipeline
-routing does not account for end-to-end privacy: per-record ``transform`` outputs
-must not be passed to a nonprivate downstream estimator as if they were releases.
-
-The fitted model can then be introspected just like Scikit-Learn’s
-non-private PCA:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> print(model.singular_values_)
-            [... ... ... ...]
-            >>> print(model.components_)
-            [[... ... ... ...]
-             [... ... ... ...]
-             [... ... ... ...]
-             [... ... ... ...]]
-
-Instead of fitting the model, you could instead retrieve the measurement
-used to make the release, just like other OpenDP APIs. This time, we’ll
-also only fit 2 components. Because of this, more budget will be
-allocated to estimating each eigenvector internally.
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-            >>> measurement = model.make(
-            ...     dp.sklearn.sklearn_fit_domain(domain),
-            ...     dp.symmetric_distance(),
-            ...     dp.max_divergence(),
-            ...     1,
-            ...     1.0,
-            ... )
-
-
-The measurement returns a :class:`~PCARelease` and does not fit or mutate
-``model``. Fitting through a query consumes the release and stores sklearn fitted
-attributes on ``model``:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> release = measurement(dp.sklearn.SklearnFit(example_dataset))
-            >>> release.components.shape
-            (2, 4)
-
-``make(...)`` makes it possible to use the calibrated release
-with other OpenDP combinators. Ordinary inference methods such as
-``transform`` and ``inverse_transform`` operate on caller-held public data.
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> print(release.singular_values)
-            [... ...]
-            >>> print(release.components)
-            [[... ... ... ...]
-             [... ... ... ...]]
-
-
-Supervised sklearn workflows
-----------------------------
-
-``SklearnFit`` carries features and optional private targets under one shared row
-adjacency. PCA's sklearn constructors handle it directly; the framework PCA
-mechanism still consumes only X. Clipping remains internal to fitting:
-
-.. code-block:: python
-
-    fit_domain = dp.sklearn.sklearn_fit_domain(
-        X=domain,
-        y=dp.vector_domain(dp.atom_domain(T=int), size=num_rows),
-    )
-    fit_context = dp.Context.compositor(
-        data=dp.sklearn.SklearnFit(X=example_dataset, y=[0] * num_rows),
-        domain=fit_domain,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
-    )
-    model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    model = fit_context.query().sklearn(model).release()
-
-    # Compose with subsequent private measurements; do not release these rows.
-    transform = model.make_transform(fit_domain)
-
-``transform`` consumes and returns ``SklearnFit``, retaining y while applying
-the released PCA projection to X. Each output
-row depends only on that input row and the released parameters, giving identity
-stability under the shared symmetric row adjacency. No generic lifting or
-projection combinator is needed. Clipping is used for fitting, not ordinary
-inference with the released projection.
-
-Please reach out on Slack if you need to a more tailored analysis: there
-are lower-level APIs for estimating *only* the eigenvalues or
-eigenvectors, or to avoid mean estimation when your data is already
-bounded.
+For preprocessing within a subsequent private query, ``model.make_transform``
+constructs a stable transformation from released parameters, retaining any y
+in ``SklearnFit``. Ordinary ``transform`` outputs on private training rows are
+**not DP releases** and must not be handed to a nonprivate downstream estimator
+as though they were. Ordinary sklearn pipelines do not account for end-to-end
+privacy.

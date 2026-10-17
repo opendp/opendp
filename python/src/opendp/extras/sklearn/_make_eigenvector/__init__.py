@@ -56,9 +56,10 @@ def make_private_eigenvector(
         # Differs from the Amin et al. in two ways:
         # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
         #   the equality is against 1 not 0
-        # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability
+        # 2. Widen (1, d) to bracket endpoint roots, including b=d for an
+        #    isotropic (or zero) matrix, and allow lower-end rounding error.
         b = dp.binary_search(
-            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d))
+            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d) + 1)
         )
         Omega = np.eye(d) + 2 * A / b
 

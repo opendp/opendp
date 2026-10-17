@@ -21,8 +21,6 @@ from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
 import typing
 from opendp.extras.numpy._make_np_clamp import (
-    make_np_clip,
-    then_np_clip,
     make_np_clamp,
     then_np_clamp,
 )  # noqa: F401
