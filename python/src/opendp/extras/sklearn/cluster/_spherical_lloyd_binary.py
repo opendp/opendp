@@ -24,7 +24,7 @@ from opendp._internal import (
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import to_then
 from opendp.extras.sklearn._domains import SklearnFitDomain, sklearn_fit_domain
-from opendp.extras.sklearn._estimator import _DPTransformer
+from opendp.extras.sklearn._estimator import DPTransformer
 from opendp.measurements import then_noise
 from opendp.mod import Domain, Measure, Measurement, Metric, Transformation
 
@@ -274,7 +274,7 @@ def make_private_spherical_kmeans(
 then_private_spherical_kmeans = to_then(make_private_spherical_kmeans)
 
 
-class SphericalKMeans(TransformerMixin, _DPTransformer):
+class SphericalKMeans(TransformerMixin, DPTransformer):
     """Private spherical k-means on boolean CSR arrays."""
 
     def __init__(
