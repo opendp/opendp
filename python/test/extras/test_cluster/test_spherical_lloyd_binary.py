@@ -303,6 +303,34 @@ def test_standalone_fit_with_explicit_domain(kind):
     assert np.isfinite(est.score(_two_blob_data()))
 
 
+@pytest.mark.parametrize("route", ["standalone", "context"])
+@pytest.mark.parametrize("with_target", [False, True])
+@pytest.mark.parametrize("empty", [False, True])
+def test_fitting_infers_sparse_sklearn_domain(route, with_target, empty):
+    X = sparse.csr_array((0, 6), dtype=bool) if empty else _two_blob_data()
+    y = np.zeros(X.shape[0], dtype=np.int32) if with_target else None
+    data = dp.sklearn.SklearnFit(X, y)
+    model = SphericalKMeans(**_PARAMS)
+    if route == "standalone":
+        assert model.fit(
+            X, y, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=0.5),
+        ) is model
+    else:
+        context = dp.Context.compositor(
+            data, privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(rho=0.5), split_evenly_over=1,
+        )
+        assert context.query().sklearn(model).release() is model
+        assert context.current_privacy_loss() == [0.5]
+    assert model.n_features_in_ == 6
+    assert model.cluster_centers_.shape == (2, 6)
+    domain = dp.domain_of(data, infer=True)
+    assert domain.cast(dp.sklearn.SklearnFitDomain).X.cast(CSRArray2Domain).max_rows is None
+    assert model.make_transform(domain, _METRIC).output_domain.member(
+        dp.sklearn.SklearnFit(model.transform(X), y)
+    )
+
+
 def test_standalone_empty_input_releases_valid_centers():
     empty = sparse.csr_array((0, 6), dtype=bool)
     est = _fit(x=empty)
