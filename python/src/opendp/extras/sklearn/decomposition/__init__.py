@@ -11,8 +11,8 @@ We suggest importing under the conventional name ``dp``:
 The members of this module will then be accessible at ``dp.sklearn.decomposition``.
 
 Differentially private scikit-learn-compatible PCA. The estimator contains only
-PCA parameters; privacy and dataset information are supplied by an OpenDP
-:class:`~opendp.context.Context` query.
+PCA parameters; privacy and dataset information are supplied to ``fit`` or by an
+OpenDP :class:`~opendp.context.Context` query.
 """
 
 from __future__ import annotations
@@ -191,7 +191,8 @@ def make_private_pca(
     """Construct a calibrated differentially private PCA measurement.
 
     The public constructor is calibrated in the units of ``output_measure``;
-    the legacy epsilon allocation is kept private to this module.
+    the legacy epsilon allocation is kept private to this module. For one-row
+    replacement in an exact-size domain, use symmetric distance with ``d_in=2``.
     """
     import opendp.prelude as dp
 
@@ -201,8 +202,8 @@ def make_private_pca(
         raise ValueError("PCA currently supports max_divergence() only")  # pragma: no cover
     if d_in <= 0 or d_out <= 0:
         raise ValueError("d_in and d_out must be positive")  # pragma: no cover
-    if d_in != 1:
-        raise ValueError("PCA currently supports d_in=1 only")
+    if d_in not in (1, 2):
+        raise ValueError("PCA currently supports d_in=1 or d_in=2")
 
     desc = input_domain.descriptor
     if not hasattr(desc, "num_columns") or not hasattr(desc, "size"):
@@ -237,9 +238,26 @@ register(make_private_pca)
 class PCA(TransformerMixin, _DPTransformer):
     """Differentially private PCA with a sklearn estimator interface.
 
-    Fits SklearnFit inputs with a public sample count in the input domain.
-    ``row_norm`` clips X internally before fitting; targets are not used.
-    Framework PCA remains X-only.
+    Fit with ``fit(X, *, domain, privacy_unit, privacy_loss)`` or
+    ``context.query().sklearn(model).release()``. Both populate and return the
+    supplied estimator. Optional targets are ignored for fitting.
+
+    ``domain`` describes the complete :class:`~opendp.extras.sklearn.SklearnFit`
+    input. It must specify a public sample count; inferred NumPy domains retain
+    dtype and feature width but leave the row count unspecified. For one-row
+    replacement in a fixed-size dataset, use symmetric distance with
+    ``privacy_unit=dp.unit_of(contributions=2)`` (one removal plus one addition).
+    Only pure epsilon-DP fitting is currently supported.
+
+    :param n_components: Number of components, a fraction of released variance
+        in (0, 1), ``'mle'``, or None for all available components.
+    :param whiten: Whether to scale projections using the released variances.
+    :param row_norm: Public L2 clipping bound applied internally to X before
+        fitting. May be omitted if the input domain already has an L2 bound.
+
+    ``components_`` and ``singular_values_`` are private releases. ``transform``
+    operates on caller-held data; transformed training rows are not DP releases.
+    Framework :func:`make_private_pca` remains X-only.
     """
 
     def __init__(self, n_components=None, *, whiten=False, row_norm=None):

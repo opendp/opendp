@@ -33,7 +33,7 @@ def _context(data, *, n_components=None, whiten=False, split=1):
     context = dp.Context.compositor(
         data=dp.sklearn.SklearnFit(data),
         domain=dp.sklearn.sklearn_fit_domain(domain),
-        privacy_unit=dp.unit_of(contributions=1),
+        privacy_unit=dp.unit_of(contributions=2),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=split,
     )
@@ -45,7 +45,8 @@ def _context(data, *, n_components=None, whiten=False, split=1):
     return context, model
 
 
-def test_pca_measurement_is_calibrated():
+@pytest.mark.parametrize("d_in", [1, 2])
+def test_pca_measurement_is_calibrated(d_in):
     from opendp.extras.sklearn.decomposition import (
         make_private_pca,
         then_private_pca,
@@ -68,26 +69,34 @@ def test_pca_measurement_is_calibrated():
         )
     with optional_dependency("scipy.linalg"):
         m_pca = space >> then_private_pca(
-            output_measure=dp.max_divergence(), d_in=1, d_out=1.0
+            output_measure=dp.max_divergence(), d_in=d_in, d_out=1.0
         )
-    assert m_pca.check(1, 1.0)
-    assert m_pca.map(1) <= 1.0
+    assert m_pca.check(d_in, 1.0)
+    assert m_pca.map(d_in) <= 1.0
 
     with optional_dependency("scipy.linalg"):
         direct_pca = make_private_pca(
-            space[0], space[1], dp.max_divergence(), d_in=1, d_out=1.0
+            space[0], space[1], dp.max_divergence(), d_in=d_in, d_out=1.0
         )
-    assert direct_pca.map(1) <= 1.0
-    with pytest.raises(ValueError, match="PCA currently supports d_in=1 only"):
+    assert direct_pca.map(d_in) <= 1.0
+    with pytest.raises(ValueError, match="PCA currently supports d_in=1 or d_in=2"):
         make_private_pca(
-            space[0], space[1], dp.max_divergence(), d_in=2, d_out=1.0
+            space[0], space[1], dp.max_divergence(), d_in=3, d_out=1.0
         )
 
     estimator = dp.sklearn.decomposition.PCA()
     measurement = estimator.make(
-        dp.sklearn.sklearn_fit_domain(space[0]), space[1], dp.max_divergence(), 1, 1.0
+        dp.sklearn.sklearn_fit_domain(space[0]), space[1], dp.max_divergence(), d_in, 1.0
     )
-    assert measurement.map(1) <= 1.0
+    assert measurement.map(d_in) <= 1.0
+
+
+def test_pca_tutorial_examples():
+    import doctest
+    from pathlib import Path
+
+    tutorial = Path(__file__).resolve().parents[3] / "docs/source/getting-started/statistical-modeling/pca.rst"
+    assert doctest.testfile(str(tutorial), module_relative=False).failed == 0
 
 
 def test_pca_center_uses_zero_origin_for_output_domain():
