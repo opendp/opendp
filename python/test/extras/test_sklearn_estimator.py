@@ -54,9 +54,17 @@ class _OffsetTransformer(TransformerMixin, _DPTransformer):
 
         check_is_fitted(self)
         offset = self.offset_.copy()
+        desc = input_domain.cast(dp.sklearn.SklearnFitDomain)
+        X_desc = desc.X.cast(dp.numpy.NPArray2Domain)
+        # Translation need not preserve norm/cardinality bounds. Declare an
+        # unrestricted float output domain with the same public shape instead.
+        output_domain = dp.sklearn.sklearn_fit_domain(
+            dp.numpy.array2_domain(T=float, size=X_desc.size, num_columns=X_desc.num_columns), desc.y,
+        )
         return _make_transformation(
-            input_domain, input_metric, input_domain, input_metric,
-            lambda data: dp.sklearn.SklearnFit(data.X + offset, data.y), lambda distance: distance,
+            input_domain, input_metric, output_domain, input_metric,
+            lambda data: dp.sklearn.SklearnFit(np.asarray(data.X + offset, dtype=float), data.y),
+            lambda distance: distance,
         )
 
 
@@ -372,6 +380,23 @@ def test_transformer_constructors_snapshot_configuration_and_fitted_parameters()
     np.testing.assert_array_equal(model.transform(data.X), data.X + [5.0, 6.0])
 
 
+def test_offset_transform_output_domain_does_not_retain_input_bounds():
+    X_domain = dp.numpy.array2_domain(T=float, norm=1, p=2, num_columns=2, cardinalities=[1, 1])
+    domain = dp.sklearn.sklearn_fit_domain(X_domain, dp.vector_domain(dp.atom_domain(T=int)))
+    model = _OffsetTransformer(np.array([2.0, 3.0]))
+    model._ingest_release(model.offset)
+    transform = model.make_transform(domain, dp.symmetric_distance())
+    data = dp.sklearn.SklearnFit(np.zeros((2, 2)), [0, 1])
+    assert domain.member(data)
+    result = transform(data)
+    assert np.linalg.norm(result.X, axis=1).min() > X_domain.descriptor.norm
+    output_X = transform.output_domain.cast(dp.sklearn.SklearnFitDomain).X.descriptor
+    assert output_X.norm is None and output_X.cardinalities is None
+    assert transform.output_domain.member(result)
+    assert result.y is data.y
+    assert transform.map(2) == 2
+
+
 def test_inherited_fit_transform_uses_dp_fit():
     X, y = np.ones((2, 2)), [0, 1]
     model = _OffsetTransformer(np.array([1.0, 2.0]))
@@ -396,6 +421,9 @@ class NoSklearn(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, NoSklearn())
 import opendp.prelude as dp
 assert dp.symmetric_distance() is not None
+dp.enable_features("contrib")
+data = dp.sklearn.SklearnFit([1, 2], [0, 1])
+assert dp.domain_of(data, infer=True).member(data)
 try:
     dp.sklearn.decomposition
 except ImportError:

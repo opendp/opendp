@@ -12,9 +12,6 @@ def make_np_clamp(
 ) -> Transformation:
     """Construct a Transformation that clamps the norm of input data.
 
-    The output has f64 elements. Clamping can increase categorical cardinalities,
-    so any input cardinality constraints are dropped from the output domain.
-
     :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
     :param norm: clamp each row to this norm. Required if data is not already bounded
@@ -43,7 +40,6 @@ def make_np_clamp(
 
     if not np.all(np.isfinite(origin)):
         raise ValueError("origin must be finite")  # pragma: no cover
-    origin = np.asarray(origin, dtype=float)
 
     def get_norm(x):
         with np.errstate(over="ignore"):
@@ -53,7 +49,7 @@ def make_np_clamp(
     def _function(arg):
         with np.errstate(over="ignore"):
             # don't mutate the input array
-            arg = np.asarray(arg, dtype=float) - origin
+            arg = arg - origin
         arg = np.nan_to_num(arg)
 
         # may have to run multiple times due to FP rounding
@@ -71,14 +67,11 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
         "nan": False,
-        "T": float,
-        "cardinalities": None,
     }
-    output_domain = dp.numpy.array2_domain(**kwargs)
     return _make_transformation(
         input_domain,
         input_metric,
-        output_domain,
+        dp.numpy.array2_domain(**kwargs),
         input_metric,
         _function,
         lambda d_in: d_in,
