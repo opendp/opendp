@@ -9,6 +9,7 @@ if find_spec("sklearn") is None:
     collect_ignore = [  # pragma: no cover
         "src/opendp/extras/sklearn/_estimator.py",
         "src/opendp/extras/sklearn/decomposition",
+        "src/opendp/extras/sklearn/linear_model",
     ]
 
 

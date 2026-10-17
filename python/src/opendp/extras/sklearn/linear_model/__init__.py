@@ -18,7 +18,7 @@ from __future__ import annotations
 from sklearn.base import RegressorMixin
 
 from opendp._lib import import_optional_dependency
-from opendp.extras.sklearn._estimator import _DPEstimator
+from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
 )
@@ -26,7 +26,7 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
 __all__ = ["TheilSenRegressor", "make_private_theil_sen"]
 
 
-class TheilSenRegressor(RegressorMixin, _DPEstimator):  # type: ignore
+class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
     The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
