@@ -69,7 +69,7 @@ from opendp.mod import (
     binary_search,
     binary_search_param,
 )
-from opendp.typing import RuntimeType
+from opendp.typing import _ELEMENTARY_TYPES, RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import Bound, LazyFrameQuery, Margin
 from dataclasses import replace
@@ -230,11 +230,28 @@ def domain_of(T, infer: bool = False) -> Domain:
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
 
     if infer:
+        from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
+
+        if isinstance(T, SklearnFit):
+            return sklearn_fit_domain(
+                domain_of(T.X, infer=True),
+                y=None if T.y is None else domain_of(T.y, infer=True),
+            )
+
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
             return _lazyframe_domain_from_schema(T.collect_schema())
+        
+        np = import_optional_dependency("numpy", raise_error=False)
+        if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
+            from opendp.extras.numpy import array2_domain
+
+            return array2_domain(
+                T=_ELEMENTARY_TYPES[T.dtype.type],
+                num_columns=T.shape[1],
+            )
 
     # normalize to a type descriptor
     if infer:
@@ -717,9 +734,6 @@ class Query(object):
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
-        if name == "sklearn":
-            return self._sklearn
-
         if name not in constructors:
             raise AttributeError(
                 f"Unrecognized constructor: '{name}'. Did you mean to '.release()' first?"
@@ -799,25 +813,30 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
-    def _sklearn(self, estimator):
+    def sklearn(self, estimator):
         """Chain an OpenDP scikit-learn-style estimator onto the current query.
 
         This is the generic bridge for every ``opendp.extras.sklearn`` estimator: the
-        estimator carries only algorithm hyperparameters, while the Context supplies
+        estimator supplies the fitting constructor, while the Context supplies
         the input domain/metric (from the current chain), the output measure, and the
         ``d_in``/``d_out`` distances.  It mirrors ``_canonical_noise``:
         ``d_in`` is the stability of the prior chain and ``d_out`` is the query's
-        privacy allowance.
+        privacy allowance. Construction is lazy: only release executes the
+        measurement and charges the Context. A successful release populates and
+        returns the supplied estimator. The measurement is constructed now and
+        must remain valid if the estimator is subsequently modified.
         """
-        from opendp.extras.sklearn import DPEstimator
+        from opendp.extras.sklearn._estimator import _DPEstimator
 
-        if not isinstance(estimator, DPEstimator):
+        if not isinstance(estimator, _DPEstimator):
             raise ValueError(
-                "sklearn(...) expects an opendp.extras.sklearn.DPEstimator instance"
+                "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
         if isinstance(self._chain, tuple):
+            input_domain, input_metric = self._chain
             d_mid = self._d_in
         elif isinstance(self._chain, Transformation):
+            input_domain, input_metric = self._chain.output_space
             d_mid = self._chain.map(self._d_in)
         elif isinstance(self._chain, PartialChain):
             raise ValueError(
@@ -828,8 +847,16 @@ class Query(object):
                 f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
-        partial = estimator.then(self._output_measure, d_mid, self._d_out)
-        return self.new_with(chain=self._chain >> partial)
+        measurement = estimator.make(input_domain, input_metric, self._output_measure, d_mid, self._d_out)
+
+        def ingest(release):
+            estimator._ingest_release(release)
+            return estimator
+
+        return self.new_with(
+            chain=measurement if isinstance(self._chain, tuple) else self._chain >> measurement,
+            wrap_release=ingest,
+        )
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
@@ -873,8 +900,10 @@ class Query(object):
             )
         else:
             chain = self._chain
-        if not allow_transformations and isinstance(chain, Transformation):
-            raise ValueError("Query is not yet a measurement or odometer.")
+        if isinstance(chain, Transformation):
+            if not allow_transformations:
+                raise ValueError("Query is not yet a measurement or odometer.")
+            return chain
         return _cast_measure(chain, self._output_measure, self._d_out)
 
     def release(
