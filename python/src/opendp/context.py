@@ -230,6 +230,14 @@ def domain_of(T, infer: bool = False) -> Domain:
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
 
     if infer:
+        from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
+
+        if isinstance(T, SklearnFit):
+            return sklearn_fit_domain(
+                domain_of(T.X, infer=True),
+                y=None if T.y is None else domain_of(T.y, infer=True),
+            )
+
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.extras.polars import _lazyframe_domain_from_schema
@@ -237,7 +245,7 @@ def domain_of(T, infer: bool = False) -> Domain:
             return _lazyframe_domain_from_schema(T.collect_schema())
         
         np = import_optional_dependency("numpy", raise_error=False)
-        if isinstance(T, np.ndarray) and T.ndim == 2:
+        if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
             from opendp.extras.numpy import array2_domain
 
             return array2_domain(
