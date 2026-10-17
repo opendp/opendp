@@ -83,8 +83,8 @@ akin to scikit-learn:
             ...     T=float,
             ... )
             >>> context = dp.Context.compositor(
-            ...     data=example_dataset,
-            ...     domain=domain,
+            ...     data=dp.sklearn.SklearnFit(example_dataset),
+            ...     domain=dp.sklearn.sklearn_fit_domain(domain),
             ...     privacy_unit=dp.unit_of(contributions=1),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=1,
@@ -95,7 +95,7 @@ akin to scikit-learn:
             ... )
 
 
-Context fitting releases a newly fitted model, leaving the supplied estimator unchanged.
+Context fitting populates and returns the supplied estimator.
 
 .. tab-set::
 
@@ -158,7 +158,7 @@ allocated to estimating each eigenvector internally.
 
             >>> model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
             >>> measurement = model.make(
-            ...     domain,
+            ...     dp.sklearn.sklearn_fit_domain(domain),
             ...     dp.symmetric_distance(),
             ...     dp.max_divergence(),
             ...     1,
@@ -177,7 +177,7 @@ attributes on ``model``:
 
         .. code:: pycon
 
-            >>> release = measurement(example_dataset)
+            >>> release = measurement(dp.sklearn.SklearnFit(example_dataset))
             >>> release.components.shape
             (2, 4)
 
@@ -202,7 +202,7 @@ with other OpenDP combinators. Ordinary inference methods such as
 Supervised sklearn workflows
 ----------------------------
 
-``SklearnFit`` carries private targets and metadata under one shared row
+``SklearnFit`` carries features and optional private targets under one shared row
 adjacency. PCA's sklearn constructors handle it directly; the framework PCA
 mechanism still consumes only X. Clipping remains internal to fitting:
 
@@ -225,8 +225,8 @@ mechanism still consumes only X. Clipping remains internal to fitting:
     # Compose with subsequent private measurements; do not release these rows.
     transform = model.make_transform(fit_domain)
 
-``transform`` consumes and returns ``SklearnFit``, retaining y (and any sample
-weights or groups) while applying the released PCA projection to X. Each output
+``transform`` consumes and returns ``SklearnFit``, retaining y while applying
+the released PCA projection to X. Each output
 row depends only on that input row and the released parameters, giving identity
 stability under the shared symmetric row adjacency. No generic lifting or
 projection combinator is needed. Clipping is used for fitting, not ordinary
