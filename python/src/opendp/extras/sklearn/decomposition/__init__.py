@@ -20,14 +20,16 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from typing import Optional, Sequence, TYPE_CHECKING
 
+from sklearn.base import TransformerMixin
+
 from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.numpy import then_np_clip
-from opendp.extras.sklearn._aligned import SklearnFitDomain, sklearn_fit_domain
-from opendp.extras.sklearn._estimator import _DPEstimator
+from opendp.extras.sklearn._domains import SklearnFitDomain, sklearn_fit_domain
+from opendp.extras.sklearn._estimator import _DPTransformer
 from opendp.extras.sklearn._make_eigendecomposition import (
     then_private_np_eigendecomposition,
 )
@@ -46,6 +48,7 @@ class PCARelease:
     components: numpy.ndarray
     n_samples: int | None = None
     n_features: int | None = None
+    n_components: int | float | str | None = None
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -57,8 +60,8 @@ class PCAEpsilons:
     mean: Optional[float]
 
 
-def _with_fit_shape(measurement: Measurement, input_domain: Domain) -> Measurement:
-    """Attach public domain shape metadata needed to ingest a PCA release."""
+def _with_fit_shape(measurement: Measurement, input_domain: Domain, n_components) -> Measurement:
+    """Attach public fit shape and frozen component selection to the release."""
     desc = input_domain.descriptor
     return measurement >> _new_pure_function(
         lambda release: PCARelease(
@@ -67,6 +70,7 @@ def _with_fit_shape(measurement: Measurement, input_domain: Domain) -> Measureme
             components=release.components,
             n_samples=desc.size,
             n_features=desc.num_columns,
+            n_components=n_components,
         )
     )
 
@@ -230,11 +234,12 @@ then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA(_DPEstimator):
+class PCA(TransformerMixin, _DPTransformer):
     """Differentially private PCA with a sklearn estimator interface.
 
-    Fits X-only or SklearnFit queries. ``row_norm`` clips X internally before
-    fitting; targets and metadata are not used. Framework PCA remains X-only.
+    Fits SklearnFit inputs with a public sample count in the input domain.
+    ``row_norm`` clips X internally before fitting; targets are not used.
+    Framework PCA remains X-only.
     """
 
     def __init__(self, n_components=None, *, whiten=False, row_norm=None):
@@ -251,8 +256,8 @@ class PCA(_DPEstimator):
         d_out,
     ) -> Measurement:
         self._preflight_sklearn()
-        fit_desc = input_domain.descriptor
-        X_domain = fit_desc.X if isinstance(fit_desc, SklearnFitDomain) else input_domain
+        fit_desc = input_domain.cast(SklearnFitDomain)
+        X_domain = fit_desc.X
         desc = X_domain.descriptor
         if getattr(desc, "size", None) is None or getattr(desc, "num_columns", None) is None:
             raise ValueError("PCA requires known input-domain size and num_columns")
@@ -271,10 +276,8 @@ class PCA(_DPEstimator):
             space = space >> then_np_clip(norm=self.row_norm, p=2)
         m_X = _with_fit_shape(
             space >> then_private_pca(output_measure, d_in, d_out, num_components=num_components),
-            X_domain,
+            X_domain, self.n_components,
         )
-        if not isinstance(fit_desc, SklearnFitDomain):
-            return m_X
         # Removing one complete sklearn row removes at most one X row. Thus
         # this estimator-specific wrapper has the same privacy map as m_X.
         return _make_measurement(
@@ -324,9 +327,9 @@ class PCA(_DPEstimator):
         if n_samples <= 1:
             raise ValueError("PCA requires at least two samples")
 
-        mean = np.asarray(release.mean)
-        singular_values = np.asarray(release.singular_values)
-        components = np.asarray(release.components)
+        mean = np.array(release.mean, copy=True)
+        singular_values = np.array(release.singular_values, copy=True)
+        components = np.array(release.components, copy=True)
         U, components = svd_flip(components.T, components)
         del U
 
@@ -337,7 +340,7 @@ class PCA(_DPEstimator):
             if total_variance > 0 else np.zeros_like(explained_variance)
         )
 
-        n_components = self.n_components
+        n_components = release.n_components
         if n_components is None:
             n_components = min(n_samples, n_features)
         elif n_components == "mle":
@@ -402,7 +405,7 @@ class PCA(_DPEstimator):
     def make_transform(self, input_domain=None, input_metric=None):
         """Construct a transformation from the released PCA state.
 
-        A SklearnFit input domain retains targets, weights, and groups unchanged.
+        A SklearnFit input domain retains targets unchanged.
         Each output row depends only on that input X row and released parameters,
         so the complete sklearn rows have identity symmetric-distance stability.
         This transformation does not release private training rows.
@@ -412,14 +415,13 @@ class PCA(_DPEstimator):
         np = import_optional_dependency("numpy")
         self._check_is_fitted()
         if input_domain is None:
-            input_domain = dp.numpy.array2_domain(T=float, num_columns=self.n_features_in_)
+            input_domain = sklearn_fit_domain(dp.numpy.array2_domain(T=float, num_columns=self.n_features_in_))
         if input_metric is None:
             input_metric = dp.symmetric_distance()
         if input_metric != dp.symmetric_distance():
             raise ValueError("PCA transform requires symmetric_distance()")
-        fit_desc = input_domain.descriptor
-        X_domain = fit_desc.X if isinstance(fit_desc, SklearnFitDomain) else input_domain
-        desc = X_domain.cast(dp.numpy.NPArray2Domain)
+        fit_desc = input_domain.cast(SklearnFitDomain)
+        desc = fit_desc.X.cast(dp.numpy.NPArray2Domain)
         if desc.num_columns != self.n_features_in_:
             raise ValueError("input_domain must match the fitted number of features")
 
@@ -437,13 +439,8 @@ class PCA(_DPEstimator):
         output_domain = dp.numpy.array2_domain(
             T=float, size=desc.size, num_columns=self.n_components_,
         )
-        if isinstance(fit_desc, SklearnFitDomain):
-            output_domain = sklearn_fit_domain(
-                output_domain, fit_desc.y, fit_desc.sample_weight, fit_desc.groups,
-            )
-            function = lambda data: replace(data, X=transform(data.X))
-        else:
-            function = transform
+        output_domain = sklearn_fit_domain(output_domain, fit_desc.y)
+        function = lambda data: replace(data, X=transform(data.X))
         return _make_transformation(
             input_domain, input_metric, output_domain, input_metric,
             function, lambda distance: distance,
@@ -482,12 +479,6 @@ class PCA(_DPEstimator):
         np = import_optional_dependency("numpy")
         self._check_is_fitted()
         return np.linalg.inv(self.get_covariance())
-
-    def fit_transform(self, X, y=None, **fit_params):
-        raise NotImplementedError(
-            "fit_transform would release transformed private training records; "
-            "fit through an OpenDP Context and call transform on public data."
-        )
 
 
 def _smaller(v):
