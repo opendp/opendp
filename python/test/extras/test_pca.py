@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
@@ -20,7 +22,7 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-def _context(data, *, n_components=None, whiten=False):
+def _context(data, *, n_components=None, whiten=False, split=1):
     domain = dp.numpy.array2_domain(
         norm=None,
         size=len(data),
@@ -29,11 +31,11 @@ def _context(data, *, n_components=None, whiten=False):
         T=float,
     )
     context = dp.Context.compositor(
-        data=data,
-        domain=domain,
+        data=dp.sklearn.SklearnFit(data),
+        domain=dp.sklearn.sklearn_fit_domain(domain),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
+        split_evenly_over=split,
     )
     model = dp.sklearn.decomposition.PCA(
         n_components=n_components,
@@ -83,7 +85,7 @@ def test_pca_measurement_is_calibrated():
 
     estimator = dp.sklearn.decomposition.PCA()
     measurement = estimator.make(
-        space[0], space[1], dp.max_divergence(), 1, 1.0
+        dp.sklearn.sklearn_fit_domain(space[0]), space[1], dp.max_divergence(), 1, 1.0
     )
     assert measurement.map(1) <= 1.0
 
@@ -125,7 +127,7 @@ def _standalone_pca_query():
         T=float,
     )
     return Query(
-        chain=(domain, dp.symmetric_distance()),
+        chain=(dp.sklearn.sklearn_fit_domain(domain), dp.symmetric_distance()),
         output_measure=dp.max_divergence(),
         d_in=1,
         d_out=1.0,
@@ -138,7 +140,7 @@ def test_pca_requires_known_domain_shape():
     domain = dp.numpy.array2_domain(num_columns=4, nan=False, T=float)
     with pytest.raises(ValueError, match="known input-domain size"):
         dp.sklearn.decomposition.PCA().make(
-            domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
+            dp.sklearn.sklearn_fit_domain(domain), dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
         )
 
 
@@ -171,15 +173,18 @@ def test_pca_make_clips_X_internally():
     np = pytest.importorskip("numpy")
     domain = dp.numpy.array2_domain(size=10, num_columns=4, nan=False, T=float)
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
-    measurement = model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
-    assert measurement.input_domain == domain
+    fit_domain = dp.sklearn.sklearn_fit_domain(domain)
+    measurement = model.make(fit_domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
+    assert measurement.input_domain == fit_domain
     assert measurement.map(1) <= 1.0
     data = np.full((10, 4), 100.0)
-    release = measurement(data)
+    model.set_params(n_components=3, row_norm=2.0)
+    release = measurement(dp.sklearn.SklearnFit(data))
     assert release.components.shape == (2, 4)
+    model._ingest_release(release)
+    assert model.n_components_ == 2
     assert release.n_samples == 10
     np.testing.assert_array_equal(data, np.full((10, 4), 100.0))
-    assert not hasattr(model, "components_")
 
 
 def test_pca_release_dimensionality_matches_component_mode():
@@ -204,10 +209,10 @@ def test_pca_release_dimensionality_matches_component_mode():
         )
         initial_state = estimator.__dict__.copy()
         measurement = estimator.make(
-            domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
+            dp.sklearn.sklearn_fit_domain(domain), dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
         )
         assert estimator.__dict__ == initial_state
-        release = measurement(data)
+        release = measurement(dp.sklearn.SklearnFit(data))
         assert estimator.__dict__ == initial_state
         assert release.components.shape == (expected_rows, 4)
         assert release.n_samples == 20
@@ -226,7 +231,7 @@ def test_pca_dependency_preflight_happens_before_release(monkeypatch):
         T=float,
     )
     query = Query(
-        chain=(domain, dp.symmetric_distance()),
+        chain=(dp.sklearn.sklearn_fit_domain(domain), dp.symmetric_distance()),
         output_measure=dp.max_divergence(),
         d_in=1,
         d_out=1.0,
@@ -276,7 +281,7 @@ def test_pca_fitted_methods_and_error_paths():
         estimator.get_covariance()
     with pytest.raises(ValueError, match="not fitted"):
         estimator.get_precision()
-    with pytest.raises(NotImplementedError, match="fit_transform would release"):
+    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         estimator.fit_transform(public)
 
     with pytest.raises(TypeError, match="expected a PCARelease"):
@@ -288,6 +293,7 @@ def test_pca_fitted_methods_and_error_paths():
             components=np.eye(3),
             n_samples=10,
             n_features=3,
+            n_components=2,
         )
     )
     assert estimator.components_.shape == (2, 3)
@@ -306,29 +312,30 @@ def test_pca_ingest_release_error_paths():
     pytest.importorskip("sklearn")
     from opendp.extras.sklearn.decomposition import PCA, PCARelease
 
-    def release(*, n_samples, n_features=3):
+    def release(*, n_samples, n_features=3, n_components=None):
         return PCARelease(
             mean=np.zeros(3),
             singular_values=np.ones(3),
             components=np.eye(3),
             n_samples=n_samples,
             n_features=n_features,
+            n_components=n_components,
         )
 
     with pytest.raises(ValueError, match="at least two samples"):
         PCA()._ingest_release(release(n_samples=1))
 
     with pytest.raises(ValueError, match="n_samples >= n_features"):
-        PCA(n_components="mle")._ingest_release(release(n_samples=2))
+        PCA()._ingest_release(release(n_samples=2, n_components="mle"))
 
     with pytest.raises(ValueError, match=r"in \(0, 1\)"):
-        PCA(n_components=1.0)._ingest_release(release(n_samples=10))
+        PCA()._ingest_release(release(n_samples=10, n_components=1.0))
 
     with pytest.raises(ValueError, match="between 1"):
-        PCA(n_components=0)._ingest_release(release(n_samples=10))
+        PCA()._ingest_release(release(n_samples=10, n_components=0))
 
     with pytest.raises(ValueError, match="None, an integer"):
-        PCA(n_components="invalid")._ingest_release(release(n_samples=10))
+        PCA()._ingest_release(release(n_samples=10, n_components="invalid"))
 
     short_release = PCARelease(
         mean=np.zeros(3),
@@ -348,7 +355,7 @@ def test_pca_ingest_release_error_paths():
         n_features=3,
     )
     for estimator in (PCA(n_components="mle"), PCA(n_components=0.8)):
-        estimator._ingest_release(valid_release)
+        estimator._ingest_release(replace(valid_release, n_components=estimator.n_components))
         assert estimator.n_components_ >= 1
 
 
@@ -360,7 +367,7 @@ def test_pca_zero_released_variance(n_components, expected):
     model = dp.sklearn.decomposition.PCA(n_components=n_components, whiten=True)
     model._ingest_release(PCARelease(
         mean=np.zeros(2), singular_values=np.zeros(2),
-        components=np.eye(2), n_samples=10, n_features=2,
+        components=np.eye(2), n_samples=10, n_features=2, n_components=n_components,
     ))
     assert model.n_components_ == expected
     np.testing.assert_array_equal(model.explained_variance_ratio_, np.zeros(expected))
@@ -397,6 +404,10 @@ def test_pca_standalone_array_fit(explicit_domain):
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1])
     ) if explicit_domain else None
+    if domain is None:
+        with pytest.raises(ValueError, match="known input-domain size"):
+            model.fit(data, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1))
+        return
     assert model.fit(
         data, domain=domain, privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
@@ -434,7 +445,7 @@ def test_pca_fitted_model_pickle_preserves_inference():
     np.testing.assert_allclose(restored.get_covariance(), fitted.get_covariance())
     assert clone(fitted).get_params() == model.get_params()
     assert not hasattr(clone(fitted), "components_")
-    assert not hasattr(model, "components_")
+    assert fitted is model
 
 
 def test_pca_context_fit_and_methods():
@@ -446,8 +457,7 @@ def test_pca_context_fit_and_methods():
     assert not hasattr(model, "components_")
     template = model
     model = context.query().sklearn(template).release()
-    assert model is not template
-    assert not hasattr(template, "components_")
+    assert model is template
     assert model.components_.shape == (2, 4)
     assert model.n_features_in_ == 4
 
@@ -455,8 +465,66 @@ def test_pca_context_fit_and_methods():
     transformed = model.transform(public)
     assert transformed.shape == (3, 2)
     assert model.inverse_transform(transformed).shape == public.shape
-    with pytest.raises(NotImplementedError, match="fit_transform would release"):
+    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
         model.fit_transform(public)
+
+
+@pytest.mark.parametrize("route", ["standalone", "context"])
+def test_pca_refitting_replaces_state_and_freezes_old_transform(route):
+    np = pytest.importorskip("numpy")
+    data = _legacy_data()
+    context, model = _context(data, n_components=1, whiten=True, split=2)
+    domain = context.accountant.input_domain
+
+    def fit():
+        if route == "context":
+            return context.query().sklearn(model).release()
+        return model.fit(data, domain=domain, privacy_unit=dp.unit_of(contributions=1),
+                         privacy_loss=dp.loss_of(epsilon=1))
+
+    assert fit() is model
+    transform = model.make_transform(domain)
+    before = transform(dp.sklearn.SklearnFit(data)).X
+    model.mean_[:] = 99
+    model.components_[:] = 0
+    model.explained_variance_[:] = 1
+    model.set_params(n_components=2, whiten=False)
+    assert fit() is model
+    assert model.n_components_ == 2
+    assert model.components_.shape == (2, 4)
+    np.testing.assert_allclose(transform(dp.sklearn.SklearnFit(data)).X, before)
+    if route == "context":
+        assert context.current_privacy_loss() == [0.5, 0.5]
+
+
+@pytest.mark.parametrize("n_components, expected", [(None, 4), (2, 2)])
+def test_pca_query_snapshots_component_selection(n_components, expected):
+    context, model = _context(_legacy_data(), n_components=n_components)
+    query = context.query().sklearn(model)
+    query.resolve()
+    assert not hasattr(model, "components_")
+    assert context.current_privacy_loss() == []
+    model.set_params(n_components=3, row_norm=2.0)
+    assert query.release() is model
+    assert model.n_components_ == expected
+    assert context.current_privacy_loss() == [1.0]
+    state = model.components_.copy()
+    with pytest.raises(dp.OpenDPException, match="out of queries"):
+        query.release()
+    np = pytest.importorskip("numpy")
+    np.testing.assert_array_equal(model.components_, state)
+
+
+def test_pca_inherited_fit_transform_uses_private_fit():
+    np = pytest.importorskip("numpy")
+    data = _legacy_data()
+    context, model = _context(data, n_components=2)
+    result = model.fit_transform(
+        data, domain=context.accountant.input_domain,
+        privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1),
+    )
+    np.testing.assert_allclose(result, model.transform(data))
+    assert result.shape == (10, 2)
 
 
 def test_pca_parameter_introspection_and_component_modes():
@@ -479,7 +547,8 @@ def test_pca_fit_and_query_sklearn_release_are_equivalent():
     release_context, release_model = _context(data)
 
     assert fit_model.fit(
-        data, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1.0),
+        data, domain=release_context.accountant.input_domain,
+        privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1.0),
     ) is fit_model
 
     release_query = release_context.query()
@@ -487,8 +556,7 @@ def test_pca_fit_and_query_sklearn_release_are_equivalent():
     fitted_query = release_query.sklearn(release_model)
     assert release_model.__dict__ == initial_state
     fitted_model = fitted_query.release()
-    assert fitted_model is not release_model
-    assert not hasattr(release_model, "components_")
+    assert fitted_model is release_model
     assert fit_model.mean_.shape == fitted_model.mean_.shape == (3,)
     assert fit_model.components_.shape == fitted_model.components_.shape
 
@@ -497,7 +565,11 @@ def test_pca_standalone_accepts_private_unused_targets():
     model = dp.sklearn.decomposition.PCA(n_components=2, row_norm=1.0)
     data = _legacy_data()
     assert model.fit(
-        data, [0] * len(data), privacy_unit=dp.unit_of(contributions=1),
+        data, [0] * len(data),
+        domain=dp.sklearn.sklearn_fit_domain(
+            dp.numpy.array2_domain(T=float, size=len(data), num_columns=data.shape[1]),
+            dp.vector_domain(dp.atom_domain(T=int)),
+        ), privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
     ) is model
     assert model.components_.shape == (2, data.shape[1])
@@ -534,9 +606,8 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     size, n_features = data.shape
     X_domain = dp.numpy.array2_domain(T=float, size=size, num_columns=n_features)
     y_domain = dp.vector_domain(dp.atom_domain(T=int), size=size)
-    weight_domain = dp.vector_domain(dp.atom_domain(T=float), size=size)
-    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain, weight_domain, y_domain)
-    aligned = dp.sklearn.SklearnFit(data.copy(), list(range(size)), [0.5] * size, list(range(size)))
+    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain)
+    aligned = dp.sklearn.SklearnFit(data.copy(), list(range(size)))
     context = dp.Context.compositor(
         aligned, dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0),
         domain=domain, split_evenly_over=1,
@@ -546,7 +617,7 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     model = dp.sklearn.decomposition.PCA(n_components=2, whiten=whiten, row_norm=1.0)
     if use_fit:
         assert model.fit(
-            aligned.X, aligned.y, sample_weight=aligned.sample_weight, groups=aligned.groups,
+            aligned.X, aligned.y,
             domain=domain, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1.0),
         ) is model
     else:
@@ -554,14 +625,12 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
         assert fitted_query.resolve().map(1) <= 1.0
         template = model
         model = fitted_query.release()
-        assert model is not template
-        assert not hasattr(template, "components_")
+        assert model is template
     assert query._chain is original_chain
     assert model.n_features_in_ == n_features
 
-    # The sklearn constructor also retains support for natural X-only inputs.
-    measurement = model.make(X_domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
-    assert measurement.input_domain == X_domain
+    measurement = model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
+    assert measurement.input_domain == domain
 
     transform = model.make_transform(domain)
     result = transform(aligned)
@@ -569,8 +638,7 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     assert result.X.shape == (size, 2)
     assert transform.output_domain.member(result)
     assert transform.map(1) == 1
-    for name in ("y", "sample_weight", "groups"):
-        assert getattr(result, name) is getattr(aligned, name)
+    assert result.y is aligned.y
     np.testing.assert_array_equal(aligned.X, data)
 
     # Once constructed, the transformation depends on the released snapshot,
@@ -588,15 +656,15 @@ def test_pca_make_transform_validation_and_empty_data():
         model.make_transform()
     model._ingest_release(PCARelease(
         mean=np.zeros(2), singular_values=np.array([2.0, 1.0]),
-        components=np.eye(2), n_samples=10, n_features=2,
+        components=np.eye(2), n_samples=10, n_features=2, n_components=1,
     ))
     transformation = model.make_transform()
     assert transformation.map(1) == 1
-    assert transformation(np.zeros((0, 2))).shape == (0, 1)
+    assert transformation(dp.sklearn.SklearnFit(np.zeros((0, 2)))).X.shape == (0, 1)
     with pytest.raises(ValueError, match="symmetric_distance"):
         model.make_transform(input_metric=dp.change_one_distance())
     with pytest.raises(ValueError, match="number of features"):
-        model.make_transform(dp.numpy.array2_domain(T=float, num_columns=3))
+        model.make_transform(dp.sklearn.sklearn_fit_domain(dp.numpy.array2_domain(T=float, num_columns=3)))
 
 
 @pytest.mark.parametrize("supervised", [False, True])
@@ -617,7 +685,7 @@ def test_pca_sklearn_transform_composes_with_next_private_estimator(supervised):
     second_query = context.query().new_with(chain=transform)
     second = dp.sklearn.decomposition.PCA(n_components=1, row_norm=1.0)
     fitted = second_query.sklearn(second).release()
-    assert not hasattr(second, "components_")
+    assert fitted is second
     assert fitted.n_features_in_ == 2
     assert fitted.components_.shape == (1, 2)
     assert transform(inputs).y is inputs.y
@@ -635,12 +703,11 @@ def test_pca_sklearn_transform_leaves_retained_complete_rows_unchanged():
     ))
     X_domain = dp.numpy.array2_domain(T=float, num_columns=2)
     y_domain = dp.vector_domain(dp.atom_domain(T=int))
-    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain, groups=y_domain)
+    domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain)
     transform = model.make_transform(domain)
-    before = dp.sklearn.SklearnFit(np.array([[1.0, 2.0]]), [0], groups=[10])
-    after = dp.sklearn.SklearnFit(np.array([[1.0, 2.0], [100.0, 200.0]]), [0, 1], groups=[10, 11])
+    before = dp.sklearn.SklearnFit(np.array([[1.0, 2.0]]), [0])
+    after = dp.sklearn.SklearnFit(np.array([[1.0, 2.0], [100.0, 200.0]]), [0, 1])
     out_before, out_after = transform(before), transform(after)
     np.testing.assert_array_equal(out_before.X, out_after.X[:1])
     assert out_before.y == out_after.y[:1]
-    assert out_before.groups == out_after.groups[:1]
     assert transform.map(1) == 1
