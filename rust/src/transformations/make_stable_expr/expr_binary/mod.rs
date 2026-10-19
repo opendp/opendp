@@ -103,10 +103,10 @@ where
     let field = Field::new(expr_output_name(&expr)?, out_dtype.clone());
     let mut series_domain = SeriesDomain::new_from_field(field)?;
 
-    // division by zero may introduce null values
+    // division or remainder by zero may introduce null values
     series_domain.nullable = left_series.nullable
         || right_series.nullable
-        || matches!(op, FloorDivide | TrueDivide | Divide);
+        || matches!(op, FloorDivide | TrueDivide | Divide | Modulus);
 
     // these ops eliminate all nulls, regardless of the input
     if matches!(op, EqValidity | NotEqValidity) {

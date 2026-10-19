@@ -464,6 +464,16 @@ fn test_rem() -> Fallible<()> {
         ]
     )?;
     test_binary!(get_i32_data, rem, [None, Some(0), None])?;
+
+    // A zero divisor can produce null even if neither input column is nullable.
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<i32>::default()),
+        SeriesDomain::new("R", AtomDomain::<i32>::default()),
+    ])?;
+    let t_rem = col("L")
+        .rem(col("R"))
+        .make_stable(lf_domain.row_by_row(), FrameDistance(SymmetricDistance))?;
+    assert!(t_rem.output_domain.column.nullable);
     Ok(())
 }
 
