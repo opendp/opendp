@@ -1,6 +1,7 @@
 from pathlib import Path
 from subprocess import check_output
 import re
+import fileinput
 
 
 def get_commits(path=None):
@@ -9,13 +10,22 @@ def get_commits(path=None):
         cmd.append(path.absolute())
     output = check_output(cmd, text=True)
     git_log = output.splitlines()
-    return set(line.split(" ")[0] for line in git_log)
+    return [line.split(" ")[0] for line in git_log]
 
 
 ignores = {
     "a695b8c99",  # Chuck's whitespace change
     "5d05f55ee",  # Mike's template change
 }
+
+
+def process(line: str, replacement: str):
+    updated = re.sub(
+        r"\\asOfCommit\{([^}]+)\}\{([^}]+)\}",
+        rf"\\asOfCommit{{\1}}{{{replacement}}}",
+        line,
+    )
+    print(updated, end="")
 
 
 def main():
@@ -34,6 +44,11 @@ def main():
                     if path_commit in ignores:
                         continue
                     print(f"\tupdate to {path_commit}")
+                    with fileinput.input(
+                        files=path, encoding="utf-8", inplace=True
+                    ) as f:
+                        for line in f:
+                            process(line, path_commit)
                     break
 
 
