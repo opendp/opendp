@@ -1,7 +1,3 @@
-//! Invariants tested
-//! 1. `d_in` comes from the odometer constructor
-//! 2. sequential measures lock earlier interactive children
-
 use std::any::Any;
 
 use crate::{
