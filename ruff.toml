@@ -2,6 +2,9 @@
 # but there is also python code outside the python directory,
 # so this config belongs at the top level.
 
+# Keep in sync with python_requires in python/setup.cfg.
+target-version = "py311"
+
 exclude = [
     ".git",
     # suggested virtualenv for python/

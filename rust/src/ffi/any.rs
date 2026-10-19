@@ -281,14 +281,12 @@ where
 }
 
 pub struct QueryOdometerInvokeType;
-pub struct QueryOdometerMapType;
 
 impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>> for AnyOdometer {
     fn from(
         val: Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>,
     ) -> AnyOdometer {
         let function = val.function.clone();
-        let QI = val.input_metric.distance_type.clone();
 
         Odometer::new(
             val.input_domain.clone(),
@@ -296,8 +294,6 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
             val.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyOdometerQuery, AnyOdometerAnswer>> {
-                    let QI = QI.clone();
-
                     // Don't wrap inner queryable.
                     // Types of inner queryable don't align with filter.
                     let wrapper = WRAPPER.take();
@@ -312,8 +308,8 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
                             let answer = inner_qbl.invoke(meas.clone())?;
                             Ok(Answer::External(OdometerAnswer::Invoke(answer)))
                         }
-                        Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
-                            let answer = inner_qbl.privacy_loss(d_in.clone())?;
+                        Query::External(OdometerQuery::PrivacyLoss) => {
+                            let answer = inner_qbl.privacy_loss()?;
                             Ok(Answer::External(OdometerAnswer::PrivacyLoss(answer)))
                         }
                         Query::Internal(query) => {
@@ -322,9 +318,6 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
                             }
                             if query.downcast_ref::<QueryOdometerInvokeType>().is_some() {
                                 return Ok(Answer::internal(Type::of::<AnyMeasurement>()));
-                            }
-                            if query.downcast_ref::<QueryOdometerMapType>().is_some() {
-                                return Ok(Answer::internal(QI.clone()));
                             }
                             let Answer::Internal(answer) =
                                 inner_qbl.eval_query(Query::Internal(query))?
@@ -339,6 +332,7 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
                     })
                 },
             ),
+            val.d_in.clone(),
         )
         .expect("AnyDomain is not checked for compatibility")
     }
@@ -721,7 +715,7 @@ pub use partials::*;
 /// An Odometer with all generic types filled by Any types. This is the type of Odometers
 /// passed back and forth over FFI.
 pub type AnyOdometer = Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyObject, AnyObject>;
-pub type AnyOdometerQueryable = OdometerQueryable<AnyObject, AnyObject, AnyObject, AnyObject>;
+pub type AnyOdometerQueryable = OdometerQueryable<AnyObject, AnyObject, AnyObject>;
 
 impl From<AnyOdometerQueryable> for AnyObject {
     fn from(value: AnyOdometerQueryable) -> Self {

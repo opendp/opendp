@@ -129,7 +129,7 @@ test_that("make_sequential_composition", {
 test_that("test_fully_adaptive_composition", {
   max_influence <- 1L
   space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())
-  o_sc <- space |> then_fully_adaptive_composition(max_divergence())
+  o_sc <- space |> then_fully_adaptive_composition(max_divergence(), d_in = max_influence)
 
   expect_equal(toString(o_sc), paste0(
     "Odometer(\n",
@@ -140,13 +140,13 @@ test_that("test_fully_adaptive_composition", {
   ))
 
   oqbl_sc <- o_sc(arg = rep(1L, 200))
-  expect_equal(oqbl_sc(d_in = max_influence), 0.0)
+  expect_equal(oqbl_sc("privacy_loss"), 0.0)
 
   m_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum() |> then_laplace(100.)
 
   # evaluating
   expect_type(oqbl_sc(query = m_sum), "integer")
-  expect_equal(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence))
+  expect_equal(oqbl_sc("privacy_loss"), m_sum(d_in = max_influence))
 
   m_lap <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 200.)
   t_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum()
@@ -157,7 +157,7 @@ test_that("test_fully_adaptive_composition", {
   )
   qbl_summed <- oqbl_sc(query = m_sum_compositor)
   # it's slightly larger, checking greater than will do
-  d_current <- oqbl_sc(d_in = max_influence)
+  d_current <- oqbl_sc("privacy_loss")
   expect_gt(d_current, m_sum(d_in = max_influence) + 0.2 + 0.09)
   expect_lt(d_current, m_sum(d_in = max_influence) + 0.2 + 0.09 + 0.0001)
 
@@ -166,7 +166,7 @@ test_that("test_fully_adaptive_composition", {
   expect_type(oqbl_sc(query = m_sum), "integer") # root release
 
   # it's slightly larger, checking greater than will do
-  expect_gt(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence) * 2 + 0.2 + 0.09)
+  expect_gt(oqbl_sc("privacy_loss"), m_sum(d_in = max_influence) * 2 + 0.2 + 0.09)
 })
 
 
@@ -174,7 +174,8 @@ test_that("test_odometer_supporting_elements", {
   sc_odo <- make_fully_adaptive_composition(
     vector_domain(atom_domain(.T = "i32")),
     symmetric_distance(),
-    max_divergence()
+    max_divergence(),
+    1L
   )
 
   expect_s3_class(sc_odo(arg = 1L), "odometer_queryable")

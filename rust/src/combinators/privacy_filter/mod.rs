@@ -21,10 +21,6 @@ mod ffi;
     features("contrib"),
     arguments(
         odometer(rust_type = b"null"),
-        d_in(
-            c_type = "AnyObject *",
-            rust_type = "$get_distance_type(odometer_input_metric(odometer))"
-        ),
         d_out(
             c_type = "AnyObject *",
             rust_type = "$get_distance_type(odometer_output_measure(odometer))"
@@ -49,7 +45,6 @@ mod ffi;
 ///
 /// # Arguments
 /// * `odometer` - A privacy odometer
-/// * `d_in` - Upper bound on the distance between adjacent datasets
 /// * `d_out` - Upper bound on the privacy loss
 pub fn make_privacy_filter<
     DI: 'static + Domain,
@@ -59,15 +54,15 @@ pub fn make_privacy_filter<
     A: 'static,
 >(
     odometer: Odometer<DI, MI, MO, Q, A>,
-    d_in: MI::Distance,
     d_out: MO::Distance,
-) -> Fallible<Measurement<DI, MI, MO, OdometerQueryable<Q, A, MI::Distance, MO::Distance>>>
+) -> Fallible<Measurement<DI, MI, MO, OdometerQueryable<Q, A, MO::Distance>>>
 where
     MI::Distance: Clone + ProductOrd,
     MO::Distance: Clone + ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
-    let continuation_rule = new_continuation_rule::<Q, A, _, _>(d_in.clone(), d_out.clone());
+    let continuation_rule = new_continuation_rule::<Q, A, _>(d_out.clone());
+    let d_in = odometer.d_in.clone();
     Measurement::new(
         odometer.input_domain.clone(),
         odometer.input_metric.clone(),
@@ -93,15 +88,13 @@ where
 /// Returns a function that wraps a queryable.
 /// The wrapped queryable refuses to release any query
 /// that would cause the privacy loss to exceed `d_out`.
-fn new_continuation_rule<Q, A, QB, AB>(d_in: QB, d_out: AB) -> Wrapper
+fn new_continuation_rule<Q, A, AB>(d_out: AB) -> Wrapper
 where
     Q: 'static,
     A: 'static,
-    QB: 'static + Clone,
     AB: 'static + Clone + Debug + ProductOrd,
 {
     Wrapper::new(move |queryable| {
-        let d_in = d_in.clone();
         let d_out = d_out.clone();
 
         let mut state = Some(queryable);
@@ -117,7 +110,7 @@ where
             let answer = queryable.eval_query(query)?;
 
             let OdometerAnswer::<A, AB>::PrivacyLoss(pending_d_out) =
-                queryable.eval_poly(&OdometerQuery::<Q, QB>::PrivacyLoss(d_in.clone()))?
+                queryable.eval_poly(&OdometerQuery::<Q>::PrivacyLoss)?
             else {
                 return fallible!(FailedFunction, "expected privacy loss");
             };

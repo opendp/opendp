@@ -20,7 +20,10 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
+    ),
     generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
 )]
 /// Construct an odometer that can spawn a compositor queryable.
@@ -39,6 +42,7 @@ mod ffi;
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
 /// * `output_measure` - how privacy is measured
+/// * `d_in` - maximum distance between adjacent input datasets
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -48,13 +52,18 @@ pub fn make_fully_adaptive_composition<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: MI::Distance,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
+    MI::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
     output_measure.composability(Adaptivity::FullyAdaptive)?;
+
+    // the privacy unit recorded on the odometer
+    let d_in_constructor = d_in.clone();
 
     Odometer::new(
         input_domain.clone(),
@@ -65,9 +74,11 @@ where
                 input_domain.clone(),
                 input_metric.clone(),
                 output_measure.clone(),
+                d_in.clone(),
                 arg.clone(),
             )
         }),
+        d_in_constructor,
     )
 }
 
@@ -83,8 +94,9 @@ fn new_fully_adaptive_composition_queryable<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: MI::Distance,
     data: DI::Carrier,
-) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
+) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MO::Distance>>
 where
     (DI, MI): MetricSpace,
 {
@@ -96,13 +108,8 @@ where
     let mut privacy_maps: Vec<PrivacyMap<MI, MO>> = vec![];
 
     Queryable::new(
-        move |self_: &OdometerQueryable<
-            Measurement<DI, MI, MO, TO>,
-            TO,
-            MI::Distance,
-            MO::Distance,
-        >,
-              query: Query<OdometerQuery<Measurement<DI, MI, MO, TO>, _>>| {
+        move |self_: &OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MO::Distance>,
+              query: Query<OdometerQuery<Measurement<DI, MI, MO, TO>>>| {
             // this queryable and wrapped children communicate via an AskPermission query
             // defined here, where no-one else can access the type
             struct AskPermission(usize);
@@ -125,7 +132,7 @@ where
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
@@ -145,10 +152,10 @@ where
                     // done!
                     Answer::External(OdometerAnswer::Invoke(answer))
                 }
-                // evaluate external map query
-                Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                // evaluate external privacy loss query
+                Query::External(OdometerQuery::PrivacyLoss) => {
                     let d_mids = (privacy_maps.iter())
-                        .map(|m| m.eval(d_in))
+                        .map(|m| m.eval(&d_in))
                         .collect::<Fallible<_>>()?;
 
                     let d_out = output_measure.compose(d_mids)?;
