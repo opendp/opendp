@@ -44,8 +44,6 @@ from typing import Any, Optional, Sequence, TypeAlias, cast, TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
-_ROUND_LOG: list = []
-
 
 @dataclass(kw_only=True, frozen=True)
 class AIM(Algorithm):
@@ -161,13 +159,13 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of MarkovRandomField or GemPlusModel
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
         from opendp.extras.mbi._gem import GemPlusModel
         if not isinstance(model, (MarkovRandomField, GemPlusModel)):
-            raise ValueError("model must be a MarkovRandomField")
+            raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
@@ -303,7 +301,6 @@ def _make_aim_marginal(
 
         all_marginals = marginals.add(new_marginal)
 
-
         if isinstance(model, MarkovRandomField):
             new_model = algorithm.estimator(
                 model.domain, all_marginals.flatten(), potentials=model.potentials
@@ -323,7 +320,6 @@ def _make_aim_marginal(
         # Update is significant if the L1 norm of the update to the selected marginal
         #    is greater than the expectation of the noise's half-distribution.
         is_significant = diff > mean
-        _ROUND_LOG.append({"diff": diff, "threshold": mean, "significant": is_significant})
 
         return all_marginals, new_model, is_significant
 
@@ -357,12 +353,6 @@ def _make_aim_select(
         to_mu = sqrt(2 / pi)
 
     model = cast(mbi.MarkovRandomField, model)
-
-    # def is_small(clique: tuple[str, ...]) -> bool:
-    #     model_size = mbi.junction_tree.hypothetical_model_size(
-    #         model.domain, cliques=model.cliques + [clique]
-    #     )
-    #     return model_size <= max_size
 
     def is_small(clique: tuple[str, ...]) -> bool:
         # Gem+ has no junction tree, and its selection step has no size filter.

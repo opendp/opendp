@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NamedTuple
 from dataclasses import dataclass, field
 
 import jax
@@ -6,26 +6,25 @@ import jax.nn
 import jax.numpy as jnp
 import numpy as np
 import optax
-from mbi import Dataset, Domain, Factor, CliqueVector, LinearMeasurement
+from mbi import Dataset, DatavectorQuery, Domain, Factor, CliqueVector, LinearMeasurement, MarginalLossFn
 from mbi.clique_utils import maximal_subset
-from mbi.estimation import minimum_variance_unbiased_total
+from mbi.estimation import minimum_variance_unbiased_total, Estimator
+from mbi.marginal_loss import from_linear_measurements
 from collections.abc import Sequence
 from itertools import combinations
 from math import prod, sqrt
 
 @jax.tree_util.register_dataclass
-
-
-
 @dataclass
-class GemPlusModel():
+class GemPlusModel:
+    """Gem+ generator: a fixed Gaussian batch z fed through GEM's generator network,
+    giving a mixture of B product distributions (one per row of z)."""
 
     _params : Any #network weights
     _z : jax.Array #the inital seeds for person types
     domain : Domain = field(metadata={"static": True}) #dataset metadata
     total : float = field(metadata={"static": True}) #N
-    potentials = None
-    #_opt_state : Any = None #optimizer state
+
 
     def num_components(self) -> int:
         """Number of soft records B — the rows of the fixed noise batch."""
@@ -39,46 +38,51 @@ class GemPlusModel():
         batch: int = 25000,
         hidden: tuple[int, ...] | None = None,
         seed: int = 0,
-        scale: float = 0.1,
     ) -> "GemPlusModel":
-        """Initialize with a fixed gaussian batch and random network weights."""
+        """Fixed Gaussian batch z and GEM's generator, with PyTorch's default initialization."""
         if hidden is None:
             hidden = (dim * 2, dim * 2)
+        if batch < 2:
+            raise ValueError("batch must be at least 2 (batch norm uses batch statistics)")
 
         key_z, key_w = jax.random.split(jax.random.PRNGKey(seed))
         z = jax.random.normal(key_z, (batch, dim))
 
-        widths = [dim, *hidden, sum(domain.shape)]
-        keys = jax.random.split(key_w, len(widths) - 1)
-        params = [
-        {
-            "W": jax.random.normal(k, (n_in, n_out)) * scale,
-            "b": jnp.zeros(n_out),
-        }
-        for k, n_in, n_out in zip(keys, widths[:-1], widths[1:])
-        ]
-        return GemPlusModel(params, z, domain, total)
+        def linear(key, n_in, n_out):
+            # torch.nn.Linear default: weights and bias ~ U(-1/sqrt(n_in), 1/sqrt(n_in))
+            bound = 1 / sqrt(n_in)
+            k_w, k_b = jax.random.split(key)
+            return {
+                "W": jax.random.uniform(k_w, (n_in, n_out), minval=-bound, maxval=bound),
+                "b": jax.random.uniform(k_b, (n_out,), minval=-bound, maxval=bound),
+            }
+
+        keys = jax.random.split(key_w, len(hidden) + 1)
+        blocks, width = [], dim
+        for k, n_out in zip(keys, hidden):
+            blocks.append({**linear(k, width, n_out), "gamma": jnp.ones(n_out), "beta": jnp.zeros(n_out)})
+            width += n_out  # each block's output is concatenated with its input
+        out = linear(keys[-1], width, sum(domain.shape))
+        return GemPlusModel({"blocks": blocks, "out": out}, z, domain, total)
 
     def _apply(self) -> jax.Array:
+        """GEM's generator: residual blocks (Linear, BatchNorm, ReLU, concat input), then Linear."""
         h = self._z
-        num_layers = len(self._params) #number of layers
-        for i in range(num_layers): 
-            W_i, b_i = self._params[i]["W"], self._params[i]["b"]
-            h = h@W_i + b_i
-            if i != num_layers-1 : #every layer except the last
-                h = jax.nn.relu(h)
-
-        return h
+        for p in self._params["blocks"]:
+            out = h @ p["W"] + p["b"]
+            out = (out - out.mean(axis=0)) / jnp.sqrt(out.var(axis=0) + 1e-5)  # BatchNorm1d, eps=1e-5
+            out = out * p["gamma"] + p["beta"]
+            h = jnp.concatenate([jax.nn.relu(out), h], axis=1)  # same order as GEM: [out, input]
+        return h @ self._params["out"]["W"] + self._params["out"]["b"]
 
     def products(self) -> dict[str, jax.Array]:
 
-        h = self._apply() #forward pass (call apply)
+        h = self._apply() 
 
         out : dict[str, jax.Array] = {}
 
-        #slice
         idx = 0
-        for attribute_col in self.domain:
+        for attribute_col in self.domain.attributes:
             n = self.domain[attribute_col]
             out[attribute_col] = jax.nn.softmax( h[:, idx : idx+n], axis=1 )
             idx += n
@@ -101,9 +105,16 @@ class GemPlusModel():
         values = jnp.einsum(formula, *components) * self.total / self.num_components()
         return Factor(self.domain.project(attrs), values)
 
+    def supports(self, attrs: str | Sequence[str]) -> bool:
+        """A mixture of products can answer any marginal over its domain."""
+        if isinstance(attrs, str):
+            attrs = (attrs,)
+        return set(attrs) <= set(self.domain.attributes)
+
     
     def synthetic_data(self, rows=None, method=None) -> Dataset:
-        """Generate synthetic data via randomized rounding."""
+        """Generate synthetic data via randomized rounding. `method` is accepted for
+        compatibility with MarkovRandomField.synthetic_data and ignored."""
         total = max(1, int(rows or self.total))
         rng = np.random.default_rng()
         products = self.products()
@@ -140,31 +151,17 @@ class GemPlusModel():
 def _marginal_closure(domain: Domain, measurements: list) -> list:
     """Gem+ line 7: add the noisy sub-marginals implied by each measurement.
 
-    For every measurement over a clique of 2+ attributes, each nonempty proper
-    subset of its attributes is estimated by summing the noisy marginal over
-    the dropped attributes. This is post-processing of already-noised values,
-    so it has no privacy cost.
-
-    Rules:
-      * Direct measurements always win: a subset that was measured directly
-        is never derived.
-      * Otherwise the first measurement (in the order given) that implies a
-        subset wins, matching Gem+'s round-by-round semantics where a
-        sub-marginal added to M in an earlier round stays there.
-      * Only identity (datavector) measurements are expanded; other query
-        types are passed through unchanged.
-
-    Each derived cell is a sum of k independent noisy cells, where k is the
-    product of the dropped attributes' sizes, so its stddev is stddev * sqrt(k).
-
-    Returns the original measurements followed by the derived ones.
+    Sub-marginals are computed by summing over the dropped attributes, so this is
+    post-processing with no privacy cost. Directly measured cliques are never
+    re-derived, and otherwise the first measurement implying a clique is used.
+    A derived cell sums k noisy cells, so its stddev is stddev * sqrt(k).
     """
     covered = {frozenset(m.clique) for m in measurements}
     derived = []
 
     for m in measurements:
         clique = tuple(m.clique)
-        if len(clique) < 2 or m.query != Factor.datavector:
+        if len(clique) < 2 or not isinstance(m.query, DatavectorQuery):
             continue
 
         # mbi stores a marginal's cells in clique order
@@ -190,13 +187,75 @@ def _marginal_closure(domain: Domain, measurements: list) -> list:
 
     return list(measurements) + derived
 
+def _l1_loss(marginals, measurements):
+    """Gem+ line 8: mean over measurements of the unweighted L1 error.
+    mbi's built-in L1 loss weights each measurement by 1/stddev; Gem+ does not."""
+    loss = 0.0
+    for m in measurements:
+        mu = marginals.project(m.clique)
+        loss += jnp.sum(jnp.abs(m.query(mu) - m.noisy_measurement))
+    return loss / len(measurements)
+
+class GemPlusState(NamedTuple):
+    """Optimization state: the model must come first (mbi passes state[0] to callbacks)."""
+    model: GemPlusModel
+    opt_state: Any
+    loss: jax.Array
+
+
+@dataclass(frozen=True, kw_only=True)
+class GemPlusEstimator(Estimator): 
+    """Trains the generator with a fresh optimizer each call, warm-starting params and z."""
+    optimizer: optax.GradientTransformation
+    dim: int = 512
+    batch: int = 25000
+    hidden: tuple[int, ...] | None = None
+    seed: int = 0
+
+    def _init(self, domain, loss_fn, known_total, *, warm_start=None, constraints=()):
+
+        if constraints:
+            raise NotImplementedError("GemPlusEstimator does not support constraints")
+        if warm_start is not None and not isinstance(warm_start, GemPlusModel):
+            raise TypeError(f"warm_start must be a GemPlusModel, got {type(warm_start).__name__}")
+        if warm_start is not None and warm_start.domain != domain:
+            raise ValueError("warm_start was fit on a different domain")
+
+        if warm_start is not None:
+            model = GemPlusModel(warm_start._params, warm_start._z, domain, known_total)
+        else:
+            model = GemPlusModel.random(
+                domain, known_total, dim=self.dim, batch=self.batch,
+                hidden=self.hidden, seed=self.seed,
+            )
+        return GemPlusState(model, self.optimizer.init(model._params), jnp.asarray(jnp.inf))
+
+    def _step(self, state: GemPlusState, loss_fn, known_total, constraints=()):
+        model = state.model
+
+        def objective(params):
+            current = GemPlusModel(params, model._z, model.domain, model.total)
+            marginals = CliqueVector(
+                current.domain, loss_fn.cliques,
+                {cl: current.project(cl) for cl in loss_fn.cliques},
+            )
+            return loss_fn(marginals)
+
+        loss, grads = jax.value_and_grad(objective)(model._params)
+        updates, opt_state = self.optimizer.update(grads, state.opt_state, model._params)
+        params = optax.apply_updates(model._params, updates)
+        return GemPlusState(GemPlusModel(params, model._z, model.domain, model.total), opt_state, loss)
+
+    def _finalize(self, state, known_total, constraints=()):
+        return state.model
+
 
 def gem_plus(
     domain: Domain,
     loss_fn,
     *,
     # contract, matching mirror_descent
-    potentials=None,
+    potentials=None, #to match opendp's current calls
     warm_start=None,
     # hyperparameters
     optimizer: optax.GradientTransformation | None = None,
@@ -205,71 +264,50 @@ def gem_plus(
     hidden: tuple[int, ...] | None = None,
     steps: int = 1500,
     seed: int = 0,
-    weighted: bool = False
+    weighted: bool = False #for experiments, GEM+ specifies unweighted, remove later
 ) -> GemPlusModel:
-    """Fit a GemPlusModel to noisy marginals by gradient descent.
+    """Fit a GemPlusModel to noisy marginals using Gem+.
 
-    Drop-in replacement for mbi.estimation.mirror_descent, implementing line 8
-    of Gem+: minimize the mean unweighted L1 distance between the generator's
-    soft marginals and the noisy measurements.
+    Adds the sub-marginals implied by each measurement (Gem+ line 7), then trains
+    the generator on the mean unweighted L1 error (line 8). ``warm_start`` continues
+    from a previous model's weights and noise batch; ``potentials`` is ignored.
+    Defaults follow the Gem+ paper (batch, steps) and GEM's code (network, optimizer).
 
-    `potentials` is accepted for signature compatibility and ignored; it is
-    shaped for a graphical model and has no analogue in a neural generator.
-    Warm starting comes from `warm_start`, the model fitted in the preceding
-    round, whose weights, noise batch and optimizer state are all reused.
-    Reusing `_z` is not only a convergence matter: AIM anneals on
-    ||q(theta_t(z)) - q(theta_{t-1}(z))||, which measures learning rather than
-    reinitialization noise only if both generators share the same z.
-
-    MBI keeps optimizer state beside the model in a separate state object.
-    Here it rides on the model because the estimator contract returns a model
-    and nothing else, so that is the only channel across rounds.  It is not
-    part of the represented distribution.
+    :param domain: the mbi Domain to fit over
+    :param loss_fn: noisy measurements, as a list of LinearMeasurement
+    :param potentials: ignored; accepted for OpenDP's estimator signature
+    :param warm_start: a GemPlusModel to continue training, or None
+    :param optimizer: optax optimizer; defaults to Adam with learning rate 1e-4
+    :param dim: width of the noise vector
+    :param batch: number of mixture components
+    :param hidden: widths of the residual blocks; defaults to (2 * dim, 2 * dim)
+    :param steps: optimizer steps, a multiple of 50
+    :param seed: random seed for the noise batch and initial weights
+    :param weighted: experimental: weight each measurement by 1/stddev
     """
-    measurements = loss_fn
+    # Estimates must be f64 to pass through the OpenDP FFI.
+    jax.config.update("jax_enable_x64", True)
+    if steps % 50:
+        raise ValueError(f"steps ({steps}) must be a multiple of 50")
+    if isinstance(loss_fn, MarginalLossFn):
+        raise TypeError("gem_plus needs the measurements themselves (for the marginal closure), not a MarginalLossFn")
+    
+    measurements = list(loss_fn)
     total = minimum_variance_unbiased_total(measurements)  # originals only
     measurements = _marginal_closure(domain, measurements)  # Gem+ line 7
-    cliques = maximal_subset([m.clique for m in measurements])
+
+    if weighted:
+        loss = from_linear_measurements(measurements, domain, norm="l1")
+    else:
+        loss = MarginalLossFn(
+            maximal_subset([m.clique for m in measurements]), _l1_loss, tuple(measurements)
+        )
 
     if optimizer is None:
         optimizer = optax.adam(1e-4)
 
-    if isinstance(warm_start, GemPlusModel):
-        model = warm_start
-    else:
-        model = GemPlusModel.random(domain, total, dim=dim, batch=batch, hidden=hidden, seed=seed)
-
-    params, z = model._params, model._z
-    # opt_state = (
-    #     model._opt_state
-    #     if model._opt_state is not None
-    #     else optimizer.init(params)
-    # )
-
-    opt_state = optimizer.init(params)
-
-    def marginal_loss(marginals: CliqueVector):
-        """L(theta) = mean over M of ||q(theta(z)) - q~||_1."""
-        loss = 0.0
-        for m in measurements:
-            mu = marginals.project(m.clique)
-            err = jnp.sum(jnp.abs(m.query(mu) - m.noisy_measurement))
-            loss += err / m.stddev if weighted else err
-        return loss / len(measurements)
-
-    def objective(params):
-        current = GemPlusModel(params, z, domain, total)
-        return marginal_loss(
-            CliqueVector(domain, cliques, {cl: current.project(cl) for cl in cliques})
-        )
-
-    @jax.jit
-    def update(params, opt_state):
-        loss, grads = jax.value_and_grad(objective)(params)
-        updates, opt_state = optimizer.update(grads, opt_state)
-        return optax.apply_updates(params, updates), opt_state, loss
-
-    for _ in range(steps):
-        params, opt_state, loss = update(params, opt_state)
-
-    return GemPlusModel(params, z, domain, total)
+    estimator = GemPlusEstimator(
+        optimizer=optimizer, dim=dim, batch=batch,
+        hidden=tuple(hidden) if hidden else None, seed=seed,
+    )
+    return estimator.estimate(domain, loss, known_total=total, iters=steps, warm_start=warm_start)
