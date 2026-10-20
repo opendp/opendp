@@ -631,11 +631,11 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             ... )
             >>> query.release().collect().sort("HWUSUAL")
             shape: (7, 2)
-            ┌─────────┬─────────┐
-            │ HWUSUAL ┆ len     │
-            │ ---     ┆ ---     │
-            │ u32     ┆ i64     │
-            ╞═════════╪═════════╡
+            ┌─────────┬──────┐
+            │ HWUSUAL ┆ len  │
+            │ ---     ┆ ---  │
+            │ u32     ┆ i64  │
+            ╞═════════╪══════╡
             │ 0       ┆ ... │
             │ 1       ┆ ... │
             │ 2       ┆ ... │
@@ -643,7 +643,7 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             │ 4       ┆ ... │
             │ 5       ┆ ... │
             │ 6       ┆ ... │
-            └─────────┴─────────┘
+            └─────────┴──────┘
 
 
 In the case of categorical data types, OpenDP only allows this
