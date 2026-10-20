@@ -87,6 +87,20 @@ where
             op
         );
     }
+    // Comparing Enum with private strings can fail when a string is not a category.
+    // That error depends on the data, so reject these ordering comparisons.
+    if matches!(op, Lt | LtEq | Gt | GtEq)
+        && matches!(
+            (left_series.dtype(), right_series.dtype()),
+            (DataType::Enum(_, _), DataType::String) | (DataType::String, DataType::Enum(_, _))
+        )
+    {
+        return fallible!(
+            MakeTransformation,
+            "ordering comparisons between Enum and String are not stable"
+        );
+    }
+
     // use Polars to compute the output dtype
     let mock_df = DataFrame::new(vec![
         Column::new_empty("left".into(), &left_series.dtype()),
