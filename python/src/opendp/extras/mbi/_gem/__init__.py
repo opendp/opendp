@@ -1,5 +1,6 @@
 from typing import Any, NamedTuple
 from dataclasses import dataclass, field
+import functools
 
 import jax
 import jax.nn
@@ -15,7 +16,7 @@ from itertools import combinations
 from math import prod, sqrt
 
 @jax.tree_util.register_dataclass
-@dataclass
+@dataclass(frozen=True)
 class GemPlusModel:
     """Gem+ generator: a fixed Gaussian batch z fed through GEM's generator network,
     giving a mixture of B product distributions (one per row of z)."""
@@ -75,20 +76,23 @@ class GemPlusModel:
             h = jnp.concatenate([jax.nn.relu(out), h], axis=1)  # same order as GEM: [out, input]
         return h @ self._params["out"]["W"] + self._params["out"]["b"]
 
-    def products(self) -> dict[str, jax.Array]:
-
-        h = self._apply() 
-
-        out : dict[str, jax.Array] = {}
-
+    @functools.cached_property
+    def _products(self) -> dict[str, jax.Array]:
+        h = self._apply()
+        out = {}
         idx = 0
-        for attribute_col in self.domain.attributes:
-            n = self.domain[attribute_col]
-            out[attribute_col] = jax.nn.softmax( h[:, idx : idx+n], axis=1 )
+        for col in self.domain.attributes:
+            n = self.domain[col]
+            out[col] = jax.nn.softmax(h[:, idx : idx + n], axis=1)
             idx += n
-        
-        
         return out
+
+    def products(self) -> dict[str, jax.Array]:
+        """Per-attribute probabilities for each of the B components.
+
+        Computed once per model: weights are fixed after construction, and AIM
+        calls project() once per candidate clique every round."""
+        return self._products
 
     def project(self, attrs: str | Sequence[str]) -> Factor:
 
