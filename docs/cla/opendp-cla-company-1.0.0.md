@@ -18,7 +18,7 @@ This Contributor License Agreement (the “CLA”) is entered into by and betwee
 7. Contributor is not expected to provide support for Contributor’s Contributions, except to the extent Contributor desires to provide such support. Contributor may provide support for free, for a fee, or not at all. Unless required by applicable law or agreed to in writing, Contributor provides Contributions on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE.
 8. Contributor agrees to notify Harvard of any facts or circumstances of which Contributor becomes aware that would make any representations set forth herein inaccurate in any respect.
 
-\ 
+\
 
 | CONTRIBUTOR                         | HARVARD                             |
 |-------------------------------------|-------------------------------------|
@@ -36,7 +36,7 @@ In order to participate, the Employee will be required to execute a Contributor 
 
 By signing below, you are representing that you have the authority to provide this consent on behalf of the Company.
 
-\ 
+\
 
 | COMPANY REPRESENTATIVE              |
 |-------------------------------------|

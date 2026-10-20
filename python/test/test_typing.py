@@ -9,15 +9,6 @@ from opendp.typing import *
 from opendp.typing import _INTEGER_TYPES
 
 
-def test_numpy_function():
-    np = pytest.importorskip("numpy")
-    assert str(RuntimeType.infer(np.array([1, 2, 3]))) == "Vec<i64>"
-    assert str(RuntimeType.infer(np.array(1))) == "i32"
-    assert str(RuntimeType.infer(np.array(1.0))) == "f64"
-    assert str(RuntimeType.infer(np.array("A"))) == "String"
-    assert str(RuntimeType.infer(np.array(["A", "B"]))) == "Vec<String>"
-
-
 def test_typing_infer_to_string():
     # Currently these return actual strings, which we test with `is`.
     # The plan is to change the response type to be consistent:

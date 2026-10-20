@@ -8,7 +8,7 @@
 \begin{document}
 \maketitle
 
-This document proves that the implementation of \rustdoc{transformations/make_stable_expr/expr_count/fn}{counting\_query\_stability\_map} in \asOfCommit{mod.rs}{f5bb719} 
+This document proves that the implementation of \rustdoc{transformations/make_stable_expr/expr_count/fn}{counting\_query\_stability\_map} in \asOfCommit{mod.rs}{f5bb719}
 satisfies its proof definition.
 
 \section{Hoare Triple}
@@ -30,14 +30,14 @@ None
 \subsection*{Postcondition}
 \begin{theorem}
     \label{sample-bernoulli}
-    For any setting of the input parameters \texttt{public\_info}, \texttt{M} and \texttt{P}, 
-    returns a \texttt{StabilityMap} where for any predicate $p(\cdot)$ 
-    and $f(x) = [\sum_i \mathbbm{1}_{p(x_{1i})}, \sum_i \mathbbm{1}_{p(x_{2i})}, \dots]$, 
+    For any setting of the input parameters \texttt{public\_info}, \texttt{M} and \texttt{P},
+    returns a \texttt{StabilityMap} where for any predicate $p(\cdot)$
+    and $f(x) = [\sum_i \mathbbm{1}_{p(x_{1i})}, \sum_i \mathbbm{1}_{p(x_{2i})}, \dots]$,
     if $d_{\mathrm{PartitionDistance<M>}}(x, x') \leq d_{in}$,
     then $d_{LP}(f(x), f(x')) \leq d_{out}$, where $d_{out} = \texttt{StabilityMap.eval}(d_{in})$.
 \end{theorem}
 
-\begin{proof} 
+\begin{proof}
 Since the input metric is PartitionDistance<M>,
 and M is an unbounded dataset distance metric (with associated distance type \texttt{u32}),
 the distance type is a tuple of the $L_0$, $L_1$ and $L_\infty$ distances between the per-partition distances with respect to the input metric \texttt{M},
@@ -58,7 +58,7 @@ Consider two cases. First, when substituting the $\Delta_0$ and $\Delta_\infty$ 
     &= \Delta_0^{1/P}\Delta_\infty
 \end{align}
 
-Alternatively, apply the $\Delta_1$ bound, 
+Alternatively, apply the $\Delta_1$ bound,
 considering that distance is maximized when all $\Delta_1$ contributions are made to the same partition:
 \begin{align}
     &= \left(\sum_i^{\len(x)}\left(\sum_j^{\len(x_i)} \mathbbm{1}_{p(x_{ij})} - \mathbbm{1}_{p(x'_{ij})}\right)^P\right)^{1/P} \\
@@ -83,4 +83,4 @@ Therefore, the stability map returned on line \ref{stability-map} also satisfies
 
 \end{proof}
 
-\end{document} 
+\end{document}

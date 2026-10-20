@@ -18,8 +18,8 @@ simply changing the privacy loss:
 
 ``dp.loss_of(epsilon=1.0)`` → ``dp.loss_of(rho=0.1)``
 
-The following code repeats the same initial release in the `Essential
-Statistics <../../../getting-started/tabular-data/essential-statistics.ipynb>`__
+The following code repeats the same initial release in the
+:doc:`Essential Statistics <../../../getting-started/tabular-data/essential-statistics>`
 documentation on the Labour Force Survey, but under zero-concentrated
 differential privacy, resulting in Gaussian noise perturbation instead
 of Laplace noise perturbation.
@@ -43,7 +43,9 @@ of Laplace noise perturbation.
             ...     split_evenly_over=5,
             ... )
 
-            >>> query_num_responses = context.query().select(dp.len())
+            >>> query_num_responses = context.query().select(
+            ...     dp.len(signed=True)
+            ... )
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 5)
             ┌────────┬──────────────┬──────────────────┬───────┬──────────┐
@@ -131,7 +133,7 @@ privacy loss under zCDP becomes much smaller.
             >>> query_num_responses = (
             ...     context_margin.query()
             ...     .group_by("YEAR", "QUARTER")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 6)
@@ -164,7 +166,7 @@ aware of this data descriptor.
             >>> query_num_responses = (
             ...     context.query()
             ...     .group_by("YEAR", "QUARTER")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 6)

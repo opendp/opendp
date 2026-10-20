@@ -6,7 +6,7 @@
 
 \begin{document}
 \maketitle\contrib
-This document proves soundness of \rustdoc{measurements/noisy_top_k}{permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}. 
+This document proves soundness of \rustdoc{measurements/noisy_top_k}{permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}.
 \texttt{permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores.
 
 \section{Hoare Triple}
@@ -39,7 +39,7 @@ None
     Substituting $\texttt{scale} = \frac{2\Delta}{\epsilon}$,
     the argument to \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} is then $\frac{\epsilon}{2\Delta}(q_* - q_r)$,
     which is non-negative, satisfying the precondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}.
-    Therefore by the postcondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}, 
+    Therefore by the postcondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp},
     the response is a sample from $\mathrm{Bern}(\exp(-x))$, where $x = \frac{\epsilon}{2\Delta}(q_* - q_r)$.
     Therefore the response is a sample from $\mathrm{Bern}(\exp(\frac{\epsilon}{2\Delta}(q_r - q_*)))$,
     which is equivalent to Algorithm~1 in \cite{mckenna2020permute}.

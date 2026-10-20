@@ -53,11 +53,14 @@ def make_private_np_eigendecomposition(
     t_sscp = make_np_sscp(input_domain, input_metric)
 
     t_eigvals = t_sscp.output_space >> then_eigenvalues()
-    m_eigvals = dp.binary_search_chain(  # type: ignore[misc]
-        lambda s: t_eigvals >> dp.m.then_laplace(s),
-        d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
-        d_out=eigvals_epsilon,
-    ) >> dp.as_array()
+    m_eigvals = (
+        dp.binary_search_chain(  # type: ignore[misc]
+            lambda s: t_eigvals >> dp.m.then_laplace(s),
+            d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
+            d_out=eigvals_epsilon,
+        )
+        >> dp.as_array()
+    )
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,
     )

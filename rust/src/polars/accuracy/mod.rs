@@ -254,6 +254,13 @@ fn summarize_expr<'a>(
 }
 
 fn expr_aggregate(expr: &Expr) -> Fallible<String> {
+    // Signed counting queries cast the exact aggregate before applying noise.
+    // The cast does not change which aggregate is being summarized.
+    let expr = match expr {
+        Expr::Cast { expr, .. } => expr.as_ref(),
+        expr => expr,
+    };
+
     if let Some((_, plugin)) = match_trusted_plugin::<DiscreteQuantileScorePlugin>(&expr)? {
         let (num, den) = plugin.alpha;
         return Ok(format!("{}-Quantile", num as f64 / den as f64));

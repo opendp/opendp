@@ -4,9 +4,9 @@
 Adaptive Composition
 --------------------
 
-Adaptive composition allows for queries to be submitted interactively. 
-That is, you can make submit a query, view the output, 
-and then submit another query that uses the information gained from the prior release. 
+Adaptive composition allows for queries to be submitted interactively.
+That is, you can make submit a query, view the output,
+and then submit another query that uses the information gained from the prior release.
 
 The API for adaptive compositors is more verbose than in the
 non-adaptive case because you must explicitly pass the input domain,
@@ -126,19 +126,18 @@ sum and count:
 
 .. note::
 
-    The adaptive composition API has another internal distinction 
+    The adaptive composition API has another internal distinction
     between adaptive composition and concurrent composition,
     which varies based on the choice of privacy measure.
 
-    Adaptive composition is subject to the limitation that 
+    Adaptive composition is subject to the limitation that
     only one queryable is active at any point in time.
-    To satisfy adaptive composition, the compositor locks, or freezes, 
+    To satisfy adaptive composition, the compositor locks, or freezes,
     any queryable it has previously spawned when a new query arrives.
-    This is because the postprocessing argument doesn't necessarily 
+    This is because the postprocessing argument doesn't necessarily
     hold when the analyst may still interact with earlier queryables.
 
-    Concurrent composition lifts this limitation for measures of privacy 
+    Concurrent composition lifts this limitation for measures of privacy
     where we have been able to prove that postprocessing still holds.
     In OpenDP, all privacy measures support concurrent composition,
     except for approximate zCDP and approximate Renyi-DP.
-

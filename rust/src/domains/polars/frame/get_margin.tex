@@ -30,14 +30,14 @@ None
 \begin{theorem}
 Returns a \texttt{Margin} that describes properties of members of \texttt{domain} when grouped by \texttt{by}.
 \end{theorem}
-\begin{proof} 
-    On line \ref{let-margin}, \texttt{margin} is either a valid margin descriptor 
+\begin{proof}
+    On line \ref{let-margin}, \texttt{margin} is either a valid margin descriptor
     for \texttt{by}, by the definition of \texttt{domain},
-    or it is the default margin, which is a valid margin descriptor for all potential datasets. 
+    or it is the default margin, which is a valid margin descriptor for all potential datasets.
 
     We now update descriptors based on other information available in \texttt{domain}.
 
-    On line \ref{let-subset-margins}, 
+    On line \ref{let-subset-margins},
     \texttt{subset\_margins} is the subset of margins spanned by \texttt{by}.
     Then \ref{let-max-length} assigns the smallest known descriptors over any margin spanning a subset of the grouping columns.
 
@@ -46,14 +46,14 @@ Returns a \texttt{Margin} that describes properties of members of \texttt{domain
     Therefore \texttt{max\_length} remains valid after mutation.
 
     Line \ref{all-max-groups} retrieves all known \texttt{max\_groups} descriptors.
-    There are no manual preconditions to \rustdoc{domains/polars/frame/fn}{find\_min\_covering}, 
+    There are no manual preconditions to \rustdoc{domains/polars/frame/fn}{find\_min\_covering},
     therefore we claim the postcondition, that the output is a covering for \texttt{by}.
 
     The number of groups can be no greater than the cardinality of the cartesian product of the keys of each grouping column.
     Therefore the code finds a set of \texttt{max\_groups} descriptors that covers the grouping columns,
     and then updates \texttt{margin} to the product of the covering.
 
-    On an aside, for utility, while the covering found may not be the smallest, 
+    On an aside, for utility, while the covering found may not be the smallest,
     the greedy algorithm will always choose a singleton cover if it is available,
     therefore this update to the descriptor cannot increase the descriptor.
 

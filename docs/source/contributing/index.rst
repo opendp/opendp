@@ -9,10 +9,8 @@ please consult :doc:`../getting-started/index` and :doc:`../api/index`.
 .. toctree::
    :glob:
    :titlesonly:
-   :maxdepth: 3
+   :maxdepth: 1
 
-   contact
    getting-involved
-   development-environment
    contribution-process
-   cla
+   development-environment

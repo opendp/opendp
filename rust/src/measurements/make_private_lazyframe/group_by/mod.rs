@@ -14,7 +14,7 @@ use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
-use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
+use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
@@ -234,7 +234,9 @@ where
 
         // incorporate all information into optional bounds
         let l0 = option_min(bound.num_groups, margin.max_groups);
-        let li = option_min(bound.per_group, margin.max_length);
+        // Each input group has at most k rows, so two groups can differ by 2k rows.
+        let max_group_change = margin.max_length.map(|k| k.alerting_mul(&2)).transpose()?;
+        let li = option_min(bound.per_group, max_group_change);
         let l1 = d_in.get_bound(&HashSet::new()).per_group;
 
         // reduce optional bounds to concrete bounds

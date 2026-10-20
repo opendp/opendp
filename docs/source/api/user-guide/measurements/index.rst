@@ -30,7 +30,7 @@ There is a symmetric structure to the additive noise measurements:
 By passing the appropriate input space,
 you can construct either scalar or vector-valued mechanisms.
 
-More details on `laplacian and gaussian noise mechanisms here <additive-noise-mechanisms.html>`_.
+More details on :doc:`laplacian and gaussian noise mechanisms here <additive-noise-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -41,7 +41,7 @@ More details on `laplacian and gaussian noise mechanisms here <additive-noise-me
 Laplacian Noise
 ***************
 
-:func:`~opendp.measurements.make_laplace` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
+:func:`~opendp.measurements.make_laplace` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon.
 Use :func:`~opendp.accuracy.laplacian_scale_to_accuracy`
 and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` to convert to/from accuracy estimates.
 (:func:`~opendp.measurements.make_geometric`
@@ -65,7 +65,7 @@ If you need constant-time execution to protect against timing side-channels, spe
 Gaussian Noise
 **************
 
-:func:`~opendp.measurements.make_gaussian` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
+:func:`~opendp.measurements.make_gaussian` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy).
 Use :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and
 :func:`~opendp.accuracy.accuracy_to_gaussian_scale` to convert to/from accuracy estimates.
 (Refer to :ref:`measure-casting` to convert to approximate DP.)
@@ -92,7 +92,7 @@ Under :math:`(\epsilon, \delta)`-DP,
 the canonical noise distribution follows the Tulap distribution,
 which is a combination of discrete laplace noise and continuous uniform noise.
 
-More details on `the canonical noise mechanism here <canonical-noise-mechanism.html>`_.
+More details on :doc:`the canonical noise mechanism here <canonical-noise-mechanism>`.
 
 .. toctree::
   :hidden:
@@ -118,7 +118,7 @@ Just like the additive noise mechanisms, the thresholded noise mechanisms have a
    * - ``L02InfDistance<AbsoluteDistance<T>>``
      - :func:`~opendp.measurements.make_gaussian_threshold`
 
-More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms.html>`_.
+More details on :doc:`thresholded noise mechanisms here <thresholded-noise-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -128,8 +128,8 @@ More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms
 Thresholded Laplacian Noise
 ***************************
 
-:func:`~opendp.measurements.make_laplace_threshold` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
-Use the :func:`~opendp.accuracy.laplacian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` 
+:func:`~opendp.measurements.make_laplace_threshold` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta.
+Use the :func:`~opendp.accuracy.laplacian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_laplacian_scale`
 functions to convert to/from accuracy estimates.
 
 .. list-table::
@@ -146,8 +146,8 @@ functions to convert to/from accuracy estimates.
 Thresholded Gaussian Noise
 **************************
 
-:func:`~opendp.measurements.make_gaussian_threshold` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
-Use the :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_gaussian_scale` 
+:func:`~opendp.measurements.make_gaussian_threshold` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta.
+Use the :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_gaussian_scale`
 functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
 
@@ -192,7 +192,7 @@ Noisy Max and Noisy Top K
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
 Exponential noise is added to scores when the output measure is ``MaxDivergence``,
-and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
+and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``.
 
 .. list-table::
    :header-rows: 1
@@ -209,7 +209,7 @@ and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergenc
 
 Report noisy max is a special case of noisy top k when k equals one.
 
-More details on `noisy max mechanisms here <noisy-max-mechanisms.html>`_.
+More details on :doc:`noisy max mechanisms here <noisy-max-mechanisms>`.
 
 .. toctree::
   :hidden:
@@ -240,7 +240,7 @@ These measurements are used to randomize an individual's response to a query in 
      - ``DiscreteDistance``
      - ``MaxDivergence``
 
-More details on `randomized response here <randomized-response.html>`_.
+More details on :doc:`randomized response here <randomized-response>`.
 
 .. toctree::
   :hidden:

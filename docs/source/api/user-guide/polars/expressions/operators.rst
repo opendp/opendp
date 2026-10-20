@@ -48,14 +48,14 @@ predicates and grouping columns.
             ...     )  # using the .gt, .and_ and .ne operators
             ...     .with_columns(OVER_40=pl.col.AGE > 40)
             ...     .group_by("SEX", "OVER_40")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query.release().collect().sort("SEX", "OVER_40")
             shape: (4, 3)
             ┌─────┬─────────┬────────┐
             │ SEX ┆ OVER_40 ┆ len    │
             │ --- ┆ ---     ┆ ---    │
-            │ i64 ┆ bool    ┆ u32    │
+            │ i64 ┆ bool    ┆ i64    │
             ╞═════╪═════════╪════════╡
             │ 1   ┆ false   ┆ ... │
             │ 1   ┆ true    ┆ ... │

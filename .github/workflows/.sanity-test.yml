@@ -32,13 +32,13 @@ jobs:
         if: ${{ inputs.python_repository == 'local' }}
         uses: actions/download-artifact@v7
         with:
-          name: python_wheel_ubuntu-latest 
+          name: python_wheel_ubuntu-latest
           path: python/dist
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: pip
 
       - name: Install requirements

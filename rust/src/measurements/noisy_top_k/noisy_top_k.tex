@@ -7,7 +7,7 @@
 \begin{document}
 \maketitle
 \contrib
-This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} in \asOfCommit{mod.rs}{e62b0aa2}. 
+This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} in \asOfCommit{mod.rs}{e62b0aa2}.
 \texttt{noisy\_top\_k} noisily selects the index of the best score from a vector of input scores $k$ times.
 
 \section{Hoare Triple}
@@ -40,7 +40,7 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_t
 \begin{proof}
     By the precondition that each element in $x$ is finite,
     the conversion into rational is infallible.
-    
+
     By the postcondition of \rustdoc{measurements/noisy_top_k/exponential/fn}{peel\_permute\_and\_flip},
     and the potential negation on line~\ref{negate},
     the postcondition is satisfied.

@@ -2,7 +2,7 @@
 >>> import polars as pl
 
 We'll imagine an elementary school is taking a pet census.
-The private census data will have two columns: 
+The private census data will have two columns:
 
 >>> lf_domain = dp.lazyframe_domain([
 ...     dp.series_domain("grade", dp.atom_domain(T=dp.i32)),
@@ -17,7 +17,7 @@ We also need to specify the column we'll be grouping by.
 ...         invariant="keys",
 ...         max_length=50))
 
-With that in place, we can plan the Polars computation, using the ``dp`` plugin. 
+With that in place, we can plan the Polars computation, using the ``dp`` plugin.
 
 >>> plan = (
 ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})

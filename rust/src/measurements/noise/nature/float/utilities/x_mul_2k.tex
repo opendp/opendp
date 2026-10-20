@@ -36,7 +36,7 @@ $k \neq \texttt{i32.MIN}$
         \item If $k < 0$, then multiplying the denominator by $2^-k$ is equivalent to multiplying by $2^k$.
             Since $k$ is negative, then $-k$ is positive, meaning the cast to \texttt{usize} is valid.
             Shifting $-k$ zeros to the left is equivalent to multipying the denominator by $2^k$.
-            Negation of $k$ is well-defined for all values of \texttt{i32}, 
+            Negation of $k$ is well-defined for all values of \texttt{i32},
             except for \texttt{i32.MIN}, which is not allowed by the precondition.
             Therefore, the result is $x \cdot 2^k$.
 

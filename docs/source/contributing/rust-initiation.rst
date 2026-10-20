@@ -1,10 +1,9 @@
 OpenDP Rust Initiation
 ======================
 
-This notebook is an introduction to the Rust internals of the OpenDP
-framework. I’m assuming you have already read about the programming
-framework in the user guide, and you have some familiarity with the
-library interfaces.
+This notebook is an introduction to the Rust internals of OpenDP.
+It assumes you have already read about the :ref:`framework-api`,
+and you have some familiarity with the library interfaces.
 
 If you have not worked with Rust before, `a great place to get started
 is the Rust
@@ -100,7 +99,7 @@ We also have input and output metrics.
 
 Examples of metrics are ``HammingDistance``, ``SymmetricDistance``,
 ``AbsoluteDistance`` and ``L1Distance``. They behave in the same way
-that the input and output domains do when chaining. 
+that the input and output domains do when chaining.
 
 .. code:: rust
 
@@ -194,13 +193,13 @@ provided. I’ll break it down into three parts.
    )
        -> Fallible<
            Transformation<
-               VectorDomain<AtomDomain<TIA>>, 
-               M, 
-               VectorDomain<AtomDomain<TOA>>, 
+               VectorDomain<AtomDomain<TIA>>,
+               M,
+               VectorDomain<AtomDomain<TOA>>,
                M>>
 
        // 2.
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
              TOA: 'static + RoundCast<TIA> + Default + CheckNull,
              M: DatasetMetric,
              (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -228,7 +227,7 @@ The first part is the function signature:
        -> Fallible<
            Transformation<
                VectorDomain<AtomDomain<TIA>>,
-               M,  
+               M,
                VectorDomain<AtomDomain<TOA>>,
                M>>
        ...
@@ -255,7 +254,7 @@ The second part is the where clause:
 .. code:: rust
 
        ...
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
            TOA: 'static + RoundCast<TIA> + Default + CheckNull,
            M: DatasetMetric,
            (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,

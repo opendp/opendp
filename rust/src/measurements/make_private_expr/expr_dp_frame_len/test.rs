@@ -31,3 +31,19 @@ fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fall
     assert_eq!(df.column("len")?.dtype(), &output_type);
     Ok(())
 }
+
+#[test]
+fn test_dp_frame_len_shim_schema() -> Fallible<()> {
+    let (_, lf) = get_test_data()?;
+
+    // the raw, non-evaluable shim still infers a correct schema
+    let schema_unsigned = lf
+        .clone()
+        .select([dp_len(Some(0.0), false).alias("len")])
+        .collect_schema()?;
+    assert_eq!(schema_unsigned.get("len").unwrap(), &DataType::UInt32);
+
+    // execution is still an error
+    assert!(lf.select([dp_len(Some(0.0), false)]).collect().is_err());
+    Ok(())
+}

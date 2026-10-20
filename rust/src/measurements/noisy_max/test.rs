@@ -63,6 +63,26 @@ fn test_max_vs_min_gumbel() -> Fallible<()> {
 }
 
 #[test]
+#[allow(deprecated)]
+fn test_deprecated_gumbel_optimize() -> Fallible<()> {
+    let input_domain = VectorDomain::new(AtomDomain::default());
+    let input_metric = LInfDistance::default();
+    let scores = vec![0, 1, 2, 100];
+
+    let m_max = make_report_noisy_max_gumbel(
+        input_domain.clone(),
+        input_metric.clone(),
+        0.,
+        Optimize::Max,
+    )?;
+    let m_min = make_report_noisy_max_gumbel(input_domain, input_metric, 0., Optimize::Min)?;
+
+    assert_eq!(m_max.invoke(&scores)?, 3);
+    assert_eq!(m_min.invoke(&scores)?, 0);
+    Ok(())
+}
+
+#[test]
 fn test_max_vs_min_exponential() -> Fallible<()> {
     check_rnm_outcome(MaxDivergence, 0., false, vec![1, 2, 3], 2, f64::INFINITY)?;
     check_rnm_outcome(MaxDivergence, 0., true, vec![1, 2, 3], 0, f64::INFINITY)?;

@@ -61,7 +61,7 @@ adds those columns to the data.
             ...         )
             ...     )
             ...     .group_by(pl.col.HWUSUAL)
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query_hwusual_binned.release().collect().sort(
             ...     "HWUSUAL"
@@ -70,7 +70,7 @@ adds those columns to the data.
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ...     │
             │ [0, 20)   ┆ ...     │
@@ -163,7 +163,7 @@ these expressions must be row-by-row.
             ...             [0, 20, 40, 60, 80, 98], left_closed=True
             ...         )
             ...     )
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
             >>> query_hwusual_binned.release().collect().sort(
             ...     "HWUSUAL"
@@ -172,7 +172,7 @@ these expressions must be row-by-row.
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ...     │
             │ [0, 20)   ┆ ...     │

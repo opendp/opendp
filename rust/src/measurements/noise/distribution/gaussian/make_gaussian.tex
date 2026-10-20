@@ -25,7 +25,7 @@ Perturbative noise mechanisms may be parameterized along many different axes:
 All parameterizations reduce to a single core mechanism that perturbs
 a vector of signed big integers with noise sampled from the appropriate discrete distribution.
 
-The implementation of this function constructs a random variable denoting the noise distribution to add, 
+The implementation of this function constructs a random variable denoting the noise distribution to add,
 and then dispatches to the \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>} trait
 which constructs the core mechanism and wraps it in pre-processing transformations and postprocessors to match the desired parameterization.
 

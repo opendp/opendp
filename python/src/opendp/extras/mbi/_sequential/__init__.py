@@ -10,6 +10,7 @@ from opendp.extras.mbi._utilities import (
     Algorithm,
     get_associated_metric,
     get_cardinalities,
+    Marginals,
 )
 from opendp.metrics import frame_distance, symmetric_distance
 from opendp.mod import (
@@ -35,7 +36,7 @@ class Sequential(Algorithm):
     """Sequence of algorithms."""
     weights: Optional[list[float]] = None
     """Budget allocation amongst algorithms.
-    
+
     Defaults to equal budget for each algorithm."""
 
     def __post_init__(self):
@@ -45,7 +46,9 @@ class Sequential(Algorithm):
             raise ValueError("algorithms must contain at least one element")
 
         if any(not isinstance(a, Algorithm) for a in self.algorithms):
-            raise ValueError(f"algorithms ({self.algorithms}) must be instances of Algorithm")
+            raise ValueError(
+                f"algorithms ({self.algorithms}) must be instances of Algorithm"
+            )
 
         if self.weights is not None:
             if len(self.weights) != len(self.algorithms):
@@ -63,7 +66,7 @@ class Sequential(Algorithm):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: Marginals,
         model: Any,  # MarkovRandomField
     ):
         """Implements a "Sequential" algorithm over ordinal data.
@@ -105,7 +108,7 @@ class Sequential(Algorithm):
 
         def function(
             qbl: Queryable,
-        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField]:
             all_marginals = marginals.copy()
             current_model = model
             for algo, d_mid in zip(self.algorithms, d_mids):

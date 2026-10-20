@@ -187,12 +187,12 @@ pub(crate) fn generate_function(
 
 def {then_name}(
 {then_args}
-):  
+):
     r"""Partial constructor of `{func_name}`.
 
     .. end-markdown
 
-    .. seealso:: 
+    .. seealso::
       Delays application of ``input_domain`` and ``input_metric`` in :py:func:`~opendp.{module_name}.{func_name}`
 
 {doc_params}

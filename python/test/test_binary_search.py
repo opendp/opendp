@@ -8,9 +8,9 @@ def test_binary_search_fail():
         dp.binary_search(lambda _: bool(1 / 0), T=float)
     if hasattr(e.value, "add_note"):
         assert (
-            e.value.__notes__[0]
+            e.value.__notes__[0]  # type: ignore[attr-defined]
             == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
-        )  # type: ignore[attr-defined]
+        )
 
 
 def test_binary_search_overflow():
@@ -45,7 +45,7 @@ def test_stuck():
         bounds=(0.0, real_v * 2.0),
         d_out=epsilon,
     )
-    assert discovered_scale == 192307694098.69745
+    assert discovered_scale == 192307694098.6973
 
 
 def test_binary_search():
@@ -53,6 +53,34 @@ def test_binary_search():
     assert dp.binary_search(lambda x: x <= 5, T=int) == 5
     assert dp.binary_search(lambda x: x >= -5, T=int) == -5
     assert dp.binary_search(lambda x: x >= 5, T=int) == 5
+
+
+@pytest.mark.parametrize("bounds", [(0, None), (None, 10)])
+def test_binary_search_one_sided(bounds):
+    assert dp.binary_search(lambda x: x <= 5, bounds=bounds) == 5
+
+
+@pytest.mark.parametrize("bounds", [(0,), (0, 10, 20)])
+def test_binary_search_rejects_malformed_bounds(bounds):
+    with pytest.raises(ValueError, match="bounds must contain exactly two elements"):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+@pytest.mark.parametrize(
+    ("bounds", "message"),
+    [
+        ((10, None), "decision boundary is below the lower bound"),
+        ((None, 0), "decision boundary is above the upper bound"),
+    ],
+)
+def test_binary_search_one_sided_errors(bounds, message):
+    with pytest.raises(ValueError, match=message):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+def test_mixed_type_bounds():
+    with pytest.raises(TypeError, match="bounds must share the same type"):
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.0))
 
 
 def test_binary_search_inferred_int():

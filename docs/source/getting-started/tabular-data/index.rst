@@ -24,7 +24,7 @@ This functionality is not enabled by default.
     .. tab-item:: R
         :sync: r
 
-        OpenDP does not currently support Polars in R. 
+        OpenDP does not currently support Polars in R.
         For the current status of this, see `issue #1872 <https://github.com/opendp/opendp/issues/1872>`_.
 
     .. tab-item:: Rust
@@ -33,70 +33,71 @@ This functionality is not enabled by default.
         Add ``"polars"`` to the features of the ``opendp`` dependency in your ``Cargo.toml``.
 
 
-Dataset Description 
+Dataset Description
 -------------------
 
 We will use a `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat
 for this tutorial, with some `additional preprocessing <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__.
 On a quarterly cadence Eurostat surveys the working hours of individuals in the European Union.
-The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
-
-We chose this dataset for a few reasons: 
-
-1. **Accessibility:** The dataset is accessible to users across various domains.
-2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
-
-For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
-
-The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
-for the dataset describes many variables. 
-Our examples will use just a few. (Descriptions are copied from the User Guide.) 
-
-.. list-table:: 
-   :header-rows: 1
-
-   * - Variable
-     - Definition
-     - Coding
-   * - ``SEX``
-     - Sex
-     - | ``1``: Male
-       | ``2``: Female
-   * - ``AGE``
-     - Age of the Individual During the Reference Week
-     - Single Years
-   * - ``ILOSTAT``
-     - Labour Status During the Reference Week
-     - | ``1``: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service)
-       | ``2``: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service)
-       | ``3``: Was not working because of lay-off
-       | ``4``: Was a conscript on compulsory military or community service
-       | ``5``: Other (15 years or more) who neither worked nor had a job or business during the reference week
-       | ``9``: Not applicable (child less than 15 years old)
-   * - ``HWUSUAL``
-     - Number of Hours Per Week Usually Worked
-     - | ``00``: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month
-       | ``01`` - ``98``: Number of hours usually worked in the main job
-       | ``99``: Not applicable
-       | *blank*: No answer
-   * - ``QUARTER``
-     - Fixed Reference Quarter
-     - Single Quarter
-   * - ``YEAR``
-     - Fixed Reference Year
-     - Single Year
-
-While the dataset does not contain a unique identifier for individuals,
-we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
+The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise.
 
 
-Mediate access with ``Context``
--------------------------------
+.. dropdown:: Dataset Details
 
-The ``Context`` is the foundation of our differentially private analysis. 
-It mediates access to the sensitive data,
-ensuring that queries you would like to release satisfy necessary privacy properties. 
+  We chose this dataset for a few reasons:
+
+  1. **Accessibility:** The dataset is accessible to users across various domains.
+  2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat.
+  3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset.
+
+  For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years.
+
+  The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
+  for the dataset describes many variables.
+  Our examples will use just a few. (Descriptions are copied from the User Guide.)
+
+  .. list-table::
+    :header-rows: 1
+
+    * - Variable
+      - Definition
+      - Coding
+    * - ``SEX``
+      - Sex
+      - | ``1``: Male
+        | ``2``: Female
+    * - ``AGE``
+      - Age of the Individual During the Reference Week
+      - Single Years
+    * - ``ILOSTAT``
+      - Labour Status During the Reference Week
+      - | ``1``: Did any work for pay or profit during the reference week - one hour or more (including family workers but excluding conscripts on compulsory military or community service)
+        | ``2``: Was not working but had a job or business from which he/she was absent during the reference week (including family workers but excluding conscripts on compulsory military or community service)
+        | ``3``: Was not working because of lay-off
+        | ``4``: Was a conscript on compulsory military or community service
+        | ``5``: Other (15 years or more) who neither worked nor had a job or business during the reference week
+        | ``9``: Not applicable (child less than 15 years old)
+    * - ``HWUSUAL``
+      - Number of Hours Per Week Usually Worked
+      - | ``00``: Usual hours cannot be given because hours worked vary considerably from week to week or from month to month
+        | ``01`` - ``98``: Number of hours usually worked in the main job
+        | ``99``: Not applicable
+        | *blank*: No answer
+    * - ``QUARTER``
+      - Fixed Reference Quarter
+      - Single Quarter
+    * - ``YEAR``
+      - Fixed Reference Year
+      - Single Year
+
+  While the dataset does not contain a unique identifier for individuals,
+  we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
+
+Loading data
+------------
+
+Data for this tutorial is available under ``dp.examples``.
+We'll use ``scan_csv`` to load data, but Polars can also read a number of `other formats <https://docs.pola.rs/user-guide/io/>`_.
 
 .. tab-set::
 
@@ -105,10 +106,51 @@ ensuring that queries you would like to release satisfy necessary privacy proper
     .. code:: pycon
 
       >>> import polars as pl
-      >>> df = pl.LazyFrame()
+      >>> lazyframe = pl.scan_csv(
+      ...     dp.examples.get_france_lfs_path(),
+      ... )
+
+.. note::
+
+    Data loading is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
+    CSV schema inference is data-dependent:
+    private values can affect both the inferred types and whether parsing succeeds.
+    In a trusted environment, however, a parsing error can be useful,
+    since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
+
+    If the success or failure of ``scan_csv`` has effects outside a trusted environment,
+    this information leak may violate differential privacy.
+    Instead, read from a schema-bearing source such as Parquet with
+    `scan_parquet <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_parquet.html>`_,
+    or load columns as strings via ``infer_schema=False`` and cast them explicitly.
+
+    Another option is to reference the database directly,
+    either `reading a database table into memory <https://docs.pola.rs/user-guide/io/database/>`_,
+    or (experimental feature) running your query on the database
+    with :py:func:`~opendp.extras.ibis.run_on_database`.
+
+    Using ``ignore_errors=True`` avoids some parsing failures,
+    but it may silently change the loaded data and reduce utility,
+    so it should be used deliberately rather than by default.
+    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_
+    for more schema and error-handling options.
+
+
+Mediate access with ``Context``
+-------------------------------
+
+The ``Context`` is the foundation of our differentially private analysis.
+It mediates access to the sensitive data,
+ensuring that queries you would like to release satisfy necessary privacy properties.
+
+.. tab-set::
+
+  .. tab-item:: Python
+
+    .. code:: pycon
 
       >>> context = dp.Context.compositor(
-      ...     data=df,
+      ...     data=lazyframe,
       ...     privacy_unit=dp.unit_of(contributions=36),
       ...     privacy_loss=dp.loss_of(epsilon=1.0),
       ...     split_evenly_over=10,
@@ -117,17 +159,17 @@ ensuring that queries you would like to release satisfy necessary privacy proper
       >>> # Once you construct the context, you should abstain from
       >>> # directly accessing your data again.
       >>> # In fact, it is good practice to delete it!
-      >>> del df
+      >>> del lazyframe
 
 
 A number of parameters define the ``Context``:
 
 The ``privacy_unit`` describes the greatest influence one individual may have on your dataset.
 In this case we have quarterly data across 9 years, and an individual can contribute up to one row per quarter,
-so an individual can contribute up to 36 rows. 
+so an individual can contribute up to 36 rows.
 If we were to analyze a particular quarter in a particular year,
-the unit of privacy would be 1 since each individual would contribute at most one row.   
-(Later in this tutorial we'll make this simpler by using the identifier column ``PIDENT`` 
+the unit of privacy would be 1 since each individual would contribute at most one row.
+(Later in this tutorial we'll make this simpler by using the identifier column ``PIDENT``
 to define the privacy unit.)
 
 The ``privacy_loss`` is the greatest privacy loss an individual in the dataset can experience.
@@ -144,8 +186,7 @@ Alternatively, ``split_by_weights`` lets you give more of your budget to more im
 
 Later examples in this tutorial will also introduce the idea of "margins".
 
-See the Polars section in the `OpenDP User Guide <../../api/user-guide/polars/index.html>`_
-for more information on any of these topics.
+See :ref:`polars-user-guide` in API User Guide for more information on any of these topics.
 
 .. toctree::
   :maxdepth: 1
