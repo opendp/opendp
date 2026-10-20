@@ -64,12 +64,12 @@ def _get_opendp_polars_lib_path():
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
         warn(
-            "The default value is currently signed=False, and counts are clamped at zero, "
-            "consistent with past releases, but the default will be changing to signed=True. ",
+            "The default value is now signed=True, and counts may be negative. "
+            "In future releases this warning will be dropped.",
             FutureWarning,
             stacklevel=3,
         )
-        return False
+        return True
     if not isinstance(signed, bool):
         raise TypeError("signed must be a bool or None")
     return signed
