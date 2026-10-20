@@ -10,6 +10,9 @@ use crate::{
 
 use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
 
+#[cfg(test)]
+mod test;
+
 /// Sample from the censored geometric distribution.
 ///
 /// # Proof Definition
@@ -159,16 +162,21 @@ where
     // Thanks for the input @ctcovington (Christian Covington)
     shift = shift.total_clamp(lower, upper)?;
 
-    let noised = loop {
+    let (direction, magnitude) = loop {
         let direction = sample_standard_bernoulli()?;
-        let sample = sample_geometric_linear(shift, direction, prob, trials)?;
+        let magnitude = sample_geometric_linear(T::zero(), true, prob, trials)?;
         // reject sampling no noise in the negative direction, to avoid double-drawing zero
-        if direction || sample != shift {
-            break sample;
+        if direction || !magnitude.is_zero() {
+            break (direction, magnitude);
         }
     };
 
-    noised.total_clamp(lower, upper)
+    // capping the magnitude clamps the output to `[lower, upper]` without overflow
+    Ok(if direction {
+        shift.alerting_add(&magnitude.min(upper.alerting_sub(&shift)?))?
+    } else {
+        shift.alerting_sub(&magnitude.min(shift.alerting_sub(&lower)?))?
+    })
 }
 
 #[proven]
