@@ -1,16 +1,15 @@
 //! Invariants tested
 //! - the output distribution is invariant to translating `shift` and `bounds` together, including onto the type minimum
-//! - outputs stay within `bounds` without error when `shift` and `bounds` sit at the type extremes
+//! - a shift at `lower` mirrors a shift at `upper`
+//! - outputs stay within `bounds` when `shift` and `bounds` sit at the type extremes
 
 use crate::traits::samplers::test::TEST_Z;
 
 use super::*;
 
 const WIDTH: i8 = 10;
-// the regression shifts mass at `lower` from ~0.62 to ~0.39, so far fewer samples than BASE_N suffice
 const N: usize = 10_000;
 
-/// Histogram of offsets from `lower` when noising `shift = lower + offset` on `[lower, lower + WIDTH]`.
 fn histogram<T: Integer>(lower: T, offset: i8) -> Fallible<Vec<u64>>
 where
     usize: ExactIntCast<T>,
@@ -26,9 +25,9 @@ where
 }
 
 /// Two-sample chi-square test of homogeneity.
-fn assert_same_distribution(a: Vec<u64>, b: Vec<u64>) -> Fallible<()> {
+fn check_chi_square_homogeneity(a: &[u64], b: &[u64]) -> Fallible<()> {
     let (mut statistic, mut df) = (0.0f64, -1.0f64);
-    for (&a, &b) in a.iter().zip(&b) {
+    for (&a, &b) in a.iter().zip(b) {
         if a + b > 0 {
             statistic += (a as f64 - b as f64).powi(2) / (a + b) as f64;
             df += 1.0;
@@ -38,29 +37,31 @@ fn assert_same_distribution(a: Vec<u64>, b: Vec<u64>) -> Fallible<()> {
     if statistic > crit {
         return fallible!(
             FailedFunction,
-            "distributions differ: statistic={statistic} > crit={crit}\n{a:?}\n{b:?}"
+            "Chi-square rejected: statistic={statistic} > crit={crit}\n{a:?}\n{b:?}"
         );
     }
     Ok(())
 }
 
 #[test]
-fn test_discrete_laplace_linear_type_extremes_match_interior() -> Fallible<()> {
-    // regression: a shift at the type minimum previously lost the mass of negative noise
-    assert_same_distribution(histogram(i8::MIN, 0)?, histogram(i8::MIN + 1, 0)?)?;
-    // shift at `lower` rejects positive zeros, shift at `upper` rejects negative zeros; they must mirror
-    let mut mirrored = histogram(0i8, WIDTH)?;
-    mirrored.reverse();
-    assert_same_distribution(histogram(0i8, 0)?, mirrored)
+fn discrete_laplace_linear_type_min_matches_interior() -> Fallible<()> {
+    check_chi_square_homogeneity(&histogram(i8::MIN, 0)?, &histogram(i8::MIN + 1, 0)?)
 }
 
 #[test]
-fn test_discrete_laplace_linear_extreme_bounds_infallible() -> Fallible<()> {
+fn discrete_laplace_linear_shift_at_bounds_is_mirrored() -> Fallible<()> {
+    let mut mirrored = histogram(0i8, WIDTH)?;
+    mirrored.reverse();
+    check_chi_square_homogeneity(&histogram(0i8, 0)?, &mirrored)
+}
+
+#[test]
+fn discrete_laplace_linear_extreme_bounds_in_range() -> Fallible<()> {
     for bounds in [(i8::MIN, -1), (0, i8::MAX), (-127, 0)] {
         for shift in [i8::MIN, bounds.0, bounds.1, i8::MAX] {
             for _ in 0..50 {
                 let v = sample_discrete_laplace_linear::<i8, f64>(shift, 50.0, bounds)?;
-                assert!(bounds.0 <= v && v <= bounds.1);
+                assert!((bounds.0..=bounds.1).contains(&v));
             }
         }
     }
