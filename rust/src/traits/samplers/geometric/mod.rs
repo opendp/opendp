@@ -5,7 +5,7 @@ use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
-    traits::{AlertingAdd, ExactIntCast, FiniteBounds, Float, Integer},
+    traits::{ExactIntCast, FiniteBounds, Float, Integer},
 };
 
 use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
@@ -151,13 +151,9 @@ where
         return Ok(lower);
     }
 
-    // split `upper - lower - 1` at zero, so that wide bounds on signed types don't overflow `T`
-    let trials: Option<usize> = Some(if lower < T::zero() && upper >= T::zero() {
-        let neg_lower_m1 = T::zero().alerting_sub(&lower.alerting_add(&T::one())?)?;
-        usize::exact_int_cast(upper)?.alerting_add(&usize::exact_int_cast(neg_lower_m1)?)?
-    } else {
-        usize::exact_int_cast(upper.alerting_sub(&lower)?.alerting_sub(&T::one())?)?
-    });
+    let trials: Option<usize> = Some(usize::exact_int_cast(
+        upper.alerting_sub(&lower)?.alerting_sub(&T::one())?,
+    )?);
 
     // make prob conservatively smaller, because a smaller probability means greater noise
     let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
@@ -169,7 +165,7 @@ where
     let noised = loop {
         let direction = sample_standard_bernoulli()?;
         let sample = sample_geometric_linear(shift, direction, prob, trials)?;
-        // reject no noise on one side to avoid double-drawing zero; at `lower` the negative side is all clamped, so reject the positive side
+        // reject sampling no noise in the negative direction (positive at `lower`), to avoid double-drawing zero
         if direction != (shift == lower) || sample != shift {
             break sample;
         }
