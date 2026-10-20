@@ -162,5 +162,6 @@ fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
 
     assert_eq!(meas.map(&(1, rbig!(0), rbig!(0)))?, (0.0, 0.0));
     assert_eq!(meas.map(&(1, rbig!(1), rbig!(1)))?, (f64::INFINITY, 1.));
+    assert!(meas.map(&(1, rbig!(-1), rbig!(1))).is_err());
     Ok(())
 }
