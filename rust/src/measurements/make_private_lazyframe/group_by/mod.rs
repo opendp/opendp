@@ -286,7 +286,8 @@ where
         if margin.invariant.is_some() || is_join {
             ()
         } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
-            let d_instability = threshold_value.neg_inf_sub(&li)?;
+            let d_instability = threshold_value.neg_inf_sub(&li)?; // 0 - 1 here is overflow.
+            // ERROR AT d_instability
             let delta_single =
                 integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
             let delta_joint = (1.0).inf_sub(
