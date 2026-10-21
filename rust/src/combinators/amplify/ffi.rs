@@ -47,7 +47,10 @@ impl AmplifiableMeasure for AnyMeasure {
 /// * `population_size` - the size of the population from which the input dataset is a simple sample
 ///
 /// # Why honest-but-curious?
-/// The privacy guarantees are only valid if the input dataset is a simple sample from a population with `population_size` records.
+/// Sampling: The input dataset must be a simple random sample from a population of
+/// `population_size` records, and sample membership must remain confidential.
+/// Terminal amplification: The amplified measurement must encompass all processing
+/// and releases involving the sample, and must be its only analysis.
 fn make_population_amplification(
     measurement: &AnyMeasurement,
     population_size: usize,

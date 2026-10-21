@@ -68,6 +68,12 @@ impl AmplifiableMeasure for Approximate<MaxDivergence> {
 /// * `TO` - Output Type.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
+///
+/// # Why honest-but-curious?
+/// Sampling: The input dataset must be a simple random sample from a population of
+/// `population_size` records, and sample membership must remain confidential.
+/// Terminal amplification: The amplified measurement must encompass all processing
+/// and releases involving the sample, and must be its only analysis.
 pub fn make_population_amplification<DI, MI, MO, TO>(
     measurement: &Measurement<DI, MI, MO, TO>,
     population_size: usize,
