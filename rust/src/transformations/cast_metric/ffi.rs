@@ -94,7 +94,18 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+    let input_metric = match input_metric.downcast_ref::<SymmetricDistance>() {
+        Ok(metric) => metric.clone(),
+        Err(_) => {
+            return err!(
+                FFI,
+                "make_metric_bounded requires SymmetricDistance. \
+                 For InsertDeleteDistance, first call make_unordered to obtain \
+                 SymmetricDistance, then make_metric_bounded to obtain ChangeOneDistance."
+            )
+            .into();
+        }
+    };
     let trans = try_!(super::make_metric_bounded(
         input_domain.clone(),
         input_metric

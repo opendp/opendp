@@ -46,5 +46,5 @@ def test_bounded():
 
 def test_bounded_rejects_ordered_metric():
     domain = dp.vector_domain(dp.atom_domain(T=dp.i32), 3)
-    with pytest.raises(dp.OpenDPException):
+    with pytest.raises(dp.OpenDPException, match="first call make_unordered"):
         dp.t.make_metric_bounded(domain, dp.insert_delete_distance())
