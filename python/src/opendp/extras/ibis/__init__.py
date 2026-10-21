@@ -171,7 +171,7 @@ def _run_ffi_split_plan(plan, connection):
     """Noise each typed SQL aggregate before evaluating public postprocessing."""
     from json import loads
 
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
     import opendp.prelude as dp
     from opendp._data import decode_noise_plugin_parameters
 
