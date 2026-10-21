@@ -34,12 +34,14 @@ None
     Otherwise the output is \texttt{Ok(privacy\_map)}
     where \texttt{privacy\_map} observes the following:
 
-    Define \texttt{function(x)} as a function that updates each pair $(k_i, v_i + Z_i)$,
+    Define \texttt{function(x)} as a function that omits entries with $v_i = 0$,
+    then updates each remaining pair $(k_i, v_i + Z_i)$,
     where $Z_i$ are iid samples from \texttt{self},
-    and discards pairs where $v_i + Z_i$ has smaller magnitude than \texttt{|threshold|}.
+    and retains pairs for which $v_i + Z_i > T$ in the positive-threshold direction,
+    or $v_i + Z_i < -T$ in the negative-threshold direction, where $T = |\texttt{threshold}|$.
     The ordering of returned pairs is independent from the input ordering.
 
-    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    For every pair of elements $x, x'$ in \texttt{MapDomain<AtomDomain<TK>, AtomDomain<IBig>{}>},
     and for every pair (\texttt{d\_in}, \texttt{d\_out}),
     where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
     if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
@@ -79,7 +81,7 @@ None
     Now the \texttt{l1} sensitivity is zero if any of the three bounds are zero,
     due to the tightening of the \texttt{l1} bound on line \ref{line:l1}.
     Line \ref{line:zero-sens} then checks for zero sensitivity to return a privacy loss of zero epsilon, zero delta,
-    because all neighboring datasets have identical pairs, and the ordering is randomized.
+    because all neighboring datasets have identical nonzero-valued pairs after omitting zeros, and the ordering is randomized.
 
     Otherwise sensitivity is nonzero, so if the scale is zero,
     the privacy loss is unbounded, shown on line \ref{line:zero-scale}.
@@ -95,17 +97,29 @@ None
     To ensure that the distance to instability remains positive,
     the threshold must be at least as large as the sensitivity, as checked on line \ref{line:threshold-check}.
 
+    It suffices to analyze the positive-threshold direction.
+    For a negative threshold $-T$, the release condition $c_j + Z_j < -T$
+    is equivalent to $-c_j - Z_j > T$.
+    Since the noise distribution is symmetric, $-Z_j$ has the same distribution as $Z_j$.
+    Negation also preserves all input sensitivity bounds, so the privacy bound is unchanged.
+
     Adapting the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7).
-    Consider $S$ to be the set of labels that are common between $x$ and $x'$.
+    Let $\operatorname{supp}(x)$ denote the keys whose values are nonzero,
+    treating missing keys as having value zero.
+    Omitting explicit zero-valued entries does not affect any of the input distances.
+    If a key is in $\operatorname{supp}(x) \setminus \operatorname{supp}(x')$,
+    its value differs from zero and is therefore counted by $\Delta_0$;
+    the same holds with $x$ and $x'$ interchanged.
+    Consider $S = \operatorname{supp}(x) \cap \operatorname{supp}(x')$.
     Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
     (where only stable partitions are released).
     We then lower bound the probability of the mechanism returning an event $E$.
-    In the following, $c_j$ denotes the exact count for partition $j$,
+    In the following, $c_j$ denotes the exact (possibly signed) value for partition $j$,
     and $Z_j$ is a random variable distributed according to \texttt{self}.
 
     \begin{align*}
-        \Pr[E] &= \prod_{j \in x \backslash x'} \Pr[c_j + Z_j \le T] \\
-        &\ge \prod_{j \in x \backslash x'} \Pr[\Delta_\infty + Z_j \le T] \\
+        \Pr[E] &= \prod_{j \in \operatorname{supp}(x) \setminus \operatorname{supp}(x')} \Pr[c_j + Z_j \le T] \\
+        &\ge \prod_{j \in \operatorname{supp}(x) \setminus \operatorname{supp}(x')} \Pr[\Delta_\infty + Z_j \le T] \\
         &\ge \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0}
     \end{align*}
 

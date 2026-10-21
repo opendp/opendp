@@ -62,7 +62,7 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-/// * `threshold` - Exclude pairs with values whose distance from zero exceeds this value.
+/// * `threshold` - Release noisy values strictly beyond this threshold in its signed direction.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
