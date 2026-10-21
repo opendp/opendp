@@ -6,7 +6,9 @@ use crate::{
     traits::{CheckAtom, Float, RoundCast},
 };
 
-use super::{num_layers_from_num_nodes, num_nodes_from_num_layers};
+use super::{
+    checked_num_nodes_from_num_layers, num_layers_from_num_nodes, num_nodes_from_num_layers,
+};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -40,11 +42,18 @@ where
     TIA: CheckAtom + Clone,
     TOA: Float + RoundCast<TIA>,
 {
+    if branching_factor < 2 {
+        return fallible!(MakeTransformation, "branching_factor must be at least two");
+    }
     let branching_factor = branching_factor as usize;
     Ok(Function::new_fallible(move |arg: &Vec<TIA>| {
+        if arg.is_empty() {
+            return fallible!(FailedFunction, "tree must contain at least one node");
+        }
         let layers = num_layers_from_num_nodes(arg.len(), branching_factor);
+        let num_nodes = checked_num_nodes_from_num_layers(layers, branching_factor)?;
 
-        let mut vars = vec![TOA::one(); num_nodes_from_num_layers(layers, branching_factor)];
+        let mut vars = vec![TOA::one(); num_nodes];
         let zero_leaves = vars.len() - arg.len();
         let mut tree: Vec<TOA> = arg
             .iter()

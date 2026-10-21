@@ -433,7 +433,9 @@ def test_rshift_multi_partial():
         split_evenly_over=1,
     )
     with pytest.raises(ValueError, match="laplace is missing 1 parameter"):
-        context.query().b_ary_tree(leaf_count=3).laplace()
+        context.query().b_ary_tree(
+            output_metric=dp.l1_distance(T=int), leaf_count=3
+        ).laplace()
 
 
 def test_transformation_release_error():
