@@ -29,6 +29,25 @@ def query_and_connection(monkeypatch, plugins, values=(42,)):
     monkeypatch.setattr(
         polars_to_ibis, "split_polars_on_ffi", lambda *a, **kw: (table, plugins)
     )
+    records = tuple(
+        SimpleNamespace(
+            name=f"c{i}",
+            parameters=plugin,
+            input_dtype=(
+                pl.Float64 if i < len(values) and type(values[i]) is float else pl.Int64
+            ),
+        )
+        for i, plugin in enumerate(plugins)
+    )
+    plan = SimpleNamespace(
+        ibis_table=table, plugins=records, postprocess=lambda frame: frame
+    )
+    monkeypatch.setattr(
+        polars_to_ibis,
+        "split_polars_on_ffi_plan",
+        lambda *a, **kw: plan,
+        raising=False,
+    )
     calls = []
 
     def to_polars(received_table):
@@ -168,4 +187,13 @@ def test_run_on_database_preserves_scalar_order(monkeypatch):
     ]
     query, connection, calls = query_and_connection(monkeypatch, plugins, [7, 12.5])
     assert run_on_database(query, connection, "synthetic") == [7, 12.5]
+    assert len(calls) == 1
+
+
+def test_run_on_database_with_older_translator(monkeypatch):
+    query, connection, calls = query_and_connection(
+        monkeypatch, [plugin(pickle.dumps(parameters(scale=0.0)))], [42]
+    )
+    monkeypatch.delattr(polars_to_ibis, "split_polars_on_ffi_plan")
+    assert run_on_database(query, connection, "synthetic") == [42]
     assert len(calls) == 1

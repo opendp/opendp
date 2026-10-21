@@ -109,11 +109,18 @@ def run_on_database(query, connection, table_name: str):
     """
     import opendp.prelude as dp
 
-    from polars_to_ibis import split_polars_on_ffi
+    import polars_to_ibis
 
     query_lf = query.release().lazy()
 
-    ibis_table, param_dicts = split_polars_on_ffi(
+    # The two-stage planner is optional until its API is available in a release.
+    # Older translator versions retain the existing scalar execution path.
+    split_plan = getattr(polars_to_ibis, "split_polars_on_ffi_plan", None)
+    if split_plan is not None:
+        plan = split_plan(query_lf, table_name=table_name, backend=connection)
+        return _run_ffi_split_plan(plan, connection)
+
+    ibis_table, param_dicts = polars_to_ibis.split_polars_on_ffi(
         query_lf,
         table_name=table_name,
         backend=connection,
@@ -158,3 +165,95 @@ def run_on_database(query, connection, table_name: str):
         )  # pragma: no cover
 
     return [measurement(item) for item, measurement in zip(private_items, measurements)]
+
+
+def _run_ffi_split_plan(plan, connection):
+    """Noise each typed SQL aggregate before evaluating public postprocessing."""
+    from json import loads
+
+    import polars as pl
+    import opendp.prelude as dp
+    from opendp._data import decode_noise_plugin_parameters
+
+    carriers = {
+        pl.Int32: "i32",
+        pl.Int64: "i64",
+        pl.UInt32: "u32",
+        pl.UInt64: "u64",
+        pl.Float64: "f64",
+    }
+    names = [plugin.name for plugin in plan.plugins]
+    if not names or len(set(names)) != len(names):
+        raise dp.OpenDPException("Expected distinct scalar noise plugin columns.")
+
+    measurements = []
+    for plugin in plan.plugins:
+        if plugin.parameters["symbol"] != "noise_plugin":
+            raise dp.OpenDPException("Only OpenDP noise plugins are supported.")
+        if plugin.input_dtype not in carriers:
+            raise dp.OpenDPException("Unsupported native noise input type.")
+        kwargs = loads(decode_noise_plugin_parameters(plugin.parameters["kwargs"]))
+        expected_support = "Integer" if plugin.input_dtype.is_integer() else "Float"
+        if kwargs["support"] != expected_support:
+            raise dp.OpenDPException("Noise support does not match its input type.")
+        carrier = carriers[plugin.input_dtype]
+        input_space = (
+            dp.atom_domain(T=carrier, nan=False),
+            dp.absolute_distance(T=carrier),
+        )
+        make = {
+            "Laplace": dp.m.make_laplace,
+            "Gaussian": dp.m.make_gaussian,
+        }[kwargs["distribution"]]
+        measurements.append(make(*input_space, scale=kwargs["scale"]))
+
+    private_result = connection.to_polars(plan.ibis_table)
+    if private_result.height != 1 or set(private_result.columns) != set(names):
+        raise dp.OpenDPException(
+            "Private SQL values are not 1-1 with the scalar noise parameters."
+        )
+
+    def typed_scalar(value, plugin, domain):
+        # SQL result types do not identify the native carrier: e.g. a backend's
+        # COUNT may be Int64 while the original Polars expression is UInt32.
+        if plugin.input_dtype.is_integer():
+            valid_type = type(value) is int
+        else:
+            valid_type = type(value) in (int, float)
+        if not valid_type:
+            raise dp.OpenDPException("Invalid scalar value for a native noise type.")
+        try:
+            value = pl.Series([value], dtype=plugin.input_dtype, strict=True)[0]
+            if not domain.member(value):
+                raise ValueError("Value outside the noise domain")
+        except (
+            ValueError,
+            TypeError,
+            OverflowError,
+            dp.OpenDPException,
+            pl.exceptions.PolarsError,
+        ):
+            raise dp.OpenDPException(
+                "Scalar value is outside its native noise type."
+            ) from None
+        return value
+
+    # Validate all private scalar carriers before evaluating any mechanism.
+    private_values = [
+        typed_scalar(private_result[plugin.name][0], plugin, measurement.input_domain)
+        for plugin, measurement in zip(plan.plugins, measurements)
+    ]
+    noisy_columns = [
+        pl.Series(
+            plugin.name,
+            [typed_scalar(measurement(value), plugin, measurement.input_domain)],
+            dtype=plugin.input_dtype,
+        )
+        for plugin, measurement, value in zip(
+            plan.plugins, measurements, private_values
+        )
+    ]
+    result = plan.postprocess(pl.DataFrame(noisy_columns))
+    if result.height != 1:
+        raise dp.OpenDPException("Expected one postprocessed result row.")
+    return list(result.row(0))

@@ -5,6 +5,7 @@ import math
 import pickle
 import sys
 from uuid import uuid4
+from types import SimpleNamespace
 
 import pytest
 import opendp.prelude as dp
@@ -100,3 +101,96 @@ def test_run_on_database_native_noise_parameters(monkeypatch, database, distribu
         assert summary["distribution"] == f"Integer {distribution}"
         assert parameter["scale"] == summary["scale"]
         assert math.isfinite(parameter["scale"]) and parameter["scale"] > 0
+
+
+@pytest.mark.filterwarnings(
+    "ignore:'json' serialization format of LazyFrame is deprecated:UserWarning"
+)
+@pytest.mark.parametrize("distribution", ["Laplace", "Gaussian"])
+def test_run_on_database_mean_postprocessing(monkeypatch, database, distribution):
+    import polars_to_ibis
+    from opendp import _data
+
+    split = getattr(polars_to_ibis, "split_polars_on_ffi_plan", None)
+    if split is None:
+        pytest.skip("Requires the two-stage translator API")
+
+    connection, table_name = database
+    loss = {"epsilon": 1.0} if distribution == "Laplace" else {"rho": 0.5}
+    context = dp.Context.compositor(
+        data=dp.ibis.scan_database(connection, table_name),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(**loss),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(max_length=4)],
+    )
+    query = context.query().select(
+        pl.col("value").fill_null(0).dp.mean((0, 10)).alias("mean_value")
+    )
+    summary_frame = query.summarize()
+    assert isinstance(summary_frame, pl.DataFrame)
+    summary = summary_frame.to_dicts()
+
+    aggregates = []
+    original_to_polars = connection.to_polars
+
+    def observed_to_polars(*args, **kwargs):
+        frame = original_to_polars(*args, **kwargs)
+        aggregates.append(list(frame.row(0)))
+        return frame
+
+    parameters = []
+    original_decode = _data.decode_noise_plugin_parameters
+
+    def observed_decode(*args, **kwargs):
+        decoded = original_decode(*args, **kwargs)
+        parameters.append(json.loads(decoded))
+        return decoded
+
+    plans = []
+    noised = []
+    postprocessed = []
+
+    def observed_split(*args, **kwargs):
+        plan = split(*args, **kwargs)
+        plans.append(plan)
+
+        def postprocess(frame):
+            noised.append(frame)
+            result = plan.postprocess(frame)
+            postprocessed.append(result)
+            return result
+
+        return SimpleNamespace(
+            ibis_table=plan.ibis_table, plugins=plan.plugins, postprocess=postprocess
+        )
+
+    monkeypatch.setattr(connection, "to_polars", observed_to_polars)
+    monkeypatch.setattr(_data, "decode_noise_plugin_parameters", observed_decode)
+    monkeypatch.setattr(polars_to_ibis, "split_polars_on_ffi_plan", observed_split)
+
+    [result] = dp.ibis.run_on_database(query, connection, table_name)
+
+    assert aggregates == [[10, 4]]
+    assert len(plans) == len(noised) == len(postprocessed) == 1
+    assert [plugin.input_dtype for plugin in plans[0].plugins] == [pl.Int64, pl.UInt32]
+    assert list(noised[0].schema.values()) == [pl.Int64, pl.UInt32]
+    assert postprocessed[0].columns == ["mean_value"]
+    assert len(parameters) == len(summary) == 2
+    for parameter, row in zip(parameters, summary):
+        assert parameter["distribution"] == distribution
+        assert parameter["support"] == "Integer"
+        assert parameter["scale"] == row["scale"]
+
+    numerator, denominator = noised[0].row(0)
+    # Compare arithmetic on the actual two noised values, not random draws.
+    if denominator:
+        expected = float(numerator) / float(denominator)
+    elif numerator:
+        expected = math.copysign(math.inf, numerator)
+    else:
+        expected = math.nan
+    if math.isnan(expected):
+        assert math.isnan(result)
+    else:
+        assert result == expected
