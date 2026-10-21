@@ -3,9 +3,7 @@ use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast, IntoAny
 use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
 };
-use crate::transformations::cast_metric::traits::{
-    BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
-};
+use crate::transformations::cast_metric::traits::{BoundedMetric, OrderedMetric, UnorderedMetric};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_ordered_random(
@@ -96,37 +94,19 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
 ) -> FfiResult<*mut AnyTransformation> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MI_ = input_metric.type_.clone();
+    let input_metric = try_!(input_metric.downcast_ref::<SymmetricDistance>()).clone();
+    let trans = try_!(super::make_metric_bounded(
+        input_domain.clone(),
+        input_metric
+    ));
 
-    fn monomorphize<MI: 'static + UnboundedMetric<Distance = IntDistance>>(
-        input_domain: &AnyDomain,
-        input_metric: &AnyMetric,
-    ) -> FfiResult<*mut AnyTransformation>
-    where
-        MI::Distance: 'static,
-        <MI::BoundedMetric as Metric>::Distance: 'static,
-        (AnyDomain, MI): MetricSpace,
-        (AnyDomain, MI::BoundedMetric): MetricSpace,
-    {
-        let input_metric = try_!(input_metric.downcast_ref::<MI>()).clone();
-        let trans = try_!(super::make_metric_bounded::<AnyDomain, MI>(
-            input_domain.clone(),
-            input_metric
-        ));
-
-        trans
-            .with_map(
-                AnyMetric::new(trans.input_metric.clone()),
-                AnyMetric::new(trans.output_metric.clone()),
-                trans.stability_map.clone().into_any(),
-            )
-            .into()
-    }
-    dispatch!(
-        monomorphize,
-        [(MI_, [SymmetricDistance, InsertDeleteDistance])],
-        (input_domain, input_metric)
-    )
+    trans
+        .with_map(
+            AnyMetric::new(trans.input_metric.clone()),
+            AnyMetric::new(trans.output_metric.clone()),
+            trans.stability_map.clone().into_any(),
+        )
+        .into()
 }
 
 #[unsafe(no_mangle)]
