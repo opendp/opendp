@@ -28,8 +28,6 @@ use crate::{
     error::Fallible,
     traits::CheckAtom,
 };
-#[cfg(feature = "contrib")]
-use crate::{traits::Hashable, transformations::DataFrameDomain};
 use std::fmt::{Debug, Formatter};
 
 /// The type that represents the distance between datasets.
@@ -84,21 +82,7 @@ impl Metric for SymmetricDistance {
     type Distance = IntDistance;
 }
 
-// Symmetric distance is defined in terms of unescaped line-breaks for CSV string datasets
-impl MetricSpace for (AtomDomain<String>, SymmetricDistance) {
-    fn check_space(&self) -> Fallible<()> {
-        Ok(())
-    }
-}
-
 impl<D: Domain> MetricSpace for (VectorDomain<D>, SymmetricDistance) {
-    fn check_space(&self) -> Fallible<()> {
-        Ok(())
-    }
-}
-
-#[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
@@ -155,13 +139,6 @@ impl Metric for InsertDeleteDistance {
 }
 
 impl<D: Domain> MetricSpace for (VectorDomain<D>, InsertDeleteDistance) {
-    fn check_space(&self) -> Fallible<()> {
-        Ok(())
-    }
-}
-
-#[cfg(feature = "contrib")]
-impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }
