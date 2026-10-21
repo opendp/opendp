@@ -16,7 +16,7 @@ mod test;
 
 #[bootstrap(
     name = "decode_noise_plugin_parameters",
-    arguments(kwargs(rust_type = "Vec<u8>", hint = "FfiSlicePtr")),
+    arguments(kwargs(rust_type = "Vec<u8>", hint = "Sequence[int]")),
     returns(c_type = "FfiResult<char *>")
 )]
 /// Internal function. Decodes serialized noise plugin parameters as JSON.

@@ -54,7 +54,9 @@ def test_run_on_database_native_noise_parameters(monkeypatch, database, distribu
         pl.col("value").fill_null(0).dp.sum((0, 10)).alias("sum_value"),
     )
 
-    expected_summary = query.summarize().to_dicts()
+    summary_frame = query.summarize()
+    assert isinstance(summary_frame, pl.DataFrame)
+    expected_summary = summary_frame.to_dicts()
 
     aggregates = []
     original_to_polars = connection.to_polars
