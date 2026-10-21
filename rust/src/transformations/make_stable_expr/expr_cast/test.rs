@@ -1,3 +1,4 @@
+use crate::core::Domain;
 use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
@@ -161,5 +162,87 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
 
         assert_eq!(cast.output_domain.column.dtype(), dtype);
     }
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_nullability() -> Fallible<()> {
+    // Non-strict casts can introduce nulls into otherwise non-nullable columns.
+    let lf = df!("x" => &["1", "not-an-integer"])?.lazy();
+    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "x",
+        AtomDomain::<String>::default(),
+    )])?;
+    assert!(!input_domain.series_domains[0].nullable);
+
+    // The constructor forces the default strict cast to be non-strict.
+    let t_cast = make_expr_cast(
+        input_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("x").cast(DataType::Int64),
+    )?;
+    assert!(t_cast.output_domain.column.nullable);
+
+    let expr = t_cast.invoke(&lf.logical_plan)?.expr;
+    let observed = lf.select([expr]).collect()?;
+    assert_eq!(observed, df!("x" => &[Some(1_i64), None])?);
+    assert!(
+        t_cast
+            .output_domain
+            .column
+            .member(observed.column("x")?.as_materialized_series())?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_widening_preserves_non_null() -> Fallible<()> {
+    let lf = df!("x" => &[1i32, 2, 3])?.lazy();
+    let input_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("x", AtomDomain::<i32>::default())])?;
+
+    let t_cast = make_expr_cast(
+        input_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("x").cast(DataType::Int64),
+    )?;
+    assert!(!t_cast.output_domain.column.nullable);
+
+    let expr = t_cast.invoke(&lf.logical_plan)?.expr;
+    let observed = lf.select([expr]).collect()?;
+    assert_eq!(observed, df!("x" => &[1i64, 2, 3])?);
+    assert!(
+        t_cast
+            .output_domain
+            .column
+            .member(observed.column("x")?.as_materialized_series())?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_other_null_preserving() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("integer", AtomDomain::<i64>::default()),
+        SeriesDomain::new("float", AtomDomain::<f32>::default()),
+        SeriesDomain::new("bool", AtomDomain::<bool>::default()),
+    ])?;
+
+    for expr in [
+        col("integer").cast(DataType::Float64),
+        col("integer").cast(DataType::String),
+        col("float").cast(DataType::Float64),
+        col("bool").cast(DataType::String),
+    ] {
+        let t_cast = make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            expr,
+        )?;
+        assert!(!t_cast.output_domain.column.nullable);
+    }
+
     Ok(())
 }

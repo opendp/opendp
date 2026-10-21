@@ -9,8 +9,8 @@ use crate::{
 
 pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf_domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("cycle_(..101f64)", AtomDomain::<i32>::default()),
-        SeriesDomain::new("cycle_(..10i32)", AtomDomain::<f64>::default()),
+        SeriesDomain::new("cycle_(..101f64)", AtomDomain::<f64>::new(None, None)),
+        SeriesDomain::new("cycle_(..10i32)", AtomDomain::<i32>::default()),
     ])?
     .with_margin(Margin::select().with_max_length(1000).with_invariant_keys())?
     .with_margin(
