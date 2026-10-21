@@ -263,8 +263,8 @@ Bounded Metrics
 You may be more familiar with "bounded" differential privacy, where dataset distances are expressed in terms of the number of changed rows.
 Expressing dataset distances in this manner is more restrictive, as edit distances are only valid for datasets with a fixed size.
 Generally speaking, if a dataset differs from a neighboring dataset by no more than ``k`` edits, then they differ by no more than ``2k`` additions and removals.
-We therefore write all transformations in terms of the more general "unbounded"-dp metrics ``SymmetricDistance`` and ``InsertDeleteDistance``,
-and provide the following constructors to convert to/from "bounded"-dp metrics ``ChangeOneDistance`` and ``HammingDistance`` respectively.
+The constructors below convert between the unordered metrics ``SymmetricDistance`` and ``ChangeOneDistance``,
+and from ``HammingDistance`` to ``InsertDeleteDistance``.
 
 .. list-table::
    :header-rows: 1
@@ -277,10 +277,6 @@ and provide the following constructors to convert to/from "bounded"-dp metrics `
      - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``SymmetricDistance``
      - ``ChangeOneDistance``
-   * - :func:`~opendp.transformations.make_metric_bounded`
-     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
-     - ``InsertDeleteDistance``
-     - ``HammingDistance``
    * - :func:`~opendp.transformations.make_metric_unbounded`
      - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``ChangeOneDistance``
