@@ -87,16 +87,14 @@ class Fixed(Algorithm):
         if model is not None and not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         cliques = [q.by for q in self.queries]
         weights = [q.weight for q in self.queries]
 
         def make(scale: float) -> Measurement:
             return make_stable_marginals(
-                input_domain,
-                input_metric,
-                lp_metric,
-                cliques,  # type: ignore[arg-type]
+                input_domain, input_metric, cliques
             ) >> then_noise_marginals(output_measure, cliques, scale, weights)  # type: ignore[return-type]
 
         m_marginals = binary_search_chain(make, d_in, d_out, T=float)
