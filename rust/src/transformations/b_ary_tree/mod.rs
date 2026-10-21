@@ -75,7 +75,11 @@ where
                 layers.push(
                     layers[i]
                         .chunks(branching_factor)
-                        .map(|chunk| chunk.iter().sum::<TA>())
+                        .map(|chunk| {
+                            chunk
+                                .iter()
+                                .fold(TA::zero(), |sum, v| sum.saturating_add(v))
+                        })
                         .collect(),
                 );
             });

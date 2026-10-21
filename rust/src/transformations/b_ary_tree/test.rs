@@ -83,6 +83,34 @@ fn test_make_b_ary_tree() -> Fallible<()> {
 }
 
 #[test]
+fn test_b_ary_tree_saturates() -> Fallible<()> {
+    let tree = make_b_ary_tree::<_, i32>(
+        VectorDomain::new(AtomDomain::default()).with_size(2),
+        L1Distance::<i32>::default(),
+        2,
+        2,
+    )?;
+    assert_eq!(
+        tree.invoke(&vec![i32::MAX, 0])?,
+        vec![i32::MAX, i32::MAX, 0]
+    );
+    assert_eq!(
+        tree.invoke(&vec![i32::MAX, 1])?,
+        vec![i32::MAX, i32::MAX, 1]
+    );
+    assert_eq!(
+        tree.invoke(&vec![i32::MIN, 0])?,
+        vec![i32::MIN, i32::MIN, 0]
+    );
+    assert_eq!(
+        tree.invoke(&vec![i32::MIN, -1])?,
+        vec![i32::MIN, i32::MIN, -1]
+    );
+    assert_eq!(tree.map(&1)?, 2);
+    Ok(())
+}
+
+#[test]
 fn test_noise_b_ary_tree() -> Fallible<()> {
     let meas =
         (make_b_ary_tree::<_, i32>(Default::default(), L1Distance::<u32>::default(), 10, 2)?
