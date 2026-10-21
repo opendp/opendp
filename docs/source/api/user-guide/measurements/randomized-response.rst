@@ -358,7 +358,7 @@ Bit Vector Randomized Response
 Another way to generalize boolean randomized response
 is by considering bit vectors with limited weight.
 In this setting, neighboring datasets may be completely different bitvectors,
-but all bitvectors may only have a limited number of true bits (the weight).
+but all bitvectors must have the same length and may only have a limited number of true bits (the weight).
 
 .. tab-set::
 
@@ -372,7 +372,7 @@ but all bitvectors may only have a limited number of true bits (the weight).
 
             >>> # construct the measurement
             >>> m_rr = dp.m.make_randomized_response_bitvec(
-            ...     dp.bitvector_domain(max_weight=3),
+            ...     dp.bitvector_domain(max_weight=3, size=24),
             ...     dp.discrete_distance(),
             ...     f=0.8,
             ... )

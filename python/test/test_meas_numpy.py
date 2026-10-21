@@ -7,8 +7,13 @@ np = pytest.importorskip("numpy")
 def test_randomized_response_bitvec():
     f = 1e-20
     m = 3
+    with pytest.raises(Exception, match="requires a size"):
+        dp.m.make_randomized_response_bitvec(
+            dp.bitvector_domain(max_weight=m), dp.discrete_distance(), f=f
+        )
+
     m_rr = dp.m.make_randomized_response_bitvec(
-        dp.bitvector_domain(max_weight=m), dp.discrete_distance(), f=f
+        dp.bitvector_domain(max_weight=m, size=24), dp.discrete_distance(), f=f
     )
 
     # the postprocessor expects little endian data
