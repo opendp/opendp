@@ -176,6 +176,7 @@ impl Domain for ExprDomain {
         let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
             Context::RowByRow { .. } => plan.select([expr]),
+            Context::Aggregation { margin } if margin.by.is_empty() => plan.select([expr.clone()]),
             Context::Aggregation { margin } => plan
                 .group_by(margin.by.iter().cloned().collect::<Vec<_>>())
                 .agg([expr.clone()]),
@@ -190,7 +191,7 @@ impl Domain for ExprDomain {
         match &self.context {
             Context::RowByRow => (),
             Context::Aggregation { margin } => {
-                if !margin.member(frame.lazy().group_by(&Vec::from_iter(margin.by.clone())))? {
+                if !margin.member(frame.lazy())? {
                     return Ok(false);
                 }
             }
@@ -330,6 +331,31 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, L0InfDistance<LInfDistance<Q>>)
 
 impl<const P: usize, M: UnboundedMetric> MetricSpace for (ExprDomain, L0PInfDistance<P, M>) {
     fn check_space(&self) -> Fallible<()> {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::domains::AtomDomain;
+    use polars::lazy::dsl::len;
+
+    #[test]
+    fn test_member_select() -> Fallible<()> {
+        let lf = df!("A" => [1, 2, 3])?.lazy();
+        let plan = ExprPlan {
+            plan: lf.logical_plan,
+            expr: len(),
+            fill: None,
+        };
+        let domain = ExprDomain {
+            column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
+            context: Context::Aggregation {
+                margin: Margin::select().with_max_length(1),
+            },
+        };
+        assert!(domain.member(&plan)?);
         Ok(())
     }
 }
