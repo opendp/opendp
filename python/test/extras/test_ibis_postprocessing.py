@@ -132,6 +132,45 @@ def test_run_ffi_split_plan_rejects_metadata_before_sql(record):
     assert not calls
 
 
+@pytest.mark.parametrize("names", [[], ["aggregate", "aggregate"]])
+def test_run_ffi_split_plan_rejects_invalid_plugin_names_before_sql(names, monkeypatch):
+    noise_calls = []
+    postprocess_calls = []
+    monkeypatch.setattr(
+        dp.Measurement, "__call__", lambda *args: noise_calls.append(args)
+    )
+    plan, connection, sql_calls = plan_and_connection(
+        [plugin(name, pl.Int32) for name in names],
+        pl.DataFrame({"aggregate": [1]}),
+        postprocess=lambda frame: postprocess_calls.append(frame),
+    )
+    with pytest.raises(
+        dp.OpenDPException, match="distinct scalar noise plugin columns"
+    ):
+        _run_ffi_split_plan(plan, connection)
+    assert not sql_calls
+    assert not noise_calls
+    assert not postprocess_calls
+
+
+def test_run_ffi_split_plan_rejects_nan_before_noise(monkeypatch):
+    noise_calls = []
+    postprocess_calls = []
+    monkeypatch.setattr(
+        dp.Measurement, "__call__", lambda *args: noise_calls.append(args)
+    )
+    plan, connection, sql_calls = plan_and_connection(
+        [plugin("aggregate", pl.Float64)],
+        pl.DataFrame({"aggregate": [float("nan")]}),
+        postprocess=lambda frame: postprocess_calls.append(frame),
+    )
+    with pytest.raises(dp.OpenDPException, match="outside its native noise type"):
+        _run_ffi_split_plan(plan, connection)
+    assert len(sql_calls) == 1
+    assert not noise_calls
+    assert not postprocess_calls
+
+
 @pytest.mark.parametrize(
     "frame",
     [
@@ -177,3 +216,29 @@ def test_run_ffi_split_plan_rejects_invalid_mechanism_output(monkeypatch):
     )
     with pytest.raises(dp.OpenDPException, match="native noise type"):
         _run_ffi_split_plan(plan, connection)
+
+
+@pytest.mark.parametrize("height", [0, 2])
+def test_run_ffi_split_plan_rejects_postprocessing_shape(height, monkeypatch):
+    noise_inputs = []
+    postprocess_inputs = []
+
+    def controlled_noise(measurement, value):
+        noise_inputs.append(value)
+        return value + 1
+
+    def postprocess(frame):
+        postprocess_inputs.append(frame.to_dict(as_series=False))
+        return pl.concat([frame] * height) if height else frame.clear()
+
+    monkeypatch.setattr(dp.Measurement, "__call__", controlled_noise)
+    plan, connection, sql_calls = plan_and_connection(
+        [plugin("aggregate", pl.Int32)],
+        pl.DataFrame({"aggregate": [4]}),
+        postprocess=postprocess,
+    )
+    with pytest.raises(dp.OpenDPException, match="one postprocessed result row"):
+        _run_ffi_split_plan(plan, connection)
+    assert len(sql_calls) == 1
+    assert noise_inputs == [4]
+    assert postprocess_inputs == [{"aggregate": [5]}]

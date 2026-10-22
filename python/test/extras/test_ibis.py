@@ -197,3 +197,12 @@ def test_run_on_database_with_older_translator(monkeypatch):
     monkeypatch.delattr(polars_to_ibis, "split_polars_on_ffi_plan")
     assert run_on_database(query, connection, "synthetic") == [42]
     assert len(calls) == 1
+
+
+def test_run_on_database_with_older_translator_rejects_other_plugins(monkeypatch):
+    payload = plugin(pickle.dumps(parameters()), symbol="index_candidates_plugin")
+    query, connection, calls = query_and_connection(monkeypatch, [payload])
+    monkeypatch.delattr(polars_to_ibis, "split_polars_on_ffi_plan")
+    with pytest.raises(dp.OpenDPException, match="Only OpenDP noise plugins"):
+        run_on_database(query, connection, "synthetic")
+    assert not calls
