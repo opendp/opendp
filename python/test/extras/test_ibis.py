@@ -34,7 +34,7 @@ def query_and_connection(monkeypatch, plugins, values=(42,)):
             name=f"c{i}",
             parameters=plugin,
             input_dtype=(
-                pl.Float64 if i < len(values) and type(values[i]) is float else pl.Int64
+                pl.Float64 if i < len(values) and type(values[i]) is float else pl.Int32
             ),
         )
         for i, plugin in enumerate(plugins)

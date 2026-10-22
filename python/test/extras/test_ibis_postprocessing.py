@@ -1,11 +1,13 @@
 """Check typed scalar execution at the two-stage database boundary."""
 
 import pickle
+import re
 from types import SimpleNamespace
 
 import pytest
 import opendp.prelude as dp
 from opendp.extras.ibis import _run_ffi_split_plan
+from ..helpers import unsupported_native_carrier_error
 
 pl = pytest.importorskip("polars")
 
@@ -45,16 +47,16 @@ def plan_and_connection(plugins, frame, *, postprocess=lambda frame: frame):
 
 
 @pytest.mark.parametrize(
-    "dtype,value",
+    "dtype,carrier,value",
     [
-        (pl.Int32, 2147483647),
-        (pl.Int64, 2147483651),
-        (pl.UInt32, 4294967295),
-        (pl.UInt64, 18446744073709551615),
-        (pl.Float64, 1.25),
+        (pl.Int32, "i32", 2147483647),
+        (pl.Int64, "i64", 2147483651),
+        (pl.UInt32, "u32", 4294967295),
+        (pl.UInt64, "u64", 18446744073709551615),
+        (pl.Float64, "f64", 1.25),
     ],
 )
-def test_run_ffi_split_plan_preserves_native_carrier(dtype, value):
+def test_run_ffi_split_plan_preserves_native_carrier(dtype, carrier, value):
     observed = []
 
     def postprocess(frame):
@@ -66,6 +68,16 @@ def test_run_ffi_split_plan_preserves_native_carrier(dtype, value):
         pl.DataFrame([pl.Series("aggregate", [value], dtype=dtype)]),
         postprocess=postprocess,
     )
+    error_message = unsupported_native_carrier_error(carrier)
+    if error_message is not None:
+        # Debug builds omit 64-bit integer dispatch. Check their defined error
+        # without skipping the other carriers or weakening release assertions.
+        with pytest.raises(dp.OpenDPException, match=re.escape(error_message)):
+            _run_ffi_split_plan(plan, connection)
+        assert not calls
+        assert not observed
+        return
+
     assert _run_ffi_split_plan(plan, connection) == [value]
     assert len(calls) == 1
     assert observed == [{"aggregate": dtype}]
@@ -81,7 +93,7 @@ def test_run_ffi_split_plan_validates_all_values_before_noise(monkeypatch):
 
     monkeypatch.setattr(dp.Measurement, "__call__", observed_call)
     plan, connection, _ = plan_and_connection(
-        [plugin("sum", pl.Int64), plugin("count", pl.UInt32)],
+        [plugin("sum", pl.Int32), plugin("count", pl.UInt32)],
         pl.DataFrame({"sum": [10], "count": [-1]}),
     )
     with pytest.raises(dp.OpenDPException, match="native noise type"):
@@ -92,7 +104,7 @@ def test_run_ffi_split_plan_validates_all_values_before_noise(monkeypatch):
 @pytest.mark.parametrize("value", [None, True, 1.5, "synthetic-private-marker"])
 def test_run_ffi_split_plan_rejects_noninteger_carrier(value):
     plan, connection, _ = plan_and_connection(
-        [plugin("aggregate", pl.Int64)], pl.DataFrame({"aggregate": [value]})
+        [plugin("aggregate", pl.Int32)], pl.DataFrame({"aggregate": [value]})
     )
     with pytest.raises(dp.OpenDPException, match="native noise type") as error:
         _run_ffi_split_plan(plan, connection)
@@ -102,13 +114,13 @@ def test_run_ffi_split_plan_rejects_noninteger_carrier(value):
 @pytest.mark.parametrize(
     "record",
     [
-        plugin("aggregate", pl.Int64, support="Float"),
+        plugin("aggregate", pl.Int32, support="Float"),
         plugin("aggregate", pl.Float64, support="Integer"),
         plugin("aggregate", pl.String),
         plugin("aggregate", pl.Int8),
         plugin("aggregate", pl.Int16),
         plugin("aggregate", pl.Float32),
-        plugin("aggregate", pl.Int64, symbol="other_plugin"),
+        plugin("aggregate", pl.Int32, symbol="other_plugin"),
     ],
 )
 def test_run_ffi_split_plan_rejects_metadata_before_sql(record):
@@ -134,7 +146,7 @@ def test_run_ffi_split_plan_rejects_sql_shape(frame, monkeypatch):
     monkeypatch.setattr(
         dp.Measurement, "__call__", lambda *args: noise_calls.append(args)
     )
-    plan, connection, _ = plan_and_connection([plugin("aggregate", pl.Int64)], frame)
+    plan, connection, _ = plan_and_connection([plugin("aggregate", pl.Int32)], frame)
     with pytest.raises(dp.OpenDPException, match="not 1-1"):
         _run_ffi_split_plan(plan, connection)
     assert not noise_calls
@@ -150,7 +162,7 @@ def test_run_ffi_split_plan_postprocesses_separately_noised_values(monkeypatch):
 
     monkeypatch.setattr(dp.Measurement, "__call__", controlled_noise)
     plan, connection, _ = plan_and_connection(
-        [plugin("sum", pl.Int64), plugin("count", pl.UInt32)],
+        [plugin("sum", pl.Int32), plugin("count", pl.UInt32)],
         pl.DataFrame({"sum": [10], "count": [4]}),
         postprocess=lambda frame: frame.select(pl.col("sum") / pl.col("count")),
     )

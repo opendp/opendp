@@ -3,15 +3,17 @@
 import json
 import math
 import pickle
+import re
 import sys
 from uuid import uuid4
 from types import SimpleNamespace
 
 import pytest
 import opendp.prelude as dp
+from ..helpers import unsupported_native_carrier_error
 
 pl = pytest.importorskip("polars")
-pytest.importorskip("polars_to_ibis")
+polars_to_ibis = pytest.importorskip("polars_to_ibis")
 
 
 @pytest.fixture(params=["sqlite", "duckdb"])
@@ -86,6 +88,17 @@ def test_run_on_database_native_noise_parameters(monkeypatch, database, distribu
     monkeypatch.setattr(connection, "to_polars", observed_to_polars)
     monkeypatch.setattr(_data, "decode_noise_plugin_parameters", observed_decode)
     monkeypatch.setattr(pickle, "loads", guarded_loads)
+
+    error_message = (
+        unsupported_native_carrier_error("i64")
+        if hasattr(polars_to_ibis, "split_polars_on_ffi_plan")
+        else None
+    )
+    if error_message is not None:
+        with pytest.raises(dp.OpenDPException, match=re.escape(error_message)):
+            run_on_database(query, connection, table_name)
+        assert not aggregates
+        return
 
     results = run_on_database(query, connection, table_name)
 
@@ -168,6 +181,15 @@ def test_run_on_database_mean_postprocessing(monkeypatch, database, distribution
     monkeypatch.setattr(connection, "to_polars", observed_to_polars)
     monkeypatch.setattr(_data, "decode_noise_plugin_parameters", observed_decode)
     monkeypatch.setattr(polars_to_ibis, "split_polars_on_ffi_plan", observed_split)
+
+    error_message = unsupported_native_carrier_error("i64")
+    if error_message is not None:
+        with pytest.raises(dp.OpenDPException, match=re.escape(error_message)):
+            dp.ibis.run_on_database(query, connection, table_name)
+        assert not aggregates
+        assert not noised
+        assert not postprocessed
+        return
 
     [result] = dp.ibis.run_on_database(query, connection, table_name)
 
