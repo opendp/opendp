@@ -546,3 +546,42 @@ fn test_enum_string_ordering_is_not_stable() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
+    let enum_domain = EnumDomain::new(Series::new("".into(), vec!["low", "high"]))?;
+    let enum_dtype = SeriesDomain::new("E", enum_domain.clone()).dtype();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("E", enum_domain),
+        SeriesDomain::new("S", AtomDomain::<String>::default()),
+    ])?;
+    let lf = df!(
+        "E" => ["low", "high", "low"],
+        "S" => ["low", "unknown", "high"],
+    )?
+    .lazy()
+    .with_column(col("E").cast(enum_dtype));
+
+    // Unlike ordering, equality with an unknown enum category does not fail.
+    for (expr, expected) in [
+        (col("E").eq(col("S")), [true, false, false]),
+        (col("S").eq(col("E")), [true, false, false]),
+        (col("E").neq(col("S")), [false, true, true]),
+        (col("S").neq(col("E")), [false, true, true]),
+        (col("E").eq_missing(col("S")), [true, false, false]),
+        (col("S").eq_missing(col("E")), [true, false, false]),
+        (col("E").neq_missing(col("S")), [false, true, true]),
+        (col("S").neq_missing(col("E")), [false, true, true]),
+    ] {
+        expr.clone().make_stable(
+            domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+        )?;
+        let observed = lf.clone().select([expr.alias("out")]).collect()?;
+        assert_eq!(
+            observed.column("out")?,
+            &Column::new("out".into(), expected)
+        );
+    }
+    Ok(())
+}
