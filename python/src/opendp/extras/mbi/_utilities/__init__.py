@@ -401,7 +401,7 @@ def identity_query_precision(measurement) -> float:
 
 
 class Marginals:
-    """A multimap from clique to independent :py:class:`mbi.LinearMeasurement`.
+    """A multimap from clique to independent ``LinearMeasurement``.
 
     A clique identifies the marginal a query operates on; it does not
     uniquely identify the observation. Several independent measurements can
