@@ -170,8 +170,8 @@ macro_rules! impl_make_sum_float {
                         make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)
 
                     } else {
-                        // 2. fall back to ordered summation
-                        make_ordered_random(input_domain, input_metric)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
+                        // 2. use sequential saturation when intermediate sums may overflow
+                        make_ordered_random(input_domain, input_metric)? >> make_sized_bounded_float_ordered_sum::<Sequential<_>>(size, bounds)?
                     }
                 } else {
                     if !Pairwise::<Self>::can_float_sum_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
@@ -179,8 +179,8 @@ macro_rules! impl_make_sum_float {
                         make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)
 
                     } else {
-                        // 2. sum can overflow, so shuffle and use an ordered sum
-                        make_ordered_random(input_domain, input_metric)? >> make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
+                        // 2. sum can overflow, so shuffle and use sequential saturation
+                        make_ordered_random(input_domain, input_metric)? >> make_bounded_float_ordered_sum::<Sequential<_>>(DEFAULT_SIZE_LIMIT, bounds)?
                     }
                 }
             }
@@ -202,8 +202,8 @@ macro_rules! impl_make_sum_float {
                         make_unordered(input_domain, input_metric)? >> make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)?
 
                     } else {
-                        // 2. fall back to ordered summation
-                        make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)
+                        // 2. use sequential saturation when intermediate sums may overflow
+                        make_sized_bounded_float_ordered_sum::<Sequential<_>>(size, bounds)
                     }
                 } else {
                     if !Pairwise::<Self>::can_float_sum_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
@@ -212,8 +212,8 @@ macro_rules! impl_make_sum_float {
                         make_unordered(input_domain, input_metric)? >> make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
 
                     } else {
-                        // 2. sum can overflow, but data is already sorted, so use a saturating sum
-                        make_bounded_float_ordered_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)
+                        // 2. data is already ordered, so use sequential saturation
+                        make_bounded_float_ordered_sum::<Sequential<_>>(DEFAULT_SIZE_LIMIT, bounds)
                     }
                 }
             }

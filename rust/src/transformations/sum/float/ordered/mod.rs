@@ -1,3 +1,9 @@
+//! Ordered float sums use exact sequential saturation as their reference function.
+//! Clamping is monotone and nonexpansive, so aligning neighboring inputs keeps
+//! common suffixes from amplifying edit differences. Sequential::relaxation
+//! additionally accounts for rounding on each input. Regrouping saturated partial
+//! sums does not have this property, so Pairwise is intentionally unsupported.
+
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -8,7 +14,7 @@ use crate::{
     traits::{AlertingAbs, InfAdd, InfCast, InfMul, InfSub, ProductOrd},
 };
 
-use super::{Float, Pairwise, Sequential, SumRelaxation};
+use super::{Float, Sequential, SumRelaxation};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -16,25 +22,26 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>")),
+    generics(S(default = "Sequential<T>")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known ordering.
 ///
 /// Only useful when `make_bounded_float_checked_sum` returns an error due to potential for overflow.
 /// You may need to use `make_ordered_random` to impose an ordering on the data.
-/// The utility loss from overestimating the `size_limit` is small.
+/// A smaller public `size_limit` reduces the rounding relaxation, which grows quadratically.
+/// Construction fails if the rounding relaxation cannot be represented in the output type.
 ///
 /// | S (summation algorithm) | input type     |
 /// | ----------------------- | -------------- |
 /// | `Sequential<S::Item>`   | `Vec<S::Item>` |
-/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
 ///
 /// `S::Item` is the type of all of the following:
 /// each bound, each element in the input data, the output data, and the output sensitivity.
 ///
-/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
-/// set `S` to `Pairwise<f32>`.
+/// Only sequential saturation is supported. Regrouping a saturating pairwise sum
+/// can exceed its stability bound when an element is inserted or deleted.
+/// For `f32` single-precision floats, set `S` to `Sequential<f32>`.
 ///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -76,7 +83,10 @@ where
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
+            // Let BS be the exact sequential saturated fold and BS* its rounded implementation.
+            // Clamp after each addition is nonexpansive, so a common suffix
+            // cannot amplify an insertion/deletion difference.
+            // d_out =  |BS*(v) - BS*(v')|
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in * ideal_sens + 2 * error
             //       =  d_in * ideal_sens + relaxation
@@ -90,7 +100,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>")),
+    generics(S(default = "Sequential<T>")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.
@@ -102,13 +112,13 @@ where
 /// | S (summation algorithm) | input type     |
 /// | ----------------------- | -------------- |
 /// | `Sequential<S::Item>`   | `Vec<S::Item>` |
-/// | `Pairwise<S::Item>`     | `Vec<S::Item>` |
 ///
 /// `S::Item` is the type of all of the following:
 /// each bound, each element in the input data, the output data, and the output sensitivity.
 ///
-/// For example, to construct a transformation that pairwise-sums `f32` half-precision floats,
-/// set `S` to `Pairwise<f32>`.
+/// Only sequential saturation is supported. Regrouping a saturating pairwise sum
+/// can exceed its stability bound when an element is inserted or deleted.
+/// For `f32` single-precision floats, set `S` to `Sequential<f32>`.
 ///
 /// # Citations
 /// * [CSVW22 Widespread Underestimation of Sensitivity...](https://arxiv.org/pdf/2207.10635.pdf)
@@ -146,7 +156,10 @@ where
         AbsoluteDistance::default(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
-            // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
+            // Let BS be the exact sequential saturated fold and BS* its rounded implementation.
+            // Clamp after each addition is nonexpansive, so a common suffix
+            // cannot amplify an insertion/deletion difference.
+            // d_out =  |BS*(v) - BS*(v')|
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
             //       <= d_in / 2 * (U - L) + 2 * error
             //       =  d_in / 2 * (U - L) + relaxation
@@ -165,19 +178,6 @@ pub trait SaturatingSum: SumRelaxation {
 impl<T: Float> SaturatingSum for Sequential<T> {
     fn saturating_sum(arg: &[T]) -> T {
         arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))
-    }
-}
-
-impl<T: Float> SaturatingSum for Pairwise<T> {
-    fn saturating_sum(arg: &[T]) -> T {
-        match arg.len() {
-            0 => T::zero(),
-            1 => arg[0],
-            n => {
-                let m = n / 2;
-                Self::saturating_sum(&arg[..m]).saturating_add(&Self::saturating_sum(&arg[m..]))
-            }
-        }
     }
 }
 
