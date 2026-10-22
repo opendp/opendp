@@ -34,7 +34,8 @@ where
     };
 
     // only enforce row-by-row context if the fill expression is not broadcastable
-    let expr_domain = if fill.clone().meta().root_names().len() > 0 {
+    let is_column_fill = !fill.clone().meta().root_names().is_empty();
+    let expr_domain = if is_column_fill {
         input_domain.as_row_by_row()
     } else if let Expr::Literal(value) = fill.clone() {
         if !value.is_scalar() {
@@ -107,8 +108,11 @@ where
     }
     let output_domain = ExprDomain {
         column: series_domain,
-        // fill_nan should not change the output context-- just require that its input is row-by-row
-        context: input_domain.context.clone(),
+        context: if is_column_fill {
+            input_domain.context.clone()
+        } else {
+            data_domain.context.clone()
+        },
     };
 
     Transformation::new(

@@ -159,6 +159,50 @@ fn test_explicit_keys() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_fill_after_filter_privacy_map() -> Fallible<()> {
+    // Regression for #3039: dp.sum implicitly fills nulls after a filter.
+    // Filling must not restore the public-length invariant lost by the filter.
+    let lf = df!("x" => [1i64, 3, 3], "k" => [0i64, 0, 0])?.lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", AtomDomain::<i64>::default()),
+        SeriesDomain::new("k", AtomDomain::<i64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["k"])
+            .with_invariant_lengths()
+            .with_max_length(50)
+            .with_max_groups(3),
+    )?;
+
+    let filtered = col("x").filter(col("x").gt(lit(1i64)));
+    for expr in [
+        filtered.clone().dp().sum((lit(2i64), lit(3i64)), Some(1.0)),
+        filtered
+            .fill_null(2i64)
+            .clip(lit(2i64), lit(3i64))
+            .sum()
+            .dp()
+            .noise(Some(1.0)),
+    ] {
+        let meas = make_private_lazyframe(
+            domain.clone(),
+            SymmetricDistance,
+            MaxDivergence,
+            lf.clone().group_by(&[col("k")]).agg(&[expr]),
+            None,
+            None,
+        )?;
+
+        let privacy_loss = meas.map(&2u32)?;
+        assert!(
+            (6.0..7.0).contains(&privacy_loss),
+            "filtering must invalidate public lengths; got privacy loss {privacy_loss}"
+        );
+    }
+    Ok(())
+}
+
 fn process_expr(expr: Expr) -> Fallible<Expr> {
     Ok(make_private_expr(
         WildExprDomain {
