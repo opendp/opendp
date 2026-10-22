@@ -109,3 +109,25 @@ fn test_make_float_to_bigint_neg_k() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_make_float_to_bigint_rejects_negative_distance() -> Fallible<()> {
+    fn check<const P: usize>(size: usize, negative: f64) -> Fallible<()> {
+        let space = (
+            VectorDomain::new(AtomDomain::<f64>::new_non_nan()).with_size(size),
+            LpDistance::<P, f64>::default(),
+        );
+        let t = make_float_to_bigint(space, 0)?;
+        let err = t.map(&negative).unwrap_err();
+        assert!(err.message.unwrap().contains(&format!("{negative:?}")));
+        assert!(t.map(&0.0).is_ok());
+        assert!(t.map(&-0.0).is_ok());
+        Ok(())
+    }
+
+    check::<1>(1, -0.5)?;
+    check::<1>(16, -15.5)?;
+    check::<2>(1, -0.5)?;
+    check::<2>(16, -3.5)?;
+    Ok(())
+}

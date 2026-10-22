@@ -78,6 +78,8 @@ None
 
     Now the \texttt{l2} sensitivity is zero if any of the three bounds are zero,
     due to the tightening of the \texttt{l2} bound on line \ref{line:l2}.
+    The call to \texttt{noise\_privacy\_map} on line \ref{line:rho} rejects negative \texttt{l2} sensitivities,
+    including when the scale is zero.
     Line \ref{line:zero-sens} then checks for zero sensitivity to return a privacy loss of zero rho, zero delta,
     because all neighboring datasets have identical pairs, and the ordering is randomized.
 

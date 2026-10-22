@@ -22,10 +22,12 @@ def make_float_to_bigint(
 
     def stability_map(d_in):
         try:
-            d_in = RBig.try_from(d_in)
+            d_in_r = RBig.try_from(d_in)
         except Exception:
             raise f"d_in ({d_in}) must be finite"
-        return x_mul_2k(d_in + rounding_distance, -k)  # |\label{line:x-mul-2k}|
+        if d_in_r.is_negative():
+            raise f"d_in ({d_in}) must be non-negative"
+        return x_mul_2k(d_in_r + rounding_distance, -k)  # |\label{line:x-mul-2k}|
 
     return Transformation.new(
         input_domain,
