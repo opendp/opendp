@@ -129,10 +129,11 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         (middle_domain.margins.iter().cloned())
             .filter(|m| m.by.is_subset(&h_keys))
             .map(|mut m| {
+                m.by = materialize_grouping_keys(&m.by)?;
                 m.invariant = None;
-                m
+                Ok(m)
             })
-            .collect(),
+            .collect::<Fallible<_>>()?,
     )?;
 
     let t_group_agg = Transformation::new(
@@ -182,6 +183,14 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     )?;
 
     t_prior >> t_group_agg
+}
+
+/// Express a subset of validated grouping keys as their materialized output columns.
+/// Re-evaluating a grouping expression after aggregation may describe different groups.
+pub(super) fn materialize_grouping_keys(by: &HashSet<Expr>) -> Fallible<HashSet<Expr>> {
+    by.iter()
+        .map(|key| Ok(col(key.clone().meta().output_name()?)))
+        .collect()
 }
 
 #[derive(Clone, Copy)]

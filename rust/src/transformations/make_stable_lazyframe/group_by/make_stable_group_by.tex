@@ -38,12 +38,17 @@ None
 
     By the postcondition of \texttt{DslPlan.simulate\_schema},
     \texttt{series\_domains} follows the expected schema of members in the output domain.
-    Notice that this is a very conservative output domain, as no data descriptors are preserved except for the schema itself.
-    On the other hand, this comes with the benefit that aggregations are black-boxes, allowing for any infallible group-wise data processing.
+    The output column domains preserve the schema while allowing infallible black-box aggregation.
 
-    For the same reason, the only margins preserved are those that are a subset of the grouping keys.
-    Among these margins, invariants are discarded. A more careful proof may be able to preserve invariants,
-    but this is not necessary for the soundness of the transformation.
+    Only margins whose original grouping expressions are a subset of the grouping keys are preserved.
+    On line \ref{line:materialized-margin}, each preserved key becomes \texttt{col(output\_name)}.
+    Polars evaluates a grouping expression on the input and stores its value in the output column with that name.
+    The translated margin therefore partitions output rows by the same labels as the original margin partitions input rows.
+    Each input row contributes to at most one output row,
+    so the upper bounds on group lengths and the number of groups remain valid.
+    Re-evaluating the original expression after aggregation is not generally equivalent
+    and must not inherit the original margin.
+    Among these margins, invariants are discarded.
 
     It has been shown that for every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
 \end{proof}
@@ -56,7 +61,7 @@ This can be extended in the future, but is sufficient for select queries.
 \begin{proof}[Stability guarantee]
     We first simplify the problem on line \ref{line:identifier} by only considering datasets that differ by rows, not by identifiers.
 
-    The only bound derived is when there are no grouping keys.
+    The only output distance bound derived is for the empty grouping set, namely the entire output table.
 
     We first retrieve optional upper bounds on the number of rows and groups an individual may contribute on lines \ref{line:total-contributions} and \ref{line:total-groups}.
     Both of these bounds directly correspond to the number of rows an individual may influence in the resulting dataset.

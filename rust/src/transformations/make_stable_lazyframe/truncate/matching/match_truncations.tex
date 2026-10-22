@@ -29,7 +29,9 @@ None
     For any choice of LazyFrame plan,
     returns the plan with the truncations removed,
     the truncations that were removed in the order they are applied,
-    and per-id bounds on row and/or group contributions.
+    and per-id bounds on row and/or group contributions using the original grouping expressions.
+    If a groupby truncation is present, its caller must express these bounds in terms of the materialized output columns
+    before using them as output distance bounds.
 \end{theorem}
 
 \begin{proof}
@@ -58,9 +60,11 @@ None
 
     Another limitation of the group-by truncation is that bounds on row contributions when grouped by a given set of columns
     are no longer valid if those columns are changed in the group-by truncation.
-    Therefore, \texttt{allowed\_keys} on line \ref{line:allowed_keys} contains columns that are preserved through the group-by truncation,
-    by virtue of being part of the grouping columns.
-    This limitation does not hinder expected use-cases, but is necessary to ensure that per-id bounds on contributions remain valid after the group-by truncation.
+    Therefore, \texttt{allowed\_keys} on line \ref{line:allowed_keys} contains the original grouping expressions
+    whose values are materialized by the group-by truncation.
+    This guarantees preservation of their grouping labels, not equivalence when those expressions are re-evaluated on the output.
+    The caller must translate each retained expression to its materialized output column.
+    The subset check is necessary for this correspondence.
 
     If a group-by truncation is not present, no update is made to the state.
 
@@ -76,9 +80,10 @@ None
     maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
     Finally, since the descent through the query plan is in reverse order,
     line \ref{line:truncations_reverse} ensures that the truncation order is correct.
-    Neither the check on line \ref{line:match_group_by_truncation_check}
-    nor the reversal on line \ref{line:bounds_reverse} are necessary to match the postcondition,
-    but both are included to improve usability.
+    The check on line \ref{line:match_group_by_truncation_check} rejects a groupby truncation below the already matched stages.
+    This keeps the accepted pipeline limited to filters followed by at most one final groupby,
+    so that no later matched truncation reinterprets the materialized output columns.
+    The reversal on line \ref{line:bounds_reverse} puts the bounds in the order used by the caller.
 
     Since the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds} are maintained,
     and the algorithm only matches through truncations,
