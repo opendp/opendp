@@ -117,7 +117,7 @@ def test_grouping_bounds_follow_materialized_keys(bound_source, key_mode, loss):
         return
 
     summary = query.summarize().row(0, named=True)
-    expected_scale = NUM_GROUPS
+    expected_scale: float = NUM_GROUPS
     if "rho" in loss:
         expected_scale = math.sqrt(NUM_GROUPS)
 
@@ -186,6 +186,7 @@ def test_reused_grouping_expression_with_global_truncation(bound_source, loss):
         .summarize()
         .row(0, named=True)
     )
+    assert isinstance(reference, dict)
     assert summary["scale"] == pytest.approx(reference["scale"])
     assert summary["distribution"] == reference["distribution"]
     assert summary["threshold"] == reference["threshold"]
