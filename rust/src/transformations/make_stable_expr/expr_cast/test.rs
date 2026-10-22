@@ -125,3 +125,41 @@ fn test_make_expr_cast_bool() -> Fallible<()> {
     assert_eq!(expected, actual);
     Ok(())
 }
+
+#[test]
+fn test_make_expr_cast_output_dtype() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "value",
+        AtomDomain::<f64>::default(),
+    )])?;
+
+    let categories = Categories::global();
+    let enum_categories = FrozenCategories::new(["a", "b"].into_iter()).unwrap();
+    for dtype in [
+        DataType::Boolean,
+        DataType::UInt32,
+        DataType::UInt64,
+        DataType::Int8,
+        DataType::Int16,
+        DataType::Int32,
+        DataType::Int64,
+        DataType::Float32,
+        DataType::Float64,
+        DataType::String,
+        DataType::Date,
+        DataType::Datetime(TimeUnit::Microseconds, None),
+        DataType::Time,
+        DataType::Categorical(categories.clone(), categories.mapping()),
+        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
+        DataType::Array(Box::new(DataType::Float32), 2),
+    ] {
+        let cast = make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("value").cast(dtype.clone()),
+        )?;
+
+        assert_eq!(cast.output_domain.column.dtype(), dtype);
+    }
+    Ok(())
+}

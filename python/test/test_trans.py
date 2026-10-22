@@ -2,7 +2,9 @@ import opendp.prelude as dp
 from opendp.mod import enable_features
 
 import re
+import sys
 import pytest
+import math
 
 enable_features("contrib")
 
@@ -56,13 +58,39 @@ def test_cast_default():
     assert caster([float("nan"), 2.0]) == [0, 2]
 
 
-def test_impute_uniform():
-    caster = dp.t.make_impute_uniform_float(
+@pytest.mark.parametrize(
+    "lower,upper",
+    [
+        (-100, 100),
+        pytest.param(
+            1,
+            1 + 1e-10,
+            marks=pytest.mark.xfail(
+                reason="Runs VERY slowly: https://github.com/opendp/opendp/issues/3015",
+                run=False,
+            ),
+        ),
+        pytest.param(
+            -sys.float_info.max,
+            sys.float_info.max,
+            marks=pytest.mark.xfail(
+                reason="Only returns negatives: https://github.com/opendp/opendp/issues/3016"
+            ),
+        ),
+    ],
+)
+def test_impute_uniform(lower, upper):
+    impute = dp.t.make_impute_uniform_float(
         dp.vector_domain(dp.atom_domain(T=float, nan=True)),
         dp.symmetric_distance(),
-        bounds=(-1.0, 2.0),
+        (lower, upper),
     )
-    assert -1.0 <= caster([float("nan")])[0] <= 2.0
+    imputed = impute([math.nan] * 10_000)
+    assert all(lower <= x <= upper for x in imputed)
+    if lower < 0:
+        neg_count = sum(1 for x in imputed if x < 0)
+        pos_count = sum(1 for x in imputed if x > 0)
+        assert pos_count / neg_count == pytest.approx(upper / -lower, abs=0.1)
 
 
 def test_int_identity():
