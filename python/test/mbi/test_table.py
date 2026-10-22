@@ -610,16 +610,19 @@ def test_contingency_table_high_delta():
     epsilon, delta = (100.0, 0.999)
     """High privacy budget params"""
 
-    print(data)
     context = dp.Context.compositor(
         data=data.lazy(),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=epsilon, delta=delta),
+        split_evenly_over=1,
     )
     contingency_table = (
-        context.query(epsilon=epsilon, delta=delta)
-        .select("A")
-        .contingency_table(cuts={"B": [0, 1, 2, 3]})
+        context.query()
+        .select("A", "B")
+        .contingency_table(
+            cuts={"B": [0, 1, 2, 3]},
+            algorithm=dp.mbi.AIM(),
+        )
         .release()
     )
     synthetic_data = contingency_table.synthesize()
