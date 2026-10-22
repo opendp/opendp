@@ -169,3 +169,23 @@ def test_reused_grouping_expression_with_global_truncation(bound_source, loss):
     )
     assert summary["scale"] == pytest.approx(NUM_GROUPS)
     assert summary["threshold"] > NUM_GROUPS
+
+    # In this fixture each (id, A + B) group contains one row, so the two
+    # grouping steps assign each original row to A + 2 * B.
+    # An independent context with a total row bound needs the same calibration.
+    reference_context = dp.Context.compositor(
+        data=_data().with_columns((pl.col("A") + 2 * pl.col("B")).alias("key")),
+        privacy_unit=dp.unit_of(contributions=NUM_GROUPS),
+        privacy_loss=dp.loss_of(**loss, delta=1e-7),
+        split_evenly_over=1,
+    )
+    reference = (
+        reference_context.query()
+        .group_by("key")
+        .agg(dp.len(signed=True))
+        .summarize()
+        .row(0, named=True)
+    )
+    assert summary["scale"] == pytest.approx(reference["scale"])
+    assert summary["distribution"] == reference["distribution"]
+    assert summary["threshold"] == reference["threshold"]
