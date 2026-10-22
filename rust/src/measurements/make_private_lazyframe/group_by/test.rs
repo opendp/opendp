@@ -196,3 +196,63 @@ fn test_find_len_expr() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
+    use crate::core::Domain;
+
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<String>::default()),
+        SeriesDomain::new("B", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_max_length(3)
+            .with_max_groups(1)
+            .with_invariant_keys(),
+    )?;
+
+    let x = df!("A" => ["a", "a", "a"], "B" => [10i32, 10, 10])?.lazy();
+    let y = df!("A" => ["a", "a", "a"], "B" => [-10i32, -10, -10])?.lazy();
+    assert!(domain.member(&x)?);
+    assert!(domain.member(&y)?);
+
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        x.group_by(&[col("A")])
+            .agg(&[col("B").dp().sum((lit(-10), lit(10)), Some(30.0))]),
+        None,
+        None,
+    )?;
+
+    // Replacing three rows changes six rows under SymmetricDistance.
+    // The clipped sums differ by 60, giving epsilon 60 / 30 = 2.
+    assert!((measurement.map(&6)? - 2.0).abs() < 1e-6);
+    // A single insertion still incurs the sensitivity of just one row.
+    assert!((measurement.map(&1)? - 1.0 / 3.0).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
+fn test_max_length_overflow() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
+    let margin = Margin::by(["A"])
+        .with_max_length(u32::MAX)
+        .with_invariant_keys();
+    let domain = domain.with_margin(margin)?;
+
+    let lf = df!("A" => [1i32])?.lazy();
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        lf.group_by(&[col("A")]).agg(&[len().dp().noise(Some(1.0))]),
+        None,
+        None,
+    )?;
+
+    assert!(measurement.map(&1).is_err());
+    Ok(())
+}
