@@ -19,6 +19,12 @@ from opendp.extras.mbi._utilities import mirror_descent, SelectPrefixQuery
 import pytest
 import opendp.prelude as dp
 import warnings
+import polars as pl
+import jax
+
+# Enable float64 precision
+jax.config.update("jax_enable_x64", True)
+jax.config.update("jax_enable_compilation_cache", False)
 
 
 @pytest.mark.parametrize(
@@ -595,3 +601,26 @@ def test_get_null_index():
     assert _get_null_index(pl.Series(["a", "b", None])) == 2
     assert _get_null_index(pl.Series(["a", None, "b"])) == 1
     assert _get_null_index(pl.Series(["a", "b"])) is None
+
+
+def test_contingency_table_high_delta():
+    """A large delta test that should create highly accurate results."""
+    # Test Constants
+    data = pl.DataFrame({"A": ["A", "B", "C"] * 100, "B": [1, 2, 3] * 100})
+    epsilon, delta = (100.0, 0.999)
+    """High privacy budget params"""
+
+    print(data)
+    context = dp.Context.compositor(
+        data=data.lazy(),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=epsilon, delta=delta),
+    )
+    contingency_table = (
+        context.query(epsilon=epsilon, delta=delta)
+        .select("A")
+        .contingency_table(cuts={"B": [0, 1, 2, 3]})
+        .release()
+    )
+    synthetic_data = contingency_table.synthesize()
+    assert synthetic_data["A"].unique() == ["A", "B", "C"]
