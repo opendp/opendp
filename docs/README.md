@@ -116,7 +116,7 @@ It is organized to reflect the needs of different classes of users.
 - [User Guide](https://docs.opendp.org/en/stable/api/user-guide/index.html) goes into more depth and explains how different parts of the OpenDP Library work together.
 - [API Reference](https://docs.opendp.org/en/stable/api/index.html) is a reference for Python users, and provides links to R and Rust documentation.
 - [Contributing](https://docs.opendp.org/en/stable/contributing/index.html) is for people interested in contributing to the OpenDP Library.
-- Finally, [Cookbook](https://cookbook.opendp.org/) provides a home for more loosely structured community contributions to docs, outside this repo.
+- Finally, [Cookbook](https://cookbook.opendp.org/) provides a home for more loosely structured community contributions to docs, outside of this repo.
 
 After someone has read "Contributing", they can turn to a `README.md` or comments in the code for the details on a particular part of the codebase.
 
