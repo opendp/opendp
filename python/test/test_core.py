@@ -17,7 +17,8 @@ def test_version():
 
 def test_type_getters():
     transformation = dp.t.make_mean(
-        dp.vector_domain(dp.atom_domain((0.0, 10.0)), 9), dp.symmetric_distance()
+        dp.vector_domain(dp.atom_domain((0.0, 10.0), nan=False), 9),
+        dp.symmetric_distance(),
     )
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"

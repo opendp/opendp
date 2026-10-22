@@ -6,11 +6,10 @@ use crate::metrics::{IntDistance, L01InfDistance, LpDistance};
 use crate::traits::{
     AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
     ProductOrd,
+    sum::{round_up, sum_magnitude, sum_relaxation},
 };
+use crate::transformations::can_int_sum_overflow;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{
-    CanFloatSumOverflow, Sequential, SumRelaxation, can_int_sum_overflow,
-};
 use num::Zero;
 use polars::prelude::*;
 use polars_plan::plans::{TypedLiteral, typed_lit};
@@ -240,13 +239,17 @@ macro_rules! impl_accumulator_for_float {
     ($t:ty) => {
         impl Accumulator for $t {
             fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
-                if Sequential::<$t>::can_float_sum_overflow(size_limit, (lower, upper))? {
-                    return fallible!(
-                        MakeTransformation,
-                        "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
-                    );
-                }
-                Sequential::<$t>::relaxation(size_limit, lower, upper)
+                // The array kernel uses pairwise 128-element blocks, but
+                // ChunkAgg::sum left-folds chunk totals. Without a chunk-count
+                // invariant, N singleton chunks can require depth N-1. This
+                // also bounds other binary merges of group partials; zero adds
+                // are exact. Do not substitute the array kernel's depth alone.
+                let max_depth = size_limit.saturating_sub(1);
+                round_up(sum_relaxation(
+                    size_limit,
+                    max_depth,
+                    sum_magnitude((lower, upper))?,
+                )?)
             }
         }
     };

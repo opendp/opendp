@@ -4,7 +4,7 @@ import pytest
 
 def test_amplification():
     input_space = (
-        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=10),
+        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=10),
         dp.symmetric_distance(),
     )
     meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)

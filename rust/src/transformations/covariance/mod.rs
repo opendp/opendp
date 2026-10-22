@@ -3,10 +3,14 @@ use crate::{
     domains::{AtomDomain, Bounds, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, SymmetricDistance},
-    traits::{CheckAtom, ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub},
+    traits::{
+        CheckAtom, ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub,
+        sum::{round_up, sum_error, sum_magnitude},
+    },
 };
 
-use num::{One, Zero};
+use dashu::rational::RBig;
+use num::One;
 
 use super::UncheckedSum;
 
@@ -30,7 +34,7 @@ pub fn make_sized_bounded_covariance<S>(
 >
 where
     S: UncheckedSum,
-    S::Item: 'static + Float,
+    S::Item: 'static + Float + InfCast<RBig>,
     (S::Item, S::Item): CheckAtom,
 {
     if size == 0 {
@@ -61,9 +65,12 @@ where
 
     // DERIVE RELAXATION TERM
     // Let x_bar_approx = x_bar + 2e, the approximate mean on finite data types
-    // Let e = (n^2/2^k) / n, the mean error
-    let mean_0_error = S::error(size, lower_0, upper_0)?.inf_div(&_size)?;
-    let mean_1_error = S::error(size, lower_1, upper_1)?.inf_div(&_size)?;
+    // Divide the absolute sum errors by n to bound the mean errors.
+    let depth = S::depth(size);
+    let mean_0_error =
+        round_up::<S::Item>(sum_error(size, depth, sum_magnitude(bounds_0)?)?)?.inf_div(&_size)?;
+    let mean_1_error =
+        round_up::<S::Item>(sum_error(size, depth, sum_magnitude(bounds_1)?)?)?.inf_div(&_size)?;
 
     // Let L' = L - e, U' = U + e
     let (lower_0, upper_0) = (
@@ -86,7 +93,8 @@ where
         .inf_div(&_size)?
         .inf_div(&_size.neg_inf_sub(&_ddof)?)?;
 
-    let relaxation = S::relaxation(size, S::Item::zero(), range_0.inf_mul(&range_1)?)?;
+    let relaxation =
+        round_up::<S::Item>(sum_error(size, depth, range_0.inf_mul(&range_1)?)? * RBig::from(2))?;
 
     // OVERFLOW CHECKS
     // Bound the magnitudes of the sums when computing the means

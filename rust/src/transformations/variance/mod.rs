@@ -1,6 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use dashu::rational::RBig;
 use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
@@ -8,7 +9,7 @@ use crate::core::Transformation;
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
-use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
+use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
 use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
 
@@ -49,7 +50,7 @@ pub fn make_variance<S>(
 >
 where
     S: UncheckedSum,
-    S::Item: 'static + Float,
+    S::Item: 'static + Float + InfCast<RBig>,
 {
     let size = (input_domain.size).ok_or_else(|| {
         err!(
