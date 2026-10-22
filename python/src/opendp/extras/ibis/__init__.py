@@ -7,7 +7,6 @@ We suggest importing under the conventional name ``dp``:
 .. code:: pycon
 
     >>> import opendp.prelude as dp
-    >>> dp.enable_features("contrib")
 
 The members of this module will then be accessible at ``dp.ibis``.
 
@@ -16,6 +15,12 @@ The members of this module will then be accessible at ``dp.ibis``.
     This is an early release, and is intended primarily to solicit feedback.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
+
+    For the moment, ``contrib`` must be enabled to use this functionality:
+
+    .. code:: pycon
+
+        >>> dp.enable_features("contrib")
 """
 
 __all__ = ["run_on_database", "get_connection", "scan_database"]
