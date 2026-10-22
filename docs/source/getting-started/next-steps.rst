@@ -2,7 +2,7 @@ Next Steps
 ==========
 
 This has only been a quick tour of the OpenDP Library.
-Everything we've touched on here is explained in more detail in the API User Guide:
+Everything we've touched on here is explained in more detail in the :ref:`user-guide`:
 
 * For more on using Polars in OpenDP, see :ref:`expression-index`.
 * For a deeper explanation of how to combine multiple queries, see :ref:`combinators-user-guide`.
