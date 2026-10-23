@@ -4,7 +4,8 @@ Privacy Filters
 
 You can convert any odometer into a measurement by setting an upper bound on the privacy loss.
 The following example converts the fully adaptive composition odometer into a privacy filter
-that rejects any query that would cause the privacy loss to exceed 2.0:
+that rejects any query that would cause the privacy loss to exceed 2.0.
+The privacy filter holds for the same ``d_in`` as the odometer:
 
 .. tab-set::
 
@@ -20,11 +21,11 @@ that rejects any query that would cause the privacy loss to exceed 2.0:
             ...         ),
             ...         input_metric=dp.symmetric_distance(),
             ...         output_measure=dp.max_divergence(),
+            ...         d_in=1,
             ...     )
             ... )
             >>> meas_fully_adaptive_comp = dp.c.make_privacy_filter(
             ...     odom_fully_adaptive_comp,
-            ...     d_in=1,
             ...     d_out=2.0,
             ... )
 
@@ -109,7 +110,7 @@ Now that we have submitted two queries, we can see that the privacy loss has inc
 
         .. code:: pycon
 
-            >>> qbl_fully_adaptive_comp.privacy_loss(1)
+            >>> qbl_fully_adaptive_comp.privacy_loss()
             2.0
 
     .. tab-item:: R

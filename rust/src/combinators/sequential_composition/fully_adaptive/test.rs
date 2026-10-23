@@ -1,10 +1,18 @@
+//! Invariants tested
+//! 1. 'd_in' comes from odometer constructor
+//! 2. maps are evaluated once
+//! 3. failed maps fail fast by rejecting the query
+//! 4. renyi query resumbissions accumulate in one group
+//! 5. sequential measures lock earlier interactive children
+
 use std::any::Any;
 
 use crate::{
     combinators::make_adaptive_composition,
+    core::PrivacyMap,
     domains::AtomDomain,
     measurements::make_randomized_response_bool,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
 };
 
@@ -17,6 +25,7 @@ fn test_privacy_odometer() -> Fallible<()> {
         AtomDomain::default(),
         DiscreteDistance::default(),
         MaxDivergence::default(),
+        1,
     )?;
 
     // pass dataset in and receive a queryable
@@ -67,7 +76,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
     let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
-    let total_usage = odometer.privacy_loss(1)?;
+    let total_usage = odometer.privacy_loss()?;
     println!("total usage: {:?}", total_usage);
 
     Ok(())
@@ -88,10 +97,167 @@ fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
         AtomDomain::<bool>::default(),
         DiscreteDistance,
         Approximate(ZeroConcentratedDivergence),
+        1,
     )?;
 
     let mut qbl = m_odo.invoke(&false)?;
     assert!(qbl.invoke(m_query)?);
-    assert_eq!(qbl.privacy_loss(1)?, (1.0, 1e-7));
+    assert_eq!(qbl.privacy_loss()?, (1.0, 1e-7));
+    Ok(())
+}
+
+/// Under a Sequential measure, spawning a new query locks earlier interactive children.
+#[test]
+fn test_sequentiality_enforced() -> Fallible<()> {
+    let odometer = make_fully_adaptive_composition::<_, _, _, Queryable<(), bool>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        1,
+    )?;
+
+    let m_interactive = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(!arg))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+
+    let mut qbl = odometer.invoke(&false)?;
+    let mut child = qbl.invoke(m_interactive.clone())?;
+    // the child answers while it is the most recent query
+    assert!(child.eval(&())?);
+    // a new root query locks it
+    let _child_2 = qbl.invoke(m_interactive)?;
+    assert!(child.eval(&()).is_err());
+    Ok(())
+}
+
+/// a measurement whose privacy map is `d_in -> d_in` and counts its own evaluations
+fn make_counting_scalar_measurement(
+    eval_count: Rc<RefCell<usize>>,
+) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
+    Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        Function::new(|&arg: &bool| arg),
+        PrivacyMap::new(move |d_in: &u32| {
+            *eval_count.borrow_mut() += 1;
+            f64::from(*d_in)
+        }),
+    )
+}
+
+/// privacy loss is reported at the d_in the odometer was constructed with
+#[test]
+fn test_privacy_loss_at_constructor_d_in() -> Fallible<()> {
+    let m = make_counting_scalar_measurement(Rc::new(RefCell::new(0)))?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        2,
+    )?;
+    assert_eq!(odometer.d_in, 2);
+
+    let mut qbl = odometer.invoke(&true)?;
+    qbl.invoke(m.clone())?;
+    qbl.invoke(m)?;
+    assert_eq!(qbl.privacy_loss()?, 4.0);
+    Ok(())
+}
+
+/// each privacy map is evaluated once, when its query is answered,
+/// so privacy loss reads don't grow with the number of past queries
+#[test]
+fn test_privacy_loss_reads_do_not_reevaluate_maps() -> Fallible<()> {
+    let count = Rc::new(RefCell::new(0));
+    let m = make_counting_scalar_measurement(count.clone())?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+
+    let k = 100;
+    for i in 1..=k {
+        qbl.invoke(m.clone())?;
+        assert_eq!(qbl.privacy_loss()?, f64::from(i));
+    }
+    assert_eq!(*count.borrow(), k as usize);
+    Ok(())
+}
+
+/// a privacy map that fails at d_in rejects the query before the measurement is invoked
+#[test]
+fn test_failing_privacy_map_rejects_before_release() -> Fallible<()> {
+    let invoked = Rc::new(RefCell::new(false));
+    let m = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        Function::new(enclose!(invoked, move |&arg: &bool| {
+            *invoked.borrow_mut() = true;
+            arg
+        })),
+        PrivacyMap::new_fallible(|_: &u32| fallible!(FailedMap, "map fails")),
+    )?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+
+    assert!(qbl.invoke(m).is_err());
+    assert!(!*invoked.borrow());
+    assert_eq!(qbl.privacy_loss()?, 0.0);
+    Ok(())
+}
+
+/// renyi charges are grouped by privacy map identity,
+/// even when the privacy map allocates a new curve on every evaluation (as over FFI)
+#[test]
+fn test_renyi_groups_by_privacy_map_not_curve_allocation() -> Fallible<()> {
+    let eval_count = Rc::new(RefCell::new(0));
+    let m = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        RenyiDivergence,
+        Function::new(|&arg: &bool| arg),
+        PrivacyMap::new(enclose!(eval_count, move |_d_in: &u32| {
+            let eval_count = eval_count.clone();
+            Function::new(move |alpha: &f64| {
+                *eval_count.borrow_mut() += 1;
+                0.5 * alpha
+            })
+        })),
+    )?;
+
+    let odometer = make_fully_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        RenyiDivergence,
+        1,
+    )?;
+    let mut qbl = odometer.invoke(&true)?;
+
+    let k = 50;
+    for _ in 0..k {
+        qbl.invoke(m.clone())?;
+    }
+
+    let curve = qbl.privacy_loss()?;
+    assert_eq!(curve.eval(&2.0)?, f64::from(k));
+    // one curve evaluation for one order, not one per query
+    assert_eq!(*eval_count.borrow(), 1);
     Ok(())
 }

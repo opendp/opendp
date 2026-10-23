@@ -448,19 +448,17 @@ new_queryable_internal <- function(ptr) {
 #' @concept mod
 #' @param ptr a pointer to an odometer queryable
 new_odometer_queryable_internal <- function(ptr) {
-  odometer_queryable <- function(attr, query, d_in) {
-    if (missing(attr) + missing(query) + missing(d_in) != 2) {
-      stop("expected exactly one of attr, query or d_in", call. = FALSE)
+  odometer_queryable <- function(attr, query) {
+    if (missing(attr) + missing(query) != 1) {
+      stop("expected exactly one of attr or query", call. = FALSE)
     }
 
     if (!missing(query)) {
       return(odometer_queryable_invoke(ptr, query))
     }
-    if (!missing(d_in)) {
-      return(odometer_queryable_privacy_loss(ptr, d_in))
-    }
 
     switch(attr,
+      privacy_loss = odometer_queryable_privacy_loss(ptr),
       ptr = ptr,
       stop("unrecognized attribute", call. = FALSE)
     )
