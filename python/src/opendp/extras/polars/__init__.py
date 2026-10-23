@@ -1090,8 +1090,12 @@ class LazyFrameQuery:
                 pass
 
             # now that scale has been solved, find a suitable threshold
+            def printer(x):
+                print(f"Threshold: {x}")
+                return x
+
             threshold = binary_search(
-                lambda t: _make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
+                lambda t: _make(scale, printer(t)).map(d_in)[1] < d_out[1],  # type: ignore[index]
                 T=int,
             )
 
