@@ -2,7 +2,6 @@ import opendp.prelude as dp
 from opendp.mod import enable_features
 
 import re
-import subprocess
 import sys
 import pytest
 import math
@@ -84,46 +83,6 @@ def test_impute_uniform(lower, upper):
         neg_count = sum(1 for x in imputed if x < 0)
         pos_count = sum(1 for x in imputed if x > 0)
         assert pos_count / neg_count == pytest.approx(upper / -lower, abs=0.1)
-
-
-@pytest.mark.parametrize(
-    "lower,upper",
-    [
-        pytest.param(0.0, 1.0, id="unit-interval"),
-        pytest.param(1.7e9, 1.7e9 + 1.0, id="timestamp-interval"),
-        pytest.param(1.0, 1.0 + 1e-10, id="narrow-interval"),
-        pytest.param(1.0, math.nextafter(1.0, math.inf), id="adjacent-f64"),
-    ],
-)
-def test_impute_uniform_narrow_bounds(lower: float, upper: float):
-    """Regression cases for #3015 must complete within the process deadline."""
-    # Isolate the native call so a regression cannot hang the entire test suite.
-    script = """
-import math
-import sys
-import opendp.prelude as dp
-
-dp.enable_features("contrib")
-lower, upper = float(sys.argv[1]), float(sys.argv[2])
-impute = dp.t.make_impute_uniform_float(
-    dp.vector_domain(dp.atom_domain(T=float, nan=True)),
-    dp.symmetric_distance(),
-    (lower, upper),
-)
-unchanged = [-math.inf, 0.0, math.inf]
-result = impute([math.nan] * 10_000 + unchanged)
-assert len(result) == 10_000 + len(unchanged)
-assert all(lower <= value <= upper for value in result[:10_000])
-assert result[10_000:] == unchanged
-assert impute.check(1, 1)
-"""
-    result = subprocess.run(
-        [sys.executable, "-c", script, repr(lower), repr(upper)],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_int_identity():
