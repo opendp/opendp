@@ -1,8 +1,10 @@
-use polars::prelude::DataType;
+use polars::prelude::{Column, DataFrame, DataType, IntoLazy};
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
+use crate::domains::{
+    AtomDomain, ExprDomain, ExprPlan, NaN, OuterMetric, SeriesDomain, WildExprDomain,
+};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
@@ -88,12 +90,65 @@ where
         return fallible!(MakeTransformation, "fill expression must not be nullable");
     }
 
+    // Infer the result type from the stabilized expressions, preserving Polars'
+    // coercion rules for dynamic literals and mixed numeric inputs. Only public
+    // schema information is used; no private data is evaluated.
+    let mock = DataFrame::new(
+        input_domain
+            .columns
+            .iter()
+            .map(|column| Column::new_empty(column.name.clone(), &column.dtype()))
+            .collect(),
+    )?
+    .lazy();
+    let mock_data = t_data.invoke(&mock.logical_plan)?;
+    let mock_fill = t_fill.invoke(&mock.logical_plan)?;
+    let schema = mock
+        .select([mock_data.expr.fill_null(mock_fill.expr)])
+        .collect_schema()?;
+    let output_dtype = schema
+        .get(&data_domain.column.name)
+        .ok_or_else(|| err!(MakeTransformation, "fill_null output column is missing"))?
+        .clone();
+
+    let is_numeric = |dtype: DataType| dtype.is_primitive_numeric() || dtype == DataType::Boolean;
+    if data_domain.column.dtype() != fill_domain.column.dtype()
+        && !(is_numeric(data_domain.column.dtype()) && is_numeric(fill_domain.column.dtype()))
+    {
+        return fallible!(
+            MakeTransformation,
+            "fill_null with different input and filler types is only supported for numeric data"
+        );
+    }
+
+    let can_be_nan = |column: &SeriesDomain| -> Fallible<bool> {
+        Ok(match column.dtype() {
+            DataType::Float32 => column.atom_domain::<f32>()?.nan(),
+            DataType::Float64 => column.atom_domain::<f64>()?.nan(),
+            _ => false,
+        })
+    };
+    // A non-null input never selects the filler, even when it affects coercion.
+    let output_nan = can_be_nan(&data_domain.column)?
+        || (data_domain.column.nullable && can_be_nan(&fill_domain.column)?);
+
     let mut output_domain = data_domain.clone();
+    match output_dtype {
+        DataType::Float32 => output_domain
+            .column
+            .set_element_domain(AtomDomain::<f32>::new(None, output_nan.then(NaN::new))),
+        DataType::Float64 => output_domain
+            .column
+            .set_element_domain(AtomDomain::<f64>::new(None, output_nan.then(NaN::new))),
+        dtype if dtype != output_domain.column.dtype() => output_domain.column.set_dtype(dtype)?,
+        _ => {
+            output_domain.column.drop_bounds().ok();
+        }
+    }
+    output_domain.column.nullable = false;
     if is_column_fill {
         output_domain.context = input_domain.context.clone();
     }
-    output_domain.column.drop_bounds().ok();
-    output_domain.column.nullable = false;
 
     Transformation::new(
         input_domain,
