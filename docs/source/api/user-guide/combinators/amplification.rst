@@ -7,7 +7,10 @@ you can make the privacy relation more permissive by wrapping your measurement w
 
 .. note::
 
-    The amplifier requires a looser trust model, as the population size can be set arbitrarily.
+    Sampling: The input dataset must be a simple random sample from the stated
+    population, and sample membership must remain confidential.
+    Terminal amplification: The amplified measurement must encompass all processing
+    and releases involving the sample, and must be its only analysis.
 
     .. code:: pycon
 
@@ -71,3 +74,28 @@ is a simple sample of individuals from a theoretical larger dataset that capture
         >>> assert amplified.check(2, 0.4941)
 
 The efficacy of this combinator improves as n gets larger.
+
+All processing of the sample, including transformations, must be part of the
+measurement passed to the amplifier rather than chained before the amplified measurement.
+When releasing multiple results from the same sample, compose the measurements
+before amplification:
+
+.. tab-set::
+
+  .. tab-item:: Python
+
+    .. code:: pycon
+
+        >>> jointly_amplified = dp.c.make_population_amplification(
+        ...     dp.c.make_composition([meas, meas]), population_size=100
+        ... )
+
+Composing independently amplified measurements on that same sample instead
+violates the terminal amplification requirement:
+
+.. code:: pycon
+
+    >>> # Invalid: amplifies each release separately on the same sample.
+    >>> dp.c.make_composition(
+    ...     [amplified, amplified]
+    ... )  # doctest: +SKIP
