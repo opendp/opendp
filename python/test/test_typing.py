@@ -67,6 +67,17 @@ def test_typing_parse():
         RuntimeType.parse(list[Any])
 
 
+@pytest.mark.parametrize("type_name", ["T", "Vec<T>", "VectorDomain<AtomDomain<T>>"])
+def test_generic_atom_inference(type_name):
+    generic = RuntimeType.parse(type_name, generics=["T"])
+    assert get_atom(generic) is None
+    assert get_atom_or_infer(generic, 1.0) == f64
+
+
+def test_explicit_atom_takes_precedence_over_inference():
+    assert get_atom_or_infer("Vec<f32>", 1.0) == f32
+
+
 def test_sensitivity():
     assert isinstance(L1Distance[int], SensitivityMetric)
     assert not isinstance(RuntimeType.parse("(f32)"), SensitivityMetric)

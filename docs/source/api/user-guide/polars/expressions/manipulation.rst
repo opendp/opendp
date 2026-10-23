@@ -63,7 +63,7 @@ dominate the sensitivity.
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -292,7 +292,7 @@ In the following example, all nans and nulls are dropped from the
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -334,7 +334,7 @@ simply a single scalar, but more complicated expressions are valid:
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -436,7 +436,7 @@ age:
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -497,7 +497,7 @@ by ``.dp.sum``.
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14117.076259 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14114.538129 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 

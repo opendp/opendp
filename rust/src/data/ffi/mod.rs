@@ -118,8 +118,13 @@ pub extern "C" fn opendp_data__slice_as_object(
         // TODO: Need to do some extra wrapping to own the slice here.
         unimplemented!()
     }
-    #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len == 0 {
+            return Ok(AnyObject::new(Vec::<T>::new()));
+        }
+        if raw.ptr.is_null() {
+            return fallible!(FFI, "Attempted to follow a null pointer to create a vector");
+        }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
@@ -1460,6 +1465,19 @@ mod tests {
         let res = opendp_data__slice_as_object(raw, "Vec<i32>".to_char_p());
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_slice_as_object_null_vec() -> Fallible<()> {
+        let raw = FfiSlice::new(std::ptr::null_mut(), 0);
+        let res = opendp_data__slice_as_object(&raw, "Vec<i32>".to_char_p());
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
+        assert!(res.is_empty());
+
+        let raw = FfiSlice::new(std::ptr::null_mut(), 1);
+        let res = opendp_data__slice_as_object(&raw, "Vec<i32>".to_char_p());
+        assert!(Fallible::from(res).is_err());
         Ok(())
     }
 

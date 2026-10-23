@@ -1,14 +1,18 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use num::{Float as _, One, Zero};
+use dashu::rational::RBig;
+use num::{Float as _, One};
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
-use crate::traits::{ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub};
+use crate::traits::{
+    ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub,
+    sum::{round_up, sum_error, sum_magnitude},
+};
 
 use super::UncheckedSum;
 
@@ -59,7 +63,7 @@ pub fn make_sum_of_squared_deviations<S>(
 >
 where
     S: UncheckedSum,
-    S::Item: 'static + Float,
+    S::Item: 'static + Float + InfCast<RBig>,
 {
     let size = (input_domain.size).ok_or_else(|| {
         err!(
@@ -78,8 +82,9 @@ where
 
     // DERIVE RELAXATION TERM
     // Let x_bar_approx = x_bar + 2e, the approximate mean on finite data types
-    // Let e = (n^2/2^k) / n, the mean error
-    let mean_error = S::error(size, lower, upper)?.inf_div(&size_)?;
+    // Divide the absolute sum error by n to bound the mean error.
+    let mean_error = round_up::<S::Item>(sum_error(size, S::depth(size), sum_magnitude(bounds)?)?)?
+        .inf_div(&size_)?;
 
     // Let L' = L - e, U' = U + e
     let (lower, upper) = (lower.neg_inf_sub(&mean_error)?, upper.inf_add(&mean_error)?);
@@ -94,7 +99,9 @@ where
         .inf_div(&size_)?;
 
     // each deviation is bounded between 0 and range^2
-    let relaxation = S::relaxation(size, S::Item::zero(), range.inf_mul(&range)?)?;
+    let relaxation = round_up::<S::Item>(
+        sum_error(size, S::depth(size), range.inf_mul(&range)?)? * RBig::from(2),
+    )?;
 
     // OVERFLOW CHECKS
     // Bound the magnitude of the sum when computing the mean

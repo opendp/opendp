@@ -216,7 +216,7 @@ def test_clamp():
 
 def test_bounded_mean():
     query = dp.t.make_mean(
-        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=9),
+        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=9),
         dp.symmetric_distance(),
     )
     assert query(FLOAT_DATA) == 5.0
@@ -227,14 +227,16 @@ def test_bounded_sum():
     import opendp.prelude as dp
 
     query = dp.t.make_sum(
-        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0))), dp.symmetric_distance()
+        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False)),
+        dp.symmetric_distance(),
     )
     assert query(FLOAT_DATA) == 45.0
     # TODO: tighten the check
     assert query.check(1, 20.0)
 
     query = dp.t.make_sum(
-        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), dp.symmetric_distance()
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))),
+        dp.symmetric_distance(),
     )
     assert query(INT_DATA) == 45
     # TODO: tighten the check
@@ -247,28 +249,82 @@ def test_bounded_sum():
         pass
 
 
+@pytest.mark.filterwarnings("error::DeprecationWarning")
+def test_sum_deprecation_warning():
+    domain = dp.vector_domain(dp.atom_domain(bounds=(-1, 1)))
+    with pytest.deprecated_call(match="Polars or NumPy"):
+        dp.t.make_sum(domain, dp.symmetric_distance())
+
+
+def test_sum_automatic_integer_limit():
+    from inspect import signature
+
+    assert tuple(signature(dp.t.make_sum).parameters) == (
+        "input_domain",
+        "input_metric",
+    )
+    assert not signature(dp.t.then_sum).parameters
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0, 2**30)))
+    query = (domain, dp.insert_delete_distance()) >> dp.t.then_sum()
+    assert query.input_carrier_type == "Vec<i32>"
+    assert query([2**30, 2**30]) == 2**30
+    assert query([1, 2]) == 1
+    assert query.input_domain.member([2**30, 2**30])
+    fixed = dp.vector_domain(dp.atom_domain(bounds=(0, 2**30)), size=2)
+    with pytest.raises(
+        dp.OpenDPException, match="potential intermediate integer sum overflow"
+    ):
+        dp.t.make_sum(fixed, dp.symmetric_distance())
+    fixed = dp.vector_domain(dp.atom_domain(bounds=(-1, 1)), size=2)
+    assert dp.t.make_sum(fixed, dp.symmetric_distance())([1, 1]) == 2
+
+
+def test_sum_integer_prefix_eviction():
+    lower, upper = -1_000_000_000, 1_100_000_000
+    domain = dp.vector_domain(dp.atom_domain(bounds=(lower, upper)))
+    query = dp.t.make_sum(domain, dp.insert_delete_distance())
+    assert query([upper]) - query([lower, upper]) == upper - lower
+    assert query.map(1) == upper - lower
+
+
+def test_sum_inferred_float_type_and_pairwise():
+    a = float(2**53)
+    domain = dp.vector_domain(dp.atom_domain(bounds=(-a, a), nan=False), size=4)
+    query = dp.t.make_sum(domain, dp.symmetric_distance())
+    assert query.input_carrier_type == "Vec<f64>"
+    assert query([a, 1.0, 1.0, -a]) == 1.0
+
+
 def test_sized_bounded_sum():
     import opendp.prelude as dp
 
-    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=9)
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=9)
     metric = dp.symmetric_distance()
     query = (domain, metric) >> dp.t.then_sum()
     assert query(FLOAT_DATA) == 45.0
     assert query.check(1, 10.0 + 1e-12)
 
-    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=10_000)
+    domain = dp.vector_domain(
+        dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=10_000
+    )
     query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10.0 + 1e-9)
 
-    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=100_000)
+    domain = dp.vector_domain(
+        dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=100_000
+    )
     query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10.0 + 1e-8)
 
-    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=1_000_000)
+    domain = dp.vector_domain(
+        dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=1_000_000
+    )
     query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10.0 + 1e-7)
 
-    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=10_000_000)
+    domain = dp.vector_domain(
+        dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=10_000_000
+    )
     query = (domain, metric) >> dp.t.then_sum()
     assert query.check(1, 10.0 + 1e-5)
 
@@ -399,12 +455,13 @@ def test_indexing():
 
 
 def test_lipschitz_mul_float():
-    trans = dp.t.make_sized_bounded_float_ordered_sum(
-        10, (0.0, 10.0)
+    trans = dp.t.make_sum(
+        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=10),
+        dp.insert_delete_distance(),
     ) >> dp.t.then_lipschitz_float_mul(1 / 10, (-3.0, 4.0))
 
     assert trans([3.0] * 10) == 0.4
-    assert trans.map(2) == 1.0000000000000153
+    assert 1.0 < trans.map(2) < 1.0 + 1e-12
 
 
 # pytest.mark will override pytest.ini and reenable DeprecationWarnings,

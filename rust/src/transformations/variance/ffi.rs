@@ -1,13 +1,15 @@
 use std::convert::TryFrom;
 use std::os::raw::{c_char, c_uint};
 
+use dashu::rational::RBig;
+
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::SymmetricDistance;
-use crate::traits::Float;
+use crate::traits::{Float, InfCast};
 use crate::transformations::{Pairwise, Sequential, UncheckedSum, make_variance};
 
 #[unsafe(no_mangle)]
@@ -24,7 +26,7 @@ pub extern "C" fn opendp_transformations__make_variance(
         S: Type,
     ) -> Fallible<AnyTransformation>
     where
-        T: 'static + Float,
+        T: 'static + Float + InfCast<RBig>,
     {
         fn monomorphize2<S>(
             input_domain: &AnyDomain,
@@ -33,7 +35,7 @@ pub extern "C" fn opendp_transformations__make_variance(
         ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
-            S::Item: 'static + Float,
+            S::Item: 'static + Float + InfCast<RBig>,
         {
             let input_domain = input_domain
                 .downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?
