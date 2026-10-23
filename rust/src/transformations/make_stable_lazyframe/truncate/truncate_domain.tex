@@ -10,7 +10,7 @@
 \contrib
 
 Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_domain}
-in \asOfCommit{mod.rs}{f5bb719}.
+in \asOfCommit{mod.rs}{a105afe}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -51,8 +51,17 @@ Truncation keys are stable row-by-row transformations of the data.
 
     The schema of members of the output domain is determined by the keys and aggregates of the groupby operation,
     which is computed on line \ref{line:simulate-schema}.
-    In this case, only margins that are a subset of the grouping keys remain valid,
-    as any bounds on group lengths are not preserved through the black-box aggregation function.
+    Only margins whose grouping expressions are a subset of the original grouping keys are retained.
+    For each such margin, line \ref{line:materialized-margin} replaces every key expression
+    with \texttt{col(output\_name)} for that expression.
+    A group key is evaluated on the input and stored under its output name by the groupby operation,
+    so grouping output rows by these materialized columns uses the same labels as the original input grouping.
+    Evaluating the original expression again on the output is not generally equivalent.
+
+    Each original row contributes to at most one output row,
+    and each output row retains its original grouping labels.
+    Therefore the upper bounds on group lengths and the number of groups remain valid for the translated margins,
+    even when the aggregates change other columns.
     Among preserved margins, invariants are discarded.
 \end{proof}
 
