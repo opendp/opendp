@@ -276,17 +276,20 @@ where
 #[cfg(test)]
 mod tests_shr {
     use crate::{
+        domains::{AtomDomain, VectorDomain},
         measurements::then_laplace,
-        transformations::{make_split_lines, then_cast_default, then_clamp, then_sum},
+        metrics::SymmetricDistance,
+        transformations::{then_clamp, then_sum},
     };
 
     use super::*;
 
     #[test]
     fn test_shr() -> Fallible<()> {
-        (make_split_lines()?
-            >> then_cast_default()
-            >> then_clamp((0, 1))
+        ((
+            VectorDomain::new(AtomDomain::<i32>::default()),
+            SymmetricDistance,
+        ) >> then_clamp((0, 1))
             >> then_sum()
             >> then_laplace(1., None))
         .map(|_| ())

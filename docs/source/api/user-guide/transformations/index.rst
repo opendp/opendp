@@ -31,7 +31,6 @@ to identify the input domain that you'll need to preprocess to.
 Casting
 -------
 Any time you want to convert between data types, you'll want to use a casting transformation.
-In particular, in pipelines that load dataframes from CSV files, it is very common to cast from Strings to some other type.
 
 Depending on the caster you choose, the output data may be null and you will be required to chain with an imputer.
 
@@ -80,9 +79,7 @@ When you cast with :func:`~opendp.transformations.make_cast` or :func:`~opendp.t
 the cast may fail, so the output domain may include null values (``OptionDomain`` or ``AtomDomain`` with nullity).
 We have provided imputation transformations to transform the data domain to the non-null ``VectorDomain<AtomDomain<TA>>``.
 
-You may also be in a situation where you want to bypass dataframe loading and casting
-because you already have a vector of floats loaded into memory.
-In this case, you should start your chain with an imputer if the floats are potentially null.
+If your input is already a vector of floats, start with an imputer if the floats may be null.
 
 :OptionDomain: A representation of nulls using an Option type (``Option<bool>``, ``Option<i32>``, etc).
 :AtomDomain: A representation of nulls using the data type itself (``f32`` and ``f64``).
