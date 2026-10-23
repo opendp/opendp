@@ -214,6 +214,18 @@ def test_make_count_by_ptr():
     assert meas.check(1, (1.0, 1e-6))
 
 
+@pytest.mark.xfail(reason="https://github.com/opendp/opendp/issues/2922")
+def test_laplace_threshold_delta():
+    users = [f"user{i}" for i in range(100_000)]
+    release = dp.t.make_count_by(
+        dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
+    ) >> dp.m.then_laplace_threshold(scale=1.0, threshold=5)
+    reported_delta = release.map(1)[1]
+    measured_rate = len(release(users)) / len(users)
+    # TODO: Not confident this is the right assertion:
+    assert reported_delta > measured_rate
+
+
 def test_randomized_response():
     meas = dp.m.make_randomized_response(categories=["A", "B", "C", "D"], prob=0.75)
     print("randomized response:", meas("A"))

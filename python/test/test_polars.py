@@ -4,7 +4,7 @@ import pytest
 import re
 import warnings
 
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timedelta
 
 import opendp.prelude as dp
 from opendp.extras.polars import Margin
@@ -1431,4 +1431,46 @@ def test_signed_groupby_len_preserves_negative_noise():
     )
     assert len(result.filter(pl.col("len") < 0)) > 0, (
         "dp.len result didn't have any negative values."
+    )
+
+
+@pytest.mark.xfail(
+    run=False,
+    reason="to_pysical can be negative; https://github.com/opendp/opendp/issues/2937",
+)
+def test_date_to_physical_negative():
+    day = date(2024, 1, 1)  # physical value 19,723
+    x = pl.LazyFrame({"d": [day] * 108_882})  # sum of day counts: 2,147,479,686 < 2^31
+    y = pl.LazyFrame({"d": [day] * 108_883})  # one more row: 2,147,499,409 > 2^31
+
+    epoch = date(1970, 1, 1)
+    bounds = ((date(2000, 1, 1) - epoch).days, (date(2025, 12, 31) - epoch).days)
+    query = pl.LazyFrame(schema={"d": pl.Date}).select(
+        pl.col("d").to_physical().dp.mean(bounds, scale=bounds[1])
+    )
+    noisy_mean = dp.m.make_private_lazyframe(
+        dp.with_margin(
+            dp.lazyframe_domain([dp.series_domain("d", dp.atom_domain(T="NaiveDate"))]),
+            dp.polars.Margin(max_length=150_000),
+        ),
+        dp.frame_distance(dp.symmetric_distance()),
+        dp.max_divergence(),
+        query,
+    )
+
+    print("claimed epsilon:", noisy_mean.map([dp.polars.Bound(per_group=1)]))
+    print(
+        "released mean date from x:",
+        epoch + timedelta(days=noisy_mean(x).collect().item()),
+    )
+    # Next line crashes:
+    # test/test_polars.py Fatal Python error: Aborted
+    #
+    # Current thread 0x00000001eaba8f40 (most recent call first):
+    #   File "/.../opendp/python/src/opendp/_data.py", line 374 in onceframe_collect
+    #   File "/.../opendp/python/src/opendp/extras/polars/__init__.py", line 652 in collect
+    #   File "/.../opendp/python/test/test_polars.py", line 1459 in test_date_to_physical_negative
+    print(
+        "released mean date from y:",
+        epoch + timedelta(days=noisy_mean(y).collect().item()),
     )
