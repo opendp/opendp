@@ -5,7 +5,7 @@ use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
 use crate::core::Domain;
-use crate::domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, Invariant, LazyFrameDomain, Margin, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, L0PInfDistance, L2Distance, SymmetricDistance};
 
 use super::*;
@@ -341,5 +341,70 @@ fn test_make_expr_fill_null_nan_sum_fail() -> Fallible<()> {
         err.message.as_deref(),
         Some("input data (data) might contain nans. Preprocess your data with `.fill_nan`.")
     );
+    Ok(())
+}
+
+#[test]
+fn test_fill_preserves_filter_context() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", AtomDomain::<f64>::default()),
+        SeriesDomain::new("k", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::by(["k"]).with_invariant_lengths())?
+    .aggregate(["k"]);
+
+    for expr in [
+        col("x").filter(col("x").gt(0.0)).fill_null(0.0),
+        col("x").filter(col("x").gt(0.0)).fill_nan(0.0),
+    ] {
+        let t_fill = expr.make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        assert_eq!(
+            t_fill.output_domain.context.aggregation("fill")?.invariant,
+            Some(Invariant::Keys)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_fill_preserves_aggregation_context_with_column_fill() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", OptionDomain::new(AtomDomain::<f64>::default())),
+        SeriesDomain::new("y", AtomDomain::<f64>::new_non_nan()),
+        SeriesDomain::new("k", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::by(["k"]).with_invariant_lengths())?
+    .aggregate(["k"]);
+
+    for expr in [col("x").fill_null(col("y")), col("x").fill_nan(col("y"))] {
+        let t_fill = expr.make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        assert_eq!(
+            t_fill.output_domain.context.aggregation("fill")?.invariant,
+            Some(Invariant::Lengths)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_filtered_fill_null_preserves_context_and_nan_coercion() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", OptionDomain::new(AtomDomain::<f32>::new_non_nan())),
+        SeriesDomain::new("k", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::by(["k"]).with_invariant_lengths())?
+    .aggregate(["k"]);
+    let expr = col("x")
+        .filter(col("x").gt(0.0))
+        .fill_null(typed_lit(f64::NAN));
+    let transformation = expr.make_stable(domain, FrameDistance(SymmetricDistance))?;
+    let output = &transformation.output_domain;
+    assert_eq!(
+        output.context.aggregation("fill")?.invariant,
+        Some(Invariant::Keys)
+    );
+    assert_eq!(output.column.dtype(), DataType::Float64);
+    assert!(output.column.atom_domain::<f64>()?.nan());
+    assert!(!output.column.nullable);
     Ok(())
 }

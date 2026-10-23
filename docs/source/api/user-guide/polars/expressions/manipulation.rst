@@ -158,7 +158,9 @@ individuals working each hour range.
             ...     .group_by("HWUSUAL")
             ...     .agg(dp.len(signed=True))
             ... )
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
@@ -225,7 +227,9 @@ from grouping:
 
         .. code:: pycon
 
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
@@ -640,7 +644,9 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             ...     .agg(dp.len(signed=True))
             ...     .with_keys(pl.LazyFrame([labels]))
             ... )
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌─────────┬─────────┐
             │ HWUSUAL ┆ len     │

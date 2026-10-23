@@ -135,6 +135,7 @@ impl
 
                 let l2 = (l2.clone()).min(&li * RBig::try_from(f64::from(*l0).inf_sqrt()?)?);
                 let li = li.min(l2.floor().into_parts().1);
+                let rho = noise_privacy_map.eval(&l2)?;
 
                 if l2.is_zero() {
                     return Ok((0.0, 0.0));
@@ -143,8 +144,6 @@ impl
                 if scale.is_zero() {
                     return Ok((f64::INFINITY, 1.0));
                 }
-
-                let rho = noise_privacy_map.eval(&l2)?;
 
                 if li > threshold {
                     return fallible!(

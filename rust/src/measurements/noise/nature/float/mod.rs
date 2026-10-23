@@ -1,4 +1,4 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{base::Signed, integer::IBig, rational::RBig};
 use opendp_derive::proven;
 
 use crate::{
@@ -93,9 +93,12 @@ where
                 .collect()
         }),
         StabilityMap::new_fallible(move |d_in: &QI| {
-            let d_in = RBig::try_from(d_in.clone())
+            let d_in_r = RBig::try_from(d_in.clone())
                 .map_err(|_| err!(FailedMap, "d_in ({:?}) must be finite", d_in))?;
-            Ok(x_mul_2k(d_in + rounding_distance.clone(), -k))
+            if d_in_r.is_negative() {
+                return fallible!(FailedMap, "d_in ({:?}) must be non-negative", d_in);
+            }
+            Ok(x_mul_2k(d_in_r + rounding_distance.clone(), -k))
         }),
     )
 }

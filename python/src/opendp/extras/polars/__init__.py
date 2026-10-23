@@ -64,12 +64,12 @@ def _get_opendp_polars_lib_path():
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
         warn(
-            "The default value is currently signed=False, and counts are clamped at zero, "
-            "consistent with past releases, but the default will be changing to signed=True. ",
+            "The default value is now signed=True, and counts may be negative. "
+            "In future releases this warning will be dropped.",
             FutureWarning,
             stacklevel=3,
         )
-        return False
+        return True
     if not isinstance(signed, bool):
         raise TypeError("signed must be a bool or None")
     return signed
@@ -98,7 +98,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.
+    and are documented in the :ref:`User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
