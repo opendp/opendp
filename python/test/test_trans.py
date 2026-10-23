@@ -63,14 +63,6 @@ def test_cast_default():
     [
         (-100, 100),
         pytest.param(
-            1,
-            1 + 1e-10,
-            marks=pytest.mark.xfail(
-                reason="Runs VERY slowly: https://github.com/opendp/opendp/issues/3015",
-                run=False,
-            ),
-        ),
-        pytest.param(
             -sys.float_info.max,
             sys.float_info.max,
             marks=pytest.mark.xfail(
