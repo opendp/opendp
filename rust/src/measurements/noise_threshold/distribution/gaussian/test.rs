@@ -156,12 +156,81 @@ fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
     let meas: Measurement<_, _, Approximate<ZeroConcentratedDivergence>, _> =
         distribution.make_noise_threshold((domain, metric), ibig!(100))?;
 
-    let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
-    let expected = HashMap::from([(true, ibig!(100))]);
+    let data = HashMap::from([(false, ibig!(100)), (true, ibig!(101))]);
+    let expected = HashMap::from([(true, ibig!(101))]);
     assert_eq!(meas.invoke(&data)?, expected);
 
     assert_eq!(meas.map(&(1, rbig!(0), rbig!(0)))?, (0.0, 0.0));
     assert_eq!(meas.map(&(1, rbig!(1), rbig!(1)))?, (f64::INFINITY, 1.));
     assert!(meas.map(&(1, rbig!(-1), rbig!(1))).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_gaussian_threshold_strict() -> Fallible<()> {
+    let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+
+    let positive = make_gaussian_threshold(domain.clone(), metric.clone(), 0.0, 10, None)?;
+    assert_eq!(
+        positive.invoke(&HashMap::from([(false, 10), (true, 11)]))?,
+        HashMap::from([(true, 11)])
+    );
+
+    let negative = make_gaussian_threshold(domain, metric, 0.0, -10, None)?;
+    assert_eq!(
+        negative.invoke(&HashMap::from([(false, -10), (true, -11)]))?,
+        HashMap::from([(true, -11)])
+    );
+    Ok(())
+}
+
+#[test]
+fn test_gaussian_threshold_delta_empirical() -> Fallible<()> {
+    const N: u32 = 2048;
+    let domain = MapDomain::new(AtomDomain::<u32>::default(), AtomDomain::<i32>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+
+    // Match N, scale, positive threshold, and tolerance in
+    // make_private_lazyframe/group_by/test.rs::test_stable_keys_delta_empirical.
+    // Each key is unstable relative to the empty map, so its release probability
+    // must be at most delta. The margin controls sampling fluctuations.
+    for (count, threshold) in [(1, 2), (-1, -2)] {
+        let measurement =
+            make_gaussian_threshold(domain.clone(), metric.clone(), 0.5, threshold, None)?;
+        let data: HashMap<_, _> = (0..N).map(|key| (key, count)).collect();
+        let release_rate = measurement.invoke(&data)?.len() as f64 / f64::from(N);
+        let delta = measurement.map(&(1, 1, 1))?.1;
+        assert!(
+            release_rate <= delta + 0.05,
+            "release rate {release_rate} exceeds delta {delta} (threshold {threshold})"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_gaussian_threshold_zero_valued_keys() -> Fallible<()> {
+    let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+
+    for threshold in [-1, 1] {
+        let measurement =
+            make_gaussian_threshold(domain.clone(), metric.clone(), 20.0, threshold, None)?;
+        assert_eq!(measurement.map(&(0, 0, 0))?, (0.0, 0.0));
+
+        // Zero-valued entries are indistinguishable from absent keys under L0PInfDistance.
+        // Opposite-sign nonzero entries must still be eligible for noise.
+        let mut released_opposite_sign = false;
+        for _ in 0..64 {
+            let result = measurement.invoke(&HashMap::from([(false, 0), (true, -threshold)]))?;
+            assert!(!result.contains_key(&false));
+            released_opposite_sign |= result.contains_key(&true);
+        }
+        assert!(
+            released_opposite_sign,
+            "opposite-sign values must still be sampled"
+        );
+    }
     Ok(())
 }

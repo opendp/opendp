@@ -99,6 +99,43 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 }
 
 #[test]
+fn test_stable_keys_delta_empirical() -> Fallible<()> {
+    const N: u32 = 2048;
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<u32>::default())])?
+        .with_margin(Margin::by(["A"]).with_max_length(1))?;
+    let data = df!("A" => &(0..N).collect::<Vec<_>>())?.lazy();
+
+    // Match N, scale, threshold, and tolerance in
+    // noise_threshold/distribution/{laplace,gaussian}/test.rs::
+    // test_{laplace,gaussian}_threshold_delta_empirical (positive case).
+    // Each group is unstable relative to a neighboring frame without its row.
+    // Releasing a group at the threshold would exceed the reported delta.
+    macro_rules! check {
+        ($measure:expr) => {{
+            let meas = make_private_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                Approximate($measure),
+                data.clone()
+                    .group_by(&[col("A")])
+                    .agg(&[len().dp().noise(None)]),
+                Some(0.5),
+                Some(2),
+            )?;
+            let delta = meas.map(&1.into())?.1;
+            let release_rate = meas.invoke(&data)?.collect()?.height() as f64 / f64::from(N);
+            assert!(
+                release_rate <= delta + 0.05,
+                "release rate {release_rate} exceeds delta {delta}"
+            );
+        }};
+    }
+    check!(MaxDivergence);
+    check!(ZeroConcentratedDivergence);
+    Ok(())
+}
+
+#[test]
 fn test_explicit_keys() -> Fallible<()> {
     static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;

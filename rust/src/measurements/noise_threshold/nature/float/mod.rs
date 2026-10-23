@@ -69,7 +69,7 @@ where
             return fallible!(FailedFunction, "threshold ({threshold}) must be finite");
         };
 
-        let r_threshold = x_mul_2k(r_threshold, -k).round();
+        let r_threshold = x_mul_2k(r_threshold, -k).floor();
 
         let t_int = make_float_to_bigint_threshold::<TK, TV, P, QI>(input_space, threshold, k)?;
         let m_noise = distribution.make_noise_threshold(t_int.output_space(), r_threshold)?;
