@@ -427,9 +427,18 @@ Should you need it, the following constructors give greater control over the sum
   There are separate constructors for integers and floats, because floats additionally need a dataset truncation and a slightly larger sensitivity.
   The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm.
 
-  Floating-point summation may be further configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
-  Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n / 2^k))`` increase,
+  Checked floating-point summation may be configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
+  Ordered floating-point summation uses only ``Sequential<T>``: a saturating pairwise sum can change
+  its grouping after an insertion or deletion and exceed the declared sensitivity.
+  ``make_sum`` retains the checked pairwise path when overflow is ruled out, and selects sequential
+  saturation when overflow is possible.
+
+  Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while checked pairwise
+  summation results in an ``O(log_2(n)n / 2^k)`` increase,
   where ``k`` is the bit length of the mantissa in the floating-point numbers used.
+  A tighter public size or size limit reduces the sequential relaxation. In particular, the default
+  limit for an unknown size can make this bound unrepresentable for large ``f32`` values;
+  construction then fails rather than returning an invalid sensitivity bound.
 
 
   .. list-table::
