@@ -50,7 +50,7 @@ fn test_impute_uniform_narrow_bounds_terminates() -> Fallible<()> {
 
 #[test]
 fn test_impute_uniform_infinite_width() {
-    fn assert_rejected<TA: Float + SampleUniform>(bounds: (TA, TA)) {
+    fn assert_rejected<TA: Float + SampleUniform>(bounds: (TA, TA), expected: &str) {
         let message = make_impute_uniform_float(
             VectorDomain::new(AtomDomain::default()),
             SymmetricDistance,
@@ -59,15 +59,17 @@ fn test_impute_uniform_infinite_width() {
         .unwrap_err()
         .message
         .unwrap_or_default();
-        assert!(message.contains("must be finite"), "{bounds:?}: {message}");
+        assert!(message.contains(expected), "{bounds:?}: {message}");
     }
 
-    assert_rejected((0.0, f64::INFINITY));
-    assert_rejected((f64::NEG_INFINITY, 0.0));
-    assert_rejected((f64::NEG_INFINITY, f64::INFINITY));
+    assert_rejected((0.0, f64::INFINITY), "must be finite");
+    assert_rejected((f64::NEG_INFINITY, 0.0), "must be finite");
+    assert_rejected((f64::NEG_INFINITY, f64::INFINITY), "must be finite");
     // finite bounds, but the width overflows
-    assert_rejected((f64::MIN, f64::MAX));
-    assert_rejected((f32::MIN, f32::MAX));
+    assert_rejected((f64::MIN, f64::MAX), "must be finite");
+    assert_rejected((f32::MIN, f32::MAX), "must be finite");
+    // swapped bounds report the order, even when the width overflows
+    assert_rejected((f64::MAX, f64::MIN), "lower must be smaller");
 }
 
 #[test]

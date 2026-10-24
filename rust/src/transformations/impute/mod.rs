@@ -44,14 +44,14 @@ where
     if upper.is_nan() {
         return fallible!(MakeTransformation, "upper may not be nan");
     }
+    if lower >= upper {
+        return fallible!(MakeTransformation, "lower must be smaller than upper");
+    }
     if !(upper - lower).is_finite() {
         return fallible!(
             MakeTransformation,
             "the width of the bounds (upper - lower) must be finite"
         );
-    }
-    if lower >= upper {
-        return fallible!(MakeTransformation, "lower must be smaller than upper");
     }
 
     make_row_by_row(
