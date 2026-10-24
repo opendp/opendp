@@ -60,16 +60,7 @@ def test_cast_default():
 
 @pytest.mark.parametrize(
     "lower,upper",
-    [
-        (-100, 100),
-        pytest.param(
-            -sys.float_info.max,
-            sys.float_info.max,
-            marks=pytest.mark.xfail(
-                reason="Only returns negatives: https://github.com/opendp/opendp/issues/3016"
-            ),
-        ),
-    ],
+    [(-100, 100)],
 )
 def test_impute_uniform(lower, upper):
     impute = dp.t.make_impute_uniform_float(
@@ -83,6 +74,23 @@ def test_impute_uniform(lower, upper):
         neg_count = sum(1 for x in imputed if x < 0)
         pos_count = sum(1 for x in imputed if x > 0)
         assert pos_count / neg_count == pytest.approx(upper / -lower, abs=0.1)
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        (0.0, float("inf")),
+        # finite bounds, but the width overflows
+        (-sys.float_info.max, sys.float_info.max),
+    ],
+)
+def test_impute_uniform_infinite_width(bounds):
+    with pytest.raises(dp.OpenDPException, match="must be finite"):
+        dp.t.make_impute_uniform_float(
+            dp.vector_domain(dp.atom_domain(T=float, nan=True)),
+            dp.symmetric_distance(),
+            bounds=bounds,
+        )
 
 
 def test_int_identity():
