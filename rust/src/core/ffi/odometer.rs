@@ -7,7 +7,7 @@ use crate::{
     ffi::{
         any::{
             AnyDomain, AnyMeasure, AnyMetric, AnyObject, AnyOdometer, AnyOdometerQueryable,
-            Downcast, QueryOdometerInvokeType, QueryOdometerMapType,
+            Downcast, QueryOdometerInvokeType,
         },
         util::{self, Type, into_c_char_p},
     },
@@ -15,7 +15,7 @@ use crate::{
 
 use super::FfiResult;
 
-pub type AnyOdometerQuery = OdometerQuery<AnyObject, AnyObject>;
+pub type AnyOdometerQuery = OdometerQuery<AnyObject>;
 pub type AnyOdometerAnswer = OdometerAnswer<AnyObject, AnyObject>;
 
 #[bootstrap(
@@ -166,44 +166,19 @@ pub extern "C" fn opendp_core__odometer_queryable_invoke_type(
 }
 
 #[bootstrap(
-    name = "odometer_queryable_privacy_loss_type",
-    arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<char *>")
-)]
-/// Get the map query type of an odometer `queryable`.
-///
-/// # Arguments
-/// * `this` - The queryable to retrieve the query type from.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__odometer_queryable_privacy_loss_type(
-    this: *mut AnyObject,
-) -> FfiResult<*mut c_char> {
-    let this = try_as_mut_ref!(this);
-    let this = try_!(this.downcast_mut::<AnyOdometerQueryable>());
-    let answer: Type = try_!(this.eval_internal(&QueryOdometerMapType));
-    FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
-}
-
-#[bootstrap(
     name = "odometer_queryable_privacy_loss",
-    arguments(
-        queryable(rust_type = b"null"),
-        d_in(rust_type = "$odometer_queryable_privacy_loss_type(queryable)")
-    )
+    arguments(queryable(rust_type = b"null"))
 )]
 /// Retrieve the privacy loss of an odometer `queryable`.
 ///
 /// # Arguments
 /// * `queryable` - Queryable to eval.
-/// * `d_in` - Maximum distance between adjacent inputs in the input domain.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__odometer_queryable_privacy_loss(
     queryable: *mut AnyObject,
-    d_in: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyOdometerQueryable>());
-    let d_in = try_as_ref!(d_in).clone();
-    queryable.privacy_loss(d_in).into()
+    queryable.privacy_loss().into()
 }
 
 #[cfg(test)]
@@ -227,19 +202,20 @@ mod tests {
             AnyMeasure::new(MaxDivergence),
             Function::new_fallible(|arg: &AnyObject| {
                 let data = arg.downcast_ref::<Vec<i32>>()?.clone();
-                Queryable::new_external(move |query: &OdometerQuery<AnyObject, AnyObject>| {
+                Queryable::new_external(move |query: &OdometerQuery<AnyObject>| {
                     Ok(match query {
                         OdometerQuery::Invoke(idx) => {
                             let idx = idx.downcast_ref::<usize>()?;
                             let res = data[*idx].clone();
                             OdometerAnswer::Invoke(AnyObject::new(res))
                         }
-                        OdometerQuery::PrivacyLoss(_) => {
+                        OdometerQuery::PrivacyLoss => {
                             OdometerAnswer::PrivacyLoss(AnyObject::new(0.0))
                         }
                     })
                 })
             }),
+            AnyObject::new(1u32),
         )
     }
 

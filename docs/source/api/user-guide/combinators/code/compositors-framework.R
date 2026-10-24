@@ -80,7 +80,8 @@ qbl_adaptive_comp(query = meas_count)
 odom_fully_adaptive_comp <- make_fully_adaptive_composition(
   input_domain = vector_domain(atom_domain(.T = i32)),
   input_metric = symmetric_distance(),
-  output_measure = max_divergence()
+  output_measure = max_divergence(),
+  d_in = 1L
 )
 # /fully-adaptive-composition
 
@@ -90,7 +91,7 @@ qbl_fully_adaptive_comp <- odom_fully_adaptive_comp(arg = int_dataset)
 # /fully-adaptive-composition-invoke
 
 # fully-adaptive-composition-loss1
-qbl_fully_adaptive_comp(d_in = 1L)
+qbl_fully_adaptive_comp("privacy_loss")
 # 0.0
 # /fully-adaptive-composition-loss1
 
@@ -102,14 +103,13 @@ qbl_fully_adaptive_comp(query = meas_count)
 # /fully-adaptive-composition-eval1
 
 # fully-adaptive-composition-loss2
-qbl_fully_adaptive_comp(d_in = 1L)
+qbl_fully_adaptive_comp("privacy_loss")
 # 3.0
 # /fully-adaptive-composition-loss2
 
 # privacy-filter
 meas_fully_adaptive_comp <- make_privacy_filter(
   odom_fully_adaptive_comp,
-  d_in = 1L,
   d_out = 2.0
 )
 # /privacy-filter
@@ -127,7 +127,7 @@ qbl_fully_adaptive_comp(query = meas_count)
 # /privacy-filter-eval1
 
 # privacy-filter-loss1
-qbl_fully_adaptive_comp(d_in = 1L)
+qbl_fully_adaptive_comp("privacy_loss")
 # 2.0
 # /privacy-filter-loss1
 

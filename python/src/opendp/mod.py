@@ -312,7 +312,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)):  # type: ignore[misc]
     An Odometer can be invoked with a dataset to return an OdometerQueryable.
 
     Differentially private queries (measurements) may be passed to the queryable,
-    and ``.privacy_loss(d_in)`` can be called to check the current privacy usage.
+    and ``.privacy_loss()`` can be called to check the current privacy usage.
 
     :example:
 
@@ -327,6 +327,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)):  # type: ignore[misc]
     ...     input_domain=meas_rr.input_domain,
     ...     input_metric=meas_rr.input_metric,
     ...     output_measure=meas_rr.output_measure,
+    ...     d_in=1,
     ... )
     ...
     >>> # invoke the odometer to get a queryable
@@ -340,8 +341,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)):  # type: ignore[misc]
     >>> print("Release:", qbl_comp(meas_rr))  # doctest: +ELLIPSIS
     Release: ...
     >>> # The odometer's privacy consumption (in terms of ε) can be checked at any time.
-    >>> # Input dataset may differ by discrete distance 1.
-    >>> qbl_comp.privacy_loss(1)
+    >>> qbl_comp.privacy_loss()
     0.8109302162163288
     """
 
@@ -749,21 +749,17 @@ class OdometerQueryable:
 
         return odometer_queryable_invoke(self.value, query)
 
-    def privacy_loss(self, d_in):
+    def privacy_loss(self):
         from opendp.core import odometer_queryable_privacy_loss
 
-        return odometer_queryable_privacy_loss(self.value, d_in)
+        return odometer_queryable_privacy_loss(self.value)
 
     def __repr__(self) -> str:
-        from opendp.core import (
-            odometer_queryable_invoke_type,
-            odometer_queryable_privacy_loss_type,
-        )
+        from opendp.core import odometer_queryable_invoke_type
         from opendp.typing import RuntimeType
 
         Q = RuntimeType.parse(odometer_queryable_invoke_type(self.value))
-        QB = RuntimeType.parse(odometer_queryable_privacy_loss_type(self.value))
-        return f"OdometerQueryable(Q={Q}, QB={QB})"
+        return f"OdometerQueryable(Q={Q})"
 
 
 class Function(ctypes.POINTER(AnyFunction)):  # type: ignore[misc]

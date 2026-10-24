@@ -101,7 +101,9 @@ def test_plugin_queryable_error():
 def test_fully_adaptive_composition():
     max_influence = 1
     space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-    o_comp = space >> dp.c.then_fully_adaptive_composition(dp.max_divergence())
+    o_comp = space >> dp.c.then_fully_adaptive_composition(
+        dp.max_divergence(), d_in=max_influence
+    )
     assert space == o_comp.input_space
 
     assert (
@@ -113,16 +115,16 @@ def test_fully_adaptive_composition():
     )
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
-    assert qbl_comp.privacy_loss(max_influence) == 0.0
+    assert qbl_comp.privacy_loss() == 0.0
 
-    assert str(qbl_comp) == "OdometerQueryable(Q=AnyMeasurement, QB=u32)"
+    assert str(qbl_comp) == "OdometerQueryable(Q=AnyMeasurement)"
     m_sum = (
         space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.0)
     )
 
     # evaluating
     assert isinstance(qbl_comp(m_sum), int)
-    assert qbl_comp.privacy_loss(max_influence) == m_sum.map(max_influence)
+    assert qbl_comp.privacy_loss() == m_sum.map(max_influence)
 
     m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.0)
     t_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
@@ -133,14 +135,14 @@ def test_fully_adaptive_composition():
     )
     qbl_summed = qbl_comp.invoke(m_sum_compositor)
     # it's slightly larger, checking greater than will do
-    assert qbl_comp.privacy_loss(max_influence) > m_sum.map(max_influence) + 0.2 + 0.09
+    assert qbl_comp.privacy_loss() > m_sum.map(max_influence) + 0.2 + 0.09
 
     assert isinstance(qbl_summed(m_lap), int)  # child release
     assert isinstance(qbl_summed(m_lap), int)  # child release
     assert isinstance(qbl_comp(m_sum), int)  # root release
 
     # it's slightly larger, checking greater than will do
-    assert qbl_comp.privacy_loss(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
+    assert qbl_comp.privacy_loss() > m_sum.map(max_influence) * 2 + 0.2 + 0.09
 
 
 def test_odometer_supporting_elements():
@@ -148,6 +150,7 @@ def test_odometer_supporting_elements():
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
         output_measure=dp.max_divergence(),
+        d_in=1,
     )
 
     assert isinstance(o_ac.invoke([]), dp.OdometerQueryable)
@@ -169,8 +172,8 @@ def test_privacy_filter():
             input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             input_metric=dp.symmetric_distance(),
             output_measure=dp.max_divergence(),
+            d_in=1,
         ),
-        d_in=1,
         d_out=2.0,
     )
 
@@ -179,6 +182,6 @@ def test_privacy_filter():
     m_count = dp.t.make_count(*m_filter.input_space) >> dp.m.then_laplace(1.0)
 
     qbl_filter(m_count)
-    assert qbl_filter.privacy_loss(1) == 1.0
+    assert qbl_filter.privacy_loss() == 1.0
     qbl_filter(m_count)
-    assert qbl_filter.privacy_loss(1) == 2.0
+    assert qbl_filter.privacy_loss() == 2.0
