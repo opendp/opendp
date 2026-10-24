@@ -199,7 +199,9 @@ from grouping:
             ...
 
             >>> labels = pl.Series(
-            ...     "HWUSUAL", cut_labels(breaks), dtype=pl.Categorical
+            ...     "HWUSUAL",
+            ...     cut_labels(breaks),
+            ...     dtype=pl.Enum(cut_labels(breaks)),
             ... )
 
             >>> query = (
@@ -246,8 +248,8 @@ from grouping:
             └───────────┴─────────┘
 
 
-The output type is categorical, but with a data-independent encoding,
-meaning OpenDP allows grouping by these keys.
+The output type is an Enum with a data-independent encoding,
+so OpenDP allows grouping by these keys.
 
 Drop NaNs
 ---------
@@ -607,10 +609,11 @@ supplied, then OpenDP considers the output to be non-null.
 To Physical
 -----------
 
-``.to_physical`` returns the underlying representation of categorical
-(``pl.Categorical``, ``pl.Enum``) or temporal (``pl.Date``, ``pl.Time``,
+``.to_physical`` returns the underlying representation of
+enums (``pl.Enum``) or temporal (``pl.Date``, ``pl.Time``,
 ``pl.Datetime``) data. For example, you can use the ``.to_physical``
 expression to retrieve the bin indices of the ``.cut`` expression.
+Categorical encodings are data-dependent; cast to ``pl.Enum`` first.
 
 .. tab-set::
 
@@ -652,6 +655,5 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             └─────────┴─────────┘
 
 
-In the case of categorical data types, OpenDP only allows this
-expression if the encoding is data-independent. More information can be
-found in :doc:`Data Types <../data-types>`.
+Categorical encodings do not have a fixed integer representation. More
+information can be found in :doc:`Data Types <../data-types>`.

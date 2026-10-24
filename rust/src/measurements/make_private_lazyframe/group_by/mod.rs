@@ -8,7 +8,7 @@ use crate::accuracy::{
 };
 use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
@@ -20,7 +20,7 @@ use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars::prelude::{DataType, DslPlan, JoinType, LazyFrame, col, len, lit};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -72,27 +72,26 @@ where
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    for expr in &group_by {
-        // grouping keys must be stable
-        let t_group_by = expr.clone().make_stable(
-            WildExprDomain {
-                columns: middle_domain.series_domains.clone(),
-                context: Context::RowByRow,
-            },
-            L0PInfDistance(middle_metric.0.clone()),
-        )?;
-
-        let series_domain = &t_group_by.output_domain.column;
-        if let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() {
-            if domain.categories().is_none() {
+    let group_by_keys = group_by
+        .iter()
+        .map(|expr| {
+            let t_key = expr.clone().make_stable(
+                WildExprDomain {
+                    columns: middle_domain.series_domains.clone(),
+                    context: Context::RowByRow,
+                },
+                L0PInfDistance(middle_metric.0.clone()),
+            )?;
+            if matches!(t_key.output_domain.column.dtype(), DataType::Categorical(_, _)) {
                 return fallible!(
                     MakeMeasurement,
-                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.",
-                    series_domain.name
+                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to String or Enum before grouping.",
+                    t_key.output_domain.column.name
                 );
             }
-        };
-    }
+            Ok(t_key.invoke(&input)?.expr)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     // 2: prepare for release of `aggs`
     let group_by_id = HashSet::from_iter(group_by.iter().cloned());
@@ -176,7 +175,7 @@ where
         #[cfg(patch_polars)]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             predicates: vec![],
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
@@ -186,7 +185,7 @@ where
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,

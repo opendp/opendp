@@ -269,7 +269,9 @@ def make_contingency_table(
 
     if cuts_pl:
         plan = plan.with_columns(
-            pl.col(c).cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
+            pl.col(c)
+            .cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
+            .cast(pl.String)
             for c, cutset in cuts_pl.items()
             if c in schema
         )

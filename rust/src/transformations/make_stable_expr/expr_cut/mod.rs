@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
@@ -66,6 +66,13 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
+    // Polars sorts breaks before deriving default labels.
+    let mut breaks = breaks;
+    if breaks.iter().any(|b| b.is_nan()) {
+        return fallible!(MakeTransformation, "cut breaks cannot be NaN");
+    }
+    breaks.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+
     let categories = if let Some(labels) = &labels {
         if labels.len() != breaks.len() + 1 {
             return fallible!(
@@ -80,8 +87,11 @@ where
         compute_labels(&breaks, left_closed)?
     };
 
-    let element_domain = CategoricalDomain::new_with_categories(categories)?;
-    output_domain.column.set_element_domain(element_domain);
+    // Categorical codes depend on the data. Enum fixes the bin encoding.
+    let categories = FrozenCategories::new(categories.iter().map(|s| s.as_str()))?;
+    let enum_dtype = DataType::Enum(categories.clone(), categories.mapping().clone());
+    output_domain.column.set_dtype(enum_dtype.clone())?;
+    output_domain.column.nullable = true;
 
     t_prior
         >> Transformation::new(
@@ -91,6 +101,7 @@ where
             middle_metric,
             Function::then_expr(move |expr| {
                 expr.cut(breaks.clone(), labels.clone(), left_closed, include_breaks)
+                    .cast(enum_dtype.clone())
             }),
             StabilityMap::new(Clone::clone),
         )?

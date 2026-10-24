@@ -1,4 +1,4 @@
-use crate::domains::{LazyFrameDomain, SeriesDomain, SeriesElementDomain};
+use crate::domains::{CategoricalDomain, LazyFrameDomain, SeriesDomain, SeriesElementDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -37,20 +37,38 @@ fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + Seri
 
 #[test]
 fn test_expr_to_physical_categorical() -> Fallible<()> {
-    let in_elem_domain = CategoricalDomain::new_with_categories(
-        vec!["A", "B", "C", "D"]
-            .into_iter()
-            .map(PlSmallStr::from)
-            .collect(),
-    )?;
+    let series = Series::new("data".into(), ["A", "B"]).cast(&DataType::Categorical(
+        Categories::global(),
+        Categories::global().mapping(),
+    ))?;
+    let lf = DataFrame::new(vec![series.into_column()])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "data",
+        CategoricalDomain::default(),
+    )])?;
+    assert!(
+        make_stable_lazyframe(
+            domain,
+            FrameDistance(SymmetricDistance),
+            lf.with_column(col("data").to_physical()),
+        )
+        .is_err()
+    );
+    Ok(())
+}
 
-    let in_series = Series::new("data".into(), ["A", "B", "B", "C", "D"]).cast(
-        &DataType::Categorical(Categories::global(), Categories::global().mapping()),
-    )?;
-
-    let out_elem_domain = AtomDomain::<u32>::default();
-    let out_series = Series::new("data".into(), [0u32, 1, 1, 2, 3]);
-    assert_expr_to_physical(in_elem_domain, in_series, out_elem_domain, out_series)
+#[test]
+fn test_expr_to_physical_enum() -> Fallible<()> {
+    let categories = ["A", "B", "C", "D"];
+    let frozen = FrozenCategories::new(categories)?;
+    let dtype = DataType::Enum(frozen.clone(), frozen.mapping().clone());
+    let in_series = Series::new("data".into(), ["B", "A", "B", "C", "D"]).cast(&dtype)?;
+    assert_expr_to_physical(
+        crate::domains::EnumDomain::new(Series::new("".into(), categories))?,
+        in_series,
+        AtomDomain::<u32>::default(),
+        Series::new("data".into(), [1u32, 0, 1, 2, 3]),
+    )
 }
 
 #[test]

@@ -132,6 +132,31 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         test_cov(clique)
 
 
+@pytest.mark.parametrize("oneway", ["unkeyed", "all"])
+def test_contingency_table_cut_enum_indexing(oneway):
+    pytest.importorskip("mbi")
+    import polars as pl
+
+    # The stable cut emits an Enum, but MBI's private index mapping uses
+    # public String bin labels. Exercise both one-way and final indexing.
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [-1.0, 0.0, 1.0, 2.0]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=10.0),
+    )
+    table = (
+        context.query(epsilon=10.0)
+        .contingency_table(
+            cuts={"A": [0.5]},
+            algorithm=Fixed(queries=[Count(("A",))], oneway=oneway),
+        )
+        .release()
+    )
+
+    assert table.keys["A"].to_list() == ["(-inf, 0.5]", "(0.5, inf]"]
+    assert table.project(["A"]).shape == (2,)
+
+
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
     from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
