@@ -24,6 +24,7 @@ from opendp.typing import (
 )
 from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
+from opendp.extras.numpy._norm import _rows_within_norm
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp  # noqa: F401
 
@@ -89,6 +90,7 @@ def array2_domain(
     _check_norm_and_p(norm, p)
 
     if norm is not None:
+        dp.assert_features("idealized-numerics")
         # normalize origin to a scalar
         origin = origin if origin is not None else 0.0
 
@@ -182,13 +184,11 @@ def array2_domain(
         if T in {"f32", "f64"} and not nan and np.isnan(x).any():
             raise ValueError("must not contain NaN values")
 
-        if origin is not None:
-            x = x - origin
-        if (
-            norm is not None
-            and np.linalg.norm(x, ord=p, axis=1).max(initial=0.0) > norm
-        ):
-            raise ValueError(f"must have row norm at most {norm}")
+        if norm is not None:
+            with np.errstate(over="ignore", invalid="ignore"):
+                centered = x - origin
+            if not _rows_within_norm(centered, norm, p).all():
+                raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
 
