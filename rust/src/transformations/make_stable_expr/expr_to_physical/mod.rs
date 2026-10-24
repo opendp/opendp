@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
@@ -62,23 +62,18 @@ where
 
     use DataType::*;
     let in_dtype = active_series.dtype();
+    let is_enum = matches!(in_dtype, Enum(_, _));
 
     // this code is written intentionally to fail or change if polars behavior changes
     match (in_dtype.clone(), in_dtype.to_physical()) {
         (in_dtype, out_dtype) if in_dtype == out_dtype => (),
-        (Categorical(_, _), UInt32) => {
-            let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
-
-            if cat_domain.categories().is_none() {
-                return fallible!(
-                    MakeTransformation,
-                    "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first."
-                );
-            }
-
-            active_series.set_element_domain(AtomDomain::<u32>::default());
+        (Categorical(_, _), _) => {
+            return fallible!(
+                MakeTransformation,
+                "to_physical: categorical encodings are data-dependent. Cast to Enum first."
+            );
         }
-        (Enum(_, _), UInt32) => {
+        (Enum(_, _), UInt8 | UInt16 | UInt32) => {
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }
         (Date, Int32) => {
@@ -102,7 +97,10 @@ where
             middle_metric.clone(),
             output_domain,
             middle_metric,
-            Function::then_expr(move |expr| expr.to_physical()),
+            Function::then_expr(move |expr| {
+                let expr = expr.to_physical();
+                if is_enum { expr.cast(UInt32) } else { expr }
+            }),
             StabilityMap::new(Clone::clone),
         )?
 }
