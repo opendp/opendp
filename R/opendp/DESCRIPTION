@@ -1,5 +1,5 @@
 Package: opendp
-Version: 0.15.1
+Version: 0.16.0
 Title: R Bindings for the OpenDP Library
 Authors@R: c(
     person("Stefano", "Iacus",
@@ -30,7 +30,7 @@ RoxygenNote: 7.3.3
 SystemRequirements: Cargo (Rust's package manager), rustc
 Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0
-Collate: 
+Collate:
     'mod.R'
     'extras.R'
     'typing.R'

@@ -36,9 +36,9 @@ class Fixed(Algorithm):
     """Workload of queries."""
     oneway: OnewayType = ONEWAY_UNKEYED
     """Only fit one-way marginals for columns missing keys.
-    
+
     The fixed algorithm differs from other algorithms
-    in that it only estimates marginals with missing keys, 
+    in that it only estimates marginals with missing keys,
     not all unknown first-order marginals.
     """
 
@@ -79,7 +79,7 @@ class Fixed(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import Domain, MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -87,16 +87,14 @@ class Fixed(Algorithm):
         if model is not None and not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         cliques = [q.by for q in self.queries]
         weights = [q.weight for q in self.queries]
 
         def make(scale: float) -> Measurement:
             return make_stable_marginals(
-                input_domain,
-                input_metric,
-                lp_metric,
-                cliques,  # type: ignore[arg-type]
+                input_domain, input_metric, cliques
             ) >> then_noise_marginals(output_measure, cliques, scale, weights)  # type: ignore[return-type]
 
         m_marginals = binary_search_chain(make, d_in, d_out, T=float)

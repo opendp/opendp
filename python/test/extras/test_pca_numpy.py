@@ -22,7 +22,7 @@ def sample_covariance(num_features):
     return A.T @ A
 
 
-def test_pca():    
+def test_pca():
     num_columns = 4
     num_rows = 10_000
     space = (

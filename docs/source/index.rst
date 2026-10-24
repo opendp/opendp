@@ -8,7 +8,7 @@ Differential privacy is a rigorous mathematical definition of privacy.
 Consider an algorithm that analyzes a dataset and releases statistics:
 The algorithm is differentially private if by looking at the output,
 you cannot tell whether any individual's data was included in the original dataset or not.
-Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual. 
+Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual.
 
 For more background on differential privacy and its applications
 see the OpenDP Project's `Educational Resources <https://learning.opendp.org/>`_,
@@ -55,14 +55,15 @@ What next?
 There are multiple tracks through the documentation:
 
 * New users of the library should begin with :doc:`getting-started/index`.
-* For Python, R, and Rust references, see the :doc:`api/index`.
-* If you want to understand how the fundamentals of DP are applied in OpenDP, see :doc:`theory/index`.
+* If you want to understand how the pieces provided by OpenDP work together, see :doc:`api/user-guide/index`
+* For Python, R, and Rust API references, see the :doc:`api/index`.
+* If you learn better from examples, check out the `OpenDP Cookbook <https://cookbook.opendp.org/>`_.
 * Finally, if you're joining the project, see :doc:`contributing/index`.
 
 .. toctree::
   :hidden:
 
   getting-started/index
+  api/user-guide/index
   api/index
-  theory/index
   contributing/index

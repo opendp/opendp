@@ -99,7 +99,7 @@ We also have input and output metrics.
 
 Examples of metrics are ``HammingDistance``, ``SymmetricDistance``,
 ``AbsoluteDistance`` and ``L1Distance``. They behave in the same way
-that the input and output domains do when chaining. 
+that the input and output domains do when chaining.
 
 .. code:: rust
 
@@ -193,13 +193,13 @@ provided. I’ll break it down into three parts.
    )
        -> Fallible<
            Transformation<
-               VectorDomain<AtomDomain<TIA>>, 
-               M, 
-               VectorDomain<AtomDomain<TOA>>, 
+               VectorDomain<AtomDomain<TIA>>,
+               M,
+               VectorDomain<AtomDomain<TOA>>,
                M>>
 
        // 2.
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
              TOA: 'static + RoundCast<TIA> + Default + CheckNull,
              M: DatasetMetric,
              (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -227,7 +227,7 @@ The first part is the function signature:
        -> Fallible<
            Transformation<
                VectorDomain<AtomDomain<TIA>>,
-               M,  
+               M,
                VectorDomain<AtomDomain<TOA>>,
                M>>
        ...
@@ -254,7 +254,7 @@ The second part is the where clause:
 .. code:: rust
 
        ...
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
            TOA: 'static + RoundCast<TIA> + Default + CheckNull,
            M: DatasetMetric,
            (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,

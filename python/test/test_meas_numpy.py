@@ -3,6 +3,7 @@ import opendp.prelude as dp
 
 np = pytest.importorskip("numpy")
 
+
 def test_randomized_response_bitvec():
     f = 1e-20
     m = 3

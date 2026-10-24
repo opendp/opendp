@@ -21,7 +21,7 @@ mod test;
 ///
 /// $\mathcal{L}_\mathbb{R}(0, s)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{R}, \quad  
+/// \forall x \in \mathbb{R}, \quad
 /// P[X = x] = \frac{1}{2 s}e^{-|x|/s}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{R}(0, s)
 /// ```
@@ -55,7 +55,7 @@ fn check_tail_arguments(scale: &RBig, tail: &RBig) -> Fallible<()> {
 ///
 /// $\mathcal{L}_\mathbb{Z}(0, scale)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
@@ -82,7 +82,7 @@ pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) ->
 ///
 /// $\mathcal{N}_\mathbb{Z}(0, scale)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```

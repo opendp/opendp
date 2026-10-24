@@ -47,7 +47,7 @@ jobs:
 
       - name: Drop R release tarballs from tracked history
         run: rm -f R/opendp/src/*.tar.xz
-      
+
       - name: Push changes
         run: |
           # Generated files are git-ignored, so we need --force.

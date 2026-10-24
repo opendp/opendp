@@ -17,16 +17,18 @@ class RV:
 
         match threshold.sign():
             case Sign.Positive:
-                inner = Ordering.Less
+                keep_ordering = Ordering.Greater
             case Sign.Negative:
-                inner = Ordering.Greater
+                keep_ordering = Ordering.Less
 
         def function(data: HashMap[TK, IBig]) -> HashMap[TK, IBig]:
             out = []
             for k, v in data.items():
+                if v == 0:  # |\label{line:skip-zero}|
+                    continue
                 v = self.sample(v)  # |\label{line:sample}|
 
-                if v.cmp(threshold) != inner:
+                if v.cmp(threshold) == keep_ordering:
                     out.append((k, v))
             # shuffle the output to avoid leaking the order of the input
             random.shuffle(out)  # |\label{line:shuffle}|

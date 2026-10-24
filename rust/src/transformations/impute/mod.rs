@@ -61,7 +61,8 @@ where
         move |v| {
             if v.is_null() {
                 let mut rng = GeneratorOpenDP::new();
-                let sample = Uniform::from(lower..upper).sample(&mut rng);
+                // Include the upper bound to avoid rand's slow adjustment for narrow intervals.
+                let sample = Uniform::new_inclusive(lower, upper).sample(&mut rng);
                 rng.error.map(|_| sample).unwrap_or(lower)
             } else {
                 *v

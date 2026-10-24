@@ -13,7 +13,7 @@ def test_private_np_mean():
         dp.symmetric_distance(),
     )
     trans = space >> then_private_np_mean(scale=0.001, norm=1.0)
-    
+
     print(
         "trans(np.random.normal(size=(1000, 4)))",
         trans(np.random.normal(size=(1000, 4))),

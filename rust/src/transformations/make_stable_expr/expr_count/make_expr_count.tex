@@ -8,7 +8,7 @@
 \begin{document}
 \maketitle
 
-This document proves that the implementation of \rustdoc{transformations/make_stable_expr/expr_count/fn}{make\_expr\_count} in \asOfCommit{mod.rs}{f5bb719} 
+This document proves that the implementation of \rustdoc{transformations/make_stable_expr/expr_count/fn}{make\_expr\_count} in \asOfCommit{mod.rs}{f5bb719}
 satisfies its proof definition.
 
 \section{Hoare Triple}
@@ -36,18 +36,18 @@ None
 \begin{theorem}
 \validTransformation{(input\_domain, input\_metric, expr, MI, P)}{make\_expr\_count}
 \end{theorem}
-Starting from line \ref{match-strategy}, 
+Starting from line \ref{match-strategy},
 \texttt{expr} is analyzed to determine the type of counting query \texttt{strategy} and input to the counting query \texttt{input}.
 
-All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified, 
+All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified,
 therefore by the postcondition \texttt{t\_prior} is a valid transformation.
 
-To prove that the output is a valid transformation, 
+To prove that the output is a valid transformation,
 we must first prove that the transformation on line \ref{count-trans} is valid.
 
 \begin{proof}
     \textbf{Appropriate Output Domain}
-    Since the count transformation is not row-by-row, 
+    Since the count transformation is not row-by-row,
     line \ref{alignment} disallows this count transformation from being constructed in a row-by-row context,
     satisfying the requirements of ExprDomain.
 
@@ -56,7 +56,7 @@ we must first prove that the transformation on line \ref{count-trans} is valid.
     and the data type of elements in the series is u32,
     which is consistent with \ref{output-series}.
     This series is then part of a dataframe and and operations are continued to be applied with the same context,
-    on line \ref{output-domain}.    
+    on line \ref{output-domain}.
     This domain is then used on line \ref{output-domain-usage} to construct the count transformation.
 \end{proof}
 
@@ -67,11 +67,11 @@ we must first prove that the transformation on line \ref{count-trans} is valid.
     line \ref{is-row-by-row} checks if \texttt{input} can be parsed into a row-by-row transformation.
 
     Line \ref{will-count-all} uses domain descriptors to determine if the counting query will count all rows.
-    This is the case if the counting query is \texttt{Len}, 
+    This is the case if the counting query is \texttt{Len},
     or if the counting query counts all non-null values in data that doesn't contain nulls.
 
-    If all rows are to be counted, 
-    then the \texttt{public\_info} domain descriptor about the partitioning applies to this count query strategy, 
+    If all rows are to be counted,
+    then the \texttt{public\_info} domain descriptor about the partitioning applies to this count query strategy,
     on line \ref{public-info}.
 
     The function defined on line \ref{function} applies the counting query to the input expression with the given query strategy.
@@ -83,4 +83,4 @@ we must first prove that the transformation on line \ref{count-trans} is valid.
 Since it has been shown that both \texttt{t\_prior} and the count transformation are valid transformations,
 then the preconditions for \texttt{make\_chain\_tt} are met (invoked via the right-shift operator shorthand).
 
-\end{document} 
+\end{document}

@@ -366,7 +366,7 @@ impl DPExpr {
     /// `scale` must not be negative or inf.
     /// Scale and distribution may be left None, to be filled later by [`make_private_lazyframe`].
     /// The noise distribution is chosen according to the privacy definition:
-    ///    
+    ///
     /// * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
     /// * zCDP: Gaussian noise, where `scale` == standard_devation
     ///
@@ -556,7 +556,7 @@ impl OnceFrame {
     ///
     /// 1. The LazyFrame (compute plan) is only ever executed once.
     /// 2. The analyst does not observe ordering of rows in the output.
-    ///    
+    ///
     /// To ensure that row ordering is not observed:
     ///
     /// 1. Do not extend the compute plan with order-sensitive computations.

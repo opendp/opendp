@@ -41,7 +41,7 @@ More details on :doc:`laplacian and gaussian noise mechanisms here <additive-noi
 Laplacian Noise
 ***************
 
-:func:`~opendp.measurements.make_laplace` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
+:func:`~opendp.measurements.make_laplace` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon.
 Use :func:`~opendp.accuracy.laplacian_scale_to_accuracy`
 and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` to convert to/from accuracy estimates.
 (:func:`~opendp.measurements.make_geometric`
@@ -65,7 +65,7 @@ If you need constant-time execution to protect against timing side-channels, spe
 Gaussian Noise
 **************
 
-:func:`~opendp.measurements.make_gaussian` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
+:func:`~opendp.measurements.make_gaussian` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy).
 Use :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and
 :func:`~opendp.accuracy.accuracy_to_gaussian_scale` to convert to/from accuracy estimates.
 (Refer to :ref:`measure-casting` to convert to approximate DP.)
@@ -128,8 +128,8 @@ More details on :doc:`thresholded noise mechanisms here <thresholded-noise-mecha
 Thresholded Laplacian Noise
 ***************************
 
-:func:`~opendp.measurements.make_laplace_threshold` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
-Use the :func:`~opendp.accuracy.laplacian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` 
+:func:`~opendp.measurements.make_laplace_threshold` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta.
+Use the :func:`~opendp.accuracy.laplacian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_laplacian_scale`
 functions to convert to/from accuracy estimates.
 
 .. list-table::
@@ -146,8 +146,8 @@ functions to convert to/from accuracy estimates.
 Thresholded Gaussian Noise
 **************************
 
-:func:`~opendp.measurements.make_gaussian_threshold` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
-Use the :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_gaussian_scale` 
+:func:`~opendp.measurements.make_gaussian_threshold` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta.
+Use the :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_gaussian_scale`
 functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
 
@@ -192,7 +192,7 @@ Noisy Max and Noisy Top K
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
 Exponential noise is added to scores when the output measure is ``MaxDivergence``,
-and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
+and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``.
 
 .. list-table::
    :header-rows: 1

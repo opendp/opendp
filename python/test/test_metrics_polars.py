@@ -1,7 +1,7 @@
 import pytest
 import opendp.prelude as dp
 from opendp.extras.polars import Bound
-from opendp.mod import  FrameDistance, SymmetricIdDistance
+from opendp.mod import FrameDistance, SymmetricIdDistance
 
 pl = pytest.importorskip("polars")
 

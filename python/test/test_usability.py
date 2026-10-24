@@ -89,5 +89,3 @@ def test_query_dir():
     query_dir = dir(context.query())
     assert "count" in query_dir
     assert "laplace" in query_dir
-
-

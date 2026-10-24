@@ -2,7 +2,7 @@ Assessing Utility
 =================
 
 Finding an acceptable tradeoff between privacy and utility can be a challenge.
-In this section of the documentation, 
+In this section of the documentation,
 we will demonstrate tools to help you navigate this tradeoff.
 
 .. _accuracy-user-guide:
@@ -20,7 +20,6 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
     This confidence interval is specifically for the input to the noise addition mechanism.
     The library currently does not compensate for the bias introduced from clipping or other preprocessing
     (`[KMRS+23] <https://arxiv.org/pdf/2301.13334.pdf>`_ shows that this is somewhat unavoidable).
-    In the Theory section we have :doc:`a notebook demonstrating this limitation <../theory/accuracy-pitfalls>`.
 
 The noise distribution may be either Laplace or Gaussian.
 
@@ -37,7 +36,7 @@ The library provides the following functions for converting between noise scale 
 * :func:`~opendp.accuracy.gaussian_scale_to_accuracy`
 * :func:`~opendp.accuracy.accuracy_to_gaussian_scale`
 
-To demonstrate, the following snippet finds the necessary gaussian scale such that the input to 
+To demonstrate, the following snippet finds the necessary gaussian scale such that the input to
 :code:`make_gaussian(input_domain, input_metric, scale=1.)` differs from the release by no more than 2 with 95% confidence.
 
 .. tab-set::

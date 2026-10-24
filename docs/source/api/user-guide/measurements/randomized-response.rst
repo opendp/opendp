@@ -355,9 +355,9 @@ Since the dataset size is known, simply post-process the mean estimates:
 Bit Vector Randomized Response
 ------------------------------
 
-Another way to generalize boolean randomized response 
+Another way to generalize boolean randomized response
 is by considering bit vectors with limited weight.
-In this setting, neighboring datasets may be completely different bitvectors, 
+In this setting, neighboring datasets may be completely different bitvectors,
 but all bitvectors may only have a limited number of true bits (the weight).
 
 .. tab-set::
@@ -396,7 +396,7 @@ but all bitvectors may only have a limited number of true bits (the weight).
             >>> print("epsilon:", m_rr.map(1))
             epsilon: 2.4327906486489863
 
-We now convert a vector of randomized response bitvec releases 
+We now convert a vector of randomized response bitvec releases
 to an unbiased frequency estimate via ``debias_randomized_response_bitvec``:
 
 .. tab-set::

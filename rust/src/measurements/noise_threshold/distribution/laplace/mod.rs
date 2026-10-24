@@ -61,7 +61,7 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-/// * `threshold` - Exclude counts that are less than this minimum value.
+/// * `threshold` - Release noisy counts strictly greater than this value (or strictly less when negative).
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics

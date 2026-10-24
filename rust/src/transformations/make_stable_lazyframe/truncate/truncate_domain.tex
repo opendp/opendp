@@ -4,12 +4,12 @@
 \title{\texttt{fn truncate\_domain}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_domain} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_domain}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -39,13 +39,13 @@ Truncation keys are stable row-by-row transformations of the data.
 \begin{proof}
     First consider the case where \texttt{truncation} is a filter.
     Since filtering is a contractive mapping,
-    the output domain is a subset of the input domain. 
-    However, any invariants on the group length and keys are no longer valid. 
+    the output domain is a subset of the input domain.
+    However, any invariants on the group length and keys are no longer valid.
     This is reflected in line \ref{line:invariant-filter}.
 
     Now consider the case where \texttt{truncation} is a groupby operation.
-    Since each group becomes one row in the resulting dataset, 
-    an arbitrary black-box function may be applied to each group, 
+    Since each group becomes one row in the resulting dataset,
+    an arbitrary black-box function may be applied to each group,
     so long as erors from the black-box function (the aggregates) are data-independent.
     Line \ref{line:infallible} ensures that the aggregates are infallible.
 

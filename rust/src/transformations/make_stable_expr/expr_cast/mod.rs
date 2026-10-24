@@ -7,7 +7,7 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::StableExpr;
+use super::{StableExpr, cast::is_null_preserving_cast};
 
 #[cfg(test)]
 mod test;
@@ -65,10 +65,10 @@ where
         })?
         .clone();
 
-    // it is possible to tighten this:
-    // in cases where casting will never fail, the nullable and/or nan bits can be left false
-    // in the meantime, users will need to impute
+    let from_dtype = data_column.dtype();
     data_column.set_dtype(to_type_dtype.clone())?;
+    // Non-strict casts may introduce nulls, even from non-null inputs.
+    data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
 
     t_prior
         >> Transformation::new(

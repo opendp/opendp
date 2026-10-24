@@ -10,10 +10,10 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise}
 for \texttt{DiscreteGaussian} in \asOfCommit{mod.rs}{f5bb719}.
 
-This is an intermediary compile-time layer whose purpose is 
+This is an intermediary compile-time layer whose purpose is
 to dispatch to either the integer or floating-point variations of the mechanism,
 depending on the type of data in the input domain.
 
@@ -37,7 +37,7 @@ The following trait bounds are also required:
 \begin{itemize}
     \item \texttt{(DI, MI)} implements trait \texttt{MetricSpace}
     \item \texttt{DI\_Atom} implements trait \rustdoc{measurements/noise/nature/trait}{Nature}.
-        This trait encodes the relationship between the atomic data type 
+        This trait encodes the relationship between the atomic data type
         and the type of the noise distribution that is compatible with it: \texttt{DI\_Atom\_RV2}.
         In Rust, this corresponds to the (ugly) \texttt{<DI::Atom as Nature>::RV<2>} type.
     \item \texttt{DI\_Atom\_RV2} implements trait \rustdoc{measurements/noise/trait}{MakeNoise}.
@@ -56,7 +56,7 @@ None
 \end{theorem}
 
 \begin{proof}
-    On line \ref{line:make-noise}, \texttt{make\_noise} has no preconditions, 
+    On line \ref{line:make-noise}, \texttt{make\_noise} has no preconditions,
     so irregardless of any prior logic,
     the postcondition of \texttt{make\_noise} follows that the output is a valid measurement.
 \end{proof}

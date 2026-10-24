@@ -137,7 +137,9 @@ def test_truncate_error_messages():
         split_evenly_over=1,
     )
 
-    query = context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len(signed=True))
+    query = (
+        context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len(signed=True))
+    )
     with pytest.raises(
         dp.OpenDPException,
         match="`per_group` contributions is unknown. This is likely due to a missing truncation",
@@ -180,9 +182,7 @@ def test_truncate_num_groups(keep):
 
 def test_truncation_contingency():
     synth_context = dp.Context.compositor(
-        data=pl.scan_csv(
-            dp.examples.get_france_lfs_path(), encoding="utf8-lossy"
-        ),
+        data=pl.scan_csv(dp.examples.get_france_lfs_path(), encoding="utf8-lossy"),
         privacy_unit=dp.unit_of(contributions=1, identifier="PIDENT"),
         privacy_loss=dp.loss_of(epsilon=1),
         split_evenly_over=1,

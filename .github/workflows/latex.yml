@@ -24,7 +24,7 @@ jobs:
           echo "tex<<EOF" >> $GITHUB_OUTPUT
           echo "$files" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-    
+
           # construct list of .pdf files
           echo "pdf<<EOF" >> $GITHUB_OUTPUT
           # Command substitution strips the trailing newline from git diff output,
@@ -38,7 +38,7 @@ jobs:
      tex: ${{ steps.diffs.outputs.tex }}
      pdf: ${{ steps.diffs.outputs.pdf }}
 
-      
+
   latex-build:
     needs: [pre-latex-build]
     if: ${{ needs.pre-latex-build.outputs.tex != '' }}

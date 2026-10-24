@@ -1,7 +1,7 @@
 """High-level mechanism for applying mbi mechanisms to dataframes with mixed types."""
 
 from math import sqrt
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     Iterator,
@@ -66,7 +66,7 @@ class ContingencyTable:
     model: Any  # MarkovRandomField
     """MarkovRandomField spanning the same columns as keys"""
     thresholds: dict[str, int] = field(default_factory=dict)
-    """Cut-off point for discovered stable keys. 
+    """Cut-off point for discovered stable keys.
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):
@@ -117,9 +117,9 @@ class ContingencyTable:
 
         model = cast(MarkovRandomField, self.model)
 
-        indices = model.synthetic_data(rows, method).df
+        indices = model.synthetic_data(rows, method).data
         data = {
-            c: _deindex(indices[c].to_numpy(), self.keys[c], cuts=self.cuts.get(c))
+            c: _deindex(indices[c], self.keys[c], cuts=self.cuts.get(c))
             for c in self.keys
         }
         return pl.DataFrame(data)
@@ -356,9 +356,7 @@ def make_contingency_table(
 
         potentials = None
         if isinstance(model, mbi.MarkovRandomField):
-            import attr  # type: ignore[import-not-found]
-
-            potentials = attr.evolve(model.potentials, domain=mbi_domain)
+            potentials = replace(model.potentials, domain=mbi_domain)
 
         current_model = (
             algorithm.estimator(

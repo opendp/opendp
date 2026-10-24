@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Literal, Optional, Any, Iterator, get_args, TYPE_CHECKING
 from functools import reduce
-from math import sqrt
+from math import inf, nextafter, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -16,12 +16,15 @@ from opendp.measurements import then_noise
 from opendp.measures import max_divergence, zero_concentrated_divergence
 from opendp.metrics import (
     _get_bound,
+    absolute_distance,
     frame_distance,
+    l01inf_distance,
     l1_distance,
     l2_distance,
     symmetric_distance,
 )
 from opendp.core import as_array
+from opendp._lib import import_optional_dependency
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -47,8 +50,8 @@ class Count:
     by: tuple[str, ...]
     """Columns to group by."""
     weight: float = 1.0
-    """Importance of this count query. 
-    
+    """Importance of this count query.
+
     - Used by AIM to prioritize cliques.
     - Used by Fixed to distribute privacy budget.
     """
@@ -69,9 +72,14 @@ def mirror_descent(
 
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
-    from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
+    jax = import_optional_dependency("jax")
 
-    return _mirror_descent(domain, loss_fn, potentials=potentials)
+    # mbi<2 enabled x64 on import; mbi>=2 only warns.
+    # Estimates must be f64 to pass through the OpenDP FFI.
+    jax.config.update("jax_enable_x64", True)
+    from mbi.estimation import MirrorDescent  # type: ignore
+
+    return MirrorDescent().estimate(domain, loss_fn, warm_start=potentials)
 
 
 OnewayType = Literal["all", "unkeyed"]
@@ -86,7 +94,7 @@ class Algorithm(ABC):
     """Optimizer to use to fit a MarkovRandomField.
 
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
-    Any function matching the signature of ``mirror_descent`` 
+    Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
@@ -94,7 +102,7 @@ class Algorithm(ABC):
     """Fit one-way marginals for all columns, or only unkeyed columns."""
     oneway_split: Optional[float] = None
     """Proportion of budget to use for oneway release.
-    
+
     When ``oneway_split`` is not set, defaults to half of the budget.
 
     If oneway is ``unkeyed``, budget is further reduced by the proportion of columns with missing keys or cuts.
@@ -233,10 +241,9 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
 def make_stable_marginals(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    output_inner_metric: Metric,
     cliques: list[tuple[str, ...]],
 ) -> Transformation:
-    """Return a transformation that computes all marginals in a workload."""
+    """Return marginals with (L0, L1, Linf) contribution bounds per clique."""
     from opendp.extras.numpy import arrayd_domain
     from opendp.extras.polars import Bound
     import polars as pl  # type: ignore[import-not-found]
@@ -247,12 +254,6 @@ def make_stable_marginals(
         raise ValueError(message)
 
     cardinalities = get_cardinalities(input_domain)
-
-    metrics = {l1_distance(T="u32"): 1, l2_distance(T="u32"): 2}
-    if output_inner_metric not in metrics:
-        message = f"inner_output_metric ({output_inner_metric}) must be in {set(metrics.keys())}"
-        raise ValueError(message)
-    p = metrics[output_inner_metric]
 
     def shape(by: tuple[str, ...]) -> tuple[int, ...]:
         return tuple(cardinalities[c] for c in by)
@@ -270,15 +271,19 @@ def make_stable_marginals(
         dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques])
         return {c: pivot(m, c) for m, c in zip(dfs, cliques)}
 
-    def count_sensitivity(bounds: list[Bound], clique: tuple[str, ...]) -> float:
-        l1 = _get_bound(bounds, []).per_group
+    def count_sensitivity(
+        bounds: list[Bound], clique: tuple[str, ...]
+    ) -> tuple[int, int, int]:
+        total = _get_bound(bounds, []).per_group
+        if total is None:
+            raise ValueError("input bounds must specify total contributions")
 
         bound: Bound = _get_bound(bounds, [pl.col(c) for c in clique])
-        l0 = (bound.num_groups or l1) ** (1 / p)
-        li = bound.per_group or l1
-        return min(l1, l0 * li)
+        l0 = min(bound.num_groups if bound.num_groups is not None else total, total)
+        linf = min(bound.per_group if bound.per_group is not None else total, total)
+        return l0, min(total, l0 * linf), linf
 
-    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], float]:
+    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], tuple[int, int, int]]:
         return {clique: count_sensitivity(d_in, clique) for clique in cliques}
 
     return _make_transformation(
@@ -287,7 +292,7 @@ def make_stable_marginals(
         output_domain=typed_dict_domain(
             {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques}
         ),
-        output_metric=typed_dict_distance(output_inner_metric),
+        output_metric=typed_dict_distance(l01inf_distance(absolute_distance(T="i32"))),
         function=function,
         stability_map=stability_map,
     )
@@ -332,19 +337,24 @@ def make_noise_marginal(
 
     clique_domain.cast(NPArrayDDomain)
 
-    associated_metric = get_associated_metric(output_measure)
-
-    if inner_metric != associated_metric:
-        message = f"input_metric's inner metric ({inner_metric}) doesn't match the output_measure's associated metric ({associated_metric})"
+    structural_metric = l01inf_distance(absolute_distance(T="i32"))
+    if inner_metric != structural_metric:
+        message = (
+            f"input_metric's inner metric ({inner_metric}) must be {structural_metric}"
+        )
         raise ValueError(message)
+
+    associated_metric = get_associated_metric(output_measure)
+    if output_measure == zero_concentrated_divergence():
+        associated_metric = l2_distance(T="f64")
 
     t_marginal = _make_transformation(
         input_domain,
         input_metric,
         output_domain=vector_domain(atom_domain(T="i32")),
-        output_metric=inner_metric,
+        output_metric=associated_metric,
         function=lambda exact_tabs: exact_tabs[clique].astype(np.int32).flatten(),
-        stability_map=lambda d_in: d_in[clique],
+        stability_map=lambda d_in: _noise_sensitivity(output_measure, d_in[clique]),
     )
 
     def function(x):
@@ -356,6 +366,16 @@ def make_noise_marginal(
         >> as_array()
         >> _new_pure_function(function)
     )
+
+
+def _noise_sensitivity(measure: Measure, distance: tuple[int, int, int]) -> float | int:
+    """Project marginal contribution bounds to the norm used by the noise."""
+    if measure == max_divergence():
+        return distance[1]
+
+    l0, l1, linf = distance
+    # sqrt may round down; advance by one representable float.
+    return min(l1, nextafter(sqrt(l0 * linf**2), inf))
 
 
 def row_major_order(keys: Iterator):
@@ -381,31 +401,21 @@ class SelectPrefixQuery:
         return factor.datavector()[: self.length]
 
 
-def _queries_equal(left: Callable, right: Callable) -> bool:
-    if left is right:
-        return True
-    try:
-        result = left == right
-        return result if isinstance(result, bool) else False
-    except Exception:  # pragma: no cover - defensive for user-defined queries
-        return False
-
-
 def identity_query_precision(measurement) -> float:
     """Return precision contributed by a full-datavector observation.
 
     Partial queries do not provide a uniform uncertainty estimate for every
     cell in a marginal, so they contribute zero precision.
     """
-    from mbi import Factor  # type: ignore[import-untyped,import-not-found]
+    from mbi import DatavectorQuery  # type: ignore[import-untyped,import-not-found]
 
-    if _queries_equal(measurement.query, Factor.datavector):
+    if isinstance(measurement.query, DatavectorQuery):
         return 1 / measurement.stddev**2
     return 0.0
 
 
 class Marginals:
-    """A multimap from clique to independent :py:class:`mbi.LinearMeasurement`.
+    """A multimap from clique to independent ``LinearMeasurement``.
 
     A clique identifies the marginal a query operates on; it does not
     uniquely identify the observation. Several independent measurements can

@@ -47,7 +47,7 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
             :language: r
             :start-after: # make-repeat
             :end-before: # /make-repeat
-    
+
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
 .. tab-set::
@@ -69,5 +69,5 @@ The resulting Transformation may be used interchangeably with those constructed 
             :start-after: # use-transformation
             :end-before: # /use-transformation
 
-The code snip may form a basis for you to create your own data transformations, 
+The code snip may form a basis for you to create your own data transformations,
 and mix them into an OpenDP analysis.
