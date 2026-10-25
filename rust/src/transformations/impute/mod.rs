@@ -47,6 +47,12 @@ where
     if lower >= upper {
         return fallible!(MakeTransformation, "lower must be smaller than upper");
     }
+    if !(upper - lower).is_finite() {
+        return fallible!(
+            MakeTransformation,
+            "the width of the bounds (upper - lower) must be finite"
+        );
+    }
 
     make_row_by_row(
         input_domain,
