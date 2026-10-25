@@ -1,0 +1,54 @@
+# for syntax highlighting in intellij
+# 1. install the GNU Makefile plugin
+# 2. right click on this file and associate the filetype with a Makefile
+
+TARGET = x86_64-pc-windows-gnu
+# Keep Cargo's Windows target output on a short path. Vendored OpenSSL can fail
+# under R's staged-install temp directories when MinGW tries to write depfiles.
+TARGET_DIR = /tmp/opendp-target-$(TARGET)
+
+# Rtools42 doesn't have the linker in the location that cargo expects, so we
+# need to overwrite it via configuration.
+CARGO_LINKER = x86_64-w64-mingw32.static.posix-gcc.exe
+
+# will always be located at src/libopendp.a once rust_build is done
+STATLIB = libopendp.a
+
+# PKG_LIBS tells R where to find the static library (libopendp.a)
+PKG_LIBS = $(STATLIB) -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -lcrypt32
+
+all: rust_build
+
+# When building from staged source, configure substitutes @RUST_FEATURES@
+# before prepare_rust_manifest.sh and cargo build run.
+# Work around https://github.com/extendr/rextendr/issues/279 by placing
+# Cargo's target output on a short path and creating the mock libgcc path.
+rust_build:
+
+	@if [ -f "binary.tar.xz" ]; then \
+		echo "* detected suitable pre-compiled binary"; \
+		$(TAR) --extract --xz -f binary.tar.xz -C .; \
+		cp binary/libopendp.a .; \
+	elif [ -f "source.tar.xz" ]; then \
+		mkdir -p $(TARGET_DIR)/release/libgcc_mock && touch $(TARGET_DIR)/release/libgcc_mock/libgcc_eh.a; \
+		echo "* extract opendp and vendor files"; \
+		$(TAR) --extract --xz -f source.tar.xz -C .; \
+		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
+		sh ../tools/prepare_rust_manifest.sh rust/Cargo.toml "@RUST_FEATURES@"; \
+		mkdir -p .cargo; \
+		cp cargo_vendor_config.toml .cargo/config.toml; \
+		echo "* building OpenDP Library (libopendp.a)"; \
+		@BEFORE_CARGO_BUILD@ export CARGO_TARGET_DIR="$(TARGET_DIR)" && cargo build --manifest-path rust/Cargo.toml --target=$(TARGET) --color always --release --jobs 2 --offline --features @RUST_FEATURES@; \
+		@AFTER_CARGO_BUILD@ \
+		cp $(TARGET_DIR)/$(TARGET)/release/libopendp.a .; \
+	elif [ ! -z "@OPENDP_LIB_DIR@" ]; then \
+		cp @OPENDP_LIB_DIR@/libopendp.a .; \
+	else \
+		echo "expected either a src/binary.tar.xz, src/source.tar.xz (run bash tools/r_stage.sh) or OPENDP_LIB_DIR to be set"; \
+		exit 1; \
+	fi
+
+
+
+clean:
+	rm -Rf $(SHLIB) $(OBJECTS) $(STATLIB)

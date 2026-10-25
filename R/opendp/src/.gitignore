@@ -1,0 +1,10 @@
+*.o
+*.so
+*.dll
+*.a
+
+opendp.so
+libopendp.a
+
+rust/
+opendp.h
