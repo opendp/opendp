@@ -1,0 +1,7 @@
+opendp.extras.numpy.canonical module
+====================================
+
+.. automodule:: opendp.extras.numpy.canonical
+   :members:
+   :undoc-members:
+   :show-inheritance:
