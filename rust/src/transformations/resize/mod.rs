@@ -76,8 +76,8 @@ where
                         .chain(vec![&constant; size - arg.len()])
                         .cloned()
                         .collect::<Vec<TA>>();
-                    // if output metric is ordered, then shuffle the imputed values into the data
-                    if MO::ORDERED {
+                    // Randomize the order only when converting unordered input to ordered output.
+                    if MO::ORDERED && !MI::ORDERED {
                         data.shuffle()?;
                     }
                     data
