@@ -25,3 +25,28 @@ fn test_check_infallible_resize() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_stable_group_by_categorical() -> Fallible<()> {
+    use crate::domains::{CategoricalDomain, LazyFrameDomain};
+    use crate::metrics::SymmetricDistance;
+    use crate::transformations::make_stable_lazyframe;
+
+    let categories = Categories::global();
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    let series = Series::new("category".into(), ["B", "A", "B"]).cast(&dtype)?;
+    let lf = DataFrame::new(vec![series.into_column()])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+
+    let t = make_stable_lazyframe(
+        domain,
+        FrameDistance(SymmetricDistance),
+        lf.clone().group_by(["category"]).agg([len()]),
+    )?;
+
+    assert_eq!(t.invoke(&lf)?.collect()?.height(), 2);
+    Ok(())
+}

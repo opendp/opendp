@@ -99,11 +99,15 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     };
 
     // each expression must be stable row by row
-    keys.iter().try_for_each(|key| {
-        key.clone()
-            .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
-            .map(|_: Transformation<_, _, _, L01InfDistance<M>>| ())
-    })?;
+    let stable_keys = keys
+        .iter()
+        .map(|key| {
+            let t_key: Transformation<_, _, _, L01InfDistance<M>> = key
+                .clone()
+                .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))?;
+            Ok(t_key.invoke(&input)?.expr)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     // check that aggregations are infallible. Aggregations are allowed to resize data
     aggs.iter()
@@ -118,7 +122,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
 
     // use Polars to compute the output dtype
     let series_domains = middle_domain
-        .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
+        .simulate_schema(|lf| lf.group_by(&stable_keys).agg(&aggs))?
         .iter_fields()
         .map(SeriesDomain::new_from_field)
         .collect::<Fallible<_>>()?;
@@ -144,7 +148,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             #[cfg(patch_polars)]
             let output = DslPlan::GroupBy {
                 input: Arc::new(plan.clone()),
-                keys: keys.clone(),
+                keys: stable_keys.clone(),
                 predicates: vec![],
                 aggs: aggs.clone(),
                 apply: None,
@@ -154,7 +158,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             #[cfg(not(patch_polars))]
             let output = DslPlan::GroupBy {
                 input: Arc::new(plan.clone()),
-                keys: keys.clone(),
+                keys: stable_keys.clone(),
                 aggs: aggs.clone(),
                 apply: None,
                 maintain_order: false,
