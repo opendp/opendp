@@ -64,12 +64,12 @@ def _get_opendp_polars_lib_path():
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
         warn(
-            "The default value is currently signed=False, and counts are clamped at zero, "
-            "consistent with past releases, but the default will be changing to signed=True. ",
+            "The default value is now signed=True, and counts may be negative. "
+            "In future releases this warning will be dropped.",
             FutureWarning,
             stacklevel=3,
         )
-        return False
+        return True
     if not isinstance(signed, bool):
         raise TypeError("signed must be a bool or None")
     return signed
@@ -98,7 +98,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.
+    and are documented in the :ref:`User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -1282,72 +1282,6 @@ class Margin:
     `Formal Privacy Guarantees with Invariant Statistics <https://arxiv.org/abs/2410.17468>`_,
     when invariants are set, the effective privacy guarantees of the library are weaker than advertised.
     """
-
-    @property
-    @deprecated(version="0.13.0", reason="Use max_length instead.")
-    def max_partition_length(self):
-        return self.max_length  # pragma: no cover
-
-    @max_partition_length.setter
-    @deprecated(reason="Use max_length instead.")
-    def max_partition_length(self, value):
-        self.max_length = value  # pragma: no cover
-
-    @property
-    @deprecated(
-        version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
-    )
-    def max_num_partitions(self):
-        return self.max_groups  # pragma: no cover
-
-    @max_num_partitions.setter
-    @deprecated(
-        version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.",
-    )
-    def max_num_partitions(self, value):
-        self.max_groups = value  # pragma: no cover
-
-    @property
-    @deprecated(
-        version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
-    )
-    def public_info(self):
-        return self.invariant  # pragma: no cover
-
-    @public_info.setter
-    @deprecated(
-        version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".',
-    )
-    def public_info(self, value):
-        self.invariant = value  # pragma: no cover
-
-    @property
-    def max_partition_contributions(self):
-        raise NotImplementedError(
-            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
-        )  # pragma: no cover
-
-    @max_partition_contributions.setter
-    def max_partition_contributions(self, value):
-        raise NotImplementedError(
-            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
-        )  # pragma: no cover
-
-    @property
-    def max_influenced_partitions(self):
-        raise NotImplementedError(
-            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
-        )  # pragma: no cover
-
-    @max_influenced_partitions.setter
-    def max_influenced_partitions(self, value):
-        raise NotImplementedError(
-            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
-        )  # pragma: no cover
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Margin):

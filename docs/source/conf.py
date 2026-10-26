@@ -169,6 +169,9 @@ html_theme_options = {
     "github_url": "https://github.com/opendp",
     "article_header_end": ["questions-feedback", "old-version-warning"],
     "announcement": "https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html",
+    "external_links": [
+        {"name": "Cookbook", "url": "https://cookbook.opendp.org/"},
+    ],
 }
 
 html_theme = "pydata_sphinx_theme"

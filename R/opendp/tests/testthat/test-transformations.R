@@ -305,7 +305,11 @@ test_that("test_lipschitz_b_ary_tree", {
   leaf_count <- 7L
   branching_factor <- 2L
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
-  tree_builder <- input_space |> then_b_ary_tree(leaf_count, branching_factor)
+  tree_builder <- input_space |> then_b_ary_tree(
+    output_metric = l1_distance(.T = i32),
+    leaf_count = leaf_count,
+    branching_factor = branching_factor
+  )
   expect_equal(
     tree_builder(arg = rep(1L, each = leaf_count)),
     c(7L, 4L, 3L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L)
@@ -317,7 +321,11 @@ test_that("test_lipschitz_b_ary_tree", {
   meas_base <-
     c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_count_by_categories(categories = c("A", "B", "C", "D", "E", "F")) |>
-    then_b_ary_tree(leaf_count, branching_factor) |>
+    then_b_ary_tree(
+      output_metric = l1_distance(.T = i32),
+      leaf_count = leaf_count,
+      branching_factor = branching_factor
+    ) |>
     then_geometric(1.) |>
     then_consistent_b_ary_tree(branching_factor)
 

@@ -43,7 +43,8 @@ where
     };
 
     // only enforce row-by-row context if the fill expression is not broadcastable
-    let expr_domain = if fill.clone().meta().root_names().len() > 0 {
+    let is_column_fill = !fill.clone().meta().root_names().is_empty();
+    let expr_domain = if is_column_fill {
         input_domain.as_row_by_row()
     } else if let Expr::Literal(value) = fill.clone() {
         if !value.is_scalar() {
@@ -88,9 +89,11 @@ where
     }
 
     let mut output_domain = data_domain.clone();
+    if is_column_fill {
+        output_domain.context = input_domain.context.clone();
+    }
     output_domain.column.drop_bounds().ok();
     output_domain.column.nullable = false;
-    output_domain.context = input_domain.context.clone();
 
     Transformation::new(
         input_domain,
