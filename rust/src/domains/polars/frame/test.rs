@@ -35,6 +35,41 @@ fn test_margin() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_margin_select() -> Fallible<()> {
+    let lf_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
+    let lf = df!("A" => [1, 2, 3])?.lazy();
+
+    for (max_length, expected) in [(2, false), (3, true)] {
+        let domain = lf_domain
+            .clone()
+            .with_margin(Margin::select().with_max_length(max_length))?;
+        assert_eq!(domain.member(&lf)?, expected);
+    }
+
+    let zero_groups = lf_domain
+        .clone()
+        .with_margin(Margin::select().with_max_groups(0))?;
+    assert!(!zero_groups.member(&lf)?);
+
+    let empty = lf.filter(lit(false));
+    assert!(!zero_groups.member(&empty)?);
+    assert!(
+        lf_domain
+            .clone()
+            .with_margin(Margin::select().with_max_length(0))?
+            .member(&empty)?
+    );
+    assert!(
+        lf_domain
+            .with_margin(Margin::by(["A"]).with_max_length(0).with_max_groups(0))?
+            .member(&empty)?
+    );
+
+    Ok(())
+}
+
 fn assert_row_descriptors<F: Frame>(domain: &FrameDomain<F>, by: &[&str], max_length: Option<u32>) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
     assert_eq!(margin.max_length, max_length);

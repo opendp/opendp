@@ -13,6 +13,7 @@ from opendp.combinators import (
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
+    _noise_sensitivity,
     get_associated_metric,
     get_scale,
     make_noise_marginal,
@@ -162,7 +163,7 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField or GemPlusModel
+        :param model: warm-start fit of ``MarkovRandomField`` or ``GemPlusModel``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -173,12 +174,11 @@ class AIM(Algorithm):
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         cliques = [query.by for query in queries]
 
-        t_marginals = make_stable_marginals(
-            input_domain, input_metric, lp_metric, cliques
-        )
+        t_marginals = make_stable_marginals(input_domain, input_metric, cliques)
         d_marginals = t_marginals.map(d_in)
 
         T = algorithm.rounds or (16 * len(input_domain.columns))
@@ -375,7 +375,10 @@ def _make_aim_select(
     # penalize candidates by the expected error of the upcoming MEASURE step,
     # not of this SELECT step
     expectations = {
-        q.by: get_scale(output_measure, d_measure, d_in[q.by]) * to_mu
+        q.by: get_scale(
+            output_measure, d_measure, _noise_sensitivity(output_measure, d_in[q.by])
+        )
+        * to_mu
         for q in candidates
     }
 
@@ -425,7 +428,7 @@ def _make_aim_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query.by]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in[q.by] * q.weight for q in queries),
+        stability_map=lambda d_in: max(d_in[q.by][1] * q.weight for q in queries),
     )
 
 

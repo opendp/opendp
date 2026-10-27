@@ -6,8 +6,8 @@ enable_features("contrib", "honest-but-curious")
 # pairwise-predict
 pairwise_predict <- function(data, x_cuts) {
   data <- as.matrix(data)
-  data <- data[seq_len(nrow(data) %/% 2L * 2L), , drop = FALSE]
   data <- data[sample(nrow(data)), , drop = FALSE]
+  data <- data[seq_len(nrow(data) %/% 2L * 2L), , drop = FALSE]
 
   midpoint <- nrow(data) %/% 2L
   p1 <- data[seq_len(midpoint), , drop = FALSE]
@@ -44,7 +44,7 @@ make_pairwise_predict <- function(
         )
       )
     },
-    stability_map = function(d_in) d_in * runs
+    stability_map = function(d_in) d_in * runs * 2L
   )
 }
 then_pairwise_predict <- to_then(make_pairwise_predict)

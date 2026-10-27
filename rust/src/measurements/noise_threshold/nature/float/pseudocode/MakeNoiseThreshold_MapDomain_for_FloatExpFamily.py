@@ -22,7 +22,7 @@ class FloatExpFamily:
             raise f"threshold ({threshold}) must not be negative"
 
         r_threshold = RBig.try_from(threshold)
-        r_threshold = x_mul_2k(r_threshold, -k).round()
+        r_threshold = x_mul_2k(r_threshold, -k).floor()
 
         t_int = make_float_to_bigint_threshold(input_space, threshold, k)
         m_noise = distribution.make_noise_threshold(t_int.output_space(), r_threshold)

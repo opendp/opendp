@@ -186,7 +186,7 @@ Alternatively, ``split_by_weights`` lets you give more of your budget to more im
 
 Later examples in this tutorial will also introduce the idea of "margins".
 
-See :ref:`polars-user-guide` in API User Guide for more information on any of these topics.
+See :ref:`polars-user-guide` for more information on any of these topics.
 
 .. toctree::
   :maxdepth: 1

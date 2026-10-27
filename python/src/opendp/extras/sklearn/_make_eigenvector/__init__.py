@@ -90,8 +90,12 @@ def make_private_eigenvector(
             # u is a sample from the angular central gaussian distribution,
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
-            if np_csprng.random() < np.exp(-u.T @ A @ u) / (
-                M * (u.T @ Omega @ u) ** (d / 2)
+            # Amin et al., Algorithm 2 step 4(b), incorrectly divides by
+            # (u.T @ Omega @ u) ** (d / 2). The ACG proposal density
+            # contains its inverse, so rejection sampling must multiply
+            # by this factor instead (Kent et al., Eq. 3.3).
+            if np_csprng.random() < (
+                np.exp(-u.T @ A @ u) * (u.T @ Omega @ u) ** (d / 2) / M
             ):
                 return u
 

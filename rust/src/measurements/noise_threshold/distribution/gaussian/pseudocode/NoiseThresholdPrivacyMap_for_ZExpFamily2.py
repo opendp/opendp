@@ -26,14 +26,13 @@ class ZExpFamily2:
                 li * RBig.try_from(f64.from_(l0).inf_sqrt())
             )  # |\label{line:l2}|
             li = li.min(l2.floor())  # |\label{line:li}|
+            rho = noise_privacy_map.eval(l2)  # |\label{line:rho}|
 
             if l2.is_zero():  # |\label{line:zero-sens}|
                 return 0.0, 0.0
 
             if scale.is_zero():  # |\label{line:zero-scale}|
                 return f64.INFINITY, 1.0
-
-            rho = noise_privacy_map.eval(l2)  # |\label{line:rho}|
 
             if li > threshold:  # |\label{line:threshold-check}|
                 raise f"threshold must not be smaller than {li}"

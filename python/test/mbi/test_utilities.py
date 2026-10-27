@@ -6,6 +6,7 @@ import opendp.prelude as dp
 from opendp.extras.mbi._utilities import (
     Marginals,
     SelectPrefixQuery,
+    _noise_sensitivity,
     get_cardinalities,
     get_scale,
     get_std,
@@ -102,7 +103,6 @@ def test_make_stable_marginals():
         make_stable_marginals(
             dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T="i32"))]),
             dp.discrete_distance(),
-            dp.l1_distance(T="u32"),
             cliques=[("A",)],
         )
 
@@ -110,20 +110,6 @@ def test_make_stable_marginals():
         make_stable_marginals(
             dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T="i32"))]),
             dp.frame_distance(dp.symmetric_distance()),
-            dp.l1_distance(T="u32"),
-            cliques=[("A",)],
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape("inner_output_metric (L1Distance(i32)) must be in"),
-    ):
-        make_stable_marginals(
-            dp.lazyframe_domain(
-                [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 10)))]
-            ),
-            dp.frame_distance(dp.symmetric_distance()),
-            dp.l1_distance(T="i32"),
             cliques=[("A",)],
         )
 
@@ -139,7 +125,6 @@ def test_make_stable_marginals_clips_u32_counts(monkeypatch):
     transformation = make_stable_marginals(
         domain,
         dp.frame_distance(dp.symmetric_distance()),
-        dp.l1_distance(T="u32"),
         cliques=[("A",)],
     )
 
@@ -157,13 +142,60 @@ def test_make_stable_marginals_clips_u32_counts(monkeypatch):
     assert marginals[("A",)].tolist() == [np.iinfo(np.int32).max]
 
 
+def test_marginal_sensitivities_select_and_measure():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    clique = ("A",)
+    marginals = make_stable_marginals(
+        dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 8)))]
+        ),
+        dp.frame_distance(dp.symmetric_distance()),
+        [clique],
+    )
+    distance = marginals.map(
+        [
+            dp.polars.Bound(per_group=9),
+            dp.polars.Bound(by=[pl.col("A")], num_groups=9, per_group=1),
+        ]
+    )
+    assert distance == {clique: (9, 9, 1)}
+    assert marginals.map([dp.polars.Bound(per_group=0)]) == {clique: (0, 0, 0)}
+
+    # A per-clique bound alone does not bound total contributions.
+    with pytest.raises(
+        Exception, match="input bounds must specify total contributions"
+    ):
+        marginals.map([dp.polars.Bound(by=[pl.col("A")], num_groups=9, per_group=1)])
+
+    laplace = make_noise_marginal(
+        *marginals.output_space, dp.max_divergence(), clique, 1
+    )
+    gaussian = make_noise_marginal(
+        *marginals.output_space, dp.zero_concentrated_divergence(), clique, 1
+    )
+    assert laplace.map(distance) == 9.0
+    assert gaussian.map(distance) == pytest.approx(4.5)
+    assert gaussian.map({clique: (2, 2, 1)}) == pytest.approx(1.0)
+
+
+def test_noise_sensitivity_rounds_up():
+    sensitivity = _noise_sensitivity(dp.zero_concentrated_divergence(), (2, 2, 1))
+    numerator, denominator = sensitivity.as_integer_ratio()
+    assert numerator**2 >= 2 * denominator**2
+    assert sensitivity == pytest.approx(2**0.5)
+
+
 def test_make_noise_marginal():
     pytest.importorskip("mbi")
     kwargs = dict(
         input_domain=typed_dict_domain(
             {("A",): dp.numpy.arrayd_domain(shape=(1, 2), T="u32")}
         ),
-        input_metric=typed_dict_distance(dp.l1_distance(T="u32")),
+        input_metric=typed_dict_distance(
+            dp.l01inf_distance(dp.absolute_distance(T="i32"))
+        ),
         output_measure=dp.max_divergence(),
         clique=("A",),
         scale=1.0,
@@ -192,7 +224,10 @@ def test_make_noise_marginal():
             **kwargs_without("input_metric"),
         )
 
-    msg = "input_metric's inner metric (L1Distance(f64)) doesn't match the output_measure's associated metric (L1Distance(u32))"
+    msg = (
+        "input_metric's inner metric (L1Distance(f64)) must be "
+        "L01InfDistance(AbsoluteDistance(i32))"
+    )
     with pytest.raises(ValueError, match=re.escape(msg)):
         make_noise_marginal(
             input_metric=typed_dict_distance(dp.l1_distance(T="f64")),
@@ -200,7 +235,7 @@ def test_make_noise_marginal():
         )
 
     m_noise = make_noise_marginal(**kwargs)  # type: ignore[arg-type]
-    assert m_noise.map({("A",): 1}) == 1.0
+    assert m_noise.map({("A",): (1, 1, 1)}) == 1.0
 
 
 def test_marginal_measurements_add_preserves_atomic_queries():

@@ -34,10 +34,14 @@ def make_float_to_bigint_threshold(
         l0, lp, li = d_in
 
         r_lp = RBig.try_from(lp)
+        if r_lp.is_negative():
+            raise f"l{P} ({lp}) must be non-negative"
         r_lp_round = get_rounding_distance(k, usize.from_(l0), P)
         r_lp = x_mul_2k(r_lp + r_lp_round, -k)  # |\label{line:lp-x-mul-2k}|
 
         r_li = RBig.try_from(li)
+        if r_li.is_negative():
+            raise f"li ({li}) must be non-negative"
         if r_li > x_mul_2k(r_threshold, -k):  # |\label{line:check-li}|
             raise f"li ({li}) must not be larger than threshold ({threshold})"
         r_li_round = get_rounding_distance(k, 1, P)

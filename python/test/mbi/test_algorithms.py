@@ -108,6 +108,25 @@ def test_aim_init(kwargs, message):
         AIM(**kwargs)
 
 
+def test_mst_and_aim_scores_use_l1_sensitivity():
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-untyped,import-not-found]
+    from opendp.extras.mbi._aim import _make_aim_scores
+    from opendp.extras.mbi._mst import _make_mst_scores
+    from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
+
+    clique = ("A", "B")
+    domain = typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(9, 9), T="i32")})
+    metric = typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32")))
+    model = mirror_descent(mbi.Domain(clique, (9, 9)), [])
+    distance = {clique: (9, 9, 1)}
+
+    mst = _make_mst_scores(domain, metric, [clique], model)
+    aim = _make_aim_scores(domain, metric, [Count(clique)], {clique: 0.0}, model)
+    assert mst.map(distance) == 9.0
+    assert aim.map(distance) == 9.0
+
+
 def test_aim_exhaustion():
     # tests how algorithm behaves when all workload queries are ineligible for selection
     pytest.importorskip("mbi")
@@ -180,16 +199,17 @@ def test_aim_selects_correlated_pairs():
     assert np.mean(errors) < 0.04
 
 
-def test_aim_penalty_is_per_clique(monkeypatch):
+@pytest.mark.parametrize(
+    "output_measure, ratio",
+    [(dp.max_divergence(), 2.0), (dp.zero_concentrated_divergence(), 2**1.5)],
+)
+def test_aim_penalty_is_per_clique(monkeypatch, output_measure, ratio):
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
     from opendp.extras.mbi import _aim
     from opendp.extras.mbi._aim import _expand_queries, _make_aim_select
-    from opendp.extras.mbi._utilities import (
-        get_associated_metric,
-        make_stable_marginals,
-    )
+    from opendp.extras.mbi._utilities import make_stable_marginals
 
     penalties = []
     inner = _aim._make_aim_scores
@@ -207,12 +227,11 @@ def test_aim_penalty_is_per_clique(monkeypatch):
 
     columns = ("A", "B", "C")
     # an individual contributes up to four records, but only one per group of A,
-    # halving the sensitivity of the ("A",) marginal relative to every other candidate
+    # tightening the sensitivity of the ("A",) marginal
     d_in = [
         dp.polars.Bound(per_group=4),
         dp.polars.Bound(by=[pl.col("A")], per_group=1, num_groups=2),
     ]
-    output_measure = dp.max_divergence()
     queries = _expand_queries(2, list(columns))
 
     t_marginals = make_stable_marginals(
@@ -223,7 +242,6 @@ def test_aim_penalty_is_per_clique(monkeypatch):
             ]
         ),
         dp.frame_distance(dp.symmetric_distance()),
-        get_associated_metric(output_measure),
         [q.by for q in queries],
     )
 
@@ -240,14 +258,7 @@ def test_aim_penalty_is_per_clique(monkeypatch):
 
     assert penalties, "no SELECT step ran"
     for expectations in penalties:
-        tightened = expectations[("A",)]
-        others = {c: e for c, e in expectations.items() if c != ("A",)}
-        assert others, "expected candidates beyond the tightened clique"
-        for clique, expectation in others.items():
-            assert expectation == pytest.approx(2 * tightened), (
-                f"{clique} penalized as {expectation}, "
-                f"but ('A',) has half the sensitivity and is penalized {tightened}"
-            )
+        assert expectations[("B",)] == pytest.approx(ratio * expectations[("A",)])
 
 
 @pytest.mark.parametrize(

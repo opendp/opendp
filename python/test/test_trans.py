@@ -2,7 +2,9 @@ import opendp.prelude as dp
 from opendp.mod import enable_features
 
 import re
+import sys
 import pytest
+import math
 
 enable_features("contrib")
 
@@ -56,13 +58,39 @@ def test_cast_default():
     assert caster([float("nan"), 2.0]) == [0, 2]
 
 
-def test_impute_uniform():
-    caster = dp.t.make_impute_uniform_float(
+@pytest.mark.parametrize(
+    "lower,upper",
+    [(-100, 100)],
+)
+def test_impute_uniform(lower, upper):
+    impute = dp.t.make_impute_uniform_float(
         dp.vector_domain(dp.atom_domain(T=float, nan=True)),
         dp.symmetric_distance(),
-        bounds=(-1.0, 2.0),
+        (lower, upper),
     )
-    assert -1.0 <= caster([float("nan")])[0] <= 2.0
+    imputed = impute([math.nan] * 10_000)
+    assert all(lower <= x <= upper for x in imputed)
+    if lower < 0:
+        neg_count = sum(1 for x in imputed if x < 0)
+        pos_count = sum(1 for x in imputed if x > 0)
+        assert pos_count / neg_count == pytest.approx(upper / -lower, abs=0.1)
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        (0.0, float("inf")),
+        # finite bounds, but the width overflows
+        (-sys.float_info.max, sys.float_info.max),
+    ],
+)
+def test_impute_uniform_infinite_width(bounds):
+    with pytest.raises(dp.OpenDPException, match="must be finite"):
+        dp.t.make_impute_uniform_float(
+            dp.vector_domain(dp.atom_domain(T=float, nan=True)),
+            dp.symmetric_distance(),
+            bounds=bounds,
+        )
 
 
 def test_int_identity():
@@ -437,7 +465,9 @@ def test_lipschitz_b_ary_tree():
     leaf_count = 7
     branching_factor = 2
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
-    tree_builder = input_space >> dp.t.then_b_ary_tree(leaf_count, branching_factor)
+    tree_builder = input_space >> dp.t.then_b_ary_tree(
+        dp.l1_distance(T=int), leaf_count, branching_factor
+    )
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
