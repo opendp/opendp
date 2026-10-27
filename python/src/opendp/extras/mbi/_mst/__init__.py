@@ -137,6 +137,7 @@ class MST(Algorithm):
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
         from opendp.extras.mbi._gem import GemPlusModel
+
         if not isinstance(model, (MarkovRandomField, GemPlusModel)):
             raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
@@ -195,9 +196,7 @@ class MST(Algorithm):
                 )
             else:
                 new_model = self.estimator(
-                    model.domain,
-                    all_marginals.flatten(),
-                    warm_start=model
+                    model.domain, all_marginals.flatten(), warm_start=model
                 )
             return all_marginals, new_model
 

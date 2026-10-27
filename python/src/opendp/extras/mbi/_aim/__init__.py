@@ -168,6 +168,7 @@ class AIM(Algorithm):
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
         from opendp.extras.mbi._gem import GemPlusModel
+
         if not isinstance(model, (MarkovRandomField, GemPlusModel)):
             raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 

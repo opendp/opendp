@@ -7,12 +7,21 @@ import jax.nn
 import jax.numpy as jnp
 import numpy as np
 import optax
-from mbi import Dataset, DatavectorQuery, Domain, Factor, CliqueVector, LinearMeasurement, MarginalLossFn
+from mbi import (
+    Dataset,
+    DatavectorQuery,
+    Domain,
+    Factor,
+    CliqueVector,
+    LinearMeasurement,
+    MarginalLossFn,
+)
 from mbi.clique_utils import maximal_subset
 from mbi.estimation import minimum_variance_unbiased_total, Estimator
 from collections.abc import Sequence
 from itertools import combinations
 from math import prod, sqrt
+
 
 @jax.tree_util.register_dataclass
 @dataclass(frozen=True)
@@ -24,15 +33,14 @@ class GemPlusModel:
     :param domain: metadata for dataset
     :param total: number of rows (N)"""
 
-    _params : Any 
-    _z : jax.Array 
-    domain : Domain = field(metadata={"static": True}) 
-    total : float = field(metadata={"static": True}) 
-
+    _params: Any
+    _z: jax.Array
+    domain: Domain = field(metadata={"static": True})
+    total: float = field(metadata={"static": True})
 
     def num_components(self) -> int:
         """Number of soft records B"""
-        return self._z.shape[0] 
+        return self._z.shape[0]
 
     @staticmethod
     def random(
@@ -58,7 +66,9 @@ class GemPlusModel:
         """
         hidden = (dim * 2, dim * 2)
         if batch < 2:
-            raise ValueError("batch must be at least 2 (batch norm uses batch statistics)")
+            raise ValueError(
+                "batch must be at least 2 (batch norm uses batch statistics)"
+            )
 
         key_z, key_w = jax.random.split(jax.random.PRNGKey(seed))
         z = jax.random.normal(key_z, (batch, dim))
@@ -68,14 +78,22 @@ class GemPlusModel:
             bound = 1 / sqrt(n_in)
             k_w, k_b = jax.random.split(key)
             return {
-                "W": jax.random.uniform(k_w, (n_in, n_out), minval=-bound, maxval=bound),
+                "W": jax.random.uniform(
+                    k_w, (n_in, n_out), minval=-bound, maxval=bound
+                ),
                 "b": jax.random.uniform(k_b, (n_out,), minval=-bound, maxval=bound),
             }
 
         keys = jax.random.split(key_w, len(hidden) + 1)
         blocks, width = [], dim
         for k, n_out in zip(keys, hidden):
-            blocks.append({**linear(k, width, n_out), "gamma": jnp.ones(n_out), "beta": jnp.zeros(n_out)})
+            blocks.append(
+                {
+                    **linear(k, width, n_out),
+                    "gamma": jnp.ones(n_out),
+                    "beta": jnp.zeros(n_out),
+                }
+            )
             width += n_out  # each block's output is concatenated with its input
         out = linear(keys[-1], width, sum(domain.shape))
         return GemPlusModel({"blocks": blocks, "out": out}, z, domain, total)
@@ -85,9 +103,13 @@ class GemPlusModel:
         h = self._z
         for p in self._params["blocks"]:
             out = h @ p["W"] + p["b"]
-            out = (out - out.mean(axis=0)) / jnp.sqrt(out.var(axis=0) + 1e-5)  # BatchNorm1d, eps=1e-5
+            out = (out - out.mean(axis=0)) / jnp.sqrt(
+                out.var(axis=0) + 1e-5
+            )  # BatchNorm1d, eps=1e-5
             out = out * p["gamma"] + p["beta"]
-            h = jnp.concatenate([jax.nn.relu(out), h], axis=1)  # same order as GEM: [out, input]
+            h = jnp.concatenate(
+                [jax.nn.relu(out), h], axis=1
+            )  # same order as GEM: [out, input]
         return h @ self._params["out"]["W"] + self._params["out"]["b"]
 
     @functools.cached_property
@@ -138,7 +160,6 @@ class GemPlusModel:
             attrs = (attrs,)
         return set(attrs) <= set(self.domain.attributes)
 
-    
     def synthetic_data(self, rows=None, method=None) -> Dataset:
         """Generate synthetic data via randomized rounding. `method` is accepted for
         compatibility with MarkovRandomField.synthetic_data and ignored."""
@@ -214,6 +235,7 @@ def _marginal_closure(domain: Domain, measurements: list) -> list:
 
     return list(measurements) + derived
 
+
 def _l1_loss(marginals, measurements):
     """Gem+ line 8: mean over measurements of the unweighted L1 error.
 
@@ -228,16 +250,19 @@ def _l1_loss(marginals, measurements):
         loss += jnp.sum(jnp.abs(m.query(mu) - m.noisy_measurement))
     return loss / len(measurements)
 
+
 class GemPlusState(NamedTuple):
     """Optimization state: the model must come first (mbi passes state[0] to callbacks)."""
+
     model: GemPlusModel
     opt_state: Any
     loss: jax.Array
 
 
 @dataclass(frozen=True, kw_only=True)
-class GemPlusEstimator(Estimator): 
+class GemPlusEstimator(Estimator):
     """Trains the generator with a fresh optimizer each call, warm-starting params and z."""
+
     optimizer: optax.GradientTransformation
     dim: int = 512
     batch: int = 25000
@@ -249,7 +274,9 @@ class GemPlusEstimator(Estimator):
         if constraints:
             raise NotImplementedError("GemPlusEstimator does not support constraints")
         if warm_start is not None and not isinstance(warm_start, GemPlusModel):
-            raise TypeError(f"warm_start must be a GemPlusModel, got {type(warm_start).__name__}")
+            raise TypeError(
+                f"warm_start must be a GemPlusModel, got {type(warm_start).__name__}"
+            )
         if warm_start is not None and warm_start.domain != domain:
             raise ValueError("warm_start was fit on a different domain")
 
@@ -257,10 +284,16 @@ class GemPlusEstimator(Estimator):
             model = GemPlusModel(warm_start._params, warm_start._z, domain, known_total)
         else:
             model = GemPlusModel.random(
-                domain, known_total, dim=self.dim, batch=self.batch,
-                hidden=self.hidden, seed=self.seed,
+                domain,
+                known_total,
+                dim=self.dim,
+                batch=self.batch,
+                hidden=self.hidden,
+                seed=self.seed,
             )
-        return GemPlusState(model, self.optimizer.init(model._params), jnp.asarray(jnp.inf))
+        return GemPlusState(
+            model, self.optimizer.init(model._params), jnp.asarray(jnp.inf)
+        )
 
     def _step(self, state: GemPlusState, loss_fn, known_total, constraints=()):
         model = state.model
@@ -268,15 +301,20 @@ class GemPlusEstimator(Estimator):
         def objective(params):
             current = GemPlusModel(params, model._z, model.domain, model.total)
             marginals = CliqueVector(
-                current.domain, loss_fn.cliques,
+                current.domain,
+                loss_fn.cliques,
                 {cl: current.project(cl) for cl in loss_fn.cliques},
             )
             return loss_fn(marginals)
 
         loss, grads = jax.value_and_grad(objective)(model._params)
-        updates, opt_state = self.optimizer.update(grads, state.opt_state, model._params)
+        updates, opt_state = self.optimizer.update(
+            grads, state.opt_state, model._params
+        )
         params = optax.apply_updates(model._params, updates)
-        return GemPlusState(GemPlusModel(params, model._z, model.domain, model.total), opt_state, loss)
+        return GemPlusState(
+            GemPlusModel(params, model._z, model.domain, model.total), opt_state, loss
+        )
 
     def _finalize(self, state, known_total, constraints=()):
         return state.model
@@ -286,7 +324,7 @@ def gem_plus(
     domain: Domain,
     loss_fn,
     *,
-    potentials=None, 
+    potentials=None,
     warm_start=None,
     optimizer: optax.GradientTransformation | None = None,
     dim: int = 512,
@@ -318,19 +356,28 @@ def gem_plus(
     if steps % 50:
         raise ValueError(f"steps ({steps}) must be a multiple of 50")
     if isinstance(loss_fn, MarginalLossFn):
-        raise TypeError("gem_plus needs the measurements themselves (for the marginal closure), not a MarginalLossFn")
-    
+        raise TypeError(
+            "gem_plus needs the measurements themselves (for the marginal closure), not a MarginalLossFn"
+        )
+
     measurements = list(loss_fn)
     total = minimum_variance_unbiased_total(measurements)  # originals only
     measurements = _marginal_closure(domain, measurements)  # Gem+ line 7
 
-    loss = MarginalLossFn(maximal_subset([m.clique for m in measurements]), _l1_loss, tuple(measurements))
+    loss = MarginalLossFn(
+        maximal_subset([m.clique for m in measurements]), _l1_loss, tuple(measurements)
+    )
 
     if optimizer is None:
         optimizer = optax.adam(1e-4)
 
     estimator = GemPlusEstimator(
-        optimizer=optimizer, dim=dim, batch=batch,
-        hidden=tuple(hidden) if hidden else None, seed=seed,
+        optimizer=optimizer,
+        dim=dim,
+        batch=batch,
+        hidden=tuple(hidden) if hidden else None,
+        seed=seed,
     )
-    return estimator.estimate(domain, loss, known_total=total, iters=steps, warm_start=warm_start)
+    return estimator.estimate(
+        domain, loss, known_total=total, iters=steps, warm_start=warm_start
+    )
