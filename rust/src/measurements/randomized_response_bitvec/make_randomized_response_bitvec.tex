@@ -16,7 +16,7 @@
 
 \contrib
 
-Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec} in \asOfCommit{mod.rs}{cfd1bec5}.
+Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec} in \asOfCommit{mod.rs}{7911334b8}.
 
 \section{Introduction}
 This is a randomizer in the local model of differential privacy, which is a simplification of the RAPPOR protocol~\cite{rappor}. Under local differential privacy each user is guaranteed $\varepsilon$-DP for their response. RAPPOR achieves local differentially private frequency estimation by flipping each bit of an input vector with fixed probability. Because the noise is added mechanically we can efficiently post-process a set of outputs from this randomizer with the function \rustdoc{measurements/fn}{debias\_randomized\_response\_bitvec}, which sums and normalises a vector of private outputs to account for the bias introduced. The input to this function are elements from a \rustdoc{domains/struct}{BitVectorDomain} with fixed $\texttt{max\_weight}$, setting this value is necessary in order to bound the sensitivity of the function. we detail two use cases below to explain two possible settings of $\texttt{max\_weight}$, which we will denote $m$.
