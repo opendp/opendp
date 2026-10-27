@@ -176,8 +176,7 @@ test_that("test_fully_adaptive_composition_d_in", {
   m_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum() |> then_laplace(100.)
   oqbl_sc(query = m_sum)
   expect_equal(oqbl_sc(d_in = 1L), m_sum(d_in = 1L))
-  expect_equal(oqbl_sc(d_in = NULL), m_sum(d_in = 1L))
-  expect_error(oqbl_sc(d_in = 2L), "must equal the d_in passed to the constructor")
+  expect_error(oqbl_sc(d_in = 2L), "must match the d_in passed into the constructor")
 })
 
 

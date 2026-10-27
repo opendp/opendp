@@ -114,12 +114,11 @@ fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
     let mut qbl = odometer(Some(1))?.invoke(&true)?;
     qbl.invoke(m_rr.clone())?;
     assert_eq!(qbl.privacy_loss(1)?, d_mid);
-    assert_eq!(qbl.privacy_loss(None)?, d_mid);
     assert!(qbl.privacy_loss(2).is_err());
 
     let mut qbl = odometer(None)?.invoke(&true)?;
     qbl.invoke(m_rr)?;
     assert_eq!(qbl.privacy_loss(1)?, d_mid);
-    assert!(qbl.privacy_loss(None).is_err());
+    assert!(qbl.privacy_loss(2).is_ok());
     Ok(())
 }

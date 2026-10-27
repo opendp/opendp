@@ -193,7 +193,7 @@ def test_fully_adaptive_composition_d_in():
     )
     qbl = o_ac([1, 2, 3])
     qbl(dp.t.make_count(*o_ac.input_space) >> dp.m.then_laplace(1.0))
-    assert qbl.privacy_loss() == qbl.privacy_loss(1) == 1.0
+    assert qbl.privacy_loss(1) == 1.0
 
-    with pytest.raises(dp.OpenDPException, match="must equal the d_in passed"):
+    with pytest.raises(dp.OpenDPException, match="must match the d_in passed"):
         qbl.privacy_loss(2)

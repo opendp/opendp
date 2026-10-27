@@ -44,7 +44,7 @@ mod ffi;
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
 /// * `output_measure` - how privacy is measured
-/// * `d_in` - optional default for privacy-loss queries, which must then either omit `d_in` or match it
+/// * `d_in` - optional maximum distance between adjacent input datasets
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -158,27 +158,16 @@ where
                 }
                 // evaluate external map query
                 Query::External(OdometerQuery::PrivacyLoss(d_in_q)) => {
-                    let d_in = match (d_in_q, &d_in) {
-                        (Some(d_in_q), Some(d_in))
-                            if d_in_q.total_cmp(d_in)? != Ordering::Equal =>
-                        {
+                    if let Some(d_in) = &d_in {
+                        if d_in_q.total_cmp(d_in)? != Ordering::Equal {
                             return fallible!(
                                 FailedFunction,
-                                "d_in ({:?}) must equal the d_in passed to the constructor ({:?})",
-                                d_in_q,
-                                d_in
+                                "d_in must match the d_in passed into the constructor"
                             );
                         }
-                        (Some(d_in), _) | (None, Some(d_in)) => d_in,
-                        (None, None) => {
-                            return fallible!(
-                                FailedFunction,
-                                "d_in must be passed, as none was passed to the constructor"
-                            );
-                        }
-                    };
+                    }
                     let d_mids = (privacy_maps.iter())
-                        .map(|m| m.eval(d_in))
+                        .map(|m| m.eval(d_in_q))
                         .collect::<Fallible<_>>()?;
 
                     let d_out = output_measure.compose(d_mids)?;

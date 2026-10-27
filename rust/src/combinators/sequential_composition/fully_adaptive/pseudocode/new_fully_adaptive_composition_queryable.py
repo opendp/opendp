@@ -73,18 +73,9 @@ def new_fully_adaptive_composition_queryable(
                 return Answer.External(OdometerAnswer.Invoke(answer))
 
             # evaluate external privacy loss query
-            case Query.External(
-                OdometerQuery.PrivacyLoss(d_in_q)
-            ):  # `\label{privacy-loss}`
-                if d_in_q is not None and d_in is not None:
-                    if d_in_q.total_cmp(d_in) != Ordering.Equal:
-                        raise ValueError(
-                            "d_in must equal the d_in passed to the constructor"
-                        )
-                d_in_q = d_in if d_in_q is None else d_in_q
-                if d_in_q is None:
-                    raise ValueError("d_in must be passed")
-
+            case Query.External(OdometerQuery.PrivacyLoss(d_in_q)):
+                if d_in is not None and d_in_q.total_cmp(d_in) != Ordering.Equal:
+                    raise ValueError("d_in must match")  # `\label{d-in-check}`
                 d_mids = [m.eval(d_in_q) for m in privacy_maps]
                 d_out = output_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))

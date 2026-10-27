@@ -749,7 +749,7 @@ class OdometerQueryable:
 
         return odometer_queryable_invoke(self.value, query)
 
-    def privacy_loss(self, d_in=None):
+    def privacy_loss(self, d_in):
         from opendp.core import odometer_queryable_privacy_loss
 
         return odometer_queryable_privacy_loss(self.value, d_in)

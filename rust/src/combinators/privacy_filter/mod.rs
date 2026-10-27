@@ -117,7 +117,7 @@ where
             let answer = queryable.eval_query(query)?;
 
             let OdometerAnswer::<A, AB>::PrivacyLoss(pending_d_out) =
-                queryable.eval_poly(&OdometerQuery::<Q, QB>::PrivacyLoss(Some(d_in.clone())))?
+                queryable.eval_poly(&OdometerQuery::<Q, QB>::PrivacyLoss(d_in.clone()))?
             else {
                 return fallible!(FailedFunction, "expected privacy loss");
             };
