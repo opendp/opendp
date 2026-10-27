@@ -97,6 +97,20 @@ def test_lazyframe_ffi():
     pl_testing.assert_frame_equal(t_ident(lf).collect(), lf.collect())
 
 
+@pytest.mark.parametrize("dtype, atom_type", [(pl.UInt8, dp.u8), (pl.UInt16, dp.u16)])
+@pytest.mark.parametrize("nullable", [False, True])
+def test_small_unsigned_series_ffi(dtype, atom_type, nullable):
+    element_domain = dp.atom_domain(T=atom_type)
+    if nullable:
+        element_domain = dp.option_domain(element_domain)
+    domain = dp.series_domain("A", element_domain)
+    values = [1, None] if nullable else [1, 2]
+    series = pl.Series("A", values, dtype=dtype)
+
+    t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
+    pl_testing.assert_series_equal(t_ident(series), series)
+
+
 @pytest.mark.parametrize(
     "measure",
     [dp.max_divergence(), dp.zero_concentrated_divergence()],
@@ -864,10 +878,60 @@ def test_cut():
     )
     expected = pl.DataFrame(
         {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
-        schema={"x": pl.UInt32, "len": pl.Int64},
+        schema={"x": pl.UInt8, "len": pl.Int64},
     )
 
     pl_testing.assert_frame_equal(actual, expected)
+
+
+def test_cut_nan_count_is_not_free():
+    # #2939: NaN is a non-null float, but cut maps it to null.
+    # Fixed row count therefore does not fix the count of non-null bins.
+    dp.enable_features("contrib")
+    frame = pl.LazyFrame({"x": [float("nan")] + [1.0] * 15})
+    neighbor = pl.LazyFrame({"x": [1.0] * 16})
+    domain = dp.with_margin(
+        dp.lazyframe_domain(
+            [dp.series_domain("x", dp.option_domain(dp.atom_domain(T=float)))]
+        ),
+        dp.polars.Margin(max_length=16, invariant="lengths"),
+    )
+    count = pl.col("x").fill_null(0.0).cut([1.5]).count()
+    assert frame.select(count).collect().item() == 15
+    assert neighbor.select(count).collect().item() == 16
+
+    measurement = dp.m.make_private_lazyframe(
+        domain,
+        dp.frame_distance(dp.symmetric_distance()),
+        dp.max_divergence(),
+        frame.select(count.dp.noise()),
+        global_scale=1.0,
+    )
+    assert measurement.map([dp.polars.Bound(per_group=2)]) > 0.0
+
+
+def test_cut_direct_enum_group_by():
+    by = pl.col("x").cut([1.0], labels=["low", "high"])
+    data = pl.LazyFrame({"x": [2.0, 0.5, 0.5]})
+    context = dp.Context.compositor(
+        data=data,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=10000.0),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=[by], invariant="keys")],
+    )
+    actual = (
+        context.query()
+        .group_by(by)
+        .agg(dp.len(signed=True))
+        .release()
+        .collect()
+        .with_columns(pl.col("x").cast(pl.String))
+        .sort("x")
+    )
+    pl_testing.assert_frame_equal(
+        actual, pl.DataFrame({"x": ["high", "low"], "len": [1, 2]})
+    )
 
 
 @pytest.mark.xfail(raises=AssertionError)
@@ -919,26 +983,24 @@ def test_categorical_domain_no_mapping():
 
 
 @pytest.mark.parametrize("wrap_with_option", [False, True])
-def test_categorical_domain_with_mapping(wrap_with_option):
-
+def test_categorical_group_by_rejected(wrap_with_option):
     categories = ["Texas", "New York"]
     keys = pl.LazyFrame([pl.Series("A", categories, dtype=pl.Categorical)])
     lf = pl.LazyFrame([pl.Series("A", categories + [None], dtype=pl.Categorical)])
 
-    element_domain = dp.categorical_domain(categories)
+    element_domain = dp.categorical_domain()
     if wrap_with_option:
         element_domain = dp.option_domain(element_domain)
 
     lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
-    assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
-    # checks that categorical grouping keys can be released if encoding is public
-    dp.m.make_private_lazyframe(
-        lf_domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        lf.group_by("A").agg(dp.len(signed=True)).join(keys, how="right", on=["A"]),
-        global_scale=1.0,
-    )
+    with pytest.raises(dp.OpenDPException, match="Categories are data-dependent"):
+        dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            lf.group_by("A").agg(dp.len(signed=True)).join(keys, how="right", on=["A"]),
+            global_scale=1.0,
+        )
 
 
 def test_categorical_context():
@@ -972,16 +1034,22 @@ def test_categorical_context():
 
 
 def test_to_physical_unordered():
-    lf_domain = dp.lazyframe_domain([dp.series_domain("A", dp.categorical_domain())])
-    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York"], dtype=pl.Categorical)])
-
-    # check that row ordering is protected
-    with pytest.raises(dp.OpenDPException, match=re.escape("to_physical: to prevent")):
-        dp.t.make_stable_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            lf.with_columns(pl.col("A").to_physical()),
-        )
+    lf = pl.LazyFrame(
+        [pl.Series("A", ["New York", "Texas", "New York"], dtype=pl.Categorical)]
+    )
+    for element_domain in [
+        dp.categorical_domain(),
+        dp.option_domain(dp.categorical_domain()),
+    ]:
+        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+        with pytest.raises(
+            dp.OpenDPException, match="categorical encodings are data-dependent"
+        ):
+            dp.t.make_stable_lazyframe(
+                lf_domain,
+                dp.symmetric_distance(),
+                lf.with_columns(pl.col("A").to_physical()),
+            )
 
 
 def test_float_sum_with_unlimited_reorderable_partitions():

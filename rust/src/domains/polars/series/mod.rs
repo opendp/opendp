@@ -129,6 +129,8 @@ impl SeriesDomain {
     fn new_element_domain(dtype: DataType) -> Fallible<Arc<dyn DynSeriesElementDomain>> {
         Ok(match dtype {
             DataType::Boolean => Arc::new(AtomDomain::<bool>::default()),
+            DataType::UInt8 => Arc::new(AtomDomain::<u8>::default()),
+            DataType::UInt16 => Arc::new(AtomDomain::<u16>::default()),
             DataType::UInt32 => Arc::new(AtomDomain::<u32>::default()),
             DataType::UInt64 => Arc::new(AtomDomain::<u64>::default()),
             DataType::Int8 => Arc::new(AtomDomain::<i8>::default()),
@@ -200,6 +202,8 @@ impl SeriesDomain {
         }
 
         match self.dtype() {
+            DataType::UInt8 => drop_bounds!(u8),
+            DataType::UInt16 => drop_bounds!(u16),
             DataType::UInt32 => drop_bounds!(u32),
             DataType::UInt64 => drop_bounds!(u64),
             DataType::Int8 => drop_bounds!(i8),
@@ -438,6 +442,8 @@ macro_rules! impl_dtype_from {
         }
     };
 }
+impl_dtype_from!(u8, UInt8Type);
+impl_dtype_from!(u16, UInt16Type);
 impl_dtype_from!(u32, UInt32Type);
 impl_dtype_from!(u64, UInt64Type);
 impl_dtype_from!(i8, Int8Type);

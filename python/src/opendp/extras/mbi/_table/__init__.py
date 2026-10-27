@@ -267,6 +267,13 @@ def make_contingency_table(
         marginals = Marginals()
         thresholds = {}
 
+    # The stable cut transformation casts bins to Enum with these public labels.
+    # Keep the private columns encoded; only cast public lookup keys to Enum.
+    cut_dtypes = {c: pl.Enum(get_categories(cutset)) for c, cutset in cuts_pl.items()}
+
+    def lookup_keys(c, keyset):
+        return keyset.cast(cut_dtypes[c]) if c in cut_dtypes else keyset
+
     if cuts_pl:
         plan = plan.with_columns(
             pl.col(c).cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
@@ -320,7 +327,7 @@ def make_contingency_table(
             output_measure,
             d_in=d_in,
             d_out=d_oneway,
-            keys=keys_pl,
+            keys={c: lookup_keys(c, keyset) for c, keyset in keys_pl.items()},
             plan=plan,
             unknown_only=algorithm.oneway == ONEWAY_UNKEYED,
             has_prior_total=has_prior_total,
@@ -372,7 +379,7 @@ def make_contingency_table(
             plan.with_columns(
                 pl.col(c)
                 .replace_strict(
-                    stable_keys[c],
+                    lookup_keys(c, stable_keys[c]),
                     pl.Series(range(len(stable_keys[c])), dtype=pl.UInt32),
                     default=_get_null_index(stable_keys[c], len(stable_keys[c]) - 1),
                 )
