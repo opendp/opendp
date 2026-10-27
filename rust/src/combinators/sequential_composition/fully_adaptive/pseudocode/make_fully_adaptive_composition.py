@@ -3,6 +3,7 @@ def make_fully_adaptive_composition(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option[MI_Distance],
 ) -> Odometer[DI, MI, MO, Measurement[DI, MI, MO, TO], TO]:
 
     # check if fully adaptive composition is supported
@@ -12,7 +13,7 @@ def make_fully_adaptive_composition(
         arg: DI_Carrier,
     ) -> OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance]:
         return new_fully_adaptive_composition_queryable(
-            input_domain, input_metric, output_measure, arg
+            input_domain, input_metric, output_measure, d_in, arg
         )
 
     return Odometer.new(

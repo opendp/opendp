@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, cmp::Ordering, fmt::Debug, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
 
@@ -10,6 +10,7 @@ use crate::{
     },
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
+    traits::ProductOrd,
 };
 
 #[cfg(test)]
@@ -20,8 +21,12 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
-    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        d_in(rust_type = "Option<QI>", c_type = "AnyObject *", default = b"null")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
+    derived_types(QI = "$get_distance_type(input_metric)")
 )]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
@@ -39,6 +44,7 @@ mod ffi;
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
 /// * `output_measure` - how privacy is measured
+/// * `d_in` - optional default for privacy-loss queries, which must then either omit `d_in` or match it
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -48,9 +54,11 @@ pub fn make_fully_adaptive_composition<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option<MI::Distance>,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
+    MI::Distance: Clone + ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
@@ -65,6 +73,7 @@ where
                 input_domain.clone(),
                 input_metric.clone(),
                 output_measure.clone(),
+                d_in.clone(),
                 arg.clone(),
             )
         }),
@@ -83,9 +92,11 @@ fn new_fully_adaptive_composition_queryable<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option<MI::Distance>,
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
 where
+    MI::Distance: ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
@@ -146,7 +157,26 @@ where
                     Answer::External(OdometerAnswer::Invoke(answer))
                 }
                 // evaluate external map query
-                Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                Query::External(OdometerQuery::PrivacyLoss(d_in_q)) => {
+                    let d_in = match (d_in_q, &d_in) {
+                        (Some(d_in_q), Some(d_in))
+                            if d_in_q.total_cmp(d_in)? != Ordering::Equal =>
+                        {
+                            return fallible!(
+                                FailedFunction,
+                                "d_in ({:?}) must equal the d_in passed to the constructor ({:?})",
+                                d_in_q,
+                                d_in
+                            );
+                        }
+                        (Some(d_in), _) | (None, Some(d_in)) => d_in,
+                        (None, None) => {
+                            return fallible!(
+                                FailedFunction,
+                                "d_in must be passed, as none was passed to the constructor"
+                            );
+                        }
+                    };
                     let d_mids = (privacy_maps.iter())
                         .map(|m| m.eval(d_in))
                         .collect::<Fallible<_>>()?;

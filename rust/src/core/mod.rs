@@ -525,8 +525,9 @@ pub enum OdometerQuery<Q, QB> {
     /// A privacy loss query that returns the privacy loss of the odometer,
     /// without changing the state of the queryable.
     ///
-    /// The input is the distance between adjacent datasets.
-    PrivacyLoss(QB),
+    /// The input is the distance between adjacent datasets,
+    /// or `None` to use the distance the odometer was constructed with.
+    PrivacyLoss(Option<QB>),
 }
 
 /// The standard answer type for odometer queryables.
@@ -548,8 +549,10 @@ impl<Q, A, QB, AB> OdometerQueryable<Q, A, QB, AB> {
             fallible!(FailedCast, "return type is not an answer")
         }
     }
-    pub fn privacy_loss(&mut self, d_in: QB) -> Fallible<AB> {
-        if let OdometerAnswer::PrivacyLoss(map) = self.eval(&OdometerQuery::PrivacyLoss(d_in))? {
+    pub fn privacy_loss(&mut self, d_in: impl Into<Option<QB>>) -> Fallible<AB> {
+        if let OdometerAnswer::PrivacyLoss(map) =
+            self.eval(&OdometerQuery::PrivacyLoss(d_in.into()))?
+        {
             Ok(map)
         } else {
             fallible!(FailedCast, "return type is not a privacy map")

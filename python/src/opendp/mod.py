@@ -749,7 +749,7 @@ class OdometerQueryable:
 
         return odometer_queryable_invoke(self.value, query)
 
-    def privacy_loss(self, d_in):
+    def privacy_loss(self, d_in=None):
         from opendp.core import odometer_queryable_privacy_loss
 
         return odometer_queryable_privacy_loss(self.value, d_in)
@@ -1456,7 +1456,7 @@ def assert_features(*features: str) -> None:
 M = TypeVar("M", Transformation, Measurement)
 
 
-def binary_search_chain(
+def binary_search_chain(  # noqa: UP047 (PEP 695 type parameters need Python 3.12)
     make_chain: Callable[[float], M],
     d_in: Any,
     d_out: Any,
