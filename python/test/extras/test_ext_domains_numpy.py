@@ -137,3 +137,26 @@ def test_arrayd_domain():
         domain.member(np.array([[1.0, 2.0, 3.0]]))
 
     assert domain.member(np.array([[2.0], [1.0]]))
+
+
+def test_array2_norm_requires_idealized_numerics():
+    dp.disable_features("idealized-numerics")
+    try:
+        with pytest.raises(dp.OpenDPException, match="idealized-numerics"):
+            dp.numpy.array2_domain(norm=1.0, p=2, T=float)
+        assert dp.numpy.array2_domain(T=float)
+    finally:
+        dp.enable_features("idealized-numerics")
+
+
+def test_array2_domain_snapshots_origin():
+    origin = np.array([1.0, 2.0])
+    domain = dp.numpy.array2_domain(norm=1.0, p=2, origin=origin, T=float)
+    valid = np.array([[1.0, 2.0]])
+    assert domain.member(valid)
+
+    origin[:] = np.nan
+    stored = domain.descriptor.origin
+    np.testing.assert_array_equal(stored, [1.0, 2.0])
+    stored[:] = np.nan  # Descriptor edits must not change membership.
+    assert domain.member(valid)
