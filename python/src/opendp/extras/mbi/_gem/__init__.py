@@ -10,7 +10,6 @@ import optax
 from mbi import Dataset, DatavectorQuery, Domain, Factor, CliqueVector, LinearMeasurement, MarginalLossFn
 from mbi.clique_utils import maximal_subset
 from mbi.estimation import minimum_variance_unbiased_total, Estimator
-from mbi.marginal_loss import from_linear_measurements
 from collections.abc import Sequence
 from itertools import combinations
 from math import prod, sqrt
@@ -19,17 +18,21 @@ from math import prod, sqrt
 @dataclass(frozen=True)
 class GemPlusModel:
     """Gem+ generator: a fixed Gaussian batch z fed through GEM's generator network,
-    giving a mixture of B product distributions (one per row of z)."""
+    giving a mixture of B product distributions (one per row of z).
+    :param _params: network weights
+    :param _z: initial seeds for person types
+    :param domain: metadata for dataset
+    :param total: number of rows (N)"""
 
-    _params : Any #network weights
-    _z : jax.Array #the inital seeds for person types
-    domain : Domain = field(metadata={"static": True}) #dataset metadata
-    total : float = field(metadata={"static": True}) #N
+    _params : Any 
+    _z : jax.Array 
+    domain : Domain = field(metadata={"static": True}) 
+    total : float = field(metadata={"static": True}) 
 
 
     def num_components(self) -> int:
-        """Number of soft records B — the rows of the fixed noise batch."""
-        return self._z.shape[0] #number of distinct types
+        """Number of soft records B"""
+        return self._z.shape[0] 
 
     @staticmethod
     def random(
@@ -40,9 +43,20 @@ class GemPlusModel:
         hidden: tuple[int, ...] | None = None,
         seed: int = 0,
     ) -> "GemPlusModel":
-        """Fixed Gaussian batch z and GEM's generator, with PyTorch's default initialization."""
-        if hidden is None:
-            hidden = (dim * 2, dim * 2)
+        """New model with a fixed Gaussian batch z and GEM's generator.
+
+        Linear layers use PyTorch's default initialization; batch norm starts at
+        gamma = 1, beta = 0. The output layer has one logit per attribute value.
+
+        :param domain: the mbi Domain to generate over
+        :param total: number of rows the marginals are scaled to
+        :param dim: width of each noise vector
+        :param batch: number of components B
+        :param hidden: widths of the residual blocks; defaults to (2 * dim, 2 * dim)
+        :param seed: random seed for z and the initial weights
+        :raises ValueError: if batch < 2, since batch norm needs batch statistics
+        """
+        hidden = (dim * 2, dim * 2)
         if batch < 2:
             raise ValueError("batch must be at least 2 (batch norm uses batch statistics)")
 
@@ -95,8 +109,17 @@ class GemPlusModel:
         return self._products
 
     def project(self, attrs: str | Sequence[str]) -> Factor:
+        """Marginal over ``attrs``, scaled to ``total`` rows.
 
-        if isinstance(attrs, (str, int)):
+        Each component is a product distribution, so its marginal is the outer
+        product of its per-attribute probabilities. The model's marginal is the
+        average over the B components.
+
+        :param attrs: an attribute name, or a sequence of them
+        :return: a Factor over ``attrs`` whose cells sum to ``total``
+        """
+
+        if isinstance(attrs, str):
             attrs = (attrs,)
         attrs = tuple(attrs)
 
@@ -193,7 +216,12 @@ def _marginal_closure(domain: Domain, measurements: list) -> list:
 
 def _l1_loss(marginals, measurements):
     """Gem+ line 8: mean over measurements of the unweighted L1 error.
-    mbi's built-in L1 loss weights each measurement by 1/stddev; Gem+ does not."""
+
+    mbi's built-in L1 loss weights each measurement by 1/stddev; Gem+ does not.
+
+    :param marginals: CliqueVector of the model's marginals
+    :param measurements: LinearMeasurements, including those added by the closure
+    """
     loss = 0.0
     for m in measurements:
         mu = marginals.project(m.clique)
@@ -258,17 +286,14 @@ def gem_plus(
     domain: Domain,
     loss_fn,
     *,
-    # contract, matching mirror_descent
-    potentials=None, #to match opendp's current calls
+    potentials=None, 
     warm_start=None,
-    # hyperparameters
     optimizer: optax.GradientTransformation | None = None,
     dim: int = 512,
     batch: int = 25000,
     hidden: tuple[int, ...] | None = None,
     steps: int = 1500,
     seed: int = 0,
-    weighted: bool = False #for experiments, GEM+ specifies unweighted, remove later
 ) -> GemPlusModel:
     """Fit a GemPlusModel to noisy marginals using Gem+.
 
@@ -287,7 +312,6 @@ def gem_plus(
     :param hidden: widths of the residual blocks; defaults to (2 * dim, 2 * dim)
     :param steps: optimizer steps, a multiple of 50
     :param seed: random seed for the noise batch and initial weights
-    :param weighted: experimental: weight each measurement by 1/stddev
     """
     # Estimates must be f64 to pass through the OpenDP FFI.
     jax.config.update("jax_enable_x64", True)
@@ -300,12 +324,7 @@ def gem_plus(
     total = minimum_variance_unbiased_total(measurements)  # originals only
     measurements = _marginal_closure(domain, measurements)  # Gem+ line 7
 
-    if weighted:
-        loss = from_linear_measurements(measurements, domain, norm="l1")
-    else:
-        loss = MarginalLossFn(
-            maximal_subset([m.clique for m in measurements]), _l1_loss, tuple(measurements)
-        )
+    loss = MarginalLossFn(maximal_subset([m.clique for m in measurements]), _l1_loss, tuple(measurements))
 
     if optimizer is None:
         optimizer = optax.adam(1e-4)

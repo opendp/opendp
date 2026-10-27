@@ -109,9 +109,12 @@ class AIM(Algorithm):
     The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
     in that the exponential mechanism selects a marginal in each step.
 
-    AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
-    instead of joint distribution densities and the multiplicative weights update rule.
+    AIM differs from MWEM in that, by default, the distribution is represented via a graphical model
+    and fitted via mirror descent, instead of joint distribution densities and the multiplicative weights update rule.
     This allows AIM to support higher-dimensional datasets.
+
+    Setting ``estimator`` to Gem+ (`MGCB25 <https://arxiv.org/abs/2511.09672>`_) instead fits a neural generator
+    to the measured marginals. Each round continues training the previous generator, and ``max_size`` is not applied.
     """
 
     queries: list[Count] | int = 3
@@ -121,7 +124,7 @@ class AIM(Algorithm):
 
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
-    """Maximum memory constraint in MB for the marginal selection."""
+    """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
 
@@ -149,7 +152,7 @@ class AIM(Algorithm):
         d_out: float,
         *,
         marginals: Marginals,
-        model,  # MarkovRandomField
+        model,  # MarkovRandomField | GemPlusModel
     ) -> Measurement:
         """Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
 
@@ -234,7 +237,7 @@ def _make_aim_marginal(
     d_in: int,
     d_out: float,
     marginals: Marginals,
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
     max_size: float,
     algorithm: AIM,
 ) -> Optional[Measurement]:
@@ -355,7 +358,7 @@ def _make_aim_select(
     model = cast(mbi.MarkovRandomField, model)
 
     def is_small(clique: tuple[str, ...]) -> bool:
-        # Gem+ has no junction tree, and its selection step has no size filter.
+        # Gem+ has no junction tree, so the size limit does not apply.
         if not isinstance(model, mbi.MarkovRandomField):
             return True
         model_size = mbi.junction_tree.hypothetical_model_size(
