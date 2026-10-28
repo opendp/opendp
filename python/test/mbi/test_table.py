@@ -18,24 +18,31 @@ from opendp.extras.mbi._table import (
 from opendp.extras.mbi._utilities import mirror_descent, SelectPrefixQuery
 import pytest
 import opendp.prelude as dp
-import warnings
 
 
-@pytest.mark.parametrize(
-    "privacy_loss", [{"epsilon": 5.0}, {"rho": 0.2}], ids=["DP", "zCDP"]
-)
-@pytest.mark.parametrize("approximate", [True, False], ids=["approximate", "pure"])
-@pytest.mark.parametrize(
-    "algorithm",
-    [
-        AIM(queries=2),
-        MST(),
-        Fixed(queries=[Count(("C",)), Count(("A", "B"))]),
-        Sequential(algorithms=[Fixed(queries=[Count(("A", "B"))]), AIM()]),
-    ],
-    ids=["AIM", "MST", "Fixed", "Sequential"],
-)
-def test_fit_effectiveness(algorithm, privacy_loss, approximate):
+def _test_estimator(domain, loss_fn, *, potentials=None):
+    from mbi.estimation import MirrorDescent  # type: ignore[import-untyped,import-not-found]
+
+    return MirrorDescent().estimate(
+        domain,
+        loss_fn,
+        warm_start=potentials,
+        iters=500 if potentials is None else 400,
+    )
+
+
+def _fast_test_estimator(domain, loss_fn, *, potentials=None):
+    from mbi.estimation import MirrorDescent  # type: ignore[import-untyped,import-not-found]
+
+    return MirrorDescent().estimate(
+        domain,
+        loss_fn,
+        warm_start=potentials,
+        iters=25 if potentials is None else 10,
+    )
+
+
+def _make_effectiveness_table(privacy_loss, approximate, algorithm):
     pytest.importorskip("mbi")
     # mutating `parameter` interferes with other pytest parameterizations
     privacy_loss = privacy_loss.copy()
@@ -96,40 +103,141 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         .release()
     )
 
+    return table, roundtrip_np, lookup_B, lookup_C
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    [
+        AIM(queries=2, rounds=6, estimator=_test_estimator),
+        MST(estimator=_test_estimator),
+        Fixed(
+            queries=[Count(("C",)), Count(("A", "B"))],
+            estimator=_test_estimator,
+        ),
+        Sequential(
+            estimator=_test_estimator,
+            algorithms=[
+                Fixed(
+                    queries=[Count(("A", "B"))],
+                    estimator=_test_estimator,
+                ),
+                AIM(rounds=6, estimator=_test_estimator),
+            ],
+        ),
+    ],
+    ids=["AIM", "MST", "Fixed", "Sequential"],
+)
+def test_fit_effectiveness(algorithm):
+    import numpy as np  # type: ignore[import-not-found]
+
+    table, roundtrip_np, lookup_B, lookup_C = _make_effectiveness_table(
+        {"rho": 0.2}, False, algorithm
+    )
+
     try:
         std = table.std(("A",))
         assert isinstance(std, float)
-        # a coarser marginal that covers "A" (e.g. ("A", "B")) can now
-        # legitimately inform this estimate, not just a direct ("A",) release,
-        # so this is a loose sanity bound rather than a tight calibration
         assert 0 < std < 20
     except ValueError:
         pass
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        synthetic_df = table.synthesize()
-
-    synthetic_list = [
-        to_mid_A(synthetic_df["A"]),
-        [lookup_B[c] for c in synthetic_df["B"]],
-        [lookup_C[c] for c in synthetic_df["C"]],
+    # Check the fitted distribution directly, without synthetic sampling noise.
+    coords = [
+        np.linspace(-2.5, 2.5, 6),
+        np.asarray([lookup_B[k] for k in table.keys["B"]]),
+        np.asarray([lookup_C[k] for k in table.keys["C"]]),
     ]
-    cov_syn = np.cov(np.stack(synthetic_list))
-    cov_ref = np.cov(roundtrip_np)
+    mass = np.asarray(table.project(("A", "B", "C")), dtype=float)
+    mass = mass / mass.sum()
+    grid = np.meshgrid(*coords, indexing="ij", sparse=True)
+    means = [np.sum(mass * values) for values in grid]
+    fitted_cov = np.asarray(
+        [
+            [
+                np.sum(mass * (grid[i] - means[i]) * (grid[j] - means[j]))
+                for j in range(3)
+            ]
+            for i in range(3)
+        ]
+    )
+    reference_cov = np.cov(roundtrip_np)
 
-    def test_cov(clique):
+    def check_cov(clique):
         idx = {"A": 0, "B": 1, "C": 2}
         i, j = idx[clique[0]], idx[clique[-1]]
-        assert abs(cov_ref[i, j] - cov_syn[i, j]) < 0.2, (
-            f"{clique} cov drifted: {cov_ref[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
+        assert abs(reference_cov[i, j] - fitted_cov[i, j]) < 0.2, (
+            f"{clique} covariance drifted: "
+            f"{reference_cov[i, j]=:.3f}, {fitted_cov[i, j]=:.3f}"
         )
 
-    # in an MRF, a missing 2-way marginal does not imply independence
-    # max-entropy does not guarantee spurious correlations won't be formed on undetermined pairs
-    test_cov(("A", "B"))
+    check_cov(("A", "B"))
     for clique in (cl for cl in table.marginals.cliques() if 0 < len(cl) <= 2):
-        test_cov(clique)
+        check_cov(clique)
+
+
+@pytest.mark.parametrize(
+    ("privacy_loss", "approximate", "algorithm"),
+    [
+        (
+            {"epsilon": 5.0},
+            False,
+            Fixed(
+                queries=[Count(("C",)), Count(("A", "B"))],
+                estimator=_fast_test_estimator,
+            ),
+        ),
+        (
+            {"epsilon": 5.0},
+            True,
+            AIM(queries=2, rounds=2, oneway="unkeyed", estimator=_fast_test_estimator),
+        ),
+        (
+            {"rho": 0.2},
+            True,
+            MST(estimator=_fast_test_estimator),
+        ),
+        (
+            {"rho": 0.2},
+            True,
+            Sequential(
+                estimator=_fast_test_estimator,
+                algorithms=[
+                    Fixed(
+                        queries=[Count(("A", "B"))],
+                        estimator=_fast_test_estimator,
+                    ),
+                    AIM(queries=2, rounds=2, estimator=_fast_test_estimator),
+                ],
+            ),
+        ),
+    ],
+    ids=["DP-Fixed", "approx-DP-AIM", "approx-zCDP-MST", "approx-zCDP-Sequential"],
+)
+def test_fit_configuration_smoke(privacy_loss, approximate, algorithm):
+    import numpy as np  # type: ignore[import-not-found]
+
+    table, _, _, _ = _make_effectiveness_table(privacy_loss, approximate, algorithm)
+    assert set(table.schema) == {"A", "B", "C"}
+    assert table.cuts["A"].to_list() == [-2, -1, 0, 1, 2]
+    assert table.keys["B"].to_list() == ["a", "b", "c", "d", "e", "f", None]
+    assert len(table.keys["A"]) == len(table.cuts["A"]) + 1
+
+    projection = np.asarray(table.project(("A", "B")))
+    assert projection.shape == (len(table.keys["A"]), len(table.keys["B"]))
+    assert np.isfinite(projection).all()
+    assert np.isclose(projection.sum(), table.project([]))
+
+
+def test_deindex_float_cuts():
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+    from opendp.extras.mbi._table import _deindex
+
+    samples = _deindex(np.arange(4), np.arange(4), pl.Series([0.0, 1.0, 2.0]))
+    assert np.all(samples >= [-1.0, 0.0, 1.0, 2.0])
+    assert np.all(samples < [0.0, 1.0, 2.0, 3.0])
 
 
 def test_contingency_table_int_cuts():
@@ -226,7 +334,9 @@ def test_make_contingency_table_multi_fit():
         .select("A", "B")
         .contingency_table(
             keys={"A": list(range(5)), "B": list(range(10))},
-            algorithm=Fixed(queries=[Count(("A", "B"))]),
+            algorithm=Fixed(
+                queries=[Count(("A", "B"))], estimator=_fast_test_estimator
+            ),
         )
         .release()
     )
@@ -237,7 +347,11 @@ def test_make_contingency_table_multi_fit():
     table2: ContingencyTable = (
         context.query(rho=0.05)
         .select("B", "C")
-        .contingency_table(keys={"C": list(range(20))}, table=table)
+        .contingency_table(
+            keys={"C": list(range(20))},
+            table=table,
+            algorithm=AIM(estimator=_fast_test_estimator, rounds=6),
+        )
         .release()
     )
 
@@ -397,7 +511,11 @@ def test_contingency_table_minimum_variance_weighted_total():
         table: ContingencyTable = (
             context.query(epsilon=1.0, delta=1e-8)
             .contingency_table(
-                algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9)
+                algorithm=Fixed(
+                    queries=[Count(("A",))],
+                    oneway_split=0.9,
+                    estimator=_fast_test_estimator,
+                )
             )
             .release()
         )
