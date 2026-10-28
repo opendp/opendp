@@ -288,7 +288,7 @@ def gem_plus(
     :param loss_fn: noisy measurements, as a list of LinearMeasurement
     :param potentials: ignored; accepted for OpenDP's estimator signature
     :param warm_start: a GemPlusModel to continue training, or None
-    :param optimizer: optax optimizer; defaults to Adam with learning rate 1e-4
+    :param optimizer: optax optimizer; defaults to GEM's: Adam with cosine decay from 1e-4 to 1e-8 over ``steps``
     :param dim: width of the noise vector
     :param batch: number of mixture components
     :param hidden: widths of the residual blocks; defaults to (2 * dim, 2 * dim)
@@ -313,7 +313,11 @@ def gem_plus(
     )
 
     if optimizer is None:
-        optimizer = optax.adam(1e-4)
+        # GEM: Adam with cosine decay from 1e-4 to 1e-8 over each call's steps
+        schedule = optax.cosine_decay_schedule(
+            1e-4, decay_steps=max(steps, 1), alpha=1e-8 / 1e-4
+        )
+        optimizer = optax.adam(schedule)
 
     estimator = GemPlusEstimator(
         optimizer=optimizer,
