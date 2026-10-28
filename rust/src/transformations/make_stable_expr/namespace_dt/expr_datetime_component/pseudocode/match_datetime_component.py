@@ -4,7 +4,7 @@ def match_datetime_component(
 ) -> DataType | None:
     return (
         {
-            Millennium: DataType.UInt32,
+            Millennium: DataType.Int32,
             Century: DataType.Int32,
             Year: DataType.Int32,
             IsoYear: DataType.Int32,

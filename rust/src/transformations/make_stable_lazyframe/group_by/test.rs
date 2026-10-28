@@ -5,6 +5,10 @@ fn test_check_infallible() -> Fallible<()> {
     // failure to cast causes a data-dependent error
     assert!(check_infallible(&lit("a").strict_cast(DataType::Int32), Resize::Allow).is_err());
 
+    // Sample-and-aggregate cannot validate temporal input ranges.
+    assert!(check_infallible(&col("t").dt().year(), Resize::Allow).is_err());
+    assert!(check_infallible(&col("t").dt().hour(), Resize::Allow).is_err());
+
     Ok(())
 }
 

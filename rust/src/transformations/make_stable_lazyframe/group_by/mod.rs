@@ -736,7 +736,10 @@ fn check_infallible_function(
         },
 
         FunctionExpr::TemporalExpr(temporal_function) => match temporal_function {
-            // Component extraction / conversions (value-safe; null-propagating).
+            // These conversions may panic on out-of-range physical Datetime values.
+            // Unlike stable expressions, this checker has no input domain to
+            // establish that a timestamp is representable.
+            // Component extraction / conversions.
             TemporalFunction::Millennium
             | TemporalFunction::Century
             | TemporalFunction::Year
@@ -758,21 +761,29 @@ fn check_infallible_function(
             | TemporalFunction::Millisecond
             | TemporalFunction::Microsecond
             | TemporalFunction::Nanosecond
-            | TemporalFunction::TotalDays { .. }
+            | TemporalFunction::ToString(_)
+            | TemporalFunction::BaseUtcOffset
+            | TemporalFunction::DSTOffset => {
+                return fallible!(
+                    MakeTransformation,
+                    "Temporal component extraction may panic on out-of-range datetime values."
+                );
+            }
+
+            // Duration arithmetic and timestamp reinterpretation do not
+            // convert timestamps through a calendar datetime.
+            TemporalFunction::TotalDays { .. }
             | TemporalFunction::TotalHours { .. }
             | TemporalFunction::TotalMinutes { .. }
             | TemporalFunction::TotalSeconds { .. }
             | TemporalFunction::TotalMilliseconds { .. }
             | TemporalFunction::TotalMicroseconds { .. }
             | TemporalFunction::TotalNanoseconds { .. }
-            | TemporalFunction::ToString(_)
             | TemporalFunction::Duration(_)
             | TemporalFunction::CastTimeUnit(_)
             | TemporalFunction::WithTimeUnit(_)
             | TemporalFunction::ConvertTimeZone(_)
-            | TemporalFunction::TimeStamp(_)
-            | TemporalFunction::BaseUtcOffset
-            | TemporalFunction::DSTOffset => check_inputs!(),
+            | TemporalFunction::TimeStamp(_) => check_inputs!(),
 
             // These can raise depending on values around DST ambiguity/non-existent local times.
             TemporalFunction::Truncate | TemporalFunction::Round | TemporalFunction::Replace => {
