@@ -3,7 +3,7 @@ use std::{
     os::raw::{c_char, c_uint},
 };
 
-use dashu::integer::IBig;
+use dashu::{integer::IBig, rational::RBig};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
@@ -12,7 +12,7 @@ use crate::{
         any::{AnyObject, AnyTransformation, Downcast},
         util::Type,
     },
-    traits::{CheckAtom, Float, FloatBits},
+    traits::{CheckAtom, Float, FloatBits, InfCast},
     transformations::{Pairwise, Sequential, UncheckedSum, make_sized_bounded_covariance},
 };
 
@@ -33,7 +33,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
         S: Type,
     ) -> Fallible<AnyTransformation>
     where
-        T: 'static + Float,
+        T: 'static + Float + InfCast<RBig>,
         (T, T): CheckAtom,
         IBig: From<T::Bits>,
     {
@@ -45,7 +45,7 @@ pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
         ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
-            S::Item: 'static + Float,
+            S::Item: 'static + Float + InfCast<RBig>,
             (S::Item, S::Item): CheckAtom,
             IBig: From<<S::Item as FloatBits>::Bits>,
         {

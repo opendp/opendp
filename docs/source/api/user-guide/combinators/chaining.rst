@@ -80,7 +80,9 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0.0, 1.0))),
+        ...     dp.vector_domain(
+        ...         dp.atom_domain(bounds=(0.0, 1.0), nan=False)
+        ...     ),
         ...     dp.symmetric_distance(),
         ... )
         >>> sum_trans >> lap_meas

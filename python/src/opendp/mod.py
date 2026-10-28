@@ -1512,7 +1512,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     space = dp.vector_domain(dp.atom_domain((-b, b)), 10_000), dp.symmetric_distance()
+    ...     space = dp.vector_domain(dp.atom_domain((-b, b), nan=False), 10_000), dp.symmetric_distance()
     ...     return space >> dp.t.then_sum() >> dp.m.then_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
@@ -1573,7 +1573,7 @@ def binary_search_param(
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
+    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.), nan=False), data_size), dp.symmetric_distance()) >>
     ...        dp.t.then_mean() >>
     ...        dp.m.then_laplace(necessary_scale)
     ...    )
@@ -1701,7 +1701,7 @@ def binary_search(
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
     >>> # build a histogram that emits float counts
-    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.), nan=False), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)),
     ...     1e-8
@@ -1710,7 +1710,7 @@ def binary_search(
     >>> dp.binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)),
     ...     bounds = (0., 1.))
-    0.5235561269546629
+    0.5235561269534565
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 
