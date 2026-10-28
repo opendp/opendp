@@ -1,6 +1,4 @@
 import pickle
-import subprocess
-import sys
 
 import numpy as np
 import pytest
@@ -97,7 +95,7 @@ def test_fit_requires_explicit_privacy():
         {"privacy_unit": dp.unit_of(contributions=1)},
         {"privacy_loss": dp.loss_of(epsilon=1)},
     ):
-        with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
+        with pytest.raises(TypeError, match="required keyword-only"):
             _ConstantEstimator().fit([1, 2, 3], **kwargs)
 
 

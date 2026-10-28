@@ -817,10 +817,8 @@ class Query(object):
         """Construct a measurement that releases a new fitted estimator clone.
 
         Use the current chain's output domain/metric and stability, and this query's
-        privacy allowance. Clone configuration now; clone again and ingest the DP
-        parameter release on each execution, without mutating the supplied estimator.
-        The resulting measurement remains composable. Only release executes it and
-        charges the Context.
+        privacy allowance. Each release returns an independent fitted estimator,
+        leaving the supplied estimator unchanged.
         """
         from sklearn.base import clone
         from opendp.extras.sklearn._estimator import DPEstimator

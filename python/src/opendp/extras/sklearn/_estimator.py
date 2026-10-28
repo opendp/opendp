@@ -29,9 +29,9 @@ class DPEstimator(BaseEstimator, ABC):
         X,
         y=None,
         *,
+        privacy_unit,
+        privacy_loss,
         domain=None,
-        privacy_unit=None,
-        privacy_loss=None,
     ):
         """Fit private data, mutating and returning self.
 
@@ -44,9 +44,6 @@ class DPEstimator(BaseEstimator, ABC):
         Each standalone fit incurs its own privacy loss. Per-record transform
         outputs are not private releases for a nonprivate downstream estimator.
         """
-        if privacy_unit is None or privacy_loss is None:
-            raise TypeError("fit() requires explicit privacy_unit and privacy_loss")
-
         data = SklearnFit(X, y=y)
         if domain is None:
             domain = sklearn_fit_domain(
