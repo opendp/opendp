@@ -79,11 +79,11 @@ def test_pca_skl_privacy_budget(n_changes):
         n_changes=n_changes,
     )
 
-    # One row replacement corresponds to two symmetric changes.
-    d_in = 2 * n_changes
+    # One replacement has symmetric distance 2; n_changes scales its budget.
+    unit_epsilon = epsilon / n_changes
     for measurement in [model._prepare_fitter(), model.measurement()]:
-        assert measurement.map(d_in) == pytest.approx(epsilon)
-        assert measurement.check(d_in, epsilon)
+        assert measurement.map(2) == pytest.approx(unit_epsilon)
+        assert measurement.check(2, unit_epsilon)
 
 
 def test_pca_skl():
