@@ -21,8 +21,10 @@ def make_np_clamp(
     :param input_domain: instance of `array2_domain(...)`
     :param input_metric: instance of `symmetric_distance()`
     :param norm: clamp each row to this norm. Required if data is not already bounded
-    :param p: designates L`p` norm
-    :param origin: norm clamping is centered on this point. Defaults to zero
+    :param p: designates L`p` norm, either 1 or 2
+    :param origin: center of the norm ball. Each row is centered by subtracting
+        `origin`, clamped, and then translated back. May be scalar zero or a
+        one-dimensional vector with one value per column. Defaults to zero
     """
     import opendp.prelude as dp
 
@@ -31,47 +33,55 @@ def make_np_clamp(
     dp.assert_features("contrib", "idealized-numerics")
 
     if not str(input_domain).startswith("NPArray2Domain"):
-        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
+        raise ValueError(
+            f"input_domain must be NPArray2Domain, got {input_domain}"
+        )  # pragma: no cover
     if input_domain.descriptor.T not in _NUMERIC_TYPES:
-        raise ValueError("input_domain must have a numeric element type")
+        raise ValueError(
+            f"input_domain element type must be numeric, got {input_domain.descriptor.T}"
+        )
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input_metric must be symmetric distance")
+        raise ValueError(f"input_metric must be symmetric distance, got {input_metric}")
 
     if isinstance(norm, bool) or not isinstance(norm, Real):
-        raise ValueError("norm must be a real number")
+        raise ValueError(f"norm must be a real number, got {norm!r}")
     norm = float(norm)
     if not np.isfinite(norm) or norm <= 0.0:
-        raise ValueError("norm must be finite and positive")
+        raise ValueError(f"norm must be finite and positive, got {norm!r}")
 
     if isinstance(p, bool) or not isinstance(p, Integral) or p not in {1, 2}:
-        raise ValueError("order p must be the integer 1 or 2")
+        raise ValueError(f"order p must be the integer 1 or 2, got {p!r}")
     p = int(p)
 
-    origin = np.asarray(0.0 if origin is None else origin)
+    origin_arg = 0.0 if origin is None else origin
+    try:
+        origin = np.asarray(origin_arg)
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"origin must be numeric, got {origin_arg!r}") from err
     if origin.dtype.kind not in {"i", "u", "f"}:
-        raise ValueError("origin must be numeric")
+        raise ValueError(f"origin must be numeric, got {origin_arg!r}")
     # Snapshot the caller's array: later mutations must not change this transformation.
     origin = origin.astype(float, copy=True)
 
     if origin.ndim not in {0, 1}:
-        raise ValueError("origin must be a scalar or one-dimensional")
+        raise ValueError(
+            f"origin must be a scalar or one-dimensional, got {origin_arg!r}"
+        )
     if not np.all(np.isfinite(origin)):
-        raise ValueError("origin must be finite")
+        raise ValueError(f"origin must be finite, got {origin_arg!r}")
 
     num_columns = input_domain.descriptor.num_columns
     if origin.ndim == 0 and origin != 0.0:
+        raise ValueError(f"scalar origin must be zero, got {origin_arg!r}")
+    if origin.ndim == 1:
         if num_columns is None:
             raise ValueError(
-                "input_domain must specify num_columns for a nonzero scalar origin"
-            )
-        origin = np.full(num_columns, origin.item(), dtype=float)
-    elif origin.ndim == 1:
-        if num_columns is None:
-            raise ValueError(
-                "input_domain must specify num_columns when origin is an array"
+                f"origin requires input_domain to specify num_columns, got {origin_arg!r}"
             )
         if origin.size != num_columns:
-            raise ValueError(f"origin must have num_columns={num_columns} values")
+            raise ValueError(
+                f"origin has {origin.size} values, but num_columns={num_columns}"
+            )
 
     # Reduce rounding-induced fallbacks; the final membership check enforces containment.
     margin = 1.0 - 4 * np.finfo(float).eps
@@ -79,9 +89,8 @@ def make_np_clamp(
     def _function(arg):
         with np.errstate(all="ignore"):
             # Compute in f64, scaling before taking the norm to avoid overflow.
-            raw = np.asarray(arg, dtype=float)
-            delta = raw - origin
-            centered = np.nan_to_num(delta)
+            raw = np.ascontiguousarray(arg, dtype=float)
+            centered = np.nan_to_num(raw - origin)
             scale = np.max(np.abs(centered), axis=1, keepdims=True, initial=0.0)
             unit = centered / np.where(scale == 0, 1.0, scale)
             unit_norm = np.linalg.norm(unit, ord=p, axis=1, keepdims=True)
@@ -91,7 +100,9 @@ def make_np_clamp(
             # Leave zero-origin coordinates alone to preserve subnormal results.
             np.nextafter(projected, origin, out=projected, where=origin != 0)
             # Preserve admissible rows exactly, avoiding subtraction/addition rounding.
-            candidate = np.where(_rows_within_norm(delta, norm, p), raw, projected)
+            candidate = np.where(
+                _rows_within_norm(raw - origin, norm, p), raw, projected
+            )
             # Apply the same containment predicate as the output domain on every row.
             # The origin is always admissible when rounding invalidates a projection.
             return np.where(

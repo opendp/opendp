@@ -16,6 +16,18 @@ def test_clamp():
     np.testing.assert_allclose(trans(data), expected)
 
 
+@pytest.mark.parametrize("p", [1, 2])
+def test_clamp_memory_layout_invariant(p):
+    data = np.random.default_rng(1).normal(size=(4, 16))
+    domain = dp.numpy.array2_domain(T=float, num_columns=16)
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=p)
+
+    expected = trans(data)
+    for layout in (np.asfortranarray(data), np.repeat(data, 2, axis=1)[:, ::2]):
+        np.testing.assert_array_equal(layout, data)
+        np.testing.assert_array_equal(trans(layout), expected)
+
+
 def test_clamp_nan_inf():
     space = dp.numpy.array2_domain(T=float), dp.symmetric_distance()
     trans = space >> then_np_clamp(norm=1.0, p=2)
@@ -56,11 +68,11 @@ def test_clamp_output_domain(dtype, T):
 
 def test_clamp_origin_validation_and_normalization():
     unknown_width = dp.numpy.array2_domain(T=float)
-    with pytest.raises(ValueError, match="must specify num_columns"):
+    with pytest.raises(ValueError, match="specify num_columns"):
         (unknown_width, dp.symmetric_distance()) >> then_np_clamp(
             norm=1.0, p=2, origin=np.array([1.0])
         )
-    with pytest.raises(ValueError, match="must specify num_columns"):
+    with pytest.raises(ValueError, match="scalar origin must be zero"):
         (unknown_width, dp.symmetric_distance()) >> then_np_clamp(
             norm=1.0, p=2, origin=1.0
         )
@@ -77,17 +89,21 @@ def test_clamp_origin_validation_and_normalization():
             norm=1.0, p=2, origin=np.array([1.0])
         )
 
-    scalar = (domain, dp.symmetric_distance()) >> then_np_clamp(
-        norm=1.0, p=2, origin=5.0
-    )
-    np.testing.assert_array_equal(scalar.output_domain.descriptor.origin, [5.0, 5.0])
+    with pytest.raises(ValueError, match="scalar origin must be zero"):
+        (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2, origin=5.0)
 
     vector = (domain, dp.symmetric_distance()) >> then_np_clamp(
         norm=1.0, p=2, origin=[1.0, 2.0]
     )
     assert vector.output_domain.member(vector(np.array([[3.0, 4.0]])))
 
-    for origin in [True, [True, False], ["1", "2"], [1 + 0j, 2 + 0j]]:
+    for origin in [
+        True,
+        [True, False],
+        ["1", "2"],
+        [1 + 0j, 2 + 0j],
+        [[1.0], [2.0, 3.0]],
+    ]:
         with pytest.raises(ValueError, match="origin must be numeric"):
             (domain, dp.symmetric_distance()) >> then_np_clamp(
                 norm=1.0, p=2, origin=origin
@@ -168,8 +184,8 @@ def test_clamp_extreme_norms_in_output_domain(p):
 @pytest.mark.parametrize(
     "p,norm,origin,data",
     [
-        (2, 1.0, 1.0, [[0.0, 0.0, 1e-5]]),
-        (1, np.finfo(float).max, 1e308, [[np.inf]]),
+        (2, 1.0, [1.0, 1.0, 1.0], [[0.0, 0.0, 1e-5]]),
+        (1, np.finfo(float).max, [1e308], [[np.inf]]),
         (2, 1.0, [1e10, -1e10], [[0.0, 0.0]]),
     ],
 )
@@ -186,7 +202,7 @@ def test_clamp_extreme_origin_in_output_domain(p, norm, origin, data):
 @pytest.mark.parametrize("T", [str, bool])
 def test_clamp_rejects_non_numeric_domain(T):
     domain = dp.numpy.array2_domain(T=T, num_columns=1)
-    with pytest.raises(ValueError, match="numeric element type"):
+    with pytest.raises(ValueError, match="element type must be numeric"):
         (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2)
 
 
@@ -199,9 +215,9 @@ def test_clamp_rejects_non_symmetric_metric():
 @pytest.mark.parametrize(
     "origin,norm,data",
     [
-        (1e16, 1e16, 1.0),
+        ([1e16], 1e16, 1.0),
         (0.0, 1.0, 0.5),
-        (1e308, np.finfo(float).max, 1.0),
+        ([1e308], np.finfo(float).max, 1.0),
     ],
 )
 def test_clamp_preserves_admissible_rows(origin, norm, data):
@@ -262,3 +278,28 @@ def test_clamp_exceptional_row_is_rowwise():
     np.testing.assert_array_equal(result[:1], trans(admissible))
     assert result[1, 0] > origin[0]
     assert trans.output_domain.member(result)
+
+
+@pytest.mark.parametrize("shape", [(10_000, 8), (8, 10_000)])
+def test_clamp_large_arrays(shape):
+    domain = dp.numpy.array2_domain(T=float, num_columns=shape[1])
+    trans = (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=2)
+    data = np.full(shape, 2.0)
+
+    result = trans(data)
+
+    assert result.shape == shape
+    assert trans.output_domain.member(result)
+
+
+def test_clamp_validation_errors_include_bad_value():
+    domain = dp.numpy.array2_domain(T=float, num_columns=1)
+
+    with pytest.raises(ValueError, match=r"norm must be a real number, got True"):
+        (domain, dp.symmetric_distance()) >> then_np_clamp(norm=True, p=1)
+
+    with pytest.raises(ValueError, match=r"order p must be the integer 1 or 2, got 3"):
+        (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=3)
+
+    with pytest.raises(ValueError, match=r"origin must be numeric, got 'bad'"):
+        (domain, dp.symmetric_distance()) >> then_np_clamp(norm=1.0, p=1, origin="bad")

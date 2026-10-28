@@ -160,3 +160,16 @@ def test_array2_domain_snapshots_origin():
     np.testing.assert_array_equal(stored, [1.0, 2.0])
     stored[:] = np.nan  # Descriptor edits must not change membership.
     assert domain.member(valid)
+
+
+@pytest.mark.parametrize("p", [1, 2])
+def test_array2_norm_memory_layout_invariant(p):
+    from opendp.extras.numpy._norm import _rows_within_norm
+
+    data = np.random.default_rng(0).normal(size=(4, 16))
+    data /= np.linalg.norm(data, ord=p, axis=1, keepdims=True)
+    expected = _rows_within_norm(data, 1.0, p)
+
+    for layout in (np.asfortranarray(data), np.repeat(data, 2, axis=1)[:, ::2]):
+        np.testing.assert_array_equal(layout, data)
+        np.testing.assert_array_equal(_rows_within_norm(layout, 1.0, p), expected)
