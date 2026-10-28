@@ -239,6 +239,17 @@ def test_middle_param():
     assert isinstance(dp_sum.release(), float)
 
 
+def test_query_resolves_transformations_when_allowed():
+    space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    transform = dp.t.make_identity(*space)
+    query = dp.Query(transform, dp.max_divergence(), d_in=1, d_out=1.0)
+
+    with pytest.raises(ValueError, match="not yet a measurement"):
+        query.resolve()
+    assert query.resolve(allow_transformations=True) is transform
+    assert query.resolve(allow_transformations=True)(10) == 10
+
+
 def test_query():
     space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     query = dp.Query(space, dp.max_divergence(), d_in=1, d_out=1.0).laplace()
