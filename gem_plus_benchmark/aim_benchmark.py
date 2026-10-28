@@ -32,16 +32,15 @@ Settings and their sources:
   Gem+ --config cpu: the paper config with a smaller network (dim 32,
              hidden 128x128) and GEM's default batch (syndata_size 1000).
              Label results from it as reduced for CPU.
-  --loss weighted is mbi's stddev-weighted L1: an experiment, not part of Gem+.
 
 Examples:
   # smoke test
   python aim_benchmark.py --dataset adult --data-dir aim_adult --config cpu --eps 1 --rounds 2
   # overnight, laptop
   python aim_benchmark.py --dataset adult --data-dir aim_adult --config cpu --eps 1 --out adult_eps1.csv
-  # LFS, comparing step counts and losses (4 Gem+ combinations, plus PGM)
+  # LFS, comparing step counts (2 Gem+ settings, plus PGM)
   python aim_benchmark.py --dataset lfs --estimator gem pgm --config cpu --eps 1 \\
-      --steps 100 1500 --loss unweighted weighted --trials 3
+      --steps 100 1500 --trials 3
   # GPU, paper settings
   python aim_benchmark.py --dataset adult --data-dir aim_adult --config paper \\
       --eps 0.1 1 10 --trials 5 --out gpu_results.csv
@@ -64,7 +63,9 @@ from pathlib import Path
 
 import jax
 
-jax.config.update("jax_enable_x64", True)  # before mbi is imported; both estimators need float64
+jax.config.update(
+    "jax_enable_x64", True
+)  # before mbi is imported; both estimators need float64
 
 import numpy as np
 import optax
@@ -104,7 +105,9 @@ def cdp_delta(rho, eps):
             amin = alpha
         else:
             amax = alpha
-    delta = math.exp((alpha - 1) * (alpha * rho - eps) + alpha * math.log1p(-1 / alpha)) / (alpha - 1.0)
+    delta = math.exp(
+        (alpha - 1) * (alpha * rho - eps) + alpha * math.log1p(-1 / alpha)
+    ) / (alpha - 1.0)
     return min(delta, 1.0)
 
 
@@ -146,7 +149,11 @@ def marginal_error(table, truth: pl.DataFrame, clique, n: int) -> float:
     attrs = list(clique)
     fitted = table.project_melted(attrs).rename({"len": "fitted"})
     joined = fitted.join(
-        truth.rename({"len": "true"}), on=attrs, how="full", coalesce=True, nulls_equal=True
+        truth.rename({"len": "true"}),
+        on=attrs,
+        how="full",
+        coalesce=True,
+        nulls_equal=True,
     ).fill_null(0)
     diff = joined["fitted"].cast(pl.Float64) - joined["true"].cast(pl.Float64)
     return float(diff.abs().sum() / n)
@@ -184,7 +191,6 @@ def make_estimator(setting, seed):
             dim=setting["dim"],
             hidden=setting["hidden"],
             seed=seed,
-            weighted=setting["loss"] == "weighted",
         )
     )
 
@@ -193,7 +199,7 @@ def label(setting):
     if setting is None:
         return "pgm"
     hidden = "x".join(map(str, setting["hidden"]))
-    return f"gem steps={setting['steps']} batch={setting['batch']} dim={setting['dim']} hidden={hidden} {setting['loss']}"
+    return f"gem steps={setting['steps']} batch={setting['batch']} dim={setting['dim']} hidden={hidden}"
 
 
 # ---------------------------------------------------------------------------
@@ -235,26 +241,55 @@ def parse_hidden(text: str) -> tuple[int, ...]:
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("--dataset", choices=["adult", "lfs"], default="adult")
-    p.add_argument("--data-dir", default="aim_adult", help="adult only: folder with adult.csv and adult-domain.json")
-    p.add_argument("--estimator", nargs="+", choices=["gem", "pgm"], default=["gem", "pgm"])
+    p.add_argument(
+        "--data-dir",
+        default="aim_adult",
+        help="adult only: folder with adult.csv and adult-domain.json",
+    )
+    p.add_argument(
+        "--estimator", nargs="+", choices=["gem", "pgm"], default=["gem", "pgm"]
+    )
 
     budget = p.add_mutually_exclusive_group()
-    budget.add_argument("--eps", nargs="+", type=float, help="converted to rho at --delta (default: 1)")
-    budget.add_argument("--rho", nargs="+", type=float, help="zCDP budget, used as given")
+    budget.add_argument(
+        "--eps", nargs="+", type=float, help="converted to rho at --delta (default: 1)"
+    )
+    budget.add_argument(
+        "--rho", nargs="+", type=float, help="zCDP budget, used as given"
+    )
     p.add_argument("--delta", type=float, default=1e-9, help="AIM paper: 1e-9")
 
     p.add_argument("--trials", type=int, default=1, help="AIM paper: 5; Gem+ paper: 3")
-    p.add_argument("--rounds", type=int, default=None, help="cap on AIM rounds (default 16 per column)")
+    p.add_argument(
+        "--rounds",
+        type=int,
+        default=None,
+        help="cap on AIM rounds (default 16 per column)",
+    )
     p.add_argument("--oneway", choices=["aim-paper", "opendp"], default="aim-paper")
 
-    p.add_argument("--config", choices=list(CONFIGS), default="paper", help="base Gem+ settings")
-    p.add_argument("--steps", nargs="+", type=int, help="override; several values run each")
-    p.add_argument("--batch", nargs="+", type=int, help="override; several values run each")
-    p.add_argument("--dim", nargs="+", type=int, help="override; several values run each")
-    p.add_argument("--hidden", nargs="+", type=parse_hidden, help="override, e.g. 128x128 1024x1024")
-    p.add_argument("--loss", nargs="+", choices=["unweighted", "weighted"], default=["unweighted"])
+    p.add_argument(
+        "--config", choices=list(CONFIGS), default="paper", help="base Gem+ settings"
+    )
+    p.add_argument(
+        "--steps", nargs="+", type=int, help="override; several values run each"
+    )
+    p.add_argument(
+        "--batch", nargs="+", type=int, help="override; several values run each"
+    )
+    p.add_argument(
+        "--dim", nargs="+", type=int, help="override; several values run each"
+    )
+    p.add_argument(
+        "--hidden",
+        nargs="+",
+        type=parse_hidden,
+        help="override, e.g. 128x128 1024x1024",
+    )
 
     p.add_argument("--out", default="results.csv")
     args = p.parse_args()
@@ -272,11 +307,8 @@ def main():
         args.batch or [base["batch"]],
         args.dim or [base["dim"]],
         args.hidden or [base["hidden"]],
-        args.loss,
     )
-    gem_settings = [
-        dict(steps=s, batch=b, dim=d, hidden=h, loss=loss) for s, b, d, h, loss in grid
-    ]
+    gem_settings = [dict(steps=s, batch=b, dim=d, hidden=h) for s, b, d, h in grid]
     for setting in gem_settings:
         if setting["steps"] % 50:
             p.error(f"steps must be multiples of 50, got {setting['steps']}")
@@ -292,7 +324,9 @@ def main():
     truth = {cl: df.group_by(list(cl)).len() for cl in pairs + triples}
 
     print(f"devices: {jax.devices()}")
-    print(f"{args.dataset}: {n:,} rows, {len(columns)} columns, contributions {CONTRIBUTIONS[args.dataset]}")
+    print(
+        f"{args.dataset}: {n:,} rows, {len(columns)} columns, contributions {CONTRIBUTIONS[args.dataset]}"
+    )
     print(f"AIM rounds T = {args.rounds or 16 * len(columns)}, one-ways: {args.oneway}")
     print(f"budgets (eps, rho): {[(e, round(r, 6)) for e, r in budgets]}")
     print(f"Adam {LEARNING_RATE}, cosine to {ETA_MIN} each round")
@@ -303,8 +337,22 @@ def main():
 
     out_path = Path(args.out)
     fields = [
-        "dataset", "estimator", "eps", "delta", "rho", "trial", "err2", "err3", "rounds", "seconds",
-        "config", "steps", "batch", "dim", "hidden", "loss", "oneway",
+        "dataset",
+        "estimator",
+        "eps",
+        "delta",
+        "rho",
+        "trial",
+        "err2",
+        "err3",
+        "rounds",
+        "seconds",
+        "config",
+        "steps",
+        "batch",
+        "dim",
+        "hidden",
+        "oneway",
     ]
     new_file = not out_path.exists()
     rows = []
@@ -318,8 +366,14 @@ def main():
                 for trial in range(args.trials):
                     estimator = make_estimator(setting, seed=trial)
                     table, seconds = run_once(
-                        path, columns, keys, CONTRIBUTIONS[args.dataset],
-                        estimator, rho, args.rounds, args.oneway,
+                        path,
+                        columns,
+                        keys,
+                        CONTRIBUTIONS[args.dataset],
+                        estimator,
+                        rho,
+                        args.rounds,
+                        args.oneway,
                     )
                     gem = setting is not None
                     row = {
@@ -329,8 +383,28 @@ def main():
                         "delta": args.delta if eps != "" else "",
                         "rho": round(rho, 6),
                         "trial": trial,
-                        "err2": round(float(np.mean([marginal_error(table, truth[c], c, n) for c in pairs])), 5),
-                        "err3": round(float(np.mean([marginal_error(table, truth[c], c, n) for c in triples])), 5),
+                        "err2": round(
+                            float(
+                                np.mean(
+                                    [
+                                        marginal_error(table, truth[c], c, n)
+                                        for c in pairs
+                                    ]
+                                )
+                            ),
+                            5,
+                        ),
+                        "err3": round(
+                            float(
+                                np.mean(
+                                    [
+                                        marginal_error(table, truth[c], c, n)
+                                        for c in triples
+                                    ]
+                                )
+                            ),
+                            5,
+                        ),
                         "rounds": estimator.calls - 1,
                         "seconds": round(seconds, 1),
                         "config": args.config if gem else "",
@@ -338,7 +412,6 @@ def main():
                         "batch": setting["batch"] if gem else "",
                         "dim": setting["dim"] if gem else "",
                         "hidden": "x".join(map(str, setting["hidden"])) if gem else "",
-                        "loss": setting["loss"] if gem else "",
                         "oneway": args.oneway,
                     }
                     writer.writerow(row)
@@ -356,7 +429,11 @@ def main():
         print(f"\neps={eps}  rho={rho:.6f}")
         print(f"  {'err2':>17}{'err3':>18}{'rounds':>9}{'seconds':>10}   setting")
         for setting in settings:
-            group = [r for lab, r in rows if lab == label(setting) and r["rho"] == round(rho, 6)]
+            group = [
+                r
+                for lab, r in rows
+                if lab == label(setting) and r["rho"] == round(rho, 6)
+            ]
 
             def fmt(key, digits):
                 vals = [r[key] for r in group]
