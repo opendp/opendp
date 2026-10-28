@@ -1,8 +1,12 @@
 import pytest
 import doctest
 import re
+from importlib.util import find_spec
 
 import opendp.prelude as dp
+
+if find_spec("sklearn") is None:
+    collect_ignore = ["src/opendp/extras/sklearn/_estimator.py"]  # pragma: no cover
 
 
 @pytest.fixture(autouse=True)

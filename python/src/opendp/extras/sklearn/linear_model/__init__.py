@@ -26,6 +26,8 @@ from opendp.extras.sklearn.linear_model._make_private_logistic_regression import
     make_private_logistic_regression as _make_private_logistic_regression,
 )
 from opendp.extras.sklearn._estimator import DPEstimator
+from opendp.extras.sklearn._domains import SklearnFitDomain
+from opendp._internal import _make_measurement
 
 __all__ = ["LinearRegression", "LogisticRegression"]
 
@@ -155,7 +157,8 @@ class LogisticRegression(DPEstimator):
     ``coef_``, ``intercept_``, and ``classes_``, and supports ``predict`` and ``predict_proba``.
 
     Data is expected as a single 2-dimensional array whose last column is the binary target
-    and whose remaining columns are the features.
+    and whose remaining columns are the features. Pass this array as ``X`` to standalone
+    ``fit`` or as ``SklearnFit(X)`` to a Context. A separate ``y`` is not supported.
 
     :param n_iters: Number of DP-SGD iterations. Also controls the budget split: the total privacy budget is divided across this many gradient steps, so more iterations means more noise per step.
     :param learning_rate: Step size for the gradient update applied to the weights each iteration.
@@ -181,28 +184,14 @@ class LogisticRegression(DPEstimator):
         self.C = C
         self.l1_ratio = l1_ratio
 
-    def _prepare_fit_query(self, X, y=None, **fit_params):
-        """Normalize fit arguments into a single input query.
-
-        This estimator expects the target to already be the **last column** of the
-        query's data, with the preceding columns as features. The target is not passed
-        separately: ``y`` is accepted for scikit-learn signature compatibility but is not
-        used to relocate or attach a target column, and supplying it has no effect on the
-        released model. Fit metadata (``fit_params``) is not supported and is rejected.
-
-        :param X: a Context query whose data has the binary target as its final column
-        :param y: accepted for sklearn compatibility; ignored (the target must already be the last column of ``X``)
-        :param fit_params: not supported; any fit metadata raises
-        :return: the input query ``X`` unchanged
-        :raises TypeError: if any ``fit_params`` are supplied
-        """
-
-        self._reject_fit_params(fit_params)
-        return X  # we are assuming that the last column is the target (open design question)
-
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
-        return _make_private_logistic_regression(
-            input_domain,
+        fit_desc = input_domain.cast(SklearnFitDomain)
+        if fit_desc.y is not None:
+            raise ValueError(
+                "LogisticRegression expects the target in the last column of X"
+            )
+        measurement = _make_private_logistic_regression(
+            fit_desc.X,
             input_metric,
             output_measure,
             d_in,
@@ -213,6 +202,13 @@ class LogisticRegression(DPEstimator):
             penalty=self.penalty,
             C=self.C,
             l1_ratio=self.l1_ratio,
+        )
+        return _make_measurement(
+            input_domain,
+            input_metric,
+            measurement.output_measure,
+            lambda data: measurement(data.X),
+            measurement.map,
         )
 
     def _ingest_release(self, release):
