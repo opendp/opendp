@@ -182,3 +182,18 @@ def test_privacy_filter():
     assert qbl_filter.privacy_loss(1) == 1.0
     qbl_filter(m_count)
     assert qbl_filter.privacy_loss(1) == 2.0
+
+
+def test_fully_adaptive_composition_d_in():
+    o_ac = dp.c.make_fully_adaptive_composition(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+        d_in=1,
+    )
+    qbl = o_ac([1, 2, 3])
+    qbl(dp.t.make_count(*o_ac.input_space) >> dp.m.then_laplace(1.0))
+    assert qbl.privacy_loss(1) == 1.0
+
+    with pytest.raises(dp.OpenDPException, match="must match the d_in passed"):
+        qbl.privacy_loss(2)
