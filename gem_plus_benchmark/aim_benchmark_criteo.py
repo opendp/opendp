@@ -57,7 +57,9 @@ from pathlib import Path
 
 import jax
 
-jax.config.update("jax_enable_x64", True)  # before mbi is imported; both estimators need float64
+jax.config.update(
+    "jax_enable_x64", True
+)  # before mbi is imported; both estimators need float64
 
 import numpy as np
 import optax
@@ -97,7 +99,9 @@ def cdp_delta(rho, eps):
             amin = alpha
         else:
             amax = alpha
-    delta = math.exp((alpha - 1) * (alpha * rho - eps) + alpha * math.log1p(-1 / alpha)) / (alpha - 1.0)
+    delta = math.exp(
+        (alpha - 1) * (alpha * rho - eps) + alpha * math.log1p(-1 / alpha)
+    ) / (alpha - 1.0)
     return min(delta, 1.0)
 
 
@@ -132,7 +136,9 @@ def encode(col: pl.Series) -> tuple[pl.Series, int]:
     return col.rank("dense").cast(pl.Int32) - 1, col.n_unique()
 
 
-def prepare(input_path: str, n_columns: int, cache: Path) -> tuple[str, str, dict[str, int]]:
+def prepare(
+    input_path: str, n_columns: int, cache: Path
+) -> tuple[str, str, dict[str, int]]:
     """Codes the first n_columns usable columns, cached as CSV. Returns (name, path, sizes)."""
     name = f"criteo-{Path(input_path).name.replace('=', '')}-first{n_columns}"
     data_path, domain_path = cache / f"{name}.csv", cache / f"{name}-domain.json"
@@ -145,12 +151,17 @@ def prepare(input_path: str, n_columns: int, cache: Path) -> tuple[str, str, dic
 
     # Drop IDs and arrays (Gem+ paper)
     usable = [
-        c for c, dtype in df.schema.items()
+        c
+        for c, dtype in df.schema.items()
         if c not in ID_COLUMNS and not isinstance(dtype, (pl.List, pl.Array, pl.Struct))
     ]
-    print(f"dropped {df.width - len(usable)} ID/array columns, kept {len(usable)} (paper: {PAPER_COLUMNS})")
+    print(
+        f"dropped {df.width - len(usable)} ID/array columns, kept {len(usable)} (paper: {PAPER_COLUMNS})"
+    )
     if n_columns > len(usable):
-        raise SystemExit(f"--columns {n_columns} is more than the {len(usable)} usable columns")
+        raise SystemExit(
+            f"--columns {n_columns} is more than the {len(usable)} usable columns"
+        )
 
     coded, sizes = {}, {}
     for c in usable[:n_columns]:
@@ -166,7 +177,11 @@ def marginal_error(table, truth: pl.DataFrame, clique, n: int) -> float:
     attrs = list(clique)
     fitted = table.project_melted(attrs).rename({"len": "fitted"})
     joined = fitted.join(
-        truth.rename({"len": "true"}), on=attrs, how="full", coalesce=True, nulls_equal=True
+        truth.rename({"len": "true"}),
+        on=attrs,
+        how="full",
+        coalesce=True,
+        nulls_equal=True,
     ).fill_null(0)
     diff = joined["fitted"].cast(pl.Float64) - joined["true"].cast(pl.Float64)
     return float(diff.abs().sum() / n)
@@ -194,7 +209,11 @@ def make_estimator(name, config, seed):
     schedule = optax.cosine_decay_schedule(
         LEARNING_RATE, decay_steps=setting["steps"], alpha=ETA_MIN / LEARNING_RATE
     )
-    return Counted(functools.partial(gem_plus, optimizer=optax.adam(schedule), seed=seed, **setting))
+    return Counted(
+        functools.partial(
+            gem_plus, optimizer=optax.adam(schedule), seed=seed, **setting
+        )
+    )
 
 
 # One release
@@ -202,7 +221,10 @@ def make_estimator(name, config, seed):
 
 def run_once(path, sizes, estimator, rho, rounds):
     columns = list(sizes)
-    aim_kwargs = {"estimator": estimator, "oneway_split": 0.9 * len(columns) / (16 * len(columns))}
+    aim_kwargs = {
+        "estimator": estimator,
+        "oneway_split": 0.9 * len(columns) / (16 * len(columns)),
+    }
     if rounds is not None:
         aim_kwargs["rounds"] = rounds
     context = dp.Context.compositor(
@@ -226,20 +248,39 @@ def run_once(path, sizes, estimator, rho, rounds):
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--input", required=True, help="one day: a day_int=N folder, or a parquet file")
-    p.add_argument("--columns", type=int, default=30, help="use the first N usable columns (Table 1: 30)")
-    p.add_argument("--estimator", nargs="+", choices=["gem", "pgm"], default=["gem", "pgm"])
-    p.add_argument("--config", choices=list(CONFIGS), default="paper", help="Gem+ settings")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--input", required=True, help="one day: a day_int=N folder, or a parquet file"
+    )
+    p.add_argument(
+        "--columns",
+        type=int,
+        default=30,
+        help="use the first N usable columns (Table 1: 30)",
+    )
+    p.add_argument(
+        "--estimator", nargs="+", choices=["gem", "pgm"], default=["gem", "pgm"]
+    )
+    p.add_argument(
+        "--config", choices=list(CONFIGS), default="paper", help="Gem+ settings"
+    )
     p.add_argument("--eps", nargs="+", type=float, default=[1.0])
-    p.add_argument("--delta", type=float, default=1e-6, help="Gem+ paper, Table 1: 1e-6")
+    p.add_argument(
+        "--delta", type=float, default=1e-6, help="Gem+ paper, Table 1: 1e-6"
+    )
     p.add_argument("--trials", type=int, default=3, help="Gem+ paper: 3")
-    p.add_argument("--rounds", type=int, default=None, help="cap on AIM rounds, for smoke tests")
+    p.add_argument(
+        "--rounds", type=int, default=None, help="cap on AIM rounds, for smoke tests"
+    )
     p.add_argument("--out", default="criteo_results.csv")
     args = p.parse_args()
 
     out_path = Path(args.out)
-    name, path, sizes = prepare(args.input, args.columns, out_path.parent / "criteo_cache")
+    name, path, sizes = prepare(
+        args.input, args.columns, out_path.parent / "criteo_cache"
+    )
     columns = list(sizes)
     df = pl.read_csv(path)
     n = df.height
@@ -248,14 +289,34 @@ def main():
     budgets = [(eps, cdp_rho(eps, args.delta)) for eps in args.eps]
 
     print(f"devices: {jax.devices()}")
-    print(f"{name}: {n:,} rows, {len(columns)} columns, domain sizes {sorted(sizes.values())}")
-    print(f"AIM rounds T = {args.rounds or 16 * len(columns)}; budgets (eps, rho): "
-          f"{[(e, round(r, 6)) for e, r in budgets]}")
-    print(f"computing true marginals ({len(pairs)} pairs, {len(triples)} triples)...", flush=True)
+    print(
+        f"{name}: {n:,} rows, {len(columns)} columns, domain sizes {sorted(sizes.values())}"
+    )
+    print(
+        f"AIM rounds T = {args.rounds or 16 * len(columns)}; budgets (eps, rho): "
+        f"{[(e, round(r, 6)) for e, r in budgets]}"
+    )
+    print(
+        f"computing true marginals ({len(pairs)} pairs, {len(triples)} triples)...",
+        flush=True,
+    )
     truth = {cl: df.group_by(list(cl)).len() for cl in pairs + triples}
 
-    fields = ["dataset", "rows", "columns", "estimator", "config", "eps", "delta", "rho",
-              "trial", "err2", "err3", "rounds", "seconds"]
+    fields = [
+        "dataset",
+        "rows",
+        "columns",
+        "estimator",
+        "config",
+        "eps",
+        "delta",
+        "rho",
+        "trial",
+        "err2",
+        "err3",
+        "rounds",
+        "seconds",
+    ]
     new_file = not out_path.exists()
     rows = []
     with out_path.open("a", newline="") as f:
@@ -268,25 +329,56 @@ def main():
                 for trial in range(args.trials):
                     estimator = make_estimator(est, args.config, seed=trial)
                     try:
-                        table, seconds = run_once(path, sizes, estimator, rho, args.rounds)
+                        table, seconds = run_once(
+                            path, sizes, estimator, rho, args.rounds
+                        )
                     except Exception:
                         print(f"FAILED {est} eps={eps} trial {trial + 1}", flush=True)
                         traceback.print_exc()
                         continue
                     row = {
-                        "dataset": name, "rows": n, "columns": len(columns),
-                        "estimator": est, "config": args.config if est == "gem" else "",
-                        "eps": eps, "delta": args.delta, "rho": round(rho, 6), "trial": trial,
-                        "err2": round(float(np.mean([marginal_error(table, truth[c], c, n) for c in pairs])), 5),
-                        "err3": round(float(np.mean([marginal_error(table, truth[c], c, n) for c in triples])), 5),
+                        "dataset": name,
+                        "rows": n,
+                        "columns": len(columns),
+                        "estimator": est,
+                        "config": args.config if est == "gem" else "",
+                        "eps": eps,
+                        "delta": args.delta,
+                        "rho": round(rho, 6),
+                        "trial": trial,
+                        "err2": round(
+                            float(
+                                np.mean(
+                                    [
+                                        marginal_error(table, truth[c], c, n)
+                                        for c in pairs
+                                    ]
+                                )
+                            ),
+                            5,
+                        ),
+                        "err3": round(
+                            float(
+                                np.mean(
+                                    [
+                                        marginal_error(table, truth[c], c, n)
+                                        for c in triples
+                                    ]
+                                )
+                            ),
+                            5,
+                        ),
                         "rounds": estimator.calls - 1,
                         "seconds": round(seconds, 1),
                     }
                     writer.writerow(row)
                     f.flush()
                     rows.append(row)
-                    print(f"{est} eps={eps} trial {trial + 1}/{args.trials}  err2={row['err2']:.4f}  "
-                          f"err3={row['err3']:.4f}  rounds={row['rounds']}  {row['seconds']:.0f}s", flush=True)
+                    print(
+                        f"{est} eps={eps} trial {trial + 1}/{args.trials}  err2={row['err2']:.4f}  "
+                        f"err3={row['err3']:.4f}  rounds={row['rounds']}  {row['seconds']:.0f}s",
+                        flush=True,
+                    )
 
     print("\nsummary (mean ± sd over trials)")
     for eps, _ in budgets:
@@ -297,8 +389,10 @@ def main():
                 continue
             err3 = [r["err3"] for r in group]
             sd = statistics.stdev(err3) if len(err3) > 1 else 0.0
-            print(f"  eps={eps}  {est}: err3 {statistics.mean(err3):.4f} ± {sd:.4f} over {len(group)} runs, "
-                  f"{statistics.mean(r['seconds'] for r in group):.0f}s per run")
+            print(
+                f"  eps={eps}  {est}: err3 {statistics.mean(err3):.4f} ± {sd:.4f} over {len(group)} runs, "
+                f"{statistics.mean(r['seconds'] for r in group):.0f}s per run"
+            )
     print(f"\nresults appended to {out_path}")
 
 
