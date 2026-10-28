@@ -16,6 +16,7 @@ from mbi import (
     LinearMeasurement,
     MarginalLossFn,
 )
+from mbi.extensions.mixture_of_products import MixtureOfProducts
 from mbi.clique_utils import maximal_subset
 from mbi.estimation import minimum_variance_unbiased_total, Estimator
 from collections.abc import Sequence
@@ -53,8 +54,9 @@ class GemPlusModel:
     ) -> "GemPlusModel":
         """New model with a fixed Gaussian batch z and GEM's generator.
 
-        Linear layers use PyTorch's default initialization; batch norm starts at
-        gamma = 1, beta = 0. The output layer has one logit per attribute value.
+        Weights start as in GEM: uniform on ±1/sqrt(fan_in), PyTorch's nn.Linear
+        default, and batch norm with gamma = 1, beta = 0. The output layer has
+        one score per value of every attribute.
 
         :param domain: the mbi Domain to generate over
         :param total: number of rows the marginals are scaled to
@@ -64,7 +66,8 @@ class GemPlusModel:
         :param seed: random seed for z and the initial weights
         :raises ValueError: if batch < 2, since batch norm needs batch statistics
         """
-        hidden = (dim * 2, dim * 2)
+        if hidden is None:
+            hidden = (dim * 2, dim * 2)
         if batch < 2:
             raise ValueError(
                 "batch must be at least 2 (batch norm uses batch statistics)"
@@ -113,87 +116,31 @@ class GemPlusModel:
         return h @ self._params["out"]["W"] + self._params["out"]["b"]
 
     @functools.cached_property
-    def _products(self) -> dict[str, jax.Array]:
-        h = self._apply()
-        out = {}
-        idx = 0
-        for col in self.domain.attributes:
-            n = self.domain[col]
-            out[col] = jax.nn.softmax(h[:, idx : idx + n], axis=1)
-            idx += n
-        return out
-
-    def products(self) -> dict[str, jax.Array]:
-        """Per-attribute probabilities for each of the B components.
+    def _mixture(self) -> MixtureOfProducts:
+        """The network's output as mbi's mixture of products.
 
         Computed once per model: weights are fixed after construction, and AIM
         calls project() once per candidate clique every round."""
-        return self._products
+        h, logits, idx = self._apply(), {}, 0
+        for col in self.domain.attributes:
+            n = self.domain[col]
+            logits[col] = h[:, idx : idx + n]
+            idx += n
+        return MixtureOfProducts(logits, self.domain, self.total)
 
     def project(self, attrs: str | Sequence[str]) -> Factor:
-        """Marginal over ``attrs``, scaled to ``total`` rows.
-
-        Each component is a product distribution, so its marginal is the outer
-        product of its per-attribute probabilities. The model's marginal is the
-        average over the B components.
-
-        :param attrs: an attribute name, or a sequence of them
-        :return: a Factor over ``attrs`` whose cells sum to ``total``
-        """
-
-        if isinstance(attrs, str):
-            attrs = (attrs,)
-        attrs = tuple(attrs)
-
-        letters = "bcdefghijklmnopqrstuvwxyz"[: len(attrs)]
-        formula = ",".join(f"a{l}" for l in letters) + "->" + "".join(letters)
-
-        products = self.products()
-        components = [products[a] for a in attrs]
-
-        values = jnp.einsum(formula, *components) * self.total / self.num_components()
-        return Factor(self.domain.project(attrs), values)
+        """Marginal over ``attrs``, scaled to ``total`` rows: the average over the
+        B components of each component's product distribution."""
+        return self._mixture.project(attrs)
 
     def supports(self, attrs: str | Sequence[str]) -> bool:
         """A mixture of products can answer any marginal over its domain."""
-        if isinstance(attrs, str):
-            attrs = (attrs,)
-        return set(attrs) <= set(self.domain.attributes)
+        return self.domain.supports(attrs)
 
-    def synthetic_data(self, rows=None, method=None) -> Dataset:
-        """Generate synthetic data via randomized rounding. `method` is accepted for
+    def synthetic_data(self, rows=None, method=None):
+        """Synthetic rows via randomized rounding. ``method`` is accepted for
         compatibility with MarkovRandomField.synthetic_data and ignored."""
-        total = max(1, int(rows or self.total))
-        rng = np.random.default_rng()
-        products = self.products()
-        subtotal = total // self.num_components() + 1
-
-        blocks = []
-        for k in range(self.num_components()):
-            comp_data = {}
-            for col in self.domain.attributes:
-                counts = np.asarray(products[col][k])
-                counts = counts * subtotal / counts.sum()
-                frac, integ = np.modf(counts)
-                integ = integ.astype(int)
-                extra = subtotal - integ.sum()
-                if extra > 0:
-                    p = frac / frac.sum()
-                    idx = rng.choice(len(counts), extra, replace=False, p=p)
-                    integ[idx] += 1
-                vals = np.repeat(np.arange(len(counts)), integ)
-                rng.shuffle(vals)
-                comp_data[col] = vals
-            blocks.append(
-                np.stack([comp_data[col] for col in self.domain.attributes], axis=1)
-            )
-
-        full_data = np.concatenate(blocks, axis=0)
-        rng.shuffle(full_data)
-        full_data = full_data[:total]
-
-        data = {col: full_data[:, i] for i, col in enumerate(self.domain.attributes)}
-        return Dataset(data, self.domain)
+        return self._mixture.synthetic_data(rows)
 
 
 def _marginal_closure(domain: Domain, measurements: list) -> list:
@@ -256,7 +203,6 @@ class GemPlusState(NamedTuple):
 
     model: GemPlusModel
     opt_state: Any
-    loss: jax.Array
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -291,9 +237,7 @@ class GemPlusEstimator(Estimator):
                 hidden=self.hidden,
                 seed=self.seed,
             )
-        return GemPlusState(
-            model, self.optimizer.init(model._params), jnp.asarray(jnp.inf)
-        )
+        return GemPlusState(model, self.optimizer.init(model._params))
 
     def _step(self, state: GemPlusState, loss_fn, known_total, constraints=()):
         model = state.model
@@ -307,13 +251,13 @@ class GemPlusEstimator(Estimator):
             )
             return loss_fn(marginals)
 
-        loss, grads = jax.value_and_grad(objective)(model._params)
+        _, grads = jax.value_and_grad(objective)(model._params)
         updates, opt_state = self.optimizer.update(
             grads, state.opt_state, model._params
         )
         params = optax.apply_updates(model._params, updates)
         return GemPlusState(
-            GemPlusModel(params, model._z, model.domain, model.total), opt_state, loss
+            GemPlusModel(params, model._z, model.domain, model.total), opt_state
         )
 
     def _finalize(self, state, known_total, constraints=()):
