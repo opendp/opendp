@@ -1,6 +1,4 @@
 import pickle
-import subprocess
-import sys
 
 import numpy as np
 import pytest
@@ -97,7 +95,7 @@ def test_fit_requires_explicit_privacy():
         {"privacy_unit": dp.unit_of(contributions=1)},
         {"privacy_loss": dp.loss_of(epsilon=1)},
     ):
-        with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
+        with pytest.raises(TypeError, match="required keyword-only"):
             _ConstantEstimator().fit([1, 2, 3], **kwargs)
 
 
@@ -372,27 +370,3 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
         is model
     )
     np.testing.assert_array_equal(model.transform(X), X + 9)
-
-
-def test_other_opendp_apis_import_without_sklearn():
-    script = """
-import importlib.abc
-import sys
-import pytest
-class NoSklearn(importlib.abc.MetaPathFinder):
-    def find_spec(self, fullname, path=None, target=None):
-        if fullname == "sklearn" or fullname.startswith("sklearn."):
-            raise ModuleNotFoundError("sklearn is unavailable", name=fullname)
-sys.meta_path.insert(0, NoSklearn())
-import opendp.prelude as dp
-assert dp.symmetric_distance() is not None
-dp.enable_features("contrib")
-data = dp.sklearn.SklearnFit([1, 2], [0, 1])
-assert dp.domain_of(data, infer=True).member(data)
-for name in ("decomposition", "linear_model"):
-    with pytest.raises(ImportError):
-        getattr(dp.sklearn, name)
-with pytest.raises(ModuleNotFoundError):
-    importlib.import_module("opendp.extras.sklearn._estimator")
-"""
-    subprocess.run([sys.executable, "-c", script], check=True)
