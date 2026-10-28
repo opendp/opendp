@@ -586,10 +586,13 @@ def _make_oneway_marginals(
 
         try:
             _make(scale, threshold=None)
+            # This must pass.
             threshold: Optional[int] = None  # pragma: no cover
         except OpenDPException:
             compare_t = lambda t: _make(scale, t).map(d_in)[1] < d_out[1]  # type: ignore[index,arg-type]
-            threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]
+            print(f"Threshold at compare_t: {compare_t}")
+            # For some reason, compare_t will be 0 at high delta and then cause an error.
+            threshold = binary_search(compare_t, T=float)  # type: ignore[assignment]
 
     else:
         scale = binary_search_param(_make, d_in, d_out, T=float)
