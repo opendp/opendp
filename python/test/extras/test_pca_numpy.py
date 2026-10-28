@@ -68,6 +68,24 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
         assert pca.check(2, 1.0)
 
 
+@pytest.mark.parametrize("n_changes", [1, 2])
+def test_pca_skl_privacy_budget(n_changes):
+    epsilon = 1.0
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=epsilon,
+        row_norm=1.0,
+        n_samples=101,
+        n_features=2,
+        n_changes=n_changes,
+    )
+
+    # One replacement has symmetric distance 2; n_changes scales its budget.
+    unit_epsilon = epsilon / n_changes
+    for measurement in [model._prepare_fitter(), model.measurement()]:
+        assert measurement.map(2) == pytest.approx(unit_epsilon)
+        assert measurement.check(2, unit_epsilon)
+
+
 def test_pca_skl():
     num_columns = 4
     num_rows = 10_000
