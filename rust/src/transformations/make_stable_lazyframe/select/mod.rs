@@ -148,7 +148,7 @@ where
                 bounds
                     .0
                     .iter()
-                    .filter(|b| unaffected(&b.by, &changed_columns))
+                    .filter(|b| preserves_length && unaffected(&b.by, &changed_columns))
                     .cloned()
                     .collect(),
             )
