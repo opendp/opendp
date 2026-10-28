@@ -72,19 +72,33 @@ def fake_function(
     lib_function.restype = ctypes.c_double
 
     output = c_to_py(lib_function(c_fake_argument))
-    try:
-        output.__opendp_dict__ = {
-            '__function__': 'fake_function',
-            '__module__': 'fake_module',
-            '__kwargs__': {
-                'fake_argument': fake_argument
-            },
-        }
-    except AttributeError:  # pragma: no cover
-        pass
     return output
 ";
     assert_eq!(actual_code, expected_code);
+}
+
+#[test]
+fn test_python_serialization_return_types() {
+    let typemap: HashMap<String, String> =
+        serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
+    for return_type in [
+        "AnyMeasurement *",
+        "AnyTransformation *",
+        "AnyDomain *",
+        "AnyMetric *",
+        "AnyMeasure *",
+    ] {
+        let mut function = make_function(make_argument(), make_argument());
+        function.ret.c_type = Some(format!("FfiResult<{return_type}>"));
+        let code = python::generate_function("fake_module", &function, &typemap, &HashMap::new());
+        assert!(code.contains("output.__opendp_dict__"), "{return_type}");
+    }
+    for return_type in ["AnyObject *", "AnyQueryable *", "int", "char *"] {
+        let mut function = make_function(make_argument(), make_argument());
+        function.ret.c_type = Some(format!("FfiResult<{return_type}>"));
+        let code = python::generate_function("fake_module", &function, &typemap, &HashMap::new());
+        assert!(!code.contains("output.__opendp_dict__"), "{return_type}");
+    }
 }
 
 #[test]
