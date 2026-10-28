@@ -68,7 +68,6 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
         assert pca.check(2, 1.0)
 
 
-
 @pytest.mark.parametrize("n_changes", [1, 2])
 def test_pca_skl_privacy_budget(n_changes):
     model = dp.sklearn.decomposition.PCA(
