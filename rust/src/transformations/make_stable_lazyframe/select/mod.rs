@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::FrameDistance;
+use crate::metrics::{Bounds, FrameDistance};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
@@ -50,7 +50,8 @@ where
         context: Context::RowByRow,
     };
     let t_exprs = exprs
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -71,7 +72,61 @@ where
         }
     }
 
-    let output_domain = DslPlanDomain::new(series_domains)?;
+    // A column is unchanged only when its original name and values are retained.
+    fn is_identity(expr: &Expr, name: &PlSmallStr) -> bool {
+        match expr {
+            Expr::Alias(inner, _) => is_identity(inner, name),
+            Expr::Column(column) => column == name,
+            _ => false,
+        }
+    }
+
+    let retained_columns = exprs
+        .iter()
+        .zip(t_exprs.iter())
+        .filter(|(expr, t)| is_identity(expr, &t.output_domain.column.name))
+        .map(|(_, t)| t.output_domain.column.name.clone())
+        .collect::<HashSet<_>>();
+
+    let changed_columns = middle_domain
+        .series_domains
+        .iter()
+        .map(|s| s.name.clone())
+        .chain(t_exprs.iter().map(|t| t.output_domain.column.name.clone()))
+        .filter(|name| !retained_columns.contains(name))
+        .collect::<HashSet<_>>();
+
+    fn unaffected(by: &HashSet<Expr>, changed_columns: &HashSet<PlSmallStr>) -> bool {
+        if changed_columns.is_empty() {
+            return true;
+        }
+        // Selectors may depend on columns without exposing them through root_names().
+        if by
+            .iter()
+            .any(|expr| expr.clone().meta().has_multiple_outputs())
+        {
+            return false;
+        }
+        let root_names = by
+            .iter()
+            .flat_map(|expr| expr.clone().meta().root_names())
+            .collect::<HashSet<_>>();
+
+        root_names.is_disjoint(changed_columns)
+    }
+
+    // A literal-only select may change the number of rows.
+    let preserves_length = exprs
+        .iter()
+        .any(|expr| !expr.clone().meta().root_names().is_empty());
+
+    let margins = middle_domain
+        .margins
+        .iter()
+        .filter(|m| preserves_length && unaffected(&m.by, &changed_columns))
+        .cloned()
+        .collect();
+    let output_domain = DslPlanDomain::new_with_margins(series_domains, margins)?;
 
     let t_select = Transformation::new(
         middle_domain,
@@ -88,7 +143,16 @@ where
                 options,
             })
         }),
-        StabilityMap::new(Clone::clone),
+        StabilityMap::new(move |bounds: &Bounds| {
+            Bounds(
+                bounds
+                    .0
+                    .iter()
+                    .filter(|b| unaffected(&b.by, &changed_columns))
+                    .cloned()
+                    .collect(),
+            )
+        }),
     )?;
 
     t_prior >> t_select
