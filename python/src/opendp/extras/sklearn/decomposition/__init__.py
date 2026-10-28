@@ -244,10 +244,15 @@ class PCA(SklearnPCA, DPTransformer):
         self.clip_norm = clip_norm
         self.center = center
 
-    def fit(self, X, y=None, *, domain=None, privacy_unit=None, privacy_loss=None):
+    def fit(self, X, y=None, *, privacy_unit, privacy_loss, domain=None):
         """Fit privately through the shared estimator API, never sklearn's fitter."""
         return DPTransformer.fit(
-            self, X, y, domain=domain, privacy_unit=privacy_unit, privacy_loss=privacy_loss,
+            self,
+            X,
+            y,
+            privacy_unit=privacy_unit,
+            privacy_loss=privacy_loss,
+            domain=domain,
         )
 
     def fit_transform(self, X, y=None, **kwargs):

@@ -657,7 +657,7 @@ def test_pca_fitted_methods_and_error_paths():
         estimator.get_covariance()
     with pytest.raises(AttributeError):
         estimator.get_precision()
-    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
+    with pytest.raises(TypeError, match="required keyword-only"):
         estimator.fit_transform(public)
 
     with pytest.raises(TypeError, match="expected a PCARelease"):
@@ -782,13 +782,20 @@ def _legacy_data():
 
 
 def test_pca_standalone_requires_privacy_and_public_size():
+    from inspect import signature
+    from opendp.extras.sklearn._estimator import DPEstimator
     from opendp.extras.sklearn.decomposition import PCA
 
+    assert signature(PCA.fit) == signature(DPEstimator.fit)
     model = PCA(clip_norm=1.0)
-    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
-        model.fit(_legacy_data())
+    with pytest.raises(TypeError, match="required keyword-only"):
+        model.fit(_legacy_data())  # type: ignore[call-arg]
     with pytest.raises(ValueError, match="known input-domain size"):
-        model.fit(_legacy_data(), privacy_unit=dp.unit_of(contributions=2), privacy_loss=dp.loss_of(epsilon=1))
+        model.fit(
+            _legacy_data(),
+            privacy_unit=dp.unit_of(contributions=2),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
 
 
 def test_pca_fitted_model_pickle_preserves_inference():
