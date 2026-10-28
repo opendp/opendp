@@ -250,16 +250,6 @@ impl_CheckAtom_number!(chrono::NaiveDate);
 #[cfg(feature = "polars")]
 impl_CheckAtom_number!(chrono::NaiveTime);
 
-impl CheckAtom for (f32, f32) {
-    fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
-        bounds.member(self)
-    }
-}
-impl CheckAtom for (f64, f64) {
-    fn is_bounded(&self, bounds: Bounds<Self>) -> Fallible<bool> {
-        bounds.member(self)
-    }
-}
 impl_CheckAtom_number!(RBig IBig);
 
 macro_rules! impl_CheckAtom_simple {
