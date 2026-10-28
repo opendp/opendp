@@ -209,7 +209,7 @@ class AIM(Algorithm):
                 if not is_significant:
                     d_step *= 4
 
-                d_spent = qbl.privacy_loss(d_marginals)
+                d_spent = qbl.privacy_loss()
                 d_step = min(d_step, max(prior(d_out - d_spent), 0))
 
             return current_marginals, current_model
@@ -218,9 +218,8 @@ class AIM(Algorithm):
             t_marginals
             >> make_privacy_filter(
                 make_fully_adaptive_composition(
-                    *t_marginals.output_space, output_measure
+                    *t_marginals.output_space, output_measure, d_in=d_marginals
                 ),
-                d_in=d_marginals,
                 d_out=d_out,
             )
             >> _new_pure_function(function)

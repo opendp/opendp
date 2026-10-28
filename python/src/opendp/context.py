@@ -613,7 +613,7 @@ class Context(object):
         """When the query losses are static, returns the list of consumed privacy losses,
         otherwise returns the current privacy loss of the queryable."""
         if isinstance(self.queryable, OdometerQueryable):
-            return self.queryable.privacy_loss(self.d_in)
+            return self.queryable.privacy_loss()
         return self.d_mids_consumed.copy()
 
     def remaining_privacy_loss(self):
@@ -632,7 +632,7 @@ class Context(object):
                 else:
                     return a - b
 
-            return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
+            return _sub(self.d_out, self.queryable.privacy_loss())
 
         return None if self.d_mids is None else self.d_mids.copy()
 
@@ -1102,13 +1102,14 @@ def _normalize_compositor(
             input_domain=domain,
             input_metric=input_metric,
             output_measure=output_measure,
+            d_in=d_in,
         )
 
         inf = float("inf")
         if d_out in {inf, (inf, inf), (inf, 1.0)}:
             return odometer, None, None
 
-        return make_privacy_filter(odometer, d_in, d_out), None, d_out
+        return make_privacy_filter(odometer, d_out), None, d_out
 
     def _mul(dist, scale: float):
         if isinstance(dist, tuple):

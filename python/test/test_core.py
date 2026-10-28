@@ -265,6 +265,7 @@ def test_new_domain():
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
             dp.max_divergence(),
+            1,
         ),
         dp.user_distance(""),
         dp.user_divergence(""),
