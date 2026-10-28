@@ -30,7 +30,8 @@ The much easier case to consider is when the dataset size is known:
 
             >>> input_space = (
             ...     dp.vector_domain(
-            ...         dp.atom_domain(bounds=(0.0, 10.0)), size=10
+            ...         dp.atom_domain(bounds=(0.0, 10.0), nan=False),
+            ...         size=10,
             ...     ),
             ...     dp.symmetric_distance(),
             ... )
@@ -41,7 +42,7 @@ The much easier case to consider is when the dataset size is known:
 The sensitivity of this transformation is the same as in ``make_sum``
 (when dataset size is known), but is divided by ``size``.
 
-That is, :math:`map(d_{in}) = (d_{in} // 2) \cdot max(|L|, U) / size`,
+That is, :math:`map(d_{in}) = (d_{in} // 2) \cdot (U - L) / size`,
 where :math:`//` denotes integer division with truncation.
 
 .. tab-set::
@@ -54,7 +55,7 @@ where :math:`//` denotes integer division with truncation.
             >>> # since we are in the bounded-DP model, d_in should be a multiple of 2,
             >>> # because it takes one removal and one addition to change one record
             >>> sb_mean_trans.map(2)
-            1.0000000000000169
+            1.000000000000011
 
 Note that this operation does not divide by the length of the input
 data, it divides by the size parameter passed to the constructor. As in

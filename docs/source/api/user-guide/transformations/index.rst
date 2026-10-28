@@ -209,10 +209,9 @@ You can use combinations of the indicial transformers to map hashable data to in
 Clamping
 --------
 Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
-For example, the stability map for the :func:`~opendp.transformations.make_sum` aggregator is ``d_out = d_in * max(|L|, U)``.
-This relation states that adding or removing ``d_in`` records may influence the sum by ``d_in`` * the greatest magnitude of a record.
+For example, the ideal stability map for the :func:`~opendp.transformations.make_sum` aggregator is ``d_out = d_in * max(|L|, |U|, U - L)``.
+The ``U - L`` term accounts for an insertion evicting a retained record.
 
-Any aggregator that needs bounded data will indicate it in the function name.
 In these kinds of aggregators the relations make use of the clamping bounds ``L`` and ``U`` to translate ``d_in`` to ``d_out``.
 
 Clamping generally happens after casting and imputation but before resizing.
@@ -302,7 +301,6 @@ For example, the relation downstream for the :func:`~opendp.transformations.make
 Notice that any addition and removal may, in the worst case, change a record from ``L`` to ``U``.
 Such a substitution would influence the mean by ``(U - L) / n``.
 
-Any aggregator that needs sized data will indicate it in the function name.
 In these kinds of aggregators, the relations need knowledge about the dataset size ``n`` to translate ``d_in`` to ``d_out``.
 
 Resizing generally happens after clamping.
@@ -408,69 +406,10 @@ See the notebooks for code examples and deeper explanations:
      - ``AbsoluteDistance<TO>``
 
 
-:func:`~opendp.transformations.make_sum` makes a best guess as to which summation strategy to use based on the input space.
-Should you need it, the following constructors give greater control over the sum.
+For unsized domains, ``make_sum`` may use only part of the input: a prefix
+under ``InsertDeleteDistance`` or a random sample under ``SymmetricDistance``.
 
-.. dropdown:: Algorithm Details
-
-  The following strategies are ordered by computational efficiency:
-
-  * ``checked`` can be used when the dataset size multiplied by the bounds doesn't overflow.
-  * ``monotonic`` can be used when the bounds share the same sign.
-  * ``ordered`` can be used when the input metric is ``InsertDeleteDistance``.
-  * ``split`` separately sums positive and negative numbers, and then adds these sums together.
-
-  .. ``monotonic``, ``ordered`` and ``split`` are implemented with saturation arithmetic.
-  .. ``checked``, ``monotonic`` and ``split`` protect against underestimating sensitivity by preserving associativity.
-
-  All four algorithms are valid for integers, but only ``checked`` and ``ordered`` are available for floats.
-  There are separate constructors for integers and floats, because floats additionally need a dataset truncation and a slightly larger sensitivity.
-  The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm.
-
-  Floating-point summation may be further configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
-  Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n / 2^k))`` increase,
-  where ``k`` is the bit length of the mantissa in the floating-point numbers used.
-
-
-  .. list-table::
-    :header-rows: 1
-
-    * - Aggregator
-      - Input Domain
-      - Input Metric
-    * - :func:`~opendp.transformations.make_sized_bounded_int_checked_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_bounded_int_monotonic_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_sized_bounded_int_monotonic_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_bounded_int_ordered_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-      - ``InsertDeleteDistance``
-    * - :func:`~opendp.transformations.make_sized_bounded_int_ordered_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``InsertDeleteDistance``
-    * - :func:`~opendp.transformations.make_bounded_int_split_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_sized_bounded_int_split_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_bounded_float_checked_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_sized_bounded_float_checked_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``SymmetricDistance``
-    * - :func:`~opendp.transformations.make_bounded_float_ordered_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with bounds)
-      - ``InsertDeleteDistance``
-    * - :func:`~opendp.transformations.make_sized_bounded_float_ordered_sum`
-      - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
-      - ``InsertDeleteDistance``
+``make_sum`` is deprecated; use Polars or NumPy aggregation instead.
 
 
 Quantiles via Trees

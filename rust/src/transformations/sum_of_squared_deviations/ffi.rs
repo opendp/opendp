@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
-use dashu::integer::IBig;
+use dashu::{integer::IBig, rational::RBig};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
@@ -9,7 +9,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::SymmetricDistance;
-use crate::traits::{Float, FloatBits};
+use crate::traits::{Float, FloatBits, InfCast};
 use crate::transformations::{Pairwise, Sequential, UncheckedSum, make_sum_of_squared_deviations};
 
 #[unsafe(no_mangle)]
@@ -24,7 +24,7 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
         S: Type,
     ) -> Fallible<AnyTransformation>
     where
-        T: 'static + Float,
+        T: 'static + Float + InfCast<RBig>,
         IBig: From<T::Bits>,
     {
         fn monomorphize2<S>(
@@ -33,7 +33,7 @@ pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
         ) -> Fallible<AnyTransformation>
         where
             S: UncheckedSum,
-            S::Item: 'static + Float,
+            S::Item: 'static + Float + InfCast<RBig>,
             IBig: From<<S::Item as FloatBits>::Bits>,
         {
             let input_domain = input_domain
