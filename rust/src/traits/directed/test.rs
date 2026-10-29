@@ -37,7 +37,7 @@ fn check_arithmetic<S: DirectedScalar>() -> Fallible<()> {
         -3.0,
         -1.0,
     )?;
-    assert_contains(&(-Interval::<S>::between(1.0, 2.0)?)?, -2.0, -1.0)?;
+    assert_contains(&-Interval::<S>::between(1.0, 2.0)?, -2.0, -1.0)?;
 
     for (lhs, rhs, expected) in [
         ((1.0, 2.0), (3.0, 4.0), (3.0, 8.0)),
@@ -65,6 +65,78 @@ fn test_interval_arithmetic_backends() -> Fallible<()> {
     check_arithmetic::<N64<Approximate>>()?;
     check_arithmetic::<N64<Certified>>()?;
     check_arithmetic::<SoftFloat>()
+}
+
+fn check_direct_division<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
+    let tiny = f64::from_bits(1);
+    let inf = f64::INFINITY;
+    for (lhs, rhs, expected) in [
+        ((0.0, 0.0), (tiny, tiny), (0.0, 0.0)),
+        ((tiny, tiny), (tiny, tiny), (1.0, 1.0)),
+        ((-tiny, -tiny), (tiny, tiny), (-1.0, -1.0)),
+        ((tiny, tiny), (-tiny, -tiny), (-1.0, -1.0)),
+        ((tiny, 2.0 * tiny), (tiny, 2.0 * tiny), (0.5, 2.0)),
+        ((-2.0 * tiny, -tiny), (tiny, 2.0 * tiny), (-2.0, -0.5)),
+        ((-2.0 * tiny, -tiny), (-2.0 * tiny, -tiny), (0.5, 2.0)),
+        ((-tiny, tiny), (tiny, 2.0 * tiny), (-1.0, 1.0)),
+        ((-tiny, tiny), (-2.0 * tiny, -tiny), (-1.0, 1.0)),
+        ((1.0, inf), (1.0, inf), (0.0, inf)),
+        ((-inf, -1.0), (1.0, inf), (-inf, 0.0)),
+        ((-inf, inf), (1.0, inf), (-inf, inf)),
+        ((1.0, inf), (-inf, -1.0), (-inf, 0.0)),
+        ((-inf, -1.0), (-inf, -1.0), (0.0, inf)),
+        ((-inf, inf), (-inf, -1.0), (-inf, inf)),
+    ] {
+        let result = (Interval::<S>::between(lhs.0, lhs.1)? / Interval::between(rhs.0, rhs.1)?)?;
+        assert_contains(&result, expected.0, expected.1)?;
+        let actual = (result.lower_f64()?, result.upper_f64()?);
+        if lhs.0 == lhs.1 && rhs.0 == rhs.1 {
+            // Zero and identical-subnormal quotients must stay exact.
+            assert_eq!(actual, expected, "{lhs:?} / {rhs:?}");
+        } else {
+            // Certified native arithmetic may widen exact dyadic results by one
+            // outward ULP, but must not inherit reciprocal overflow/widening.
+            assert!(
+                actual.0 >= expected.0.next_down(),
+                "{lhs:?} / {rhs:?}: {actual:?}"
+            );
+            assert!(
+                actual.1 <= expected.1.next_up(),
+                "{lhs:?} / {rhs:?}: {actual:?}"
+            );
+        }
+    }
+    for (numerator, divisor) in [
+        (0.0, 2.0),
+        (-0.0, 2.0),
+        (0.0, -2.0),
+        (-0.0, -2.0),
+        (1.0, inf),
+        (-1.0, inf),
+        (1.0, -inf),
+        (-1.0, -inf),
+    ] {
+        let result = (Interval::<S>::point(numerator)? / Interval::point(divisor)?)?;
+        let expected = (numerator / divisor).to_bits();
+        assert_eq!(result.lower_f64()?.to_bits(), expected);
+        assert_eq!(result.upper_f64()?.to_bits(), expected);
+    }
+    for (lo, hi) in [(0.0, 0.0), (-0.0, 0.0), (-1.0, 1.0)] {
+        assert_eq!(
+            (Interval::<S>::point(1.0)? / Interval::between(lo, hi)?)
+                .unwrap_err()
+                .variant,
+            ErrorVariant::NumericIndeterminate,
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_direct_division_backends() -> Fallible<()> {
+    check_direct_division::<N64<Approximate>>()?;
+    check_direct_division::<N64<Certified>>()?;
+    check_direct_division::<SoftFloat>()
 }
 
 fn check_native_finite_overflow<S: DirectedScalar>() -> Fallible<()> {
@@ -138,12 +210,12 @@ fn test_interval_construction_and_clamping() -> Fallible<()> {
     assert!(CInterval::point(0.5)?.clamp(1.0, 0.0).is_err());
 
     assert_contains(
-        &CInterval::between(1.0, 3.0)?.min(CInterval::between(2.0, 4.0)?)?,
+        &CInterval::between(1.0, 3.0)?.min(CInterval::between(2.0, 4.0)?),
         1.0,
         3.0,
     )?;
     assert_contains(
-        &CInterval::between(1.0, 3.0)?.max(CInterval::between(2.0, 4.0)?)?,
+        &CInterval::between(1.0, 3.0)?.max(CInterval::between(2.0, 4.0)?),
         2.0,
         4.0,
     )?;
@@ -156,7 +228,7 @@ fn test_interval_construction_and_clamping() -> Fallible<()> {
     Ok(())
 }
 
-fn check_interval_ordering<S: DirectedScalar>() -> Fallible<()> {
+fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
     for (lo, hi) in [
         (f64::NEG_INFINITY, f64::INFINITY),
         (f64::NEG_INFINITY, -1.0),
@@ -200,8 +272,8 @@ fn check_interval_ordering<S: DirectedScalar>() -> Fallible<()> {
     for (lhs, rhs) in [(-0.0f64, 0.0f64), (0.0f64, -0.0f64)] {
         let left = Interval::<S>::point(lhs)?;
         let right = Interval::<S>::point(rhs)?;
-        let minimum = left.clone().min(right.clone())?;
-        let maximum = left.max(right)?;
+        let minimum = left.clone().min(right.clone());
+        let maximum = left.max(right);
         assert_eq!(minimum.lower_f64()?.to_bits(), lhs.to_bits());
         assert_eq!(minimum.upper_f64()?.to_bits(), lhs.to_bits());
         assert_eq!(maximum.lower_f64()?.to_bits(), rhs.to_bits());
@@ -241,6 +313,11 @@ fn test_internal_endpoint_ordering() -> Fallible<()> {
         .clone()
         .add_round(SoftFloat::exact(2.0f64.powi(-255))?, Direction::Up)?;
     assert_eq!(above.to_f64(Direction::Down)?, 1.0);
+    let interval = Interval::new(one.clone(), above.clone())?;
+    assert_eq!(
+        format!("{interval:?}"),
+        format!("Interval {{ lo: {one:?}, hi: {above:?} }}")
+    );
     assert_eq!(
         Interval::new(above, one).unwrap_err().variant,
         ErrorVariant::FailedFunction
@@ -248,7 +325,7 @@ fn test_internal_endpoint_ordering() -> Fallible<()> {
     Ok(())
 }
 
-fn check_transcendentals<S: DirectedTranscendental>() -> Fallible<()> {
+fn check_transcendentals<S: DirectedTranscendental + std::fmt::Debug>() -> Fallible<()> {
     assert_contains(
         &Interval::<S>::point(1.0)?.exp()?,
         std::f64::consts::E,
@@ -281,7 +358,7 @@ fn test_interval_transcendental_backends() -> Fallible<()> {
     Ok(())
 }
 
-fn check_sqrt<S: DirectedScalar>() -> Fallible<()> {
+fn check_sqrt<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
     assert_contains(&Interval::<S>::between(0.0, 4.0)?.sqrt()?, 0.0, 2.0)?;
     assert_eq!(
         Interval::<S>::between(-1.0, 1.0)?
@@ -369,7 +446,7 @@ fn test_interval_error_propagation() -> Fallible<()> {
         ErrorVariant::NumericRangeAbove
     );
 
-    let negative = (-positive)?;
+    let negative = -positive;
     assert_eq!(
         negative.lower_f64().unwrap_err().variant,
         ErrorVariant::NumericRangeBelow
