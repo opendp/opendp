@@ -126,7 +126,7 @@ fn check_direct_division<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> 
             (Interval::<S>::point(1.0)? / Interval::between(lo, hi)?)
                 .unwrap_err()
                 .variant,
-            ErrorVariant::NumericIndeterminate,
+            ErrorVariant::NumericError,
         );
     }
     Ok(())
@@ -139,29 +139,18 @@ fn test_direct_division_backends() -> Fallible<()> {
     check_direct_division::<SoftFloat>()
 }
 
-fn check_native_finite_overflow<S: DirectedScalar>() -> Fallible<()> {
-    let positive = (Interval::<S>::point(f64::MAX)? + Interval::point(f64::MAX)?)?;
-    assert_eq!(positive.lower_f64()?, f64::MAX);
-    assert_eq!(positive.upper_f64()?, f64::INFINITY);
-
-    let negative = (Interval::<S>::point(-f64::MAX)? + Interval::point(-f64::MAX)?)?;
-    assert_eq!(negative.lower_f64()?, f64::NEG_INFINITY);
-    assert_eq!(negative.upper_f64()?, -f64::MAX);
+fn check_native_finite_overflow<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
+    for value in [-f64::MAX, f64::MAX] {
+        let result = Interval::<S>::point(value)? + Interval::point(value)?;
+        assert_eq!(result.unwrap_err().variant, ErrorVariant::Overflow);
+    }
     Ok(())
 }
 
 #[test]
-fn test_native_finite_overflow_is_directionally_enclosed() -> Fallible<()> {
+fn test_native_finite_overflow_is_not_infinity() -> Fallible<()> {
     check_native_finite_overflow::<N64<Certified>>()?;
-
-    let positive = (AInterval::point(f64::MAX)? + AInterval::point(f64::MAX)?)?;
-    assert_eq!(positive.lower_f64()?, f64::INFINITY);
-    assert_eq!(positive.upper_f64()?, f64::INFINITY);
-
-    let negative = (AInterval::point(-f64::MAX)? + AInterval::point(-f64::MAX)?)?;
-    assert_eq!(negative.lower_f64()?, f64::NEG_INFINITY);
-    assert_eq!(negative.upper_f64()?, f64::NEG_INFINITY);
-    Ok(())
+    check_native_finite_overflow::<N64<Approximate>>()
 }
 
 #[test]
@@ -174,25 +163,25 @@ fn test_special_values_and_numeric_domains() -> Fallible<()> {
         (positive_infinity.clone() + negative_infinity)
             .unwrap_err()
             .variant,
-        crate::error::ErrorVariant::NumericIndeterminate
+        crate::error::ErrorVariant::NumericError
     );
     assert_eq!(
         (zero * positive_infinity.clone()).unwrap_err().variant,
-        crate::error::ErrorVariant::NumericIndeterminate
+        crate::error::ErrorVariant::NumericError
     );
     assert_eq!(
         (positive_infinity.clone() / positive_infinity)
             .unwrap_err()
             .variant,
-        crate::error::ErrorVariant::NumericIndeterminate
+        crate::error::ErrorVariant::NumericError
     );
     assert_eq!(
         SInterval::point(-1.0)?.ln().unwrap_err().variant,
-        crate::error::ErrorVariant::NumericDomain
+        crate::error::ErrorVariant::NumericError
     );
     assert_eq!(
         SInterval::point(-1.0)?.sqrt().unwrap_err().variant,
-        crate::error::ErrorVariant::NumericDomain
+        crate::error::ErrorVariant::NumericError
     );
     Ok(())
 }
@@ -228,6 +217,28 @@ fn test_interval_construction_and_clamping() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_absolute_values_normalize_signed_zero() -> Fallible<()> {
+    for (lo, hi) in [
+        (-0.0_f64, -0.0_f64),
+        (-0.0, 0.0),
+        (0.0, -0.0),
+        (-1.0, -0.0),
+        (-0.0, 1.0),
+    ] {
+        let interval = CInterval::between(lo, hi)?;
+        let absolute = interval.clone().abs()?;
+        let expected_upper = lo.abs().max(hi.abs()).to_bits();
+        assert_eq!(absolute.lower_f64()?.to_bits(), 0.0_f64.to_bits());
+        assert_eq!(absolute.upper_f64()?.to_bits(), expected_upper);
+        assert_eq!(
+            interval.abs_upper().to_f64(Direction::Up)?.to_bits(),
+            expected_upper
+        );
+    }
+    Ok(())
+}
+
 fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
     for (lo, hi) in [
         (f64::NEG_INFINITY, f64::INFINITY),
@@ -248,8 +259,8 @@ fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()
         assert_eq!(interval.is_nonnegative(), lo >= 0.0);
         assert_eq!(interval.is_nonpositive(), hi <= 0.0);
         assert_eq!(
-            interval.abs_upper().to_f64(Direction::Up)?,
-            lo.abs().max(hi.abs())
+            interval.abs_upper().to_f64(Direction::Up)?.to_bits(),
+            lo.abs().max(hi.abs()).to_bits()
         );
     }
     for (lo, hi) in [
@@ -265,7 +276,7 @@ fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()
     for (lo, hi) in [(f64::NAN, 0.0), (0.0, f64::NAN)] {
         assert_eq!(
             Interval::<S>::between(lo, hi).unwrap_err().variant,
-            ErrorVariant::NumericIndeterminate
+            ErrorVariant::NumericError
         );
     }
     // Standard Ord extrema select the first minimum and last maximum on ties.
@@ -300,7 +311,7 @@ fn test_internal_endpoint_ordering() -> Fallible<()> {
     assert!(!negative.contains_zero() && !negative.is_nonnegative() && negative.is_nonpositive());
     assert_eq!(
         negative.sqrt().unwrap_err().variant,
-        ErrorVariant::NumericDomain
+        ErrorVariant::NumericError
     );
     assert_eq!(
         Interval::new(small, SoftFloat::exact(0.0)?)
@@ -339,7 +350,7 @@ fn check_transcendentals<S: DirectedTranscendental + std::fmt::Debug>() -> Falli
     assert_contains(&Interval::<S>::point(1.0)?.ln()?, 0.0, 0.0)?;
     assert_eq!(
         Interval::<S>::between(-1.0, 1.0)?.ln().unwrap_err().variant,
-        ErrorVariant::NumericDomain
+        ErrorVariant::NumericError
     );
 
     let boundary = Interval::<S>::between(0.0, 1.0)?.ln()?;
@@ -365,7 +376,7 @@ fn check_sqrt<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
             .sqrt()
             .unwrap_err()
             .variant,
-        ErrorVariant::NumericDomain
+        ErrorVariant::NumericError
     );
     for x in [0.0, 1.0, f64::INFINITY] {
         let result = Interval::<S>::point(x)?.sqrt()?;
@@ -443,22 +454,22 @@ fn test_interval_error_propagation() -> Fallible<()> {
     let positive = SInterval::point(10_000.0)?.exp()?;
     assert_eq!(
         positive.upper_f64().unwrap_err().variant,
-        ErrorVariant::NumericRangeAbove
+        ErrorVariant::Overflow
     );
 
     let negative = -positive;
     assert_eq!(
         negative.lower_f64().unwrap_err().variant,
-        ErrorVariant::NumericRangeBelow
+        ErrorVariant::Overflow
     );
 
     assert_eq!(
         SInterval::between(-1.0, 1.0)?.recip().unwrap_err().variant,
-        ErrorVariant::NumericIndeterminate
+        ErrorVariant::NumericError
     );
     assert_eq!(
         SInterval::between(-1.0, 1.0)?.ln().unwrap_err().variant,
-        ErrorVariant::NumericDomain
+        ErrorVariant::NumericError
     );
     Ok(())
 }
