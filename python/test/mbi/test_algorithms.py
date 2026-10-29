@@ -93,6 +93,36 @@ def test_algorithm_err_elements(algorithm):
         )
 
 
+def test_algorithm_configuration_snapshots_lists():
+    count = Count(("A",))
+    fixed_queries = [count]
+    aim_queries = [count]
+    fixed = Fixed(queries=fixed_queries)
+    aim = AIM(queries=aim_queries)
+    algorithms = [fixed, aim]
+    weights = [1.0, 2.0]
+    sequential = Sequential(algorithms=algorithms, weights=weights)
+
+    fixed_queries.clear()
+    aim_queries.clear()
+    algorithms.clear()
+    weights[0] = 10.0
+
+    assert fixed.queries == (count,)
+    assert aim.queries == (count,)
+    assert sequential.algorithms == (fixed, aim)
+    assert sequential.weights == (1.0, 2.0)
+
+
+def test_aim_rejects_mutable_query_objects():
+    class QueryLike:
+        by = ["A"]
+        weight = 1.0
+
+    with pytest.raises(ValueError, match="queries must be of type Count"):
+        AIM(queries=[QueryLike()])  # type: ignore[list-item]
+
+
 @pytest.mark.parametrize(
     "kwargs,message",
     [
@@ -121,10 +151,46 @@ def test_mst_and_aim_scores_use_l1_sensitivity():
     model = mirror_descent(mbi.Domain(clique, (9, 9)), [])
     distance = {clique: (9, 9, 1)}
 
-    mst = _make_mst_scores(domain, metric, [clique], model)
+    edge = ["A", "B"]
+    mst = _make_mst_scores(domain, metric, [edge], model)  # type: ignore[list-item]
     aim = _make_aim_scores(domain, metric, [Count(clique)], {clique: 0.0}, model)
     assert mst.map(distance) == 9.0
     assert aim.map(distance) == 9.0
+
+    import numpy as np  # type: ignore[import-not-found]
+
+    exact = {clique: np.zeros((9, 9), dtype=np.int32)}
+    original_score = mst(exact)
+    edge[0] = "B"
+    assert mst(exact) == original_score
+
+
+def test_aim_scores_snapshot_workload():
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    from opendp.extras.mbi._aim import _make_aim_scores
+    from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
+
+    clique: tuple[str, ...] = ("A",)
+    queries = [Count(clique, weight=2.0)]
+    expectations = {clique: 1.0}
+    transformation = _make_aim_scores(
+        typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(2,), T="i32")}),
+        typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32"))),
+        queries,
+        expectations,
+        mirror_descent(mbi.Domain(clique, (2,)), []),
+    )
+    data = {clique: np.array([1, 0], dtype=np.int32)}
+    distance = {clique: (1, 1, 1)}
+    expected_score = transformation(data)
+    expected_map = transformation.map(distance)
+
+    queries.clear()
+    expectations[clique] = 1_000.0
+    assert transformation(data) == pytest.approx(expected_score)
+    assert transformation.map(distance) == expected_map
 
 
 def test_aim_exhaustion():

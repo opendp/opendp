@@ -22,6 +22,7 @@ from opendp.extras.mbi._utilities import (
     Count,
     Algorithm,
     Marginals,
+    _snapshot_bounds,
 )
 from opendp.measurements import then_noisy_max
 from opendp.measures import max_divergence, zero_concentrated_divergence
@@ -115,7 +116,7 @@ class AIM(Algorithm):
     This allows AIM to support higher-dimensional datasets.
     """
 
-    queries: list[Count] | int = 3
+    queries: Sequence[Count] | int = 3
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
@@ -132,8 +133,12 @@ class AIM(Algorithm):
         if isinstance(self.queries, int) and self.queries < 1:
             raise ValueError(f"queries ({self.queries}) must be positive")
 
-        if isinstance(self.queries, list) and not self.queries:
-            raise ValueError("queries must not be empty")
+        if not isinstance(self.queries, int):
+            if not self.queries:
+                raise ValueError("queries must not be empty")
+            if not all(isinstance(query, Count) for query in self.queries):
+                raise ValueError("queries must be of type Count")
+            object.__setattr__(self, "queries", tuple(self.queries))
 
         if not (0 < self.measure_split <= 1):
             raise ValueError(f"measure_split ({self.measure_split}) must be in (0, 1]")
@@ -168,6 +173,7 @@ class AIM(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
+        d_in = _snapshot_bounds(d_in)
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
 
@@ -390,7 +396,7 @@ def _make_aim_select(
 def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
-    queries: list[Count],
+    queries: Sequence[Count],
     expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
@@ -400,6 +406,8 @@ def _make_aim_scores(
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
     model = cast(MarkovRandomField, model)
+    queries = tuple(queries)
+    expectations = dict(expectations)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
@@ -422,7 +430,7 @@ def _make_aim_scores(
     )
 
 
-def _expand_queries(queries: list[Count] | int, columns: list[str]) -> list[Count]:
+def _expand_queries(queries: Sequence[Count] | int, columns: list[str]) -> list[Count]:
     """Expand queries to include all subsets.
 
     :param queries: Explicit queries to shape workload, or maximum degree to preserve.

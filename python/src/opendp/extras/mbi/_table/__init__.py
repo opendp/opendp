@@ -29,6 +29,7 @@ from opendp.extras.mbi._utilities import (
     row_major_order,
     SelectPrefixQuery,
     Algorithm,
+    _snapshot_bounds,
     Marginals,
     ONEWAY_UNKEYED,
 )
@@ -234,6 +235,7 @@ def make_contingency_table(
     import polars as pl
     import mbi
 
+    d_in = _snapshot_bounds(d_in)
     plan = _lazyframe_from_domain(input_domain)
     schema = plan.collect_schema()
 
