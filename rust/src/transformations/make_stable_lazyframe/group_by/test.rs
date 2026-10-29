@@ -107,3 +107,36 @@ fn test_group_by_preserves_plain_margin_keys() -> Fallible<()> {
     );
     Ok(())
 }
+
+#[test]
+fn test_check_infallible_pow_and_qcut() -> Fallible<()> {
+    // Integer pow may fail when a private exponent is negative.
+    let pow = Expr::Function {
+        input: vec![col("a"), col("b")],
+        function: FunctionExpr::Pow(PowFunction::Generic),
+    };
+    assert!(check_infallible(&pow.first(), Resize::Allow).is_err());
+
+    // The fixed-arity sqrt variant does not cast a private exponent.
+    let sqrt = Expr::Function {
+        input: vec![col("a")],
+        function: FunctionExpr::Pow(PowFunction::Sqrt),
+    };
+    assert!(check_infallible(&sqrt, Resize::Allow).is_ok());
+
+    for allow_duplicates in [false, true] {
+        let qcut = Expr::Function {
+            input: vec![col("v")],
+            function: FunctionExpr::QCut {
+                probs: vec![0.25, 0.5, 0.75],
+                labels: None,
+                left_closed: false,
+                allow_duplicates,
+                include_breaks: false,
+            },
+        };
+        assert!(check_infallible(&qcut.first(), Resize::Allow).is_err());
+    }
+
+    Ok(())
+}

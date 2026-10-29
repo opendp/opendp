@@ -445,6 +445,12 @@ fn check_infallible_function(
         FunctionExpr::Abs => check_inputs!(),
         FunctionExpr::Negate => check_inputs!(),
         FunctionExpr::NullCount => check_inputs!(aggregate),
+        FunctionExpr::Pow(PowFunction::Generic) => {
+            return fallible!(
+                MakeTransformation,
+                "pow may raise data-dependent errors due to integer exponent conversion."
+            );
+        }
         FunctionExpr::Pow(_) => check_inputs!(aligned_rows),
         FunctionExpr::Range(_) => check_inputs!(),
         FunctionExpr::FillNull => check_inputs!(),
@@ -477,7 +483,14 @@ fn check_infallible_function(
         FunctionExpr::LowerBound => check_inputs!(),
         FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
         FunctionExpr::Cut { .. } => check_inputs!(),
-        FunctionExpr::QCut { .. } => check_inputs!(),
+        FunctionExpr::QCut { .. } => {
+            // Duplicate quantiles are only one possible failure; even with
+            // allow_duplicates=true, quantile calculation depends on private values.
+            return fallible!(
+                MakeTransformation,
+                "qcut may raise data-dependent errors while computing quantiles."
+            );
+        }
         FunctionExpr::ToPhysical => check_inputs!(),
         FunctionExpr::Random { .. } => {
             return fallible!(
