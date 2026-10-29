@@ -31,10 +31,17 @@ fn check_generic_ordering<S: DirectedScalar>() -> Fallible<()> {
     let contains_zero: bool = interval.contains_zero();
     assert!(contains_zero);
     assert!(!interval.is_nonnegative() && !interval.is_nonpositive());
-    let magnitude: S = interval.abs_upper();
+    let magnitude: S = interval.clone().abs_upper();
     assert!(magnitude == S::exact(f64::INFINITY)?);
     let absolute: S = (-values[0].clone()).abs();
     assert!(absolute == S::exact(2.0)?);
+    let negated: Interval<S> = -interval.clone();
+    let minimum: Interval<S> = interval.clone().min(negated.clone());
+    let maximum: Interval<S> = interval.max(negated);
+    assert_eq!(minimum.lower_f64()?, f64::NEG_INFINITY);
+    assert_eq!(minimum.upper_f64()?, 2.0);
+    assert_eq!(maximum.lower_f64()?, -2.0);
+    assert_eq!(maximum.upper_f64()?, f64::INFINITY);
     Ok(())
 }
 

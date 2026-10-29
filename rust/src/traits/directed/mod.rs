@@ -29,6 +29,10 @@ pub type SInterval = Interval<SoftFloat>;
 
 /// Closed endpoint interval `[lo, hi]` over a directed scalar.
 ///
+/// Ordered endpoints alone do not guarantee a conservative enclosure: arithmetic
+/// is conservative only when the scalar's directed operations are certified.
+/// In particular, [`AInterval`] uses approximate native arithmetic.
+///
 /// Transcendental operations require [`DirectedTranscendental`]; certified
 /// native scalars support arithmetic and square root, but not native exp/ln.
 ///
@@ -60,11 +64,11 @@ pub struct Interval<S: DirectedScalar> {
     hi: S,
 }
 
-impl<S: DirectedScalar> fmt::Debug for Interval<S> {
+impl<S: DirectedScalar + fmt::Debug> fmt::Debug for Interval<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Interval")
-            .field("lo", &self.lower_f64())
-            .field("hi", &self.upper_f64())
+            .field("lo", &self.lo)
+            .field("hi", &self.hi)
             .finish()
     }
 }
@@ -154,19 +158,25 @@ impl<S: DirectedScalar> Interval<S> {
         self.lo.abs().max(self.hi.abs())
     }
 
-    pub fn max(self, rhs: Self) -> Fallible<Self> {
-        Self::new(self.lo.max(rhs.lo), self.hi.max(rhs.hi))
+    pub fn max(self, rhs: Self) -> Self {
+        Self {
+            lo: self.lo.max(rhs.lo),
+            hi: self.hi.max(rhs.hi),
+        }
     }
 
-    pub fn min(self, rhs: Self) -> Fallible<Self> {
-        Self::new(self.lo.min(rhs.lo), self.hi.min(rhs.hi))
+    pub fn min(self, rhs: Self) -> Self {
+        Self {
+            lo: self.lo.min(rhs.lo),
+            hi: self.hi.min(rhs.hi),
+        }
     }
 
     pub fn clamp(self, min: f64, max: f64) -> Fallible<Self> {
         if min > max {
             return fallible!(FailedFunction, "clamp minimum exceeds maximum");
         }
-        self.max(Self::point(min)?)?.min(Self::point(max)?)
+        Ok(self.max(Self::point(min)?).min(Self::point(max)?))
     }
 
     pub fn clamp01(self) -> Fallible<Self> {
@@ -207,10 +217,13 @@ impl<S: DirectedScalar> Sub for Interval<S> {
 }
 
 impl<S: DirectedScalar> Neg for Interval<S> {
-    type Output = Fallible<Self>;
+    type Output = Self;
 
-    fn neg(self) -> Self::Output {
-        Self::new(-self.hi, -self.lo)
+    fn neg(self) -> Self {
+        Self {
+            lo: -self.hi,
+            hi: -self.lo,
+        }
     }
 }
 
@@ -268,7 +281,29 @@ impl<S: DirectedScalar> Div for Interval<S> {
     type Output = Fallible<Self>;
 
     fn div(self, rhs: Self) -> Self::Output {
-        self * rhs.recip()?
+        if rhs.contains_zero() {
+            return fallible!(NumericIndeterminate, "divisor interval contains zero");
+        }
+        if rhs.is_nonpositive() {
+            return -self / -rhs;
+        }
+        // For a positive divisor, endpoints toward zero use its upper bound;
+        // endpoints away from zero use its lower bound. Divide directly to avoid
+        // reciprocal overflow and unnecessary infinity/infinity corner quotients.
+        let lower_divisor = if self.is_nonnegative() {
+            rhs.hi.clone()
+        } else {
+            rhs.lo.clone()
+        };
+        let upper_divisor = if self.is_nonpositive() {
+            rhs.hi
+        } else {
+            rhs.lo
+        };
+        Self::new(
+            self.lo.div_round(lower_divisor, Direction::Down)?,
+            self.hi.div_round(upper_divisor, Direction::Up)?,
+        )
     }
 }
 
