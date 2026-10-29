@@ -258,6 +258,9 @@ print.odometer <- function(x, ...) {
 
 #' new domain
 #'
+#' @section Why honest-but-curious?:
+#' The returned `descriptor` attribute must not be mutated.
+#'
 #' @concept mod
 #' @param ptr a pointer to a domain
 #' @param log call history
@@ -275,7 +278,10 @@ new_domain <- function(ptr, log) {
       debug = domain_debug(ptr),
       type = domain_type(ptr),
       carrier_type = domain_carrier_type(ptr),
-      descriptor = `_extrinsic_domain_descriptor`(ptr),
+      descriptor = {
+        assert_features("honest-but-curious")
+        `_extrinsic_domain_descriptor`(ptr)
+      },
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -300,6 +306,9 @@ print.domain <- function(x, ...) {
 
 #' new metric
 #'
+#' @section Why honest-but-curious?:
+#' The returned `descriptor` attribute must not be mutated.
+#'
 #' @concept mod
 #' @param ptr a pointer to a metric
 #' @param log call history
@@ -309,7 +318,10 @@ new_metric <- function(ptr, log) {
       debug = metric_debug(ptr),
       type = metric_type(ptr),
       distance_type = metric_distance_type(ptr),
-      descriptor = `_extrinsic_metric_descriptor`(ptr),
+      descriptor = {
+        assert_features("honest-but-curious")
+        `_extrinsic_metric_descriptor`(ptr)
+      },
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -334,6 +346,9 @@ print.metric <- function(x, ...) {
 
 #' new measure
 #'
+#' @section Why honest-but-curious?:
+#' The returned `descriptor` attribute must not be mutated.
+#'
 #' @concept mod
 #' @param ptr a pointer to a measure
 #' @param log call history
@@ -343,7 +358,10 @@ new_measure <- function(ptr, log) {
       debug = measure_debug(ptr),
       type = measure_type(ptr),
       distance_type = measure_distance_type(ptr),
-      descriptor = `_extrinsic_measure_descriptor`(ptr),
+      descriptor = {
+        assert_features("honest-but-curious")
+        `_extrinsic_measure_descriptor`(ptr)
+      },
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,

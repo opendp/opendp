@@ -330,6 +330,48 @@ def test_custom_domain(new_domain):
     assert not map_domain.member(misc_data)
 
 
+def test_extrinsic_descriptors_require_hbc():
+    from opendp.mod import (
+        GLOBAL_FEATURES,
+        ExtrinsicDomain,
+        ExtrinsicDistance,
+        ExtrinsicDivergence,
+    )
+
+    domain_descriptor = {"members": [1]}
+    metric_descriptor = ["distance"]
+    measure_descriptor = {"kind": "custom"}
+    objects: list[
+        tuple[ExtrinsicDomain | ExtrinsicDistance | ExtrinsicDivergence, object]
+    ] = [
+        (
+            _extrinsic_domain("TestDomain", lambda _: True, domain_descriptor),
+            domain_descriptor,
+        ),
+        (_extrinsic_distance("TestMetric", metric_descriptor), metric_descriptor),
+        (_extrinsic_divergence("TestMeasure", measure_descriptor), measure_descriptor),
+    ]
+
+    was_enabled = "honest-but-curious" in GLOBAL_FEATURES
+    dp.disable_features("honest-but-curious")
+    try:
+        for obj, descriptor in objects:
+            assert obj._descriptor is descriptor
+            assert obj._cast(type(descriptor)) is descriptor
+            with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+                _ = obj.descriptor
+            with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+                obj.cast(type(descriptor))
+    finally:
+        if was_enabled:
+            dp.enable_features("honest-but-curious")
+
+    if was_enabled:
+        for obj, descriptor in objects:
+            assert obj.descriptor is descriptor
+            assert obj.cast(type(descriptor)) is descriptor
+
+
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
     query = space >> dp.m.then_user_measurement(

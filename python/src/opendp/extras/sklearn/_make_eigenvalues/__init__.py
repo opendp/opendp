@@ -23,7 +23,7 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")  # pragma: no cover
 
-    input_desc = input_domain.descriptor
+    input_desc = input_domain._descriptor
 
     if input_desc.size is None:
         # implementation assumes dataset size is known

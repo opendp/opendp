@@ -30,7 +30,7 @@ def make_private_np_eigendecomposition(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
-    input_desc = input_domain.descriptor
+    input_desc = input_domain._descriptor
 
     if input_desc.size is None:
         raise ValueError("input_domain's size must be known")  # pragma: no cover

@@ -41,7 +41,7 @@ def make_private_eigenvector(
     dp.assert_features("contrib", "idealized-numerics")
 
     np_csprng = get_np_csprng()
-    input_desc = input_domain.descriptor
+    input_desc = input_domain._descriptor
 
     if input_desc.p != 2:
         raise ValueError("input_domain must have bounded L2-norm")  # pragma: no cover
@@ -130,7 +130,7 @@ def make_np_sscp_projection(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
-    input_desc = input_domain.descriptor
+    input_desc = input_domain._descriptor
 
     if input_desc.num_features != P.shape[1]:
         raise ValueError(
@@ -164,7 +164,7 @@ def make_private_eigenvectors(
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    input_desc = input_domain.descriptor
+    input_desc = input_domain._descriptor
     if input_desc.p != 2:
         raise ValueError(
             "input_domain must have bounded L2 row norm"

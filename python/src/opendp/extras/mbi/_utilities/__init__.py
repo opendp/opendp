@@ -332,10 +332,10 @@ def make_noise_marginal(
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     from opendp.extras.numpy import NPArrayDDomain
 
-    clique_domain = input_domain.cast(TypedDictDomain)[clique]
-    inner_metric = input_metric.cast(TypedDictDistance).inner_metric
+    clique_domain = input_domain._cast(TypedDictDomain)[clique]
+    inner_metric = input_metric._cast(TypedDictDistance).inner_metric
 
-    clique_domain.cast(NPArrayDDomain)
+    clique_domain._cast(NPArrayDDomain)
 
     structural_metric = l01inf_distance(absolute_distance(T="i32"))
     if inner_metric != structural_metric:

@@ -158,8 +158,37 @@ def test_array2_domain_snapshots_origin():
     origin[:] = np.nan
     stored = domain.descriptor.origin
     np.testing.assert_array_equal(stored, [1.0, 2.0])
-    stored[:] = np.nan  # Descriptor edits must not change membership.
     assert domain.member(valid)
+
+
+def test_array2_domain_snapshots_cardinalities():
+    cardinalities = np.array([2, 3])
+    domain = dp.numpy.array2_domain(cardinalities=cardinalities, T="i64")
+    valid = np.array([[0, 0], [1, 1]], dtype=np.int64)
+    assert domain.member(valid)
+
+    cardinalities[:] = 1
+    stored = domain.descriptor.cardinalities
+    np.testing.assert_array_equal(stored, [2, 3])
+    assert domain.member(valid)
+
+
+def test_numpy_domain_internal_descriptor_without_hbc():
+    from opendp.extras.numpy import NPArray2Domain
+    from opendp.mod import GLOBAL_FEATURES
+
+    was_enabled = "honest-but-curious" in GLOBAL_FEATURES
+    dp.disable_features("honest-but-curious")
+    try:
+        domain = dp.numpy.array2_domain(T=float, num_columns=2)
+        assert domain._cast(NPArray2Domain).num_columns == 2
+        transformation = (domain, dp.symmetric_distance()) >> dp.numpy.then_np_clamp(
+            norm=1.0, p=2
+        )
+        assert transformation.output_domain._descriptor.norm == 1.0
+    finally:
+        if was_enabled:
+            dp.enable_features("honest-but-curious")
 
 
 @pytest.mark.parametrize("p", [1, 2])

@@ -174,6 +174,44 @@ test_that("library extension supporting elements have python-style parity", {
   expect_identical(internal_measure("descriptor")$curve, "internal")
 })
 
+test_that("extrinsic descriptor access requires honest-but-curious", {
+  original_features <- getOption("opendp_features")
+  on.exit(options(opendp_features = original_features), add = TRUE)
+  enable_features("honest-but-curious")
+
+  domain_descriptor <- new.env(parent = emptyenv())
+  domain_descriptor$kind <- "test"
+  domain <- user_domain(
+    identifier = "AccessDomain",
+    member = \(x) is.integer(x),
+    descriptor = domain_descriptor
+  )
+  metric <- user_distance(
+    identifier = "AccessDistance",
+    descriptor = list(kind = "test")
+  )
+  measure <- user_divergence(
+    identifier = "AccessDivergence",
+    descriptor = list(kind = "test")
+  )
+  internal_measure <- getFromNamespace("_extrinsic_divergence", "opendp")(
+    identifier = "InternalAccessDivergence",
+    descriptor = list(kind = "test")
+  )
+
+  disable_features("honest-but-curious")
+  for (obj in list(domain, metric, measure, internal_measure)) {
+    expect_error(obj("descriptor"), "honest-but-curious")
+  }
+  expect_true(domain(member = 2L))
+
+  enable_features("honest-but-curious")
+  expect_identical(domain("descriptor"), domain_descriptor)
+  for (obj in list(domain, metric, measure, internal_measure)) {
+    expect_identical(obj("descriptor")$kind, "test")
+  }
+})
+
 test_that("extrinsic domain member errors surface cleanly", {
   enable_features("honest-but-curious")
 
