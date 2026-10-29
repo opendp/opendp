@@ -35,7 +35,7 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
             f"input_metric ({input_metric}) must be symmetric distance"
         )  # pragma: no cover
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
 
     if input_desc.nan:
         raise ValueError(

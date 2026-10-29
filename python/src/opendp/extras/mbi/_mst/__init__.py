@@ -283,10 +283,10 @@ def _make_mst_scores(
     import numpy as np  # type: ignore[import-not-found]
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
-    for value_domain in input_domain._cast(TypedDictDomain).values():
-        value_domain._cast(NPArrayDDomain)
+    for value_domain in input_domain.cast(TypedDictDomain).values():
+        value_domain.cast(NPArrayDDomain)
 
-    input_metric._cast(TypedDictDistance)
+    input_metric.cast(TypedDictDistance)
 
     model = cast(MarkovRandomField, model)
 

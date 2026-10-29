@@ -242,6 +242,7 @@ def test_clamp_snapshots_origin():
     origin[:] = np.nan  # Mutation after construction must not alter the clamp.
     stored = trans.output_domain.descriptor.origin
     np.testing.assert_array_equal(stored, [1.0, 2.0])
+    stored[:] = np.nan  # Descriptor edits must not affect execution or membership.
     np.testing.assert_array_equal(trans(data), expected)
     assert trans.output_domain.member(expected)
 

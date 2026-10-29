@@ -84,7 +84,7 @@ def make_private_pca(
         S: numpy.ndarray
         Vt: numpy.ndarray
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
     if input_desc.size is None:
         raise ValueError("input_domain's size must be known")  # pragma: no cover
 
@@ -430,7 +430,7 @@ def _make_center(input_domain, input_metric):
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
 
     kwargs = asdict(input_desc) | {"origin": np.zeros(input_desc.num_columns)}
     return _make_transformation(

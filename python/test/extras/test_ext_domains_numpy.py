@@ -158,6 +158,7 @@ def test_array2_domain_snapshots_origin():
     origin[:] = np.nan
     stored = domain.descriptor.origin
     np.testing.assert_array_equal(stored, [1.0, 2.0])
+    stored[:] = np.nan  # Mutating the returned descriptor must not affect membership.
     assert domain.member(valid)
 
 
@@ -170,25 +171,35 @@ def test_array2_domain_snapshots_cardinalities():
     cardinalities[:] = 1
     stored = domain.descriptor.cardinalities
     np.testing.assert_array_equal(stored, [2, 3])
+    stored[:] = 1
     assert domain.member(valid)
 
 
-def test_numpy_domain_internal_descriptor_without_hbc():
-    from opendp.extras.numpy import NPArray2Domain
-    from opendp.mod import GLOBAL_FEATURES
+def test_numpy_descriptor_without_hbc():
+    import subprocess
+    import sys
 
-    was_enabled = "honest-but-curious" in GLOBAL_FEATURES
-    dp.disable_features("honest-but-curious")
-    try:
-        domain = dp.numpy.array2_domain(T=float, num_columns=2)
-        assert domain._cast(NPArray2Domain).num_columns == 2
-        transformation = (domain, dp.symmetric_distance()) >> dp.numpy.then_np_clamp(
-            norm=1.0, p=2
-        )
-        assert transformation.output_domain._descriptor.norm == 1.0
-    finally:
-        if was_enabled:
-            dp.enable_features("honest-but-curious")
+    script = """
+import numpy as np
+import opendp.prelude as dp
+from opendp.mod import GLOBAL_FEATURES
+from opendp.extras.numpy import NPArray2Domain
+
+dp.enable_features("contrib", "idealized-numerics")
+assert "honest-but-curious" not in GLOBAL_FEATURES
+
+domain = dp.numpy.array2_domain(T=float, num_columns=2)
+assert domain.cast(NPArray2Domain).num_columns == 2
+trans = (domain, dp.symmetric_distance()) >> dp.numpy.then_np_clamp(
+    norm=1.0, p=2, origin=np.array([1.0, 2.0])
+)
+expected = trans(np.array([[3.0, 4.0]]))
+desc = trans.output_domain.descriptor
+desc.origin[:] = np.nan
+assert trans.output_domain.member(expected)
+assert np.array_equal(trans(np.array([[3.0, 4.0]])), expected)
+"""
+    subprocess.run([sys.executable, "-c", script], check=True)
 
 
 @pytest.mark.parametrize("p", [1, 2])

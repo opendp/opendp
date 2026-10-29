@@ -36,9 +36,9 @@ def make_np_clamp(
         raise ValueError(
             f"input_domain must be NPArray2Domain, got {input_domain}"
         )  # pragma: no cover
-    if input_domain._descriptor.T not in _NUMERIC_TYPES:
+    if input_domain.descriptor.T not in _NUMERIC_TYPES:
         raise ValueError(
-            f"input_domain element type must be numeric, got {input_domain._descriptor.T}"
+            f"input_domain element type must be numeric, got {input_domain.descriptor.T}"
         )
     if input_metric != dp.symmetric_distance():
         raise ValueError(f"input_metric must be symmetric distance, got {input_metric}")
@@ -70,7 +70,7 @@ def make_np_clamp(
     if not np.all(np.isfinite(origin)):
         raise ValueError(f"origin must be finite, got {origin_arg!r}")
 
-    num_columns = input_domain._descriptor.num_columns
+    num_columns = input_domain.descriptor.num_columns
     if origin.ndim == 0 and origin != 0.0:
         raise ValueError(f"scalar origin must be zero, got {origin_arg!r}")
     if origin.ndim == 1:
@@ -109,7 +109,7 @@ def make_np_clamp(
                 _rows_within_norm(candidate - origin, norm, p), candidate, origin
             )
 
-    kwargs = asdict(input_domain._descriptor) | {
+    kwargs = asdict(input_domain.descriptor) | {
         "norm": norm,
         "p": p,
         "origin": origin,

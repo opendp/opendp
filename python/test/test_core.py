@@ -330,46 +330,93 @@ def test_custom_domain(new_domain):
     assert not map_domain.member(misc_data)
 
 
-def test_extrinsic_descriptors_require_hbc():
-    from opendp.mod import (
-        GLOBAL_FEATURES,
-        ExtrinsicDomain,
-        ExtrinsicDistance,
-        ExtrinsicDivergence,
-    )
-
+def test_extrinsic_descriptors_are_copied():
     domain_descriptor = {"members": [1]}
-    metric_descriptor = ["distance"]
-    measure_descriptor = {"kind": "custom"}
-    objects: list[
-        tuple[ExtrinsicDomain | ExtrinsicDistance | ExtrinsicDivergence, object]
-    ] = [
-        (
-            _extrinsic_domain("TestDomain", lambda _: True, domain_descriptor),
-            domain_descriptor,
-        ),
-        (_extrinsic_distance("TestMetric", metric_descriptor), metric_descriptor),
-        (_extrinsic_divergence("TestMeasure", measure_descriptor), measure_descriptor),
-    ]
+    domain = _extrinsic_domain(
+        "TestDomain",
+        lambda x: x in domain_descriptor["members"],
+        domain_descriptor,
+    )
+    domain.descriptor["members"].append(2)
+    domain.cast(dict)["members"].append(3)
+    assert domain.descriptor == {"members": [1]}
+    assert domain.member(1)
+    assert not domain.member(2)
 
-    was_enabled = "honest-but-curious" in GLOBAL_FEATURES
-    dp.disable_features("honest-but-curious")
+    metric = _extrinsic_distance("TestMetric", ["distance"])
+    metric.descriptor.append("changed")
+    metric.cast(list).append("changed")
+    assert metric.descriptor == ["distance"]
+
+    measure = _extrinsic_divergence("TestMeasure", {"kind": "custom"})
+    measure.descriptor["kind"] = "changed"
+    measure.cast(dict)["kind"] = "changed"
+    assert measure.descriptor == {"kind": "custom"}
+
+    with pytest.raises(ValueError, match="domain descriptor must be a int"):
+        domain.cast(int)
+    with pytest.raises(ValueError, match="metric descriptor must be a int"):
+        metric.cast(int)
+    with pytest.raises(ValueError, match="measure descriptor must be a int"):
+        measure.cast(int)
+
+
+def test_extrinsic_descriptors_copy_nested_native_handles():
+    # Native-backed OpenDP handles are shared; mutable Python state is not.
+    value = {
+        "domain": dp.atom_domain(T=int),
+        "metric": dp.symmetric_distance(),
+        "measure": dp.max_divergence(),
+        "items": [1],
+    }
+    domain = _extrinsic_domain("Nested", lambda _: True, value)
+
+    descriptor = domain.cast(dict)
+    for key in ("domain", "metric", "measure"):
+        assert descriptor[key] is value[key]
+
+    descriptor["items"].append(2)
+    assert domain.descriptor["items"] == [1]
+
+
+def test_extrinsic_descriptors_without_hbc():
+    # Keep the feature check in another process instead of changing global test flags.
+    import subprocess
+    import sys
+
+    script = """
+from opendp import prelude as dp
+from opendp._internal import (
+    _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence,
+)
+from opendp.mod import GLOBAL_FEATURES
+
+dp.enable_features("contrib")
+assert "honest-but-curious" not in GLOBAL_FEATURES
+
+objects = [
+    (_extrinsic_domain("TestDomain", lambda _: True, {"a": [1]}), dict),
+    (_extrinsic_distance("TestMetric", ["a"]), list),
+    (_extrinsic_divergence("TestMeasure", {"a": [1]}), dict),
+]
+for obj, expected_type in objects:
+    value = obj.descriptor
+    assert isinstance(value, expected_type)
+    assert obj.cast(expected_type) == value
+
+for constructor, args in [
+    (dp.user_domain, ("TestDomain", lambda _: True)),
+    (dp.user_distance, ("TestMetric",)),
+    (dp.user_divergence, ("TestMeasure",)),
+]:
     try:
-        for obj, descriptor in objects:
-            assert obj._descriptor is descriptor
-            assert obj._cast(type(descriptor)) is descriptor
-            with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
-                _ = obj.descriptor
-            with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
-                obj.cast(type(descriptor))
-    finally:
-        if was_enabled:
-            dp.enable_features("honest-but-curious")
-
-    if was_enabled:
-        for obj, descriptor in objects:
-            assert obj.descriptor is descriptor
-            assert obj.cast(type(descriptor)) is descriptor
+        constructor(*args)
+    except dp.OpenDPException as exc:
+        assert "honest-but-curious" in str(exc)
+    else:
+        raise AssertionError("user constructor should require HBC")
+"""
+    subprocess.run([sys.executable, "-c", script], check=True)
 
 
 def test_extrinsic_free():

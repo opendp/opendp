@@ -38,7 +38,7 @@ def make_private_np_mean(
         t_clamp = make_np_clamp(input_domain, input_metric, norm, p, origin)
         input_domain, input_metric = t_clamp.output_space
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
     size = input_desc.size
     if size is None:
         raise ValueError("input_domain must consist of sized data")  # pragma: no cover

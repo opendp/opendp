@@ -9,6 +9,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 
 from __future__ import annotations
 import ctypes
+from copy import deepcopy
 from dataclasses import asdict
 from typing import (
     Any,
@@ -874,24 +875,18 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
-    def _cast(self, type_: Type[D]) -> D:
-        """Retrieve a descriptor for use by trusted OpenDP code."""
+    def __deepcopy__(self, memo):
+        """Native-backed handles remain shared when copying descriptors."""
+        return self
+
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDomain)
-            and isinstance(descriptor := self._descriptor, type_)
+            and isinstance(descriptor := self.descriptor, type_)
         ):
             raise ValueError(f"domain descriptor must be a {type_.__name__}")
         return descriptor
-
-    def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._cast(type_)
 
 
 class AtomDomain(Domain):
@@ -1032,22 +1027,11 @@ class ExtrinsicDomain(Domain):
     _type_ = AnyDomain
 
     @property
-    def _descriptor(self) -> Any:
-        """Retrieve the descriptor for use by trusted OpenDP code."""
+    def descriptor(self) -> Any:
+        """Return a deep copy of the descriptor."""
         from opendp.domains import _extrinsic_domain_descriptor
 
-        return _extrinsic_domain_descriptor(self)
-
-    @property
-    def descriptor(self) -> Any:
-        """Retrieve the live descriptor.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._descriptor
+        return deepcopy(_extrinsic_domain_descriptor(self))
 
 
 class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
@@ -1109,26 +1093,20 @@ class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
 
-    def _cast(self, type_: Type[D]) -> D:
-        """Retrieve a descriptor for use by trusted OpenDP code."""
+    def __deepcopy__(self, memo):
+        """Native-backed handles remain shared when copying descriptors."""
+        return self
+
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDistance)
-            and isinstance(descriptor := self._descriptor, type_)
+            and isinstance(descriptor := self.descriptor, type_)
         ):
             raise ValueError(
                 f"metric descriptor must be a {type_.__name__}, found {self}"
             )
         return descriptor
-
-    def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._cast(type_)
 
 
 class ExtrinsicDistance(Metric):
@@ -1137,22 +1115,11 @@ class ExtrinsicDistance(Metric):
     _type_ = AnyMetric
 
     @property
-    def _descriptor(self) -> Any:
-        """Retrieve the descriptor for use by trusted OpenDP code."""
+    def descriptor(self) -> Any:
+        """Return a deep copy of the descriptor."""
         from opendp.metrics import _extrinsic_metric_descriptor
 
-        return _extrinsic_metric_descriptor(self)
-
-    @property
-    def descriptor(self) -> Any:
-        """Retrieve the live descriptor.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._descriptor
+        return deepcopy(_extrinsic_metric_descriptor(self))
 
 
 class FrameDistance(Metric):
@@ -1266,26 +1233,20 @@ class Measure(ctypes.POINTER(AnyMeasure)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
-    def _cast(self, type_: Type[D]) -> D:
-        """Retrieve a descriptor for use by trusted OpenDP code."""
+    def __deepcopy__(self, memo):
+        """Native-backed handles remain shared when copying descriptors."""
+        return self
+
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDivergence)
-            and isinstance(descriptor := self._descriptor, type_)
+            and isinstance(descriptor := self.descriptor, type_)
         ):
             raise ValueError(
                 f"measure descriptor must be a {type_.__name__}, found {self}"
             )
         return descriptor
-
-    def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._cast(type_)
 
 
 class ExtrinsicDivergence(Measure):
@@ -1294,22 +1255,11 @@ class ExtrinsicDivergence(Measure):
     _type_ = AnyMeasure
 
     @property
-    def _descriptor(self) -> Any:
-        """Retrieve the descriptor for use by trusted OpenDP code."""
+    def descriptor(self) -> Any:
+        """Return a deep copy of the descriptor."""
         from opendp.measures import _extrinsic_measure_descriptor
 
-        return _extrinsic_measure_descriptor(self)
-
-    @property
-    def descriptor(self) -> Any:
-        """Retrieve the live descriptor.
-
-        Why honest-but-curious?
-        -----------------------
-        The returned descriptor must not be mutated.
-        """
-        assert_features("honest-but-curious")
-        return self._descriptor
+        return deepcopy(_extrinsic_measure_descriptor(self))
 
 
 class ApproximateDivergence(Measure):

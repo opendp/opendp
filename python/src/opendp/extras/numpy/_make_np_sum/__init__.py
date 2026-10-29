@@ -26,7 +26,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
             f"input_domain ({input_domain}) must be NPArray2Domain"
         )  # pragma: no cover
 
-    if input_domain._descriptor.nan:
+    if input_domain.descriptor.nan:
         raise ValueError(
             f"input_domain ({input_domain}) must not permit NaN elements"
         )  # pragma: no cover
@@ -36,7 +36,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
             "input_metric must be the symmetric distance"
         )  # pragma: no cover
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
     norm = input_desc.norm
     if norm is None:  # |\label{norm-check}|
         raise ValueError(
