@@ -22,7 +22,9 @@ class ZExpFamily1:
             if not epsilon.is_finite():
                 raise "privacy parameters are not finite"
 
-            rho = zcdp_discrete_laplace(epsilon_exact, d_in, scale).or_else(lambda: epsilon)
+            rho = zcdp_discrete_laplace(epsilon_exact, d_in, scale).or_else(
+                lambda: epsilon
+            )
             curve = PrivacyGuarantee().with_approx_dp(epsilon, 0.0).with_zCDP(rho, 0.0)
 
             def rdp(orders):
@@ -35,6 +37,7 @@ class ZExpFamily1:
                         .or_else(lambda: epsilon)
                     )
                 return values
+
             return curve.with_renyiDP(rdp, 0.0)
 
         return PrivacyMap.new_fallible(privacy_map)

@@ -281,7 +281,7 @@ fn rdp_discrete_laplace(alpha: f64, sensitivity: &RBig, scale: &RBig) -> Fallibl
         .clone()
         .mul(alpha_i.clone())?
         .mul(d_i.clone())?
-        .neg()?
+        .neg()
         .sub(log_expm1_a.clone())?;
 
     // Original term:
@@ -401,7 +401,7 @@ fn log_sub_exp(hi: SInterval, lo: SInterval) -> Fallible<SInterval> {
 }
 
 fn interval_sinh(x: SInterval) -> Fallible<SInterval> {
-    SInterval::point(0.5)?.mul(x.clone().exp()?.sub(x.neg()?.exp()?)?)
+    SInterval::point(0.5)?.mul(x.clone().exp()?.sub(x.neg().exp()?)?)
 }
 
 fn check_renyi_order(alpha: f64) -> Fallible<()> {
