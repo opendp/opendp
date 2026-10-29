@@ -74,6 +74,16 @@ def make_private_pca(
     rest. Eigenvalues and Bingham samples split the eigen budget equally, with
     equal budgets per sample. With no samples, eigenvalues get the entire share.
     Use ``d_in=2`` to protect one replacement in the exact-size input domain.
+
+    :param input_domain: Domain of the input NumPy array, with public size and width.
+    :param input_metric: Symmetric distance on input rows.
+    :param output_measure: Max divergence (pure epsilon-DP).
+    :param d_in: Input distance to protect, either one or two symmetric edits.
+    :param d_out: Positive epsilon privacy allowance at ``d_in``.
+    :param clip_norm: Optional positive finite L2 clipping radius.
+    :param center: Privately estimate the mean (None), or use the public 'origin'.
+    :param num_components: Number of components, variance fraction, 'mle', or None.
+    :return: Measurement releasing PCA parameters in a :class:`PCARelease`.
     """
     import opendp.prelude as dp
 
@@ -98,10 +108,14 @@ def make_private_pca(
     if n_samples < 2 or n_features < 1:
         raise ValueError("PCA requires at least two samples and one feature")
     if isinstance(num_components, bool):
-        raise ValueError("num_components must be None, an integer, a fraction, or 'mle'")
+        raise ValueError(
+            "num_components must be None, an integer, a fraction, or 'mle'"
+        )
     if isinstance(num_components, int):
         if not 1 <= num_components <= min(n_samples, n_features):
-            raise ValueError("num_components must be between 1 and min(n_samples, n_features)")
+            raise ValueError(
+                "num_components must be between 1 and min(n_samples, n_features)"
+            )
     elif isinstance(num_components, float):
         if not 0 < num_components < 1:
             raise ValueError("num_components must be in (0, 1) when fractional")
@@ -109,10 +123,17 @@ def make_private_pca(
         if n_samples < n_features:
             raise ValueError("num_components='mle' requires n_samples >= n_features")
     elif num_components is not None:
-        raise ValueError("num_components must be None, an integer, a fraction, or 'mle'")
-    num_samples = min(num_components if isinstance(num_components, int) else n_features, n_features - 1)
+        raise ValueError(
+            "num_components must be None, an integer, a fraction, or 'mle'"
+        )
+    num_samples = min(
+        num_components if isinstance(num_components, int) else n_features,
+        n_features - 1,
+    )
 
-    origin = np.array(0.0 if desc.origin is None else desc.origin, dtype=float, copy=True)
+    origin = np.array(
+        0.0 if desc.origin is None else desc.origin, dtype=float, copy=True
+    )
     if origin.ndim == 0:
         origin = np.full(n_features, origin.item())
     if origin.shape != (n_features,):
@@ -136,7 +157,12 @@ def make_private_pca(
         t_clip = make_np_clamp(input_domain, input_metric, radius, p=2, origin=origin)
         ball_domain = t_clip.output_domain
     centered_domain = dp.numpy.array2_domain(
-        T=float, size=n_samples, num_columns=n_features, norm=radius, p=2, nan=False,
+        T=float,
+        size=n_samples,
+        num_columns=n_features,
+        norm=radius,
+        p=2,
+        nan=False,
     )
     estimate_mean = center is None
     mean_budget = _smaller(float(d_out) / 3) if estimate_mean else 0.0
@@ -145,10 +171,16 @@ def make_private_pca(
     def eigendecomposition(reference):
         # Low-level mechanisms are calibrated at two symmetric edits.
         budget_at_two = 2 * eigen_budget / float(d_in)
-        t_reclip = make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference) if estimate_mean else None
+        t_reclip = (
+            make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference)
+            if estimate_mean
+            else None
+        )
         t_center = _make_transformation(
-            t_reclip.output_domain if t_reclip is not None else ball_domain, input_metric,
-            centered_domain, input_metric,
+            t_reclip.output_domain if t_reclip is not None else ball_domain,
+            input_metric,
+            centered_domain,
+            input_metric,
             lambda data: np.asarray(data, dtype=float) - reference,
             lambda distance: distance,
         )
@@ -157,10 +189,13 @@ def make_private_pca(
         while True:
             eigvals_epsilon = budget_at_two / 2 if num_samples else budget_at_two
             eigvecs_epsilons = (
-                [_smaller(budget_at_two / 2 / num_samples)] * num_samples if num_samples else []
+                [_smaller(budget_at_two / 2 / num_samples)] * num_samples
+                if num_samples
+                else []
             )
             measurement = t_center >> then_private_np_eigendecomposition(
-                eigvals_epsilon, eigvecs_epsilons,
+                eigvals_epsilon,
+                eigvecs_epsilons,
             )
             spent = measurement.map(d_in)
             if spent <= eigen_budget:
@@ -184,27 +219,49 @@ def make_private_pca(
     else:
         # Certify ||x-c||_1 <= sqrt(d) R without changing the L2-clipped rows.
         # Round both sqrt and multiplication upwards for conservative sensitivity.
-        l1_radius = np.nextafter(np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf)
-        l1_domain = dp.numpy.array2_domain(**(asdict(ball_domain.descriptor) | {
-            "norm": l1_radius, "p": 1, "origin": origin, "T": float,
-        }))
+        l1_radius = np.nextafter(
+            np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
+        )
+        l1_domain = dp.numpy.array2_domain(
+            **(
+                asdict(ball_domain.descriptor)
+                | {
+                    "norm": l1_radius,
+                    "p": 1,
+                    "origin": origin,
+                    "T": float,
+                }
+            )
+        )
         t_l1 = _make_transformation(
-            ball_domain, input_metric, l1_domain, input_metric,
-            lambda data: np.asarray(data, dtype=float), lambda distance: distance,
+            ball_domain,
+            input_metric,
+            l1_domain,
+            input_metric,
+            lambda data: np.asarray(data, dtype=float),
+            lambda distance: distance,
         )
         m_mean = dp.binary_search_chain(
             lambda scale: t_l1 >> make_private_np_mean(l1_domain, input_metric, scale),
             # Fixed-size sums have zero sensitivity at one symmetric edit.
-            d_in=2, d_out=2 * mean_budget / float(d_in), T=float,
+            d_in=2,
+            d_out=2 * mean_budget / float(d_in),
+            T=float,
         )
         projection = make_np_clamp(
             dp.numpy.array2_domain(T=float, size=1, num_columns=n_features),
-            input_metric, radius, p=2, origin=origin,
+            input_metric,
+            radius,
+            p=2,
+            origin=origin,
         )
         m_mean = m_mean >> _new_pure_function(lambda mean: projection(mean[None, :])[0])
         compositor = dp.c.make_adaptive_composition(
-            ball_domain, input_metric, output_measure,
-            d_in=d_in, d_mids=[mean_budget, eigen_budget],
+            ball_domain,
+            input_metric,
+            output_measure,
+            d_in=d_in,
+            d_mids=[mean_budget, eigen_budget],
         )
 
         def function(data):
@@ -213,7 +270,11 @@ def make_private_pca(
             return qbl(eigendecomposition(reference))
 
         measurement = _make_measurement(
-            ball_domain, input_metric, output_measure, function, compositor.map,
+            ball_domain,
+            input_metric,
+            output_measure,
+            function,
+            compositor.map,
         )
 
     return t_clip >> measurement if t_clip is not None else measurement
@@ -256,11 +317,15 @@ class PCA(SklearnPCA, DPTransformer):
         )
 
     def fit_transform(self, X, y=None, **kwargs):
-        """Fit with DP configuration keywords, then transform X.
+        """Reject releasing transformed private training rows without accounting.
 
-        The returned training rows are not themselves a DP release.
+        Use ``fit`` to release parameters and ``make_transform`` to preprocess
+        private records within a subsequent accounted computation.
         """
-        return self.fit(X, y, **kwargs).transform(X)
+        raise NotImplementedError(
+            "fit_transform would release nonprivate training rows; use make_transform "
+            "within an accounted private computation"
+        )
 
     def make(
         self,
@@ -273,14 +338,23 @@ class PCA(SklearnPCA, DPTransformer):
         fit_desc = input_domain.cast(SklearnFitDomain)
         X_domain = fit_desc.X
         m_X = make_private_pca(
-            X_domain, input_metric, output_measure, d_in, d_out,
-            clip_norm=self.clip_norm, center=self.center, num_components=self.n_components,
+            X_domain,
+            input_metric,
+            output_measure,
+            d_in,
+            d_out,
+            clip_norm=self.clip_norm,
+            center=self.center,
+            num_components=self.n_components,
         )
         # Removing one complete sklearn row removes at most one X row. Thus
         # this estimator-specific wrapper has the same privacy map as m_X.
         return _make_measurement(
-            input_domain, input_metric, m_X.output_measure,
-            lambda data: m_X(data.X), m_X.map,
+            input_domain,
+            input_metric,
+            m_X.output_measure,
+            lambda data: m_X(data.X),
+            m_X.map,
         )
 
     def _ingest_release(self, release: PCARelease) -> None:
@@ -307,7 +381,8 @@ class PCA(SklearnPCA, DPTransformer):
         total_variance = np.sum(explained_variance)
         explained_variance_ratio = (
             explained_variance / total_variance
-            if total_variance > 0 else np.zeros_like(explained_variance)
+            if total_variance > 0
+            else np.zeros_like(explained_variance)
         )
 
         n_components = release.n_components
@@ -316,23 +391,31 @@ class PCA(SklearnPCA, DPTransformer):
         elif n_components == "mle":
             if n_samples < n_features:
                 raise ValueError("n_components='mle' requires n_samples >= n_features")
-            n_components = _infer_dimension(explained_variance, n_samples)
+            # sklearn may select zero for one feature or a zero spectrum.
+            # This API retains at least one component, even in those cases.
+            n_components = max(1, _infer_dimension(explained_variance, n_samples))
         elif isinstance(n_components, float):
             if not 0 < n_components < 1:
                 raise ValueError("n_components must be in (0, 1) when fractional")
             # With no released variance, one component is sufficient for any
             # requested fraction; searching an all-zero cumulative sum is not.
             n_components = (
-                1 if total_variance == 0 else
-                np.searchsorted(
+                1
+                if total_variance == 0
+                else np.searchsorted(
                     np.cumsum(explained_variance_ratio), n_components, side="right"
-                ) + 1
+                )
+                + 1
             )
         elif isinstance(n_components, int) and not isinstance(n_components, bool):
             if not 1 <= n_components <= min(n_samples, n_features):
-                raise ValueError("n_components must be between 1 and min(n_samples, n_features)")
+                raise ValueError(
+                    "n_components must be between 1 and min(n_samples, n_features)"
+                )
         else:
-            raise ValueError("n_components must be None, an integer, a fraction, or 'mle'")
+            raise ValueError(
+                "n_components must be None, an integer, a fraction, or 'mle'"
+            )
 
         n_components = int(n_components)
         if n_components < 1 or n_components > len(explained_variance):
@@ -385,13 +468,19 @@ class PCA(SklearnPCA, DPTransformer):
             return np.asarray(result, dtype=float)
 
         output_domain = dp.numpy.array2_domain(
-            T=float, size=desc.size, num_columns=self.n_components_,
+            T=float,
+            size=desc.size,
+            num_columns=self.n_components_,
         )
         output_domain = sklearn_fit_domain(output_domain, fit_desc.y)
         function = lambda data: replace(data, X=transform(data.X))
         return _make_transformation(
-            input_domain, input_metric, output_domain, input_metric,
-            function, lambda distance: distance,
+            input_domain,
+            input_metric,
+            output_domain,
+            input_metric,
+            function,
+            lambda distance: distance,
         )
 
 

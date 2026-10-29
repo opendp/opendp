@@ -66,7 +66,11 @@ def make_private_np_eigendecomposition(
     if input_desc.num_columns == 1 and not eigvecs_epsilons:
         # The only direction is public: no Bingham sample or composition needed.
         np = import_optional_dependency("numpy")
-        return t_sscp >> m_eigvals >> _new_pure_function(lambda vals: (vals, np.ones((1, 1))))
+        return (
+            t_sscp
+            >> m_eigvals
+            >> _new_pure_function(lambda vals: (vals, np.ones((1, 1))))
+        )
 
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,

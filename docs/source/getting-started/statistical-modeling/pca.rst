@@ -14,7 +14,9 @@ constructor. Install ``opendp[scikit-learn]`` to use this interface.
 
     >>> import numpy as np
     >>> import opendp.prelude as dp
-    >>> dp.enable_features("contrib", "idealized-numerics", "honest-but-curious")
+    >>> dp.enable_features(
+    ...     "contrib", "idealized-numerics", "honest-but-curious"
+    ... )
     >>> public_size = 100
     >>> X = np.random.default_rng(0).normal(size=(public_size, 4))
 
@@ -27,7 +29,9 @@ mechanism needs an exact public sample count, so supply it explicitly:
 
     >>> schema = dp.domain_of(X, infer=True).descriptor
     >>> X_domain = dp.numpy.array2_domain(
-    ...     T=schema.T, num_columns=schema.num_columns, size=public_size,
+    ...     T=schema.T,
+    ...     num_columns=schema.num_columns,
+    ...     size=public_size,
     ... )
     >>> fit_domain = dp.sklearn.sklearn_fit_domain(X_domain)
 
@@ -40,9 +44,12 @@ count: this domain requires the exact sample count.
 
 .. code:: pycon
 
-    >>> model = dp.sklearn.decomposition.PCA(n_components=2, clip_norm=1.0)
+    >>> model = dp.sklearn.decomposition.PCA(
+    ...     n_components=2, clip_norm=1.0
+    ... )
     >>> model.fit(
-    ...     X, domain=fit_domain,
+    ...     X,
+    ...     domain=fit_domain,
     ...     privacy_unit=dp.unit_of(contributions=2),
     ...     privacy_loss=dp.loss_of(epsilon=1),
     ... ) is model
@@ -79,33 +86,44 @@ Eigendecomposition divides its budget equally between eigenvalues and Bingham
 samples, or assigns it all to eigenvalues if no sampling is needed.
 
 ``n_components`` also accepts a variance fraction, ``'mle'``, or None;
-``whiten=True`` scales projections using the released variances.
+``whiten=True`` scales projections using the released variances. MLE selection
+retains at least one component, including for one feature or zero released variance.
 This implementation currently supports pure epsilon-DP.
 
 Fit within a Context
 --------------------
 
-A Context supplies and accounts for the privacy budget. Its release fits the
-original estimator in place, just like standalone ``fit``:
+A Context supplies and accounts for the privacy budget. Each release returns a
+new fitted clone, leaving the supplied estimator unchanged. In contrast,
+standalone ``fit`` updates and returns the supplied estimator:
 
 .. code:: pycon
 
     >>> context = dp.Context.compositor(
-    ...     dp.sklearn.SklearnFit(X), domain=fit_domain,
+    ...     dp.sklearn.SklearnFit(X),
+    ...     domain=fit_domain,
     ...     privacy_unit=dp.unit_of(contributions=2),
-    ...     privacy_loss=dp.loss_of(epsilon=1), split_evenly_over=1,
+    ...     privacy_loss=dp.loss_of(epsilon=1),
+    ...     split_evenly_over=1,
     ... )
-    >>> context.query().sklearn(model).release() is model
-    True
-    >>> model.components_.shape
+    >>> template = dp.sklearn.decomposition.PCA(
+    ...     n_components=2, clip_norm=1.0
+    ... )
+    >>> fitted = context.query().sklearn(template).release()
+    >>> fitted is template
+    False
+    >>> hasattr(template, "components_")
+    False
+    >>> fitted.components_.shape
     (2, 4)
     >>> context.current_privacy_loss()
     [1.0]
 
 These are alternative fitting routes. Running both examples on the same private
 data spends their composed privacy loss, here epsilon 2. The Context does not
-track the earlier standalone fit. Refitting replaces learned state; it does not
-reuse a previous fit's privacy budget.
+track the earlier standalone fit. Standalone refitting replaces learned state;
+Context releases produce independent fitted clones. Neither route reuses a
+previous fit's privacy budget.
 
 Advanced composition
 --------------------
@@ -116,8 +134,11 @@ For lower-level composition, ``make`` constructs an OpenDP
 .. code:: pycon
 
     >>> measurement = model.make(
-    ...     fit_domain, dp.symmetric_distance(), dp.max_divergence(),
-    ...     d_in=2, d_out=1.0,
+    ...     fit_domain,
+    ...     dp.symmetric_distance(),
+    ...     dp.max_divergence(),
+    ...     d_in=2,
+    ...     d_out=1.0,
     ... )
     >>> measurement.check(2, 1.0)
     True
@@ -132,5 +153,7 @@ For preprocessing within a subsequent private query, ``model.make_transform``
 constructs a stable transformation from released parameters, retaining any y
 in ``SklearnFit``. Ordinary ``transform`` outputs on private training rows are
 **not DP releases** and must not be handed to a nonprivate downstream estimator
-as though they were. Ordinary sklearn pipelines do not account for end-to-end
-privacy.
+as though they were. ``fit_transform`` raises ``NotImplementedError`` to prevent
+inadvertently releasing transformed private training records; use ``make_transform``
+within a subsequent accounted computation instead. Ordinary sklearn pipelines
+do not account for end-to-end privacy.
