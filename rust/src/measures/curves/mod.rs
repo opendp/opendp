@@ -1,8 +1,8 @@
-use std::{cmp::Ordering, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     error::{ErrorVariant, Fallible},
-    utilities::search::{Above, fallible_binary_search_by},
+    utilities::search::{Above, fallible_binary_search},
 };
 
 pub(crate) mod logspace;
@@ -29,6 +29,9 @@ enum PrivacyProfileRepr {
     Points(Arc<[ApproxDPPoint]>),
     Function {
         log_delta: Arc<LogProfileFn>,
+        // Retain the original delta bound for exact equality comparisons.
+        // A delta -> log -> delta roundtrip can otherwise lose plateaus.
+        delta: Option<Arc<DeltaFn>>,
         epsilon: Option<Arc<EpsilonFn>>,
     },
 }
@@ -51,12 +54,11 @@ impl PrivacyProfile {
     /// upward-conservative delta bound. These properties are not validated at
     /// runtime beyond pointwise range checks.
     pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
+        let delta: Arc<DeltaFn> = Arc::new(delta);
         Self {
             repr: PrivacyProfileRepr::Function {
-                log_delta: Arc::new(move |epsilon| {
-                    let delta = eval_delta_profile(&delta, epsilon)?;
-                    delta_to_log_upper_unchecked(delta)
-                }),
+                log_delta: log_delta_from_delta(delta.clone()),
+                delta: Some(delta),
                 epsilon: None,
             },
         }
@@ -129,7 +131,8 @@ impl PrivacyProfile {
     ) -> Fallible<Self> {
         let delta: Arc<DeltaFn> = Arc::new(delta);
         self.repr = PrivacyProfileRepr::Function {
-            log_delta: log_delta_from_delta(delta),
+            log_delta: log_delta_from_delta(delta.clone()),
+            delta: Some(delta),
             epsilon: None,
         };
         Ok(self)
@@ -140,7 +143,8 @@ impl PrivacyProfile {
     /// The callback must be functionally pure and nonincreasing, and return a
     /// valid log-delta bound. When numerically approximate, it must be
     /// upward-conservative. These properties are not validated at runtime
-    /// beyond pointwise range checks.
+    /// beyond pointwise range checks. Numerical errors are not comparison
+    /// information; inversion requires an evaluable log-delta bound.
     #[cfg(feature = "honest-but-curious")]
     pub fn with_log_profile(
         mut self,
@@ -148,6 +152,7 @@ impl PrivacyProfile {
     ) -> Fallible<Self> {
         self.repr = PrivacyProfileRepr::Function {
             log_delta: Arc::new(log_delta),
+            delta: None,
             epsilon: None,
         };
         Ok(self)
@@ -162,6 +167,7 @@ impl PrivacyProfile {
     ) -> Fallible<Self> {
         self.repr = PrivacyProfileRepr::Function {
             log_delta: Arc::new(log_delta),
+            delta: None,
             epsilon: Some(Arc::new(epsilon)),
         };
         Ok(self)
@@ -175,6 +181,9 @@ impl PrivacyProfile {
                 let idx = points.partition_point(|point| point.epsilon <= epsilon);
                 Ok(if idx == 0 { 1.0 } else { points[idx - 1].delta })
             }
+            PrivacyProfileRepr::Function {
+                delta: Some(delta), ..
+            } => eval_delta_profile(delta.as_ref(), epsilon),
             PrivacyProfileRepr::Function { log_delta, .. } => {
                 let log_delta = eval_log_profile(log_delta.as_ref(), epsilon)?;
                 log_to_delta_upper(log_delta)
@@ -196,7 +205,11 @@ impl PrivacyProfile {
                 .find(|point| point.delta <= delta)
                 .map(|point| point.epsilon)
                 .unwrap_or(f64::INFINITY)),
-            PrivacyProfileRepr::Function { log_delta, epsilon } => {
+            PrivacyProfileRepr::Function {
+                log_delta,
+                delta: delta_profile,
+                epsilon,
+            } => {
                 if let Some(epsilon) = epsilon {
                     let value = epsilon(delta)?;
                     if value.is_nan() || value < 0.0 {
@@ -206,6 +219,14 @@ impl PrivacyProfile {
                         );
                     }
                     Ok(value.max(0.0))
+                } else if let Some(profile) = delta_profile {
+                    match invert_decreasing_callback(
+                        |epsilon| eval_delta_profile(profile.as_ref(), epsilon),
+                        delta,
+                    ) {
+                        Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
+                        result => result,
+                    }
                 } else {
                     invert_log_profile(log_delta.as_ref(), delta)
                 }
@@ -255,14 +276,9 @@ fn invert_log_profile(profile: &LogProfileFn, target_delta: f64) -> Fallible<f64
     let target_lower = delta_to_log_lower_unchecked(target_delta)?;
     match invert_decreasing_callback(&callback, target_lower) {
         Ok(epsilon) => Ok(epsilon),
-        Err(err) if err.variant == ErrorVariant::Search => {
-            let target_upper = delta_to_log_upper_unchecked(target_delta)?;
-            match invert_decreasing_callback(&callback, target_upper) {
-                Ok(epsilon) => Ok(epsilon),
-                Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
-                Err(err) => Err(err),
-            }
-        }
+        // A failed conservative comparison is not permission to weaken the
+        // target. Without a certified finite endpoint, return infinity.
+        Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
         Err(err) => Err(err),
     }
 }
@@ -272,34 +288,15 @@ fn invert_decreasing_callback(
     callback: impl Fn(f64) -> Fallible<f64>,
     target: f64,
 ) -> Fallible<f64> {
-    // This caller owns the final profile quantity, so it explicitly translates
-    // terminal range failures into ordering information. The generic search
-    // remains literal and propagates these errors.
-    let compare = |epsilon: &f64| match callback(*epsilon) {
-        Ok(value) => Ok(if value <= target {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }),
-        Err(err) if err.variant == ErrorVariant::NumericRangeBelow => Ok(Ordering::Less),
-        Err(err) if err.variant == ErrorVariant::NumericRangeAbove => Ok(Ordering::Greater),
-        // A profile callback may overflow while evaluating a sufficiently
-        // large epsilon. It is below any positive target, but it does not
-        // establish a finite pure-DP endpoint when the target is exactly 0.
-        Err(err) if err.variant == ErrorVariant::Overflow => Ok(if target == f64::NEG_INFINITY {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }),
-        Err(err) => Err(err),
-    };
+    // An overflow can originate in an intermediate operation. Neither its
+    // occurrence nor its sign would establish the final log-delta comparison.
+    let predicate = |epsilon: &f64| Ok(callback(*epsilon)? <= target);
 
-    match compare(&0.0)? {
-        Ordering::Less | Ordering::Equal => return Ok(0.0),
-        Ordering::Greater => {}
+    if predicate(&0.0)? {
+        return Ok(0.0);
     }
 
-    fallible_binary_search_by(compare, Above(0.0))
+    fallible_binary_search(predicate, Above(0.0))
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {

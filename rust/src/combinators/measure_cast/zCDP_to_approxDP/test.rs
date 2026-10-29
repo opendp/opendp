@@ -22,11 +22,11 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
 
     assert_eq!(profile.epsilon(0.)?, f64::INFINITY);
 
-    // using reverse map to check correctness
-    // implementation of reverse map is slightly looser by 1 ulp due to numerical imprecision
+    // The independently rounded reverse map may be slightly looser; it is
+    // not a lower bound on this inverse. Certify against the forward bound.
     assert_eq!(cdp_epsilon(rho, 1e-3)?, 0.6880024554878086);
     let epsilon = profile.epsilon(1e-3)?;
-    assert!(epsilon >= cdp_epsilon(rho, 1e-3)?);
+    assert!(profile.delta(epsilon)? <= 1e-3);
     assert!((epsilon - 0.6880024554878086).abs() < 1e-15);
     assert_eq!(profile.epsilon(1.0)?, 0.);
 
