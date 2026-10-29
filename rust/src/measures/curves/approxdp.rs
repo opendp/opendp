@@ -3,58 +3,32 @@ use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
-    measures::curves::{ApproxDPPoint, check_alpha, check_delta, check_epsilon},
+    measures::curves::{check_alpha, check_delta, check_epsilon},
     traits::{InfCast, SInterval},
 };
 
-impl ApproxDPPoint {
-    /// Build a point while caching directed-rounding bounds for its exponentials.
-    pub(crate) fn build((epsilon, delta): (f64, f64)) -> Fallible<Self> {
-        check_epsilon(epsilon)?;
-        if !epsilon.is_finite() {
-            return fallible!(
-                FailedMap,
-                "epsilon values in privacy profile must be finite"
-            );
-        }
-        check_delta(delta)?;
-
-        let epsilon_cert = SInterval::point(epsilon)?;
-        let exp_eps_up = RBig::try_from(epsilon_cert.clone().exp()?.upper_f64()?)?;
-        let exp_neg_eps_down = RBig::try_from((-epsilon_cert.clone())?.exp()?.lower_f64()?)?;
-
-        Ok(Self {
-            epsilon: epsilon_cert.upper_f64()?,
-            delta,
-            one_minus_delta: RBig::ONE - RBig::try_from(delta)?,
-            exp_eps_up,
-            exp_neg_eps_down,
-        })
-    }
-
-    #[proven(proof_path = "measures/curves/approxdp_point_beta.tex")]
-    #[inline]
-    pub(crate) fn beta(&self, alpha: &RBig) -> RBig {
-        let t1 = &self.one_minus_delta - &self.exp_eps_up * alpha;
-        let base = (&self.one_minus_delta - alpha).max(rbig!(0));
-        let t2 = &self.exp_neg_eps_down * base;
-
-        t1.max(t2).max(rbig!(0))
-    }
-}
-
-/// Convert point-backed ApproxDP information to a conservative symmetric
-/// tradeoff. Each point gives a certified lower bound, so the aggregate is
-/// their pointwise maximum.
-#[allow(non_snake_case)]
-pub(crate) fn beta_via_approxDP(points: &[ApproxDPPoint], alpha: f64) -> Fallible<f64> {
+/// Apply the two-sided approximate-DP theorem directly to a fixed certificate.
+/// No tradeoff representation is materialized: its rounded output must not be
+/// fed into a convexity-dependent optimizer. Delta/epsilon queries instead use
+/// the original certificate.
+#[proven(proof_path = "measures/curves/approxdp_beta.tex")]
+pub(super) fn beta_via_approx_dp(epsilon: f64, delta: f64, alpha: f64) -> Fallible<f64> {
+    check_epsilon(epsilon)?;
+    check_delta(delta)?;
     check_alpha(alpha)?;
+    if alpha == 1.0 {
+        return Ok(0.0);
+    }
+    let one_minus_delta = RBig::ONE - RBig::try_from(delta)?;
+    if alpha == 0.0 {
+        return f64::neg_inf_cast(one_minus_delta);
+    }
+    let epsilon = SInterval::point(epsilon)?;
+    let exp_eps_up = RBig::try_from(epsilon.clone().exp()?.upper_f64()?)?;
+    let exp_neg_eps_down = RBig::try_from((-epsilon).exp()?.lower_f64()?)?;
     let alpha = RBig::try_from(alpha)?;
-    let best = points
-        .iter()
-        .map(|point| point.beta(&alpha))
-        .max()
-        .unwrap_or_default();
-
-    Ok(f64::neg_inf_cast(best)?.clamp(0.0, 1.0))
+    let t1 = &one_minus_delta - exp_eps_up * &alpha;
+    let base = (one_minus_delta - alpha).max(rbig!(0));
+    let t2 = exp_neg_eps_down * base;
+    Ok(f64::neg_inf_cast(t1.max(t2).max(rbig!(0)))?.clamp(0.0, 1.0))
 }

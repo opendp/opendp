@@ -7,7 +7,7 @@ use super::*;
 use crate::error::ErrorVariant;
 
 // Scalar mathematical fixtures below exercise the vector API with singleton queries.
-fn batch(
+pub(super) fn batch(
     f: impl Fn(f64) -> Fallible<f64> + Send + Sync,
 ) -> impl Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync {
     move |values| values.iter().map(|&value| f(value)).collect()
@@ -38,24 +38,21 @@ fn approximate_dp_profile_conversion_preserves_slack_equality_and_plateaus() -> 
     Ok(())
 }
 
-#[cfg(feature = "honest-but-curious")]
 #[test]
-fn test_approxdp_points_have_certified_symmetric_tradeoff() -> Fallible<()> {
-    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 0.1), (2.0, 0.01)])?;
-    let guarantee = PrivacyGuarantee::from_profile(profile).with_approxDP_tradeoff_trusted()?;
-    let alpha = 0.2;
-    let expected = [(1.0_f64, 0.1_f64), (2.0_f64, 0.01_f64)]
-        .into_iter()
-        .map(|(epsilon, delta)| {
-            (0.0_f64)
-                .max(1.0 - delta - epsilon.exp() * alpha)
-                .max((-epsilon).exp() * (1.0 - delta - alpha))
-        })
-        .fold(0.0_f64, f64::max);
-
-    let beta = guarantee.beta(alpha)?;
-    assert!(beta <= expected);
-    assert!(beta > 0.0);
+fn test_fixed_approx_dp_tradeoff_is_conservative() -> Fallible<()> {
+    for (epsilon, delta) in [(1.0_f64, 0.1_f64), (2.0, 0.01)] {
+        let guarantee = PrivacyGuarantee::new().with_approx_dp(epsilon, delta)?;
+        let alpha = 0.2;
+        let expected = (0.0_f64)
+            .max(1.0 - delta - epsilon.exp() * alpha)
+            .max((-epsilon).exp() * (1.0 - delta - alpha));
+        let beta = guarantee.beta(&[alpha])?[0];
+        assert!(beta <= expected);
+        assert!(beta > 0.0);
+        // Queries use the original certificate, never the rounded beta callback.
+        assert_eq!(guarantee.delta(epsilon)?, delta);
+        assert_eq!(guarantee.epsilon(delta)?, epsilon);
+    }
     Ok(())
 }
 
@@ -487,87 +484,240 @@ fn test_vector_validation_and_callback_lengths() -> Fallible<()> {
     Ok(())
 }
 
-#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_alpha_inverse_uses_strict_lower_witnesses() -> Fallible<()> {
+    use crate::traits::InfCast;
+    use dashu::rational::RBig;
+
+    for slope in [1.0, 2.0, 3.0, 7.0, f64::MAX] {
+        let lower = move |alpha: f64| {
+            let value = (RBig::from(1) - RBig::try_from(slope)? * RBig::try_from(alpha)?)
+                .max(RBig::from(0));
+            f64::neg_inf_cast(value)
+        };
+        for target in [0.0, 0.125, 0.5, 1.0] {
+            let reference = (RBig::from(1) - RBig::try_from(target)?) / RBig::try_from(slope)?;
+            let alpha = invert_beta_callback(lower, target)?;
+            assert!(
+                RBig::try_from(alpha)? <= reference,
+                "alpha={alpha} exceeds crossing {reference}, slope={slope}, target={target}"
+            );
+            if alpha > 0.0 {
+                assert!(lower(alpha)? > target);
+            }
+            if target == 0.0 {
+                assert!(RBig::try_from(alpha.next_up())? >= reference);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_alpha_inverse_endpoints_plateaus_and_domain() -> Fallible<()> {
+    let plateau = |alpha: f64| {
+        assert!((0.0..=1.0).contains(&alpha));
+        Ok(if alpha < 0.25 {
+            1.0
+        } else if alpha < 0.75 {
+            0.5
+        } else {
+            0.0
+        })
+    };
+    // Equality must not certify a point deep within a plateau as its left edge.
+    assert_eq!(invert_beta_callback(plateau, 0.5)?, 0.25_f64.next_down());
+    assert_eq!(invert_beta_callback(plateau, 0.0)?, 0.75_f64.next_down());
+    assert_eq!(invert_beta_callback(plateau, 1.0)?, 0.0);
+    assert_eq!(invert_beta_callback(|_| Ok(0.0), 0.0)?, 0.0);
+    assert_eq!(invert_beta_callback(|_| Ok(0.75), 0.5)?, 1.0);
+
+    for edge in [f64::from_bits(1), f64::MIN_POSITIVE, 0.5, 1.0] {
+        let alpha =
+            invert_beta_callback(move |alpha| Ok(if alpha < edge { 1.0 } else { 0.0 }), 0.0)?;
+        assert_eq!(alpha, edge.next_down().max(0.0));
+    }
+    // Epsilon inversion must keep its opposite, passing endpoint convention.
+    assert_eq!(invert_decreasing_callback(plateau, 0.5)?, 0.25);
+    Ok(())
+}
+
+#[test]
+fn test_alpha_inverse_preserves_errors_and_validates_values() {
+    for variant in ["Overflow", "NumericError", "FailedFunction"] {
+        for fail_at_zero in [false, true] {
+            let error = invert_beta_callback(
+                |alpha| {
+                    if fail_at_zero || (0.25..0.75).contains(&alpha) {
+                        return Err(crate::error::Error {
+                            variant: variant.parse().unwrap(),
+                            ..err!(FailedMap, "alpha callback failure")
+                        });
+                    }
+                    Ok(1.0 - alpha)
+                },
+                0.5,
+            )
+            .unwrap_err();
+            assert_eq!(error.variant.to_string(), variant);
+            assert_eq!(error.message.as_deref(), Some("alpha callback failure"));
+        }
+    }
+    for invalid in [f64::NAN, f64::INFINITY, -0.1, 1.1] {
+        assert_eq!(
+            invert_beta_callback(move |_| Ok(invalid), 0.0)
+                .unwrap_err()
+                .variant,
+            ErrorVariant::FailedMap
+        );
+    }
+}
+
+#[test]
+fn test_rounded_derived_bounds_do_not_enter_convex_optimizer() -> Fallible<()> {
+    use dashu::rational::RBig;
+    let guarantee = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    let alphas = [0.5_f64.next_down(), 0.5, 0.5_f64.next_up()];
+    let values = guarantee.beta(&alphas)?;
+    let [a, b, c] = alphas.map(|a| RBig::try_from(a).unwrap());
+    let [fa, fb, fc] = [values[0], values[1], values[2]].map(|v| RBig::try_from(v).unwrap());
+    // These rounded samples are not convex. Delta and epsilon must instead
+    // query the source certificate, without constructing another representation.
+    assert!((&fb - &fa) / (&b - &a) > (&fc - &fb) / (&c - &b));
+    assert_eq!(guarantee.delta(0.0)?, 0.0);
+    assert_eq!(guarantee.epsilon(0.0)?, 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_reporting_vector_validation_and_shapes() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let counter = calls.clone();
+    let profile = PrivacyProfile::new_log(move |epsilon| {
+        counter.fetch_add(1, Ordering::Relaxed);
+        Ok(vec![f64::NEG_INFINITY; epsilon.len()])
+    });
+    let profile = PrivacyGuarantee::new().with_profile(profile);
+    let certificate = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    assert_eq!(calls.load(Ordering::Relaxed), 0);
+    for guarantee in [&profile, &certificate] {
+        let beta = guarantee.beta(&[0.0, 0.25, 0.25, 1.0])?;
+        assert_eq!(beta.len(), 4);
+        assert_eq!(beta[1], beta[2]);
+        for (actual, expected) in beta.into_iter().zip([1.0, 0.75, 0.75, 0.0]) {
+            assert!((actual - expected).abs() < 1e-14);
+        }
+        let alpha = guarantee.alpha(&[0.25, 0.5, 0.5, 1.0])?;
+        assert_eq!(alpha.len(), 4);
+        assert_eq!(alpha[1], alpha[2]);
+        for (actual, expected) in alpha.into_iter().zip([0.75, 0.5, 0.5, 0.0]) {
+            assert!((actual - expected).abs() < 1e-14);
+        }
+        assert!(guarantee.beta(&[])?.is_empty());
+        assert!(guarantee.alpha(&[])?.is_empty());
+        let before = calls.load(Ordering::Relaxed);
+        for inputs in [
+            vec![0.5, 0.25],
+            vec![f64::NAN],
+            vec![-0.1],
+            vec![1.1],
+            vec![f64::INFINITY],
+        ] {
+            assert!(guarantee.beta(&inputs).is_err());
+            assert!(guarantee.alpha(&inputs).is_err());
+        }
+        assert_eq!(calls.load(Ordering::Relaxed), before);
+    }
+    // Reporting must propagate malformed source-profile results.
+    for length in [0, 2] {
+        let guarantee = PrivacyGuarantee::new()
+            .with_profile(PrivacyProfile::new_log(move |_| Ok(vec![0.0; length])));
+        assert!(guarantee.beta(&[0.5]).is_err());
+        assert!(guarantee.alpha(&[0.5]).is_err());
+    }
+    for value in [f64::NAN, f64::INFINITY, 0.1] {
+        let guarantee =
+            PrivacyGuarantee::new().with_profile(PrivacyProfile::new_log(move |epsilon| {
+                Ok(vec![value; epsilon.len()])
+            }));
+        assert!(guarantee.beta(&[0.5]).is_err());
+        assert!(guarantee.alpha(&[0.5]).is_err());
+    }
+    Ok(())
+}
+
 #[test]
 fn test_pure_dp_profile_tradeoff_oracle() -> Fallible<()> {
-    let epsilon_0 = 2.0f64.ln();
-    let profile =
-        PrivacyProfile::new(move |epsilon| Ok((1.0 - (epsilon - epsilon_0).exp()).max(0.0)));
-    let guarantee = PrivacyGuarantee::from_profile(profile.clone());
-
-    assert!((guarantee.beta(0.25)? - 0.5).abs() < 1e-10);
-    assert!((guarantee.beta(0.75)? - 0.125).abs() < 1e-10);
-    assert!(profile.delta(epsilon_0)? <= 1e-12);
-
-    let tradeoff = PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| {
-        Ok((1.0 - 2.0 * alpha).max((1.0 - alpha) / 2.0).max(0.0))
-    })?;
-    assert!(tradeoff.delta(epsilon_0)? <= 1e-10);
+    let epsilon_0 = 2.0_f64.ln();
+    let profile = PrivacyProfile::new(batch(move |epsilon| {
+        Ok((1.0 - (epsilon - epsilon_0).exp()).max(0.0))
+    }));
+    let guarantee = PrivacyGuarantee::new().with_profile(profile.clone());
+    assert!((guarantee.beta(&[0.25])?[0] - 0.5).abs() < 1e-10);
+    assert!((guarantee.beta(&[0.75])?[0] - 0.125).abs() < 1e-10);
+    assert!(profile.delta(&[epsilon_0])?[0] <= 1e-12);
+    // Fixed certificates stay in their source representation; no rounded
+    // derived callback is handed to the convex optimizer.
+    let certificate = PrivacyGuarantee::new().with_approx_dp(epsilon_0, 0.0)?;
+    assert_eq!(certificate.delta(epsilon_0)?, 0.0);
+    assert!((certificate.beta(&[0.25])?[0] - 0.5).abs() < 1e-10);
     Ok(())
 }
 
-#[cfg(feature = "honest-but-curious")]
 #[test]
-fn test_aggregate_queries_are_monotone() -> Fallible<()> {
-    let epsilon_0 = 2.0f64.ln();
-    let profile =
-        PrivacyProfile::new(move |epsilon| Ok((1.0 - (epsilon - epsilon_0).exp()).max(0.0)));
-    let profile_only = PrivacyGuarantee::from_profile(profile.clone());
-    let tradeoff_only =
-        PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| Ok((0.85 - alpha).max(0.0)))?;
-    let combined = PrivacyGuarantee::from_profile(profile)
-        .with_symmetric_tradeoff(|alpha| Ok((0.85 - alpha).max(0.0)))?;
-
-    let combined_delta = combined.delta(0.25)?;
-    assert!(combined_delta <= profile_only.delta(0.25)? + 1e-10);
-    assert!(combined_delta <= tradeoff_only.delta(0.25)? + 1e-10);
-
-    let combined_epsilon = combined.epsilon(0.25)?;
-    assert!(combined_epsilon <= profile_only.epsilon(0.25)? + 1e-10);
-    assert!(combined_epsilon <= tradeoff_only.epsilon(0.25)? + 1e-10);
-
-    let combined_beta = combined.beta(0.25)?;
-    assert!(combined_beta + 1e-10 >= profile_only.beta(0.25)?);
-    assert!(combined_beta + 1e-10 >= tradeoff_only.beta(0.25)?);
-
-    let combined_alpha = combined.alpha(0.25)?;
-    assert!(combined_alpha + 1e-10 >= profile_only.alpha(0.25)?);
-    assert!(combined_alpha + 1e-10 >= tradeoff_only.alpha(0.25)?);
+fn test_alpha_lower_endpoint_in_source_representations() -> Fallible<()> {
+    use dashu::rational::RBig;
+    let certificate = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    let profile = PrivacyGuarantee::new()
+        .with_profile(PrivacyProfile::new_log(batch(|_| Ok(f64::NEG_INFINITY))));
+    for guarantee in [certificate, profile] {
+        for target in [0.0, 0.125, 0.5, 1.0] {
+            let alpha = guarantee.alpha(&[target])?[0];
+            let reference = RBig::from(1) - RBig::try_from(target)?;
+            assert!(RBig::try_from(alpha)? <= reference);
+            assert!(reference - RBig::try_from(alpha)? < RBig::try_from(1e-14)?);
+        }
+    }
     Ok(())
 }
 
-#[cfg(feature = "honest-but-curious")]
 #[test]
-fn test_tradeoff_and_profile_paths_are_both_available() -> Fallible<()> {
-    let tradeoff =
-        PrivacyGuarantee::new().with_symmetric_tradeoff(|alpha| Ok((0.75 - alpha).max(0.0)))?;
-    assert_eq!(tradeoff.beta(0.25)?, 0.5);
-    assert_eq!(tradeoff.alpha(0.25)?, 0.5);
-    assert!(tradeoff.delta(1.0)? <= 1.0);
+fn test_aggregate_reporting_is_conjunctive() -> Fallible<()> {
+    let profile = PrivacyProfile::new_log(batch(|_| Ok(-1.0)));
+    let profile_only = PrivacyGuarantee::new().with_profile(profile.clone());
+    let certificate_only = PrivacyGuarantee::new().with_approx_dp(1.0, 0.1)?;
+    let combined = PrivacyGuarantee::new()
+        .with_profile(profile)
+        .with_approx_dp(1.0, 0.1)?;
+    for source in [profile_only, certificate_only] {
+        assert!(combined.delta(1.0)? <= source.delta(1.0)?);
+        assert!(combined.epsilon(0.5)? <= source.epsilon(0.5)?);
+        assert!(combined.beta(&[0.25])?[0] >= source.beta(&[0.25])?[0]);
+        assert!(combined.alpha(&[0.0])?[0] >= source.alpha(&[0.0])?[0]);
+    }
+    Ok(())
+}
 
-    let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 0.1), (2.0, 0.01)])?;
-    let profile_only = PrivacyGuarantee::from_profile(profile.clone());
-    assert!(profile_only.beta(0.5)? >= 0.0);
-
-    let function_profile = PrivacyProfile::new(|epsilon| Ok((-epsilon).exp()));
-    let function_guarantee = PrivacyGuarantee::from_profile(function_profile);
-    assert!(function_guarantee.beta(0.5)? >= 0.0);
-
-    let combined = PrivacyGuarantee::from_profile(profile).with_tradeoff(|_| Ok(0.9))?;
-    assert!(combined.beta(0.5)? >= 0.9);
-    assert!(combined.delta(1.0)? <= 0.1);
-
-    let profile_error = PrivacyProfile::new(|_| fallible!(FailedFunction, "profile path failed"));
-    let profile_error = PrivacyGuarantee::from_profile(profile_error).with_tradeoff(|_| Ok(0.5))?;
-    assert_eq!(profile_error.beta(0.5)?, 0.5);
-
-    let tradeoff_error = PrivacyGuarantee::from_profile(PrivacyProfile::new(|_| Ok(0.25)))
-        .with_tradeoff(|_| fallible!(FailedFunction, "tradeoff path failed"))?;
-    assert!(tradeoff_error.beta(0.5)? >= 0.0);
-
-    let tradeoff_error = PrivacyGuarantee::new()
-        .with_symmetric_tradeoff(|_| fallible!(FailedFunction, "delta path failed"))?;
-    let error = tradeoff_error.delta(1.0).unwrap_err();
-    assert_eq!(error.variant, ErrorVariant::FailedFunction);
+#[test]
+fn test_aggregate_queries_preserve_numerical_failures() -> Fallible<()> {
+    for variant in ["NumericError", "Overflow", "FailedFunction"] {
+        let profile = PrivacyProfile::new(move |_| {
+            Err(crate::error::Error {
+                variant: variant.parse().unwrap(),
+                ..err!(FailedMap, "profile failed")
+            })
+        });
+        let guarantee = PrivacyGuarantee::new()
+            .with_approx_dp(1.0, 0.1)?
+            .with_profile(profile);
+        for result in [
+            guarantee.delta(1.0),
+            guarantee.epsilon(0.5),
+            guarantee.beta(&[0.5]).map(|v| v[0]),
+            guarantee.alpha(&[0.5]).map(|v| v[0]),
+        ] {
+            assert_eq!(result.unwrap_err().variant.to_string(), variant);
+        }
+    }
     Ok(())
 }

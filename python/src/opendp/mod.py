@@ -1366,6 +1366,10 @@ class PrivacyGuarantee(object):
     for the same privacy relation. Source parameters are retained exactly; zero
     delta certifies pure DP. Certificates are not eagerly converted to profiles.
     Queries return the tightest bound and propagate representation errors.
+
+    Beta and alpha report f-DP lower bounds derived from these representations;
+    no tradeoff representation is stored. Queries accept scalars or
+    nondecreasing vectors, permitting duplicates, and preserve that shape.
     """
 
     def __init__(
@@ -1373,22 +1377,14 @@ class PrivacyGuarantee(object):
         *,
         approx_dp: Optional[tuple[float, float]] = None,
         profile: Optional[PrivacyProfile] = None,
-        tradeoff: Optional[Callable[[float], float]] = None,
-        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
         _ptr: Any = None,
     ):
         if _ptr is not None:
-            if any(
-                value is not None
-                for value in (approx_dp, profile, tradeoff, symmetric_tradeoff)
-            ):
+            if approx_dp is not None or profile is not None:
                 raise TypeError("_ptr cannot be combined with guarantee constructors")
             self.guarantee = _ptr
             return
-        if all(
-            value is None
-            for value in (approx_dp, profile, tradeoff, symmetric_tradeoff)
-        ):
+        if approx_dp is None and profile is None:
             raise TypeError("expected at least one privacy representation")
         if approx_dp is not None and (
             not isinstance(approx_dp, tuple) or len(approx_dp) != 2
@@ -1401,7 +1397,6 @@ class PrivacyGuarantee(object):
             _new_privacy_guarantee,
             _privacy_guarantee_with_approx_dp,
             _privacy_guarantee_with_profile,
-            _privacy_guarantee_with_tradeoff,
         )
 
         guarantee = _new_privacy_guarantee()
@@ -1409,14 +1404,6 @@ class PrivacyGuarantee(object):
             guarantee = _privacy_guarantee_with_approx_dp(guarantee, *approx_dp)
         if profile is not None:
             guarantee = _privacy_guarantee_with_profile(guarantee, profile)
-        if tradeoff is not None:
-            guarantee = _privacy_guarantee_with_tradeoff(
-                guarantee, tradeoff, symmetric=False
-            )
-        if symmetric_tradeoff is not None:
-            guarantee = _privacy_guarantee_with_tradeoff(
-                guarantee, symmetric_tradeoff, symmetric=True
-            )
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):
@@ -1432,12 +1419,20 @@ class PrivacyGuarantee(object):
     def beta(self, alpha):
         from opendp.measures import _privacy_guarantee_beta
 
-        return _privacy_guarantee_beta(self.guarantee, alpha)
+        scalar = isinstance(alpha, Real)
+        result = _privacy_guarantee_beta(
+            self.guarantee, [float(alpha)] if scalar else alpha
+        )
+        return result[0] if scalar else result
 
     def alpha(self, beta):
         from opendp.measures import _privacy_guarantee_alpha
 
-        return _privacy_guarantee_alpha(self.guarantee, beta)
+        scalar = isinstance(beta, Real)
+        result = _privacy_guarantee_alpha(
+            self.guarantee, [float(beta)] if scalar else beta
+        )
+        return result[0] if scalar else result
 
 
 class _PartialConstructor(object):
