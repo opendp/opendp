@@ -68,7 +68,7 @@ fn profile_one_minus_delta(profile: &PrivacyProfile, epsilon: f64) -> Fallible<C
 
 #[inline]
 fn positive_part(x: Cert) -> Fallible<Cert> {
-    x.max(Cert::point(0.0)?)?.clamp01()
+    x.max(Cert::point(0.0)?).clamp01()
 }
 
 fn maximize_t1_lower(profile: &PrivacyProfile, alpha: f64) -> Fallible<f64> {

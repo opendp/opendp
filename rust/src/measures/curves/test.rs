@@ -278,6 +278,33 @@ fn test_pure_dp_profile_tradeoff_oracle() -> Fallible<()> {
 
 #[cfg(feature = "honest-but-curious")]
 #[test]
+fn test_aggregate_queries_preserve_numerical_failures() -> Fallible<()> {
+    for bad_profile in [false, true] {
+        let profile = PrivacyProfile::new(move |_| {
+            if bad_profile {
+                return fallible!(NumericError, "profile failed");
+            }
+            Ok(0.0)
+        });
+        let guarantee = PrivacyGuarantee::from_profile(profile).with_tradeoff(move |alpha| {
+            if !bad_profile {
+                return fallible!(NumericError, "tradeoff failed");
+            }
+            Ok(1.0 - alpha)
+        })?;
+        for result in [
+            guarantee.delta(1.0),
+            guarantee.epsilon(0.5),
+            guarantee.beta(0.5),
+            guarantee.alpha(0.5),
+        ] {
+            assert_eq!(result.unwrap_err().variant, ErrorVariant::NumericError);
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_aggregate_queries_are_monotone() -> Fallible<()> {
     let epsilon_0 = 2.0f64.ln();
     let profile =

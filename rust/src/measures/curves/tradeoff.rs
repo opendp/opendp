@@ -1,7 +1,7 @@
 use dashu::rational::RBig;
 
 use crate::{
-    error::Fallible,
+    error::{ErrorVariant, Fallible},
     measures::curves::{TradeoffFn, check_beta, check_epsilon},
     traits::{Certified, DirectedScalar, Interval, N64, SInterval},
     utilities::search::{SearchMode, fallible_golden_search_to_precision_ordered},
@@ -85,12 +85,13 @@ fn delta_tradeoff_term(
 fn likelihood_ratio_epsilon_cap() -> Fallible<f64> {
     let mut epsilon = f64::MAX.ln().next_down();
     loop {
-        let finite = SInterval::point(epsilon)
+        match SInterval::point(epsilon)
             .and_then(|value| value.exp())
             .and_then(|value| value.lower_f64().and(value.upper_f64()))
-            .is_ok();
-        if finite {
-            return Ok(epsilon);
+        {
+            Ok(_) => return Ok(epsilon),
+            Err(error) if error.variant == ErrorVariant::Overflow => (),
+            Err(error) => return Err(error),
         }
 
         let next = epsilon.next_down();

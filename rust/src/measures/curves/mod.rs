@@ -159,12 +159,14 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             match profile.delta(epsilon) {
                 Ok(delta) => best = Some(delta),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) => first_error = Some(error),
             }
         }
         if let Some(TradeoffRepresentation { beta, symmetric }) = &self.tradeoff {
             match tradeoff::delta_via_tradeoff(beta.as_ref(), *symmetric, epsilon) {
                 Ok(delta) => best = Some(best.map_or(delta, |value: f64| value.min(delta))),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
             }
@@ -191,6 +193,7 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             match profile.epsilon(delta) {
                 Ok(epsilon) => best = Some(epsilon),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) => first_error = Some(error),
             }
         }
@@ -200,6 +203,7 @@ impl PrivacyGuarantee {
                 delta,
             ) {
                 Ok(epsilon) => best = Some(best.map_or(epsilon, |value: f64| value.min(epsilon))),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
             }
@@ -227,12 +231,14 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             match profile_to_tradeoff::beta_via_profile(profile, alpha) {
                 Ok(beta) => best = Some(beta),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) => first_error = Some(error),
             }
         }
         if let Some(tradeoff) = &self.tradeoff {
             match (tradeoff.beta)(alpha).and_then(|beta| check_beta(beta).map(|_| beta)) {
                 Ok(beta) => best = Some(best.map_or(beta, |value: f64| value.max(beta))),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
             }
@@ -263,12 +269,14 @@ impl PrivacyGuarantee {
                 beta,
             ) {
                 Ok(alpha) => best = Some(alpha),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) => first_error = Some(error),
             }
         }
         if let Some(TradeoffRepresentation { beta: beta_fn, .. }) = &self.tradeoff {
             match invert_beta_callback(beta_fn.as_ref(), beta) {
                 Ok(alpha) => best = Some(best.map_or(alpha, |value: f64| value.max(alpha))),
+                Err(error) if error.variant == ErrorVariant::NumericError => return Err(error),
                 Err(error) if first_error.is_none() => first_error = Some(error),
                 Err(_) => {}
             }

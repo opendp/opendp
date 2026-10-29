@@ -21,7 +21,7 @@ impl ApproxDPPoint {
 
         let epsilon_cert = SInterval::point(epsilon)?;
         let exp_eps_up = RBig::try_from(epsilon_cert.clone().exp()?.upper_f64()?)?;
-        let exp_neg_eps_down = RBig::try_from((-epsilon_cert.clone())?.exp()?.lower_f64()?)?;
+        let exp_neg_eps_down = RBig::try_from((-epsilon_cert.clone()).exp()?.lower_f64()?)?;
 
         Ok(Self {
             epsilon: epsilon_cert.upper_f64()?,
