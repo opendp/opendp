@@ -140,6 +140,93 @@ fn test_pure_epsilon_for_points_and_functions() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_intermediate_overflow_does_not_establish_comparison() -> Fallible<()> {
+    use crate::traits::{CInterval, SInterval};
+    for sign in [-1.0, 1.0] {
+        // The final negation reverses the intermediate's sign. Software
+        // intervals can retain the finite value; native intervals cannot.
+        let exact_final = -(SInterval::point(sign * f64::MAX)? * SInterval::point(2.0)?)?;
+        assert_eq!(exact_final.is_nonpositive(), sign > 0.0);
+        let profile = PrivacyProfile::new(|_| Ok(1.0)).with_log_profile(move |epsilon| {
+            if epsilon < 2.0 {
+                return Ok(0.0);
+            }
+            let intermediate = (CInterval::point(sign * f64::MAX)? * CInterval::point(2.0)?)?;
+            (-intermediate).upper_f64()
+        })?;
+        for delta in [0.1, 0.0] {
+            assert_eq!(
+                profile.epsilon(delta).unwrap_err().variant,
+                ErrorVariant::Overflow
+            );
+        }
+        assert_eq!(
+            profile.pure_epsilon().unwrap_err().variant,
+            ErrorVariant::Overflow
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_inversion_comparison_endpoints_and_plateaus() -> Fallible<()> {
+    let step = |epsilon| {
+        Ok(if epsilon < 2.0 {
+            0.0
+        } else if epsilon < 4.0 {
+            -1.0
+        } else {
+            -2.0
+        })
+    };
+    assert_eq!(invert_decreasing_callback(step, 0.0)?, 0.0);
+    assert_eq!(invert_decreasing_callback(step, -1.0)?, 2.0);
+    assert_eq!(invert_decreasing_callback(step, -2.0)?, 4.0);
+    assert_eq!(
+        invert_decreasing_callback(step, -3.0).unwrap_err().variant,
+        ErrorVariant::Search
+    );
+
+    let overflow = |_| fallible!(Overflow, "unknown intermediate overflow");
+    for target in [-1.0, f64::NEG_INFINITY, f64::INFINITY] {
+        assert_eq!(
+            invert_decreasing_callback(overflow, target)
+                .unwrap_err()
+                .variant,
+            ErrorVariant::Overflow
+        );
+    }
+    assert_eq!(
+        PrivacyProfile::new(|_| Ok(0.1)).epsilon(0.0)?,
+        f64::INFINITY
+    );
+    Ok(())
+}
+
+#[cfg(feature = "honest-but-curious")]
+#[test]
+fn test_inversion_preserves_other_numerical_errors() -> Fallible<()> {
+    for variant in ["Overflow", "NumericError"] {
+        for fail_at_zero in [true, false] {
+            let profile = PrivacyProfile::new(|_| Ok(1.0)).with_log_profile(move |epsilon| {
+                if fail_at_zero || epsilon >= 2.0 {
+                    return Err(crate::error::Error {
+                        variant: variant.parse()?,
+                        ..err!(FailedMap, "unchanged failure")
+                    });
+                }
+                Ok(0.0)
+            })?;
+            let error = profile.epsilon(0.1).unwrap_err();
+            assert_eq!(error.variant.to_string(), variant);
+            assert_eq!(error.message.as_deref(), Some("unchanged failure"));
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn test_conservative_endpoint_behavior() -> Fallible<()> {
     let profile = PrivacyProfile::new(|_| Ok(1.0)).with_approxDP(vec![(1.0, 0.1)])?;

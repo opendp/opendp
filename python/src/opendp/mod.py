@@ -1276,6 +1276,7 @@ class PrivacyProfile(object):
     Construct a profile from exactly one of an ordinary delta callback,
     a log-delta callback, or approximate-DP ``(epsilon, delta)`` points.
     """
+
     def __init__(
         self,
         curve: Optional[Callable[[float], float]] = None,
@@ -1292,15 +1293,14 @@ class PrivacyProfile(object):
 
         choices = sum(value is not None for value in (curve, log_profile, approxDP))
         if choices != 1:
-            raise TypeError(
-                "expected exactly one of curve, log_profile, or approxDP"
-            )
+            raise TypeError("expected exactly one of curve, log_profile, or approxDP")
 
         from opendp.measures import (
             new_privacy_profile,
             new_privacy_profile_from_points,
             new_privacy_profile_log,
         )
+
         if curve is not None:
             self.curve = new_privacy_profile(curve).curve
         elif log_profile is not None:

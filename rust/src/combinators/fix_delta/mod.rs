@@ -93,7 +93,7 @@ impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
             return Ok((f64::INFINITY, delta));
         }
 
-        let remaining_delta = remaining.max(CInterval::point(0.0)?)?.lower_f64()?;
+        let remaining_delta = remaining.max(CInterval::point(0.0)?).lower_f64()?;
         curve.epsilon(remaining_delta).map(|v| (v, delta))
     }
 }

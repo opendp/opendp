@@ -111,6 +111,15 @@ fn test_cdp_delta_rounding_regression() -> Fallible<()> {
 }
 
 #[test]
+fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
+    let delta = cdp_delta(0.03125, f64::MAX)?;
+    // A finite epsilon has no certified pure-DP endpoint here. A rounded-up
+    // subnormal is valid; silently returning mathematical zero would not be.
+    assert!(delta > 0.0 && delta < f64::MIN_POSITIVE);
+    Ok(())
+}
+
+#[test]
 fn test_edge_cases() -> Fallible<()> {
     // Signed zero is mathematically zero and is accepted.
     assert_eq!(cdp_delta(-0., 0.)?, 0.);

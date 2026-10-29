@@ -1,7 +1,4 @@
-use crate::{
-    error::Fallible,
-    traits::SInterval,
-};
+use crate::{error::Fallible, traits::SInterval};
 
 pub(crate) fn check_delta(delta: f64) -> Fallible<()> {
     if delta.is_nan() || delta < 0.0 || delta > 1.0 {

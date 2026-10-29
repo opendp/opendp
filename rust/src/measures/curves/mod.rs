@@ -1,8 +1,8 @@
-use std::{cmp::Ordering, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     error::{ErrorVariant, Fallible},
-    utilities::search::{Above, fallible_binary_search_by},
+    utilities::search::{Above, fallible_binary_search},
 };
 
 pub(crate) mod logspace;
@@ -140,7 +140,8 @@ impl PrivacyProfile {
     /// The callback must be functionally pure and nonincreasing, and return a
     /// valid log-delta bound. When numerically approximate, it must be
     /// upward-conservative. These properties are not validated at runtime
-    /// beyond pointwise range checks.
+    /// beyond pointwise range checks. Numerical errors are not comparison
+    /// information; inversion requires an evaluable log-delta bound.
     #[cfg(feature = "honest-but-curious")]
     pub fn with_log_profile(
         mut self,
@@ -272,34 +273,15 @@ fn invert_decreasing_callback(
     callback: impl Fn(f64) -> Fallible<f64>,
     target: f64,
 ) -> Fallible<f64> {
-    // This caller owns the final profile quantity, so it explicitly translates
-    // terminal range failures into ordering information. The generic search
-    // remains literal and propagates these errors.
-    let compare = |epsilon: &f64| match callback(*epsilon) {
-        Ok(value) => Ok(if value <= target {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }),
-        Err(err) if err.variant == ErrorVariant::NumericRangeBelow => Ok(Ordering::Less),
-        Err(err) if err.variant == ErrorVariant::NumericRangeAbove => Ok(Ordering::Greater),
-        // A profile callback may overflow while evaluating a sufficiently
-        // large epsilon. It is below any positive target, but it does not
-        // establish a finite pure-DP endpoint when the target is exactly 0.
-        Err(err) if err.variant == ErrorVariant::Overflow => Ok(if target == f64::NEG_INFINITY {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }),
-        Err(err) => Err(err),
-    };
+    // An overflow can originate in an intermediate operation. Neither its
+    // occurrence nor its sign would establish the final log-delta comparison.
+    let predicate = |epsilon: &f64| Ok(callback(*epsilon)? <= target);
 
-    match compare(&0.0)? {
-        Ordering::Less | Ordering::Equal => return Ok(0.0),
-        Ordering::Greater => {}
+    if predicate(&0.0)? {
+        return Ok(0.0);
     }
 
-    fallible_binary_search_by(compare, Above(0.0))
+    fallible_binary_search(predicate, Above(0.0))
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {
