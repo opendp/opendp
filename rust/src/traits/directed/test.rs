@@ -228,6 +228,28 @@ fn test_interval_construction_and_clamping() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_absolute_values_normalize_signed_zero() -> Fallible<()> {
+    for (lo, hi) in [
+        (-0.0_f64, -0.0_f64),
+        (-0.0, 0.0),
+        (0.0, -0.0),
+        (-1.0, -0.0),
+        (-0.0, 1.0),
+    ] {
+        let interval = CInterval::between(lo, hi)?;
+        let absolute = interval.clone().abs()?;
+        let expected_upper = lo.abs().max(hi.abs()).to_bits();
+        assert_eq!(absolute.lower_f64()?.to_bits(), 0.0_f64.to_bits());
+        assert_eq!(absolute.upper_f64()?.to_bits(), expected_upper);
+        assert_eq!(
+            interval.abs_upper().to_f64(Direction::Up)?.to_bits(),
+            expected_upper
+        );
+    }
+    Ok(())
+}
+
 fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()> {
     for (lo, hi) in [
         (f64::NEG_INFINITY, f64::INFINITY),
@@ -248,8 +270,8 @@ fn check_interval_ordering<S: DirectedScalar + std::fmt::Debug>() -> Fallible<()
         assert_eq!(interval.is_nonnegative(), lo >= 0.0);
         assert_eq!(interval.is_nonpositive(), hi <= 0.0);
         assert_eq!(
-            interval.abs_upper().to_f64(Direction::Up)?,
-            lo.abs().max(hi.abs())
+            interval.abs_upper().to_f64(Direction::Up)?.to_bits(),
+            lo.abs().max(hi.abs()).to_bits()
         );
     }
     for (lo, hi) in [

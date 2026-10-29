@@ -14,10 +14,7 @@ pub use scalar::{Approximate, Certified, DirectedScalar, DirectedTranscendental,
 pub use soft_float::SoftFloat;
 
 use crate::error::Fallible;
-use std::{
-    fmt,
-    ops::{Add, Div, Mul, Neg, Sub},
-};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[cfg(test)]
 mod test;
@@ -33,8 +30,8 @@ pub type SInterval = Interval<SoftFloat>;
 /// is conservative only when the scalar's directed operations are certified.
 /// In particular, [`AInterval`] uses approximate native arithmetic.
 ///
-/// Transcendental operations require [`DirectedTranscendental`]; certified
-/// native scalars support arithmetic and square root, but not native exp/ln.
+/// Transcendental operations require [`DirectedTranscendental`] and are unavailable
+/// for `N64<Certified>`, which supports arithmetic and square root.
 ///
 /// ```
 /// use opendp::{error::Fallible, traits::{DirectedScalar, Interval, SoftFloat}};
@@ -46,31 +43,10 @@ pub type SInterval = Interval<SoftFloat>;
 /// assert_eq!(result.upper_f64()?, 2.0);
 /// # Ok::<(), opendp::error::Error>(())
 /// ```
-///
-/// ```compile_fail
-/// use opendp::traits::CInterval;
-/// CInterval::point(1.0)?.exp()?;
-/// # Ok::<(), opendp::error::Error>(())
-/// ```
-///
-/// ```compile_fail
-/// use opendp::traits::{Certified, Interval, N64};
-/// Interval::<N64<Certified>>::point(1.0)?.ln()?;
-/// # Ok::<(), opendp::error::Error>(())
-/// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Interval<S: DirectedScalar> {
     lo: S,
     hi: S,
-}
-
-impl<S: DirectedScalar + fmt::Debug> fmt::Debug for Interval<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Interval")
-            .field("lo", &self.lo)
-            .field("hi", &self.hi)
-            .finish()
-    }
 }
 
 impl<S: DirectedScalar> Interval<S> {
@@ -127,34 +103,21 @@ impl<S: DirectedScalar> Interval<S> {
     }
 
     pub fn recip(self) -> Fallible<Self> {
-        if self.contains_zero() {
-            return fallible!(NumericIndeterminate, "reciprocal interval contains zero");
-        }
-        let one = S::exact(1.0)?;
-        Self::new(
-            one.clone().div_round(self.hi, Direction::Down)?,
-            one.div_round(self.lo, Direction::Up)?,
-        )
+        Self::point(1.0)? / self
     }
 
     pub fn abs(self) -> Fallible<Self> {
         if self.is_nonnegative() {
-            return Ok(self);
+            return Self::new(self.lo.abs(), self.hi.abs());
         }
         if self.is_nonpositive() {
-            return Self::new(-self.hi, -self.lo);
+            return Self::new(self.hi.abs(), self.lo.abs());
         }
         let hi = self.lo.abs().max(self.hi.abs());
         Self::new(S::exact(0.0)?, hi)
     }
 
     pub fn abs_upper(self) -> S {
-        if self.is_nonnegative() {
-            return self.hi;
-        }
-        if self.is_nonpositive() {
-            return -self.lo;
-        }
         self.lo.abs().max(self.hi.abs())
     }
 
