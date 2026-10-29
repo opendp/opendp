@@ -164,29 +164,209 @@ def test_privacy_profile():
     from opendp._lib import AnyObjectPtr, CallbackFnPtr
     import math
 
-    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    with pytest.warns(DeprecationWarning, match="vector-valued"):
+        profile = new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
     assert profile.epsilon(delta=1e-7) == pytest.approx(16.11809565095832)
 
-    direct = PrivacyProfile(lambda eps: math.exp(-eps))
+    direct = PrivacyProfile(delta=lambda eps: [math.exp(-value) for value in eps])
     assert direct.epsilon(delta=1e-7) == profile.epsilon(delta=1e-7)
 
-    log_profile = PrivacyProfile(log_profile=lambda eps: -eps)
+    log_profile = PrivacyProfile(log_delta=lambda eps: [-value for value in eps])
     assert log_profile.delta(epsilon=1.0) == pytest.approx(math.exp(-1.0))
 
-    point_profile = PrivacyProfile(approxDP=[(1.0, 0.1), (2.0, 0.0)])
-    assert point_profile.delta(epsilon=1.5) == 0.1
-    assert point_profile.epsilon(delta=0.0) == 2.0
-    assert py_to_c(point_profile, AnyObjectPtr, "PrivacyProfile") is not None
+    assert log_profile.log_delta(10000.0) == -10000.0
+    assert log_profile.epsilon_from_log_delta(-10000.0) == 10000.0
+    assert log_profile.delta(10000.0) == math.ulp(0.0)
+    assert py_to_c(log_profile, AnyObjectPtr, "PrivacyProfile") is not None
+
+    slack_profile = PrivacyProfile(
+        log_delta=lambda eps: [0.0 if value < 2.0 else -math.inf for value in eps],
+        delta_slack=0.1,
+    )
+    assert slack_profile.delta(2.0) == 0.1
+    assert slack_profile.epsilon(0.1) == 2.0
+    assert slack_profile.epsilon(math.nextafter(0.1, 0.0)) == math.inf
+    assert slack_profile.log_delta(0.0) == 0.0
+    assert slack_profile.epsilon_from_log_delta(-10000.0) == math.inf
 
     with pytest.raises(TypeError, match="expected a callable callback"):
         py_to_c(1, CallbackFnPtr, "f64")
     with pytest.raises(TypeError, match="_ptr cannot be combined"):
-        PrivacyProfile(curve=lambda _: 0.0, _ptr=point_profile.curve)
+        PrivacyProfile(delta=lambda eps: [0.0] * len(eps), _ptr=log_profile.curve)
     with pytest.raises(TypeError, match="expected exactly one"):
         PrivacyProfile()
     with pytest.raises(TypeError, match="expected exactly one"):
-        PrivacyProfile(lambda _: 0.0, log_profile=lambda _: 0.0)
+        PrivacyProfile(delta=lambda eps: eps, log_delta=lambda eps: eps)
+
+
+@pytest.mark.parametrize("is_log", [False, True])
+def test_privacy_profile_vector_forward_callbacks(is_log):
+    import math
+    from opendp.mod import PrivacyProfile
+
+    calls = []
+
+    def callback(values):
+        assert isinstance(values, list)
+        calls.append(values.copy())
+        return [-value if is_log else math.exp(-value) for value in values]
+
+    profile = (
+        PrivacyProfile(log_delta=callback) if is_log else PrivacyProfile(delta=callback)
+    )
+    assert calls == []
+    assert profile.delta(1.0) == pytest.approx(math.exp(-1.0))
+    assert calls == [[1.0]]
+    assert profile.delta([0.0, 1.0, 1.0]) == pytest.approx(
+        [1.0, math.exp(-1.0), math.exp(-1.0)]
+    )
+    assert calls[-1] == [0.0, 1.0, 1.0]
+    assert len(calls) == 2
+    assert profile.log_delta([0.0, 1.0, 1.0]) == pytest.approx([0.0, -1.0, -1.0])
+    assert len(calls) == 3
+    assert profile.log_delta([1.0]) == pytest.approx([-1.0])
+    assert profile.delta([]) == []
+    with pytest.raises(TypeError):
+        PrivacyProfile(callback)  # type: ignore[misc]
+
+
+def test_privacy_profile_generic_inversion():
+    import math
+    from opendp.mod import PrivacyProfile
+
+    calls = []
+
+    def forward(values):
+        assert isinstance(values, list) and len(values) == 1
+        calls.append(values.copy())
+        return [-value for value in values]
+
+    profile = PrivacyProfile(log_delta=forward)
+    assert profile.epsilon_from_log_delta(-10000.0) == 10000.0
+    assert profile.epsilon_from_log_delta([-math.inf, -2.0, -2.0, -1.0, 0.0]) == [
+        math.inf,
+        2.0,
+        2.0,
+        1.0,
+        0.0,
+    ]
+    assert profile.epsilon([0.0, 0.25, 0.25, 1.0]) == pytest.approx(
+        [math.inf, -math.log(0.25), -math.log(0.25), 0.0]
+    )
+    for query, values in (
+        (profile.epsilon, [0.0, 0.25, 0.25, 1.0]),
+        (profile.epsilon_from_log_delta, [-math.inf, -10000.0, -2.0, -2.0, 0.0]),
+    ):
+        assert query(values) == [query(value) for value in values]
+    slack = PrivacyProfile(log_delta=forward, delta_slack=0.25)
+    assert slack.epsilon([0.1, 0.25, 0.25, 1.0]) == [math.inf, math.inf, math.inf, 0.0]
+    before = len(calls)
+    assert slack.epsilon([0.1, 1.0]) == [math.inf, 0.0]
+    assert slack.epsilon([]) == []
+    assert slack.epsilon_from_log_delta([]) == []
+    assert len(calls) == before
+
+
+def test_privacy_profile_numpy_scalar_queries():
+    from opendp.mod import PrivacyProfile
+
+    np = pytest.importorskip("numpy")
+
+    def callback(values):
+        assert isinstance(values, list) and len(values) == 1
+        assert isinstance(values[0], float)
+        return [-value for value in values]
+
+    profile = PrivacyProfile(log_delta=callback)
+    for scalar in (np.int64, np.float32, np.float64):
+        for query, value in (
+            (profile.delta, 1),
+            (profile.log_delta, 1),
+            (profile.epsilon, 0),
+            (profile.epsilon_from_log_delta, -1),
+        ):
+            result = query(scalar(value))
+            assert isinstance(result, float)
+            assert result == query(float(value))
+
+
+def test_privacy_profile_vector_validation_and_failures():
+    from opendp.mod import PrivacyProfile, OpenDPException
+
+    calls = []
+
+    def callback(values):
+        calls.append(values)
+        return [0.0] * len(values)
+
+    profile = PrivacyProfile(log_delta=callback)
+    for method, values in [
+        (profile.delta, [1.0, 0.0]),
+        (profile.log_delta, [1.0, 0.0]),
+        (profile.epsilon, [0.2, 0.1]),
+        (profile.epsilon_from_log_delta, [-1.0, -2.0]),
+    ]:
+        with pytest.raises(OpenDPException, match="nondecreasing"):
+            method(values)
+    assert calls == []
+    for length in [0, 1, 3]:
+        profile = PrivacyProfile(log_delta=lambda _: [0.0] * length)
+        for method, values in [
+            (profile.delta, [0.0, 1.0]),
+            (profile.log_delta, [0.0, 1.0]),
+            (profile.epsilon, [0.1, 0.2]),
+            (profile.epsilon_from_log_delta, [-2.0, -1.0]),
+        ]:
+            # Generic inversion checks singleton forward callback outputs.
+            if length == 1 and method in (
+                profile.epsilon,
+                profile.epsilon_from_log_delta,
+            ):
+                continue
+            with pytest.raises(OpenDPException, match="output length"):
+                method(values)
+    ordinary = PrivacyProfile(delta=lambda _: [])
+    with pytest.raises(OpenDPException, match="output length"):
+        ordinary.delta(0.0)
+    original = ValueError("vector callback failed")
+
+    def fail(_):
+        raise original
+
+    profile = PrivacyProfile(log_delta=fail)
+    for method, values in [(profile.delta, [0.0, 1.0]), (profile.epsilon, [0.1, 0.2])]:
+        with pytest.raises(ValueError) as error:
+            method(values)
+        assert error.value is original
+
+    # The new constructor does not adapt scalar callbacks.
+    def scalar_only(value: float) -> float:
+        return float(value)
+
+    scalar_callback = PrivacyProfile(delta=scalar_only)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        scalar_callback.delta(1.0)
+
+
+def test_legacy_privacy_profile_scalar_callback_with_vector_queries():
+    import math
+    from opendp.measures import new_privacy_profile
+
+    calls = []
+
+    def scalar_callback(value):
+        assert isinstance(value, float)
+        calls.append(value)
+        return math.exp(-value)
+
+    with pytest.warns(DeprecationWarning, match="vector-valued"):
+        profile = new_privacy_profile(scalar_callback)
+    assert profile.delta([0.0, 1.0, 1.0]) == pytest.approx(
+        [1.0, math.exp(-1.0), math.exp(-1.0)]
+    )
+    assert calls == [0.0, 1.0, 1.0]
+    assert profile.epsilon(0.5) == pytest.approx(math.log(2.0))
 
 
 def test_member():
