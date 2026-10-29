@@ -13,6 +13,7 @@ use crate::traits::{ExactIntCast, Float, InfMul};
 use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that computes the mean of bounded data.
 ///
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.

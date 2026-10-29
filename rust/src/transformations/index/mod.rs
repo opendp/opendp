@@ -18,6 +18,7 @@ use crate::transformations::make_row_by_row;
     generics(TIA(suppress), M(suppress)),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Find the index of a data value in a set of categories.
 ///
 /// For each value in the input vector, finds the index of the value in `categories`.
@@ -71,6 +72,7 @@ where
     generics(TIA(suppress), M(suppress)),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a transformation that finds the bin index in a monotonically increasing vector of edges.
 ///
 /// For each value in the input vector, finds the index of the bin the value falls into.
@@ -119,6 +121,7 @@ where
 }
 
 #[bootstrap(features("contrib"), generics(M(suppress)))]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a transformation that treats each element as an index into a vector of categories.
 ///
 /// # Arguments

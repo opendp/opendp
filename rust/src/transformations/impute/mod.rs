@@ -17,6 +17,10 @@ use rand::distributions::{Distribution, Uniform, uniform::SampleUniform};
     generics(M(suppress), TA(suppress)),
     derived_types(TA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(
+    since = "0.16.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
+)]
 /// Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 ///
 /// # Arguments
@@ -124,6 +128,7 @@ impl<T: CheckAtom + HasNull> ImputeConstantDomain for AtomDomain<T> {
     )),
     generics(DIA(suppress), M(suppress))
 )]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that replaces null/None data with `constant`.
 ///
 /// If chaining after a `make_cast`, the input type is `Option<Vec<TA>>`.
@@ -203,6 +208,7 @@ impl<T: CheckAtom + HasNull + Clone> DropNullDomain for AtomDomain<T> {
 }
 
 #[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that drops null values.
 ///
 ///
