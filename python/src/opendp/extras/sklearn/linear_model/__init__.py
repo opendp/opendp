@@ -19,6 +19,8 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
 from opendp._lib import import_optional_dependency
+from opendp.extras.numpy import array2_domain
+from opendp.metrics import symmetric_distance
 from opendp.mod import Measure
 from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
     make_private_logistic_regression as _make_private_logistic_regression,
@@ -60,6 +62,8 @@ class LinearRegression:
             raise Exception(msg)
 
         self.measurement = _make_private_theil_sen(
+            input_domain=array2_domain(num_columns=2, T=float),
+            input_metric=symmetric_distance(),
             output_measure=output_measure,
             x_bounds=x_bounds[0],
             y_bounds=y_bounds,

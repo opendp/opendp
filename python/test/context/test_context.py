@@ -251,6 +251,58 @@ def test_query():
     assert isinstance(query.release(10), int)
 
 
+@pytest.mark.parametrize(
+    ("mechanism", "measure", "metric"),
+    [
+        ("laplace_threshold", dp.max_divergence, dp.l01inf_distance),
+        ("gaussian_threshold", dp.zero_concentrated_divergence, dp.l02inf_distance),
+    ],
+)
+@pytest.mark.parametrize("scale", [None, 1.0])
+def test_query_threshold_budget(mechanism, measure, metric, scale):
+    dp.enable_features("contrib")
+    query = dp.Query(
+        chain=(
+            dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)),
+            metric(dp.absolute_distance(T=int)),
+        ),
+        output_measure=dp.approximate(measure()),
+        d_in=(1, 1, 1),  # type: ignore[arg-type]
+        d_out=(1.0, 1e-9),
+    )
+    kwargs = {"threshold": 2}
+    if scale is not None:
+        kwargs["scale"] = scale
+    query = getattr(query, mechanism)(**kwargs)
+
+    with pytest.raises(ValueError, match="exceeds the requested privacy budget"):
+        query.resolve()
+    with pytest.raises(ValueError, match="exceeds the requested privacy budget"):
+        query.release(data={"secret": 1})
+
+
+@pytest.mark.parametrize(
+    ("mechanism", "measure", "metric"),
+    [
+        ("laplace_threshold", dp.max_divergence, dp.l01inf_distance),
+        ("gaussian_threshold", dp.zero_concentrated_divergence, dp.l02inf_distance),
+    ],
+)
+def test_query_threshold_feasible_budget(mechanism, measure, metric):
+    dp.enable_features("contrib")
+    query = dp.Query(
+        chain=(
+            dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)),
+            metric(dp.absolute_distance(T=int)),
+        ),
+        output_measure=dp.approximate(measure()),
+        d_in=(1, 1, 1),  # type: ignore[arg-type]
+        d_out=(2.0, 0.5),
+    )
+    measurement = getattr(query, mechanism)(threshold=2, scale=1.0).resolve()
+    assert measurement.check((1, 1, 1), (2.0, 0.5))
+
+
 def test_query_rejects_numpy_coercion():
     np = pytest.importorskip("numpy")
     query = dp.Query(
@@ -446,7 +498,9 @@ def test_rshift_multi_partial():
         split_evenly_over=1,
     )
     with pytest.raises(ValueError, match="laplace is missing 1 parameter"):
-        context.query().b_ary_tree(leaf_count=3).laplace()
+        context.query().b_ary_tree(
+            output_metric=dp.l1_distance(T=int), leaf_count=3
+        ).laplace()
 
 
 def test_transformation_release_error():

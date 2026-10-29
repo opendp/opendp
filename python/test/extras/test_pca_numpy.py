@@ -1,0 +1,183 @@
+import pytest
+import opendp.prelude as dp
+from ..helpers import optional_dependency
+
+from opendp.extras.sklearn.decomposition import then_private_pca
+
+np = pytest.importorskip("numpy")
+sklearn = pytest.importorskip("sklearn")
+
+
+def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
+    cov = cov or sample_covariance(num_columns)
+    microdata = np.random.multivariate_normal(
+        np.zeros(cov.shape[0]), cov, size=num_rows or 100_000
+    )
+    microdata -= microdata.mean(axis=0)
+    return microdata
+
+
+def sample_covariance(num_features):
+    A = np.random.uniform(0, num_features, size=(num_features, num_features))
+    return A.T @ A
+
+
+def test_pca():
+    num_columns = 4
+    num_rows = 10_000
+    space = (
+        dp.numpy.array2_domain(
+            norm=1,
+            p=2,
+            origin=0,
+            num_columns=num_columns,
+            size=num_rows,
+            nan=False,
+            T=float,
+        ),
+        dp.symmetric_distance(),
+    )
+    m_pca = space >> then_private_pca(unit_epsilon=1.0)
+
+    print(
+        "m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))",
+        m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)),
+    )
+    assert m_pca.check(2, 1.0)
+
+
+@pytest.mark.parametrize("T, dtype", [(dp.f32, np.float32), (dp.f64, np.float64)])
+def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
+    from opendp.extras.sklearn.decomposition import _make_center
+
+    origin = np.array([10.0, -20.0], dtype=dtype)
+    domain = dp.numpy.array2_domain(
+        norm=1.0, p=2, origin=origin, num_columns=2, size=2, nan=False, T=T
+    )
+    data = origin + np.array([[0.5, 0.0], [0.5, 0.5]], dtype=dtype)
+    centered = _make_center(domain, dp.symmetric_distance())
+    sscp = centered >> then_np_sscp()
+
+    assert domain.member(data)
+    assert np.all(centered.output_domain.descriptor.origin == 0)
+    assert np.array_equal(sscp(data), (data - origin).T @ (data - origin))
+    # Debug native libraries only support f64 in the full PCA constructor.
+    if T == dp.f64:
+        pca = (domain, dp.symmetric_distance()) >> then_private_pca(unit_epsilon=1.0)
+        assert pca.check(2, 1.0)
+
+
+@pytest.mark.parametrize("n_changes", [1, 2])
+def test_pca_skl_privacy_budget(n_changes):
+    epsilon = 1.0
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=epsilon,
+        row_norm=1.0,
+        n_samples=101,
+        n_features=2,
+        n_changes=n_changes,
+    )
+
+    # One replacement has symmetric distance 2; n_changes scales its budget.
+    unit_epsilon = epsilon / n_changes
+    for measurement in [model._prepare_fitter(), model.measurement()]:
+        assert measurement.map(2) == pytest.approx(unit_epsilon)
+        assert measurement.check(2, unit_epsilon)
+
+
+def test_pca_skl():
+    num_columns = 4
+    num_rows = 10_000
+    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=1.0,
+        row_norm=1.0,
+        n_samples=num_rows,
+        n_features=4,
+    )
+
+    model.fit(data)
+    assert (
+        str(model)
+        == "PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)"
+    )
+    print("PCA object", model)
+    print("singular values", model.singular_values_)
+    print("components", model.components_)
+
+    loadings = model.singular_values_ * model.components_  # type: ignore[operator]
+    print("loadings", loadings)
+
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components="mle"
+    )
+
+    model.fit(data)
+
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components=0.4
+    )
+    model.fit(data)
+
+    model = dp.sklearn.decomposition.PCA(
+        epsilon=1.0, row_norm=1.0, n_samples=num_rows, n_features=4, n_components=0.4
+    )
+    meas = model.measurement()
+    meas(data)
+    print("model.components_", model.components_)
+
+
+def flip_row_signs(a, b):
+    signs = np.equal(np.sign(a[:, 0]), np.sign(b[:, 0])) * 2 - 1
+    return a, b * signs[:, None]
+
+
+def flaky_assert_pca_compare_sklearn():
+    num_columns = 4
+    num_rows = 1_000_000
+    data = sample_microdata(num_columns=num_columns, num_rows=num_rows)
+
+    model_odp = dp.sklearn.decomposition.PCA(
+        epsilon=1_000_000.0,
+        row_norm=64.0,
+        n_samples=num_rows,
+        n_features=4,
+    )
+    model_odp.fit(data)
+
+    model_skl = sklearn.decomposition.PCA()
+    model_skl.fit(data)
+
+    print("opendp object", model_odp)
+    print("opendp singular values", model_odp.singular_values_)
+
+    print("sk-learn object", model_skl)
+    print("sk-learn singular values", model_skl.singular_values_)
+
+    assert np.allclose(
+        model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
+    )
+
+    odp_comp, skl_comp = flip_row_signs(model_odp.components_, model_skl.components_)
+
+    print("opendp components\n", odp_comp)
+    print("sk-learn components\n", skl_comp)
+    print("diff\n", odp_comp - skl_comp)
+    assert np.allclose(odp_comp, skl_comp, atol=1e-3)
+
+    print("opendp explained variance", model_odp.explained_variance_)
+    print("sk-learn explained variance", model_skl.explained_variance_)
+
+
+def test_pca_compare_sklearn():
+    for _ in range(5):
+        try:
+            with optional_dependency("randomgen"):
+                flaky_assert_pca_compare_sklearn()
+            break
+        except AssertionError:
+            pass
+    else:
+        assert False, "PCA failed too many times"

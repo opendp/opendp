@@ -4,12 +4,12 @@
 \title{\texttt{fn score\_candidates\_constants}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_constants} 
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_constants}
 in \asOfCommit{mod.rs}{f5bb719}.
 \texttt{score\_candidates\_constants} returns a fractional decomposition of alpha and an upper bound on dataset size to protect against overflow.
 
@@ -48,7 +48,7 @@ None
 \begin{proof}
     While the code is complicated, all that is needed is to observe that the function does not return until line \ref{return},
     and that the conditions are explicitly checked on lines \ref{prop-1} and \ref{prop-2}.
-    
+
     Therefore, the postcondition holds.
 \end{proof}
 

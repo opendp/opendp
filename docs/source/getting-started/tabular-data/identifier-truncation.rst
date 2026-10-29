@@ -129,7 +129,7 @@ number of records per quarter.
             ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") < 10)
             ...     .group_by(quarterly)
             ...     .agg(
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )

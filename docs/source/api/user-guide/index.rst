@@ -1,8 +1,10 @@
-API User Guide
-==============
+.. _user-guide:
+
+User Guide
+==========
 
 This user guide gives a top-down picture of OpenDP;
-it complements the bottom-up view provided by the `Python API Reference <../python/index.html>`_.
+it complements the bottom-up view provided by the :doc:`Python API Reference <../python/index>`.
 
 
 .. _feature-listing:
@@ -39,7 +41,7 @@ Features can be enabled via the following syntax:
       .. code-block:: toml
 
          opendp = { features = ["contrib"] }
-      
+
 
 Features that are available from Python and R:
 
@@ -74,6 +76,7 @@ See also the :ref:`comprehensive listing of features for Rust<rust-feature-listi
    :maxdepth: 1
 
    limitations
+   api-comparison/index
    framework-api/index
    transformations/index
    measurements/index

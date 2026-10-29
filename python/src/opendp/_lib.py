@@ -154,12 +154,10 @@ def import_optional_dependency(name, raise_error=True):
 
 
 _np_csprng: Any = None
-_buffer_pos = 0  # TODO: Make this into a class rather than using ad-hoc globals.
 
 
 def get_np_csprng():
     global _np_csprng
-    global _buffer_pos
     if _np_csprng is not None:
         return _np_csprng
 
@@ -169,11 +167,15 @@ def get_np_csprng():
     buffer_len = 1024
     buffer = np.empty(buffer_len, dtype=np.uint64)
     buffer_ptr = ctypes.cast(buffer.ctypes.data, ctypes.POINTER(ctypes.c_uint8))
-    _buffer_pos = buffer_len
+    buffer_pos = buffer_len
+    buffer_pid = os.getpid()
 
     def next_raw(_voidp):
-        global _buffer_pos
-        if buffer_len == _buffer_pos:
+        nonlocal buffer_pos, buffer_pid
+        pid = os.getpid()
+        # A fork copies unread bytes, even though the underlying CSPRNG is fork-safe.
+        # Check here because callers may retain the Generator across a fork.
+        if buffer_len == buffer_pos or pid != buffer_pid:
             from opendp._data import fill_bytes
 
             # there are 8x as many u8s as there are u64s
@@ -181,10 +183,11 @@ def get_np_csprng():
                 from opendp.mod import OpenDPException
 
                 raise OpenDPException("FailedFunction", "Failed to sample from CSPRNG")
-            _buffer_pos = 0
+            buffer_pos = 0
+            buffer_pid = pid
 
-        out = buffer[_buffer_pos]
-        _buffer_pos += 1
+        out = buffer[buffer_pos]
+        buffer_pos += 1
         return int(out)
 
     _np_csprng = np.random.Generator(bit_generator=randomgen.UserBitGenerator(next_raw))  # type:ignore

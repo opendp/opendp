@@ -5,10 +5,7 @@
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
 
-# TODO: restore "-W": Treat warnings as errors.
-# https://github.com/opendp/opendp/issues/2509
-# https://github.com/opendp/opendp/issues/2508
-SPHINXOPTS    = --keep-going
+SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
@@ -35,7 +32,9 @@ html:
 	@set -e
 	# If sphinx-apidoc options change, also update conf.py!
 	$(SPHINXAPIDOC) -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
-	OPENDP_SPHINX_LOCAL=1 $(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) source $(BUILDDIR)/html
+	# Use -W (elevate warnings to errors) only on the single-version build.
+	# We don't want lower standards everywhere just to satisfy multi-version.
+	OPENDP_SPHINX_LOCAL=1 $(SPHINXBUILD) -W --keep-going $(SPHINXOPTS) -D version=$(VERSION) source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

@@ -12,7 +12,7 @@
 \contrib
 Proves soundness of \rustdoc{domains/polars/frame/fn}{find\_min\_covering} in \asOfCommit{mod.rs}{f5bb719}.
 
-\texttt{find\_min\_covering} attempts to return the smallest covering 
+\texttt{find\_min\_covering} attempts to return the smallest covering
 from \texttt{sets} that spans \texttt{must\_cover}.
 
 \section{Hoare Triple}
@@ -34,12 +34,12 @@ None
 \begin{theorem}
 Return a subset of \texttt{sets} whose intersection contains \texttt{must\_cover}, or None.
 \end{theorem}
-\begin{proof} 
+\begin{proof}
     All that needs to be proven is that the return set covers \texttt{must\_cover}.
     While the algorithm makes a best effort to minimize the cardinality of the cover,
     nothing about optimality of the algorithm has been proven.
 
-    The algorithm initializes with an empty cover on \ref{covered} and 
+    The algorithm initializes with an empty cover on \ref{covered} and
     continues to run until all elements have been added to the cover (see \ref{loop}).
     If there are no remaining sets that intersect with \texttt{must\_cover},
     then the algorithm terminates without a cover, which is a valid output.
@@ -47,7 +47,7 @@ Return a subset of \texttt{sets} whose intersection contains \texttt{must\_cover
     Otherwise, on \texttt{state}, a new set is added to the cover and those elements in \texttt{must\_cover} are removed.
     The algorithm only terminates once all members of \texttt{must\_cover} have had sets that include them added to \texttt{covered}.
 
-    Therefore \texttt{covered} returns a subset of \texttt{sets} 
+    Therefore \texttt{covered} returns a subset of \texttt{sets}
     whose intersection contains \texttt{must\_cover}, or None.
 
 \end{proof}

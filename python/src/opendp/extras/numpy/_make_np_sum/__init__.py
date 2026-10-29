@@ -16,25 +16,36 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     :return: a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
+
+    np = import_optional_dependency("numpy")
 
     dp.assert_features("contrib", "idealized-numerics")
 
     if not str(input_domain).startswith("NPArray2Domain"):  # |\label{domain-check}|
-        raise ValueError(f"input_domain ({input_domain}) must be NPArray2Domain")  # pragma: no cover
-    
+        raise ValueError(
+            f"input_domain ({input_domain}) must be NPArray2Domain"
+        )  # pragma: no cover
+
     if input_domain.descriptor.nan:
-        raise ValueError(f"input_domain ({input_domain}) must not permit NaN elements")  # pragma: no cover
+        raise ValueError(
+            f"input_domain ({input_domain}) must not permit NaN elements"
+        )  # pragma: no cover
 
     if input_metric != dp.symmetric_distance():  # |\label{metric-check}|
-        raise ValueError("input_metric must be the symmetric distance")  # pragma: no cover
+        raise ValueError(
+            "input_metric must be the symmetric distance"
+        )  # pragma: no cover
 
     input_desc = input_domain.descriptor
     norm = input_desc.norm
-    if norm is None: # |\label{norm-check}|
-        raise ValueError(f"input_domain ({input_domain}) must have bounds. See make_np_clamp")  # pragma: no cover
+    if norm is None:  # |\label{norm-check}|
+        raise ValueError(
+            f"input_domain ({input_domain}) must have bounds. See make_np_clamp"
+        )  # pragma: no cover
 
-    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_desc.p]  # |\label{p-check}|
+    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[
+        input_desc.p
+    ]  # |\label{p-check}|
 
     if input_desc.size is None:
         origin = np.atleast_1d(input_desc.origin)

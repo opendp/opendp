@@ -48,7 +48,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
             :language: r
             :start-after: # make-base-constant
             :end-before: # /make-base-constant
-    
+
 The resulting Measurement may be used interchangeably with those constructed via the library:
 
 .. tab-set::
@@ -70,6 +70,6 @@ The resulting Measurement may be used interchangeably with those constructed via
             :start-after: # use-measurement
             :end-before: # /use-measurement
 
-While this mechanism clearly has no utility, 
-the code snip may form a basis for you to create own measurements, 
+While this mechanism clearly has no utility,
+the code snip may form a basis for you to create own measurements,
 or even incorporate mechanisms from other libraries.

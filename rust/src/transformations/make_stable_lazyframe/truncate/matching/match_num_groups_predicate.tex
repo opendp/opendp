@@ -4,12 +4,12 @@
 \title{\texttt{fn match\_num\_groups\_predicate}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -18,7 +18,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 Types matching pseudocode.
 
 \subsubsection*{Caller-verified}
-None 
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -28,14 +28,14 @@ None
 \begin{theorem}[Postcondition]
     If \texttt{ranks} is a dense ranking of grouping columns,
     and \texttt{partition\_by} is a singleton of \texttt{identifier},
-    then returns the bound on per-identifier contributions, 
+    then returns the bound on per-identifier contributions,
     or an error if the truncation is mis-specified.
 \end{theorem}
 
 \begin{proof}
     Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
     an error is only raised if the predicate is unambiguously a \texttt{per\_group} truncation predicate.
-    
+
     The \texttt{per\_group} predicate is only unambiguously identified.
     This check happens on line \ref{line:check_rank}.
 
@@ -45,12 +45,12 @@ None
 
     Finally, line \ref{line:extract_grouping_columns} extracts the grouping columns from the predicate.
     Special consideration is made for structs, which are considered multiple grouping columns.
-    
+
     Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
     This effectively randomizes the ranking of the grouping columns, as the ranking is based on a lexicographic ordering.
     and gives in effect a random sample of grouping columns.
     The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
-    which prevents different combinations of grouping keys from being assigned the same rank, 
+    which prevents different combinations of grouping keys from being assigned the same rank,
     preventing more distinct groups being kept than is permitted.
 
     This predicate corresponds to a \texttt{num\_groups} truncation predicate,

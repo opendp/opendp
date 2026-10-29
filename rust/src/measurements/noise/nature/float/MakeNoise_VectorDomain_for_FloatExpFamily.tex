@@ -13,10 +13,10 @@
 Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} over vectors
 for \texttt{FloatExpFamily} in \asOfCommit{mod.rs}{f5bb719}.
 
-This mechanism samples from the \texttt{FloatExpFamily} distribution, 
+This mechanism samples from the \texttt{FloatExpFamily} distribution,
 where the tails saturate to the positive and negative infinity floats in the native float type.
-This is done by rounding floats to a fractional grid, 
-adding noise from from the \texttt{ZExpFamily} distribution (supported on all integers) 
+This is done by rounding floats to a fractional grid,
+adding noise from from the \texttt{ZExpFamily} distribution (supported on all integers)
 to the numerator of the fraction (with noise scale multiplied by the denominator),
 and then converting back to the nearest float, or saturating to positive or negative infinity.
 
@@ -49,11 +49,11 @@ None
 \end{theorem}
 
 \begin{proof}
-    Line \ref{line:dist} constructs a new random variable following a distribution equivalent to \texttt{FloatExpFamily}, 
+    Line \ref{line:dist} constructs a new random variable following a distribution equivalent to \texttt{FloatExpFamily},
     but without tails that saturate to infinity, and with gaps between adjacent point on the grid adjusted to one.
 
     Neither constructor \rustdoc{measurements/noise/nature/float/fn}{make\_float\_to\_bigint} nor
-    \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} have manual preconditions, 
+    \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} have manual preconditions,
     and the postconditions guarantee a valid transformation and valid measurement, respectively.
     \rustdoc{measurements/noise/nature/float/fn}{then\_deintegerize\_vec} also does not have preconditions,
     and its postcondition guarantees that it returns a valid postprocessor.

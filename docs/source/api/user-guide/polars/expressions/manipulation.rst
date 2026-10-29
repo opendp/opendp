@@ -156,14 +156,16 @@ individuals working each hour range.
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))
             ...     .group_by("HWUSUAL")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ... )
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ... │
             │ (-inf, 0] ┆ ... │
@@ -204,7 +206,7 @@ from grouping:
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))
             ...     .group_by("HWUSUAL")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ...     .with_keys(pl.LazyFrame([labels]))
             ... )
             >>> query.summarize()
@@ -225,12 +227,14 @@ from grouping:
 
         .. code:: pycon
 
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ u32     │
+            │ cat       ┆ i64     │
             ╞═══════════╪═════════╡
             │ (-inf, 0] ┆ ... │
             │ (0, 20]   ┆ ... │
@@ -450,7 +454,7 @@ individuals less than 65:
             >>> (
             ...     context.query()
             ...     .group_by(pl.col.AGE > 64)
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ...     .with_keys(pl.LazyFrame({"AGE": [True, False]}))
             ...     .summarize()
             ... )
@@ -579,7 +583,7 @@ differ from that of the input.
             >>> (
             ...     context.query()
             ...     .group_by(pl.col.ILOSTAT.replace_strict(ilostat_labels))
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ...     .summarize()
             ... )
             shape: (1, 5)
@@ -626,15 +630,17 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             ...         pl.col.HWUSUAL.cut(breaks=breaks).to_physical()
             ...     )
             ...     .group_by("HWUSUAL")
-            ...     .agg(dp.len())
+            ...     .agg(dp.len(signed=True))
             ...     .with_keys(pl.LazyFrame([labels]))
             ... )
-            >>> query.release().collect().sort("HWUSUAL")
+            >>> query.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌─────────┬─────────┐
             │ HWUSUAL ┆ len     │
             │ ---     ┆ ---     │
-            │ u32     ┆ u32     │
+            │ u32     ┆ i64     │
             ╞═════════╪═════════╡
             │ 0       ┆ ... │
             │ 1       ┆ ... │
@@ -648,4 +654,4 @@ expression to retrieve the bin indices of the ``.cut`` expression.
 
 In the case of categorical data types, OpenDP only allows this
 expression if the encoding is data-independent. More information can be
-found in `Data Types <../data-types.ipynb>`__.
+found in :doc:`Data Types <../data-types>`.

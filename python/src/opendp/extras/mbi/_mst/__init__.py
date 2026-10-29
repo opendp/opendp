@@ -38,16 +38,17 @@ if TYPE_CHECKING:  # pragma: no cover
 @dataclass(kw_only=True, frozen=True)
 class MST(Algorithm):
     """MST mechanism from `MMS21 <https://arxiv.org/abs/2108.04978>`_.
-    
-    MST greedily chooses pairs of columns that are most poorly represented 
-    by the DP contingency table in a way that guarantees all columns become 
+
+    MST greedily chooses pairs of columns that are most poorly represented
+    by the DP contingency table in a way that guarantees all columns become
     connected by a minimum spanning tree.
     MST then releases all of the selected marginals.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
-    
+
     .. code:: pycon
 
         >>> import opendp.prelude as dp
@@ -66,7 +67,7 @@ class MST(Algorithm):
         ...     # transformations/truncation may be applied here
         ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
         ...     .contingency_table(
-        ...         keys={"SEX": [1, 2]}, 
+        ...         keys={"SEX": [1, 2]},
         ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
         ...         algorithm=dp.mbi.MST()
         ...     )
@@ -96,11 +97,11 @@ class MST(Algorithm):
 
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     num_selections: Optional[int] = None
     """Number of second-order marginals to estimate.
-    
+
     Defaults to one fewer than the number of columns in the data."""
 
     def __post_init__(self):
@@ -131,7 +132,7 @@ class MST(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -142,10 +143,15 @@ class MST(Algorithm):
         d_measure = d_out * self.measure_split
         d_select = prior(prior(d_out - d_measure))
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         edges = list(itertools.combinations(input_domain.columns, 2))
 
-        t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
+        t_marginals = make_stable_marginals(
+            input_domain,
+            input_metric,
+            edges,  # type: ignore[arg-type]
+        )
         d_marginals = t_marginals.map(d_in)
 
         def function(
@@ -215,7 +221,7 @@ def _make_mst_select(
 
     model = cast(MarkovRandomField, model)
 
-    max_selections = len(model.domain.attrs) - 1
+    max_selections = len(model.domain.attributes) - 1
     num_selections = min(max(0, num_selections or max_selections), max_selections)
     d_select = prior(d_out / num_selections)
 
@@ -224,7 +230,7 @@ def _make_mst_select(
 
     def function(qbl: Queryable) -> list[tuple[str, str]]:
         selected_edges = []
-        components = DisjointSet(model.domain.attrs)
+        components = DisjointSet(model.domain.attributes)
 
         for _ in range(num_selections):
             # filter down to only include edges that aren't connected
@@ -296,5 +302,5 @@ def _make_mst_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in.values()),
+        stability_map=lambda d_in: max(distance[1] for distance in d_in.values()),
     )

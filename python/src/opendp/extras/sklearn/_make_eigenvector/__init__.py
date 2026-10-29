@@ -7,6 +7,22 @@ from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from opendp._internal import _make_measurement, _make_transformation
 
+
+def _optimal_b(A_eigvals, d: int) -> float:
+    import opendp.prelude as dp
+
+    # Differs from the Amin et al. in two ways:
+    # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
+    #   the equality is against 1 not 0
+    # 2. Instead of using bounds of (1, d), widen both bounds by a margin,
+    #   as the boundary may lie on a bound: numerically at 1, and exactly at d when A = 0
+    margin = 0.1
+    return dp.binary_search(
+        lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1,
+        bounds=(1.0 - margin, float(d) + margin),
+    )
+
+
 # planning to make this public, but may make more API changes
 
 
@@ -19,11 +35,11 @@ def make_private_eigenvector(
     :param input_metric: instance of `symmetric_distance()`
     :param unit_epsilon: ε-expenditure per changed record in the input data
     """
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
-    
+
     np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
 
@@ -53,13 +69,7 @@ def make_private_eigenvector(
         # b is chosen optimally when the ACG is least entropic, but is still an envelope.
         # Criteria for being an envelope are given in 3.4 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf
 
-        # Differs from the Amin et al. in two ways:
-        # 1. In 3.6 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf,
-        #   the equality is against 1 not 0
-        # 2. Instead of using bounds of (1, d), decrease the lower bound for numerical stability
-        b = dp.binary_search(
-            lambda b: sum(1 / (b + 2 * A_eigvals)) >= 1, bounds=(0.9, float(d))
-        )
+        b = _optimal_b(A_eigvals, d)
         Omega = np.eye(d) + 2 * A / b
 
         # (3)
@@ -72,15 +82,21 @@ def make_private_eigenvector(
             # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
             #  - Mult normal does not have an invertible cdf
             #  - Could try:
-            #    1. a "conservative" Cholesky decomposition of Omega_inv 
+            #    1. a "conservative" Cholesky decomposition of Omega_inv
             #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
             #       sample with sufficient precision where all components round to same float
-            
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr] 
-            # u is a sample from the angular central gaussian distribution, 
+
+            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr]
+            # u is a sample from the angular central gaussian distribution,
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
-            if np_csprng.random() < np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
+            # Amin et al., Algorithm 2 step 4(b), incorrectly divides by
+            # (u.T @ Omega @ u) ** (d / 2). The ACG proposal density
+            # contains its inverse, so rejection sampling must multiply
+            # by this factor instead (Kent et al., Eq. 3.3).
+            if np_csprng.random() < (
+                np.exp(-u.T @ A @ u) * (u.T @ Omega @ u) ** (d / 2) / M
+            ):
                 return u
 
     return _make_measurement(
@@ -141,15 +157,18 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 def make_private_eigenvectors(
     input_domain: Domain, input_metric: Metric, unit_epsilons: Sequence[float]
 ) -> Measurement:
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     import opendp.prelude as dp
-    linalg = import_optional_dependency('scipy.linalg')
+
+    linalg = import_optional_dependency("scipy.linalg")
 
     dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
     if input_desc.p != 2:
-        raise ValueError("input_domain must have bounded L2 row norm")  # pragma: no cover
+        raise ValueError(
+            "input_domain must have bounded L2 row norm"
+        )  # pragma: no cover
 
     if len(unit_epsilons) > input_desc.num_features - 1:
         raise ValueError(

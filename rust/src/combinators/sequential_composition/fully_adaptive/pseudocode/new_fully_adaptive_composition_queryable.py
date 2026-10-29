@@ -3,6 +3,7 @@ def new_fully_adaptive_composition_queryable(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option[MI_Distance],
     data: DI_Carrier,
 ) -> OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance]:
 
@@ -72,8 +73,10 @@ def new_fully_adaptive_composition_queryable(
                 return Answer.External(OdometerAnswer.Invoke(answer))
 
             # evaluate external privacy loss query
-            case Query.External(OdometerQuery.PrivacyLoss(d_in)):
-                d_mids = [m.eval(d_in) for m in privacy_maps]
+            case Query.External(OdometerQuery.PrivacyLoss(d_in_q)):
+                if d_in is not None and d_in_q.total_cmp(d_in) != Ordering.Equal:
+                    raise ValueError("d_in must match")  # `\label{d-in-check}`
+                d_mids = [m.eval(d_in_q) for m in privacy_maps]
                 d_out = output_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))
 

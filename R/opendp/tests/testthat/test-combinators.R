@@ -169,6 +169,16 @@ test_that("test_fully_adaptive_composition", {
   expect_gt(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence) * 2 + 0.2 + 0.09)
 })
 
+test_that("test_fully_adaptive_composition_d_in", {
+  space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())
+  oqbl_sc <- (space |> then_fully_adaptive_composition(max_divergence(), d_in = 1L))(arg = rep(1L, 200))
+
+  m_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum() |> then_laplace(100.)
+  oqbl_sc(query = m_sum)
+  expect_equal(oqbl_sc(d_in = 1L), m_sum(d_in = 1L))
+  expect_error(oqbl_sc(d_in = 2L), "must match the d_in passed into the constructor")
+})
+
 
 test_that("test_odometer_supporting_elements", {
   sc_odo <- make_fully_adaptive_composition(

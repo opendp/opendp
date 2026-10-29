@@ -9,7 +9,8 @@ The mechanism only releases key-value pairs that are “stable”. When the
 value is large enough in magnitude to represent contributions from many
 different individuals, then the key is not specific to any one
 individual and can be released privately. The intuition is that the key
-is present among all neighboring datasets.
+is present among all neighboring datasets. Explicit zero-valued entries are
+treated as absent: no noise is sampled for them, and they cannot be released.
 
 We’ll look at the various thresholded noise mechanisms in OpenDP:
 
@@ -49,14 +50,18 @@ An instance of the Laplace threshold mechanism is captured by a
 
     1. We first define the **function** :math:`f(\cdot)`, that applies the
     Laplace mechanism to the values of :math:`x`, and then discards pairs
-    whose value is below the threshold.
+    whose value is at or below the threshold.
 
     .. code:: pycon
 
         >>> from typing import Any
         >>> def f(x: dict[Any, float]) -> dict[Any, float]:
-        ...     x = {k: Laplace(mu=v, b=scale) for k, v in x.items()}
-        ...     return {k: v for k, v in x.items() if v >= threshold}
+        ...     x = {
+        ...         k: Laplace(mu=v, b=scale)
+        ...         for k, v in x.items()
+        ...         if v != 0
+        ...     }
+        ...     return {k: v for k, v in x.items() if v > threshold}
         ...
 
     2. Importantly, :math:`f(\cdot)` is only well-defined for any dictionary
@@ -122,8 +127,8 @@ equivalent of the Laplace threshold measurement described above.
             >>> print("noisy aggregate:", m_lap(aggregated))
             noisy aggregate: {...}
 
-As expected, pairs with small values (like ``"a": 0.0``) had too few
-people contribute to be included in the release.
+As expected, small values are unlikely to pass the threshold. The explicit
+zero-valued entry ``"a": 0.0`` is never sampled or released.
 
 .. tab-set::
 
@@ -339,8 +344,8 @@ The continuous mechanisms use these discrete samplers internally.
 Threshold: Positive vs. Negative
 --------------------------------
 
-When the threshold is negative, pairs with noisy values greater than the
-threshold are discarded.
+When the threshold is negative, pairs with noisy values greater than or equal to
+the threshold are discarded.
 
 .. tab-set::
 
@@ -386,13 +391,13 @@ the function and privacy units can be further configured to operate over
 specific bit-depths by explicitly specifying ``"f32"`` instead of
 ``"float"``, or ``"i64"`` instead of ``"int"``.
 
-More information on acceptable data types can be found in the `Typing
-section of the User Guide <../utilities/typing.rst>`__.
+More information on acceptable data types can be found in the
+:doc:`Typing section of the User Guide <../utilities/typing>`.
 
 Desideratum: Floating-Point Granularity
 ---------------------------------------
 
-Quoting from `Additive Noise Mechanisms <additive-noise-mechanisms.html#Desideratum:-Floating-Point-Granularity>`__:
+Quoting from :doc:`Additive Noise Mechanisms <additive-noise-mechanisms>`:
 
     The “continuous” Laplace and Gaussian measurements convert their float
     values to a rational representation, and then add integer noise to the

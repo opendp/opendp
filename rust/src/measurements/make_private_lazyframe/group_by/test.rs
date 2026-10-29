@@ -99,6 +99,43 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 }
 
 #[test]
+fn test_stable_keys_delta_empirical() -> Fallible<()> {
+    const N: u32 = 2048;
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<u32>::default())])?
+        .with_margin(Margin::by(["A"]).with_max_length(1))?;
+    let data = df!("A" => &(0..N).collect::<Vec<_>>())?.lazy();
+
+    // Match N, scale, threshold, and tolerance in
+    // noise_threshold/distribution/{laplace,gaussian}/test.rs::
+    // test_{laplace,gaussian}_threshold_delta_empirical (positive case).
+    // Each group is unstable relative to a neighboring frame without its row.
+    // Releasing a group at the threshold would exceed the reported delta.
+    macro_rules! check {
+        ($measure:expr) => {{
+            let meas = make_private_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                Approximate($measure),
+                data.clone()
+                    .group_by(&[col("A")])
+                    .agg(&[len().dp().noise(None)]),
+                Some(0.5),
+                Some(2),
+            )?;
+            let delta = meas.map(&1.into())?.1;
+            let release_rate = meas.invoke(&data)?.collect()?.height() as f64 / f64::from(N);
+            assert!(
+                release_rate <= delta + 0.05,
+                "release rate {release_rate} exceeds delta {delta}"
+            );
+        }};
+    }
+    check!(MaxDivergence);
+    check!(ZeroConcentratedDivergence);
+    Ok(())
+}
+
+#[test]
 fn test_explicit_keys() -> Fallible<()> {
     static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
@@ -159,6 +196,50 @@ fn test_explicit_keys() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_fill_after_filter_privacy_map() -> Fallible<()> {
+    // Regression for #3039: dp.sum implicitly fills nulls after a filter.
+    // Filling must not restore the public-length invariant lost by the filter.
+    let lf = df!("x" => [1i64, 3, 3], "k" => [0i64, 0, 0])?.lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", AtomDomain::<i64>::default()),
+        SeriesDomain::new("k", AtomDomain::<i64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["k"])
+            .with_invariant_lengths()
+            .with_max_length(50)
+            .with_max_groups(3),
+    )?;
+
+    let filtered = col("x").filter(col("x").gt(lit(1i64)));
+    for expr in [
+        filtered.clone().dp().sum((lit(2i64), lit(3i64)), Some(1.0)),
+        filtered
+            .fill_null(2i64)
+            .clip(lit(2i64), lit(3i64))
+            .sum()
+            .dp()
+            .noise(Some(1.0)),
+    ] {
+        let meas = make_private_lazyframe(
+            domain.clone(),
+            SymmetricDistance,
+            MaxDivergence,
+            lf.clone().group_by(&[col("k")]).agg(&[expr]),
+            None,
+            None,
+        )?;
+
+        let privacy_loss = meas.map(&2u32)?;
+        assert!(
+            (6.0..7.0).contains(&privacy_loss),
+            "filtering must invalidate public lengths; got privacy loss {privacy_loss}"
+        );
+    }
+    Ok(())
+}
+
 fn process_expr(expr: Expr) -> Fallible<Expr> {
     Ok(make_private_expr(
         WildExprDomain {
@@ -194,5 +275,65 @@ fn test_find_len_expr() -> Fallible<()> {
             supported_expr,
         );
     }
+    Ok(())
+}
+
+#[test]
+fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
+    use crate::core::Domain;
+
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<String>::default()),
+        SeriesDomain::new("B", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_max_length(3)
+            .with_max_groups(1)
+            .with_invariant_keys(),
+    )?;
+
+    let x = df!("A" => ["a", "a", "a"], "B" => [10i32, 10, 10])?.lazy();
+    let y = df!("A" => ["a", "a", "a"], "B" => [-10i32, -10, -10])?.lazy();
+    assert!(domain.member(&x)?);
+    assert!(domain.member(&y)?);
+
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        x.group_by(&[col("A")])
+            .agg(&[col("B").dp().sum((lit(-10), lit(10)), Some(30.0))]),
+        None,
+        None,
+    )?;
+
+    // Replacing three rows changes six rows under SymmetricDistance.
+    // The clipped sums differ by 60, giving epsilon 60 / 30 = 2.
+    assert!((measurement.map(&6)? - 2.0).abs() < 1e-6);
+    // A single insertion still incurs the sensitivity of just one row.
+    assert!((measurement.map(&1)? - 1.0 / 3.0).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
+fn test_max_length_overflow() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
+    let margin = Margin::by(["A"])
+        .with_max_length(u32::MAX)
+        .with_invariant_keys();
+    let domain = domain.with_margin(margin)?;
+
+    let lf = df!("A" => [1i32])?.lazy();
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        lf.group_by(&[col("A")]).agg(&[len().dp().noise(Some(1.0))]),
+        None,
+        None,
+    )?;
+
+    assert!(measurement.map(&1).is_err());
     Ok(())
 }

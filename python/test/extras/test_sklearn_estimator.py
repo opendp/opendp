@@ -7,9 +7,7 @@ class _DummyEstimator(DPEstimator):
     def __init__(self, marker="default"):
         self.marker = marker
 
-    def make(
-        self, input_domain, input_metric, output_measure, d_in, d_out
-    ):
+    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         raise NotImplementedError
 
     def _ingest_release(self, release):
@@ -25,9 +23,7 @@ class _CountEstimator(DPEstimator):
     def __init__(self, scale=1.0):
         self.scale = scale
 
-    def make(
-        self, input_domain, input_metric, output_measure, d_in, d_out
-    ):
+    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         import opendp.prelude as dp
 
         return (
@@ -41,12 +37,19 @@ class _CountEstimator(DPEstimator):
 
 
 def test_sklearn_estimator_is_abstract():
+    import opendp.prelude as dp
+
     with pytest.raises(TypeError):
         DPEstimator()
 
     with pytest.raises(NotImplementedError):
         DPEstimator.make(
-            _DummyEstimator(), None, None, None, 1, 1  # type: ignore[arg-type]
+            _DummyEstimator(),
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            dp.max_divergence(),
+            1,
+            1,
         )
     with pytest.raises(NotImplementedError):
         DPEstimator._ingest_release(_DummyEstimator(), None)
@@ -108,9 +111,7 @@ def test_query_sklearn_accepts_transformed_query_and_rejects_partial_chain():
     domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=3)
     metric = dp.symmetric_distance()
     transformation = (domain, metric) >> dp.t.then_clamp((0.0, 1.0))
-    transformed = dp.Query(
-        transformation, dp.max_divergence(), d_in=1, d_out=1.0
-    )
+    transformed = dp.Query(transformation, dp.max_divergence(), d_in=1, d_out=1.0)
     assert isinstance(transformed.sklearn(_CountEstimator()), dp.Query)
 
     partial = dp.Query(
@@ -129,9 +130,7 @@ def test_direct_measurement_and_context_fit_share_estimator_path():
     domain = dp.vector_domain(dp.atom_domain(T=int), size=3)
     metric = dp.symmetric_distance()
     estimator = _CountEstimator(scale=1.0)
-    measurement = estimator.make(
-        domain, metric, dp.max_divergence(), 1, 1.0
-    )
+    measurement = estimator.make(domain, metric, dp.max_divergence(), 1, 1.0)
     assert measurement.map(1) <= 1.0
 
     context = dp.Context.compositor(

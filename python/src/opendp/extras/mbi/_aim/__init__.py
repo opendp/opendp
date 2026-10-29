@@ -13,7 +13,9 @@ from opendp.combinators import (
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
+    _noise_sensitivity,
     get_associated_metric,
+    get_scale,
     make_noise_marginal,
     make_stable_marginals,
     prior,
@@ -56,6 +58,7 @@ class AIM(Algorithm):
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
 
@@ -116,7 +119,7 @@ class AIM(Algorithm):
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
     """Maximum memory constraint in MB for the marginal selection."""
@@ -157,7 +160,7 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -168,12 +171,11 @@ class AIM(Algorithm):
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         cliques = [query.by for query in queries]
 
-        t_marginals = make_stable_marginals(
-            input_domain, input_metric, lp_metric, cliques
-        )
+        t_marginals = make_stable_marginals(input_domain, input_metric, cliques)
         d_marginals = t_marginals.map(d_in)
 
         T = algorithm.rounds or (16 * len(input_domain.columns))
@@ -265,6 +267,7 @@ def _make_aim_marginal(
         model=model,
         d_in=d_in,
         d_out=d_select,
+        d_measure=d_measure,
         max_size=max_size,
     )
 
@@ -331,6 +334,7 @@ def _make_aim_select(
     output_measure: Measure,
     d_in,
     d_out,
+    d_measure,
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
@@ -348,7 +352,7 @@ def _make_aim_select(
 
     def is_small(clique: tuple[str, ...]) -> bool:
         model_size = mbi.junction_tree.hypothetical_model_size(
-            model.domain, cliques=model.cliques + [clique]
+            model.domain, cliques=[*model.cliques, clique]
         )
         return model_size <= max_size
 
@@ -358,9 +362,19 @@ def _make_aim_select(
     if not candidates:
         return None
 
+    # penalize candidates by the expected error of the upcoming MEASURE step,
+    # not of this SELECT step
+    expectations = {
+        q.by: get_scale(
+            output_measure, d_measure, _noise_sensitivity(output_measure, d_in[q.by])
+        )
+        * to_mu
+        for q in candidates
+    }
+
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
-            input_domain, input_metric, candidates, scale * to_mu, model
+            input_domain, input_metric, candidates, expectations, model
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
@@ -377,7 +391,7 @@ def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
     queries: list[Count],
-    expectation: float,
+    expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
@@ -391,7 +405,7 @@ def _make_aim_scores(
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
     def score_query(query: Count, exact: np.ndarray):
-        penalty = expectation * prod(exact.shape)
+        penalty = expectations[query.by] * prod(exact.shape)
         synth = model.project(query.by).values
 
         return (np.linalg.norm((exact - synth).flatten(), 1) - penalty) * query.weight
@@ -404,7 +418,7 @@ def _make_aim_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query.by]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in[q.by] * q.weight for q in queries),
+        stability_map=lambda d_in: max(d_in[q.by][1] * q.weight for q in queries),
     )
 
 

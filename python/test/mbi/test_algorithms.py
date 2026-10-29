@@ -108,6 +108,25 @@ def test_aim_init(kwargs, message):
         AIM(**kwargs)
 
 
+def test_mst_and_aim_scores_use_l1_sensitivity():
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-untyped,import-not-found]
+    from opendp.extras.mbi._aim import _make_aim_scores
+    from opendp.extras.mbi._mst import _make_mst_scores
+    from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
+
+    clique = ("A", "B")
+    domain = typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(9, 9), T="i32")})
+    metric = typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32")))
+    model = mirror_descent(mbi.Domain(clique, (9, 9)), [])
+    distance = {clique: (9, 9, 1)}
+
+    mst = _make_mst_scores(domain, metric, [clique], model)
+    aim = _make_aim_scores(domain, metric, [Count(clique)], {clique: 0.0}, model)
+    assert mst.map(distance) == 9.0
+    assert aim.map(distance) == 9.0
+
+
 def test_aim_exhaustion():
     # tests how algorithm behaves when all workload queries are ineligible for selection
     pytest.importorskip("mbi")
@@ -127,6 +146,119 @@ def test_aim_exhaustion():
     )
 
     m_aim(pl.LazyFrame({"A": [0]}))
+
+
+def test_aim_selects_correlated_pairs():
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    # eight columns in four perfectly correlated pairs: B{i} == A{i}
+    n = 20_000
+    rng = np.random.default_rng(1)
+    columns = [f"{letter}{i}" for i in range(4) for letter in "AB"]
+    data = {}
+    for i in range(4):
+        data[f"A{i}"] = rng.integers(0, 4, n)
+        data[f"B{i}"] = data[f"A{i}"].copy()
+    df = pl.DataFrame({c: data[c] for c in columns})
+
+    context = dp.Context.compositor(
+        data=df.lazy(),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=0.002),
+    )
+    table = (
+        context.query(rho=0.002)
+        .select(*columns)
+        .contingency_table(
+            keys={c: [0, 1, 2, 3] for c in columns},
+            algorithm=dp.mbi.AIM(queries=2),
+        )
+        .release()
+    )
+
+    selected = {frozenset(clique) for clique in table.marginals.cliques()}
+    found = sum(frozenset((f"A{i}", f"B{i}")) in selected for i in range(4))
+    assert found >= 3, f"only {found}/4 correlated pairs selected"
+
+    # mean total variation distance over all two-way marginals;
+    # the independence model scores ~0.107 here
+    synthetic = table.synthesize().drop_nulls()
+    errors = []
+    for i, left in enumerate(columns):
+        for right in columns[i + 1 :]:
+            p = np.bincount(
+                df[left].to_numpy() * 4 + df[right].to_numpy(), minlength=16
+            ) / len(df)
+            q = np.bincount(
+                synthetic[left].to_numpy() * 4 + synthetic[right].to_numpy(),
+                minlength=16,
+            ) / len(synthetic)
+            errors.append(0.5 * np.abs(p - q).sum())
+    assert np.mean(errors) < 0.04
+
+
+@pytest.mark.parametrize(
+    "output_measure, ratio",
+    [(dp.max_divergence(), 2.0), (dp.zero_concentrated_divergence(), 2**1.5)],
+)
+def test_aim_penalty_is_per_clique(monkeypatch, output_measure, ratio):
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+    from opendp.extras.mbi import _aim
+    from opendp.extras.mbi._aim import _expand_queries, _make_aim_select
+    from opendp.extras.mbi._utilities import make_stable_marginals
+
+    penalties = []
+    inner = _aim._make_aim_scores
+
+    def spy(input_domain, input_metric, queries, expectations, model):
+        # test verifies the penalty is not shared by every candidate
+        penalties.append(
+            expectations
+            if isinstance(expectations, dict)
+            else {q.by: expectations for q in queries}
+        )
+        return inner(input_domain, input_metric, queries, expectations, model)
+
+    monkeypatch.setattr(_aim, "_make_aim_scores", spy)
+
+    columns = ("A", "B", "C")
+    # an individual contributes up to four records, but only one per group of A,
+    # tightening the sensitivity of the ("A",) marginal
+    d_in = [
+        dp.polars.Bound(per_group=4),
+        dp.polars.Bound(by=[pl.col("A")], per_group=1, num_groups=2),
+    ]
+    queries = _expand_queries(2, list(columns))
+
+    t_marginals = make_stable_marginals(
+        dp.lazyframe_domain(
+            [
+                dp.series_domain(c, dp.atom_domain(T="u32", bounds=(0, 3)))
+                for c in columns
+            ]
+        ),
+        dp.frame_distance(dp.symmetric_distance()),
+        [q.by for q in queries],
+    )
+
+    _make_aim_select(
+        *t_marginals.output_space,
+        output_measure,
+        d_in=t_marginals.map(d_in),
+        d_out=0.1,
+        d_measure=0.9,
+        queries=queries,
+        model=mirror_descent(mbi.Domain(columns, (4, 4, 4)), []),
+        max_size=80.0,
+    )
+
+    assert penalties, "no SELECT step ran"
+    for expectations in penalties:
+        assert expectations[("B",)] == pytest.approx(ratio * expectations[("A",)])
 
 
 @pytest.mark.parametrize(

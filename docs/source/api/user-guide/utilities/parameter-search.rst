@@ -52,7 +52,7 @@ This is extremely powerful!
     ...     d_out=1.0,
     ... )
     0.7071067811865476
-  
+
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
   | This is useful when you want to find the smallest budget that will satisfy a target accuracy.
 
@@ -108,7 +108,7 @@ This is extremely powerful!
     ...     d_in=2,
     ...     d_out=1.0,
     ... )
-    0.353553389770093
+    0.353553389770093...
 
 The API documentation on these functions have more specific usage examples.
 
@@ -125,7 +125,7 @@ If the heuristics fail you, then pass your own bounds into the binary search uti
 
 .. dropdown:: Algorithm Details
 
-  If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero. 
+  If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero.
   If a type error is thrown, it similarly checks the predicate function at an integer zero.
   If the predicate function fails both times, you'll have to pass a type argument ``T`` of either ``float`` or ``int``.
   This heuristic can fail if the predicate function is invalid at zero.
@@ -135,7 +135,7 @@ If the heuristics fail you, then pass your own bounds into the binary search uti
   This explores a parameter regime that is unlikely to overflow, even when the origin is offset.
 
   If the positive band search fails to find a change in sign, then the same procedure is run in the negative direction.
-  In the case that no acceptance region crosses the edge of a search band, the algorithm gives up, 
+  In the case that no acceptance region crosses the edge of a search band, the algorithm gives up,
   and you'll have to work out a reasonable set of bounds that intersect the acceptance region on your own.
   Luckily, most predicate functions are monotonic, so this is unlikely to happen.
 

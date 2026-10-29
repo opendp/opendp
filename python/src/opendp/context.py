@@ -440,7 +440,7 @@ class Context(object):
 
     accountant: Union[Measurement, Odometer]
     """The accountant is the measurement used to spawn the queryable.
-    It contains information about the queryable, 
+    It contains information about the queryable,
     such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable."""
     queryable: Union[Queryable, OdometerQueryable]
     """The queryable executes the queries and tracks the privacy expenditure."""
@@ -672,7 +672,7 @@ class Query(object):
     _context: Optional["Context"]
     """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
-    """For internal use. A function that wraps the release of the query. 
+    """For internal use. A function that wraps the release of the query.
     Used to wrap the response of compositor/odometer queries in another ``Context``."""
 
     def __init__(
@@ -875,7 +875,24 @@ class Query(object):
             chain = self._chain
         if not allow_transformations and isinstance(chain, Transformation):
             raise ValueError("Query is not yet a measurement or odometer.")
-        return _cast_measure(chain, self._output_measure, self._d_out)
+        chain = _cast_measure(chain, self._output_measure, self._d_out)
+        if (
+            isinstance(chain, Measurement)
+            and self._d_in is not None
+            and self._d_out is not None
+        ):
+            actual = chain.map(self._d_in)
+            if isinstance(chain.output_measure, ApproximateDivergence):
+                assert isinstance(self._d_out, tuple)
+                exceeds_budget = any(a > b for a, b in zip(actual, self._d_out))
+            else:
+                exceeds_budget = actual > self._d_out
+            if exceeds_budget:
+                raise ValueError(
+                    "Resolved measurement exceeds the requested privacy budget "
+                    f"{self._d_out} (actual: {actual})."
+                )
+        return chain
 
     def release(
         self,
@@ -1034,8 +1051,7 @@ class PartialChain(object):
         :param bounds: The bounds for the parameter search.
         :param T: The type of the parameter to search for.
         """
-        # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
-        # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
+        # Search only on epsilon; delta need not be monotonic in the parameter.
         if (
             output_measure is not None
             and isinstance(output_measure.type, RuntimeType)

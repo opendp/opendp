@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise}
 for \texttt{RV} over vectors of big integers in \asOfCommit{mod.rs}{f5bb719}.
 
 This is the core implementation of all variations of the gaussian or laplace mechanism.
@@ -48,7 +48,7 @@ None
     The postcondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} guarantees that the function only ever returns an error independently of the data.
 \end{proof}
 
-For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}, 
+For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>},
 which has an associated function \texttt{noise\_privacy\_map} to be called on line~\ref{line:privacy-map}.
 \begin{lemma}[Postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}]
     \label{lemma:new-privacy-map}
