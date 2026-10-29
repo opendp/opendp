@@ -612,3 +612,145 @@ where
 
     Ok(None)
 }
+
+/// Search direction for scalar objectives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SearchMode {
+    Minimize,
+    Maximize,
+}
+
+impl SearchMode {
+    #[inline]
+    fn is_better(self, candidate: f64, incumbent: f64) -> bool {
+        match self {
+            SearchMode::Minimize => candidate < incumbent,
+            SearchMode::Maximize => candidate > incumbent,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Optimum {
+    pub(crate) arg: f64,
+    pub(crate) value: f64,
+}
+
+/// Optimize a unimodal f64 objective over `[lo, hi]` to floating-point
+/// precision.
+///
+/// A NaN objective value is rejected rather than assigned a direction-specific
+/// meaning. Callers that use NaN as a heuristic sentinel should handle it
+/// before invoking this primitive.
+#[inline]
+pub(crate) fn fallible_optimize_to_precision<F>(
+    mode: SearchMode,
+    lo: f64,
+    hi: f64,
+    f: F,
+) -> Fallible<Optimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    let (lo, hi) = fallible_golden_search_to_precision_ordered(mode, lo, hi, &f, |left, right| {
+        left.partial_cmp(right)
+            .ok_or_else(|| err!(Search, "optimization objective returned NaN"))
+    })?;
+
+    let mut best = evaluate_candidate(lo, &f)?;
+    for arg in [hi, interpolate(lo, hi, 0.5)] {
+        let candidate = evaluate_candidate(arg, &f)?;
+        if mode.is_better(candidate.value, best.value) {
+            best = candidate;
+        }
+    }
+    Ok(best)
+}
+
+fn evaluate_candidate<F>(arg: f64, f: &F) -> Fallible<Optimum>
+where
+    F: Fn(f64) -> Fallible<f64>,
+{
+    let value = f(arg)?;
+    if value.is_nan() {
+        return fallible!(Search, "optimization objective returned NaN");
+    }
+    Ok(Optimum { arg, value })
+}
+
+/// Perform golden-section search while comparing generic, ordered objective
+/// values, returning only the final coordinate bracket.
+///
+/// The callback is fallible so callers can preserve errors from ordered
+/// numeric backends instead of converting objective values to f64.
+#[inline]
+pub(crate) fn fallible_golden_search_to_precision_ordered<V, F, Compare>(
+    mode: SearchMode,
+    mut lo: f64,
+    mut hi: f64,
+    f: F,
+    compare: Compare,
+) -> Fallible<(f64, f64)>
+where
+    F: Fn(f64) -> Fallible<V>,
+    Compare: Fn(&V, &V) -> Fallible<Ordering>,
+{
+    const INV_PHI: f64 = 0.6180339887498949;
+    const INV_PHI2: f64 = 0.3819660112501051;
+
+    if !lo.is_finite() || !hi.is_finite() || lo > hi {
+        return fallible!(Search, "optimization bounds must be finite and ordered");
+    }
+    if lo == hi {
+        f(lo)?;
+        return Ok((lo, hi));
+    }
+
+    let mut c = interpolate(lo, hi, INV_PHI2);
+    let mut d = interpolate(lo, hi, INV_PHI);
+    let mut fc = f(c)?;
+    let mut fd = f(d)?;
+
+    loop {
+        let old_lo = lo;
+        let old_hi = hi;
+        let comparison = compare(&fc, &fd)?;
+        let take_left = match mode {
+            SearchMode::Minimize => comparison != Ordering::Greater,
+            SearchMode::Maximize => comparison != Ordering::Less,
+        };
+
+        if take_left {
+            hi = d;
+            d = c;
+            fd = fc;
+            c = interpolate(lo, hi, INV_PHI2);
+            fc = f(c)?;
+        } else {
+            lo = c;
+            c = d;
+            fc = fd;
+            d = interpolate(lo, hi, INV_PHI);
+            fd = f(d)?;
+        }
+
+        // Stop only when the floating-point coordinates no longer shrink.
+        if lo == old_lo && hi == old_hi || c == lo || c == hi || d == lo || d == hi {
+            break;
+        }
+    }
+
+    Ok((lo, hi))
+}
+
+/// Interpolate without overflowing when both finite endpoints have an infinite
+/// difference, as happens for intervals spanning most of the f64 range.
+#[inline]
+fn interpolate(lo: f64, hi: f64, t: f64) -> f64 {
+    let width = hi - lo;
+    if width.is_finite() {
+        lo + t * width
+    } else {
+        (1.0 - t) * lo + t * hi
+    }
+}
