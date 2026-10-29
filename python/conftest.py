@@ -6,7 +6,10 @@ from importlib.util import find_spec
 import opendp.prelude as dp
 
 if find_spec("sklearn") is None:
-    collect_ignore = ["src/opendp/extras/sklearn/_estimator.py"]  # pragma: no cover
+    collect_ignore = [  # pragma: no cover
+        "src/opendp/extras/sklearn/_estimator.py",
+        "src/opendp/extras/sklearn/decomposition",
+    ]
 
 
 @pytest.fixture(autouse=True)

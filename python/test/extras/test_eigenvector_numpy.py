@@ -83,6 +83,19 @@ def test_private_eigenvector_distribution(monkeypatch):
     assert kstest(angles, vonmises(0.5).cdf).pvalue > 1e-6
 
 
+@pytest.mark.parametrize("width", [2, 4])
+@pytest.mark.parametrize("value", [0.0, 1.0])
+def test_private_eigenvector_isotropic_matrix(width, value):
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    domain = _sscp_domain(num_features=width, norm=1.0, p=2, T=float)
+    measurement = make_private_eigenvector(domain, dp.symmetric_distance(), 1.0)
+    vector = measurement(np.eye(width) * value)
+    assert np.isfinite(vector).all()
+    assert np.linalg.norm(vector) == pytest.approx(1.0)
+    assert measurement.map(2) == 1.0
+
+
 def test_eigenvector_integration():
     from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp

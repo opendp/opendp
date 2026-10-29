@@ -7,6 +7,8 @@ from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
 from opendp.extras._utilities import to_then
+from opendp._internal import _new_pure_function
+from opendp._lib import import_optional_dependency
 from opendp.mod import Domain, Metric, Measurement
 
 
@@ -61,6 +63,15 @@ def make_private_np_eigendecomposition(
         )
         >> dp.as_array()
     )
+    if input_desc.num_columns == 1 and not eigvecs_epsilons:
+        # The only direction is public: no Bingham sample or composition needed.
+        np = import_optional_dependency("numpy")
+        return (
+            t_sscp
+            >> m_eigvals
+            >> _new_pure_function(lambda vals: (vals, np.ones((1, 1))))
+        )
+
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,
     )
