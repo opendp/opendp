@@ -1,12 +1,11 @@
 use crate::{
     error::Fallible,
-    measures::curves::approxdp::beta_via_approxDP,
     measures::curves::{
         PrivacyProfile, check_alpha, check_epsilon,
         logspace::{LOG_TRUE_MIN, one_minus_delta_from_log_upper_unchecked},
     },
     traits::{CInterval, SInterval},
-    utilities::search::{SearchMode, fallible_optimize_to_precision},
+    utilities::search::{SearchMode, fallible_optimize_unimodal},
 };
 
 const EPS_TRUE_MIN: f64 = 744.4400719213812;
@@ -16,17 +15,11 @@ type Cert = SInterval; // software interval provides certified transcendental bo
 /// Convert a conservative privacy profile into a conservative tradeoff lower
 /// bound.
 ///
-/// For a function-backed exact profile, the candidate objectives have the
-/// required unimodal structure when `t -> delta(log(t))` is convex. A
-/// point-backed profile is a privacy-safe step upper bound, but its staircase
-/// may not preserve that convexity and can therefore produce a non-tight beta
-/// lower bound, even when its points were sampled from a valid exact profile.
+/// The fast candidate search is tight when its objectives are unimodal.
+/// Conservativeness comes from the certified evaluation at the selected
+/// candidates, regardless of unimodality of an upper-bound profile.
 pub fn beta_via_profile(profile: &PrivacyProfile, alpha: f64) -> Fallible<f64> {
     check_alpha(alpha)?;
-
-    if let Some(points) = profile.approxDP_points() {
-        return beta_via_approxDP(points, alpha);
-    }
 
     if alpha == 0.0 {
         // At alpha=0, both tradeoff branches are bounded by 1-delta(eps),
@@ -63,12 +56,12 @@ pub fn beta_via_profile(profile: &PrivacyProfile, alpha: f64) -> Fallible<f64> {
 fn profile_one_minus_delta(profile: &PrivacyProfile, epsilon: f64) -> Fallible<Cert> {
     check_epsilon(epsilon)?;
 
-    one_minus_delta_from_log_upper_unchecked(profile.log_delta(epsilon)?)
+    one_minus_delta_from_log_upper_unchecked(profile.log_delta(&[epsilon])?[0])
 }
 
 #[inline]
 fn positive_part(x: Cert) -> Fallible<Cert> {
-    x.max(Cert::point(0.0)?)?.clamp01()
+    x.max(Cert::point(0.0)?).clamp01()
 }
 
 fn maximize_t1_lower(profile: &PrivacyProfile, alpha: f64) -> Fallible<f64> {
@@ -129,7 +122,7 @@ fn maximize_unimodal_epsilon(
         return Ok(lo);
     }
 
-    let optimum = fallible_optimize_to_precision(SearchMode::Maximize, lo, hi, objective)?;
+    let optimum = fallible_optimize_unimodal(SearchMode::Maximize, lo, hi, objective)?;
 
     Ok(optimum.arg.clamp(lo, hi))
 }
@@ -183,7 +176,7 @@ fn beta_profile_candidate_t2_fast(
 fn one_minus_delta_fast(profile: &PrivacyProfile, epsilon: f64) -> Fallible<f64> {
     check_epsilon(epsilon)?;
 
-    let value = profile.log_delta(epsilon)?;
+    let value = profile.log_delta(&[epsilon])?[0];
 
     // Fast path only: stable ordinary-f64 computation of 1 - exp(log_delta).
     Ok((-value.exp_m1()).clamp(0.0, 1.0))

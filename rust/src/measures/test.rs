@@ -41,8 +41,6 @@ fn multidp_capabilities_are_independent_presence_promises() -> Fallible<()> {
     let empty = MultiDP::default();
     assert_eq!(empty.capabilities().approx_dp(), None);
     assert_eq!(empty.capabilities().profile(), None);
-    assert!(!empty.capabilities().tradeoff());
-    assert!(MultiDP::with_tradeoff().capabilities().tradeoff());
     for purity in [Purity::Pure, Purity::Approximate] {
         let certificate_only = MultiDP::with_approx_dp(purity);
         assert_eq!(certificate_only.capabilities().approx_dp(), Some(purity));

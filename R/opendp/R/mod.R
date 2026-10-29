@@ -491,11 +491,12 @@ new_privacy_guarantee_internal <- function(ptr) {
 #'
 #' @param approx_dp Numeric pair c(epsilon, delta); zero delta certifies pure DP.
 #' @param profile A PrivacyProfile object, independently certified.
-#' @param tradeoff A convex, nonincreasing tradeoff lower-bound callback.
-#' @param symmetric_tradeoff An explicitly symmetric tradeoff callback.
+#' Alpha and beta report f-DP lower bounds derived from these representations,
+#' accepting scalars or nondecreasing vectors (duplicates permitted).
+#' No tradeoff representation is stored.
 #' @export
-privacy_guarantee <- function(approx_dp = NULL, profile = NULL, tradeoff = NULL, symmetric_tradeoff = NULL) {
-  if (is.null(approx_dp) && is.null(profile) && is.null(tradeoff) && is.null(symmetric_tradeoff)) {
+privacy_guarantee <- function(approx_dp = NULL, profile = NULL) {
+  if (is.null(approx_dp) && is.null(profile)) {
     stop("expected at least one privacy representation", call. = FALSE)
   }
   if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
@@ -510,12 +511,6 @@ privacy_guarantee <- function(approx_dp = NULL, profile = NULL, tradeoff = NULL,
   }
   if (!is.null(profile)) {
     guarantee <- `_privacy_guarantee_with_profile`(guarantee, profile)
-  }
-  if (!is.null(tradeoff)) {
-    guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, tradeoff, symmetric = FALSE)
-  }
-  if (!is.null(symmetric_tradeoff)) {
-    guarantee <- `_privacy_guarantee_with_tradeoff`(guarantee, symmetric_tradeoff, symmetric = TRUE)
   }
   guarantee
 }
