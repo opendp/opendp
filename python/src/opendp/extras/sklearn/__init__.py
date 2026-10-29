@@ -41,6 +41,7 @@ __all__ = [
     "SklearnFit",
     "SklearnFitDomain",
     "sklearn_fit_domain",
+    "cluster",
     "decomposition",
     "linear_model",
 ]

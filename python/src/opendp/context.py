@@ -253,6 +253,12 @@ def domain_of(T, infer: bool = False) -> Domain:
                 num_columns=T.shape[1],
             )
 
+        sparse = import_optional_dependency("scipy.sparse", raise_error=False)
+        if sparse is not None and isinstance(T, sparse.csr_array) and T.ndim == 2:
+            from opendp.extras.scipy import csr_array2_domain
+
+            return csr_array2_domain(T.shape[1], max_rows=None, T=_ELEMENTARY_TYPES[T.dtype.type])
+
     # normalize to a type descriptor
     if infer:
         T = ty.RuntimeType.infer(T)
