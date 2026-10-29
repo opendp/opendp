@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{beta_via_approx_dp}}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Arguments \texttt{epsilon}, \texttt{delta}, and \texttt{alpha} of type \texttt{f64}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+The source parameters satisfy finite nonnegative $\epsilon$, $\delta \in [0,1]$,
+and $\alpha \in [0,1]$. The function must complete successfully.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approxdp_beta.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    For all $\alpha \in [0, 1]$, \texttt{beta_via_approx_dp} returns a value
+    no greater than the exact approximate-DP tradeoff curve
+    $f_{\epsilon,\delta}(\alpha)$.
+\end{theorem}
+
+\begin{definition}
+    \label{def-approxdp-point-beta}
+    For a fixed approximate-DP certificate with parameters $\epsilon$ and $\delta$, define
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha,
+        \exp(-\epsilon) \max(1 - \delta - \alpha, 0)).
+    \end{equation}
+\end{definition}
+
+\begin{proof}
+The function directly computes exact rational conversions of directed interval
+endpoints satisfying
+\[
+    \texttt{exp\_eps\_up} \ge \exp(\epsilon), \qquad
+    \texttt{exp\_neg\_eps\_down} \le \exp(-\epsilon).
+\]
+The pseudocode uses these coefficients with exact rational arithmetic.
+
+For $\alpha \in [0,1]$, the first affine branch is no greater than
+$1 - \delta - \exp(\epsilon)\alpha$ because \texttt{exp\_eps\_up} is an
+upper bound and $\alpha$ is nonnegative. The second branch is similarly no
+greater than its exact counterpart because \texttt{exp\_neg\_eps\_down}
+is a lower bound. Taking the maximum with zero preserves the pointwise lower
+bound. The final conversion to \texttt{f64} rounds downward. The endpoints return
+zero at $\alpha=1$ and a downward-rounded $1-\delta$ at $\alpha=0$,
+which satisfy the same bound.
+\end{proof}
+
+\end{document}

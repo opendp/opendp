@@ -518,16 +518,68 @@ def test_privacy_guarantee_and_profile_pointer_roundtrips():
 def test_privacy_guarantee_tradeoff_queries():
     import math
     from opendp.mod import PrivacyGuarantee
-    from opendp.measures import _privacy_guarantee_with_approxDP_tradeoff
 
-    guarantee = PrivacyGuarantee(tradeoff=lambda alpha: 1.0 - alpha)
+    guarantee = PrivacyGuarantee(tradeoff=lambda alpha: [1.0 - a for a in alpha])
     assert guarantee.beta(alpha=0.3) == 0.7
     assert math.nextafter(0.3, 0.0) <= guarantee.alpha(beta=0.7) <= 0.3
-    symmetric = PrivacyGuarantee(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+    symmetric = PrivacyGuarantee(
+        symmetric_tradeoff=lambda alpha: [1.0 - a for a in alpha]
+    )
     assert symmetric.beta(alpha=0.3) == 0.7
     certificate = PrivacyGuarantee(approx_dp=(1.0, 0.1))
-    certified = _privacy_guarantee_with_approxDP_tradeoff(certificate)
-    assert certified.beta(alpha=0.3) >= 0.0
+    assert certificate.beta(alpha=0.3) >= 0.0
+    assert certificate.delta(1.0) == 0.1
+
+
+def test_tradeoff_vector_callback_and_validation(monkeypatch):
+    from opendp.mod import PrivacyGuarantee, OpenDPException
+
+    calls = []
+
+    def callback(alpha):
+        calls.append(alpha)
+        return [1.0 - a for a in alpha]
+
+    # Attachment is not gated by HBC, and the FFI has only a vector callback.
+    monkeypatch.setattr("opendp.mod.GLOBAL_FEATURES", {"contrib"})
+    guarantee = PrivacyGuarantee(tradeoff=callback)
+    assert calls == []
+    assert guarantee.beta([0.0, 0.25, 0.25, 1.0]) == [1.0, 0.75, 0.75, 0.0]
+    assert calls == [[0.0, 0.25, 0.25, 1.0]]
+    assert guarantee.beta(0.5) == 0.5
+    assert calls[-1] == [0.5]
+    assert guarantee.beta([]) == []
+    assert guarantee.alpha([]) == []
+    for query in [guarantee.beta, guarantee.alpha]:
+        for invalid in [[0.5, 0.1], [float("nan")], [-0.1], [1.1]]:
+            with pytest.raises(OpenDPException):
+                query(invalid)
+    for output in [[], [0.5], [0.5] * 3, [-0.1, 0.0], [float("nan"), 0.0]]:
+        invalid = PrivacyGuarantee(tradeoff=lambda _, output=output: output)
+        with pytest.raises(OpenDPException):
+            invalid.beta([0.0, 0.5])
+    assert guarantee.alpha([0.25, 0.5, 1.0]) == pytest.approx([0.75, 0.5, 0.0])
+
+
+@pytest.mark.parametrize(
+    "query, value", [("delta", 1.0), ("epsilon", 0.5), ("beta", 0.5), ("alpha", 0.5)]
+)
+def test_tradeoff_errors_propagate_with_other_representations(query, value):
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    original = ValueError("tradeoff callback failed")
+
+    def fail(_):
+        raise original
+
+    guarantee = PrivacyGuarantee(
+        approx_dp=(1.0, 0.1),
+        profile=PrivacyProfile(delta=lambda eps: [0.0] * len(eps)),
+        tradeoff=fail,
+    )
+    with pytest.raises(ValueError) as error:
+        getattr(guarantee, query)(value)
+    assert error.value is original
 
 
 def test_member():

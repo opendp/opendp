@@ -491,8 +491,16 @@ new_privacy_guarantee_internal <- function(ptr) {
 #'
 #' @param approx_dp Numeric pair c(epsilon, delta); zero delta certifies pure DP.
 #' @param profile A PrivacyProfile object, independently certified.
-#' @param tradeoff A convex, nonincreasing tradeoff lower-bound callback.
-#' @param symmetric_tradeoff An explicitly symmetric tradeoff callback.
+#' Tradeoff callbacks accept nondecreasing numeric vectors (duplicates allowed)
+#' and return one lower bound in [0, 1] per input. Alpha and beta queries accept
+#' both scalars and vectors. Callbacks must be pure, continuous, convex and
+#' nonincreasing over the entire real interval [0, 1], including numerical
+#' approximation error. These HBC preconditions are not checked; downward
+#' rounding alone need not preserve convexity. Symmetry refers to the true
+#' guarantee, not necessarily its numerical callback.
+#'
+#' @param tradeoff A vector-valued tradeoff lower-bound callback.
+#' @param symmetric_tradeoff A vector-valued, explicitly symmetric tradeoff callback.
 #' @export
 privacy_guarantee <- function(approx_dp = NULL, profile = NULL, tradeoff = NULL, symmetric_tradeoff = NULL) {
   if (is.null(approx_dp) && is.null(profile) && is.null(tradeoff) && is.null(symmetric_tradeoff)) {

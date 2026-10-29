@@ -1362,10 +1362,19 @@ class PrivacyProfile(object):
 class PrivacyGuarantee(object):
     """Conjunctive, independently certified privacy representations.
 
-    Supply an ``approx_dp=(epsilon, delta)`` certificate, a ``profile``, or both
-    for the same privacy relation. Source parameters are retained exactly; zero
-    delta certifies pure DP. Certificates are not eagerly converted to profiles.
+    Supply an ``approx_dp=(epsilon, delta)`` certificate, a ``profile``, and/or
+    a vector-valued ``tradeoff`` or ``symmetric_tradeoff`` callback for the same
+    privacy relation. Source parameters are retained exactly; zero delta
+    certifies pure DP. Certificates are not eagerly converted to profiles.
     Queries return the tightest bound and propagate representation errors.
+
+    Tradeoff callbacks receive nondecreasing lists, permitting duplicates, and
+    return one lower bound in [0, 1] per input. Beta and alpha queries accept
+    scalars or nondecreasing vectors and preserve that shape. Callbacks must be
+    pure, continuous, convex and nonincreasing on the entire real interval
+    [0, 1], including numerical approximation error. These HBC preconditions
+    are not checked; downward rounding alone need not preserve convexity.
+    Symmetry refers to the true guarantee, not the numerical callback.
     """
 
     def __init__(
@@ -1373,8 +1382,8 @@ class PrivacyGuarantee(object):
         *,
         approx_dp: Optional[tuple[float, float]] = None,
         profile: Optional[PrivacyProfile] = None,
-        tradeoff: Optional[Callable[[float], float]] = None,
-        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        tradeoff: Optional[Callable[[list[float]], list[float]]] = None,
+        symmetric_tradeoff: Optional[Callable[[list[float]], list[float]]] = None,
         _ptr: Any = None,
     ):
         if _ptr is not None:
@@ -1432,12 +1441,20 @@ class PrivacyGuarantee(object):
     def beta(self, alpha):
         from opendp.measures import _privacy_guarantee_beta
 
-        return _privacy_guarantee_beta(self.guarantee, alpha)
+        scalar = isinstance(alpha, Real)
+        result = _privacy_guarantee_beta(
+            self.guarantee, [float(alpha)] if scalar else alpha
+        )
+        return result[0] if scalar else result
 
     def alpha(self, beta):
         from opendp.measures import _privacy_guarantee_alpha
 
-        return _privacy_guarantee_alpha(self.guarantee, beta)
+        scalar = isinstance(beta, Real)
+        result = _privacy_guarantee_alpha(
+            self.guarantee, [float(beta)] if scalar else beta
+        )
+        return result[0] if scalar else result
 
 
 class _PartialConstructor(object):

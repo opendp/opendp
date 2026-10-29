@@ -1,11 +1,14 @@
 use dashu::rational::RBig;
 
 use crate::{
-    error::Fallible,
-    measures::curves::{TradeoffFn, check_beta, check_epsilon},
-    traits::{Certified, DirectedScalar, Interval, N64, SInterval},
-    utilities::search::{SearchMode, fallible_golden_search_to_precision_ordered},
+    error::{ErrorVariant, Fallible},
+    measures::curves::{TradeoffFn, check_beta, check_epsilon, eval_tradeoff},
+    traits::{Certified, DirectedScalar, Direction, N64, SInterval},
+    utilities::search::{SearchMode, fallible_golden_section_bracket_by},
 };
+
+#[cfg(test)]
+mod test;
 
 pub fn delta_via_tradeoff(tradeoff: &TradeoffFn, symmetric: bool, epsilon: f64) -> Fallible<f64> {
     check_epsilon(epsilon)?;
@@ -20,20 +23,15 @@ pub fn delta_via_tradeoff(tradeoff: &TradeoffFn, symmetric: bool, epsilon: f64) 
     // every larger finite epsilon.
     let epsilon = epsilon.min(likelihood_ratio_epsilon_cap()?);
 
-    // Enclose r = exp(epsilon) with the soft backend once. The generic
-    // tradeoff formula below uses exact RBig values for search ordering and N64<Certified>
-    // for the final simple-arithmetic bound.
-    let r = SInterval::point(epsilon)?.exp()?;
-    let r_lo = r.lower_f64()?;
-    let r_hi = r.upper_f64()?;
-
-    let c1 = delta_tradeoff_term(tradeoff, r_lo, r_hi, DeltaTradeoffTerm::EpsAlphaBeta)?;
+    // Only a lower bound on r = exp(epsilon) is needed to upper-bound delta.
+    let r_lo = SInterval::point(epsilon)?.exp()?.lower_f64()?;
+    let c1 = delta_tradeoff_term(tradeoff, r_lo, DeltaTradeoffTerm::EpsAlphaBeta)?;
 
     if symmetric {
         return Ok(c1.clamp(0.0, 1.0));
     }
 
-    let c2 = delta_tradeoff_term(tradeoff, r_lo, r_hi, DeltaTradeoffTerm::EpsBetaAlpha)?;
+    let c2 = delta_tradeoff_term(tradeoff, r_lo, DeltaTradeoffTerm::EpsBetaAlpha)?;
 
     Ok(c1.max(c2).clamp(0.0, 1.0))
 }
@@ -48,49 +46,60 @@ enum DeltaTradeoffTerm {
 }
 
 #[inline]
-fn delta_tradeoff_term(
-    tradeoff: &TradeoffFn,
-    r_lo: f64,
-    r_hi: f64,
-    term: DeltaTradeoffTerm,
-) -> Fallible<f64> {
-    // Convexity of beta makes both q1 = r_lo * alpha + beta(alpha) and
-    // q2 = r_lo * beta(alpha) + alpha convex. Golden-section minimization
-    // therefore gives a global bracket. Keep the coordinates as f64, but use
-    // RBig only so rounding cannot reverse a bracket decision.
-    let r_lo_exact = RBig::try_from(r_lo)?;
-    let (alpha_lo, alpha_hi) = fallible_golden_search_to_precision_ordered(
-        SearchMode::Minimize,
-        0.0,
-        1.0,
-        |alpha: f64| {
-            let beta = tradeoff(alpha)?;
-            check_beta(beta)?;
-            let alpha = RBig::try_from(alpha)?;
-            let beta = RBig::try_from(beta)?;
-            Ok(match term {
-                DeltaTradeoffTerm::EpsAlphaBeta => r_lo_exact.clone() * alpha + beta,
-                DeltaTradeoffTerm::EpsBetaAlpha => r_lo_exact.clone() * beta + alpha,
-            })
-        },
-        |left: &RBig, right: &RBig| Ok(left.cmp(right)),
-    )?;
-
-    // Recompute with certified native arithmetic on the returned bracket,
-    // not just at the optimizer's point.
-    delta_tradeoff_term_upper_on::<N64<Certified>>(tradeoff, r_lo, r_hi, alpha_lo, alpha_hi, term)
+fn delta_tradeoff_term(tradeoff: &TradeoffFn, r_lo: f64, term: DeltaTradeoffTerm) -> Fallible<f64> {
+    // Proof obligations for excluding regions:
+    // 1. b is a continuous convex nonincreasing real-domain lower bound.
+    //    User callbacks attest this INCLUDING numerical error. Internally
+    //    derived rounded bounds are not routed through this optimizer.
+    // 2. Both r_lo*alpha+b(alpha) and alpha+r_lo*b(alpha) are convex (r_lo>0).
+    //    RBig evaluates these objectives exactly, preserving their ordering.
+    // 3. For lo<c<d<hi, q(c)<=q(d) retains a minimizer in [lo,d]; otherwise
+    //    one is retained in [c,hi]. Equality is safe even for flat minima:
+    //    convexity guarantees a minimizer in [c,d]. The search checks coordinate
+    //    degeneracy BEFORE updating the interval, preserving this invariant.
+    // 4. The final interval-wide lower objective bound below uses alpha>=lo
+    //    and true B(alpha)>=b(hi)>=the conservative f64 callback(hi).
+    let r = RBig::try_from(r_lo)?;
+    let objective = |alpha| -> Fallible<RBig> {
+        let exact_alpha = RBig::try_from(alpha)?;
+        let beta = RBig::try_from(eval_beta(tradeoff, alpha)?)?;
+        Ok(match term {
+            DeltaTradeoffTerm::EpsAlphaBeta => &r * exact_alpha + beta,
+            DeltaTradeoffTerm::EpsBetaAlpha => &r * beta + exact_alpha,
+        })
+    };
+    // For a convex function, equality at both endpoints and an interior point
+    // proves it is constant on the whole interval. Certify the midpoint as a
+    // minimizer directly, rather than spending ~1500 golden steps approaching
+    // subnormal zero on a flat pure-DP objective. This is an exact equality
+    // proof, not a tolerance, refinement budget, or grid certificate.
+    let at_zero = objective(0.0)?;
+    let at_mid = objective(0.5)?;
+    let (lo, hi) = if at_zero == at_mid && objective(1.0)? == at_mid {
+        (0.5, 0.5)
+    } else {
+        fallible_golden_section_bracket_by(
+            SearchMode::Minimize,
+            0.0,
+            1.0,
+            objective,
+            |left: &RBig, right: &RBig| Ok(left.cmp(right)),
+        )?
+    };
+    delta_tradeoff_term_upper_on::<N64<Certified>>(tradeoff, r_lo, lo, hi, term)
 }
 
 /// Find a finite epsilon whose directed exponential has finite f64 endpoints.
 fn likelihood_ratio_epsilon_cap() -> Fallible<f64> {
     let mut epsilon = f64::MAX.ln().next_down();
     loop {
-        let finite = SInterval::point(epsilon)
+        match SInterval::point(epsilon)
             .and_then(|value| value.exp())
             .and_then(|value| value.lower_f64().and(value.upper_f64()))
-            .is_ok();
-        if finite {
-            return Ok(epsilon);
+        {
+            Ok(_) => return Ok(epsilon),
+            Err(error) if error.variant == ErrorVariant::Overflow => (),
+            Err(error) => return Err(error),
         }
 
         let next = epsilon.next_down();
@@ -102,7 +111,7 @@ fn likelihood_ratio_epsilon_cap() -> Fallible<f64> {
 }
 
 fn tradeoff_delta_at_infinity(tradeoff: &TradeoffFn, symmetric: bool) -> Fallible<f64> {
-    let beta_zero = tradeoff(0.0)?;
+    let beta_zero = eval_beta(tradeoff, 0.0)?;
     check_beta(beta_zero)?;
 
     let one = SInterval::point(1.0)?;
@@ -121,7 +130,7 @@ fn tradeoff_delta_at_infinity(tradeoff: &TradeoffFn, symmetric: bool) -> Fallibl
 /// Return the lower endpoint of the first alpha at which beta reaches zero,
 /// using the same left-sided generalized inverse convention as `PrivacyGuarantee::alpha`.
 fn first_zero_alpha_lower_bound(tradeoff: &TradeoffFn, beta_zero: f64) -> Fallible<f64> {
-    let beta_one = tradeoff(1.0)?;
+    let beta_one = eval_beta(tradeoff, 1.0)?;
     check_beta(beta_one)?;
 
     if beta_zero == 0.0 {
@@ -138,7 +147,7 @@ fn first_zero_alpha_lower_bound(tradeoff: &TradeoffFn, beta_zero: f64) -> Fallib
             } else if *alpha == 1.0 {
                 beta_one
             } else {
-                let beta = tradeoff(*alpha)?;
+                let beta = eval_beta(tradeoff, *alpha)?;
                 check_beta(beta)?;
                 beta
             };
@@ -155,7 +164,6 @@ fn first_zero_alpha_lower_bound(tradeoff: &TradeoffFn, beta_zero: f64) -> Fallib
 fn delta_tradeoff_term_upper_on<S>(
     tradeoff: &TradeoffFn,
     r_lo: f64,
-    r_hi: f64,
     alpha_lo: f64,
     alpha_hi: f64,
     term: DeltaTradeoffTerm,
@@ -168,23 +176,33 @@ where
     let alpha_lo = alpha_lo.max(0.0);
     let alpha_hi = alpha_hi.min(1.0);
 
-    let beta_lo = tradeoff(alpha_hi)?;
+    let beta_lo = eval_beta(tradeoff, alpha_hi)?;
     check_beta(beta_lo)?;
 
-    let one = Interval::<S>::point(1.0)?;
-    let r = Interval::<S>::between(r_lo, r_hi)?;
-    let alpha = Interval::<S>::between(alpha_lo, alpha_hi)?;
+    let r = S::exact(r_lo)?;
+    let alpha = S::exact(alpha_lo)?;
+    let beta = S::exact(beta_lo)?;
 
-    // TradeoffFn is already conservative: beta_lo is a lower bound on beta at
-    // alpha_hi, and monotonicity makes it a lower bound over [alpha_lo, alpha_hi].
-    // Use a wide interval so subtraction can use the lower endpoint while the
-    // formula remains scalar-generic.
-    let beta = Interval::<S>::between(beta_lo.max(0.0), 1.0)?;
-
+    // For every point in this cell, the TRUE monotone curve B satisfies
+    // B(alpha) >= B(alpha_hi) >= callback(alpha_hi), even if numerical lower
+    // approximations are not convex. These bounds certify both objectives on
+    // the whole cell. Use only the required rounding direction, avoiding
+    // overflow of irrelevant upper endpoints of r * alpha + beta.
     let subtrahend = match term {
-        DeltaTradeoffTerm::EpsAlphaBeta => ((r * alpha)? + beta)?,
-        DeltaTradeoffTerm::EpsBetaAlpha => ((r * beta)? + alpha)?,
+        DeltaTradeoffTerm::EpsAlphaBeta => r
+            .mul_round(alpha, Direction::Down)?
+            .add_round(beta, Direction::Down)?,
+        DeltaTradeoffTerm::EpsBetaAlpha => r
+            .mul_round(beta, Direction::Down)?
+            .add_round(alpha, Direction::Down)?,
     };
+    Ok(S::exact(1.0)?
+        .sub_round(subtrahend, Direction::Up)?
+        .to_f64(Direction::Up)?
+        .clamp(0.0, 1.0))
+}
 
-    (one - subtrahend)?.clamp01()?.upper_f64()
+// Numerical searches query the single vector callback on singleton batches.
+fn eval_beta(tradeoff: &TradeoffFn, alpha: f64) -> Fallible<f64> {
+    Ok(eval_tradeoff(tradeoff, &[alpha])?[0])
 }

@@ -279,6 +279,52 @@ test_that("privacy guarantee tradeoff queries", {
   expect_equal(symmetric(alpha = 0.3), 0.7)
 })
 
+test_that("privacy guarantee alpha returns a strict lower-side witness", {
+  guarantee <- privacy_guarantee(tradeoff = \(alpha) {
+    stopifnot(alpha >= 0., alpha <= 1.)
+    pmax(1. - 2. * alpha, 0.)
+  })
+  alpha <- guarantee(beta = 0.)
+  expect_lt(alpha, 0.5)
+  expect_gt(alpha, 0.5 - .Machine$double.eps)
+  expect_gt(1. - 2. * alpha, 0.)
+  expect_equal(guarantee(beta = 1.), 0.)
+
+})
+
+test_that("tradeoff vector callbacks validate batches and propagate errors", {
+  calls <- list()
+  guarantee <- privacy_guarantee(tradeoff = function(alpha) {
+    calls[[length(calls) + 1L]] <<- alpha
+    1. - alpha
+  })
+  expect_length(calls, 0L)
+  expect_equal(guarantee(alpha = c(0., 0.25, 0.25, 1.)), c(1., 0.75, 0.75, 0.))
+  expect_equal(calls, list(c(0., 0.25, 0.25, 1.)))
+  expect_equal(guarantee(alpha = 0.5), 0.5)
+  expect_equal(calls[[2L]], 0.5)
+  expect_equal(guarantee(alpha = numeric()), numeric())
+  expect_equal(guarantee(beta = c(0.25, 0.5, 1.)), c(0.75, 0.5, 0.))
+  expect_error(guarantee(alpha = c(0.5, 0.25)), "nondecreasing")
+  expect_error(guarantee(beta = c(0.5, 0.25)), "nondecreasing")
+  for (bad in list(c(-0.1), c(1.1), NaN, Inf)) {
+    expect_error(guarantee(alpha = bad))
+  }
+  for (output in list(numeric(), 0.5, rep(0.5, 3L), c(-0.1, 0.), c(NaN, 0.))) {
+    invalid <- privacy_guarantee(tradeoff = function(alpha) output)
+    expect_error(invalid(alpha = c(0., 0.5)))
+  }
+  failure <- privacy_guarantee(
+    approx_dp = c(1., 0.1),
+    profile = privacy_profile(delta = function(epsilon) rep(0., length(epsilon))),
+    tradeoff = function(alpha) stop("tradeoff failed")
+  )
+  expect_error(failure(epsilon = 1.), "tradeoff failed")
+  expect_error(failure(delta = 0.5), "tradeoff failed")
+  expect_error(failure(alpha = 0.5), "tradeoff failed")
+  expect_error(failure(beta = 0.5), "tradeoff failed")
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)
