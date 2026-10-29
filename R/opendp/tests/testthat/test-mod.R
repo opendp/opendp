@@ -28,6 +28,21 @@ test_that("binary search supports one-sided bounds", {
   )
 })
 
+test_that("exponential search propagates late callback errors", {
+  error <- tryCatch(
+    binary_search(
+      function(x) {
+        if (identical(x, 16L)) stop("boom happened", call. = FALSE)
+        FALSE
+      },
+      .T = "int"
+    ),
+    error = identity
+  )
+  expect_s3_class(error, "condition")
+  expect_match(conditionMessage(error), "boom happened")
+})
+
 test_that("floating-point aliases to idealized-numerics", {
   disable_features("floating-point", "idealized-numerics")
 
