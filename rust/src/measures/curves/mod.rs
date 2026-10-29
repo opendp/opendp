@@ -1,270 +1,247 @@
-use std::{cmp::Ordering, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
-    error::{ErrorVariant, Fallible},
-    utilities::search::{Above, fallible_binary_search_by},
+    error::Fallible,
+    traits::SInterval,
+    utilities::search::{Bands, fallible_binary_search},
 };
 
 pub(crate) mod logspace;
 use logspace::{
     check_delta, check_log_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked,
-    log_to_delta_upper,
+    log_to_delta_upper, logaddexp_upper,
 };
 
 #[cfg(test)]
 mod test;
 
-/// A canonical privacy profile mapping epsilon to a conservative delta bound.
+type LogDeltaFn = dyn Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync;
+
+/// An analytical privacy profile with a conservative log-delta core.
 ///
-/// A profile is materialized either as normalized points or as a forward
-/// epsilon-to-log-delta function. These are alternative representations of
-/// one profile, not conjunctive guarantees.
+/// The total delta bound is `min(1, delta_slack + exp(log_delta(epsilon)))`.
+/// Callbacks must be functionally pure, nonincreasing, and conservative; only
+/// their pointwise ranges and output lengths are checked. All input batches
+/// must be nondecreasing, permitting duplicates. Callbacks receive whole batches,
+/// including singleton batches during generic inversion.
 #[derive(Clone)]
 pub struct PrivacyProfile {
-    repr: PrivacyProfileRepr,
-}
-
-#[derive(Clone)]
-enum PrivacyProfileRepr {
-    Points(Arc<[ApproxDPPoint]>),
-    Function {
-        log_delta: Arc<LogProfileFn>,
-        epsilon: Option<Arc<EpsilonFn>>,
-    },
-}
-
-type DeltaFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
-pub(crate) type LogProfileFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
-type EpsilonFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
-
-#[derive(Clone, Debug)]
-pub(crate) struct ApproxDPPoint {
-    epsilon: f64,
-    delta: f64,
+    log_delta: Arc<LogDeltaFn>,
+    delta_slack: f64,
 }
 
 impl PrivacyProfile {
-    /// Construct a profile from a callback mapping epsilon to delta.
+    /// Construct a profile from a vector-valued, upward-conservative delta callback.
     ///
-    /// The callback must be functionally pure, nonincreasing, and return
-    /// values in `[0, 1]`. When numerically approximate, it must be an
-    /// upward-conservative delta bound. These properties are not validated at
-    /// runtime beyond pointwise range checks.
-    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
+    /// Outputs must lie in `[0, 1]` and match the input length. Conversion to log
+    /// space rounds upward, so ordinary-delta equality and plateaus may become
+    /// looser. A returned zero is trusted as exact zero, not numerical underflow.
+    pub fn new(delta: impl Fn(&[f64]) -> Fallible<Vec<f64>> + 'static + Send + Sync) -> Self {
+        Self::new_log(move |epsilon| {
+            let values = delta(epsilon)?;
+            check_length(epsilon, &values)?;
+            values
+                .into_iter()
+                .map(|value| {
+                    check_delta(value)?;
+                    delta_to_log_upper_unchecked(value)
+                })
+                .collect()
+        })
+    }
+
+    pub(crate) fn new_log(
+        log_delta: impl Fn(&[f64]) -> Fallible<Vec<f64>> + 'static + Send + Sync,
+    ) -> Self {
         Self {
-            repr: PrivacyProfileRepr::Function {
-                log_delta: Arc::new(move |epsilon| {
-                    let delta = eval_delta_profile(&delta, epsilon)?;
-                    delta_to_log_upper_unchecked(delta)
-                }),
-                epsilon: None,
-            },
+            log_delta: Arc::new(log_delta),
+            delta_slack: 0.0,
         }
     }
 
-    /// Construct an (epsilon, delta)-DP profile from epsilon-delta pairs.
-    ///
-    /// Inputs may be unsorted, repeated, plateaued, or dominated. They are
-    /// validated and canonicalized into a canonical conservative step profile.
-    /// The retained points define a step upper bound: delta is `1` before the
-    /// first retained epsilon and is the most recent retained delta thereafter.
-    /// A non-tight step profile is still a valid privacy bound; non-tightness
-    /// does not make the supplied points invalid. In particular, even points
-    /// sampled from an exact profile become a staircase that need not preserve
-    /// convexity of `t -> delta(log(t))`.
-    pub fn with_approxDP(mut self, mut points: Vec<(f64, f64)>) -> Fallible<Self> {
-        if points.is_empty() {
-            return fallible!(
-                FailedMap,
-                "privacy profile must be defined by at least one approximate-DP pair"
-            );
-        }
-
-        for (epsilon, delta) in &points {
-            check_epsilon(*epsilon)?;
-            if !epsilon.is_finite() {
-                return fallible!(
-                    FailedMap,
-                    "epsilon values in privacy profile must be finite"
-                );
-            }
-            check_delta(*delta)?;
-        }
-
-        points.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.total_cmp(&b.1)));
-
-        let mut canonical: Vec<ApproxDPPoint> = Vec::with_capacity(points.len());
-        for (epsilon, delta) in points {
-            let epsilon = crate::traits::CInterval::point(epsilon)?.upper_f64()?;
-            if let Some(last) = canonical.last_mut() {
-                if last.epsilon == epsilon {
-                    // At a repeated epsilon, retain the tightest bound.
-                    last.delta = last.delta.min(delta);
-                    continue;
-                }
-                // A point that is no tighter than the preceding point is
-                // dominated (including plateau points) and can be removed.
-                if delta >= last.delta {
-                    continue;
-                }
-            }
-            canonical.push(ApproxDPPoint { epsilon, delta });
-        }
-
-        self.repr = PrivacyProfileRepr::Points(Arc::from(canonical.into_boxed_slice()));
-        Ok(self)
-    }
-
-    /// Attach a delta-space callback, converting it to the canonical forward
-    /// epsilon-to-log-delta representation.
-    ///
-    /// The callback must be functionally pure, nonincreasing, and return
-    /// values in `[0, 1]`. When numerically approximate, it must be an
-    /// upward-conservative delta bound. These properties are not validated at
-    /// runtime beyond pointwise range checks.
+    /// Replace the core delta callback.
+    /// See [`Self::new`] for the vector callback contract and conversion rounding.
     #[cfg(feature = "honest-but-curious")]
     pub fn with_profile(
         mut self,
-        delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        delta: impl Fn(&[f64]) -> Fallible<Vec<f64>> + 'static + Send + Sync,
     ) -> Fallible<Self> {
-        let delta: Arc<DeltaFn> = Arc::new(delta);
-        self.repr = PrivacyProfileRepr::Function {
-            log_delta: log_delta_from_delta(delta),
-            epsilon: None,
-        };
+        self.log_delta = Self::new(delta).log_delta;
         Ok(self)
     }
 
-    /// Attach a callback already expressed as epsilon-to-log-delta.
-    ///
-    /// The callback must be functionally pure and nonincreasing, and return a
-    /// valid log-delta bound. When numerically approximate, it must be
-    /// upward-conservative. These properties are not validated at runtime
-    /// beyond pointwise range checks.
+    /// Replace the core with a vector-valued conservative log-delta callback.
+    /// Outputs must match the input length, be at most zero and not NaN.
+    /// Negative infinity certifies zero core delta.
     #[cfg(feature = "honest-but-curious")]
     pub fn with_log_profile(
         mut self,
-        log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        log_delta: impl Fn(&[f64]) -> Fallible<Vec<f64>> + 'static + Send + Sync,
     ) -> Fallible<Self> {
-        self.repr = PrivacyProfileRepr::Function {
-            log_delta: Arc::new(log_delta),
-            epsilon: None,
-        };
+        self.log_delta = Arc::new(log_delta);
         Ok(self)
     }
 
-    /// Attach a forward profile and an independently supplied inverse.
-    #[cfg(feature = "honest-but-curious")]
-    pub(crate) fn with_log_profile_with_epsilon(
-        mut self,
-        log_delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
-        epsilon: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
-    ) -> Fallible<Self> {
-        self.repr = PrivacyProfileRepr::Function {
-            log_delta: Arc::new(log_delta),
-            epsilon: Some(Arc::new(epsilon)),
-        };
+    /// Set this profile's additive delta slack, independently of its core.
+    pub fn with_delta_slack(mut self, delta_slack: f64) -> Fallible<Self> {
+        check_delta(delta_slack)?;
+        self.delta_slack = delta_slack.max(0.0);
         Ok(self)
     }
 
-    /// Evaluate delta(epsilon), conservatively rounded upward.
-    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
-        check_epsilon(epsilon)?;
-        match &self.repr {
-            PrivacyProfileRepr::Points(points) => {
-                let idx = points.partition_point(|point| point.epsilon <= epsilon);
-                Ok(if idx == 0 { 1.0 } else { points[idx - 1].delta })
-            }
-            PrivacyProfileRepr::Function { log_delta, .. } => {
-                let log_delta = eval_log_profile(log_delta.as_ref(), epsilon)?;
-                log_to_delta_upper(log_delta)
-            }
-        }
-    }
-
-    /// Evaluate epsilon(delta), lazily inverting the forward profile when an
-    /// independently supplied inverse is unavailable.
-    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
-        check_delta(delta)?;
-        if delta == 1.0 {
-            return Ok(0.0);
-        }
-
-        match &self.repr {
-            PrivacyProfileRepr::Points(points) => Ok(points
-                .iter()
-                .find(|point| point.delta <= delta)
-                .map(|point| point.epsilon)
-                .unwrap_or(f64::INFINITY)),
-            PrivacyProfileRepr::Function { log_delta, epsilon } => {
-                if let Some(epsilon) = epsilon {
-                    let value = epsilon(delta)?;
-                    if value.is_nan() || value < 0.0 {
-                        return fallible!(
-                            FailedMap,
-                            "epsilon ({value}) must be non-negative and not NaN"
-                        );
-                    }
-                    Ok(value.max(0.0))
-                } else {
-                    invert_log_profile(log_delta.as_ref(), delta)
+    /// Evaluate total delta bounds for nondecreasing epsilons with one core call.
+    /// Bounds round upward and are capped at one; finite logs never underflow to zero.
+    pub fn delta(&self, epsilon: &[f64]) -> Fallible<Vec<f64>> {
+        eval_log_profile(self.log_delta.as_ref(), epsilon)?
+            .into_iter()
+            .map(|core| {
+                if core == f64::NEG_INFINITY {
+                    return Ok(self.delta_slack);
                 }
-            }
-        }
+                if self.delta_slack == 0.0 {
+                    return log_to_delta_upper(core);
+                }
+                (SInterval::point(self.delta_slack)?
+                    + SInterval::point(core.max(-1024.0))?.exp()?)?
+                .min(SInterval::point(1.0)?)
+                .upper_f64()
+            })
+            .collect()
     }
 
-    /// Return the finite epsilon endpoint at which the profile is pure DP.
+    /// Evaluate total log-delta upper bounds with one core call for the whole batch.
+    pub fn log_delta(&self, epsilon: &[f64]) -> Fallible<Vec<f64>> {
+        eval_log_profile(self.log_delta.as_ref(), epsilon)?
+            .into_iter()
+            .map(|core| {
+                if self.delta_slack == 0.0 {
+                    return Ok(core);
+                }
+                logaddexp_upper(core, delta_to_log_upper_unchecked(self.delta_slack)?)
+            })
+            .collect()
+    }
+
+    /// Invert nondecreasing delta budgets, subtracting profile-specific slack.
+    pub fn epsilon(&self, delta: &[f64]) -> Fallible<Vec<f64>> {
+        check_inputs(delta, check_delta)?;
+        let mut results = vec![f64::INFINITY; delta.len()];
+        let mut targets = Vec::new();
+        let mut indices = Vec::new();
+        for (index, &delta) in delta.iter().enumerate() {
+            if delta == 1.0 {
+                results[index] = 0.0;
+                continue;
+            }
+            if delta < self.delta_slack {
+                continue;
+            }
+            targets.push(if delta == self.delta_slack {
+                // Preserve exact source-space equality, even for subnormal slack.
+                f64::NEG_INFINITY
+            } else if self.delta_slack == 0.0 {
+                delta_to_log_lower_unchecked(delta)?
+            } else {
+                (SInterval::point(delta)? - SInterval::point(self.delta_slack)?)?
+                    .ln()?
+                    .lower_f64()?
+            });
+            indices.push(index);
+        }
+        for (index, value) in indices.into_iter().zip(self.invert_core(&targets)?) {
+            results[index] = value;
+        }
+        Ok(results)
+    }
+
+    /// Invert nondecreasing total log-delta budgets without narrowing to delta.
+    /// Slack subtraction and logarithms round down before generic inversion.
+    pub fn epsilon_from_log_delta(&self, log_delta: &[f64]) -> Fallible<Vec<f64>> {
+        check_inputs(log_delta, check_log_delta)?;
+        let mut results = vec![f64::INFINITY; log_delta.len()];
+        let mut targets = Vec::new();
+        let mut indices = Vec::new();
+        for (index, &log_delta) in log_delta.iter().enumerate() {
+            if log_delta == 0.0 {
+                results[index] = 0.0;
+                continue;
+            }
+            let target = if self.delta_slack == 0.0 {
+                log_delta
+            } else {
+                if log_delta < delta_to_log_lower_unchecked(self.delta_slack)? {
+                    continue;
+                }
+                let remaining =
+                    (SInterval::point(log_delta)?.exp()? - SInterval::point(self.delta_slack)?)?;
+                if !remaining.is_nonnegative() {
+                    // No nonnegative remaining budget was certified.
+                    continue;
+                }
+                if remaining.contains_zero() {
+                    f64::NEG_INFINITY
+                } else {
+                    remaining.ln()?.lower_f64()?
+                }
+            };
+            targets.push(target);
+            indices.push(index);
+        }
+        for (index, value) in indices.into_iter().zip(self.invert_core(&targets)?) {
+            results[index] = value;
+        }
+        Ok(results)
+    }
+
+    fn invert_core(&self, targets: &[f64]) -> Fallible<Vec<f64>> {
+        targets
+            .iter()
+            .map(|&target| {
+                invert_decreasing_callback(
+                    |epsilon| Ok(eval_log_profile(self.log_delta.as_ref(), &[epsilon])?[0]),
+                    target,
+                )
+            })
+            .collect()
+    }
+
+    /// Derive a pure-DP endpoint by inversion; no support metadata is stored.
     pub fn pure_epsilon(&self) -> Fallible<Option<f64>> {
-        let epsilon = match &self.repr {
-            PrivacyProfileRepr::Points(points) => points
-                .iter()
-                .find(|point| point.delta == 0.0)
-                .map(|point| point.epsilon),
-            PrivacyProfileRepr::Function { .. } => {
-                let epsilon = self.epsilon(0.0)?;
-                epsilon.is_finite().then_some(epsilon)
-            }
-        };
-        Ok(epsilon)
+        let epsilon = self.epsilon(&[0.0])?[0];
+        Ok(epsilon.is_finite().then_some(epsilon))
     }
 }
 
-fn log_delta_from_delta(delta: Arc<DeltaFn>) -> Arc<LogProfileFn> {
-    Arc::new(move |epsilon| {
-        let value = eval_delta_profile(delta.as_ref(), epsilon)?;
-        delta_to_log_upper_unchecked(value)
-    })
-}
-
-fn eval_delta_profile(profile: &DeltaFn, epsilon: f64) -> Fallible<f64> {
-    check_epsilon(epsilon)?;
-    let value = profile(epsilon)?;
-    check_delta(value)?;
-    Ok(value)
-}
-
-fn eval_log_profile(profile: &LogProfileFn, epsilon: f64) -> Fallible<f64> {
-    check_epsilon(epsilon)?;
-    let value = profile(epsilon)?;
-    check_log_delta(value)?;
-    Ok(value)
-}
-
-fn invert_log_profile(profile: &LogProfileFn, target_delta: f64) -> Fallible<f64> {
-    let callback = |epsilon| eval_log_profile(profile, epsilon);
-    let target_lower = delta_to_log_lower_unchecked(target_delta)?;
-    match invert_decreasing_callback(&callback, target_lower) {
-        Ok(epsilon) => Ok(epsilon),
-        Err(err) if err.variant == ErrorVariant::Search => {
-            let target_upper = delta_to_log_upper_unchecked(target_delta)?;
-            match invert_decreasing_callback(&callback, target_upper) {
-                Ok(epsilon) => Ok(epsilon),
-                Err(err) if err.variant == ErrorVariant::Search => Ok(f64::INFINITY),
-                Err(err) => Err(err),
-            }
-        }
-        Err(err) => Err(err),
+fn check_inputs(values: &[f64], check: fn(f64) -> Fallible<()>) -> Fallible<()> {
+    for &value in values {
+        check(value)?;
     }
+    if values.windows(2).any(|pair| pair[0] > pair[1]) {
+        return fallible!(FailedMap, "privacy profile inputs must be nondecreasing");
+    }
+    Ok(())
+}
+
+fn check_length(inputs: &[f64], outputs: &[f64]) -> Fallible<()> {
+    if outputs.len() != inputs.len() {
+        return fallible!(
+            FailedMap,
+            "privacy profile callback output length ({}) must match input length ({})",
+            outputs.len(),
+            inputs.len()
+        );
+    }
+    Ok(())
+}
+
+fn eval_log_profile(profile: &LogDeltaFn, epsilon: &[f64]) -> Fallible<Vec<f64>> {
+    check_inputs(epsilon, check_epsilon)?;
+    let values = profile(epsilon)?;
+    check_length(epsilon, &values)?;
+    for &value in &values {
+        check_log_delta(value)?;
+    }
+    Ok(values)
 }
 
 /// Invert a nonincreasing callback while preserving the left edge of plateaus.
@@ -272,44 +249,27 @@ fn invert_decreasing_callback(
     callback: impl Fn(f64) -> Fallible<f64>,
     target: f64,
 ) -> Fallible<f64> {
-    // This caller owns the final profile quantity, so it explicitly translates
-    // terminal range failures into ordering information. The generic search
-    // remains literal and propagates these errors.
-    let compare = |epsilon: &f64| match callback(*epsilon) {
-        Ok(value) => Ok(if value <= target {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }),
-        Err(err) if err.variant == ErrorVariant::NumericRangeBelow => Ok(Ordering::Less),
-        Err(err) if err.variant == ErrorVariant::NumericRangeAbove => Ok(Ordering::Greater),
-        // A profile callback may overflow while evaluating a sufficiently
-        // large epsilon. It is below any positive target, but it does not
-        // establish a finite pure-DP endpoint when the target is exactly 0.
-        Err(err) if err.variant == ErrorVariant::Overflow => Ok(if target == f64::NEG_INFINITY {
-            Ordering::Greater
-        } else {
-            Ordering::Less
-        }),
-        Err(err) => Err(err),
-    };
-
-    match compare(&0.0)? {
-        Ordering::Less | Ordering::Equal => return Ok(0.0),
-        Ordering::Greater => {}
+    // Intermediate overflow is not evidence about the final comparison.
+    let predicate = |epsilon: &f64| Ok(callback(*epsilon)? <= target);
+    if predicate(&0.0)? {
+        return Ok(0.0);
     }
-
-    fallible_binary_search_by(compare, Above(0.0))
+    let mut lower = 0.0;
+    // Every callback error, including Search, escapes discovery and bisection.
+    for upper in f64::bands(0.0, 1).into_iter().skip(1) {
+        if predicate(&upper)? {
+            return fallible_binary_search(predicate, (lower, upper));
+        }
+        lower = upper;
+    }
+    Ok(f64::INFINITY)
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {
-    if epsilon.is_nan() {
-        return fallible!(FailedMap, "epsilon must not be nan");
-    }
-    if epsilon < 0.0 {
+    if epsilon.is_nan() || epsilon < 0.0 {
         return fallible!(
             FailedMap,
-            "epsilon ({epsilon}) must be a non-negative number"
+            "epsilon ({epsilon}) must be non-negative and not NaN"
         );
     }
     Ok(())

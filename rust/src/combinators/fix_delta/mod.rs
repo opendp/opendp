@@ -70,7 +70,7 @@ impl FixDeltaMeasure for SmoothedMaxDivergence {
     }
     fn fix_delta(&self, profile: &Self::Distance, delta: f64) -> Fallible<(f64, f64)> {
         check_delta(delta)?;
-        profile.epsilon(delta).map(|v| (v, delta.clone()))
+        profile.epsilon(&[delta]).map(|v| (v[0], delta))
     }
 }
 
@@ -93,7 +93,7 @@ impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
             return Ok((f64::INFINITY, delta));
         }
 
-        let remaining_delta = remaining.max(CInterval::point(0.0)?)?.lower_f64()?;
-        curve.epsilon(remaining_delta).map(|v| (v, delta))
+        let remaining_delta = remaining.max(CInterval::point(0.0)?).lower_f64()?;
+        curve.epsilon(&[remaining_delta]).map(|v| (v[0], delta))
     }
 }

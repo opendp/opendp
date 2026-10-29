@@ -20,20 +20,20 @@ fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     .map(&d_in)?;
     let rho = (d_in / scale).powi(2) / 2.0;
 
-    assert_eq!(profile.epsilon(0.)?, f64::INFINITY);
+    assert_eq!(profile.epsilon(&[0.])?[0], f64::INFINITY);
 
-    // using reverse map to check correctness
-    // implementation of reverse map is slightly looser by 1 ulp due to numerical imprecision
+    // The independently rounded reverse map may be slightly looser; it is
+    // not a lower bound on this inverse. Certify against the forward bound.
     assert_eq!(cdp_epsilon(rho, 1e-3)?, 0.6880024554878086);
-    let epsilon = profile.epsilon(1e-3)?;
-    assert!(epsilon >= cdp_epsilon(rho, 1e-3)?);
+    let epsilon = profile.epsilon(&[1e-3])?[0];
+    assert!(profile.delta(&[epsilon])?[0] <= 1e-3);
     assert!((epsilon - 0.6880024554878086).abs() < 1e-15);
-    assert_eq!(profile.epsilon(1.0)?, 0.);
+    assert_eq!(profile.epsilon(&[1.0])?[0], 0.);
 
     // using reverse map to check correctness
     assert_eq!(cdp_epsilon(rho, 0.1508457845622862)?, 0.0);
-    assert!(profile.delta(0.)? >= 0.1508457845622862);
-    assert!(profile.delta(0.6880024554878085)? >= 1e-3);
+    assert!(profile.delta(&[0.])?[0] >= 0.1508457845622862);
+    assert!(profile.delta(&[0.6880024554878085])?[0] >= 1e-3);
     Ok(())
 }
 
@@ -47,10 +47,10 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
     )?)?
     .map(&0.0)?;
 
-    assert_eq!(profile.epsilon(0.0)?, 0.0);
+    assert_eq!(profile.epsilon(&[0.0])?[0], 0.0);
 
-    assert_eq!(profile.epsilon(-0.0)?, 0.0);
-    assert_eq!(profile.delta(-0.0)?, 0.0);
+    assert_eq!(profile.epsilon(&[-0.0])?[0], 0.0);
+    assert_eq!(profile.delta(&[-0.0])?[0], 0.0);
     Ok(())
 }
 
@@ -64,10 +64,10 @@ fn test_zCDP_to_approxDP_nonprivate() -> Fallible<()> {
     )?)?
     .map(&1.0)?;
 
-    assert_eq!(profile.epsilon(0.0)?, f64::INFINITY);
-    assert_eq!(profile.epsilon(0.1)?, f64::INFINITY);
-    assert_eq!(profile.delta(0.0)?, 1.0);
-    assert_eq!(profile.delta(0.1)?, 1.0);
+    assert_eq!(profile.epsilon(&[0.0])?[0], f64::INFINITY);
+    assert_eq!(profile.epsilon(&[0.1])?[0], f64::INFINITY);
+    assert_eq!(profile.delta(&[0.0])?[0], 1.0);
+    assert_eq!(profile.delta(&[0.1])?[0], 1.0);
     Ok(())
 }
 
@@ -81,10 +81,10 @@ fn test_zCDP_to_approxDP_insensitive_nonprivate() -> Fallible<()> {
     )?)?
     .map(&0.0)?;
 
-    assert_eq!(profile.epsilon(0.0)?, 0.0);
-    assert_eq!(profile.epsilon(0.1)?, 0.0);
-    assert_eq!(profile.delta(0.0)?, 0.0);
-    assert_eq!(profile.delta(0.1)?, 0.0);
+    assert_eq!(profile.epsilon(&[0.0])?[0], 0.0);
+    assert_eq!(profile.epsilon(&[0.1])?[0], 0.0);
+    assert_eq!(profile.delta(&[0.0])?[0], 0.0);
+    assert_eq!(profile.delta(&[0.1])?[0], 0.0);
     Ok(())
 }
 
@@ -103,7 +103,7 @@ fn test_approx_zCDP_to_approx_approxDP() -> Fallible<()> {
     let (curve, delta) = m_adp.map(&1.0)?;
     assert_eq!(delta, 0.0);
 
-    let epsilon = curve.epsilon(1e-7)?;
+    let epsilon = curve.epsilon(&[1e-7])?[0];
 
     // when scale is 1 and sensitivity is 1, then rho = (d_in / scale)^2 / 2 = 0.5
     let expected_epsilon = cdp_epsilon(0.5, 1e-7)?;

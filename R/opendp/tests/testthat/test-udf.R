@@ -91,9 +91,109 @@ test_that("new function and privacy profile work in R", {
   )
   expect_equal(postprocess(arg = list(12., 100.)), 0.12)
 
-  profile <- new_privacy_profile(\(epsilon) if (epsilon < 0.5) 1. else 1e-8)
+  profile <- privacy_profile(log_delta = \(epsilon) ifelse(epsilon < 0.5, 0., -10000.))
   expect_equal(profile(epsilon = 0.499), 1.)
-  expect_equal(profile(delta = 1e-8), 0.5)
+  expect_equal(profile(log_delta = -10000.), 0.5)
+  expect_equal(profile(log_delta_at = 0.5), -10000.)
+  expect_gt(profile(epsilon = 0.5), 0.)
+
+  slack_profile <- privacy_profile(
+    log_delta = \(epsilon) ifelse(epsilon < 2., 0., -Inf), delta_slack = 0.1
+  )
+  expect_equal(slack_profile(epsilon = 2.), 0.1)
+  expect_equal(slack_profile(delta = 0.1), 2.)
+  expect_equal(slack_profile(delta = 0.09), Inf)
+})
+
+test_that("privacy profiles call vector forward callbacks once per batch", {
+  enable_features("contrib", "honest-but-curious")
+  for (is_log in c(FALSE, TRUE)) {
+    calls <- list()
+    callback <- function(values) {
+      expect_type(values, "double")
+      calls[[length(calls) + 1L]] <<- values
+      if (is_log) -values else exp(-values)
+    }
+    profile <- if (is_log) privacy_profile(log_delta = callback) else privacy_profile(delta = callback)
+    expect_length(calls, 0)
+    expect_equal(profile(epsilon = 1.), exp(-1.))
+    expect_identical(calls, list(1.))
+    expect_equal(profile(epsilon = c(0., 1., 1.)), c(1., exp(-1.), exp(-1.)))
+    expect_length(calls, 2)
+    expect_identical(calls[[2]], c(0., 1., 1.))
+    expect_equal(profile(log_delta_at = c(0., 1., 1.)), c(0., -1., -1.))
+    expect_length(calls, 3)
+    expect_equal(profile(epsilon = numeric()), numeric())
+  }
+})
+
+test_that("privacy profiles generically invert scalar and vector budgets", {
+  enable_features("contrib", "honest-but-curious")
+  calls <- 0L
+  forward <- function(values) {
+    stopifnot(is.double(values), length(values) == 1L)
+    calls <<- calls + 1L
+    -values
+  }
+  profile <- privacy_profile(log_delta = forward)
+  expect_equal(profile(log_delta = -10000.), 10000.)
+  log_budgets <- c(-Inf, -10000., -2., -2., -1., 0.)
+  expect_equal(profile(log_delta = log_budgets), -log_budgets)
+  expect_identical(profile(log_delta = log_budgets), vapply(log_budgets, function(value) profile(log_delta = value), numeric(1)))
+  budgets <- c(0., 0.25, 0.25, 1.)
+  expect_equal(profile(delta = budgets), c(Inf, -log(0.25), -log(0.25), 0.))
+  expect_identical(profile(delta = budgets), vapply(budgets, function(value) profile(delta = value), numeric(1)))
+  slack <- privacy_profile(log_delta = forward, delta_slack = 0.25)
+  expect_equal(slack(delta = c(0.1, 0.25, 0.25, 1.)), c(Inf, Inf, Inf, 0.))
+  before <- calls
+  expect_equal(slack(delta = c(0.1, 1.)), c(Inf, 0.))
+  expect_equal(slack(delta = numeric()), numeric())
+  expect_equal(slack(log_delta = numeric()), numeric())
+  expect_identical(calls, before)
+})
+
+test_that("vector privacy profiles validate ordering and callback lengths", {
+  enable_features("contrib", "honest-but-curious")
+  profile <- privacy_profile(log_delta = function(.values) stop("must not evaluate unsorted inputs", call. = FALSE))
+  expect_error(profile(epsilon = c(1., 0.)), "nondecreasing")
+  expect_error(profile(log_delta_at = c(1., 0.)), "nondecreasing")
+  expect_error(profile(delta = c(0.2, 0.1)), "nondecreasing")
+  expect_error(profile(log_delta = c(-1., -2.)), "nondecreasing")
+  for (size in c(0L, 1L, 3L)) {
+    callback <- function(.values) rep(0., size)
+    profile <- privacy_profile(log_delta = callback)
+    expect_error(profile(epsilon = c(0., 1.)), "output length")
+    expect_error(profile(log_delta_at = c(0., 1.)), "output length")
+    if (size != 1L) {
+      # Generic inversion checks singleton forward callback outputs.
+      expect_error(profile(delta = c(0.1, 0.2)), "output length")
+      expect_error(profile(log_delta = c(-2., -1.)), "output length")
+    }
+  }
+  expect_error(privacy_profile(delta = function(.values) numeric())(epsilon = 1.), "output length")
+  expect_error(privacy_profile(), "exactly one")
+  expect_error(privacy_profile(delta = identity, log_delta = identity), "exactly one")
+  original <- simpleError("vector callback failure")
+  fail <- function(.values) stop(original) # nolint: condition_call_linter.
+  profile <- privacy_profile(log_delta = fail)
+  expect_identical(tryCatch(profile(epsilon = c(0., 1.)), error = identity), original)
+  expect_identical(tryCatch(profile(delta = c(0.1, 0.2)), error = identity), original)
+})
+
+test_that("deprecated privacy profile adapts scalar callbacks for vector queries", {
+  enable_features("contrib", "honest-but-curious")
+  calls <- numeric()
+  scalar <- function(value) {
+    expect_length(value, 1)
+    calls <<- c(calls, value)
+    exp(-value)
+  }
+  expect_warning({
+    profile <- new_privacy_profile(scalar)
+  }, "vector-valued")
+  expect_equal(profile(epsilon = c(0., 1., 1.)), c(1., exp(-1.), exp(-1.)))
+  expect_identical(calls, c(0., 1., 1.))
+  expect_equal(profile(delta = 0.5), log(2.))
 })
 
 test_that("user-defined callback errors surface cleanly", {

@@ -9,7 +9,9 @@ fn test_fix_delta_adp() -> Fallible<()> {
         DiscreteDistance,
         SmoothedMaxDivergence,
         Function::new(|&v| v),
-        PrivacyMap::new(|_d_in| PrivacyProfile::new(|eps| Ok((-eps).exp()))),
+        PrivacyMap::new(|_d_in| {
+            PrivacyProfile::new(|eps| Ok(eps.iter().map(|&eps| (-eps).exp()).collect()))
+        }),
     )?;
     let m_fixed = make_fix_delta(&meas, 1e-7)?;
 
@@ -29,7 +31,12 @@ fn test_fix_delta_approx_adp() -> Fallible<()> {
         DiscreteDistance,
         Approximate(SmoothedMaxDivergence),
         Function::new(|&v| v),
-        PrivacyMap::new(|_d_in| (PrivacyProfile::new(|eps| Ok((-eps).exp())), 1e-7)),
+        PrivacyMap::new(|_d_in| {
+            (
+                PrivacyProfile::new(|eps| Ok(eps.iter().map(|&eps| (-eps).exp()).collect())),
+                1e-7,
+            )
+        }),
     )?;
     let m_fixed = make_fix_delta(&meas, 2e-7)?;
 
@@ -51,10 +58,7 @@ fn test_fix_delta_outer_delta_boundaries() -> Fallible<()> {
         Approximate(SmoothedMaxDivergence),
         Function::new(|&v| v),
         PrivacyMap::new_fallible(|_d_in| {
-            Ok((
-                PrivacyProfile::new(|_| Ok(0.0)).with_approxDP(vec![(0.0, 0.0)])?,
-                0.2,
-            ))
+            Ok((PrivacyProfile::new(|eps| Ok(vec![0.0; eps.len()])), 0.2))
         }),
     )?;
     let below = make_fix_delta(&meas, 0.2f64.next_down())?;

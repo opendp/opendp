@@ -22,12 +22,12 @@ fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
 
     let profile = meas_smooth.map(&(1, 1, 1))?;
 
-    assert_eq!(profile.delta(0.)?, 1.0);
-    assert_eq!(profile.delta(eps.next_down_())?, 1.0);
-    assert!(profile.delta(eps)? >= del);
-    assert!(profile.delta(eps.next_up_())? >= del);
-    assert!(profile.epsilon(del)? >= eps);
-    assert!(profile.epsilon(del.next_down())? >= eps);
+    assert_eq!(profile.delta(&[0.])?[0], 1.0);
+    assert_eq!(profile.delta(&[eps.next_down_()])?[0], 1.0);
+    assert_eq!(profile.delta(&[eps])?[0], del);
+    assert_eq!(profile.delta(&[eps.next_up_()])?[0], del);
+    assert_eq!(profile.epsilon(&[del])?[0], eps);
+    assert_eq!(profile.epsilon(&[del.next_down()])?[0], f64::INFINITY);
 
     Ok(())
 }

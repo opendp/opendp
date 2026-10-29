@@ -120,6 +120,9 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len == 0 {
+            return Ok(AnyObject::new(Vec::<T>::new()));
+        }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
@@ -1295,9 +1298,9 @@ impl Shuffle for AnyObject {
 
 #[bootstrap(
     name = "privacy_profile_delta",
-    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
+    arguments(curve(rust_type = b"null"), epsilon(rust_type = "Vec<f64>"))
 )]
-/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
+/// Internal function. Evaluate delta for a nondecreasing vector of epsilons.
 ///
 /// # Arguments
 /// * `curve` - The PrivacyProfile.
@@ -1308,19 +1311,19 @@ impl Shuffle for AnyObject {
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__privacy_profile_delta(
     curve: *const AnyObject,
-    epsilon: f64,
+    epsilon: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
-        .delta(epsilon)
+        .delta(try_!(try_as_ref!(epsilon).downcast_ref::<Vec<f64>>()))
         .map(AnyObject::new)
         .into()
 }
 
 #[bootstrap(
     name = "privacy_profile_epsilon",
-    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
+    arguments(profile(rust_type = b"null"), delta(rust_type = "Vec<f64>"))
 )]
-/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
+/// Internal function. Invert a nondecreasing vector of delta budgets.
 ///
 /// # Arguments
 /// * `profile` - The PrivacyProfile.
@@ -1331,10 +1334,50 @@ pub extern "C" fn opendp_data__privacy_profile_delta(
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__privacy_profile_epsilon(
     profile: *const AnyObject,
-    delta: f64,
+    delta: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
-        .epsilon(delta)
+        .epsilon(try_!(try_as_ref!(delta).downcast_ref::<Vec<f64>>()))
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_log_delta",
+    arguments(profile(rust_type = b"null"), epsilon(rust_type = "Vec<f64>"))
+)]
+/// Internal function. Evaluate the total log-delta bound at epsilon.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `epsilon` - Nonnegative epsilon at which to evaluate the profile.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__privacy_profile_log_delta(
+    profile: *const AnyObject,
+    epsilon: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
+        .log_delta(try_!(try_as_ref!(epsilon).downcast_ref::<Vec<f64>>()))
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_profile_epsilon_from_log_delta",
+    arguments(profile(rust_type = b"null"), log_delta(rust_type = "Vec<f64>"))
+)]
+/// Internal function. Invert a total log-delta target without narrowing to delta.
+///
+/// # Arguments
+/// * `profile` - The PrivacyProfile.
+/// * `log_delta` - Logarithm of the total delta budget, at most zero.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__privacy_profile_epsilon_from_log_delta(
+    profile: *const AnyObject,
+    log_delta: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
+        .epsilon_from_log_delta(try_!(try_as_ref!(log_delta).downcast_ref::<Vec<f64>>()))
         .map(AnyObject::new)
         .into()
 }
@@ -1514,6 +1557,11 @@ mod tests {
         let res = opendp_data__slice_as_object(raw, "Vec<i32>".to_char_p());
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3]);
+        // R represents an empty numeric batch with a null data pointer.
+        let raw = FfiSlice::new(null_mut(), 0);
+        let res = opendp_data__slice_as_object(&raw, "Vec<f64>".to_char_p());
+        let res: Vec<f64> = Fallible::from(res)?.downcast()?;
+        assert!(res.is_empty());
         Ok(())
     }
 

@@ -1,7 +1,4 @@
-use crate::{
-    error::Fallible,
-    traits::SInterval,
-};
+use crate::{error::Fallible, traits::SInterval};
 
 pub(crate) fn check_delta(delta: f64) -> Fallible<()> {
     if delta.is_nan() || delta < 0.0 || delta > 1.0 {
@@ -56,5 +53,24 @@ pub(crate) fn log_to_delta_upper(log_delta: f64) -> Fallible<f64> {
         return Ok(1.0);
     }
 
-    SInterval::point(log_delta)?.exp()?.upper_f64()
+    // exp(-1024) is below the least positive f64. Clamping upward avoids
+    // exhausting the software exponent range and still returns a positive bound.
+    SInterval::point(log_delta.max(-1024.0))?.exp()?.upper_f64()
+}
+
+/// Upward-conservative log(exp(left) + exp(right)), capped at log(1).
+/// Factoring out the larger argument avoids underflow of the total.
+pub(in crate::measures::curves) fn logaddexp_upper(left: f64, right: f64) -> Fallible<f64> {
+    if left == f64::NEG_INFINITY {
+        return Ok(right);
+    }
+    if right == f64::NEG_INFINITY {
+        return Ok(left);
+    }
+    let larger = left.max(right);
+    let difference = (SInterval::point(left.min(right))? - SInterval::point(larger)?)?
+        .max(SInterval::point(-1024.0)?);
+    (SInterval::point(larger)? + (SInterval::point(1.0)? + difference.exp()?)?.ln()?)?
+        .min(SInterval::point(0.0)?)
+        .upper_f64()
 }

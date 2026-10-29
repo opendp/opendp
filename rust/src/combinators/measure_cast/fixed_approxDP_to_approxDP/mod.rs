@@ -33,8 +33,20 @@ where
         measurement.input_metric.clone(),
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map.eval(d_in).map(|(eps, delta)| {
-                PrivacyProfile::new(move |epsilon| Ok(if epsilon < eps { 1.0 } else { delta }))
+            privacy_map.eval(d_in).and_then(|(eps, delta)| {
+                PrivacyProfile::new_log(move |epsilon| {
+                    Ok(epsilon
+                        .iter()
+                        .map(|&epsilon| {
+                            if epsilon < eps {
+                                0.0
+                            } else {
+                                f64::NEG_INFINITY
+                            }
+                        })
+                        .collect())
+                })
+                .with_delta_slack(delta)
             })
         }),
     )
