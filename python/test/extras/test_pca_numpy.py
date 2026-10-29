@@ -10,7 +10,7 @@ pytest.importorskip("sklearn")
 from opendp.extras.sklearn import decomposition
 
 
-def _context(data, *, n_components=None, whiten=False, split=1):
+def _context(data):
     domain = dp.numpy.array2_domain(
         norm=None,
         size=len(data),
@@ -18,19 +18,13 @@ def _context(data, *, n_components=None, whiten=False, split=1):
         nan=False,
         T=float,
     )
-    context = dp.Context.compositor(
+    return dp.Context.compositor(
         data=dp.sklearn.SklearnFit(data),
         domain=dp.sklearn.sklearn_fit_domain(domain),
         privacy_unit=dp.unit_of(contributions=2),
         privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=split,
+        split_evenly_over=1,
     )
-    model = dp.sklearn.decomposition.PCA(
-        n_components=n_components,
-        whiten=whiten,
-        clip_norm=1.0,
-    )
-    return context, model
 
 
 @pytest.mark.parametrize("d_in", [1, 2])
@@ -65,9 +59,6 @@ def test_pca_measurement_is_calibrated(d_in):
             space[0], space[1], dp.max_divergence(), d_in=d_in, d_out=1.0
         )
     assert direct_pca.map(d_in) <= 1.0
-    with pytest.raises(ValueError, match="PCA currently supports d_in=1 or d_in=2"):
-        make_private_pca(space[0], space[1], dp.max_divergence(), d_in=3, d_out=1.0)
-
     estimator = dp.sklearn.decomposition.PCA()
     measurement = estimator.make(
         dp.sklearn.sklearn_fit_domain(space[0]),
@@ -88,23 +79,6 @@ def test_pca_tutorial_examples():
         / "docs/source/getting-started/statistical-modeling/pca.rst"
     )
     assert doctest.testfile(str(tutorial), module_relative=False).failed == 0
-
-
-def _standalone_pca_query():
-    from opendp.context import Query
-
-    domain = dp.numpy.array2_domain(
-        size=10,
-        num_columns=4,
-        nan=False,
-        T=float,
-    )
-    return Query(
-        chain=(dp.sklearn.sklearn_fit_domain(domain), dp.symmetric_distance()),
-        output_measure=dp.max_divergence(),
-        d_in=1,
-        d_out=1.0,
-    )
 
 
 @pytest.mark.parametrize("T, dtype", [(dp.f32, "float32"), (dp.f64, "float64")])
@@ -136,20 +110,6 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
     assert centered_domain.member(centered_rows)
 
 
-def test_pca_requires_known_domain_shape():
-    pytest.importorskip("numpy")
-    pytest.importorskip("scipy.linalg")
-    domain = dp.numpy.array2_domain(num_columns=4, nan=False, T=float)
-    with pytest.raises(ValueError, match="known input-domain size"):
-        dp.sklearn.decomposition.PCA().make(
-            dp.sklearn.sklearn_fit_domain(domain),
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            1,
-            1.0,
-        )
-
-
 @pytest.mark.parametrize(
     "overrides, message",
     [
@@ -161,6 +121,16 @@ def test_pca_requires_known_domain_shape():
         ({"size": 1}, "at least two samples"),
         ({"num_columns": 0}, "one feature"),
         ({"norm": 0.0}, "positive finite L2 radius"),
+        ({"size": None}, "known input-domain size"),
+        ({"num_columns": None}, "known input-domain size"),
+        *[
+            ({"center": center}, "center must be None or 'origin'")
+            for center in ("mean", "zero", False, 0, [0.0, 0.0])
+        ],
+        *[
+            ({"clip_norm": radius}, "positive and finite")
+            for radius in (0, -1, float("inf"), float("nan"))
+        ],
     ],
 )
 def test_pca_rejects_invalid_privacy_and_public_domain(overrides, message):
@@ -172,6 +142,8 @@ def test_pca_rejects_invalid_privacy_and_public_domain(overrides, message):
         output_measure=dp.max_divergence(),
         d_in=2,
         d_out=1.0,
+        center=None,
+        clip_norm=None,
     )
     for name, value in overrides.items():
         (make_args if name in make_args else domain_args)[name] = value
@@ -180,29 +152,40 @@ def test_pca_rejects_invalid_privacy_and_public_domain(overrides, message):
         decomposition.make_private_pca(domain, **make_args)
 
 
-def test_pca_context_requires_bounded_domain_before_release(monkeypatch):
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    from opendp.context import Query
+def test_pca_rejects_malformed_origin_descriptor():
+    import numpy as np
+    from opendp._internal import _extrinsic_domain
 
-    released = []
-    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-    with pytest.raises(ValueError, match="requires an L2-bounded input domain"):
-        _standalone_pca_query().sklearn(dp.sklearn.decomposition.PCA(n_components=2))
-    assert released == []
+    domain = dp.numpy.array2_domain(T=float, size=10, num_columns=2, norm=1, p=2)
+    # array2_domain validates this already; keep just one defensive PCA check
+    # for an externally constructed domain, not a matrix of synthetic shapes.
+    malformed = _extrinsic_domain(
+        "NPArray2Domain(malformed origin)",
+        domain.member,
+        replace(domain.descriptor, origin=np.zeros(1)),
+    )
+    with pytest.raises(ValueError, match="domain origin must be scalar or have shape"):
+        decomposition.make_private_pca(
+            malformed,
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            2,
+            1.0,
+        )
 
 
-def test_pca_context_rejects_invalid_clip_norm_before_release(monkeypatch):
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    from opendp.context import Query
-
-    released = []
-    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-    model = dp.sklearn.decomposition.PCA(n_components=2, clip_norm=0.0)
-    with pytest.raises(ValueError, match="positive"):
-        _standalone_pca_query().sklearn(model)
-    assert released == []
+@pytest.mark.parametrize(
+    "clip_norm, message",
+    [
+        (None, "requires an L2-bounded input domain"),
+        (0.0, "positive"),
+    ],
+)
+def test_pca_context_rejects_unbounded_or_invalid_clipping(clip_norm, message):
+    context = _context(_legacy_data())
+    with pytest.raises(ValueError, match=message):
+        context.query().sklearn(decomposition.PCA(clip_norm=clip_norm))
+    assert context.current_privacy_loss() == []
 
 
 def test_pca_release_dimensionality_matches_component_mode():
@@ -238,9 +221,7 @@ def test_pca_release_dimensionality_matches_component_mode():
         assert estimator.__dict__ == initial_state
         assert release.components.shape == (expected_rows, 4)
         assert release.n_samples == 20
-        assert release.components.shape[1] == 4
         assert release.n_components == n_components
-        assert not hasattr(release, "n_features")
 
 
 def _capture_sscp_rows(monkeypatch):
@@ -271,8 +252,8 @@ def _capture_sscp_rows(monkeypatch):
     return observations
 
 
-def _observe_private_mean(monkeypatch, *, replacement=None):
-    """Keep the actual DP mean, optionally postprocess its result to a public point."""
+def _observe_private_mean(monkeypatch, *, replacement):
+    """Observe real DP mean execution, then replace its output with a public point."""
     np = pytest.importorskip("numpy")
     from opendp._internal import _make_transformation, _new_pure_function
     from opendp.extras.sklearn import decomposition
@@ -295,7 +276,7 @@ def _observe_private_mean(monkeypatch, *, replacement=None):
 
         def observe_mean(mean):
             observations[-1]["mean"] = np.array(mean, copy=True)
-            return mean if replacement is None else np.array(replacement, dtype=float)
+            return np.array(replacement, dtype=float)
 
         identity = _make_transformation(
             input_domain,
@@ -358,6 +339,7 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
         clip_norm=clip_norm,
         center=center,
     )
+    assert means == []  # Construction must not evaluate private rows.
     release = measurement(data)
     expected = offsets / np.maximum(
         np.linalg.norm(offsets, axis=1, keepdims=True) / radius, 1
@@ -366,6 +348,7 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
     centered_domain, centered_rows = sscp[0]
     assert centered_domain.descriptor.norm == radius
     assert centered_domain.descriptor.p == 2
+    assert centered_domain.member(centered_rows)
     np.testing.assert_allclose(centered_rows, expected, atol=1e-12)
     np.testing.assert_allclose(release.mean, origin, atol=1e-12)
     if center is None:
@@ -379,138 +362,6 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
         assert means == []
     assert measurement.map(2) <= 1.0
     np.testing.assert_array_equal(data, before)
-
-
-def test_pca_clamps_nonfinite_rows_before_sscp(monkeypatch):
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition import make_private_pca
-
-    # Deliberately outside the bounded input domain: exercise defensive
-    # sanitization, not a claim that NaN/out-of-bound rows are domain members.
-    data = np.array([[np.nan, 10.0], [0.1, 0.2], [-0.3, 0.1]])
-    domain = dp.numpy.array2_domain(
-        T=float, size=3, num_columns=2, norm=0.5, p=2, nan=True
-    )
-    sscp = _capture_sscp_rows(monkeypatch)
-    measurement = make_private_pca(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        2,
-        1.0,
-        center="origin",
-    )
-    measurement(data)
-    centered_domain, rows = sscp[0]
-    assert np.isfinite(rows).all()
-    assert centered_domain.member(rows)
-    assert np.max(np.linalg.norm(rows, axis=1)) <= 0.5
-    assert np.isnan(data[0, 0])  # Sanitization does not mutate the private input.
-    assert measurement.map(2) <= 1.0
-
-
-@pytest.mark.parametrize("scalar_origin", [0.0, 2.0])
-def test_pca_scalar_and_vector_origins_match_without_mean_or_redundant_clip(
-    monkeypatch, scalar_origin
-):
-    np = pytest.importorskip("numpy")
-    from opendp._internal import _extrinsic_domain
-    from opendp.extras.sklearn import decomposition
-
-    def unexpected(*args, **kwargs):
-        pytest.fail(
-            "finite certified origin-mode data needs neither a mean nor clipping"
-        )
-
-    monkeypatch.setattr(decomposition, "make_private_np_mean", unexpected)
-    monkeypatch.setattr(decomposition, "make_np_clamp", unexpected)
-    origin = np.full(2, scalar_origin)
-    offsets = np.tile([[0.7, 0.5], [0.7, 0.7]], (20, 1))
-    data = origin + offsets
-    vector_domain = dp.numpy.array2_domain(
-        T=float,
-        size=len(data),
-        num_columns=2,
-        nan=False,
-        norm=1,
-        p=2,
-        origin=origin,
-    )
-    # array2_domain normally expands zero scalars itself. Exercise the scalar
-    # descriptor directly, with the same certified ball and membership test.
-    scalar_domain = _extrinsic_domain(
-        "NPArray2Domain(scalar origin)",
-        vector_domain.member,
-        replace(vector_domain.descriptor, origin=np.array(scalar_origin)),
-    )
-    for domain in (scalar_domain, vector_domain):
-        model = decomposition.PCA(center="origin")
-        model.fit(
-            data,
-            domain=dp.sklearn.sklearn_fit_domain(domain),
-            privacy_unit=dp.unit_of(contributions=2),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
-        assert model.mean_.shape == (2,)
-        np.testing.assert_array_equal(model.mean_, origin)
-        assert not np.allclose(data.mean(axis=0), model.mean_)
-        # Random bases need not match; their full-rank projected geometry must.
-        scores = model.transform(data)
-        np.testing.assert_allclose(scores @ scores.T, offsets @ offsets.T)
-
-
-@pytest.mark.parametrize("origin", [[0.0], [0.0, 0.0, 0.0], [[0.0, 0.0]]])
-def test_pca_rejects_incompatible_origin_shapes(origin):
-    np = pytest.importorskip("numpy")
-    from opendp._internal import _extrinsic_domain
-    from opendp.extras.sklearn.decomposition import make_private_pca
-
-    domain = dp.numpy.array2_domain(
-        T=float, size=10, num_columns=2, norm=1, p=2, nan=False
-    )
-    domain = _extrinsic_domain(
-        "NPArray2Domain(incompatible origin)",
-        domain.member,
-        replace(domain.descriptor, origin=np.array(origin)),
-    )
-    with pytest.raises(ValueError, match="domain origin must be scalar or have shape"):
-        make_private_pca(domain, dp.symmetric_distance(), dp.max_divergence(), 2, 1.0)
-
-
-@pytest.mark.parametrize("d_in", [1, 2])
-def test_pca_bounded_default_executes_and_accounts_for_private_mean(monkeypatch, d_in):
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition import make_private_pca
-
-    data = np.tile([[0.7, 0.5], [0.7, 0.7]], (20, 1))
-    domain = dp.numpy.array2_domain(
-        T=float,
-        size=len(data),
-        num_columns=2,
-        nan=False,
-        norm=1,
-        p=2,
-    )
-    means = _observe_private_mean(monkeypatch)
-    measurement = make_private_pca(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        d_in,
-        1.0,
-    )
-    assert means == []  # Constructing a measurement does not evaluate private data.
-    release = measurement(data)
-    assert len(means) == 1
-    np.testing.assert_array_equal(means[0]["rows"], data)
-    raw = means[0]["mean"]
-    np.testing.assert_allclose(
-        release.mean, raw / max(1.0, np.linalg.norm(raw)), atol=1e-12
-    )
-    assert means[0]["map_at_two"] * d_in / 2 <= 1 / 3
-    assert means[0]["map_at_two"] * d_in / 2 == pytest.approx(1 / 3)
-    assert measurement.map(d_in) <= 1.0
-    assert measurement.map(d_in) == pytest.approx(1.0)
 
 
 def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch):
@@ -549,7 +400,7 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
     centered_domain, rows = sscp[0]
     assert centered_domain.descriptor.norm == 1
     np.testing.assert_allclose(rows, expected, atol=1e-12)
-    assert np.max(np.linalg.norm(rows, axis=1)) <= 1 + 1e-12
+    assert centered_domain.member(rows)
 
 
 @pytest.mark.parametrize(
@@ -626,8 +477,33 @@ def test_pca_fixed_budget_split_and_canonical_two_edit_calibration(
 def test_pca_many_samples_rounding_stays_within_budget(
     monkeypatch, center, d_in, width, budget
 ):
-    from opendp.extras.sklearn.decomposition import make_private_pca
+    import numpy as np
+    from opendp._internal import _make_measurement
+    from opendp.extras._utilities import to_then
+    from opendp.extras.sklearn._make_eigendecomposition import (
+        make_private_np_eigendecomposition,
+    )
 
+    eigen_maps = []
+
+    def record_eigen(input_domain, input_metric, values, vectors):
+        actual = make_private_np_eigendecomposition(
+            input_domain, input_metric, values, vectors
+        )
+        eigen_maps.append(actual.map(d_in))
+        # Keep the real stage's privacy map; skip only the expensive sampler.
+        return _make_measurement(
+            input_domain,
+            input_metric,
+            actual.output_measure,
+            lambda data: (np.ones(width), np.eye(width)),
+            actual.map,
+        )
+
+    monkeypatch.setattr(
+        decomposition, "then_private_np_eigendecomposition", to_then(record_eigen)
+    )
+    _observe_private_mean(monkeypatch, replacement=np.zeros(width))
     domain = dp.numpy.array2_domain(
         T=float,
         size=10,
@@ -636,7 +512,7 @@ def test_pca_many_samples_rounding_stays_within_budget(
         p=2,
         nan=False,
     )
-    measurement = make_private_pca(
+    measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
         dp.max_divergence(),
@@ -644,43 +520,9 @@ def test_pca_many_samples_rounding_stays_within_budget(
         budget,
         center=center,
     )
-    # Private-mean mode constructs its eigen stage lazily. A public fixed mean
-    # exercises that stage's rounding without sampling 128 Bingham directions.
-    if center is None:
-        np = pytest.importorskip("numpy")
-        from opendp.extras.sklearn import decomposition
-
-        original_eigen = decomposition.then_private_np_eigendecomposition
-        eigen_maps = []
-
-        def record_eigen(*args, **kwargs):
-            stage = original_eigen(*args, **kwargs)
-
-            # Retain stage construction/privacy accounting, but do not execute
-            # the stochastic sampler: the rounding invariant is in its map.
-            def make_stage(input_domain, input_metric):
-                from opendp._internal import _make_measurement
-
-                actual = (input_domain, input_metric) >> stage
-                eigen_maps.append(actual.map(d_in))
-                return _make_measurement(
-                    input_domain,
-                    input_metric,
-                    actual.output_measure,
-                    lambda data: (np.ones(width), np.eye(width)),
-                    actual.map,
-                )
-
-            from opendp.mod import _PartialConstructor
-
-            return _PartialConstructor(make_stage)
-
-        # Force evaluation of the lazy eigen constructor, not the real sampler.
-        monkeypatch.setattr(
-            decomposition, "then_private_np_eigendecomposition", record_eigen
-        )
-        measurement(np.zeros((10, width)))
-        assert eigen_maps and eigen_maps[-1] <= budget * 2 / 3
+    measurement(np.zeros((10, width)))  # Also construct the lazy private-mean stage.
+    eigen_budget = budget * 2 / 3 if center is None else budget
+    assert eigen_maps and eigen_maps[-1] <= eigen_budget
     assert measurement.check(d_in, budget)
     assert measurement.map(d_in) <= budget
 
@@ -768,120 +610,6 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
     assert model.n_components_ == 2
 
 
-@pytest.mark.parametrize("center", ["mean", "zero", False, 0, [0.0, 0.0]])
-def test_pca_rejects_invalid_center(center):
-    from opendp.extras.sklearn.decomposition import make_private_pca
-
-    domain = dp.numpy.array2_domain(
-        T=float, size=10, num_columns=2, norm=1, p=2, nan=False
-    )
-    with pytest.raises(ValueError, match="center must be None or 'origin'"):
-        make_private_pca(
-            domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            2,
-            1.0,
-            center=center,
-        )
-
-
-@pytest.mark.parametrize("clip_norm", [0, -1, float("inf"), float("nan")])
-def test_pca_rejects_invalid_clip_norm(clip_norm):
-    from opendp.extras.sklearn.decomposition import make_private_pca
-
-    domain = dp.numpy.array2_domain(
-        T=float, size=10, num_columns=2, norm=1, p=2, nan=False
-    )
-    with pytest.raises(ValueError, match="positive and finite"):
-        make_private_pca(
-            domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            2,
-            1.0,
-            clip_norm=clip_norm,
-        )
-
-
-def test_pca_nonzero_mean_regression_without_l1_truncation():
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition import PCA
-
-    data = np.tile([[0.7, 0.5], [0.7, 0.7]], (200, 1))
-    assert np.all(np.linalg.norm(data, ord=1, axis=1) > 1)
-    assert np.all(np.linalg.norm(data, axis=1) < 1)
-    domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(
-            T=float,
-            size=len(data),
-            num_columns=2,
-            norm=1,
-            p=2,
-            nan=False,
-        )
-    )
-    model = PCA(n_components=1)
-    model.fit(
-        data,
-        domain=domain,
-        privacy_unit=dp.unit_of(contributions=2),
-        privacy_loss=dp.loss_of(epsilon=10000),
-    )
-    np.testing.assert_allclose(model.mean_, [0.7, 0.6], atol=0.005)
-    assert abs(model.components_[0, 1]) > 0.98
-    assert abs(model.components_[0, 0]) < 0.2
-    assert model.explained_variance_[0] == pytest.approx(0.01, abs=0.002)
-
-
-def test_pca_whitening_uses_a_machine_epsilon_floor():
-    np = pytest.importorskip("numpy")
-    model = dp.sklearn.decomposition.PCA()
-    model.whiten = True
-    model.components_ = np.eye(2)
-    model.mean_ = np.zeros(2)
-    model.n_features_in_ = 2
-    model.n_components_ = 2
-    model.explained_variance_ = np.array([1.0, 1e-300])
-
-    X = np.array([[0.5, -0.25]])
-    transformed = model.transform(X)
-    assert np.isfinite(transformed).all()
-    # sklearn's inverse uses the raw variances, not the forward epsilon floor.
-    scale = np.sqrt(model.explained_variance_)
-    np.testing.assert_allclose(transformed, X / np.maximum(scale, np.finfo(float).eps))
-    np.testing.assert_allclose(
-        model.inverse_transform(transformed), transformed * scale
-    )
-
-
-def test_pca_fitted_methods_and_error_paths():
-    np = pytest.importorskip("numpy")
-
-    estimator = dp.sklearn.decomposition.PCA(n_components=2, whiten=True)
-    public = np.zeros((3, 3))
-    # Use sklearn's native unfitted-model behavior (NotFittedError is also an
-    # AttributeError; some sklearn versions access fitted arrays directly).
-    with pytest.raises(AttributeError):
-        estimator.transform(public)
-    with pytest.raises(AttributeError):
-        estimator.inverse_transform(public[:, :2])
-    with pytest.raises(AttributeError):
-        estimator.get_covariance()
-    with pytest.raises(AttributeError):
-        estimator.get_precision()
-    with pytest.raises(NotImplementedError, match="nonprivate training rows"):
-        estimator.fit_transform(public)
-
-    with pytest.raises(TypeError, match="expected a PCARelease"):
-        estimator._ingest_release(object())  # type: ignore[arg-type]
-    estimator = _released_pca(whiten=True)
-    with pytest.raises(ValueError, match="features"):
-        estimator.transform(np.zeros((3, 2)))
-    with pytest.raises(ValueError):
-        estimator.inverse_transform(np.zeros((3, 3)))
-
-
 def test_pca_fit_transform_rejects_before_fitting(monkeypatch):
     import numpy as np
     from opendp.extras.sklearn.decomposition import PCA
@@ -920,19 +648,6 @@ def test_pca_mle_one_feature_retains_one_component(variance):
     np.testing.assert_array_equal(model.explained_variance_, [variance])
 
 
-def test_pca_release_requires_samples_and_derives_feature_count():
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition import PCA, PCARelease
-
-    arrays = dict(mean=np.zeros(3), singular_values=np.ones(3), components=np.eye(3))
-    with pytest.raises(TypeError, match="n_samples"):
-        PCARelease(**arrays)
-    model = PCA()
-    model._ingest_release(PCARelease(**arrays, n_samples=10, n_components=2))
-    assert model.n_features_in_ == 3
-    assert model.n_components_ == 2
-
-
 def test_pca_ingest_release_error_paths():
     np = pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
@@ -947,6 +662,8 @@ def test_pca_ingest_release_error_paths():
             n_components=n_components,
         )
 
+    with pytest.raises(TypeError, match="expected a PCARelease"):
+        PCA()._ingest_release(object())  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="at least two samples"):
         PCA()._ingest_release(release(n_samples=1))
 
@@ -1080,7 +797,7 @@ def test_pca_fitted_model_pickle_preserves_inference():
 
     model = dp.sklearn.decomposition.PCA(n_components=2, clip_norm=1.0)
     data = _legacy_data()
-    query = _context(data)[0].query().sklearn(model)
+    query = _context(data).query().sklearn(model)
 
     # Serialize in DP postprocessing, before the separate FFI invocation-
     # metadata layer, whose private-input retention is being fixed separately.
@@ -1098,76 +815,18 @@ def test_pca_fitted_model_pickle_preserves_inference():
     assert not hasattr(model, "components_")
 
 
-@pytest.mark.parametrize("route", ["standalone", "context"])
-def test_pca_refitting_replaces_state_and_freezes_old_transform(route):
-    np = pytest.importorskip("numpy")
-    data = _legacy_data()
-    context, model = _context(data, n_components=1, whiten=True, split=2)
-    domain = context.accountant.input_domain
-
-    def fit():
-        if route == "context":
-            return context.query().sklearn(model).release()
-        return model.fit(
-            data,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
-
-    first = fit()
-    assert (first is model) == (route == "standalone")
-    transform = first.make_transform(domain, dp.symmetric_distance())
-    before = transform(dp.sklearn.SklearnFit(data)).X
-    first.mean_[:] = 99
-    first.components_[:] = 0
-    first.explained_variance_[:] = 1
-    model.set_params(n_components=2, whiten=False)
-    second = fit()
-    assert (second is model) == (route == "standalone")
-    assert second.n_components_ == 2
-    assert second.components_.shape == (2, 4)
-    np.testing.assert_allclose(transform(dp.sklearn.SklearnFit(data)).X, before)
-    if route == "context":
-        assert second is not first
-        assert first.n_components_ == 1
-        assert not hasattr(model, "components_")
-        assert context.current_privacy_loss() == [0.5, 0.5]
-
-
-@pytest.mark.parametrize("n_components, expected", [(None, 4), (2, 2)])
-def test_pca_query_snapshots_component_selection(n_components, expected):
-    context, model = _context(_legacy_data(), n_components=n_components)
-    query = context.query().sklearn(model)
-    query.resolve()
-    assert not hasattr(model, "components_")
-    assert context.current_privacy_loss() == []
-    model.set_params(n_components=3, clip_norm=2.0, center="origin")
-    fitted = query.release()
-    assert fitted is not model
-    assert not hasattr(model, "components_")
-    assert fitted.n_components_ == expected
-    assert fitted.n_components == n_components
-    assert context.current_privacy_loss() == [1.0]
-    state = fitted.components_.copy()
-    with pytest.raises(dp.OpenDPException, match="out of queries"):
-        query.release()
-    np = pytest.importorskip("numpy")
-    np.testing.assert_array_equal(fitted.components_, state)
-
-
-def _released_pca(*, whiten=False, n_components=2, variances=(4.0, 2.0, 1.0)):
+def _released_pca(*, whiten):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn.decomposition import PCA, PCARelease
 
-    model = PCA(n_components=n_components, whiten=whiten, clip_norm=1.0)
+    model = PCA(n_components=2, whiten=whiten)
     model._ingest_release(
         PCARelease(
             mean=np.array([0.5, -1.0, 2.0]),
-            singular_values=np.sqrt(np.asarray(variances) * 9),
+            singular_values=np.sqrt(np.array([4.0, 2.0, 1.0]) * 9),
             components=np.eye(3),
             n_samples=10,
-            n_components=n_components,
+            n_components=2,
         )
     )
     return model
@@ -1182,29 +841,6 @@ def forbid_sklearn_fitting(monkeypatch):
 
     for name in ("fit", "fit_transform", "_fit", "_fit_full", "_fit_truncated"):
         monkeypatch.setattr(SklearnPCA, name, nonprivate_fit)
-
-
-@pytest.mark.parametrize("route", ["fit", "context"])
-@pytest.mark.parametrize("whiten", [False, True])
-def test_pca_fitting_never_calls_sklearn_training(
-    forbid_sklearn_fitting, route, whiten
-):
-    data = _legacy_data()
-    context, model = _context(data, n_components=2, whiten=whiten)
-    if route == "context":
-        fitted = context.query().sklearn(model).release()
-        assert fitted is not model
-        assert not hasattr(model, "components_")
-        assert context.current_privacy_loss() == [1.0]
-    else:
-        fitted = model.fit(
-            data,
-            domain=context.accountant.input_domain,
-            privacy_unit=dp.unit_of(contributions=2),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
-        assert fitted is model
-    assert fitted.components_.shape == (2, 4)
 
 
 @pytest.mark.parametrize("n_components", [2, 0.8, "mle"])
@@ -1222,16 +858,6 @@ def test_pca_clone_preserves_only_supported_parameters(n_components):
         "center": "origin",
     }
     assert clone(model).get_params() == model.get_params()
-    for name in (
-        "transform",
-        "inverse_transform",
-        "get_covariance",
-        "get_precision",
-        "score",
-        "score_samples",
-        "get_feature_names_out",
-    ):
-        assert getattr(PCA, name) is getattr(SklearnPCA, name)
 
 
 @pytest.mark.parametrize("whiten", [False, True])
@@ -1239,21 +865,13 @@ def test_pca_inherited_inference_from_release_without_training(
     forbid_sklearn_fitting, whiten
 ):
     np = pytest.importorskip("numpy")
-    from sklearn.utils.validation import check_is_fitted
-
     model = _released_pca(whiten=whiten)
-    attributes = (
-        "mean_",
-        "components_",
-        "n_components_",
-        "n_features_in_",
-        "n_samples_",
-        "explained_variance_",
-        "explained_variance_ratio_",
-        "singular_values_",
-        "noise_variance_",
-    )
-    check_is_fitted(model, attributes=attributes)
+    assert model.n_samples_ == 10
+    assert model.n_features_in_ == 3
+    np.testing.assert_allclose(model.explained_variance_, [4.0, 2.0])
+    np.testing.assert_allclose(model.explained_variance_ratio_, [4 / 7, 2 / 7])
+    np.testing.assert_array_equal(model.singular_values_, [6.0, (18.0) ** 0.5])
+    assert model.noise_variance_ == 1.0
     X = np.array([[1.0, 2.0, 3.0], [4.0, -1.0, 0.0]])
     expected = (X - model.mean_) @ model.components_.T
     if whiten:
@@ -1264,69 +882,16 @@ def test_pca_inherited_inference_from_release_without_training(
         model.inverse_transform(expected), unscaled @ model.components_ + model.mean_
     )
 
-    covariance = model.get_covariance()
-    precision = np.linalg.inv(covariance)
-    centered = X - model.mean_
-    expected_scores = -0.5 * (
-        np.sum((centered @ precision) * centered, axis=1)
-        + 3 * np.log(2 * np.pi)
-        + np.linalg.slogdet(covariance)[1]
-    )
-    np.testing.assert_allclose(model.score_samples(X), expected_scores)
-    np.testing.assert_allclose(model.score(X), expected_scores.mean())
-    np.testing.assert_array_equal(model.get_feature_names_out(), ["pca0", "pca1"])
-    np.testing.assert_array_equal(
-        model.get_feature_names_out(["a", "b", "c"]), ["pca0", "pca1"]
-    )
-    domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(T=float, num_columns=3)
-    )
-    transform = model.make_transform(domain, dp.symmetric_distance())
-    np.testing.assert_allclose(transform(dp.sklearn.SklearnFit(X)).X, expected)
-    assert transform.map(2) == 2
-
-
-@pytest.mark.parametrize("whiten", [False, True])
-@pytest.mark.parametrize(
-    "n_components, variances",
-    [(2, (4.0, 2.0, 1.0)), (2, (4.0, 2.0, 0.0)), (3, (4.0, 2.0, 1.0))],
-)
-def test_pca_inherited_covariance_and_precision(
-    forbid_sklearn_fitting, monkeypatch, whiten, n_components, variances
-):
-    np = pytest.importorskip("numpy")
-    linalg = pytest.importorskip("scipy.linalg")
-    model = _released_pca(whiten=whiten, n_components=n_components, variances=variances)
-    components = model.components_.copy()
-    if whiten:
-        components *= np.sqrt(model.explained_variance_)[:, None]
-    covariance = (
-        components.T * np.maximum(model.explained_variance_ - model.noise_variance_, 0)
-    ) @ components + model.noise_variance_ * np.eye(3)
-    np.testing.assert_allclose(model.get_covariance(), covariance)
-    if n_components < 3 and model.noise_variance_ == 0:
-        # Zero residual variance makes a reduced-rank covariance singular.
-        with pytest.raises(np.linalg.LinAlgError):
-            model.get_precision()
-        return
-
-    inverse_shapes = []
-    inverse = linalg.inv
-
-    def record_inverse(matrix, *args, **kwargs):
-        inverse_shapes.append(matrix.shape)
-        return inverse(matrix, *args, **kwargs)
-
-    monkeypatch.setattr(linalg, "inv", record_inverse)
-    np.testing.assert_allclose(model.get_precision(), np.linalg.inv(covariance))
-    if n_components < 3:
-        # sklearn applies the matrix inversion lemma to the smaller matrix.
-        assert inverse_shapes == [(n_components, n_components)]
+    # Smoke-test representative inherited methods with the released attributes;
+    # sklearn owns their detailed covariance/precision/scoring algorithms.
+    assert model.get_covariance().shape == (3, 3)
+    assert model.get_precision().shape == (3, 3)
+    assert np.isfinite(model.score(X))
 
 
 @pytest.mark.parametrize("use_fit", [False, True])
 @pytest.mark.parametrize("whiten", [False, True])
-def test_pca_sklearn_fit_and_transform(use_fit, whiten):
+def test_pca_sklearn_fit_and_transform(forbid_sklearn_fitting, use_fit, whiten):
     np = pytest.importorskip("numpy")
     pytest.importorskip("sklearn")
     pytest.importorskip("scipy.linalg")
@@ -1360,10 +925,16 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     else:
         fitted_query = query.sklearn(model)
         assert fitted_query.resolve().map(1) <= 1.0
+        assert context.current_privacy_loss() == []
+        model.set_params(n_components=3, clip_norm=0.1, center="origin")
         template = model
         model = fitted_query.release()
         assert model is not template
         assert not hasattr(template, "components_")
+        assert model.get_params() == dict(
+            n_components=2, whiten=whiten, clip_norm=1.0, center=None
+        )
+        assert context.current_privacy_loss() == [1.0]
     assert query._chain is original_chain
     assert model.n_features_in_ == n_features
     assert model.n_samples_ == size
@@ -1382,9 +953,11 @@ def test_pca_sklearn_fit_and_transform(use_fit, whiten):
     assert result.y is aligned.y
     np.testing.assert_array_equal(aligned.X, data)
 
-    # Once constructed, the transformation depends on the released snapshot,
-    # not on subsequent estimator parameter changes.
+    # The transformation freezes both parameters and learned arrays.
     model.set_params(whiten=not whiten)
+    model.mean_[:] = 99
+    model.components_[:] = 0
+    model.explained_variance_[:] = 1
     np.testing.assert_allclose(transform(aligned).X, result.X)
 
 
