@@ -122,3 +122,23 @@ fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
     assert!(qbl.privacy_loss(2).is_ok());
     Ok(())
 }
+
+#[test]
+fn test_fully_adaptive_sequential_child_accepts_queries() -> Fallible<()> {
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let mut qbl = make_fully_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        None,
+    )?
+    .invoke(&true)?;
+    assert!(qbl.invoke(child)?.eval(&())?);
+    Ok(())
+}

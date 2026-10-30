@@ -136,7 +136,7 @@ where
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
