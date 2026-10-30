@@ -38,8 +38,12 @@ None
     after executing the query.
     If the new privacy loss exceeds \texttt{d\_out} on line \ref{check},
     the query is rejected, and the inner queryable is freed from memory on line \ref{free}.
+    The invocation outcome is retained until this check has completed, including when
+    the outcome is an error from fallible postprocessing after an internal private release.
+    In particular, an over-budget invocation error is withheld just like a successful answer.
 
-    Otherwise, the answer is returned on line \ref{return}.
+    Otherwise, the answer is returned on line \ref{return}, or the retained invocation error
+    is raised on line \ref{return-error}.
 \end{proof}
 
 \end{document}

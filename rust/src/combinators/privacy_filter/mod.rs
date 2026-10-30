@@ -38,6 +38,9 @@ mod ffi;
 /// to reject any query that would increase the total privacy loss
 /// above the privacy guarantee of the mechanism.
 ///
+/// An invocation that returns an error may still have consumed privacy budget.
+/// Its error is subject to the same budget check as a successful answer.
+///
 /// # Citations
 /// * [RRUV21 Privacy Odometers and Filters: Pay-as-you-Go Composition](https://arxiv.org/abs/1605.08294v1)
 /// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
@@ -114,7 +117,9 @@ where
                 );
             };
 
-            let answer = queryable.eval_query(query)?;
+            // Do not expose even an error until its privacy loss has been checked:
+            // postprocessing may have failed after an internal private release.
+            let answer = queryable.eval_query(query);
 
             let OdometerAnswer::<A, AB>::PrivacyLoss(pending_d_out) =
                 queryable.eval_poly(&OdometerQuery::<Q, QB>::PrivacyLoss(d_in.clone()))?
@@ -132,7 +137,7 @@ where
                 );
             }
 
-            Ok(answer)
+            answer
         }))
     })
 }

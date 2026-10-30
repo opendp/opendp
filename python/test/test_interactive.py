@@ -104,13 +104,10 @@ def test_fully_adaptive_composition():
     o_comp = space >> dp.c.then_fully_adaptive_composition(dp.max_divergence())
     assert space == o_comp.input_space
 
-    assert (
-        str(o_comp)
-        == """Odometer(
+    assert str(o_comp) == """Odometer(
     input_domain   = VectorDomain(AtomDomain(T=i32)),
     input_metric   = SymmetricDistance(),
     output_measure = MaxDivergence)"""
-    )
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
     assert qbl_comp.privacy_loss(max_influence) == 0.0
@@ -197,3 +194,91 @@ def test_fully_adaptive_composition_d_in():
 
     with pytest.raises(dp.OpenDPException, match="must match the d_in passed"):
         qbl.privacy_loss(2)
+
+
+def _failing_constructor_after_release(_released):
+    # Exercise a real native constructor failure after the randomized response
+    # has already run, rather than replacing the compositor with a mock.
+    return dp.m.make_randomized_response_bool(prob=-1.0)
+
+
+def test_adaptive_failed_postprocessing_consumes_budget():
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    qbl = dp.c.make_adaptive_composition(
+        *rr.input_space,
+        rr.output_measure,
+        d_in=1,
+        d_mids=[rr.map(1)],
+    )(True)
+    with pytest.raises(dp.OpenDPException):
+        qbl(rr >> _failing_constructor_after_release)
+    with pytest.raises(dp.OpenDPException, match="out of queries"):
+        qbl(rr)
+
+
+def test_fully_adaptive_failed_postprocessing_counts_privacy_loss():
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    qbl = dp.c.make_fully_adaptive_composition(*rr.input_space, rr.output_measure)(True)
+    with pytest.raises(dp.OpenDPException):
+        qbl(rr >> _failing_constructor_after_release)
+    assert qbl.privacy_loss(1) == rr.map(1)
+    assert isinstance(qbl(rr), bool)
+    assert qbl.privacy_loss(1) > rr.map(1)
+
+
+def test_filter_failed_postprocessing_counts_privacy_loss():
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    odometer = dp.c.make_fully_adaptive_composition(*rr.input_space, rr.output_measure)
+    qbl = dp.c.make_privacy_filter(odometer, d_in=1, d_out=3.0)(True)
+    with pytest.raises(dp.OpenDPException):
+        qbl(rr >> _failing_constructor_after_release)
+    assert qbl.privacy_loss(1) == rr.map(1)
+    assert isinstance(qbl(rr), bool)
+    assert qbl.privacy_loss(1) > rr.map(1)
+
+
+def test_filter_exhaustion_withholds_postprocessing_error():
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    odometer = dp.c.make_fully_adaptive_composition(*rr.input_space, rr.output_measure)
+    qbl = dp.c.make_privacy_filter(odometer, d_in=1, d_out=0.0)(True)
+    with pytest.raises(dp.OpenDPException, match="filter is now exhausted"):
+        qbl(rr >> _failing_constructor_after_release)
+    with pytest.raises(dp.OpenDPException, match="filter is exhausted"):
+        qbl(rr)
+
+
+def test_filter_failed_postprocessing_cannot_refund_budget():
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    odometer = dp.c.make_fully_adaptive_composition(*rr.input_space, rr.output_measure)
+    qbl = dp.c.make_privacy_filter(odometer, d_in=1, d_out=rr.map(1))(True)
+    with pytest.raises(dp.OpenDPException):
+        qbl(rr >> _failing_constructor_after_release)
+    with pytest.raises(dp.OpenDPException, match="filter is now exhausted"):
+        qbl(rr)
+
+
+@pytest.mark.parametrize("kind", ["adaptive", "odometer", "filter"])
+def test_pre_invocation_validation_does_not_consume_budget(kind):
+    rr = dp.m.make_randomized_response_bool(prob=0.75)
+    if kind == "adaptive":
+        qbl = dp.c.make_adaptive_composition(
+            *rr.input_space, rr.output_measure, d_in=1, d_mids=[rr.map(1)]
+        )(True)
+    else:
+        odometer = dp.c.make_fully_adaptive_composition(
+            *rr.input_space, rr.output_measure
+        )
+        qbl = (
+            odometer
+            if kind == "odometer"
+            else dp.c.make_privacy_filter(odometer, d_in=1, d_out=rr.map(1))
+        )(True)
+
+    wrong_space = dp.m.make_laplace(
+        dp.atom_domain(T=int), dp.absolute_distance(T=int), scale=1.0
+    )
+    with pytest.raises(dp.OpenDPException):
+        qbl(wrong_space)
+    if kind != "adaptive":
+        assert qbl.privacy_loss(1) == 0.0
+    assert isinstance(qbl(rr), bool)
