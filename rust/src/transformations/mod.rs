@@ -19,11 +19,6 @@ mod b_ary_tree;
 pub use b_ary_tree::*;
 
 #[cfg(feature = "contrib")]
-mod dataframe;
-#[cfg(feature = "contrib")]
-pub use dataframe::*;
-
-#[cfg(feature = "contrib")]
 pub mod quantile_score_candidates;
 #[cfg(feature = "contrib")]
 pub use quantile_score_candidates::*;

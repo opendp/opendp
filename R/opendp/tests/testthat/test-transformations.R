@@ -85,10 +85,10 @@ test_that("test_cast_inherent", {
 })
 
 test_that("test_impute_constant_inherent", {
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_constant(-1.)
-  expect_equal(tester(arg = "nan\n1."), c(-1., 1.))
+  expect_equal(tester(arg = c("nan", "1.")), c(-1., 1.))
 })
 
 test_that("test_cast_default", {
@@ -118,42 +118,41 @@ test_that("test_is_equal", {
 })
 
 test_that("test_is_null", {
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_is_null()
-  expect_equal(tester(arg = "nan\n1.\ninf"), c(TRUE, FALSE, FALSE))
+  expect_equal(tester(arg = c("nan", "1.", "inf")), c(TRUE, FALSE, FALSE))
 
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast(.TOA = f64) |>
     then_is_null()
-  expect_equal(tester(arg = "nan\n1.\ninf"), c(TRUE, FALSE, FALSE))
+  expect_equal(tester(arg = c("nan", "1.", "inf")), c(TRUE, FALSE, FALSE))
 })
 
-test_that("test_split_lines__cast__impute", {
-  expect_equal(make_split_lines()(arg = "1\n2\n3"), c("1", "2", "3"))
-  query <- make_split_lines() |>
+test_that("test_cast_impute_pipeline", {
+  query <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast(.TOA = i32) |>
     then_impute_constant(constant = 2L)
 
-  expect_equal(query(arg = "1\n2\n3"), c(1L, 2L, 3L))
+  expect_equal(query(arg = c("1", "2", "3")), c(1L, 2L, 3L))
   expect_equal(query(d_in = 1L), 1L)
 })
 
 test_that("test_inherent_cast__impute", {
-  casted <- make_split_lines() |>
+  casted <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_constant(constant = 9.)
 
-  expect_equal(casted(arg = "a\n23.23\n12"), c(9.0, 23.23, 12.0))
+  expect_equal(casted(arg = c("a", "23.23", "12")), c(9.0, 23.23, 12.0))
   expect_equal(casted(d_in = 1L), 1L)
 })
 
 test_that("test_inherent_cast__impute_uniform", {
-  casted <- make_split_lines() |>
+  casted <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_uniform_float(bounds = c(23., 32.5))
 
-  res <- casted(arg = "a\n23.23\n12")
+  res <- casted(arg = c("a", "23.23", "12"))
   expect_equal(tail(res, -1), c(23.23, 12.0))
   expect_lte(23.0, res[[1]])
   expect_lte(res[[1]], 32.5)
