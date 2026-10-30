@@ -122,3 +122,140 @@ fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
     assert!(qbl.privacy_loss(2).is_ok());
     Ok(())
 }
+
+#[test]
+fn test_fully_adaptive_failed_postprocessing_counts_privacy_loss() -> Fallible<()> {
+    let rr = make_randomized_response_bool(0.75, false)?;
+    let budget = rr.map(&1)?;
+    let failing = (rr.clone()
+        >> Function::new_fallible(|_: &bool| {
+            make_randomized_response_bool(-1.0, false)?;
+            Ok(false)
+        }))?;
+    let mut qbl = make_fully_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        None,
+    )?
+    .invoke(&true)?;
+
+    assert!(qbl.invoke(failing).is_err());
+    assert_eq!(qbl.privacy_loss(1)?, budget);
+    assert!(qbl.invoke(rr).is_ok());
+    assert_eq!(
+        qbl.privacy_loss(1)?,
+        MaxDivergence.compose(vec![budget; 2])?
+    );
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_pre_invocation_rejection_does_not_count() -> Fallible<()> {
+    let measurement = |domain| {
+        Measurement::new(
+            domain,
+            DiscreteDistance,
+            MaxDivergence,
+            Function::new(|_: &i32| 0_i32),
+            PrivacyMap::new(|_| 1.0),
+        )
+    };
+    let mut qbl = make_fully_adaptive_composition(
+        AtomDomain::<i32>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        None,
+    )?
+    .invoke(&0)?;
+    assert!(
+        qbl.invoke(measurement(AtomDomain::new_closed((0, 1))?)?)
+            .is_err()
+    );
+    assert_eq!(qbl.privacy_loss(1)?, 0.0);
+    assert_eq!(qbl.invoke(measurement(AtomDomain::default())?)?, 0);
+    assert_eq!(qbl.privacy_loss(1)?, 1.0);
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_failure_retires_previous_sequential_child() -> Fallible<()> {
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let failing = (child.clone()
+        >> Function::new_fallible(|_: &Queryable<(), bool>| {
+            fallible!(FailedFunction, "postprocessing failed") as Fallible<Queryable<(), bool>>
+        }))?;
+    let mut qbl = make_fully_adaptive_composition::<_, _, _, Box<dyn Any>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        None,
+    )?
+    .invoke(&true)?;
+
+    let mut previous: Queryable<(), bool> = qbl.invoke_poly(child.into_poly())?;
+    assert!(previous.eval(&())?);
+    assert!(qbl.invoke(failing.into_poly()).is_err());
+    assert!(previous.eval(&()).is_err());
+    assert_eq!(
+        qbl.privacy_loss(1)?,
+        Approximate(ZeroConcentratedDivergence).compose(vec![(1.0, 1e-7); 2])?
+    );
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_failed_postprocessing_child_keeps_sequential_wrapper() -> Fallible<()> {
+    let escaped = Rc::new(RefCell::new(None));
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let failing = (child.clone()
+        >> Function::new_fallible(enclose!(escaped, move |qbl: &Queryable<(), bool>| {
+            *escaped.borrow_mut() = Some(qbl.clone());
+            fallible!(FailedFunction, "postprocessing failed") as Fallible<Queryable<(), bool>>
+        })))?;
+    let mut qbl = make_fully_adaptive_composition::<_, _, _, Box<dyn Any>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        None,
+    )?
+    .invoke(&true)?;
+
+    assert!(qbl.invoke(failing.into_poly()).is_err());
+    let mut current: Queryable<(), bool> = qbl.invoke_poly(child.into_poly())?;
+    assert!(current.eval(&())?);
+    assert!(escaped.borrow_mut().as_mut().unwrap().eval(&()).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_sequential_child_accepts_queries() -> Fallible<()> {
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let mut qbl = make_fully_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        None,
+    )?
+    .invoke(&true)?;
+    assert!(qbl.invoke(child)?.eval(&())?);
+    Ok(())
+}
