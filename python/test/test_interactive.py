@@ -104,10 +104,13 @@ def test_fully_adaptive_composition():
     o_comp = space >> dp.c.then_fully_adaptive_composition(dp.max_divergence())
     assert space == o_comp.input_space
 
-    assert str(o_comp) == """Odometer(
+    assert (
+        str(o_comp)
+        == """Odometer(
     input_domain   = VectorDomain(AtomDomain(T=i32)),
     input_metric   = SymmetricDistance(),
     output_measure = MaxDivergence)"""
+    )
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
     assert qbl_comp.privacy_loss(max_influence) == 0.0
