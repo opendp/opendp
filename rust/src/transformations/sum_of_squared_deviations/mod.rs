@@ -18,6 +18,10 @@ use super::UncheckedSum;
     generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(
+    since = "0.16.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
+)]
 /// Make a Transformation that computes the sum of squared deviations of bounded data.
 ///
 /// This uses a restricted-sensitivity proof that takes advantage of known dataset size.

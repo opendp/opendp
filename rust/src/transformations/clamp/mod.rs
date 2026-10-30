@@ -19,6 +19,7 @@ use crate::transformations::make_row_by_row_fallible;
     generics(TA(suppress), M(suppress)),
     derived_types(TA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that clamps numeric data in `Vec<TA>` to `bounds`.
 ///
 /// If datum is less than lower, let datum be lower.

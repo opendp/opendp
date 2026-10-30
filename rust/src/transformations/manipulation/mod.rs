@@ -112,6 +112,10 @@ where
     features("contrib", "honest-but-curious"),
     generics(D(suppress), M(suppress))
 )]
+#[deprecated(
+    since = "0.16.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
+)]
 /// Make a Transformation representing the identity function.
 ///
 /// WARNING: In Python, this function does not ensure that the domain and metric form a valid metric space.
@@ -163,6 +167,7 @@ where
         M = "$get_type(input_metric)"
     )
 )]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that checks if each element is equal to `value`.
 ///
 /// # Arguments
@@ -192,6 +197,7 @@ where
 }
 
 #[bootstrap(features("contrib"), generics(M(suppress), DIA(suppress)))]
+#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
 /// Make a Transformation that checks if each element in a vector is null or nan.
 ///
 /// # Arguments
