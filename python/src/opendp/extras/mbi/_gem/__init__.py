@@ -16,7 +16,7 @@ import importlib.util
 import warnings
 
 if importlib.util.find_spec("mbi") is not None:
-    import jax
+    import jax  # type: ignore[import-untyped,import-not-found]
 
     # Estimates must be f64 to pass through the OpenDP FFI. Set this before
     # importing mbi, which warns at import when JAX is in float32 mode.
@@ -26,10 +26,10 @@ if importlib.util.find_spec("mbi") is not None:
         # mbi also warns at import when JAX's compilation cache is on. That is
         # advice for the user's JAX setup, so don't fail module import on it.
         warnings.filterwarnings("ignore", message="JAX persistent compilation cache")
-        import jax.nn
-        import jax.numpy as jnp
-        import optax
-        from mbi import (
+        import jax.nn  # type: ignore[import-untyped,import-not-found]
+        import jax.numpy as jnp  # type: ignore[import-untyped,import-not-found]
+        import optax  # type: ignore[import-untyped,import-not-found]
+        from mbi import (  # type: ignore[import-untyped,import-not-found]
             DatavectorQuery,
             Domain,
             Factor,
@@ -37,9 +37,9 @@ if importlib.util.find_spec("mbi") is not None:
             LinearMeasurement,
             MarginalLossFn,
         )
-        from mbi.extensions.mixture_of_products import MixtureOfProducts
-        from mbi.clique_utils import maximal_subset
-        from mbi.estimation import minimum_variance_unbiased_total, Estimator
+        from mbi.extensions.mixture_of_products import MixtureOfProducts  # type: ignore[import-untyped,import-not-found]
+        from mbi.clique_utils import maximal_subset  # type: ignore[import-untyped,import-not-found]
+        from mbi.estimation import minimum_variance_unbiased_total, Estimator  # type: ignore[import-untyped,import-not-found]
 
     @jax.tree_util.register_dataclass
     @dataclass(frozen=True)
@@ -206,7 +206,7 @@ if importlib.util.find_spec("mbi") is not None:
         :param marginals: CliqueVector of the model's marginals
         :param measurements: LinearMeasurements, including those added by the closure
         """
-        loss = 0.0
+        loss = jnp.array(0.0)
         for m in measurements:
             mu = marginals.project(m.clique)
             loss += jnp.sum(jnp.abs(m.query(mu) - m.noisy_measurement))

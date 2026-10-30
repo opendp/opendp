@@ -9,11 +9,11 @@ import pytest
 pytest.importorskip("mbi")
 jax = pytest.importorskip("jax")
 
-import jax.numpy as jnp
+import jax.numpy as jnp  # type: ignore[import-untyped,import-not-found]
 import numpy as np
-import optax
-from mbi import Domain, LinearMeasurement
-from mbi.marginal_loss import from_linear_measurements
+import optax  # type: ignore[import-untyped,import-not-found]
+from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+from mbi.marginal_loss import from_linear_measurements  # type: ignore[import-untyped,import-not-found]
 
 from opendp.extras.mbi._gem import GemPlusEstimator, GemPlusModel, gem_plus
 
