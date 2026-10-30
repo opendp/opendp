@@ -412,7 +412,8 @@ def test_lipschitz_mul_float():
     ) >> dp.t.then_lipschitz_float_mul(1 / 10, (-3.0, 4.0))
 
     assert trans([3.0] * 10) == 0.4
-    assert trans.map(2) == 1.0000000000000153
+    # Include the sequential sum's rounding error relaxation before scaling.
+    assert trans.map(2) == 1.0000000000000449
 
 
 # pytest.mark will override pytest.ini and reenable DeprecationWarnings,
