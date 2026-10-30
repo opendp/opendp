@@ -20,7 +20,7 @@ use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars::prelude::{DslPlan, JoinType, UniqueKeepStrategy, col, lit};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -28,7 +28,7 @@ mod test;
 
 mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
-use polars_plan::prelude::ProjectionOptions;
+use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
 
 #[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
@@ -96,15 +96,10 @@ where
 
     // 2: prepare for release of `aggs`
     let group_by_id = HashSet::from_iter(group_by.iter().cloned());
-    let mut margin = middle_domain.get_margin(&group_by_id);
-
-    let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
-        let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
-        margin.max_groups = Some(num_keys.column("len")?.u32()?.last().unwrap());
-        true
-    } else {
-        false
-    };
+    // Do not infer max_groups from the public key frame: it may change
+    // between measurement construction and invocation, invalidating the bound.
+    let margin = middle_domain.get_margin(&group_by_id);
+    let is_join = matches!(key_sanitizer, Some(KeySanitizer::Join { .. }));
 
     let m_expr_aggs = aggs.into_iter().map(|expr| {
         expr.make_private(
@@ -205,12 +200,27 @@ where
                 options,
                 fill_null,
             }) => {
-                let (input_left, input_right) = match how {
-                    JoinType::Left => (labels, Arc::new(output)),
-                    JoinType::Right => (Arc::new(output), labels),
+                // Deduplicate before joining: duplicates repeat an existing group's
+                // noisy result but independently impute absent groups, revealing membership.
+                let public_on = match how {
+                    JoinType::Left => left_on.clone(),
+                    JoinType::Right => right_on.clone(),
                     _ => unreachable!(
                         "Invariant: by constructor checks, JoinType is only Left or Right"
                     ),
+                };
+                let labels = Arc::new(DslPlan::Distinct {
+                    input: labels,
+                    options: DistinctOptionsDSL {
+                        subset: Some(public_on),
+                        keep_strategy: UniqueKeepStrategy::Any,
+                        maintain_order: false,
+                    },
+                });
+                let (input_left, input_right) = match how {
+                    JoinType::Left => (labels, Arc::new(output)),
+                    JoinType::Right => (Arc::new(output), labels),
+                    _ => unreachable!(),
                 };
                 DslPlan::HStack {
                     input: Arc::new(DslPlan::Join {

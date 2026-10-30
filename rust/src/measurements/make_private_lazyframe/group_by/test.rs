@@ -144,10 +144,12 @@ fn test_explicit_keys() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<u32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
     ])?
-    .with_margin(Margin::by(["A"]).with_max_length(1))?;
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(1))?;
 
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
-    let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();
+    let mut key_values = (0u32..N_SAMPLES).collect::<Vec<_>>();
+    key_values.push(0); // Public key zero occurs twice; output must still have N_SAMPLES rows.
+    let keys = df!("A" => key_values)?.lazy();
 
     let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
@@ -193,6 +195,274 @@ fn test_explicit_keys() -> Fallible<()> {
         &[N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;
 
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_partial_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let grouped = data
+        .group_by(&[col("A"), col("B")])
+        .agg(&[len().dp().noise(Some(1.0))]);
+    for left in [true, false] {
+        let public = df!("A" => [0i32])?.lazy();
+        let joined = if left {
+            public.join(
+                grouped.clone(),
+                [col("A")],
+                [col("A")],
+                JoinType::Left.into(),
+            )
+        } else {
+            grouped
+                .clone()
+                .join(public, [col("A")], [col("A")], JoinType::Right.into())
+        };
+        let error = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+        assert_eq!(error.variant, MakeMeasurement);
+        assert_eq!(
+            error.message.as_deref(),
+            Some("join keys must match group-by keys")
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_deduplicates_public_keys() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<String>::default()),
+    ])?
+    .with_margin(Margin::by(["A", "B"]).with_max_length(1))?;
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let grouped = data
+        .clone()
+        .group_by([col("A"), col("B")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let public = df!(
+        "A" => [0i32, 0, 1],
+        "B" => ["private", "private", "absent"],
+        "meta" => ["first", "second", "third"]
+    )?
+    .lazy();
+
+    for left in [true, false] {
+        let joined = if left {
+            public.clone().join(
+                grouped.clone(),
+                [col("A"), col("B")],
+                [col("A"), col("B")],
+                JoinType::Left.into(),
+            )
+        } else {
+            grouped.clone().join(
+                public.clone(),
+                [col("A"), col("B")],
+                [col("A"), col("B")],
+                JoinType::Right.into(),
+            )
+        };
+
+        assert!(match_group_by(joined.logical_plan.clone())?.is_some());
+        let meas = make_private_group_by(
+            domain.clone().cast_carrier(),
+            FrameDistance(SymmetricDistance),
+            MaxDivergence,
+            joined.logical_plan,
+            Some(1.0),
+            None,
+        )?;
+        let released_plan = meas.invoke(&data.logical_plan)?;
+        let DslPlan::HStack { input, .. } = &released_plan else {
+            panic!("expected imputation after the join");
+        };
+        let DslPlan::Join {
+            input_left,
+            input_right,
+            ..
+        } = input.as_ref()
+        else {
+            panic!("expected public-key join");
+        };
+        let public_keys = if left { input_left } else { input_right };
+        let DslPlan::Distinct { options, .. } = public_keys.as_ref() else {
+            panic!("expected deduplication on the public side");
+        };
+        assert_eq!(options.subset, Some(vec![col("A"), col("B")]));
+
+        let release = LazyFrame::from(released_plan).collect()?;
+        assert_eq!(release.height(), 2);
+        assert!(release.column("meta").is_ok());
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_collisions() -> Fallible<()> {
+    let private = df!("A" => [0i32])?
+        .lazy()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0)).alias("count")]);
+
+    for left in [true, false] {
+        let keys = df!("A" => [0i32], "count" => [2u32])?.lazy();
+        let joined = if left {
+            keys.join(
+                private.clone(),
+                [col("A")],
+                [col("A")],
+                JoinType::Left.into(),
+            )
+        } else {
+            private
+                .clone()
+                .join(keys, [col("A")], [col("A")], JoinType::Right.into())
+        };
+        let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+        assert_eq!(err.variant, MakeMeasurement);
+        assert_eq!(
+            err.message.as_deref(),
+            Some("public columns must not conflict with private output columns")
+        );
+    }
+
+    // Even a public join key may shadow an aggregate with the same name.
+    let keys = df!("count" => [0i32])?.lazy();
+    let joined = private
+        .clone()
+        .join(keys, [col("A")], [col("count")], JoinType::Right.into());
+    let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("public columns must not conflict with private output columns")
+    );
+
+    // Different key names are fine when the schemas are otherwise disjoint.
+    let keys = df!("K" => [0i32])?.lazy();
+    let joined = private.join(keys, [col("A")], [col("K")], JoinType::Right.into());
+    assert!(match_group_by(joined.logical_plan)?.is_some());
+
+    // The private key A is coalesced even when public A is not paired with it.
+    let private = df!("A" => [0i32], "B" => [1i32])?
+        .lazy()
+        .group_by([col("A"), col("B")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let public = df!("A" => [1i32], "B" => [0i32])?.lazy();
+    let joined = private.join(
+        public,
+        [col("A"), col("B")],
+        [col("B"), col("A")],
+        JoinType::Right.into(),
+    );
+    assert!(match_group_by(joined.logical_plan)?.is_some());
+
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_unsafe_options() -> Fallible<()> {
+    let private = df!("A" => [0i32])?
+        .lazy()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let keys = df!("A" => [0i32, 1])?.lazy();
+
+    let mut args: JoinArgs = JoinType::Left.into();
+    args.coalesce = JoinCoalesce::KeepColumns;
+    let joined = keys
+        .clone()
+        .join(private.clone(), [col("A")], [col("A")], args);
+    let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("DP key joins must coalesce join keys")
+    );
+
+    // The LazyFrame join builder panics on slicing; construct the DSL directly.
+    let joined = private.join(keys, [col("A")], [col("A")], JoinType::Right.into());
+    let DslPlan::Join {
+        input_left,
+        input_right,
+        left_on,
+        right_on,
+        predicates,
+        options,
+    } = joined.logical_plan
+    else {
+        panic!("expected join");
+    };
+    let mut options = (*options).clone();
+    options.args.slice = Some((0, 1));
+    let joined = DslPlan::Join {
+        input_left,
+        input_right,
+        left_on,
+        right_on,
+        predicates,
+        options: Arc::new(options),
+    };
+    let err = match_group_by(joined).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("DP key joins cannot be sliced because slicing introduces order dependence")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_mismatched_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let mismatched = data
+        .group_by(&[col("A"), col("B")])
+        .agg(&[len().dp().noise(Some(1.0)).alias("C")])
+        .join(
+            df!("A" => [0i32], "C" => [0u32])?.lazy(),
+            [col("A"), col("C")],
+            [col("A"), col("C")],
+            JoinType::Right.into(),
+        );
+    let error = match_group_by(mismatched.logical_plan)
+        .map(|_| ())
+        .unwrap_err();
+    assert_eq!(error.variant, MakeMeasurement);
+    assert_eq!(
+        error.message.as_deref(),
+        Some("join keys must match group-by keys")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_accepts_computed_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let computed = data
+        .group_by(&[col("A").gt(lit(0))])
+        .agg(&[len().dp().noise(Some(1.0))])
+        .join(
+            df!("A" => [true, false])?.lazy(),
+            [col("A")],
+            [col("A")],
+            JoinType::Right.into(),
+        );
+    assert!(match_group_by(computed.logical_plan)?.is_some());
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_accepts_aliased_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let aliased = data
+        .group_by(&[col("A").alias("key")])
+        .agg(&[len().dp().noise(Some(1.0))])
+        .join(
+            df!("key" => [0i32])?.lazy(),
+            [col("key")],
+            [col("key")],
+            JoinType::Right.into(),
+        );
+    assert!(match_group_by(aliased.logical_plan)?.is_some());
     Ok(())
 }
 

@@ -39,11 +39,7 @@ def make_private_group_by(
 
     # 2: prepare for release of `aggs` |\label{line:prep-release-aggs}|
     match key_sanitizer:
-        case KeySanitizer.Join(keys):
-            num_keys = LazyFrame.from_(keys).select([len()]).collect()
-            margin.max_num_partitions = (
-                num_keys.column("len").u32().last()
-            )  # |\label{line:keys-len}|
+        case KeySanitizer.Join(_):
             is_join = True
         case _:
             is_join = False
@@ -126,6 +122,16 @@ def make_private_group_by(
                 fill_null,
                 keys=labels,
             ):
+                # Deduplicate public keys before joining and imputing.
+                public_on = left_on if how == JoinType.Left else right_on
+                labels = DslPlan.Distinct(
+                    input=labels,
+                    options=DistinctOptionsDSL(
+                        subset=public_on,
+                        keep_strategy=UniqueKeepStrategy.Any,
+                        maintain_order=False,
+                    ),
+                )
                 match how:  # |\label{line:join-how}|
                     case JoinType.Left:
                         input_left, input_right = labels, output
