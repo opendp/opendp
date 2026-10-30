@@ -39,7 +39,6 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         dp.m.then_gaussian(1),
         # Compositions:
         chained,
-        dp.c.make_population_amplification(chained, population_size=100),
     ],
     ids=lambda arg: str(arg),
 )
