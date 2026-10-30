@@ -69,6 +69,24 @@ def test_make_user_measurement():
     assert mech.map(200) == 0.0
 
 
+def test_invocation_does_not_retain_private_data():
+    class Release:
+        pass
+
+    private_data = 17
+    release = Release()
+    measurement = dp.m.make_user_measurement(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(int),
+        dp.max_divergence(),
+        lambda _: release,
+        lambda _: 0.0,
+        TO="ExtrinsicObject",
+    )
+    assert measurement(private_data) is release
+    assert not hasattr(release, "__opendp_dict__")
+
+
 def make_postprocess_frac():
     """An example user-defined postprocessor from Python"""
 

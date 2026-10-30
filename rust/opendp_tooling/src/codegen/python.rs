@@ -405,13 +405,25 @@ fn generate_docstring_return_arg(arg: &Argument) -> String {
 /// - the call constructs and retrieves the ffi function name, sets ctypes,
 ///     makes the call, handles errors, and converts the response to python
 fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, String>) -> String {
+    let c_type = func.ret.c_type();
+    let c_type = c_type
+        .strip_prefix("FfiResult<")
+        .and_then(|c_type| c_type.strip_suffix('>'))
+        .unwrap_or(&c_type);
+    let serialization = if matches!(
+        c_type,
+        "AnyMeasurement *" | "AnyTransformation *" | "AnyDomain *" | "AnyMetric *" | "AnyMeasure *"
+    ) {
+        format!("\n{}", generate_serialization(module_name, func))
+    } else {
+        String::new()
+    };
+
     format!(
         r#"{flag_checker}{type_arg_formatter}
 {data_converter}
-{make_call}
-{serialization}
+{make_call}{serialization}
 return output"#,
-        serialization = generate_serialization(module_name, func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
