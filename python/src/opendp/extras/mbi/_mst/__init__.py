@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import itertools
-from typing import Any, Optional, cast, TYPE_CHECKING
+from typing import Any, Optional, Sequence, cast, TYPE_CHECKING
 
 from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
@@ -211,7 +211,7 @@ def _make_mst_select(
     output_measure: Measure,
     d_in,
     d_out,
-    edges: list[tuple[str, str]],
+    edges: Sequence[tuple[str, str]],
     model,  # MarkovRandomField
     num_selections: Optional[int] = None,
 ) -> Measurement:
@@ -220,6 +220,7 @@ def _make_mst_select(
     from scipy.cluster.hierarchy import DisjointSet  # type: ignore[import-untyped,import-not-found]
 
     model = cast(MarkovRandomField, model)
+    edges = tuple((a, b) for a, b in edges)
 
     max_selections = len(model.domain.attributes) - 1
     num_selections = min(max(0, num_selections or max_selections), max_selections)
@@ -275,13 +276,15 @@ def _make_mst_select(
 def _make_mst_scores(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
-    queries: list[tuple[str, str]],
+    queries: Sequence[tuple[str, str]],
     model,  # MarkovRandomField
 ):
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
     import numpy as np  # type: ignore[import-not-found]
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
+
+    queries = tuple((a, b) for a, b in queries)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)

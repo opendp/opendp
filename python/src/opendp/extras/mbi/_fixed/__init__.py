@@ -1,7 +1,7 @@
 """Releases all queries in a fixed workload."""
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class Fixed(Algorithm):
     """Releases all queries in a fixed workload."""
 
-    queries: list[Count]
+    queries: Sequence[Count]
     """Workload of queries."""
     oneway: OnewayType = ONEWAY_UNKEYED
     """Only fit one-way marginals for columns missing keys.
@@ -57,6 +57,8 @@ class Fixed(Algorithm):
 
         if not all(isinstance(q, Count) for q in self.queries):
             raise ValueError("queries must be of type Count")
+
+        object.__setattr__(self, "queries", tuple(self.queries))
 
     def make_marginals(
         self,

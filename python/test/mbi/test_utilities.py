@@ -1,3 +1,5 @@
+from dataclasses import FrozenInstanceError
+
 import pytest
 from opendp.extras.mbi import Count, AIM
 import re
@@ -7,6 +9,7 @@ from opendp.extras.mbi._utilities import (
     Marginals,
     SelectPrefixQuery,
     _noise_sensitivity,
+    _snapshot_bounds,
     get_cardinalities,
     get_scale,
     get_std,
@@ -24,6 +27,13 @@ from ..helpers import ids
 def test_count_post_init():
     with pytest.raises(ValueError):
         Count(("A",), weight=-1)
+
+    by = ["A"]
+    count = Count(by, weight=1.0)  # type: ignore[arg-type]
+    by[0] = "B"
+    assert count.by == ("A",)
+    with pytest.raises(FrozenInstanceError):
+        count.weight = 2.0  # type: ignore[misc]
 
 
 def test_algorithm_post_init():
@@ -47,6 +57,35 @@ def test_typed_dict_domain():
         domain.member(dict(A=True))
 
     assert domain.member(dict(A=1))
+
+
+def test_typed_dict_domain_snapshots_mapping():
+    domains = {"A": dp.atom_domain(T=int)}
+    domain = typed_dict_domain(domains)
+
+    domains["A"] = dp.atom_domain(T=str)
+    domains["B"] = dp.atom_domain(T=int)
+    assert domain.member({"A": 1})
+    with pytest.warns(Warning, match="does not belong to carrier type"):
+        domain.member({"A": "changed"})
+
+
+def test_snapshot_bounds():
+    pl = pytest.importorskip("polars")
+
+    by = [pl.col("A")]
+    bound = dp.polars.Bound(by=by, per_group=2, num_groups=3)
+    bounds = [bound]
+    snapshot = _snapshot_bounds(bounds)
+
+    by[0] = pl.col("B")
+    bound.per_group = 9
+    bounds.clear()
+
+    assert len(snapshot) == 1
+    assert snapshot[0].by[0].meta.output_name() == "A"
+    assert snapshot[0].per_group == 2
+    assert snapshot[0].num_groups == 3
 
 
 def test_get_std():
@@ -112,6 +151,30 @@ def test_make_stable_marginals():
             dp.frame_distance(dp.symmetric_distance()),
             cliques=[("A",)],
         )
+
+
+def test_make_stable_marginals_snapshots_cliques():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    cliques = [["A"]]
+    transformation = make_stable_marginals(
+        dp.lazyframe_domain(
+            [
+                dp.series_domain(c, dp.atom_domain(T="i32", bounds=(0, 1)))
+                for c in ("A", "B")
+            ]
+        ),
+        dp.frame_distance(dp.symmetric_distance()),
+        cliques,  # type: ignore[arg-type]
+    )
+    bounds = [dp.polars.Bound(per_group=1)]
+    expected = transformation.map(bounds)
+
+    cliques[0][0] = "B"
+    cliques.append(["B"])
+    assert transformation.map(bounds) == expected
+    assert set(transformation(pl.LazyFrame({"A": [0], "B": [1]}))) == {("A",)}
 
 
 def test_make_stable_marginals_clips_u32_counts(monkeypatch):
