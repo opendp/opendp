@@ -20,7 +20,7 @@ use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars::prelude::{DataType, DslPlan, JoinType, LazyFrame, col, len, lit};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -83,6 +83,13 @@ where
         )?;
 
         let series_domain = &t_group_by.output_domain.column;
+        if contains_float(&series_domain.dtype()) {
+            return fallible!(
+                MakeMeasurement,
+                "Floating-point grouping keys are not supported because Polars may reveal distinct representations of signed zero or NaN. Convert {} to a non-floating-point type before grouping.",
+                series_domain.name
+            );
+        }
         if let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() {
             if domain.categories().is_none() {
                 return fallible!(
@@ -320,6 +327,17 @@ where
             function,
             privacy_map,
         )?
+}
+
+/// Polars groups signed zeros and NaNs together but may release an original
+/// representative, so floating-point values cannot occur in private group keys.
+fn contains_float(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
+        DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
+        _ => false,
+    }
 }
 
 fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {

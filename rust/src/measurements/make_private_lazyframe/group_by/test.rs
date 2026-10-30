@@ -11,6 +11,94 @@ use polars::prelude::*;
 use super::*;
 
 #[test]
+fn test_reject_float_grouping_keys() -> Fallible<()> {
+    macro_rules! check {
+        ($ty:ty, $values:expr) => {{
+            let domain = LazyFrameDomain::new(vec![
+                SeriesDomain::new("key", AtomDomain::<$ty>::default()),
+            ])?;
+            let lf = df!("key" => $values)?.lazy();
+            for key in [col("key"), col("key").alias("aliased")] {
+                let err = make_private_lazyframe(
+                    domain.clone(),
+                    SymmetricDistance,
+                    Approximate(MaxDivergence),
+                    lf.clone().group_by(&[key]).agg(&[len().dp().noise(None)]),
+                    Some(1.),
+                    Some(10),
+                )
+                .map(|_| ())
+                .unwrap_err();
+
+                let message = err.message.as_deref().unwrap_or_default();
+                assert!(message.contains("Floating-point grouping keys"), "{err:?}");
+                assert_eq!(err.variant, MakeMeasurement);
+            }
+        }};
+    }
+
+    check!(f32, [-0.0f32, 0.0f32]);
+    check!(f64, [f64::NAN, f64::from_bits(0x7ff8_0000_0000_0001)]);
+    Ok(())
+}
+
+#[test]
+fn test_contains_float_nested() {
+    assert!(contains_float(&DataType::Float16));
+    assert!(contains_float(&DataType::Array(
+        Box::new(DataType::Float32),
+        2
+    )));
+    assert!(contains_float(&DataType::List(Box::new(DataType::Float64))));
+    assert!(contains_float(&DataType::Struct(vec![Field::new(
+        "nested".into(),
+        DataType::Array(Box::new(DataType::Float32), 2),
+    )])));
+
+    assert!(!contains_float(&DataType::Int32));
+    assert!(!contains_float(&DataType::Array(
+        Box::new(DataType::Int32),
+        2
+    )));
+}
+
+#[test]
+fn test_cast_float_grouping_keys_allowed() -> Fallible<()> {
+    let domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("key", AtomDomain::<f64>::default())])?;
+    let lf = df!("key" => [-0.0f64, 0.0, f64::NAN])?.lazy();
+
+    make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key").cast(DataType::Int64)])
+            .agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )?;
+    Ok(())
+}
+
+#[test]
+fn test_float_non_grouping_column_allowed() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+    ])?;
+    let lf = df!("key" => [1i32, 1], "value" => [-0.0f64, f64::NAN])?.lazy();
+    make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )?;
+    Ok(())
+}
+
+#[test]
 fn test_aggregate() -> Fallible<()> {
     let lf_domain = DslPlanDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
