@@ -101,18 +101,7 @@ where
         );
     }
 
-    // use Polars to compute the output dtype
-    let mock_df = DataFrame::new(vec![
-        Column::new_empty("left".into(), &left_series.dtype()),
-        Column::new_empty("right".into(), &right_series.dtype()),
-    ])?;
-    let out_dtype = mock_df
-        .lazy()
-        .select([binary_expr(col("left"), op, col("right"))])
-        .collect()?
-        .column("left")?
-        .dtype()
-        .clone();
+    let out_dtype = super::infer_output_dtype(&expr, &input_domain)?;
 
     let field = Field::new(expr_output_name(&expr)?, out_dtype.clone());
     let mut series_domain = SeriesDomain::new_from_field(field)?;

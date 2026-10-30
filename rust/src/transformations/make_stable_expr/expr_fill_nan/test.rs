@@ -1,7 +1,10 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{NamedFrom, col, lit};
+use polars::prelude::{DataType, NamedFrom, col, lit};
 use polars::series::Series;
+use polars_plan::plans::typed_lit;
+
+use crate::core::Domain;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
@@ -80,5 +83,48 @@ fn test_make_expr_fill_nan_expr_filter_fail() -> Fallible<()> {
         err.message,
         Some("filter is not allowed in a row-by-row context".to_string())
     );
+    Ok(())
+}
+
+#[test]
+fn test_fill_nan_coercion() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", OptionDomain::new(AtomDomain::<f32>::default())),
+        SeriesDomain::new("y", AtomDomain::<f64>::new_non_nan()),
+    ])?
+    .row_by_row();
+    let data = df!(
+        "x" => [None, Some(f32::NAN), Some(1f32)],
+        "y" => [0.0f64, 2.0, 3.0],
+    )?
+    .lazy();
+
+    for (expr, expected_dtype) in [
+        (col("x").fill_nan(lit(0.0f64)), DataType::Float32),
+        (col("x").fill_nan(typed_lit(0.0f64)), DataType::Float64),
+        (col("x").fill_nan(col("y")), DataType::Float64),
+    ] {
+        let transformation = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        let output = &transformation.output_domain;
+        assert_eq!(output.column.dtype(), expected_dtype, "{expr:?}");
+        assert_eq!(
+            data.clone().select([expr.clone()]).collect()?.get_columns()[0].dtype(),
+            &expected_dtype,
+            "{expr:?}"
+        );
+        assert!(output.column.nullable, "{expr:?}");
+        let nan = match expected_dtype {
+            DataType::Float32 => output.column.atom_domain::<f32>()?.nan(),
+            DataType::Float64 => output.column.atom_domain::<f64>()?.nan(),
+            _ => unreachable!(),
+        };
+        assert!(!nan, "{expr:?}");
+        assert!(
+            output.member(&transformation.invoke(&data.logical_plan)?)?,
+            "{expr:?}"
+        );
+    }
     Ok(())
 }

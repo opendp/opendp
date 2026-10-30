@@ -95,14 +95,25 @@ where
         );
     }
 
+    if !matches!(
+        data_domain.column.dtype(),
+        DataType::Float32 | DataType::Float64
+    ) {
+        return fallible!(
+            MakeTransformation,
+            "fill_nan may only be applied to float data"
+        );
+    }
+
     let mut series_domain = data_domain.column.clone();
-    match series_domain.dtype() {
+    match super::infer_output_dtype(&expr, &input_domain)? {
         DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::new(None, None)),
         DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::new(None, None)),
-        _ => {
+        dtype => {
             return fallible!(
                 MakeTransformation,
-                "fill_nan may only be applied to float data"
+                "fill_nan produced an unsupported dtype: {}",
+                dtype
             );
         }
     }

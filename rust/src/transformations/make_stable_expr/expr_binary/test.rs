@@ -1,6 +1,7 @@
 use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
+use polars_plan::plans::typed_lit;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use super::*;
@@ -581,6 +582,37 @@ fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
         assert_eq!(
             observed.column("out")?,
             &Column::new("out".into(), expected)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "x",
+        AtomDomain::<f32>::new_non_nan(),
+    )])?
+    .row_by_row();
+    let data = df!("x" => [1.0f32, 2.0])?.lazy();
+
+    for expr in [
+        col("x") + lit(0.5f64),
+        col("x") + typed_lit(0.5f64),
+        lit(0.5f64) + col("x"),
+        col("x") + lit(1i32),
+        col("x") + typed_lit(1i32),
+    ] {
+        let actual_dtype = data.clone().select([expr.clone()]).collect()?.get_columns()[0]
+            .dtype()
+            .clone();
+        let transformation = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        assert_eq!(
+            transformation.output_domain.column.dtype(),
+            actual_dtype,
+            "{expr:?}"
         );
     }
     Ok(())

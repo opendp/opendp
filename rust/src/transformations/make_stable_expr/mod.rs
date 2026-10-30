@@ -1,4 +1,6 @@
 use opendp_derive::bootstrap;
+#[cfg(feature = "contrib")]
+use polars::prelude::{DataType, Field, Schema};
 use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
@@ -108,6 +110,18 @@ where
     (ExprDomain, MO): MetricSpace,
 {
     expr.make_stable(input_domain, input_metric)
+}
+
+// Ask Polars to resolve the dtype, including its dynamic-literal coercion rules.
+#[cfg(feature = "contrib")]
+fn infer_output_dtype(expr: &Expr, domain: &WildExprDomain) -> Fallible<DataType> {
+    let schema = Schema::from_iter(
+        domain
+            .columns
+            .iter()
+            .map(|column| Field::new(column.name.clone(), column.dtype())),
+    );
+    Ok(expr.to_field(&schema)?.dtype)
 }
 
 pub trait StableExpr<MI: Metric, MO: Metric> {
