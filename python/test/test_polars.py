@@ -1151,6 +1151,17 @@ def test_large_keys_warns(monkeypatch):
         )
 
 
+@pytest.mark.parametrize("time_unit", ["ms", "us"])
+def test_out_of_range_datetime_component(time_unit):
+    dtype = pl.Datetime(time_unit)
+    domain = dp.lazyframe_domain(
+        [dp.series_domain("t", dp.datetime_domain(time_unit=time_unit))]
+    )
+    query = seed({"t": dtype}).select(pl.col("t").dt.year())
+    with pytest.raises(dp.OpenDPException, match="out-of-range"):
+        dp.t.make_stable_lazyframe(domain, dp.symmetric_distance(), query)
+
+
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
 def test_datetime(dtype):
     dtype = getattr(pl, dtype)

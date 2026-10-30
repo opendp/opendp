@@ -59,19 +59,27 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let in_dtype = middle_domain.column.dtype();
-    if !matches!(
-        in_dtype,
-        DataType::Time | DataType::Datetime(_, _) | DataType::Date
-    ) {
-        return fallible!(
-            MakeTransformation,
-            "expected a temporal input type, got {}",
-            in_dtype
-        );
+    match in_dtype {
+        DataType::Time | DataType::Date | DataType::Datetime(TimeUnit::Nanoseconds, _) => {}
+        DataType::Datetime(_, _) => {
+            return fallible!(
+                MakeTransformation,
+                "Datetime component extraction may panic on out-of-range millisecond or microsecond timestamps."
+            );
+        }
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "expected a temporal input type, got {}",
+                in_dtype
+            );
+        }
     }
 
     let mut output_domain = middle_domain.clone();
     output_domain.column.set_dtype(to_dtype)?;
+    // Calendar extraction may produce null even from a non-null temporal column.
+    output_domain.column.nullable = true;
 
     t_prior
         >> Transformation::new(
@@ -89,8 +97,8 @@ where
 
 /// # Proof Definition
 /// For any choice of `temporal_function`,
-/// returns the data type of the output if the input is an infallible row-by-row temporal expression,
-/// otherwise returns none.
+/// returns the data type of the output if the function extracts a row-by-row temporal component,
+/// otherwise returns none. This does not establish that the function is infallible for every input dtype.
 pub(super) fn match_datetime_component(temporal_function: &TemporalFunction) -> Option<DataType> {
     use TemporalFunction::*;
     Some(match temporal_function {
