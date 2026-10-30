@@ -19,7 +19,7 @@ mod ffi;
 /// * [RAPPOR: Randomized Aggregatable Privacy-Preserving Ordinal Response](https://arxiv.org/abs/1407.6981)
 ///
 /// # Arguments
-/// * `input_domain` - BitVectorDomain with max_weight
+/// * `input_domain` - BitVectorDomain with max_weight and size
 /// * `input_metric` - DiscreteDistance
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
 /// * `constant_time` - Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
@@ -38,6 +38,13 @@ pub fn make_randomized_response_bitvec(
             );
         }
     };
+
+    if input_domain.size.is_none() {
+        return fallible!(
+            MakeMeasurement,
+            "make_randomized_response_bitvec requires a size on the input_domain"
+        );
+    }
 
     if f <= 0.0 || f > 1.0 {
         return fallible!(MakeMeasurement, "f must be in (0, 1]");
@@ -124,7 +131,7 @@ mod test {
     #[test]
     fn test_make_randomized_response_bitvec() -> Fallible<()> {
         let m_rr = make_randomized_response_bitvec(
-            BitVectorDomain::new().with_max_weight(1),
+            BitVectorDomain::new().with_max_weight(1).with_size(10),
             DiscreteDistance,
             0.5,
             false,
@@ -137,9 +144,24 @@ mod test {
     }
 
     #[test]
+    fn test_make_randomized_response_bitvec_requires_size() -> Fallible<()> {
+        use crate::core::Domain;
+
+        let domain = BitVectorDomain::new().with_max_weight(1).with_size(8);
+        assert!(domain.member(&bitvec![u8, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0])?);
+        assert!(!domain.member(&bitvec![u8, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0])?);
+        assert!(!domain.member(&bitvec![u8, Lsb0; 1, 1, 0, 0, 0, 0, 0, 0])?);
+        assert!(
+            make_randomized_response_bitvec(domain.without_size(), DiscreteDistance, 0.5, false)
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_make_randomized_response_bitvec_randomizes_last_bit() -> Fallible<()> {
         let m_rr = make_randomized_response_bitvec(
-            BitVectorDomain::new().with_max_weight(1),
+            BitVectorDomain::new().with_max_weight(1).with_size(4),
             DiscreteDistance,
             1.0,
             false,
