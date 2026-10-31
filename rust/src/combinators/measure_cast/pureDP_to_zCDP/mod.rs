@@ -8,6 +8,9 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 /// Constructs a new output measurement where the output measure
 /// is casted from `MaxDivergence` to `ZeroConcentratedDivergence`.
 ///
@@ -34,9 +37,12 @@ where
         m.input_metric.clone(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .and_then(|eps| eps.inf_powi(2.into())?.inf_div(&2.0))
+            let eps = privacy_map.eval(d_in)?;
+            // Genuine infinity should remain distinct from finite overflow.
+            if eps == f64::INFINITY {
+                return Ok(f64::INFINITY);
+            }
+            eps.inf_powi(2.into())?.inf_div(&2.0)
         }),
     )
 }
