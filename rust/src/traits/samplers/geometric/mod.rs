@@ -156,7 +156,15 @@ where
     )?);
 
     // make prob conservatively smaller, because a smaller probability means greater noise
-    let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
+    // For a positive subnormal scale, -1/scale can overflow natively.
+    // A finite upper bound on that exponent preserves conservative rounding.
+    let neg_inverse = -scale.recip();
+    let neg_inverse = if neg_inverse == P::neg_infinity() {
+        P::MIN_FINITE
+    } else {
+        neg_inverse
+    };
+    let prob = P::one().neg_inf_sub(&neg_inverse.inf_exp()?)?;
 
     // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
     // Thanks for the input @ctcovington (Christian Covington)

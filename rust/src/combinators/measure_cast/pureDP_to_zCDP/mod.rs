@@ -34,9 +34,29 @@ where
         m.input_metric.clone(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .and_then(|eps| eps.inf_powi(2.into())?.inf_div(&2.0))
+            let eps = privacy_map.eval(d_in)?;
+            // Genuine unbounded privacy loss stays infinite; this is not a
+            // finite-result overflow in the legacy finite-only arithmetic API.
+            if eps == f64::INFINITY {
+                return Ok(f64::INFINITY);
+            }
+            eps.inf_powi(2.into())?.inf_div(&2.0)
         }),
     )
+}
+
+#[cfg(test)]
+#[test]
+fn test_unbounded_privacy_loss() -> Fallible<()> {
+    use crate::{domains::AtomDomain, measurements::make_laplace, metrics::AbsoluteDistance};
+    let m = make_laplace(
+        AtomDomain::<f64>::new_non_nan(),
+        AbsoluteDistance::<f64>::default(),
+        0.0,
+        None,
+    )?;
+    let m = make_pureDP_to_zCDP(m)?;
+    assert_eq!(m.map(&0.0)?, 0.0);
+    assert_eq!(m.map(&1.0)?, f64::INFINITY);
+    Ok(())
 }

@@ -176,6 +176,7 @@ impl From<FfiError> for Error {
             "InvalidDistance" => ErrorVariant::InvalidDistance,
             "Search" => ErrorVariant::Search,
             "Overflow" => ErrorVariant::Overflow,
+            "NumericError" => ErrorVariant::NumericError,
             "NotImplemented" => ErrorVariant::NotImplemented,
             unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
         };
@@ -373,6 +374,24 @@ mod tests {
                 backtrace: "".to_char_p(),
             }))
         );
+    }
+
+    #[test]
+    fn test_numerical_error_ffi_round_trip() {
+        for (error, variant) in [
+            (
+                err!(NumericError, "numerical failure"),
+                ErrorVariant::NumericError,
+            ),
+            (err!(Overflow, "numerical failure"), ErrorVariant::Overflow),
+        ] {
+            let result: Fallible<()> = Err(error);
+            let ffi: FfiResult<*mut ()> = result.into();
+            let restored: Fallible<()> = ffi.into();
+            let error = restored.unwrap_err();
+            assert_eq!(error.variant, variant);
+            assert_eq!(error.message.as_deref(), Some("numerical failure"));
+        }
     }
 
     #[test]
