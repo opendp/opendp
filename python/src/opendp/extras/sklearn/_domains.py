@@ -6,8 +6,6 @@ from typing import Any
 from opendp._internal import _extrinsic_domain
 from opendp.mod import Domain
 
-__all__ = ["SklearnFit", "SklearnFitDomain", "sklearn_fit_domain"]
-
 
 @dataclass
 class SklearnFit:
@@ -26,7 +24,11 @@ class SklearnFitDomain:
 
 
 def sklearn_fit_domain(X, y=None) -> Domain:
-    """Construct a domain for private, row-aligned sklearn inputs."""
+    """Construct and return an OpenDP Domain for private, row-aligned sklearn inputs.
+
+    SklearnFitDomain is the descriptor for the returned Domain, not the Domain
+    itself. This follows the NPArray2Domain / array2_domain naming convention.
+    """
     descriptor = SklearnFitDomain(X, y)
 
     def member(value):

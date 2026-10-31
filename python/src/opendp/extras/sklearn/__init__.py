@@ -33,7 +33,6 @@ def __getattr__(name):
 
     import_optional_dependency("sklearn")
     module = import_module(f"{__name__}.{name}")
-    globals()[name] = module
     return module
 
 
