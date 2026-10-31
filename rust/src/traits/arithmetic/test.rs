@@ -1,5 +1,5 @@
 use super::*;
-use crate::error::Fallible;
+use crate::error::{ErrorVariant, Fallible};
 
 /// Pins `(lower, upper)` bounds, and checks they are no looser than `old`,
 /// the bounds from the workarounds used before dashu 0.6.
@@ -53,4 +53,166 @@ fn test_inf_powi() {
     let huge = IBig::from(10u8).pow(16);
     check(powi(0.5, huge.clone()), (0.0, 5e-324), (-5e-324, 5e-324));
     check(powi(-0.5, huge + 1), (-5e-324, -0.0), (-5e-324, 5e-324));
+}
+
+fn assert_error<T: std::fmt::Debug>(result: Fallible<T>, variant: ErrorVariant) {
+    assert_eq!(result.unwrap_err().variant, variant);
+}
+
+#[test]
+fn test_integer_error_taxonomy_and_rounding() {
+    macro_rules! check_integer {
+        ($($ty:ty),+) => {$(
+            assert_error((1 as $ty).alerting_div(&0), ErrorVariant::NumericError);
+            assert_error((1 as $ty).inf_div(&0), ErrorVariant::NumericError);
+            assert_error((0 as $ty).neg_inf_div(&0), ErrorVariant::NumericError);
+            assert_error(<$ty>::MAX.alerting_add(&1), ErrorVariant::Overflow);
+            assert_eq!((7 as $ty).inf_div(&3).unwrap(), 3);
+            assert_eq!((7 as $ty).neg_inf_div(&3).unwrap(), 2);
+        )+};
+    }
+    check_integer!(
+        u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+    );
+    macro_rules! check_signed {
+        ($($ty:ty),+) => {$(
+            assert_error(<$ty>::MIN.alerting_div(&-1), ErrorVariant::Overflow);
+            assert_error(<$ty>::MIN.inf_div(&-1), ErrorVariant::Overflow);
+            assert_error(<$ty>::MIN.neg_inf_div(&-1), ErrorVariant::Overflow);
+            // All sign combinations, exact and inexact quotients.
+            for (lhs, rhs, down, up) in [
+                (7, 3, 2, 3), (-7, 3, -3, -2),
+                (7, -3, -3, -2), (-7, -3, 2, 3),
+                (6, -3, -2, -2), (-6, 3, -2, -2),
+            ] {
+                assert_eq!((lhs as $ty).neg_inf_div(&(rhs as $ty)).unwrap(), down);
+                assert_eq!((lhs as $ty).inf_div(&(rhs as $ty)).unwrap(), up);
+            }
+        )+};
+    }
+    check_signed!(i8, i16, i32, i64, i128, isize);
+}
+
+#[test]
+fn test_legacy_float_error_taxonomy() {
+    macro_rules! check_float {
+        ($ty:ty) => {{
+            let zero = 0.0 as $ty;
+            let one = 1.0 as $ty;
+            let negative = -1.0 as $ty;
+            assert_error(<$ty>::NAN.alerting_abs(), ErrorVariant::NumericError);
+            assert_eq!(<$ty>::NEG_INFINITY.alerting_abs().unwrap(), <$ty>::INFINITY);
+            for result in [
+                one.alerting_div(&zero),
+                zero.alerting_div(&zero),
+                one.inf_div(&zero),
+                zero.neg_inf_div(&zero),
+                <$ty>::INFINITY.alerting_sub(&<$ty>::INFINITY),
+                <$ty>::INFINITY.inf_sub(&<$ty>::INFINITY),
+                <$ty>::INFINITY.neg_inf_add(&<$ty>::NEG_INFINITY),
+                zero.alerting_mul(&<$ty>::INFINITY),
+                zero.inf_mul(&<$ty>::INFINITY),
+                <$ty>::INFINITY.neg_inf_div(&<$ty>::INFINITY),
+                zero.inf_ln(),
+                zero.neg_inf_ln(),
+                zero.inf_log2(),
+                zero.neg_inf_log2(),
+                negative.inf_ln_1p(),
+                negative.neg_inf_ln_1p(),
+                zero.alerting_pow(&negative),
+                zero.inf_powi(IBig::from(-1)),
+                zero.neg_inf_powi(IBig::from(-1)),
+            ] {
+                assert_error(result, ErrorVariant::NumericError);
+            }
+            for result in [
+                negative.inf_sqrt(),
+                negative.neg_inf_sqrt(),
+                negative.inf_ln(),
+                negative.neg_inf_ln(),
+                negative.inf_log2(),
+                negative.neg_inf_log2(),
+                (-2.0 as $ty).inf_ln_1p(),
+                (-2.0 as $ty).neg_inf_ln_1p(),
+                negative.alerting_pow(&(0.5 as $ty)),
+            ] {
+                assert_error(result, ErrorVariant::NumericError);
+            }
+            for result in [
+                <$ty>::MAX.alerting_add(&<$ty>::MAX),
+                (-<$ty>::MAX).alerting_sub(&<$ty>::MAX),
+                <$ty>::MAX.alerting_mul(&(2.0 as $ty)),
+                <$ty>::MAX.alerting_div(&(0.5 as $ty)),
+                <$ty>::MAX.alerting_pow(&(2.0 as $ty)),
+                <$ty>::MAX.inf_add(&<$ty>::MAX),
+                <$ty>::MAX.neg_inf_add(&<$ty>::MAX),
+                (-<$ty>::MAX).inf_sub(&<$ty>::MAX),
+                (-<$ty>::MAX).neg_inf_sub(&<$ty>::MAX),
+                <$ty>::MAX.inf_mul(&(2.0 as $ty)),
+                <$ty>::MAX.neg_inf_mul(&(2.0 as $ty)),
+                <$ty>::MAX.inf_div(&(0.5 as $ty)),
+                <$ty>::MAX.neg_inf_div(&(0.5 as $ty)),
+                (1000.0 as $ty).inf_exp(),
+                (1000.0 as $ty).neg_inf_exp(),
+                (1000.0 as $ty).inf_exp_m1(),
+                (1000.0 as $ty).neg_inf_exp_m1(),
+                (2.0 as $ty).inf_powi(IBig::from(2048)),
+            ] {
+                assert_error(result, ErrorVariant::Overflow);
+            }
+            // A representable inward endpoint remains valid for a huge finite power.
+            assert_eq!(
+                (2.0 as $ty).neg_inf_powi(IBig::from(2048)).unwrap(),
+                <$ty>::MAX
+            );
+            for invalid in [<$ty>::NAN, <$ty>::INFINITY, <$ty>::NEG_INFINITY] {
+                for result in [
+                    invalid.alerting_add(&one),
+                    one.alerting_add(&invalid),
+                    invalid.alerting_sub(&one),
+                    one.alerting_sub(&invalid),
+                    invalid.alerting_mul(&one),
+                    one.alerting_mul(&invalid),
+                    invalid.alerting_div(&one),
+                    one.alerting_div(&invalid),
+                    invalid.alerting_pow(&one),
+                    one.alerting_pow(&invalid),
+                    invalid.inf_add(&one),
+                    one.inf_add(&invalid),
+                    invalid.neg_inf_add(&one),
+                    one.neg_inf_add(&invalid),
+                    invalid.inf_sub(&one),
+                    one.inf_sub(&invalid),
+                    invalid.neg_inf_sub(&one),
+                    one.neg_inf_sub(&invalid),
+                    invalid.inf_mul(&one),
+                    one.inf_mul(&invalid),
+                    invalid.neg_inf_mul(&one),
+                    one.neg_inf_mul(&invalid),
+                    invalid.inf_div(&one),
+                    one.inf_div(&invalid),
+                    invalid.neg_inf_div(&one),
+                    one.neg_inf_div(&invalid),
+                    invalid.inf_sqrt(),
+                    invalid.neg_inf_sqrt(),
+                    invalid.inf_ln(),
+                    invalid.neg_inf_ln(),
+                    invalid.inf_log2(),
+                    invalid.neg_inf_log2(),
+                    invalid.inf_ln_1p(),
+                    invalid.neg_inf_ln_1p(),
+                    invalid.inf_exp(),
+                    invalid.neg_inf_exp(),
+                    invalid.inf_exp_m1(),
+                    invalid.neg_inf_exp_m1(),
+                    invalid.inf_powi(IBig::ONE),
+                    invalid.neg_inf_powi(IBig::ONE),
+                ] {
+                    assert_error(result, ErrorVariant::NumericError);
+                }
+            }
+        }};
+    }
+    check_float!(f32);
+    check_float!(f64);
 }
