@@ -373,6 +373,9 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
 
 
 def test_other_opendp_apis_import_without_sklearn():
+    import subprocess
+    import sys
+
     script = """
 import importlib.abc
 import sys
