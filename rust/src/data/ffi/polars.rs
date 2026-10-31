@@ -1,11 +1,63 @@
 use opendp_derive::bootstrap;
 use polars::lazy::frame::LazyFrame;
+use std::ffi::c_char;
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, FfiSlice},
+    error::Fallible,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
+    ffi::util::into_c_char_p,
+    measurements::expr_noise::NoisePlugin,
     polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
 };
+
+#[cfg(test)]
+mod test;
+
+#[bootstrap(
+    name = "decode_noise_plugin_parameters",
+    arguments(kwargs(rust_type = "Vec<u8>", hint = "Sequence[int]")),
+    returns(c_type = "FfiResult<char *>")
+)]
+/// Internal function. Decodes serialized noise plugin parameters as JSON.
+///
+/// Uses the same typed, data-only deserializer as the Rust noise plugin,
+/// without invoking Python's pickle deserializer.
+///
+/// # Arguments
+/// * `kwargs` - The serialized keyword arguments of an OpenDP noise plugin.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__decode_noise_plugin_parameters(
+    kwargs: *const FfiSlice,
+) -> FfiResult<*mut c_char> {
+    let kwargs = try_as_ref!(kwargs);
+    if kwargs.ptr.is_null() || kwargs.len > isize::MAX as usize {
+        return err!(FFI, "Invalid noise plugin parameter buffer").into();
+    }
+    // SAFETY: The FFI caller must provide a valid byte buffer of length kwargs.len
+    // that remains alive for this call. The Python binding owns that buffer.
+    let kwargs = unsafe { std::slice::from_raw_parts(kwargs.ptr as *const u8, kwargs.len) };
+    let parameters = try_!(decode_noise_plugin_parameters(kwargs));
+    FfiResult::Ok(try_!(into_c_char_p(parameters)))
+}
+
+fn decode_noise_plugin_parameters(kwargs: &[u8]) -> Fallible<String> {
+    let parameters: NoisePlugin = serde_pickle::from_slice(kwargs, Default::default())
+        .map_err(|_| err!(FailedFunction, "Invalid noise plugin parameters"))?;
+
+    // JSON cannot represent non-finite floats: serde_json would emit null.
+    // Reject them explicitly rather than changing the decoded scale's type.
+    if !parameters.scale.is_finite() {
+        return fallible!(FailedFunction, "Noise plugin scale must be finite");
+    }
+
+    serde_json::to_string(&parameters).map_err(|_| {
+        err!(
+            FailedFunction,
+            "Unable to serialize noise plugin parameters"
+        )
+    })
+}
 
 #[bootstrap(
     name = "onceframe_collect",

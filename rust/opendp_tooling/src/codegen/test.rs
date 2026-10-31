@@ -128,3 +128,40 @@ fake_function <- function(
 ";
     assert_eq!(actual_code, expected_code);
 }
+
+#[test]
+fn test_noise_parameter_decoder_bindings() {
+    // The decoder takes a byte sequence through FfiSlice, and is only available
+    // with Polars. R builds without Polars and must not link against its symbol.
+    let mut parameter = make_argument();
+    parameter.name = Some("kwargs".to_string());
+    parameter.c_type = Some("FfiSlice *".to_string());
+    parameter.rust_type = Some(TypeRecipe::Name("Vec<u8>".to_string()));
+    parameter.hint = Some("Sequence[int]".to_string());
+    parameter.default = None;
+
+    let mut result = make_argument();
+    result.c_type = Some("FfiResult<char *>".to_string());
+    result.rust_type = None;
+
+    let mut function = make_function(parameter, result);
+    function.name = "decode_noise_plugin_parameters".to_string();
+    function.features.clear();
+    function.deprecation = None;
+    let modules = HashMap::from([("data".to_string(), vec![function])]);
+
+    let python_bindings = python::generate_bindings(&modules);
+    let python_code = &python_bindings[&std::path::PathBuf::from("_data.py")];
+    assert!(python_code.contains("kwargs: Sequence[int]"));
+    assert!(python_code.contains("py_to_c(kwargs, c_type=FfiSlicePtr, type_name=\"Vec<u8>\")"));
+    assert!(python_code.contains("lib.opendp_data__decode_noise_plugin_parameters"));
+
+    let r_bindings = r::generate_bindings(&modules);
+    for (path, code) in r_bindings {
+        assert!(
+            !code.contains("decode_noise_plugin_parameters"),
+            "Polars decoder leaked into {}",
+            path.display()
+        );
+    }
+}
