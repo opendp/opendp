@@ -17,12 +17,12 @@ class DPEstimator(BaseEstimator, ABC):
         Capture configuration values and copy mutable parameters as needed so
         later changes to self cannot invalidate the function or privacy map.
         """
-        raise NotImplementedError  # pragma: no cover
+        ...
 
     @abstractmethod
     def _ingest_release(self, release):
         """Replace learned state with a complete fitted state from the release."""
-        raise NotImplementedError  # pragma: no cover
+        ...
 
     def fit(
         self,
@@ -74,4 +74,4 @@ class DPTransformer(DPEstimator):
         fitted parameters so later changes to self cannot invalidate the
         function or stability map.
         """
-        raise NotImplementedError  # pragma: no cover
+        ...
