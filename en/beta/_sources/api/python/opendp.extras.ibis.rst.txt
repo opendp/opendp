@@ -1,0 +1,10 @@
+opendp.extras.ibis package
+==========================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.ibis
+   :members:
+   :undoc-members:
+   :show-inheritance:

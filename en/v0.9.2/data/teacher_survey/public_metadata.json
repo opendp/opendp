@@ -1,0 +1,67 @@
+{
+    "column_names": [
+        "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
+        "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
+    ],
+    "column_metadata": {
+        "name": {
+            "description": "name of individual",
+            "comment": "this column was randomly generated"
+        },
+        "sex": {
+            "keys": [1, 2, 3],
+            "key_labels": ["Male", "Female", "Other"]
+        },
+        "age": {
+            "type": "integer",
+            "description": "teacher age in years"
+        },
+        "maritalStatus": {
+            "keys": ["1", "2", "3", "4", "5", "6", "7", "8"],
+            "key_labels": [
+                "Single", "Steady Relationship", "Living with partner", "Married first time", 
+                "Remarried", "Separated", "Divorced", "Widowed"
+            ]
+        },
+        "hasChildren": {
+            "keys": [1, 2],
+            "key_labels": ["Yes", "No"]
+        },
+        "highestEducationLevel": {
+            "keys": [1, 2, 3, 4, 5, 6],
+            "key_labels": [
+                "Primary", "Some secondary", "Completed high school", "Some additional training", 
+                "Completed undergraduate", "Postgraduate completed"
+            ]
+        },
+        "sourceOfStress": {
+            "keys": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            "key_labels": [
+                "Work", "Spouse or partner", "Relationships", "Children", "Family", "Health/Illness", 
+                "Life in general", "Money/finances", "Time (lack of time, too much to do)"
+            ]
+        },
+        "smoker": {
+            "keys": [1, 2],
+            "key_labels": ["Yes", "No"]
+        },
+        "optimism": {
+            "type": "integer",
+            "lower_bound": 6,
+            "upper_bound": 30,
+            "description": "optimism score based on a standard questionnaire"
+        },
+        "lifeSatisfaction": {
+            "type": "integer",
+            "lower_bound": 5,
+            "upper_bound": 35,
+            "description": "life satisfaction based on a standard questionnaire"
+        },
+        "selfEsteem": {
+            "type": "integer",
+            "lower_bound": 5,
+            "upper_bound": 35,
+            "description": "self-esteem based on a standard questionnaire"
+        }
+    }
+}

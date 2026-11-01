@@ -1,0 +1,10 @@
+opendp.extras.polars package
+============================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.polars
+   :members:
+   :undoc-members:
+   :show-inheritance:
