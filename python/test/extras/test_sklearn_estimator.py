@@ -372,17 +372,90 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
     np.testing.assert_array_equal(model.transform(X), X + 9)
 
 
-def test_logistic_regression_rejects_separate_target():
+def test_logistic_regression_rejects_missing_target():
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
     domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float),
-        dp.vector_domain(dp.atom_domain(T=int), size=100),
+        dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
     )
-    with pytest.raises(ValueError, match="target in the last column of X"):
+    with pytest.raises(ValueError, match="requires a target domain y"):
         LogisticRegression().make(
             domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1.0
         )
+
+
+@pytest.mark.parametrize("target_type", [bool, float])
+def test_logistic_regression_assembles_aligned_rows(target_type, monkeypatch):
+    from opendp.extras.sklearn.linear_model import _logistic_regression as logistic
+
+    X = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.float32)
+    y = np.array([0, 1, 0], dtype=target_type)
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(num_columns=2, size=3, nan=False, T=np.float32),
+        dp.vector_domain(dp.atom_domain(T=target_type, nan=False)),
+    )
+    transforms = []
+    original = logistic._make_transformation
+
+    def record(*args):
+        transform = original(*args)
+        transforms.append(transform)
+        return transform
+
+    monkeypatch.setattr(logistic, "_make_transformation", record)
+    measurement = logistic.LogisticRegression(n_iters=1).make(
+        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 0.5
+    )
+    (assemble,) = transforms
+    data = dp.sklearn.SklearnFit(X, y)
+    assert domain.member(data)
+    assert not domain.member(dp.sklearn.SklearnFit(X, y[:-1]))
+    combined = assemble(data)
+    np.testing.assert_array_equal(combined, np.column_stack((X, y)))
+    assert assemble.output_domain.member(combined)
+    desc = assemble.output_domain.cast(dp.numpy.NPArray2Domain)
+    assert (desc.size, desc.num_columns, desc.nan) == (3, 3, False)
+    assert desc.T == ("f32" if target_type is bool else "f64")
+    assert [assemble.map(d) for d in (0, 1, 2, 4)] == [0, 1, 2, 4]
+    order = [2, 0, 1]
+    np.testing.assert_array_equal(
+        assemble(dp.sklearn.SklearnFit(X[order], y[order])), combined[order]
+    )
+    assert measurement.map(2) <= 0.5
+
+
+def test_logistic_regression_validates_input_domains():
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    options = dict(num_columns=2, size=3, nan=False, T=float)
+    targets = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    cases: list[tuple[dict, dp.Domain, str]] = [
+        ({"nan": True}, targets, "exclude NaNs"),
+        ({}, dp.vector_domain(dp.atom_domain(T=float, nan=True)), "exclude NaNs"),
+        ({"T": str}, targets, "numeric element types"),
+        ({}, dp.atom_domain(T=float), "VectorDomain"),
+        (
+            {},
+            dp.vector_domain(dp.atom_domain(T=float, nan=False), size=2),
+            "matching row counts",
+        ),
+        ({"num_columns": None}, targets, "size and num_columns"),
+        ({"size": None}, targets, "size and num_columns"),
+        ({"norm": 1, "p": 2}, targets, "row-norm and cardinality"),
+        ({"cardinalities": [2, 2]}, targets, "row-norm and cardinality"),
+    ]
+    for overrides, y_domain, error in cases:
+        domain = dp.sklearn.sklearn_fit_domain(
+            dp.numpy.array2_domain(**(options | overrides)), y_domain
+        )
+        with pytest.raises(ValueError, match=error):
+            LogisticRegression().make(
+                domain,
+                dp.symmetric_distance(),
+                dp.zero_concentrated_divergence(),
+                2,
+                1.0,
+            )
 
 
 @pytest.mark.parametrize("route", ["context", "standalone"])
@@ -396,10 +469,11 @@ def test_logistic_regression_fitting(route):
     rng = np.random.default_rng(0)
     X = rng.standard_normal((100, 3))
     y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
+    data = dp.sklearn.SklearnFit(X, y)
 
     domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
+        dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
+        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=100),
     )
     metric = dp.symmetric_distance()
     estimator = LogisticRegression(n_iters=50, learning_rate=0.3, clip_norm=5.0)
@@ -411,7 +485,7 @@ def test_logistic_regression_fitting(route):
 
     if route == "context":
         context = dp.Context.compositor(
-            data=dp.sklearn.SklearnFit(data),
+            data=data,
             domain=domain,
             privacy_unit=dp.unit_of(contributions=2),
             privacy_loss=dp.loss_of(rho=1.0),
@@ -423,7 +497,8 @@ def test_logistic_regression_fitting(route):
         assert context.current_privacy_loss() == [1.0]
     else:
         fitted = estimator.fit(
-            data,
+            X,
+            y,
             domain=domain,
             privacy_unit=dp.unit_of(contributions=2),
             privacy_loss=dp.loss_of(rho=1.0),
@@ -432,10 +507,9 @@ def test_logistic_regression_fitting(route):
     assert fitted.coef_.shape == (3,)
     assert list(fitted.classes_) == [0, 1]
 
-    features = data[:, :-1]
-    proba = fitted.predict_proba(features)
+    proba = fitted.predict_proba(X)
     assert proba.shape == (100, 2)
-    preds = fitted.predict(features)
+    preds = fitted.predict(X)
     assert set(np.unique(preds)).issubset({0, 1})
 
 
@@ -451,9 +525,10 @@ def test_logistic_regression_matches_sklearn_regularized():
     rng = np.random.default_rng(0)
     X = rng.standard_normal((100, 3))
     y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
+    data = dp.sklearn.SklearnFit(X, y)
     dom = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
+        dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
+        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=100),
     )
 
     est = LogisticRegression(
@@ -462,7 +537,7 @@ def test_logistic_regression_matches_sklearn_regularized():
     theta_dp = np.asarray(
         est.make(
             dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
-        )(dp.sklearn.SklearnFit(data))
+        )(data)
     )
 
     Xb = np.hstack([X, np.ones((100, 1))])
@@ -482,9 +557,10 @@ def test_logistic_regression_l1_sparsity():
     rng = np.random.default_rng(0)
     X = rng.standard_normal((200, 3))
     y = (X[:, 0] + 0.3 * rng.standard_normal(200) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
+    data = dp.sklearn.SklearnFit(X, y)
     dom = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=4, size=200, nan=False, T=float)
+        dp.numpy.array2_domain(num_columns=3, size=200, nan=False, T=float),
+        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=200),
     )
     est = LogisticRegression(
         n_iters=2000,
@@ -496,7 +572,7 @@ def test_logistic_regression_l1_sparsity():
     theta = np.asarray(
         est.make(
             dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
-        )(dp.sklearn.SklearnFit(data))
+        )(data)
     )
 
     coef = theta[:-1]

@@ -3,7 +3,11 @@
 import numpy as np
 from scipy.special import expit  # type: ignore[import-untyped]
 
-from opendp._internal import _make_measurement
+from opendp._convert import _numpy_dtype_for_rust_type
+from opendp._internal import _make_transformation
+from opendp.extras.numpy import NPArray2Domain, array2_domain
+from opendp.mod import AtomDomain, VectorDomain
+from opendp.typing import _NUMERIC_TYPES
 from opendp.extras.sklearn._domains import SklearnFitDomain
 from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
@@ -24,13 +28,18 @@ class LogisticRegression(DPEstimator):
     the noised gradient, so it adds no privacy cost. After ``fit``, the model exposes
     ``coef_``, ``intercept_``, and ``classes_``, and supports ``predict`` and ``predict_proba``.
 
-    Data is expected as a single 2-dimensional array whose last column is the binary target
-    and whose remaining columns are the features. Pass this array as ``X`` to standalone
-    ``fit`` or as ``SklearnFit(X)`` to a Context. A separate ``y`` is not supported.
+    Fit separate features and binary targets with
+    ``fit(X, y, privacy_unit=..., privacy_loss=..., domain=...)``. For Context
+    fitting, supply ``SklearnFit(X, y)`` and release a fitted clone with
+    ``context.query().sklearn(model).release()``.
 
-    An explicit ``sklearn_fit_domain(array2_domain(..., size=n, nan=False))`` is
-    required for standalone fitting and Context construction. The row count ``n``
-    and the absence of NaNs must be specified publicly, not inferred from private data.
+    Specify ``domain=sklearn_fit_domain(X_domain, y_domain)`` explicitly.
+    ``X_domain`` must be a numeric ``NPArray2Domain`` with a public feature count,
+    a known positive row count, and ``nan=False``. Row-norm and cardinality
+    constraints on features are not supported. ``y_domain`` must be a numeric
+    or boolean ``VectorDomain`` excluding NaNs and aligned with the feature rows.
+    Dataset size and finiteness constraints must be specified publicly, not
+    inferred from private data.
 
     :param n_iters: Number of DP-SGD iterations. Also controls the budget split: the total privacy budget is divided across this many gradient steps, so more iterations means more noise per step.
     :param learning_rate: Step size for the gradient update applied to the weights each iteration.
@@ -58,12 +67,51 @@ class LogisticRegression(DPEstimator):
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         fit_desc = input_domain.cast(SklearnFitDomain)
-        if fit_desc.y is not None:
+        if fit_desc.y is None:
+            raise ValueError("LogisticRegression requires a target domain y")
+        x_desc = fit_desc.X.cast(NPArray2Domain)
+        y_domain = fit_desc.y
+        if not isinstance(y_domain, VectorDomain):
+            raise ValueError("y_domain must be a VectorDomain")
+        y_atom = y_domain.element_domain
+        if not isinstance(y_atom, AtomDomain):
+            raise ValueError("y_domain must have an AtomDomain element domain")
+        numeric = _NUMERIC_TYPES | {"bool"}
+        if x_desc.T not in _NUMERIC_TYPES or y_atom.carrier_type not in numeric:
             raise ValueError(
-                "LogisticRegression expects the target in the last column of X"
+                "X and y must have numeric element types (y may be boolean)"
             )
-        measurement = _make_private_logistic_regression(
-            fit_desc.X,
+        if x_desc.nan or y_atom.nan:
+            raise ValueError("X and y domains must exclude NaNs (nan=False)")
+        if x_desc.size is None or x_desc.size <= 0 or x_desc.num_columns is None:
+            raise ValueError("X_domain must specify a positive size and num_columns")
+        if y_domain.size is not None and y_domain.size != x_desc.size:
+            raise ValueError("X and y domains must have matching row counts")
+        if x_desc.norm is not None or x_desc.cardinalities is not None:
+            raise ValueError(
+                "feature row-norm and cardinality constraints are not supported"
+            )
+
+        y_dtype = _numpy_dtype_for_rust_type(str(y_atom.carrier_type))
+        dtype = np.result_type(_numpy_dtype_for_rust_type(str(x_desc.T)), y_dtype)
+        combined_domain = array2_domain(
+            num_columns=x_desc.num_columns + 1,
+            size=x_desc.size,
+            nan=False,
+            T=dtype.type,
+        )
+        assemble = _make_transformation(
+            input_domain,
+            input_metric,
+            combined_domain,
+            input_metric,
+            lambda data: np.column_stack(
+                (data.X, np.asarray(data.y, dtype=y_dtype))
+            ).astype(dtype, copy=False),
+            lambda distance: distance,
+        )
+        return assemble >> _make_private_logistic_regression(
+            combined_domain,
             input_metric,
             output_measure,
             d_in,
@@ -74,13 +122,6 @@ class LogisticRegression(DPEstimator):
             penalty=self.penalty,
             C=self.C,
             l1_ratio=self.l1_ratio,
-        )
-        return _make_measurement(
-            input_domain,
-            input_metric,
-            measurement.output_measure,
-            lambda data: measurement(data.X),
-            measurement.map,
         )
 
     def _ingest_release(self, release):
