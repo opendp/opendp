@@ -168,9 +168,13 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
 
     # choose a metric type if not set
     if M is None:
-        if D.origin == "VectorDomain":  # type: ignore[union-attr]
+        if isinstance(D, ty.RuntimeType) and D.origin == "VectorDomain":
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty._NUMERIC_TYPES:  # type: ignore[union-attr]
+        elif (
+            isinstance(D, ty.RuntimeType)
+            and D.origin == "AtomDomain"
+            and ty.get_atom(D) in ty._NUMERIC_TYPES
+        ):
             M = ty.AbsoluteDistance
         else:
             raise TypeError(
@@ -223,10 +227,10 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
-    For ``SklearnFit`` inputs, 2D NumPy features and 1D NumPy targets retain native
-    array domains. Their dtypes and feature count are assumed public; record count
-    and finiteness are not inferred. Outside ``SklearnFit``, 1D NumPy arrays retain
-    Rust vector domains.
+    NumPy arrays with one or two dimensions infer native array domains, assuming
+    public dtype and feature count, but not length or finiteness. Rust-vector
+    operations on NumPy inputs require an explicit vector domain. Native array
+    domains also require an explicit metric when used with ``space_of``.
 
     :param T: carrier type
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
@@ -237,17 +241,11 @@ def domain_of(T, infer: bool = False) -> Domain:
     if infer:
         from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
 
-        np = import_optional_dependency("numpy", raise_error=False)
         if isinstance(T, SklearnFit):
-            y_domain = None
-            if T.y is not None:
-                if np is not None and isinstance(T.y, np.ndarray) and T.y.ndim == 1:
-                    from opendp.extras.numpy import array1_domain
-
-                    y_domain = array1_domain(T=_ELEMENTARY_TYPES[T.y.dtype.type])
-                else:
-                    y_domain = domain_of(T.y, infer=True)
-            return sklearn_fit_domain(domain_of(T.X, infer=True), y=y_domain)
+            return sklearn_fit_domain(
+                domain_of(T.X, infer=True),
+                y=None if T.y is None else domain_of(T.y, infer=True),
+            )
 
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
@@ -255,13 +253,17 @@ def domain_of(T, infer: bool = False) -> Domain:
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 
-        if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
-            from opendp.extras.numpy import array2_domain
+        np = import_optional_dependency("numpy", raise_error=False)
+        if np is not None and isinstance(T, np.ndarray):
+            from opendp.extras.numpy import array1_domain, array2_domain
 
-            return array2_domain(
-                T=_ELEMENTARY_TYPES[T.dtype.type],
-                num_columns=T.shape[1],
-            )
+            if T.ndim == 1:
+                return array1_domain(T=_ELEMENTARY_TYPES[T.dtype.type])
+            if T.ndim == 2:
+                return array2_domain(
+                    T=_ELEMENTARY_TYPES[T.dtype.type],
+                    num_columns=T.shape[1],
+                )
 
     # normalize to a type descriptor
     if infer:

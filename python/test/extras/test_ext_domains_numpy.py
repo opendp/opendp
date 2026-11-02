@@ -10,7 +10,7 @@ np = pytest.importorskip("numpy")
 def test_array1_domain(T):
     values = np.array([0, 1], dtype=T)
     domain = dp.numpy.array1_domain(T=T, size=2, nan=False)
-    desc = domain.cast(dp.numpy.NPArray1Domain)
+    desc = domain.cast(dp.numpy.NPArray1Descriptor)
     assert (desc.size, desc.nan) == (2, False)
     assert domain.member(values)
     assert domain.member(values[::-1])

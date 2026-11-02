@@ -9,14 +9,14 @@ from opendp.mod import Domain
 
 @dataclass
 class SklearnFit:
-    """A vertically partitioned sklearn dataset with aligned rows."""
+    """Features and optional targets with aligned rows."""
 
     X: Any
     y: Any | None = None
 
 
 @dataclass(frozen=True)
-class SklearnFitDomain:
+class SklearnFitDescriptor:
     """Domains for the populated fields of a SklearnFit dataset."""
 
     X: Domain
@@ -24,12 +24,12 @@ class SklearnFitDomain:
 
 
 def sklearn_fit_domain(X, y=None) -> Domain:
-    """Construct and return an OpenDP Domain for private, row-aligned sklearn inputs.
+    """Construct a domain for SklearnFit with aligned feature and target rows.
 
-    SklearnFitDomain is the descriptor for the returned Domain, not the Domain
-    itself. This follows the NPArray2Domain / array2_domain naming convention.
+    :param X: feature domain
+    :param y: optional target domain
     """
-    descriptor = SklearnFitDomain(X, y)
+    descriptor = SklearnFitDescriptor(X, y)
 
     def member(value):
         if not isinstance(value, SklearnFit):

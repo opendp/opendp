@@ -22,11 +22,10 @@ class DPEstimator(BaseEstimator, ABC):
         d_in: Any,
         d_out: Any,
     ) -> Measurement:
-        """Construct a fitting measurement without mutating self.
+        """Construct a fitting measurement from SklearnFit to learned parameters.
 
-        The measurement consumes SklearnFit and releases learned parameters.
-        Capture configuration values and copy mutable parameters as needed so
-        later changes to self cannot invalidate the function or privacy map.
+        Do not mutate self. Snapshot configuration so later mutations cannot change
+        the measurement's function or privacy map.
         """
         ...
 
@@ -46,14 +45,12 @@ class DPEstimator(BaseEstimator, ABC):
     ) -> _EstimatorT:
         """Fit private data, mutating and returning self.
 
-        ``privacy_unit=dp.unit_of(...)`` and ``privacy_loss=dp.loss_of(...)``
-        are required. ``domain`` describes the complete SklearnFit input;
-        if omitted, feature width and dtype are assumed public and inferred.
+        Requires ``privacy_unit`` and ``privacy_loss``; each call incurs that loss.
+        ``domain`` describes SklearnFit(X, y). If omitted, infer public dtypes and
+        feature count, not row count or finiteness.
 
-        Context fitting instead uses ``query.sklearn(model).release()``, which
-        releases a new fitted clone without mutating the supplied estimator.
-        Each standalone fit incurs its own privacy loss. Per-record transform
-        outputs are not private releases for a nonprivate downstream estimator.
+        Context's ``query.sklearn(model).release()`` instead returns a fitted clone.
+        Per-record transform outputs are not private releases.
         """
         data = SklearnFit(X, y=y)
         if domain is None:
@@ -77,11 +74,9 @@ class DPTransformer(DPEstimator):
     def make_transform(
         self, input_domain: Domain, input_metric: Metric
     ) -> Transformation:
-        """Construct a stable transformation using fitted parameters.
+        """Construct a stable SklearnFit transformation preserving aligned metadata.
 
-        Consumes and returns SklearnFit, preserving aligned metadata.
-        Must not fit or modify the estimator. Snapshot mutable configuration and
-        fitted parameters so later changes to self cannot invalidate the
-        function or stability map.
+        Do not fit or modify self. Snapshot configuration and fitted parameters so
+        later mutations cannot change the function or stability map.
         """
         ...

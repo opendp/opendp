@@ -96,12 +96,12 @@ def array1_domain(
             raise ValueError("must not contain NaN values")
         return True
 
-    desc = NPArray1Domain(size=size, nan=nan, T=T)
+    desc = NPArray1Descriptor(size=size, nan=nan, T=T)
     return _extrinsic_domain(f"NPArray1Domain({_fmt_attrs(desc)})", _member, desc)
 
 
 @dataclass(kw_only=True, frozen=True)
-class NPArray1Domain:
+class NPArray1Descriptor:
     size: int | None
     """number of elements, if fixed"""
     nan: bool

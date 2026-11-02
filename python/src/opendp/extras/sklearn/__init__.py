@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from opendp.extras.sklearn._domains import (
     SklearnFit,
-    SklearnFitDomain,
+    SklearnFitDescriptor,
     sklearn_fit_domain,
 )
 
@@ -38,7 +38,7 @@ def __getattr__(name):
 
 __all__ = [
     "SklearnFit",
-    "SklearnFitDomain",
+    "SklearnFitDescriptor",
     "sklearn_fit_domain",
     "decomposition",
     "linear_model",

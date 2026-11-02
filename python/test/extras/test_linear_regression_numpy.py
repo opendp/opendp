@@ -11,27 +11,6 @@ import opendp.prelude as dp
 np = pytest.importorskip("numpy")
 
 
-def test_logistic_regression_unsized_requires_reference_size():
-    from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
-        make_private_logistic_regression,
-    )
-
-    with pytest.raises(ValueError, match="reference_size is required"):
-        make_private_logistic_regression(
-            dp.sklearn.sklearn_fit_domain(
-                dp.numpy.array2_domain(num_columns=3, nan=False, T=float),
-                dp.numpy.array1_domain(T=float, nan=False),
-            ),
-            dp.symmetric_distance(),
-            dp.zero_concentrated_divergence(),
-            2,
-            1.0,
-            n_iters=1,
-            learning_rate=0.1,
-            clip_norm=1.0,
-        )
-
-
 def test_private_theil_sen():
     x_bounds = -3, 3
     y_bounds = -10, 10

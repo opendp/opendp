@@ -20,7 +20,7 @@ dp.enable_features("contrib")
 def test_sklearn_fit_domain_inference(dtype, T, y, rows):
     data = dp.sklearn.SklearnFit(np.ones((rows, 4), dtype=dtype), y)
     domain = dp.domain_of(data, infer=True)
-    desc = domain.cast(dp.sklearn.SklearnFitDomain)
+    desc = domain.cast(dp.sklearn.SklearnFitDescriptor)
     assert (desc.X.descriptor.T, desc.X.descriptor.num_columns) == (T, 4)
     assert desc.X.descriptor.size is None and desc.X.descriptor.norm is None
     if isinstance(y, np.ndarray):
@@ -44,7 +44,7 @@ def test_context_infers_sklearn_fit_domain(y):
         split_evenly_over=1,
     )
     domain = context.accountant.input_domain
-    desc = domain.cast(dp.sklearn.SklearnFitDomain)
+    desc = domain.cast(dp.sklearn.SklearnFitDescriptor)
     assert desc.X.descriptor.size is None
     assert (desc.y is not None) == (y is not None)
     assert domain.member(data)
@@ -52,12 +52,15 @@ def test_context_infers_sklearn_fit_domain(y):
     assert context.query()._d_in == 2
 
 
-def test_numpy_vector_inference_is_unchanged_outside_sklearn_fit():
+def test_numpy_array_inference():
     values = np.array([np.nan, np.inf])
-    domain, metric = dp.space_of(values, infer=True)
-    assert domain == dp.vector_domain(dp.atom_domain(T=float))
+    domain, metric = dp.space_of(values, M=dp.SymmetricDistance, infer=True)
+    assert domain == dp.numpy.array1_domain(T=float)
+    assert domain.cast(dp.numpy.NPArray1Descriptor).size is None
     assert metric == dp.symmetric_distance()
     assert domain.member(values)
+    with pytest.raises(TypeError, match="no default metric"):
+        dp.space_of(values, infer=True)
 
 
 def test_sklearn_fit_membership_and_row_alignment():

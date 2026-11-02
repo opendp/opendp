@@ -6,8 +6,8 @@ import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
-from opendp.extras.numpy import NPArray1Domain, NPArray2Domain, make_np_clamp
-from opendp.extras.sklearn._domains import SklearnFitDomain
+from opendp.extras.numpy import NPArray1Descriptor, NPArray2Domain, make_np_clamp
+from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.typing import _NUMERIC_TYPES
 
 
@@ -93,40 +93,30 @@ def make_private_logistic_regression(
     l1_ratio: float = 0.0,
     reference_size: int | None = None,
 ) -> Measurement:
-    """Release binary logistic-regression weights using full-batch noisy gradient descent.
+    """Construct a measurement releasing logistic weights followed by the intercept.
 
-    Each iteration computes per-example gradients over the entire dataset, clips
-    their norms, privately sums them with Gaussian noise, and updates the weights.
-    Regularization is postprocessing, with parameter alpha and L1 fraction
-    l1_ratio; the intercept is not regularized. Each update scales the noisy
-    gradient sum plus the regularization gradient by learning_rate / normalizer.
-    The normalizer is the public reference_size if provided, otherwise the domain's
-    known size. It must be a finite positive integer; unsized domains require an
-    explicit reference_size. It need not equal the private dataset size and changes
-    only the step size, not the regularized objective. Privacy loss is composed
-    under zCDP, independently of reference_size and the actual number of records.
+    Accepts SklearnFit with numeric array2_domain features (public column count)
+    and numeric or boolean array1_domain targets, described by SklearnFitDescriptor.
+    Labels are expected to be 0/1, but their domain need not enforce this.
 
-    The input Domain must be described by SklearnFitDomain with numeric
-    NPArray2Domain features and numeric or boolean NPArray1Domain targets.
-    Ordinary NumPy SklearnFit inputs can use domain_of(data, infer=True), which
-    assumes public dtypes and feature count but infers neither size nor finiteness.
-    Binary labels are expected to be encoded as 0 and 1; the target domain need
-    not restrict their values. Nonfinite features are replaced with zero, and
-    nonfinite targets produce zero gradient rows. Extreme arithmetic is sanitized
-    to finite values before clipping. All preprocessing is row-local, preserving
-    identity stability under symmetric_distance(). Feature-domain constraints are
-    retained. Fixed-size domains use substitution adjacency (even d_in); unsized
-    domains use add/remove adjacency, including d_in=1.
+    Supports symmetric_distance and zCDP. Fixed-size inputs require even d_in for
+    substitutions; unsized inputs support add/remove adjacency, including d_in=1.
+    The normalizer is reference_size, or the known domain size when omitted, and
+    must be a public finite positive integer. No private row count is used.
+
+    Nonfinite features are zero-imputed and nonfinite targets give zero gradients.
+    Row-local sanitization produces finite gradients before clipping. Optimizer
+    parameters follow LogisticRegression; reference_size only changes step size.
     """
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    fit_desc = input_domain.cast(SklearnFitDomain)
+    fit_desc = input_domain.cast(SklearnFitDescriptor)
     if fit_desc.y is None:
         raise ValueError("LogisticRegression requires a target domain y")
     x_desc = fit_desc.X.cast(NPArray2Domain)
-    y_desc = fit_desc.y.cast(NPArray1Domain)
+    y_desc = fit_desc.y.cast(NPArray1Descriptor)
     target_types = _NUMERIC_TYPES | {"bool"}
     if x_desc.T not in _NUMERIC_TYPES or y_desc.T not in target_types:
         raise ValueError("X and y must have numeric element types (y may be boolean)")
