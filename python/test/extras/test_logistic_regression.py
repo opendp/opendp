@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import opendp.prelude as dp
 import pytest
 
@@ -25,7 +27,7 @@ def expit():
 def _domain(size=None, y_size=None, **features):
     return dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(**(dict(T=float, num_columns=2, size=size) | features)),
-        dp.numpy.array1_domain(T=float, size=y_size),
+        dp.vector_domain(dp.atom_domain(T=float), size=y_size),
     )
 
 
@@ -85,9 +87,9 @@ def test_nonfinite_gradients_and_fitting(model_type):
     "x_size, y_size, reference_size, learning_rate, alpha, l1_ratio, clip_norm",
     [
         (3, None, None, 0.3, 0, 0, 10),
-        (3, 3, 6, 0.6, 2, 0, 10),
-        (None, 3, None, 0.3, 2, 1, 10),
-        (None, None, 6, 0.6, 2, 0.5, 0.5),
+        (3, 3, 6, Fraction(3, 5), 2, 0, 10),
+        (None, 3, None, 0.3, 0.75, 1, 10),
+        (None, None, 6, 0.6, 0.75, 0.5, 0.5),
     ],
 )
 def test_updates_and_privacy_map(
@@ -101,12 +103,17 @@ def test_updates_and_privacy_map(
     l1_ratio,
     clip_norm,
 ):
-    # Nonzero first-step coefficients avoid L1's sign discontinuity under tiny noise.
     X, y = (
         np.array([[1, 0], [0, 2], [1, 1]], dtype=float),
         np.array([1, 0, 1], dtype=float),
     )
-    domain = _domain(x_size, y_size, norm=3, p=2, cardinalities=[2, 3])
+    domain = _domain(
+        x_size,
+        y_size,
+        norm=3,
+        p=2,
+        cardinalities=[2, 3],
+    )
     model = model_type(
         n_iters=2,
         learning_rate=learning_rate,
@@ -126,12 +133,17 @@ def test_updates_and_privacy_map(
         gradients /= np.maximum(
             1, np.linalg.norm(gradients, axis=1, keepdims=True) / clip_norm
         )
-        penalty = alpha * (l1_ratio * np.sign(expected) + (1 - l1_ratio) * expected)
+        penalty = alpha * (1 - l1_ratio) * expected
         penalty[-1] = 0
         expected -= 0.1 * (gradients.sum(axis=0) + penalty)
-    np.testing.assert_allclose(
-        measurement(dp.sklearn.SklearnFit(X, y)), expected, atol=1e-4, rtol=0
-    )
+        expected[:-1] = np.sign(expected[:-1]) * np.maximum(
+            np.abs(expected[:-1]) - 0.1 * alpha * l1_ratio, 0
+        )
+    actual = measurement(dp.sklearn.SklearnFit(X, y))
+    np.testing.assert_allclose(actual, expected, atol=1e-4, rtol=0)
+    if l1_ratio > 0:
+        assert actual[0] > 0 and actual[1] == 0
+        assert actual[-1] != 0  # The intercept is not soft-thresholded.
 
 
 def test_unsized_empty_fit_has_noise(model_type):
@@ -172,14 +184,13 @@ def test_input_domain_validation(model_type):
                 dp.numpy.array2_domain(T=float, num_columns=2)
             ),
         )
-    targets = dp.numpy.array1_domain(T=float)
+    targets = dp.vector_domain(dp.atom_domain(T=float))
     options = dict(T=float, num_columns=2, size=3)
     cases: list[tuple[dict, dp.Domain, str]] = [
         ({"T": str}, targets, "numeric element types"),
-        ({}, dp.vector_domain(dp.atom_domain(T=float)), "NPArray1Descriptor"),
-        ({}, dp.numpy.array2_domain(T=float), "NPArray1Descriptor"),
-        ({}, dp.numpy.array1_domain(T=str), "numeric element types"),
-        ({}, dp.numpy.array1_domain(T=float, size=2), "matching row counts"),
+        ({}, dp.vector_domain(dp.atom_domain(T=str)), "numeric element types"),
+        ({}, dp.numpy.array2_domain(T=float), "VectorDomain"),
+        ({}, dp.vector_domain(dp.atom_domain(T=float), size=2), "matching row counts"),
         ({"num_columns": None}, targets, "specify num_columns"),
     ]
     for features, target, error in cases:
@@ -198,6 +209,9 @@ def test_input_domain_validation(model_type):
         ("alpha", [-1, float("nan"), float("inf")]),
         ("l1_ratio", [-0.1, 1.1, float("nan"), float("inf")]),
         ("reference_size", [0, -1, 1.5, True, float("nan"), float("inf"), 10**1000]),
+        ("n_iters", [0, 1.5, True, float("inf")]),
+        ("learning_rate", [0, float("nan"), float("inf"), "0.1"]),
+        ("clip_norm", [-1, float("nan"), float("inf"), None]),
     ],
 )
 def test_public_parameter_validation(model_type, parameter, values):
@@ -207,15 +221,17 @@ def test_public_parameter_validation(model_type, parameter, values):
             _make(model_type(**{parameter: value}), domain)
 
 
-@pytest.mark.parametrize("route", ["standalone", "context"])
-def test_fitting_routes(model_type, data, route):
+@pytest.mark.parametrize(
+    "route, as_list", [("standalone", False), ("standalone", True), ("context", False)]
+)
+def test_fitting_routes(model_type, data, route, as_list):
     from sklearn.base import is_classifier
 
     model = model_type(n_iters=3, reference_size=37 if route == "standalone" else None)
     if route == "standalone":
         fitted = model.fit(
             data.X,
-            data.y.astype(bool),
+            data.y.astype(int).tolist() if as_list else data.y.astype(bool),
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(rho=1.0),
         )

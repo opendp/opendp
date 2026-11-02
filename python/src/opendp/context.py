@@ -227,10 +227,9 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
-    NumPy arrays with one or two dimensions infer native array domains, assuming
-    public dtype and feature count, but not length or finiteness. Rust-vector
-    operations on NumPy inputs require an explicit vector domain. Native array
-    domains also require an explicit metric when used with ``space_of``.
+    2D NumPy features infer native array domains; 1D NumPy arrays infer Rust
+    vector domains, including SklearnFit targets. Dtype and feature count are
+    assumed public; row count and finiteness are not inferred.
 
     :param T: carrier type
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
@@ -254,16 +253,13 @@ def domain_of(T, infer: bool = False) -> Domain:
             return _lazyframe_domain_from_schema(T.collect_schema())
 
         np = import_optional_dependency("numpy", raise_error=False)
-        if np is not None and isinstance(T, np.ndarray):
-            from opendp.extras.numpy import array1_domain, array2_domain
+        if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
+            from opendp.extras.numpy import array2_domain
 
-            if T.ndim == 1:
-                return array1_domain(T=_ELEMENTARY_TYPES[T.dtype.type])
-            if T.ndim == 2:
-                return array2_domain(
-                    T=_ELEMENTARY_TYPES[T.dtype.type],
-                    num_columns=T.shape[1],
-                )
+            return array2_domain(
+                T=_ELEMENTARY_TYPES[T.dtype.type],
+                num_columns=T.shape[1],
+            )
 
     # normalize to a type descriptor
     if infer:

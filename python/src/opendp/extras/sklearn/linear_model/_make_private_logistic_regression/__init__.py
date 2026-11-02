@@ -1,12 +1,12 @@
 import math
-from numbers import Integral
+from numbers import Integral, Real
 
-from opendp.mod import Measure, Domain, Metric, Measurement
+from opendp.mod import AtomDomain, Measure, Domain, Metric, Measurement, VectorDomain
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
-from opendp.extras.numpy import NPArray1Descriptor, NPArray2Domain, make_np_clamp
+from opendp.extras.numpy import NPArray2Domain, make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.typing import _NUMERIC_TYPES
 
@@ -15,12 +15,17 @@ def per_example_gradients(data, theta):
     """Compute finite gradients independently for each aligned SklearnFit record."""
     np = import_optional_dependency("numpy")
     special = import_optional_dependency("scipy.special")
-    y = data.y
+    y = np.asarray(data.y)
+    # Python integers wider than NumPy's native types produce object arrays.
+    if y.dtype.kind == "O":
+        y = y.astype(float)
     X = np.nan_to_num(data.X, nan=0.0, posinf=0.0, neginf=0.0)
-    X = np.hstack([X, np.ones((X.shape[0], 1))])
+    gradients = np.empty((X.shape[0], X.shape[1] + 1))
     with np.errstate(all="ignore"):
-        z = np.nan_to_num(X @ theta, nan=0.0)
-        gradients = (special.expit(z) - y)[:, None] * X
+        z = np.nan_to_num(X @ theta[:-1] + theta[-1], nan=0.0)
+        residual = special.expit(z) - y
+        np.multiply(residual[:, None], X, out=gradients[:, :-1])
+        gradients[:, -1] = residual
     # Missing/nonfinite targets contribute nothing, including to the intercept.
     gradients[~np.isfinite(y)] = 0.0
     # Saturate overflow and remove NaNs before entering the clipping domain.
@@ -73,9 +78,17 @@ def log_regression_train(
             bounds=(0.0, 1e6),
         )
         noised_sum = np.asarray(queryable(step))
-        penalty_grad = l1_coef * np.sign(theta) + l2_coef * theta
-        penalty_grad[-1] = 0.0
-        theta = theta - learning_rate / normalizer * (noised_sum + penalty_grad)
+        step_size = learning_rate / normalizer
+        smooth_grad = noised_sum.copy()
+        smooth_grad[:-1] += l2_coef * theta[:-1]
+        next_theta = theta - step_size * smooth_grad
+        if l1_coef > 0:
+            # Proximal L1 update; the intercept remains unregularized.
+            threshold = step_size * l1_coef
+            next_theta[:-1] = np.sign(next_theta[:-1]) * np.maximum(
+                np.abs(next_theta[:-1]) - threshold, 0.0
+            )
+        theta = next_theta
     return theta
 
 
@@ -96,7 +109,7 @@ def make_private_logistic_regression(
     """Construct a measurement releasing logistic weights followed by the intercept.
 
     Accepts SklearnFit with numeric array2_domain features (public column count)
-    and numeric or boolean array1_domain targets, described by SklearnFitDescriptor.
+    and numeric or boolean VectorDomain targets, described by SklearnFitDescriptor.
     Labels are expected to be 0/1, but their domain need not enforce this.
 
     Supports symmetric_distance and zCDP. Fixed-size inputs require even d_in for
@@ -116,18 +129,19 @@ def make_private_logistic_regression(
     if fit_desc.y is None:
         raise ValueError("LogisticRegression requires a target domain y")
     x_desc = fit_desc.X.cast(NPArray2Domain)
-    y_desc = fit_desc.y.cast(NPArray1Descriptor)
+    if not isinstance(fit_desc.y, VectorDomain):
+        raise ValueError("y_domain must be a VectorDomain")
+    y_atom = fit_desc.y.element_domain
+    if not isinstance(y_atom, AtomDomain):
+        raise ValueError("y must have numeric or boolean elements")
+    y_type, y_size = y_atom.carrier_type, fit_desc.y.size
     target_types = _NUMERIC_TYPES | {"bool"}
-    if x_desc.T not in _NUMERIC_TYPES or y_desc.T not in target_types:
+    if x_desc.T not in _NUMERIC_TYPES or y_type not in target_types:
         raise ValueError("X and y must have numeric element types (y may be boolean)")
-    if (
-        x_desc.size is not None
-        and y_desc.size is not None
-        and x_desc.size != y_desc.size
-    ):
+    if x_desc.size is not None and y_size is not None and x_desc.size != y_size:
         raise ValueError("X and y domains must have matching row counts")
     # Alignment makes the record count public if either field has a fixed size.
-    n = x_desc.size if x_desc.size is not None else y_desc.size
+    n = x_desc.size if x_desc.size is not None else y_size
     d = x_desc.num_columns
     if d is None:
         raise ValueError("X_domain must specify num_columns")
@@ -164,14 +178,21 @@ def make_private_logistic_regression(
 
     l1_coef, l2_coef = l1_ratio * alpha, (1.0 - l1_ratio) * alpha
 
-    if n_iters < 1:
-        raise ValueError(f"n_iters must be >= 1, got {n_iters}")  # pragma: no cover
-    if learning_rate <= 0:
-        raise ValueError(
-            f"learning_rate must be > 0, got {learning_rate}"
-        )  # pragma: no cover
-    if clip_norm <= 0:
-        raise ValueError(f"clip_norm must be > 0, got {clip_norm}")  # pragma: no cover
+    if isinstance(n_iters, bool) or not isinstance(n_iters, Integral) or n_iters <= 0:
+        raise ValueError("n_iters must be a positive integer")
+    for name, value in (("learning_rate", learning_rate), ("clip_norm", clip_norm)):
+        try:
+            valid = (
+                not isinstance(value, bool)
+                and isinstance(value, Real)
+                and float(value) > 0
+                and math.isfinite(value)
+            )
+        except OverflowError:
+            valid = False
+        if not valid:
+            raise ValueError(f"{name} must be a finite positive real number")
+    learning_rate, clip_norm = float(learning_rate), float(clip_norm)
     if n is not None and d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "

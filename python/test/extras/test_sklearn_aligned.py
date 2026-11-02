@@ -23,13 +23,12 @@ def test_sklearn_fit_domain_inference(dtype, T, y, rows):
     desc = domain.cast(dp.sklearn.SklearnFitDescriptor)
     assert (desc.X.descriptor.T, desc.X.descriptor.num_columns) == (T, 4)
     assert desc.X.descriptor.size is None and desc.X.descriptor.norm is None
-    if isinstance(y, np.ndarray):
-        assert desc.y == dp.numpy.array1_domain(T=y.dtype.type)
-        assert desc.y.descriptor.size is None
+    if y is None:
+        assert desc.y is None
     else:
-        assert desc.y == (
-            None if y is None else dp.vector_domain(dp.atom_domain(T=int))
-        )
+        target_type = y.dtype.type if isinstance(y, np.ndarray) else int
+        assert desc.y == dp.vector_domain(dp.atom_domain(T=target_type))
+        assert desc.y.size is None
     assert desc.X.descriptor.nan == (dtype in (np.float32, np.float64))
     assert domain.member(data)
 
@@ -52,15 +51,12 @@ def test_context_infers_sklearn_fit_domain(y):
     assert context.query()._d_in == 2
 
 
-def test_numpy_array_inference():
+def test_numpy_vector_inference_outside_sklearn_fit():
     values = np.array([np.nan, np.inf])
-    domain, metric = dp.space_of(values, M=dp.SymmetricDistance, infer=True)
-    assert domain == dp.numpy.array1_domain(T=float)
-    assert domain.cast(dp.numpy.NPArray1Descriptor).size is None
+    domain, metric = dp.space_of(values, infer=True)
+    assert domain == dp.vector_domain(dp.atom_domain(T=float))
     assert metric == dp.symmetric_distance()
     assert domain.member(values)
-    with pytest.raises(TypeError, match="no default metric"):
-        dp.space_of(values, infer=True)
 
 
 def test_sklearn_fit_membership_and_row_alignment():
@@ -68,6 +64,8 @@ def test_sklearn_fit_membership_and_row_alignment():
     y_domain = dp.vector_domain(dp.atom_domain(T=int), size=2)
     domain = dp.sklearn.sklearn_fit_domain(X_domain, y_domain)
     value = dp.sklearn.SklearnFit(np.ones((2, 2)), [0, 1])
+    assert value != dp.sklearn.SklearnFit(value.X, value.y)
+    assert repr(value) == object.__repr__(value)
     assert domain.member(value)
     assert not domain.member(value.X)
     assert not domain.member(dp.sklearn.SklearnFit(value.X))
@@ -83,6 +81,33 @@ def test_sklearn_fit_membership_and_row_alignment():
     )
     assert unbounded.member(dp.sklearn.SklearnFit(np.ones((0, 2)), []))
     assert not unbounded.member(dp.sklearn.SklearnFit(np.ones((1, 2)), [0, 1]))
+
+
+def test_numpy_targets_remain_arrays_in_callback():
+    y = np.array([0.0, 0.0, 1.0, 1.0, 0.0, 0.0])[::2]
+    data = dp.sklearn.SklearnFit(np.ones((3, 2)), y)
+    domain = dp.domain_of(data, infer=True)
+    assert isinstance(domain.cast(dp.sklearn.SklearnFitDescriptor).y, dp.VectorDomain)
+    assert domain.member(data)
+    received = []
+
+    def callback(value):
+        received.append(value.y)
+        return value
+
+    transform = dp.t.make_user_transformation(
+        domain,
+        dp.symmetric_distance(),
+        domain,
+        dp.symmetric_distance(),
+        function=callback,
+        stability_map=lambda d: d,
+    )
+    result = transform(data)
+    assert len(received) == 1
+    assert isinstance(received[0], np.ndarray)
+    assert received[0] is y and result.y is y
+    assert np.asarray(received[0]) is y
 
 
 @pytest.mark.parametrize("sparse_type", ["csr_matrix", "csr_array"])

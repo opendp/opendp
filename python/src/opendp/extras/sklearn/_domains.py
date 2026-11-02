@@ -7,7 +7,7 @@ from opendp._internal import _extrinsic_domain
 from opendp.mod import Domain
 
 
-@dataclass
+@dataclass(eq=False, repr=False)
 class SklearnFit:
     """Features and optional targets with aligned rows."""
 

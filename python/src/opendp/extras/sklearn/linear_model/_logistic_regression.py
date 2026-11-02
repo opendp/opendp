@@ -14,7 +14,8 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
     """Differentially private binary logistic regression with sklearn's classifier interface.
 
     Uses full-batch noisy gradient descent with per-record L2 clipping and Gaussian
-    noise. Labels should be encoded as 0 and 1.
+    noise, with proximal updates for L1 regularization. Labels should be encoded
+    as 0 and 1; NumPy arrays and Python lists are supported.
 
     ``fit`` requires ``privacy_unit`` and ``privacy_loss``. Without an explicit
     ``domain``, NumPy dtypes and feature count are assumed public; neither row count
@@ -24,9 +25,9 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
     targets contribute zero gradient rows; extreme arithmetic is sanitized before
     clipping.
 
-    :param n_iters: number of full-batch steps; the privacy budget is split across them
-    :param learning_rate: step size before division by the normalizer
-    :param clip_norm: per-record L2 gradient bound
+    :param n_iters: positive integer number of full-batch steps; budget is split across them
+    :param learning_rate: finite positive step size before division by the normalizer
+    :param clip_norm: finite positive per-record L2 gradient bound
     :param alpha: finite, nonnegative regularization strength for the summed loss;
         zero disables regularization, and the intercept is not regularized
     :param l1_ratio: finite L1 fraction in [0, 1]; zero selects L2, one selects L1
