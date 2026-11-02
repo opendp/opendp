@@ -110,9 +110,12 @@ class AIM(Algorithm):
     The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
     in that the exponential mechanism selects a marginal in each step.
 
-    AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
-    instead of joint distribution densities and the multiplicative weights update rule.
+    AIM differs from MWEM in that, by default, the distribution is represented via a graphical model
+    and fitted via mirror descent, instead of joint distribution densities and the multiplicative weights update rule.
     This allows AIM to support higher-dimensional datasets.
+
+    Setting ``estimator`` to Gem+ (`MGCB25 <https://arxiv.org/abs/2511.09672>`_) instead fits a neural generator
+    to the measured marginals. Each round continues training the previous generator, and ``max_size`` is not applied.
     """
 
     queries: list[Count] | int = 3
@@ -122,7 +125,7 @@ class AIM(Algorithm):
 
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
-    """Maximum memory constraint in MB for the marginal selection."""
+    """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
 
@@ -150,7 +153,7 @@ class AIM(Algorithm):
         d_out: float,
         *,
         marginals: Marginals,
-        model,  # MarkovRandomField
+        model,  # MarkovRandomField | GemPlusModel
     ) -> Measurement:
         """Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
 
@@ -160,13 +163,14 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of ``MarkovRandomField``
+        :param model: warm-start fit of ``MarkovRandomField`` or ``GemPlusModel``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from opendp.extras.mbi._gem import GemPlusModel
 
-        if not isinstance(model, MarkovRandomField):
-            raise ValueError("model must be a MarkovRandomField")
+        if not isinstance(model, (MarkovRandomField, GemPlusModel)):
+            raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
@@ -234,7 +238,7 @@ def _make_aim_marginal(
     d_in: int,
     d_out: float,
     marginals: Marginals,
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
     max_size: float,
     algorithm: AIM,
 ) -> Optional[Measurement]:
@@ -301,11 +305,15 @@ def _make_aim_marginal(
 
         all_marginals = marginals.add(new_marginal)
 
-        new_model: MarkovRandomField = algorithm.estimator(
-            model.domain,
-            all_marginals.flatten(),
-            potentials=model.potentials,
-        )
+        if isinstance(model, MarkovRandomField):
+            new_model = algorithm.estimator(
+                model.domain, all_marginals.flatten(), potentials=model.potentials
+            )
+        else:
+            # Gem+ continues training the previous generator.
+            new_model = algorithm.estimator(
+                model.domain, all_marginals.flatten(), warm_start=model
+            )
 
         next_tab = new_model.project(selected_clique).values
         diff = float(np.linalg.norm((next_tab - prev_tab).flatten(), 1))
@@ -351,6 +359,9 @@ def _make_aim_select(
     model = cast(mbi.MarkovRandomField, model)
 
     def is_small(clique: tuple[str, ...]) -> bool:
+        # Gem+ has no junction tree, so the size limit does not apply.
+        if not isinstance(model, mbi.MarkovRandomField):
+            return True
         model_size = mbi.junction_tree.hypothetical_model_size(
             model.domain, cliques=[*model.cliques, clique]
         )

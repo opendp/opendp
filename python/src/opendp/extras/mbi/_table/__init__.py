@@ -73,8 +73,12 @@ class ContingencyTable:
         from mbi import MarkovRandomField, Domain  # type: ignore[import-untyped,import-not-found]
         import polars as pl  # type: ignore[import-not-found]
 
-        if not isinstance(self.model, MarkovRandomField):  # pragma: no cover
-            raise ValueError("model must be a MarkovRandomField")
+        from opendp.extras.mbi._gem import GemPlusModel
+
+        if not isinstance(
+            self.model, (MarkovRandomField, GemPlusModel)
+        ):  # pragma: no cover
+            raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         for col in self.keys:
             self.keys[col] = pl.Series(col, self.keys[col])
