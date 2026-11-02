@@ -52,6 +52,7 @@ def test_returns_gem_plus_model(domain):
     assert isinstance(fitted, GemPlusModel)
     assert fitted.domain == domain
     assert fitted.project("age").values.shape == (3,)
+    assert fitted.num_components() == BATCH
 
 
 def test_supports(model):
