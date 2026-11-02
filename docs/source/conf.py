@@ -116,6 +116,7 @@ nitpick_ignore = [
     # External dependencies may not exist when building docs
     ("py:class", "numpy.ndarray"),
     ("py:class", "sklearn.decomposition._pca.PCA"),
+    ("py:class", "sklearn.base.ClassifierMixin"),
     ("py:class", "sklearn.decomposition.PCA"),
     # Base class of the sklearn estimators is in a private module
     ("py:class", "opendp.extras.sklearn._estimator.DPEstimator"),

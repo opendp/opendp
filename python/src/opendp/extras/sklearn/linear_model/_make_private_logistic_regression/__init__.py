@@ -1,9 +1,11 @@
-from opendp.mod import AtomDomain, Measure, Domain, Metric, Measurement, VectorDomain
+import math
+
+from opendp.mod import Measure, Domain, Metric, Measurement
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
-from opendp.extras.numpy import NPArray2Domain, make_np_clamp
+from opendp.extras.numpy import NPArray1Domain, NPArray2Domain, make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDomain
 from opendp.typing import _NUMERIC_TYPES
 
@@ -12,7 +14,7 @@ def per_example_gradients(data, theta):
     """Compute one gradient per aligned SklearnFit record at fixed weights."""
     np = import_optional_dependency("numpy")
     special = import_optional_dependency("scipy.special")
-    y = np.asarray(data.y)
+    y = data.y
     X = np.hstack([data.X, np.ones((data.X.shape[0], 1))])
     z = X @ theta
     p = special.expit(z)
@@ -80,18 +82,23 @@ def make_private_logistic_regression(
     n_iters: int,
     learning_rate: float,
     clip_norm: float,
-    penalty: str = "l2",
-    C: float = 1.0,
-    l1_ratio: float | None = None,
+    alpha: float = 1.0,
+    l1_ratio: float = 0.0,
 ) -> Measurement:
-    """Release DP-SGD weights from a row-aligned SklearnFit(X, y) dataset.
+    """Release binary logistic-regression weights using full-batch noisy gradient descent.
+
+    Each iteration computes per-example gradients over the entire dataset, clips
+    their norms, privately sums them with Gaussian noise, and updates the weights.
+    Regularization is postprocessing, with strength alpha / n and L1 fraction
+    l1_ratio; the intercept is not regularized. Privacy loss is composed under zCDP.
 
     The input Domain must be described by SklearnFitDomain with numeric
-    NPArray2Domain features and numeric or boolean VectorDomain targets.
-    Both must exclude NaNs. Feature count and a positive dataset size must be
-    specified publicly; feature-domain norm and cardinality constraints are
-    retained on the original input domain.
-    Each aligned feature/target pair is one record under symmetric_distance().
+    NPArray2Domain features and numeric or boolean NPArray1Domain targets.
+    Binary labels are expected to be encoded as 0 and 1; the target domain need
+    not restrict their values. Both domains must exclude NaNs. Feature count and
+    a positive dataset size must be specified publicly; feature-domain constraints
+    are retained. Each aligned feature/target pair is one record under
+    symmetric_distance(), with identity stability for per-example gradients.
     """
     import opendp.prelude as dp
 
@@ -101,23 +108,18 @@ def make_private_logistic_regression(
     if fit_desc.y is None:
         raise ValueError("LogisticRegression requires a target domain y")
     x_desc = fit_desc.X.cast(NPArray2Domain)
-    y_domain = fit_desc.y
-    if not isinstance(y_domain, VectorDomain):
-        raise ValueError("y_domain must be a VectorDomain")
-    y_atom = y_domain.element_domain
-    if not isinstance(y_atom, AtomDomain):
-        raise ValueError("y_domain must have an AtomDomain element domain")
+    y_desc = fit_desc.y.cast(NPArray1Domain)
     target_types = _NUMERIC_TYPES | {"bool"}
-    if x_desc.T not in _NUMERIC_TYPES or y_atom.carrier_type not in target_types:
+    if x_desc.T not in _NUMERIC_TYPES or y_desc.T not in target_types:
         raise ValueError("X and y must have numeric element types (y may be boolean)")
-    if x_desc.nan or y_atom.nan:
+    if x_desc.nan or y_desc.nan:
         raise ValueError("X and y domains must exclude NaNs (nan=False)")
     n, d = x_desc.size, x_desc.num_columns
     if n is None or n <= 0:
         raise ValueError("X_domain must have known size greater than zero")
     if d is None:
         raise ValueError("X_domain must specify num_columns")
-    if y_domain.size is not None and y_domain.size != n:
+    if y_desc.size is not None and y_desc.size != n:
         raise ValueError("X and y domains must have matching row counts")
 
     if input_metric != dp.symmetric_distance():  # |\label{metric-check}|
@@ -130,33 +132,13 @@ def make_private_logistic_regression(
             "output_measure must be zero-concentrated divergence (zCDP)"
         )  # pragma: no cover
 
-    if penalty not in ("l1", "l2", "elasticnet", None):
-        raise ValueError(
-            f"penalty must be 'l1', 'l2', 'elasticnet', or None, got {penalty}"
-        )  # pragma: no cover
+    if not math.isfinite(alpha) or alpha < 0:
+        raise ValueError("alpha must be finite and nonnegative")
+    if not math.isfinite(l1_ratio) or not 0 <= l1_ratio <= 1:
+        raise ValueError("l1_ratio must be finite and in [0, 1]")
 
-    if C <= 0:
-        raise ValueError(f"C must be > 0, got {C}")  # pragma: no cover
-    if penalty == "elasticnet" and l1_ratio is None:
-        raise ValueError(
-            "l1_ratio required when penalty='elasticnet'"
-        )  # pragma: no cover
-    if l1_ratio is not None and not (0 <= l1_ratio <= 1):
-        raise ValueError(
-            f"l1_ratio must be in [0, 1], got {l1_ratio}"
-        )  # pragma: no cover
-
-    reg = 1.0 / (C * n)
-
-    if penalty is None:
-        l1_coef, l2_coef = 0.0, 0.0  # pragma: no cover
-    elif penalty == "l2":
-        l1_coef, l2_coef = 0.0, reg  # pragma: no cover
-    elif penalty == "l1":
-        l1_coef, l2_coef = reg, 0.0  # pragma: no cover
-    elif penalty == "elasticnet":  # pragma: no cover
-        assert l1_ratio is not None  # pragma: no cover
-        l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg  # pragma: no cover
+    reg = alpha / n
+    l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg
 
     if n_iters < 1:
         raise ValueError(f"n_iters must be >= 1, got {n_iters}")  # pragma: no cover
@@ -166,8 +148,6 @@ def make_private_logistic_regression(
         )  # pragma: no cover
     if clip_norm <= 0:
         raise ValueError(f"clip_norm must be > 0, got {clip_norm}")  # pragma: no cover
-    if penalty not in ("l1", "l2", "elasticnet", None):
-        raise ValueError(...)  # pragma: no cover
     if d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "

@@ -20,7 +20,7 @@ def test_logistic_regression_requires_known_size():
         make_private_logistic_regression(
             dp.sklearn.sklearn_fit_domain(
                 dp.numpy.array2_domain(num_columns=3, nan=False, T=float),
-                dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+                dp.numpy.array1_domain(T=float, nan=False),
             ),
             dp.symmetric_distance(),
             dp.zero_concentrated_divergence(),

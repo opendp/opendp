@@ -12,3 +12,10 @@ def test_logistic_regression_lazy_export():
     assert LogisticRegression is implementation
     model = LogisticRegression(n_iters=3)
     assert clone(model).get_params() == model.get_params()
+    assert set(model.get_params()) == {
+        "n_iters",
+        "learning_rate",
+        "clip_norm",
+        "alpha",
+        "l1_ratio",
+    }

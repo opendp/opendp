@@ -62,6 +62,54 @@ def _fmt_attrs(attrs) -> str:
     return ", ".join(f"{k}={v}" for k, v in asdict(attrs).items() if v is not None)
 
 
+def array1_domain(
+    *,
+    T: RuntimeTypeDescriptor,
+    size: int | None = None,
+    nan: bool | None = None,
+) -> Domain:
+    """Construct a Domain representing 1-dimensional NumPy arrays.
+
+    :param T: atom type
+    :param size: optional number of elements
+    :param nan: whether NaNs are allowed; defaults to True for floating-point types
+    """
+    np = import_optional_dependency("numpy")
+    _check_nonnegative_int(size, "size")
+    T = RuntimeType.parse(T)
+    if T not in _PRIMITIVE_TYPES:
+        raise ValueError(f"T ({T}) must be a primitive type")
+    if nan is None:
+        nan = T in {"f32", "f64"}
+
+    def _member(x):
+        if not isinstance(x, np.ndarray):
+            raise TypeError("must be a numpy ndarray")
+        if x.ndim != 1:
+            raise ValueError("must be a 1-dimensional array")
+        T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
+        if T_actual != T:
+            raise TypeError(f"must have data of type {T}, got {T_actual}")
+        if size is not None and len(x) != size:
+            raise ValueError(f"must have exactly {size} elements")
+        if T in {"f32", "f64"} and not nan and np.isnan(x).any():
+            raise ValueError("must not contain NaN values")
+        return True
+
+    desc = NPArray1Domain(size=size, nan=nan, T=T)
+    return _extrinsic_domain(f"NPArray1Domain({_fmt_attrs(desc)})", _member, desc)
+
+
+@dataclass(kw_only=True, frozen=True)
+class NPArray1Domain:
+    size: int | None
+    """number of elements, if fixed"""
+    nan: bool
+    """whether NaN values are allowed"""
+    T: str | RuntimeType
+    """atom type"""
+
+
 def array2_domain(
     *,
     norm: float | None = None,

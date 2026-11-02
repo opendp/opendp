@@ -6,6 +6,40 @@ import re
 np = pytest.importorskip("numpy")
 
 
+@pytest.mark.parametrize("T", [bool, np.int32, np.float32, float])
+def test_array1_domain(T):
+    values = np.array([0, 1], dtype=T)
+    domain = dp.numpy.array1_domain(T=T, size=2, nan=False)
+    desc = domain.cast(dp.numpy.NPArray1Domain)
+    assert (desc.size, desc.nan) == (2, False)
+    assert domain.member(values)
+    assert domain.member(values[::-1])
+    assert dp.numpy.array1_domain(T=T).member(np.array([], dtype=T))
+    assert dp.numpy.array1_domain(T=T, size=0).member(np.array([], dtype=T))
+    wrong_dtype = np.float32 if values.dtype == np.float64 else np.float64
+    with pytest.warns(match="must have data of type"):
+        assert not domain.member(values.astype(wrong_dtype))
+
+
+def test_array1_domain_validation():
+    domain = dp.numpy.array1_domain(T=float, size=2, nan=False)
+    for value, error in [
+        ([0.0, 1.0], "must be a numpy ndarray"),
+        (np.array(0.0), "1-dimensional"),
+        (np.zeros((2, 1)), "1-dimensional"),
+        (np.zeros(3), "exactly 2 elements"),
+        (np.array([0.0, np.nan]), "NaN"),
+    ]:
+        with pytest.warns(match=error):
+            assert not domain.member(value)
+    assert dp.numpy.array1_domain(T=float, nan=True).member(np.array([np.nan]))
+    assert dp.numpy.array1_domain(T=float).member(np.array([np.nan]))
+    with pytest.raises(ValueError, match="non-negative"):
+        dp.numpy.array1_domain(T=float, size=-1)
+    with pytest.raises(ValueError, match="primitive type"):
+        dp.numpy.array1_domain(T=dp.Measurement)
+
+
 def test_array2_domain():
     # missing norm
     with pytest.raises(ValueError):

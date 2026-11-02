@@ -403,7 +403,7 @@ def test_logistic_regression_gradients_preserve_aligned_rows(target_type):
             p=2,
             cardinalities=[3, 3],
         ),
-        dp.vector_domain(dp.atom_domain(T=target_type, nan=False)),
+        dp.numpy.array1_domain(T=target_type, nan=False),
     )
     data = dp.sklearn.SklearnFit(X, y)
     assert domain.member(data)
@@ -444,15 +444,21 @@ def test_logistic_regression_validates_input_domains():
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
     options = dict(num_columns=2, size=3, nan=False, T=float)
-    targets = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    targets = dp.numpy.array1_domain(T=float, nan=False)
     cases: list[tuple[dict, dp.Domain, str]] = [
         ({"nan": True}, targets, "exclude NaNs"),
-        ({}, dp.vector_domain(dp.atom_domain(T=float, nan=True)), "exclude NaNs"),
+        ({}, dp.numpy.array1_domain(T=float, nan=True), "exclude NaNs"),
         ({"T": str}, targets, "numeric element types"),
-        ({}, dp.atom_domain(T=float), "VectorDomain"),
+        ({}, dp.vector_domain(dp.atom_domain(T=float, nan=False)), "NPArray1Domain"),
         (
             {},
-            dp.vector_domain(dp.atom_domain(T=float, nan=False), size=2),
+            dp.numpy.array2_domain(T=float, size=3, num_columns=1, nan=False),
+            "NPArray1Domain",
+        ),
+        ({}, dp.numpy.array1_domain(T=str), "numeric element types"),
+        (
+            {},
+            dp.numpy.array1_domain(T=float, nan=False, size=2),
             "matching row counts",
         ),
         ({"num_columns": None}, targets, "specify num_columns"),
@@ -473,6 +479,31 @@ def test_logistic_regression_validates_input_domains():
             )
 
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"alpha": -1.0},
+        {"alpha": float("nan")},
+        {"alpha": float("inf")},
+        {"l1_ratio": -0.1},
+        {"l1_ratio": 1.1},
+        {"l1_ratio": float("nan")},
+        {"l1_ratio": float("inf")},
+    ],
+)
+def test_logistic_regression_rejects_invalid_regularization(params):
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=3, num_columns=2, nan=False),
+        dp.numpy.array1_domain(T=float, size=3, nan=False),
+    )
+    with pytest.raises(ValueError, match="alpha|l1_ratio"):
+        LogisticRegression(**params).make(
+            domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1.0
+        )
+
+
 @pytest.mark.parametrize("route", ["context", "standalone"])
 def test_logistic_regression_fitting(route):
     import opendp.prelude as dp
@@ -488,7 +519,7 @@ def test_logistic_regression_fitting(route):
 
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
-        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=100),
+        dp.numpy.array1_domain(T=float, nan=False, size=100),
     )
     metric = dp.symmetric_distance()
     estimator = LogisticRegression(n_iters=50, learning_rate=0.3, clip_norm=5.0)
@@ -519,16 +550,29 @@ def test_logistic_regression_fitting(route):
             privacy_loss=dp.loss_of(rho=1.0),
         )
         assert fitted is estimator
-    assert fitted.coef_.shape == (3,)
+    from sklearn.base import clone, is_classifier
+
+    assert is_classifier(estimator) and is_classifier(fitted)
+    assert fitted.coef_.shape == (1, 3)
+    assert fitted.intercept_.shape == (1,)
+    assert fitted.n_features_in_ == 3
     assert list(fitted.classes_) == [0, 1]
+    assert clone(fitted).get_params() == fitted.get_params()
 
     proba = fitted.predict_proba(X)
     assert proba.shape == (100, 2)
+    np.testing.assert_allclose(proba.sum(axis=1), 1)
     preds = fitted.predict(X)
     assert set(np.unique(preds)).issubset({0, 1})
+    assert fitted.score(X, y) == np.mean(preds == y)
 
 
-def test_logistic_regression_matches_sklearn_regularized():
+# sklearn 1.8 warns on its recommended C=inf path for unregularized fitting.
+@pytest.mark.filterwarnings(
+    "ignore:Setting penalty=None will ignore the C and l1_ratio parameters:UserWarning"
+)
+@pytest.mark.parametrize("alpha", [0.0, 1.0])
+def test_logistic_regression_matches_sklearn_regularized(alpha):
     import opendp.prelude as dp
 
     np = pytest.importorskip("numpy")
@@ -543,11 +587,11 @@ def test_logistic_regression_matches_sklearn_regularized():
     data = dp.sklearn.SklearnFit(X, y)
     dom = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
-        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=100),
+        dp.numpy.array1_domain(T=float, nan=False, size=100),
     )
 
     est = LogisticRegression(
-        n_iters=2000, learning_rate=0.5, clip_norm=100.0, penalty="l2", C=1.0
+        n_iters=2000, learning_rate=0.5, clip_norm=100.0, alpha=alpha
     )
     theta_dp = np.asarray(
         est.make(
@@ -556,13 +600,16 @@ def test_logistic_regression_matches_sklearn_regularized():
     )
 
     Xb = np.hstack([X, np.ones((100, 1))])
-    sk = SkLR(C=1.0, fit_intercept=False, max_iter=10000).fit(Xb, y)
+    sk = SkLR(
+        C=1.0 / alpha if alpha else np.inf, fit_intercept=False, max_iter=10000
+    ).fit(Xb, y)
 
     print("DP:", np.round(theta_dp, 3), "sklearn:", np.round(sk.coef_[0], 3))
     assert np.max(np.abs(theta_dp - sk.coef_[0])) < 0.5
 
 
-def test_logistic_regression_l1_sparsity():
+@pytest.mark.parametrize("l1_ratio", [0.5, 1.0])
+def test_logistic_regression_l1_sparsity(l1_ratio):
     import opendp.prelude as dp
 
     np = pytest.importorskip("numpy")
@@ -575,14 +622,14 @@ def test_logistic_regression_l1_sparsity():
     data = dp.sklearn.SklearnFit(X, y)
     dom = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(num_columns=3, size=200, nan=False, T=float),
-        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=200),
+        dp.numpy.array1_domain(T=float, nan=False, size=200),
     )
     est = LogisticRegression(
         n_iters=2000,
         learning_rate=0.5,
         clip_norm=100.0,
-        penalty="l1",
-        C=0.05,
+        alpha=20.0,
+        l1_ratio=l1_ratio,
     )
     theta = np.asarray(
         est.make(
