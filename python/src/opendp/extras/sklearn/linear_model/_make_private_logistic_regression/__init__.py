@@ -1,17 +1,19 @@
-from opendp.mod import Measure, Domain, Metric, Measurement
+from opendp.mod import AtomDomain, Measure, Domain, Metric, Measurement, VectorDomain
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
-from opendp.extras.numpy import make_np_clamp
+from opendp.extras.numpy import NPArray2Domain, make_np_clamp
+from opendp.extras.sklearn._domains import SklearnFitDomain
+from opendp.typing import _NUMERIC_TYPES
 
 
 def per_example_gradients(data, theta):
+    """Compute one gradient per aligned SklearnFit record at fixed weights."""
     np = import_optional_dependency("numpy")
     special = import_optional_dependency("scipy.special")
-    y = data[:, -1]
-    Xf = data[:, :-1]
-    X = np.hstack([Xf, np.ones((data.shape[0], 1))])
+    y = np.asarray(data.y)
+    X = np.hstack([data.X, np.ones((data.X.shape[0], 1))])
     z = X @ theta
     p = special.expit(z)
     return (p - y)[:, None] * X
@@ -43,6 +45,7 @@ def log_regression_train(
             dp.numpy.array2_domain(num_columns=d + 1, size=n, T=float),
             dp.symmetric_distance(),
             function=lambda data, th=theta: per_example_gradients(data, th),
+            # One aligned (X[i], y[i]) record produces one gradient row.
             stability_map=lambda b_in: b_in,
         )
         clamp = make_np_clamp(
@@ -80,21 +83,42 @@ def make_private_logistic_regression(
     penalty: str = "l2",
     C: float = 1.0,
     l1_ratio: float | None = None,
-) -> dp.Measurement:
+) -> Measurement:
+    """Release DP-SGD weights from a row-aligned SklearnFit(X, y) dataset.
 
+    The input Domain must be described by SklearnFitDomain with numeric
+    NPArray2Domain features and numeric or boolean VectorDomain targets.
+    Both must exclude NaNs. Feature count and a positive dataset size must be
+    specified publicly; feature-domain norm and cardinality constraints are
+    retained on the original input domain.
+    Each aligned feature/target pair is one record under symmetric_distance().
+    """
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    if not str(input_domain).startswith("NPArray2Domain"):  # |\label{domain-check}|
-        raise ValueError(
-            f"input_domain ({input_domain}) must be NPArray2Domain"
-        )  # pragma: no cover
-
-    if input_domain.descriptor.nan:
-        raise ValueError(
-            f"input_domain ({input_domain}) must not permit NaN elements"
-        )  # pragma: no cover
+    fit_desc = input_domain.cast(SklearnFitDomain)
+    if fit_desc.y is None:
+        raise ValueError("LogisticRegression requires a target domain y")
+    x_desc = fit_desc.X.cast(NPArray2Domain)
+    y_domain = fit_desc.y
+    if not isinstance(y_domain, VectorDomain):
+        raise ValueError("y_domain must be a VectorDomain")
+    y_atom = y_domain.element_domain
+    if not isinstance(y_atom, AtomDomain):
+        raise ValueError("y_domain must have an AtomDomain element domain")
+    target_types = _NUMERIC_TYPES | {"bool"}
+    if x_desc.T not in _NUMERIC_TYPES or y_atom.carrier_type not in target_types:
+        raise ValueError("X and y must have numeric element types (y may be boolean)")
+    if x_desc.nan or y_atom.nan:
+        raise ValueError("X and y domains must exclude NaNs (nan=False)")
+    n, d = x_desc.size, x_desc.num_columns
+    if n is None or n <= 0:
+        raise ValueError("X_domain must have known size greater than zero")
+    if d is None:
+        raise ValueError("X_domain must specify num_columns")
+    if y_domain.size is not None and y_domain.size != n:
+        raise ValueError("X and y domains must have matching row counts")
 
     if input_metric != dp.symmetric_distance():  # |\label{metric-check}|
         raise ValueError(
@@ -121,11 +145,6 @@ def make_private_logistic_regression(
         raise ValueError(
             f"l1_ratio must be in [0, 1], got {l1_ratio}"
         )  # pragma: no cover
-
-    desc = input_domain.descriptor
-    n, d = desc.size, desc.num_columns - 1
-    if n is None:
-        raise ValueError("input_domain must have known size (sized data required)")
 
     reg = 1.0 / (C * n)
 

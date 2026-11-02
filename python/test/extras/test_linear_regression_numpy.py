@@ -18,7 +18,10 @@ def test_logistic_regression_requires_known_size():
 
     with pytest.raises(ValueError, match="must have known size"):
         make_private_logistic_regression(
-            dp.numpy.array2_domain(num_columns=4, nan=False, T=float),
+            dp.sklearn.sklearn_fit_domain(
+                dp.numpy.array2_domain(num_columns=3, nan=False, T=float),
+                dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ),
             dp.symmetric_distance(),
             dp.zero_concentrated_divergence(),
             2,

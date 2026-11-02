@@ -385,42 +385,58 @@ def test_logistic_regression_rejects_missing_target():
 
 
 @pytest.mark.parametrize("target_type", [bool, float])
-def test_logistic_regression_assembles_aligned_rows(target_type, monkeypatch):
-    from opendp.extras.sklearn.linear_model import _logistic_regression as logistic
+def test_logistic_regression_gradients_preserve_aligned_rows(target_type):
+    from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
+        make_private_logistic_regression,
+        per_example_gradients,
+    )
 
     X = np.array([[1, 2], [3, 4], [5, 6]], dtype=np.float32)
     y = np.array([0, 1, 0], dtype=target_type)
     domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=2, size=3, nan=False, T=np.float32),
+        dp.numpy.array2_domain(
+            num_columns=2,
+            size=3,
+            nan=False,
+            T=np.float32,
+            norm=10,
+            p=2,
+            cardinalities=[3, 3],
+        ),
         dp.vector_domain(dp.atom_domain(T=target_type, nan=False)),
     )
-    transforms = []
-    original = logistic._make_transformation
-
-    def record(*args):
-        transform = original(*args)
-        transforms.append(transform)
-        return transform
-
-    monkeypatch.setattr(logistic, "_make_transformation", record)
-    measurement = logistic.LogisticRegression(n_iters=1).make(
-        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 0.5
-    )
-    (assemble,) = transforms
     data = dp.sklearn.SklearnFit(X, y)
     assert domain.member(data)
     assert not domain.member(dp.sklearn.SklearnFit(X, y[:-1]))
-    combined = assemble(data)
-    np.testing.assert_array_equal(combined, np.column_stack((X, y)))
-    assert assemble.output_domain.member(combined)
-    desc = assemble.output_domain.cast(dp.numpy.NPArray2Domain)
-    assert (desc.size, desc.num_columns, desc.nan) == (3, 3, False)
-    assert desc.T == ("f32" if target_type is bool else "f64")
-    assert [assemble.map(d) for d in (0, 1, 2, 4)] == [0, 1, 2, 4]
+    theta = np.array([0.2, -0.1, 0.3])
+    gradients = per_example_gradients(data, theta)
+    features = np.column_stack((X, np.ones(3)))
+    expected = (1 / (1 + np.exp(-(features @ theta))) - y)[:, None] * features
+    np.testing.assert_allclose(gradients, expected)
     order = [2, 0, 1]
-    np.testing.assert_array_equal(
-        assemble(dp.sklearn.SklearnFit(X[order], y[order])), combined[order]
+    np.testing.assert_allclose(
+        per_example_gradients(dp.sklearn.SklearnFit(X[order], y[order]), theta),
+        gradients[order],
     )
+    changed_X, changed_y = X.copy(), y.copy()
+    changed_X[0] = [-1, -2]
+    changed_y[0] = 1
+    changed = dp.sklearn.SklearnFit(changed_X, changed_y)
+    assert domain.member(changed)
+    changed_gradients = per_example_gradients(changed, theta)
+    assert not np.array_equal(changed_gradients[0], gradients[0])
+    np.testing.assert_array_equal(changed_gradients[1:], gradients[1:])
+    measurement = make_private_logistic_regression(
+        domain,
+        dp.symmetric_distance(),
+        dp.zero_concentrated_divergence(),
+        2,
+        0.5,
+        n_iters=1,
+        learning_rate=0.1,
+        clip_norm=1.0,
+    )
+    assert measurement.input_domain == domain
     assert measurement.map(2) <= 0.5
 
 
@@ -439,10 +455,9 @@ def test_logistic_regression_validates_input_domains():
             dp.vector_domain(dp.atom_domain(T=float, nan=False), size=2),
             "matching row counts",
         ),
-        ({"num_columns": None}, targets, "size and num_columns"),
-        ({"size": None}, targets, "size and num_columns"),
-        ({"norm": 1, "p": 2}, targets, "row-norm and cardinality"),
-        ({"cardinalities": [2, 2]}, targets, "row-norm and cardinality"),
+        ({"num_columns": None}, targets, "specify num_columns"),
+        ({"size": None}, targets, "known size"),
+        ({"size": 0}, targets, "known size greater than zero"),
     ]
     for overrides, y_domain, error in cases:
         domain = dp.sklearn.sklearn_fit_domain(

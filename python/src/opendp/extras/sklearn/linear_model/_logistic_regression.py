@@ -3,12 +3,6 @@
 import numpy as np
 from scipy.special import expit  # type: ignore[import-untyped]
 
-from opendp._convert import _numpy_dtype_for_rust_type
-from opendp._internal import _make_transformation
-from opendp.extras.numpy import NPArray2Domain, array2_domain
-from opendp.mod import AtomDomain, VectorDomain
-from opendp.typing import _NUMERIC_TYPES
-from opendp.extras.sklearn._domains import SklearnFitDomain
 from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
     make_private_logistic_regression as _make_private_logistic_regression,
@@ -35,9 +29,10 @@ class LogisticRegression(DPEstimator):
 
     Specify ``domain=sklearn_fit_domain(X_domain, y_domain)`` explicitly.
     ``X_domain`` must be a numeric ``NPArray2Domain`` with a public feature count,
-    a known positive row count, and ``nan=False``. Row-norm and cardinality
-    constraints on features are not supported. ``y_domain`` must be a numeric
-    or boolean ``VectorDomain`` excluding NaNs and aligned with the feature rows.
+    a known positive row count, and ``nan=False``. Feature row-norm and cardinality
+    constraints are supported and retained on the input domain. ``y_domain`` must
+    be a numeric or boolean ``VectorDomain`` excluding NaNs and aligned with the
+    feature rows.
     Dataset size and finiteness constraints must be specified publicly, not
     inferred from private data.
 
@@ -66,52 +61,8 @@ class LogisticRegression(DPEstimator):
         self.l1_ratio = l1_ratio
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
-        fit_desc = input_domain.cast(SklearnFitDomain)
-        if fit_desc.y is None:
-            raise ValueError("LogisticRegression requires a target domain y")
-        x_desc = fit_desc.X.cast(NPArray2Domain)
-        y_domain = fit_desc.y
-        if not isinstance(y_domain, VectorDomain):
-            raise ValueError("y_domain must be a VectorDomain")
-        y_atom = y_domain.element_domain
-        if not isinstance(y_atom, AtomDomain):
-            raise ValueError("y_domain must have an AtomDomain element domain")
-        numeric = _NUMERIC_TYPES | {"bool"}
-        if x_desc.T not in _NUMERIC_TYPES or y_atom.carrier_type not in numeric:
-            raise ValueError(
-                "X and y must have numeric element types (y may be boolean)"
-            )
-        if x_desc.nan or y_atom.nan:
-            raise ValueError("X and y domains must exclude NaNs (nan=False)")
-        if x_desc.size is None or x_desc.size <= 0 or x_desc.num_columns is None:
-            raise ValueError("X_domain must specify a positive size and num_columns")
-        if y_domain.size is not None and y_domain.size != x_desc.size:
-            raise ValueError("X and y domains must have matching row counts")
-        if x_desc.norm is not None or x_desc.cardinalities is not None:
-            raise ValueError(
-                "feature row-norm and cardinality constraints are not supported"
-            )
-
-        y_dtype = _numpy_dtype_for_rust_type(str(y_atom.carrier_type))
-        dtype = np.result_type(_numpy_dtype_for_rust_type(str(x_desc.T)), y_dtype)
-        combined_domain = array2_domain(
-            num_columns=x_desc.num_columns + 1,
-            size=x_desc.size,
-            nan=False,
-            T=dtype.type,
-        )
-        assemble = _make_transformation(
+        return _make_private_logistic_regression(
             input_domain,
-            input_metric,
-            combined_domain,
-            input_metric,
-            lambda data: np.column_stack(
-                (data.X, np.asarray(data.y, dtype=y_dtype))
-            ).astype(dtype, copy=False),
-            lambda distance: distance,
-        )
-        return assemble >> _make_private_logistic_regression(
-            combined_domain,
             input_metric,
             output_measure,
             d_in,
