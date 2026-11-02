@@ -1,7 +1,7 @@
 """Sklearn estimator wrapper for differentially private logistic regression."""
 
 import numpy as np
-from scipy.special import expit
+from scipy.special import expit  # type: ignore[import-untyped]
 
 from opendp._internal import _make_measurement
 from opendp.extras.sklearn._domains import SklearnFitDomain

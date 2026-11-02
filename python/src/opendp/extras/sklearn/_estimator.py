@@ -1,13 +1,15 @@
 """Shared standalone fitting for OpenDP sklearn estimators."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Self
+from typing import Any, TypeVar
 
 from opendp.context import _cast_measure, domain_of
 from sklearn.base import BaseEstimator
 
 from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
 from opendp.mod import Domain, Metric, Measure, Measurement, Transformation
+
+_EstimatorT = TypeVar("_EstimatorT", bound="DPEstimator")
 
 
 class DPEstimator(BaseEstimator, ABC):
@@ -33,15 +35,15 @@ class DPEstimator(BaseEstimator, ABC):
         """Replace learned state with a complete fitted state from the release."""
         ...
 
-    def fit(
-        self,
+    def fit(  # noqa: PYI019 - Python 3.10 docs compatibility
+        self: _EstimatorT,
         X: Any,
         y: Any | None = None,
         *,
         privacy_unit: tuple[Metric, Any],
         privacy_loss: tuple[Measure, Any],
         domain: Domain | None = None,
-    ) -> Self:
+    ) -> _EstimatorT:
         """Fit private data, mutating and returning self.
 
         ``privacy_unit=dp.unit_of(...)`` and ``privacy_loss=dp.loss_of(...)``
