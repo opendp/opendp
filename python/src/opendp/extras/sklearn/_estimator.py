@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 from opendp.context import _cast_measure, domain_of
 from sklearn.base import BaseEstimator
 
-from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
+from opendp.extras.sklearn._domains import SklearnFit
 from opendp.mod import Domain, Metric, Measure, Measurement, Transformation
 
 _EstimatorT = TypeVar("_EstimatorT", bound="DPEstimator")
@@ -57,10 +57,7 @@ class DPEstimator(BaseEstimator, ABC):
         """
         data = SklearnFit(X, y=y)
         if domain is None:
-            domain = sklearn_fit_domain(
-                domain_of(X, infer=True),
-                y=None if data.y is None else domain_of(data.y, infer=True),
-            )
+            domain = domain_of(data, infer=True)
 
         input_metric, d_in = privacy_unit
         output_measure, d_out = privacy_loss

@@ -440,14 +440,142 @@ def test_logistic_regression_gradients_preserve_aligned_rows(target_type):
     assert measurement.map(2) <= 0.5
 
 
+@pytest.mark.parametrize("extreme_weights", [False, True])
+def test_logistic_regression_nonfinite_gradients(extreme_weights):
+    from scipy.special import expit  # type: ignore[import-untyped]
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+    from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
+        per_example_gradients,
+    )
+
+    largest = np.finfo(float).max
+    smallest = np.finfo(float).smallest_subnormal
+    X = np.array(
+        [
+            [np.nan, 2],
+            [np.inf, -np.inf],
+            [largest, largest],
+            [1, 2],
+            [1, 2],
+            [1, 2],
+            [largest, -largest],
+            [smallest, -smallest],
+        ]
+    )
+    y = np.array([1, 0, largest, np.nan, np.inf, -np.inf, -2, 1])
+    original_X, original_y = X.copy(), y.copy()
+    theta = np.full(3, largest) if extreme_weights else np.array([0.2, -0.1, 0.3])
+    data = dp.sklearn.SklearnFit(X, y)
+    with np.errstate(all="raise"):
+        gradients = per_example_gradients(data, theta)
+    assert gradients.shape == (8, 3)
+    assert np.isfinite(gradients).all()
+    assert dp.numpy.array2_domain(T=float, num_columns=3, nan=False).member(gradients)
+    np.testing.assert_array_equal(gradients[3:6], np.zeros((3, 3)))
+    imputed = np.array([[0, 2, 1], [0, 0, 1]], dtype=float)
+    with np.errstate(over="ignore", invalid="ignore"):
+        expected = (expit(imputed @ theta) - y[:2])[:, None] * imputed
+    np.testing.assert_allclose(gradients[:2], expected)
+    order = [6, 3, 1, 0, 7, 5, 2, 4]
+    np.testing.assert_array_equal(
+        per_example_gradients(dp.sklearn.SklearnFit(X[order], y[order]), theta),
+        gradients[order],
+    )
+    extended = dp.sklearn.SklearnFit(np.vstack([X, X[:1]]), np.concatenate([y, y[:1]]))
+    np.testing.assert_array_equal(
+        per_example_gradients(extended, theta)[:-1], gradients
+    )
+    np.testing.assert_array_equal(X, original_X)
+    np.testing.assert_array_equal(y, original_y)
+    model = LogisticRegression(reference_size=11, n_iters=2).fit(
+        X,
+        y,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=1.0),
+    )
+    assert np.isfinite(model.coef_).all() and np.isfinite(model.intercept_).all()
+    with np.errstate(all="raise"):
+        proba = model.predict_proba(X)
+    assert np.isfinite(proba).all()
+    np.testing.assert_allclose(proba.sum(axis=1), 1)
+
+
+@pytest.mark.parametrize(
+    "x_size, y_size, reference_size, learning_rate",
+    [
+        (3, 3, None, 0.3),
+        (3, 3, 3, 0.3),
+        (3, None, np.int64(6), 0.6),
+        (None, 3, None, 0.3),
+        (None, None, 6, 0.6),
+    ],
+)
+def test_logistic_regression_public_normalizer(
+    x_size, y_size, reference_size, learning_rate
+):
+    from scipy.special import expit  # type: ignore[import-untyped]
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    # Both initial coefficient updates are nonzero: L1's sign is discontinuous
+    # at zero, even with arbitrarily small DP noise.
+    X = np.array([[1, 0], [0, 2], [1, 1]], dtype=float)
+    y = np.array([1, 0, 1], dtype=float)
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=x_size, num_columns=2),
+        dp.numpy.array1_domain(T=float, size=y_size),
+    )
+    model = LogisticRegression(
+        n_iters=2,
+        learning_rate=learning_rate,
+        clip_norm=10,
+        alpha=2,
+        l1_ratio=0.5,
+        reference_size=reference_size,
+    )
+    d_in = 1 if x_size is None and y_size is None else 2
+    measurement = model.make(
+        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), d_in, 1e12
+    )
+    assert measurement.map(d_in) <= 1e12
+    theta = measurement(dp.sklearn.SklearnFit(X, y))
+    expected = np.zeros(3)
+    Xb = np.column_stack([X, np.ones(3)])
+    for _ in range(2):
+        gradients = (expit(Xb @ expected) - y)[:, None] * Xb
+        penalty = np.sign(expected) + expected  # alpha=2, l1_ratio=0.5
+        penalty[-1] = 0
+        expected -= 0.1 * (gradients.sum(axis=0) + penalty)
+    np.testing.assert_allclose(theta, expected, atol=1e-4, rtol=0)
+
+
+def test_logistic_regression_unsized_empty_fit():
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    X, y = np.empty((0, 2)), np.empty(0)
+    model = LogisticRegression(reference_size=11, n_iters=2).fit(
+        X,
+        y,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=1.0),
+    )
+    assert np.isfinite(model.coef_).all()
+    assert model.predict_proba(X).shape == (0, 2)
+    other = clone(model).fit(
+        X,
+        y,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=1.0),
+    )
+    # Empty private data still needs noise under add/remove adjacency.
+    assert not np.array_equal(model.coef_, other.coef_)
+
+
 def test_logistic_regression_validates_input_domains():
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
     options = dict(num_columns=2, size=3, nan=False, T=float)
     targets = dp.numpy.array1_domain(T=float, nan=False)
     cases: list[tuple[dict, dp.Domain, str]] = [
-        ({"nan": True}, targets, "exclude NaNs"),
-        ({}, dp.numpy.array1_domain(T=float, nan=True), "exclude NaNs"),
         ({"T": str}, targets, "numeric element types"),
         ({}, dp.vector_domain(dp.atom_domain(T=float, nan=False)), "NPArray1Domain"),
         (
@@ -462,8 +590,8 @@ def test_logistic_regression_validates_input_domains():
             "matching row counts",
         ),
         ({"num_columns": None}, targets, "specify num_columns"),
-        ({"size": None}, targets, "known size"),
-        ({"size": 0}, targets, "known size greater than zero"),
+        ({"size": None}, targets, "reference_size is required"),
+        ({"size": 0}, targets, "finite positive integer"),
     ]
     for overrides, y_domain, error in cases:
         domain = dp.sklearn.sklearn_fit_domain(
@@ -489,23 +617,31 @@ def test_logistic_regression_validates_input_domains():
         {"l1_ratio": 1.1},
         {"l1_ratio": float("nan")},
         {"l1_ratio": float("inf")},
+        {"reference_size": 0},
+        {"reference_size": -1},
+        {"reference_size": 1.5},
+        {"reference_size": True},
+        {"reference_size": float("nan")},
+        {"reference_size": float("inf")},
+        {"reference_size": 10**1000},
     ],
 )
-def test_logistic_regression_rejects_invalid_regularization(params):
+def test_logistic_regression_rejects_invalid_public_parameters(params):
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(T=float, size=3, num_columns=2, nan=False),
         dp.numpy.array1_domain(T=float, size=3, nan=False),
     )
-    with pytest.raises(ValueError, match="alpha|l1_ratio"):
+    with pytest.raises(ValueError, match="alpha|l1_ratio|reference_size"):
         LogisticRegression(**params).make(
             domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1.0
         )
 
 
+@pytest.mark.parametrize("sized", [False, True])
 @pytest.mark.parametrize("route", ["context", "standalone"])
-def test_logistic_regression_fitting(route):
+def test_logistic_regression_fitting(route, sized):
     import opendp.prelude as dp
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
@@ -517,23 +653,36 @@ def test_logistic_regression_fitting(route):
     y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
     data = dp.sklearn.SklearnFit(X, y)
 
-    domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
-        dp.numpy.array1_domain(T=float, nan=False, size=100),
+    domain = (
+        dp.sklearn.sklearn_fit_domain(
+            dp.numpy.array2_domain(num_columns=3, size=100, nan=False, T=float),
+            dp.numpy.array1_domain(T=float, nan=False, size=100),
+        )
+        if sized
+        else dp.domain_of(data, infer=True)
     )
+    d_in = 2 if sized else 1
     metric = dp.symmetric_distance()
-    estimator = LogisticRegression(n_iters=50, learning_rate=0.3, clip_norm=5.0)
+    estimator = LogisticRegression(
+        n_iters=50,
+        learning_rate=0.3,
+        clip_norm=5.0,
+        reference_size=None if sized else 37,
+    )
 
     measurement = estimator.make(
-        domain, metric, dp.zero_concentrated_divergence(), 2, 1.0
+        domain, metric, dp.zero_concentrated_divergence(), d_in, 1.0
     )
-    assert measurement.map(2) <= 1.0
+    assert measurement.map(d_in) <= 1.0
+    if sized:
+        with pytest.raises(ValueError, match="d_in must be even"):
+            estimator.make(domain, metric, dp.zero_concentrated_divergence(), 1, 1.0)
 
     if route == "context":
         context = dp.Context.compositor(
             data=data,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=2),
+            domain=domain if sized else None,
+            privacy_unit=dp.unit_of(contributions=d_in),
             privacy_loss=dp.loss_of(rho=1.0),
             split_evenly_over=1,
         )
@@ -545,8 +694,8 @@ def test_logistic_regression_fitting(route):
         fitted = estimator.fit(
             X,
             y,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=2),
+            domain=domain if sized else None,
+            privacy_unit=dp.unit_of(contributions=d_in),
             privacy_loss=dp.loss_of(rho=1.0),
         )
         assert fitted is estimator
@@ -565,6 +714,14 @@ def test_logistic_regression_fitting(route):
     preds = fitted.predict(X)
     assert set(np.unique(preds)).issubset({0, 1})
     assert fitted.score(X, y) == np.mean(preds == y)
+    missing_X = X.copy()
+    missing_X[0] = [np.nan, np.inf, -np.inf]
+    imputed_X = X.copy()
+    imputed_X[0] = 0.0
+    np.testing.assert_array_equal(
+        fitted.predict_proba(missing_X), fitted.predict_proba(imputed_X)
+    )
+    np.testing.assert_array_equal(fitted.predict(missing_X), fitted.predict(imputed_X))
 
 
 # sklearn 1.8 warns on its recommended C=inf path for unregularized fitting.

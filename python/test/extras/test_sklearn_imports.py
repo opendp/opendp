@@ -18,4 +18,5 @@ def test_logistic_regression_lazy_export():
         "clip_norm",
         "alpha",
         "l1_ratio",
+        "reference_size",
     }

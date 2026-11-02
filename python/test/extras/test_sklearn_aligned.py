@@ -13,6 +13,8 @@ dp.enable_features("contrib")
         (np.float32, dp.f32, None, 2),
         (np.float64, dp.f64, [0, 1], 2),
         (np.int32, dp.i32, np.zeros(0, dtype=np.int32), 0),
+        (np.float32, dp.f32, np.array([np.nan, np.inf], dtype=np.float32), 2),
+        (np.float64, dp.f64, np.array([False, True]), 2),
     ],
 )
 def test_sklearn_fit_domain_inference(dtype, T, y, rows):
@@ -21,13 +23,20 @@ def test_sklearn_fit_domain_inference(dtype, T, y, rows):
     desc = domain.cast(dp.sklearn.SklearnFitDomain)
     assert (desc.X.descriptor.T, desc.X.descriptor.num_columns) == (T, 4)
     assert desc.X.descriptor.size is None and desc.X.descriptor.norm is None
-    assert desc.y == (None if y is None else dp.vector_domain(dp.atom_domain(T=int)))
+    if isinstance(y, np.ndarray):
+        assert desc.y == dp.numpy.array1_domain(T=y.dtype.type)
+        assert desc.y.descriptor.size is None
+    else:
+        assert desc.y == (
+            None if y is None else dp.vector_domain(dp.atom_domain(T=int))
+        )
+    assert desc.X.descriptor.nan == (dtype in (np.float32, np.float64))
     assert domain.member(data)
 
 
-@pytest.mark.parametrize("supervised", [False, True])
-def test_context_infers_sklearn_fit_domain(supervised):
-    data = dp.sklearn.SklearnFit(np.ones((2, 2)), [0, 1] if supervised else None)
+@pytest.mark.parametrize("y", [None, [0, 1], np.array([np.nan, np.inf])])
+def test_context_infers_sklearn_fit_domain(y):
+    data = dp.sklearn.SklearnFit(np.ones((2, 2)), y)
     context = dp.Context.compositor(
         data,
         dp.unit_of(contributions=2),
@@ -37,10 +46,18 @@ def test_context_infers_sklearn_fit_domain(supervised):
     domain = context.accountant.input_domain
     desc = domain.cast(dp.sklearn.SklearnFitDomain)
     assert desc.X.descriptor.size is None
-    assert (desc.y is not None) == supervised
+    assert (desc.y is not None) == (y is not None)
     assert domain.member(data)
     assert context.query()._chain == (domain, dp.symmetric_distance())
     assert context.query()._d_in == 2
+
+
+def test_numpy_vector_inference_is_unchanged_outside_sklearn_fit():
+    values = np.array([np.nan, np.inf])
+    domain, metric = dp.space_of(values, infer=True)
+    assert domain == dp.vector_domain(dp.atom_domain(T=float))
+    assert metric == dp.symmetric_distance()
+    assert domain.member(values)
 
 
 def test_sklearn_fit_membership_and_row_alignment():

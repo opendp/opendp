@@ -223,6 +223,11 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
+    For ``SklearnFit`` inputs, 2D NumPy features and 1D NumPy targets retain native
+    array domains. Their dtypes and feature count are assumed public; record count
+    and finiteness are not inferred. Outside ``SklearnFit``, 1D NumPy arrays retain
+    Rust vector domains.
+
     :param T: carrier type
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """
@@ -232,11 +237,17 @@ def domain_of(T, infer: bool = False) -> Domain:
     if infer:
         from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
 
+        np = import_optional_dependency("numpy", raise_error=False)
         if isinstance(T, SklearnFit):
-            return sklearn_fit_domain(
-                domain_of(T.X, infer=True),
-                y=None if T.y is None else domain_of(T.y, infer=True),
-            )
+            y_domain = None
+            if T.y is not None:
+                if np is not None and isinstance(T.y, np.ndarray) and T.y.ndim == 1:
+                    from opendp.extras.numpy import array1_domain
+
+                    y_domain = array1_domain(T=_ELEMENTARY_TYPES[T.y.dtype.type])
+                else:
+                    y_domain = domain_of(T.y, infer=True)
+            return sklearn_fit_domain(domain_of(T.X, infer=True), y=y_domain)
 
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
@@ -244,7 +255,6 @@ def domain_of(T, infer: bool = False) -> Domain:
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 
-        np = import_optional_dependency("numpy", raise_error=False)
         if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
             from opendp.extras.numpy import array2_domain
 

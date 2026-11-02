@@ -1,4 +1,5 @@
 import math
+from numbers import Integral
 
 from opendp.mod import Measure, Domain, Metric, Measurement
 import opendp.prelude as dp
@@ -11,14 +12,19 @@ from opendp.typing import _NUMERIC_TYPES
 
 
 def per_example_gradients(data, theta):
-    """Compute one gradient per aligned SklearnFit record at fixed weights."""
+    """Compute finite gradients independently for each aligned SklearnFit record."""
     np = import_optional_dependency("numpy")
     special = import_optional_dependency("scipy.special")
     y = data.y
-    X = np.hstack([data.X, np.ones((data.X.shape[0], 1))])
-    z = X @ theta
-    p = special.expit(z)
-    return (p - y)[:, None] * X
+    X = np.nan_to_num(data.X, nan=0.0, posinf=0.0, neginf=0.0)
+    X = np.hstack([X, np.ones((X.shape[0], 1))])
+    with np.errstate(all="ignore"):
+        z = np.nan_to_num(X @ theta, nan=0.0)
+        gradients = (special.expit(z) - y)[:, None] * X
+    # Missing/nonfinite targets contribute nothing, including to the intercept.
+    gradients[~np.isfinite(y)] = 0.0
+    # Saturate overflow and remove NaNs before entering the clipping domain.
+    return np.nan_to_num(gradients, copy=False)
 
 
 def log_regression_train(
@@ -31,6 +37,7 @@ def log_regression_train(
     d_mids,
     n,
     d,
+    normalizer,
     clip_norm,
     learning_rate,
     l1_coef,
@@ -44,7 +51,7 @@ def log_regression_train(
         gradient = dp.t.make_user_transformation(
             input_domain,
             input_metric,
-            dp.numpy.array2_domain(num_columns=d + 1, size=n, T=float),
+            dp.numpy.array2_domain(num_columns=d + 1, size=n, nan=False, T=float),
             dp.symmetric_distance(),
             function=lambda data, th=theta: per_example_gradients(data, th),
             # One aligned (X[i], y[i]) record produces one gradient row.
@@ -68,7 +75,7 @@ def log_regression_train(
         noised_sum = np.asarray(queryable(step))
         penalty_grad = l1_coef * np.sign(theta) + l2_coef * theta
         penalty_grad[-1] = 0.0
-        theta = theta - learning_rate * (noised_sum / n + penalty_grad)
+        theta = theta - learning_rate / normalizer * (noised_sum + penalty_grad)
     return theta
 
 
@@ -84,21 +91,32 @@ def make_private_logistic_regression(
     clip_norm: float,
     alpha: float = 1.0,
     l1_ratio: float = 0.0,
+    reference_size: int | None = None,
 ) -> Measurement:
     """Release binary logistic-regression weights using full-batch noisy gradient descent.
 
     Each iteration computes per-example gradients over the entire dataset, clips
     their norms, privately sums them with Gaussian noise, and updates the weights.
-    Regularization is postprocessing, with strength alpha / n and L1 fraction
-    l1_ratio; the intercept is not regularized. Privacy loss is composed under zCDP.
+    Regularization is postprocessing, with parameter alpha and L1 fraction
+    l1_ratio; the intercept is not regularized. Each update scales the noisy
+    gradient sum plus the regularization gradient by learning_rate / normalizer.
+    The normalizer is the public reference_size if provided, otherwise the domain's
+    known size. It must be a finite positive integer; unsized domains require an
+    explicit reference_size. It need not equal the private dataset size and changes
+    only the step size, not the regularized objective. Privacy loss is composed
+    under zCDP, independently of reference_size and the actual number of records.
 
     The input Domain must be described by SklearnFitDomain with numeric
     NPArray2Domain features and numeric or boolean NPArray1Domain targets.
+    Ordinary NumPy SklearnFit inputs can use domain_of(data, infer=True), which
+    assumes public dtypes and feature count but infers neither size nor finiteness.
     Binary labels are expected to be encoded as 0 and 1; the target domain need
-    not restrict their values. Both domains must exclude NaNs. Feature count and
-    a positive dataset size must be specified publicly; feature-domain constraints
-    are retained. Each aligned feature/target pair is one record under
-    symmetric_distance(), with identity stability for per-example gradients.
+    not restrict their values. Nonfinite features are replaced with zero, and
+    nonfinite targets produce zero gradient rows. Extreme arithmetic is sanitized
+    to finite values before clipping. All preprocessing is row-local, preserving
+    identity stability under symmetric_distance(). Feature-domain constraints are
+    retained. Fixed-size domains use substitution adjacency (even d_in); unsized
+    domains use add/remove adjacency, including d_in=1.
     """
     import opendp.prelude as dp
 
@@ -112,15 +130,32 @@ def make_private_logistic_regression(
     target_types = _NUMERIC_TYPES | {"bool"}
     if x_desc.T not in _NUMERIC_TYPES or y_desc.T not in target_types:
         raise ValueError("X and y must have numeric element types (y may be boolean)")
-    if x_desc.nan or y_desc.nan:
-        raise ValueError("X and y domains must exclude NaNs (nan=False)")
-    n, d = x_desc.size, x_desc.num_columns
-    if n is None or n <= 0:
-        raise ValueError("X_domain must have known size greater than zero")
+    if (
+        x_desc.size is not None
+        and y_desc.size is not None
+        and x_desc.size != y_desc.size
+    ):
+        raise ValueError("X and y domains must have matching row counts")
+    # Alignment makes the record count public if either field has a fixed size.
+    n = x_desc.size if x_desc.size is not None else y_desc.size
+    d = x_desc.num_columns
     if d is None:
         raise ValueError("X_domain must specify num_columns")
-    if y_desc.size is not None and y_desc.size != n:
-        raise ValueError("X and y domains must have matching row counts")
+    normalizer = reference_size if reference_size is not None else n
+    if normalizer is None:
+        raise ValueError("reference_size is required for unsized domains")
+    if (
+        isinstance(normalizer, bool)
+        or not isinstance(normalizer, Integral)
+        or normalizer <= 0
+    ):
+        raise ValueError("reference_size must be a finite positive integer")
+    try:
+        finite = math.isfinite(normalizer)
+    except OverflowError:
+        finite = False
+    if not finite:
+        raise ValueError("reference_size must be a finite positive integer")
 
     if input_metric != dp.symmetric_distance():  # |\label{metric-check}|
         raise ValueError(
@@ -137,8 +172,7 @@ def make_private_logistic_regression(
     if not math.isfinite(l1_ratio) or not 0 <= l1_ratio <= 1:
         raise ValueError("l1_ratio must be finite and in [0, 1]")
 
-    reg = alpha / n
-    l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg
+    l1_coef, l2_coef = l1_ratio * alpha, (1.0 - l1_ratio) * alpha
 
     if n_iters < 1:
         raise ValueError(f"n_iters must be >= 1, got {n_iters}")  # pragma: no cover
@@ -148,7 +182,7 @@ def make_private_logistic_regression(
         )  # pragma: no cover
     if clip_norm <= 0:
         raise ValueError(f"clip_norm must be > 0, got {clip_norm}")  # pragma: no cover
-    if d_in % 2 != 0:
+    if n is not None and d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "
             f"affecting 2 rows. Got d_in={d_in}."
@@ -177,6 +211,7 @@ def make_private_logistic_regression(
             d_mids=d_mids,
             n=n,
             d=d,
+            normalizer=normalizer,
             clip_norm=clip_norm,
             learning_rate=learning_rate,
             l1_coef=l1_coef,

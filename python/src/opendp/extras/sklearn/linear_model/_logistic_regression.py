@@ -24,30 +24,42 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
     ``coef_`` of shape ``(1, n_features)``, ``intercept_`` of shape ``(1,)``,
     ``classes_=[0, 1]``, and ``n_features_in_``.
 
-    Fit separate features and binary targets with
-    ``fit(X, y, privacy_unit=..., privacy_loss=..., domain=...)``. For Context
+    NumPy feature and binary target arrays can be fitted without an explicit
+    domain. Dtypes and feature count are assumed public; dataset size and
+    finiteness are never inferred. Floating-point domains allow NaNs by default::
+
+        model = dp.sklearn.linear_model.LogisticRegression(reference_size=1000)
+        model.fit(
+            X, y,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(rho=1.0),
+        )
+
+    Inferred domains are unsized, so a public ``reference_size`` is required for
+    optimization scaling. It need not equal the actual dataset size. Each aligned
+    feature/target pair is one record under add/remove adjacency. For Context
     fitting, supply ``SklearnFit(X, y)`` and release a fitted clone with
     ``context.query().sklearn(model).release()``.
 
-    Specify ``domain=sklearn_fit_domain(X_domain, y_domain)`` explicitly.
-    ``X_domain`` must be a numeric ``NPArray2Domain`` with a public feature count,
-    a known positive row count, and ``nan=False``. Feature row-norm and cardinality
-    constraints are supported and retained on the input domain. ``y_domain`` must
-    be a numeric or boolean ``NPArray1Domain`` excluding NaNs and aligned with the
-    feature rows. Binary labels are expected to be encoded as 0 and 1; the domain
-    need not restrict their values. Dataset size and necessary numerical assumptions
-    must be public, not inferred from private data. For example::
+    Explicit ``domain=sklearn_fit_domain(X_domain, y_domain)`` remains supported:
+    numeric ``NPArray2Domain`` features (public feature count) and numeric or boolean
+    ``NPArray1Domain`` targets, with aligned rows. A known domain size is used as
+    the default normalizer and enables fixed-size substitution analysis (even
+    contributions, typically 2). Feature row-norm and cardinality constraints are
+    retained. No private record count is used in optimization or privacy calibration.
 
-        domain = dp.sklearn.sklearn_fit_domain(
-            dp.numpy.array2_domain(T=float, size=100, num_columns=3, nan=False),
-            dp.numpy.array1_domain(T=float, size=100, nan=False),
-        )
+    Nonfinite features are zero-imputed in training and prediction. Records with
+    nonfinite targets contribute zero gradient rows, including for the intercept.
+    Extreme arithmetic is sanitized before gradient clipping. This handling is
+    deterministic and independent across rows. Binary labels should be encoded as
+    0 and 1; the target domain need not restrict their values.
 
     :param n_iters: Number of full-batch gradient steps. The privacy budget is split across these steps; more iterations means more noise per step.
     :param learning_rate: Step size for the gradient update applied to the weights each iteration.
     :param clip_norm: Per-example gradient clipping bound. Each example's gradient is scaled to have L2 norm at most this value, bounding one record's influence on the update. Larger values distort gradients less but require more noise.
-    :param alpha: Finite, nonnegative regularization parameter, with strength ``alpha / n``. Zero disables regularization. Defaults to 1.0. The intercept is not regularized.
+    :param alpha: Finite, nonnegative regularization parameter for the summed loss objective. Zero disables regularization. Defaults to 1.0. The intercept is not regularized.
     :param l1_ratio: Finite elastic-net mixing parameter in [0, 1]. Zero (default) selects L2, one selects L1, and intermediate values mix both.
+    :param reference_size: Public finite positive integer normalizer, required for unsized domains. Defaults to the known domain size when available. Each update multiplies the noisy gradient sum plus regularization gradient by ``learning_rate / normalizer``; this changes only the step size, not the objective or privacy calibration.
     """
 
     def __init__(
@@ -57,12 +69,14 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
         clip_norm=1.0,
         alpha=1.0,
         l1_ratio=0.0,
+        reference_size: int | None = None,
     ):
         self.n_iters = n_iters
         self.learning_rate = learning_rate
         self.clip_norm = clip_norm
         self.alpha = alpha
         self.l1_ratio = l1_ratio
+        self.reference_size = reference_size
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         return _make_private_logistic_regression(
@@ -76,6 +90,7 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
             clip_norm=self.clip_norm,
             alpha=self.alpha,
             l1_ratio=self.l1_ratio,
+            reference_size=self.reference_size,
         )
 
     def _ingest_release(self, release):
@@ -86,7 +101,10 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
         self.n_features_in_ = self.coef_.shape[1]
 
     def predict_proba(self, X):
-        p = expit(np.asarray(X) @ self.coef_[0] + self.intercept_[0])
+        X = np.nan_to_num(np.asarray(X), nan=0.0, posinf=0.0, neginf=0.0)
+        with np.errstate(all="ignore"):
+            z = np.nan_to_num(X @ self.coef_[0] + self.intercept_[0], nan=0.0)
+        p = expit(z)
         return np.column_stack([1 - p, p])
 
     def predict(self, X):

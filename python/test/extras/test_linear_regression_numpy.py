@@ -11,12 +11,12 @@ import opendp.prelude as dp
 np = pytest.importorskip("numpy")
 
 
-def test_logistic_regression_requires_known_size():
+def test_logistic_regression_unsized_requires_reference_size():
     from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
         make_private_logistic_regression,
     )
 
-    with pytest.raises(ValueError, match="must have known size"):
+    with pytest.raises(ValueError, match="reference_size is required"):
         make_private_logistic_regression(
             dp.sklearn.sklearn_fit_domain(
                 dp.numpy.array2_domain(num_columns=3, nan=False, T=float),
