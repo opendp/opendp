@@ -11,6 +11,24 @@ import opendp.prelude as dp
 np = pytest.importorskip("numpy")
 
 
+def test_logistic_regression_requires_known_size():
+    from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
+        make_private_logistic_regression,
+    )
+
+    with pytest.raises(ValueError, match="must have known size"):
+        make_private_logistic_regression(
+            dp.numpy.array2_domain(num_columns=4, nan=False, T=float),
+            dp.symmetric_distance(),
+            dp.zero_concentrated_divergence(),
+            2,
+            1.0,
+            n_iters=1,
+            learning_rate=0.1,
+            clip_norm=1.0,
+        )
+
+
 def test_private_theil_sen():
     x_bounds = -3, 3
     y_bounds = -10, 10

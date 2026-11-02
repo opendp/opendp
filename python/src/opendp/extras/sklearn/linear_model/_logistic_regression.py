@@ -1,7 +1,9 @@
 """Sklearn estimator wrapper for differentially private logistic regression."""
 
+import numpy as np
+from scipy.special import expit
+
 from opendp._internal import _make_measurement
-from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._domains import SklearnFitDomain
 from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
@@ -25,6 +27,10 @@ class LogisticRegression(DPEstimator):
     Data is expected as a single 2-dimensional array whose last column is the binary target
     and whose remaining columns are the features. Pass this array as ``X`` to standalone
     ``fit`` or as ``SklearnFit(X)`` to a Context. A separate ``y`` is not supported.
+
+    An explicit ``sklearn_fit_domain(array2_domain(..., size=n, nan=False))`` is
+    required for standalone fitting and Context construction. The row count ``n``
+    and the absence of NaNs must be specified publicly, not inferred from private data.
 
     :param n_iters: Number of DP-SGD iterations. Also controls the budget split: the total privacy budget is divided across this many gradient steps, so more iterations means more noise per step.
     :param learning_rate: Step size for the gradient update applied to the weights each iteration.
@@ -78,17 +84,14 @@ class LogisticRegression(DPEstimator):
         )
 
     def _ingest_release(self, release):
-        np = import_optional_dependency("numpy")
         theta = np.asarray(release)
         self.coef_ = theta[:-1]
         self.intercept_ = theta[-1]
         self.classes_ = np.array([0, 1])
 
     def predict_proba(self, X):
-        np = import_optional_dependency("numpy")
-        special = import_optional_dependency("scipy.special")
         Xb = np.hstack([np.asarray(X), np.ones((len(X), 1))])
-        p = special.expit(Xb @ np.concatenate([self.coef_, [self.intercept_]]))
+        p = expit(Xb @ np.concatenate([self.coef_, [self.intercept_]]))
         return np.column_stack([1 - p, p])
 
     def predict(self, X):

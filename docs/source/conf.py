@@ -64,8 +64,8 @@ def setup(app):
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
-# Estimator wrappers inherit from sklearn, which is optional in the docs environment.
-autodoc_mock_imports = ["sklearn"]
+# Estimator wrappers require sklearn and scipy, both optional in the docs environment.
+autodoc_mock_imports = ["sklearn", "scipy"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

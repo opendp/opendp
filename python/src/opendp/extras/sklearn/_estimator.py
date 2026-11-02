@@ -1,16 +1,25 @@
 """Shared standalone fitting for OpenDP sklearn estimators."""
 
 from abc import ABC, abstractmethod
+from typing import Any, Self
 
 from opendp.context import _cast_measure, domain_of
 from sklearn.base import BaseEstimator
 
 from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
+from opendp.mod import Domain, Metric, Measure, Measurement, Transformation
 
 
 class DPEstimator(BaseEstimator, ABC):
     @abstractmethod
-    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+    def make(
+        self,
+        input_domain: Domain,
+        input_metric: Metric,
+        output_measure: Measure,
+        d_in: Any,
+        d_out: Any,
+    ) -> Measurement:
         """Construct a fitting measurement without mutating self.
 
         The measurement consumes SklearnFit and releases learned parameters.
@@ -20,19 +29,19 @@ class DPEstimator(BaseEstimator, ABC):
         ...
 
     @abstractmethod
-    def _ingest_release(self, release):
+    def _ingest_release(self, release: Any) -> None:
         """Replace learned state with a complete fitted state from the release."""
         ...
 
     def fit(
         self,
-        X,
-        y=None,
+        X: Any,
+        y: Any | None = None,
         *,
-        privacy_unit,
-        privacy_loss,
-        domain=None,
-    ):
+        privacy_unit: tuple[Metric, Any],
+        privacy_loss: tuple[Measure, Any],
+        domain: Domain | None = None,
+    ) -> Self:
         """Fit private data, mutating and returning self.
 
         ``privacy_unit=dp.unit_of(...)`` and ``privacy_loss=dp.loss_of(...)``
@@ -66,7 +75,9 @@ class DPTransformer(DPEstimator):
     """A DP estimator that supports stable post-fit transformations."""
 
     @abstractmethod
-    def make_transform(self, input_domain, input_metric):
+    def make_transform(
+        self, input_domain: Domain, input_metric: Metric
+    ) -> Transformation:
         """Construct a stable transformation using fitted parameters.
 
         Consumes and returns SklearnFit, preserving aligned metadata.

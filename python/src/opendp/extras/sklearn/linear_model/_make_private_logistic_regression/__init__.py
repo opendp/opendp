@@ -124,6 +124,8 @@ def make_private_logistic_regression(
 
     desc = input_domain.descriptor
     n, d = desc.size, desc.num_columns - 1
+    if n is None:
+        raise ValueError("input_domain must have known size (sized data required)")
 
     reg = 1.0 / (C * n)
 
@@ -137,10 +139,6 @@ def make_private_logistic_regression(
         assert l1_ratio is not None  # pragma: no cover
         l1_coef, l2_coef = l1_ratio * reg, (1.0 - l1_ratio) * reg  # pragma: no cover
 
-    if n is None:
-        raise ValueError(
-            "input_domain must have known size (sized data required)"
-        )  # pragma: no cover
     if n_iters < 1:
         raise ValueError(f"n_iters must be >= 1, got {n_iters}")  # pragma: no cover
     if learning_rate <= 0:

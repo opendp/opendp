@@ -14,7 +14,7 @@ If you're interested in the underlying algorithm, we've also
 `implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.
 """
 
-from typing import TYPE_CHECKING, Iterable
+from typing import Iterable
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
@@ -25,10 +25,7 @@ from opendp.mod import Measure
 
 # Keep low-level constructors importable without sklearn. Autodoc can supply
 # its mocked sklearn dependency here to document the estimator as well.
-if (
-    TYPE_CHECKING
-    or import_optional_dependency("sklearn", raise_error=False) is not None
-):
+if import_optional_dependency("sklearn", raise_error=False) is not None:
     from opendp.extras.sklearn.linear_model._logistic_regression import (
         LogisticRegression,
     )
@@ -145,19 +142,3 @@ class LinearRegression:
         :raises NotImplementedError: This method is included only for documention.
         """
         raise NotImplementedError("Included only for documentation")  # pragma: no cover
-
-
-def __getattr__(name):
-    # The low-level constructors and LinearRegression do not need sklearn at import time.
-    if name != "LogisticRegression":
-        raise AttributeError(name)
-    import_optional_dependency("sklearn")
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
-    )
-
-    return LogisticRegression
-
-
-def __dir__():
-    return sorted(set(globals()) | set(__all__))
