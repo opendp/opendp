@@ -64,6 +64,7 @@ def test_gradients_and_row_stability(expit):
 
 
 def test_gradients_with_wide_integer_targets():
+    pytest.importorskip("scipy.special")
     # NumPy infers object dtype for Python integers beyond its native range.
     y = [2**100, -(2**100), 0]
     assert np.asarray(y).dtype.kind == "O"
