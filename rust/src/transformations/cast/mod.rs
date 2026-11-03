@@ -11,7 +11,7 @@ use crate::traits::{CheckAtom, HasNull, RoundCast};
 use crate::transformations::make_row_by_row;
 
 #[bootstrap(features("contrib"), generics(M(suppress), TIA(suppress)))]
-#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
 /// For each element, failure to parse results in `None`, else `Some(out)`.
 ///
@@ -66,7 +66,7 @@ where
         M = "$get_type(input_metric)"
     )
 )]
-#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
 /// Any element that fails to cast is filled with default.
 ///
@@ -102,7 +102,7 @@ where
 }
 
 #[bootstrap(features("contrib"), generics(M(suppress), TIA(suppress)))]
-#[deprecated(since = "0.16.0", note = "Use Polars instead.")]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that casts a vector of data from type `TIA` to a type that can represent nullity `TOA`.
 /// If cast fails, fill with `TOA`'s null value.
 ///
