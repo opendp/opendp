@@ -23,7 +23,7 @@ from opendp._internal import (
 )
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import to_then
-from opendp.extras.sklearn._domains import SklearnFitDomain, sklearn_fit_domain
+from opendp.extras.sklearn._domains import SklearnFitDescriptor, sklearn_fit_domain
 from opendp.extras.sklearn._estimator import DPTransformer
 from opendp.measurements import then_noise
 from opendp.mod import Domain, Measure, Measurement, Metric, Transformation
@@ -302,7 +302,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         self.random_state = random_state
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
-        fit_desc = input_domain.cast(SklearnFitDomain)
+        fit_desc = input_domain.cast(SklearnFitDescriptor)
         measurement = make_private_spherical_kmeans(
             fit_desc.X,
             input_metric,
@@ -351,7 +351,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         """Lift a fixed-center, per-row operation into an OpenDP transformation."""
         self._require_fitted()
         _check_symmetric(input_metric)
-        fit_desc = input_domain.cast(SklearnFitDomain)
+        fit_desc = input_domain.cast(SklearnFitDescriptor)
         desc = fit_desc.X.cast(CSRArray2Domain)
         if desc.T != "bool":
             raise ValueError("expected a boolean CSR domain (T=bool)")

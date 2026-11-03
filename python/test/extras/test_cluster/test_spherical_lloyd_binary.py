@@ -381,7 +381,7 @@ def test_fitting_infers_sparse_sklearn_domain(route, with_target, empty):
     assert fitted.cluster_centers_.shape == (2, 6)
     domain = dp.domain_of(data, infer=True)
     assert (
-        domain.cast(dp.sklearn.SklearnFitDomain).X.cast(CSRArray2Domain).max_rows
+        domain.cast(dp.sklearn.SklearnFitDescriptor).X.cast(CSRArray2Domain).max_rows
         is None
     )
     assert fitted.make_transform(domain, _METRIC).output_domain.member(
