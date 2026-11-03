@@ -13,7 +13,8 @@ dp.enable_features("contrib")
         (np.float32, dp.f32, None, 2),
         (np.float64, dp.f64, [0, 1], 2),
         (np.int32, dp.i32, np.zeros(0, dtype=np.int32), 0),
-        (np.float32, dp.f32, np.array([np.nan, np.inf], dtype=np.float32), 2),
+        # Rust debug binaries omit VectorDomain<AtomDomain<f32>>.
+        (np.float32, dp.f32, np.array([np.nan, np.inf], dtype=np.float64), 2),
         (np.float64, dp.f64, np.array([False, True]), 2),
     ],
 )
