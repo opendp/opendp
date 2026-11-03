@@ -2,6 +2,7 @@ from pathlib import Path
 from subprocess import check_output
 import re
 import fileinput
+import sys
 
 
 def get_all_repo_commits():
@@ -51,7 +52,7 @@ def main():
             print(f"{path.name}: no asOfCommit")
             continue
         as_of_commit = as_of_commits[0]
-        if as_of_commit in repo_commits:
+        if any(repo_commit.startswith(as_of_commit) for repo_commit in repo_commits):
             print(f"{path.name}: {as_of_commit} IS in git log: No rewrite needed!")
             continue
         print(f"{path.name}: {as_of_commit} NOT in git log: Will try to rewrite...")
@@ -65,6 +66,7 @@ def main():
 
     if failures:
         print(f"failures:\n{'\n'.join(failures)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
