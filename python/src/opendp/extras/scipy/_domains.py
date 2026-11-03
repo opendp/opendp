@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from operator import index
 from typing import Any
 
 from opendp._internal import _extrinsic_domain
@@ -25,10 +26,12 @@ def csr_array2_domain(
     T: RuntimeTypeDescriptor,
 ) -> Domain:
     """Domain of canonical 2D CSR arrays of atom type T, without explicit zeros."""
-    if n_features <= 0:
+    if isinstance(n_features, bool) or index(n_features) <= 0:
         raise ValueError("n_features must be positive")
-    if max_rows is not None and max_rows < 0:
+    if max_rows is not None and (isinstance(max_rows, bool) or index(max_rows) < 0):
         raise ValueError("max_rows must be non-negative")
+    n_features = index(n_features)
+    max_rows = None if max_rows is None else index(max_rows)
 
     T = RuntimeType.parse(T)
     descriptor = CSRArray2Domain(n_features, max_rows, T)
