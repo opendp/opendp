@@ -13,8 +13,8 @@ from opendp.extras.sklearn.linear_model._make_private_logistic_regression import
 class LogisticRegression(ClassifierMixin, DPEstimator):
     """Differentially private binary logistic regression with sklearn's classifier interface.
 
-    Uses full-batch noisy gradient descent with per-record L2 clipping and Gaussian noise, 
-    with proximal updates for L1 regularization. 
+    Uses full-batch noisy gradient descent with per-record L2 clipping and Gaussian noise,
+    with proximal updates for L1 regularization.
     Labels should be encoded as 0 and 1.
     Unsized inputs require a public ``reference_size``.
 
