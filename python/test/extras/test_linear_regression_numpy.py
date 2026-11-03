@@ -24,7 +24,8 @@ def _estimator():
     )
 
 
-def test_private_theil_sen_measurement_consumes_aligned_data():
+@pytest.mark.parametrize("d_in", [1, 2])
+def test_private_theil_sen_measurement_consumes_aligned_data(d_in):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn.linear_model import make_private_theil_sen
 
@@ -33,7 +34,7 @@ def test_private_theil_sen_measurement_consumes_aligned_data():
         domain,
         dp.symmetric_distance(),
         dp.max_divergence(),
-        d_in=1,
+        d_in=d_in,
         d_out=1.0,
         x_bounds=((-3.0, 3.0),),
         y_bounds=(-10.0, 60.0),
@@ -41,7 +42,8 @@ def test_private_theil_sen_measurement_consumes_aligned_data():
     assert measurement.map(1) == 0
     assert measurement.check(2, 1.0)
     assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.SklearnFitDomain), dp.sklearn.SklearnFitDomain
+        measurement.input_domain.cast(dp.sklearn.SklearnFitDescriptor),
+        dp.sklearn.SklearnFitDescriptor,
     )
     slope, intercept = measurement(data)
     assert np.asarray(slope).shape == ()
@@ -143,7 +145,9 @@ def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
     from collections import Counter
     from itertools import permutations
     import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import pairwise_predict
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
+        pairwise_predict,
+    )
 
     X, y = np.array([[0.0], [1.0], [3.0]]), np.array([0.0, 1.0, 9.0])
     distributions = []
@@ -151,9 +155,11 @@ def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
         data = dp.sklearn.SklearnFit(X[list(row_order)], y[list(row_order)])
         outcomes = []
         for shuffle_order in permutations(range(3)):
+
             def shuffle(indices):
                 assert len(indices) == 3  # omit only after randomizing all rows
                 indices[:] = shuffle_order
+
             monkeypatch.setattr(np.random, "shuffle", shuffle)
             outcomes.append(tuple(pairwise_predict(data, np.array([0.0, 1.0])).ravel()))
         distributions.append(Counter(outcomes))
@@ -165,18 +171,27 @@ def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
 def test_pairwise_variable_size_stability_allows_replacing_a_pair(runs, monkeypatch):
     from collections import Counter
     import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_pairwise_predict
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
+        make_pairwise_predict,
+    )
 
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(T=float, num_columns=1),
         dp.vector_domain(dp.atom_domain(T=float)),
     )
     transform = make_pairwise_predict(
-        domain, dp.symmetric_distance(), np.array([0.0, 1.0]), runs=runs,
+        domain,
+        dp.symmetric_distance(),
+        np.array([0.0, 1.0]),
+        runs=runs,
     )
     assert transform.map(1) == 2 * runs
     assert transform.map(2) == 4 * runs
-    monkeypatch.setattr(np.random, "shuffle", lambda indices: indices.__setitem__(slice(None), indices[::-1]))
+    monkeypatch.setattr(
+        np.random,
+        "shuffle",
+        lambda indices: indices.__setitem__(slice(None), indices[::-1]),
+    )
     before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
     after = dp.sklearn.SklearnFit(np.array([[0.0], [1.0], [3.0]]), [0.0, 1.0, 9.0])
     old_rows = Counter(map(tuple, transform(before)))
@@ -203,7 +218,8 @@ def test_theil_sen_estimator_context_fit_and_methods():
     assert not hasattr(estimator, "coef_")
     template = estimator
     estimator = context.query().sklearn(template).release()
-    assert estimator is template
+    assert estimator is not template
+    assert not hasattr(template, "coef_")
     assert estimator.coef_.shape == (1,)
     assert isinstance(estimator.intercept_, float)
     assert estimator.n_features_in_ == 1
@@ -224,16 +240,23 @@ def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
     )
     fit_estimator, release_estimator = _estimator(), _estimator()
 
-    assert fit_estimator.fit(
-        data.X, data.y, domain=domain, privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-    ) is fit_estimator
+    assert (
+        fit_estimator.fit(
+            data.X,
+            data.y,
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+        )
+        is fit_estimator
+    )
 
     initial_state = release_estimator.__dict__.copy()
     fitted_query = release_context.query().sklearn(release_estimator)
     assert release_estimator.__dict__ == initial_state
     fitted = fitted_query.release()
-    assert fitted is release_estimator
+    assert fitted is not release_estimator
+    assert release_estimator.__dict__ == initial_state
     assert fit_estimator.coef_.shape == fitted.coef_.shape == (1,)
     assert isinstance(fitted.intercept_, float)
 
@@ -246,24 +269,33 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
     X = np.column_stack([data.X[:, 0], np.ones(len(data.X))])
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(T=float, size=len(X), num_columns=2),
-        original_domain.cast(dp.sklearn.SklearnFitDomain).y,
+        original_domain.cast(dp.sklearn.SklearnFitDescriptor).y,
     )
     inputs = dp.sklearn.SklearnFit(X.copy(), data.y)
+    # Exact-size domains protect replacement at two symmetric edits.
     context = dp.Context.compositor(
-        inputs, dp.unit_of(contributions=1), dp.loss_of(epsilon=2.0),
-        domain=domain, split_evenly_over=2,
+        inputs,
+        dp.unit_of(contributions=2),
+        dp.loss_of(epsilon=2.0),
+        domain=domain,
+        split_evenly_over=2,
     )
     pca = PCA(n_components=1, clip_norm=1.0)
     pca = context.query().sklearn(pca).release()
     transform = pca.make_transform(domain, dp.symmetric_distance())
     assert transform(inputs).y is inputs.y
     estimator = dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=((-30.0, 30.0),), y_bounds=(-10.0, 60.0),
+        x_bounds=((-30.0, 30.0),),
+        y_bounds=(-10.0, 60.0),
     )
     next_query = context.query().new_with(chain=transform)
-    fitted = next_query.sklearn(estimator).release()
-    assert fitted is estimator
+    fitted_query = next_query.sklearn(estimator)
+    assert fitted_query.resolve().map(2) <= 1.0
+    fitted = fitted_query.release()
+    assert fitted is not estimator
+    assert not hasattr(estimator, "coef_")
     assert fitted.coef_.shape == (1,)
+    assert context.current_privacy_loss() == [1.0, 1.0]
     np.testing.assert_array_equal(inputs.X, X)
 
 
@@ -276,10 +308,16 @@ def test_theil_sen_standalone_and_serialization(domain_kind):
     data, fit_domain = _training_data()
     domain = fit_domain if domain_kind == "fit" else None
     estimator = _estimator()
-    assert estimator.fit(
-        data.X, data.y, domain=domain, privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-    ) is estimator
+    assert (
+        estimator.fit(
+            data.X,
+            data.y,
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+        )
+        is estimator
+    )
     restored = pickle.loads(pickle.dumps(estimator))
     np.testing.assert_allclose(restored.predict(data.X), estimator.predict(data.X))
     assert clone(estimator).get_params() == estimator.get_params()
@@ -297,7 +335,8 @@ def test_theil_sen_framework_make_is_non_mutating():
     )
     assert measurement.map(1) <= 1.0
     assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.SklearnFitDomain), dp.sklearn.SklearnFitDomain
+        measurement.input_domain.cast(dp.sklearn.SklearnFitDescriptor),
+        dp.sklearn.SklearnFitDescriptor,
     )
     assert estimator.__dict__ == initial_state
     slope, intercept = measurement(data)
@@ -352,12 +391,11 @@ def test_theil_sen_constructor_and_aligned_domain_validation():
     X_domain = dp.numpy.array2_domain(num_columns=1, size=10, T=float)
     without_y = dp.sklearn.sklearn_fit_domain(X=X_domain)
     with pytest.raises(ValueError, match="with y"):
-        estimator.make(
-            without_y, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
-        )
+        estimator.make(without_y, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
 
     mismatched = dp.sklearn.sklearn_fit_domain(
-        X=X_domain, y=dp.vector_domain(dp.atom_domain(T=float), size=9),
+        X=X_domain,
+        y=dp.vector_domain(dp.atom_domain(T=float), size=9),
     )
     assert not mismatched.member(dp.sklearn.SklearnFit(np.zeros((10, 1)), np.zeros(9)))
 
@@ -391,12 +429,18 @@ def test_theil_sen_fit_requires_privacy_and_rejects_unsupported_parameters(monke
     released = []
     monkeypatch.setattr(Query, "release", lambda self: released.append(True))
 
-    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
+    with pytest.raises(
+        TypeError,
+        match="required keyword-only arguments: 'privacy_unit' and 'privacy_loss'",
+    ):
         estimator.fit(query, [1.0] * 10)
     with pytest.raises(TypeError, match="unexpected keyword argument 'sample_weight'"):
         estimator.fit(  # type: ignore[call-arg]
-            [[1.0]] * 10, [1.0] * 10, sample_weight=[1.0] * 10,
-            privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1),
+            [[1.0]] * 10,
+            [1.0] * 10,
+            sample_weight=[1.0] * 10,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
         )
     assert released == []
 
@@ -408,21 +452,42 @@ def test_theil_sen_refitting_replaces_learned_state(route):
     data, domain = _training_data()
     model = _estimator()
     context = dp.Context.compositor(
-        data, dp.unit_of(contributions=1), dp.loss_of(epsilon=2),
-        domain=domain, split_evenly_over=2,
+        data,
+        dp.unit_of(contributions=1),
+        dp.loss_of(epsilon=2),
+        domain=domain,
+        split_evenly_over=2,
     )
 
     def fit():
         if route == "context":
             return context.query().sklearn(model).release()
-        return model.fit(data.X, data.y, domain=domain,
-                         privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(epsilon=1))
+        return model.fit(
+            data.X,
+            data.y,
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
 
-    assert fit() is model
+    first = fit()
+    if route == "context":
+        assert first is not model
+        assert not hasattr(model, "coef_")
+    else:
+        assert first is model
+    model = first
     old_coef = model.coef_
     model.coef_[:] = 1e6
     model.intercept_ = -1e6
-    assert fit() is model
+    second = fit()
+    if route == "context":
+        assert second is not model
+        np.testing.assert_array_equal(model.coef_, [1e6])
+        assert model.intercept_ == -1e6
+    else:
+        assert second is model
+    model = second
     assert model.coef_ is not old_coef
     assert np.isfinite(model.predict(data.X)).all()
     assert abs(model.coef_[0]) <= 5.0 + 1e-10
@@ -436,15 +501,24 @@ def test_theil_sen_query_snapshots_mutable_configuration_and_is_lazy(monkeypatch
     from opendp.extras.sklearn.linear_model import _make_private_theil_sen as framework
 
     data, domain = _training_data()
-    x_bounds, y_bounds, fractions = np.array([[-3.0, 25.0]]), [-10.0, 60.0], [0.25, 0.75]
+    x_bounds, y_bounds, fractions = (
+        np.array([[-3.0, 25.0]]),
+        [-10.0, 60.0],
+        [0.25, 0.75],
+    )
     model = dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=x_bounds, y_bounds=y_bounds, fraction_bounds=fractions,
+        x_bounds=x_bounds,
+        y_bounds=y_bounds,
+        fraction_bounds=fractions,
     )
     model._ingest_release((2.0, 1.0))
     old_coef = model.coef_
     context = dp.Context.compositor(
-        data, dp.unit_of(contributions=1), dp.loss_of(epsilon=1),
-        domain=domain, split_evenly_over=1,
+        data,
+        dp.unit_of(contributions=1),
+        dp.loss_of(epsilon=1),
+        domain=domain,
+        split_evenly_over=1,
     )
     cuts = []
     original = framework.pairwise_predict
@@ -462,23 +536,29 @@ def test_theil_sen_query_snapshots_mutable_configuration_and_is_lazy(monkeypatch
     y_bounds[:] = [10000.0, 20000.0]
     fractions[:] = [0.1, 0.9]
     model.set_params(runs=3, candidates_count=2)
-    assert query.release() is model
+    fitted = query.release()
+    assert fitted is not model
+    assert model.coef_ is old_coef and model.intercept_ == 1.0
+    assert fitted.runs == 1 and fitted.candidates_count == 100
     assert len(cuts) == 1
     np.testing.assert_array_equal(cuts[0], [4.0, 18.0])
-    predictions = model.predict([[4.0], [18.0]])
+    predictions = fitted.predict([[4.0], [18.0]])
     assert np.all(predictions >= -10.0 - 1e-10) and np.all(predictions <= 60.0 + 1e-10)
-    assert model.coef_ is not old_coef
+    assert fitted.coef_ is not old_coef
     assert context.current_privacy_loss() == [1.0]
-    state = model.coef_.copy(), model.intercept_
+    state = fitted.coef_.copy(), fitted.intercept_
     with pytest.raises(dp.OpenDPException, match="out of queries"):
         query.release()
-    np.testing.assert_array_equal(model.coef_, state[0])
-    assert model.intercept_ == state[1] and len(cuts) == 1
+    np.testing.assert_array_equal(fitted.coef_, state[0])
+    assert fitted.intercept_ == state[1] and len(cuts) == 1
+    assert model.coef_ is old_coef and model.intercept_ == 1.0
 
 
 def test_pairwise_constructor_snapshots_mutable_cuts(monkeypatch):
     import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_pairwise_predict
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
+        make_pairwise_predict,
+    )
 
     data, domain = _training_data()
     monkeypatch.setattr(np.random, "shuffle", lambda indices: None)

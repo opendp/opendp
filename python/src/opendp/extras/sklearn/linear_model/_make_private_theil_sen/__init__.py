@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDomain
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
 from opendp.mod import Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
@@ -51,7 +51,7 @@ def make_pairwise_predict(input_domain, input_metric, x_cuts, runs: int = 1, T=f
     import opendp.prelude as dp
 
     np = _numpy()
-    desc = input_domain.cast(SklearnFitDomain)
+    desc = input_domain.cast(SklearnFitDescriptor)
     input_desc = desc.X.cast(dp.numpy.NPArray2Domain)
     if input_desc.num_columns != 1:
         raise ValueError("input_domain must have one feature column")
@@ -143,7 +143,7 @@ def _make_private_theil_sen_with_scale(
 
     np = _numpy()
     desc = getattr(input_domain, "descriptor", None)
-    if not isinstance(desc, SklearnFitDomain):
+    if not isinstance(desc, SklearnFitDescriptor):
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
     if desc.y is None:
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain with y")
@@ -152,25 +152,31 @@ def _make_private_theil_sen_with_scale(
     if not isinstance(desc.y, VectorDomain):
         raise ValueError("TheilSenRegressor requires a vector target domain")
     if input_metric != dp.symmetric_distance():
-        raise ValueError("TheilSenRegressor supports symmetric_distance() only")  # pragma: no cover
+        raise ValueError(
+            "TheilSenRegressor supports symmetric_distance() only"
+        )  # pragma: no cover
     if len(x_bounds) != 1:
-        raise ValueError("x_bounds must contain exactly one feature bound")  # pragma: no cover
+        raise ValueError(
+            "x_bounds must contain exactly one feature bound"
+        )  # pragma: no cover
     if len(fraction_bounds) != 2 or fraction_bounds[0] >= fraction_bounds[1]:
-        raise ValueError("fraction_bounds must contain two increasing values")  # pragma: no cover
+        raise ValueError(
+            "fraction_bounds must contain two increasing values"
+        )  # pragma: no cover
     if not 0 < fraction_bounds[0] < fraction_bounds[1] < 1:
-        raise ValueError("fraction_bounds must lie strictly between zero and one")  # pragma: no cover
+        raise ValueError(
+            "fraction_bounds must lie strictly between zero and one"
+        )  # pragma: no cover
     if runs < 1 or candidates_count < 2 or scale <= 0:
-        raise ValueError("runs, candidates_count, and scale must be positive")  # pragma: no cover
+        raise ValueError(
+            "runs, candidates_count, and scale must be positive"
+        )  # pragma: no cover
 
     x_bounds = x_bounds[0]
-    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.asarray(
-        fraction_bounds
-    )
+    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.asarray(fraction_bounds)
     P_inv = np.linalg.inv(np.vstack([x_cuts, np.ones_like(x_cuts)]).T)
 
-    pairwise = make_pairwise_predict(
-        input_domain, input_metric, x_cuts, runs=runs
-    )
+    pairwise = make_pairwise_predict(input_domain, input_metric, x_cuts, runs=runs)
     pair_domain = pairwise.output_domain
     pair_metric = pairwise.output_metric
     medians = make_private_percentile_medians(
@@ -221,7 +227,7 @@ def make_private_theil_sen(
         )
 
     desc = getattr(input_domain, "descriptor", None)
-    if not isinstance(desc, SklearnFitDomain):
+    if not isinstance(desc, SklearnFitDescriptor):
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
     size = desc.X.cast(dp.numpy.NPArray2Domain).size
     if size is None and isinstance(desc.y, VectorDomain):
