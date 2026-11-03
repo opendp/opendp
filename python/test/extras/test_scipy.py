@@ -90,6 +90,18 @@ def test_context_infers_sparse_sklearn_fit_domain(with_target, rows):
     assert context.current_privacy_loss() == []
 
 
+@pytest.mark.parametrize(
+    ("n_features", "max_rows", "message"),
+    [
+        (0, None, "n_features must be positive"),
+        (3, -1, "max_rows must be non-negative"),
+    ],
+)
+def test_csr_array2_domain_rejects_invalid_schema(n_features, max_rows, message):
+    with pytest.raises(ValueError, match=message):
+        csr_array2_domain(n_features, max_rows=max_rows, T=bool)
+
+
 def test_csr_array2_domain_normalizes_atom_type():
     assert csr_array2_domain(3, max_rows=None, T=bool) == csr_array2_domain(
         3, max_rows=None, T="bool"

@@ -175,6 +175,11 @@ def test_invalid_budget(budget):
         _measurement(budget=budget)
 
 
+def test_unrepresentable_noise_scale_is_rejected():
+    with pytest.raises(ValueError, match="invalid noise scale"):
+        _measurement(budget=math.nextafter(0.0, 1.0))
+
+
 def test_domain_exports_and_variable_row_counts():
     domain = csr_array2_domain(6, max_rows=None, T=bool)
     assert domain.cast(CSRArray2Domain) == CSRArray2Domain(6, None, "bool")
@@ -240,6 +245,35 @@ def test_exact_feature_sums_and_sensitivity(norm, sensitivity):
     np.testing.assert_array_equal(
         t(sparse.csr_array((0, 6), dtype=bool)), np.zeros(12, dtype=np.int32)
     )
+
+
+@pytest.mark.parametrize(
+    "centers",
+    [
+        lambda: _centers().astype(np.float64),
+        lambda: sparse.csr_array((0, 6), dtype=np.int32),
+        lambda: sparse.csr_array(np.ones((1, 5), dtype=np.int32)),
+    ],
+)
+def test_feature_sums_reject_invalid_centers(centers):
+    with pytest.raises(ValueError, match="nonempty canonical int32 CSR centers"):
+        spherical.make_cluster_feature_sums(
+            csr_array2_domain(6, max_rows=None, T=bool),
+            _METRIC,
+            centers=centers(),
+            max_active=3,
+        )
+
+
+def test_feature_sums_reject_unsupported_norm():
+    with pytest.raises(ValueError, match="norm must be 1 or 2"):
+        spherical.make_cluster_feature_sums(
+            csr_array2_domain(6, max_rows=None, T=bool),
+            _METRIC,
+            centers=_centers(),
+            max_active=3,
+            norm=3,
+        )
 
 
 def test_count_saturation_precedes_int32_cast(monkeypatch):
