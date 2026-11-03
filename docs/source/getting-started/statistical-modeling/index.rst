@@ -2,8 +2,9 @@ Statistical Modeling
 ====================
 
 Beyond the basic statistics offered by the Polars interface,
-OpenDP offers differentially private versions of linear regression and
-:class:`~opendp.extras.sklearn.decomposition.PCA`,
+OpenDP offers differentially private
+:class:`~opendp.extras.sklearn.linear_model.TheilSenRegressor` and
+:class:`~opendp.extras.sklearn.decomposition.PCA` estimators,
 with APIs modelled after scikit-learn.
 
 Another more flexible option is to use OpenDP to create synthetic data.
@@ -16,5 +17,4 @@ this may be a good option.
 .. toctree::
   :maxdepth: 1
 
-  linear-regression
   synthetic-data
