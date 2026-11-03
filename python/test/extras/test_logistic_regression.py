@@ -63,6 +63,23 @@ def test_gradients_and_row_stability(expit):
     )
 
 
+def test_gradients_with_wide_integer_targets():
+    # NumPy infers object dtype for Python integers beyond its native range.
+    y = [2**100, -(2**100), 0]
+    assert np.asarray(y).dtype.kind == "O"
+    X = np.array([[1, 2], [-1, 0], [2, 4]], dtype=float)
+    gradients = per_example_gradients(dp.sklearn.SklearnFit(X, y), np.zeros(3))
+    assert gradients.dtype == np.dtype(float)
+    assert np.isfinite(gradients).all()
+    np.testing.assert_array_equal(
+        gradients,
+        np.array(
+            [[-(2**100), -(2**101), -(2**100)], [-(2**100), 0, 2**100], [1, 2, 0.5]],
+            dtype=float,
+        ),
+    )
+
+
 def test_nonfinite_gradients_and_fitting(model_type):
     largest, smallest = np.finfo(float).max, np.finfo(float).smallest_subnormal
     X = np.array(
@@ -203,6 +220,17 @@ def test_input_domain_validation(model_type):
         _make(model_type(), _domain(3), d_in=1)
 
 
+def test_nonatomic_target_validation(model_type, monkeypatch):
+    # Synthesize a non-atomic element domain to exercise the defensive guard.
+    domain = _domain(3)
+    element_domain = dp.numpy.array2_domain(T=float)
+    monkeypatch.setattr(
+        dp.VectorDomain, "element_domain", property(lambda _: element_domain)
+    )
+    with pytest.raises(ValueError, match="^y must have numeric or boolean elements$"):
+        _make(model_type(), domain)
+
+
 @pytest.mark.parametrize(
     "parameter, values",
     [
@@ -210,8 +238,8 @@ def test_input_domain_validation(model_type):
         ("l1_ratio", [-0.1, 1.1, float("nan"), float("inf")]),
         ("reference_size", [0, -1, 1.5, True, float("nan"), float("inf"), 10**1000]),
         ("n_iters", [0, 1.5, True, float("inf")]),
-        ("learning_rate", [0, float("nan"), float("inf"), "0.1"]),
-        ("clip_norm", [-1, float("nan"), float("inf"), None]),
+        ("learning_rate", [0, float("nan"), float("inf"), "0.1", 10**1000]),
+        ("clip_norm", [-1, float("nan"), float("inf"), None, 10**1000]),
     ],
 )
 def test_public_parameter_validation(model_type, parameter, values):
