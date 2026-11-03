@@ -227,10 +227,6 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of([1, 2, 3], infer=True)
     VectorDomain(AtomDomain(T=i32))
 
-    2D NumPy features infer native array domains; 1D NumPy arrays infer Rust
-    vector domains, including SklearnFit targets. Dtype and feature count are
-    assumed public; row count and finiteness are not inferred.
-
     :param T: carrier type
     :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.
     """

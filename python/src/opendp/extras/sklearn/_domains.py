@@ -49,7 +49,11 @@ def sklearn_fit_domain(X, y=None) -> Domain:
 
         return True
 
-    return _extrinsic_domain(str(descriptor), member, descriptor)
+    return _extrinsic_domain(
+        f"SklearnFitDomain(X={X!r}, y={y!r})",
+        member,
+        descriptor,
+    )
 
 
 def _n_rows(value) -> int:

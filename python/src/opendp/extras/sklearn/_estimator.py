@@ -45,12 +45,12 @@ class DPEstimator(BaseEstimator, ABC):
     ) -> _EstimatorT:
         """Fit private data, mutating and returning self.
 
-        Requires ``privacy_unit`` and ``privacy_loss``; each call incurs that loss.
-        ``domain`` describes SklearnFit(X, y). If omitted, infer public dtypes and
-        feature count, not row count or finiteness.
+        Requires ``privacy_unit`` and ``privacy_loss``.
+
+        ``domain`` should be constructed with ``sklearn_fit_domain(...)``.
+        Otherwise, dtypes and feature count are inferred from the data.
 
         Context's ``query.sklearn(model).release()`` instead returns a fitted clone.
-        Per-record transform outputs are not private releases.
         """
         data = SklearnFit(X, y=y)
         if domain is None:

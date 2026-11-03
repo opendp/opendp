@@ -59,6 +59,21 @@ def test_numpy_vector_inference_outside_sklearn_fit():
     assert domain.member(values)
 
 
+def test_sklearn_fit_domain_representation_and_equality():
+    X = dp.numpy.array2_domain(T=float, size=3, num_columns=2)
+    y = dp.vector_domain(dp.atom_domain(T=int), size=3)
+    domain = dp.sklearn.sklearn_fit_domain(X, y)
+    equivalent = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=3, num_columns=2),
+        dp.vector_domain(dp.atom_domain(T=int), size=3),
+    )
+    assert repr(domain) == f"SklearnFitDomain(X={X!r}, y={y!r})"
+    assert repr(domain.cast(dp.sklearn.SklearnFitDescriptor)) == (
+        f"SklearnFitDescriptor(X={X!r}, y={y!r})"
+    )
+    assert domain == equivalent
+
+
 def test_sklearn_fit_membership_and_row_alignment():
     X_domain = dp.numpy.array2_domain(T=float, size=2, num_columns=2, nan=False)
     y_domain = dp.vector_domain(dp.atom_domain(T=int), size=2)
