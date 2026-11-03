@@ -120,6 +120,7 @@ nitpick_ignore = [
     ("py:class", "sklearn.decomposition.PCA"),
     # Base class of the sklearn estimators is in a private module
     ("py:class", "opendp.extras.sklearn._estimator.DPEstimator"),
+    ("py:class", "opendp.extras.sklearn._estimator.DPTransformer"),
     # Standard library reference fails to resolve
     ("py:class", "abc.ABC"),
     # I think the problem is that Sphinx is making parameter list documentation,

@@ -38,6 +38,7 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
         if constructor == "sscp":
             make_np_sscp(domain, dp.symmetric_distance())
         else:
+            pytest.importorskip("sklearn")
             (domain, dp.symmetric_distance()) >> (
                 dp.sklearn.decomposition.then_private_np_eigendecomposition(
                     eigvals_epsilon=1.0, eigvecs_epsilons=[1.0]
