@@ -141,6 +141,29 @@ def test_pairwise_prediction_keeps_features_and_targets_aligned(monkeypatch):
     )
 
 
+@pytest.mark.parametrize("vertical_only", [False, True])
+def test_pairwise_prediction_filters_vertical_pairs_before_division(
+    vertical_only, monkeypatch
+):
+    import numpy as np
+    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
+        pairwise_predict,
+    )
+
+    monkeypatch.setattr(np.random, "shuffle", lambda _: None)
+    # Pair rows 0 with 2 (vertical), and 1 with 3 (optionally vertical).
+    data = dp.sklearn.SklearnFit(
+        X=np.array([[0.0], [1.0], [0.0], [1.0 if vertical_only else 3.0]]),
+        y=np.array([0.0, 3.0, 1.0, 7.0]),
+    )
+    with np.errstate(divide="raise", invalid="raise"):
+        result = pairwise_predict(data, np.array([0.0, 1.0]))
+    expected = np.empty((0, 2)) if vertical_only else np.array([[1.0, 3.0]])
+    assert result.dtype == np.float64
+    assert result.shape == expected.shape
+    np.testing.assert_array_equal(result, expected)
+
+
 def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
     from collections import Counter
     from itertools import permutations
@@ -192,6 +215,7 @@ def test_pairwise_variable_size_stability_allows_replacing_a_pair(runs, monkeypa
         "shuffle",
         lambda indices: indices.__setitem__(slice(None), indices[::-1]),
     )
+    # Regression for #2950: one insertion can replace a pair prediction.
     before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
     after = dp.sklearn.SklearnFit(np.array([[0.0], [1.0], [3.0]]), [0.0, 1.0, 9.0])
     old_rows = Counter(map(tuple, transform(before)))
@@ -347,7 +371,11 @@ def test_theil_sen_framework_make_is_non_mutating():
 
 def test_theil_sen_fitted_methods_and_error_paths():
     np = pytest.importorskip("numpy")
+    from sklearn.base import RegressorMixin
+    from sklearn.metrics import r2_score
+
     estimator = _estimator()
+    assert type(estimator).score is RegressorMixin.score
     with pytest.raises(ValueError, match="not fitted"):
         estimator.predict([[1.0]])
 
@@ -357,12 +385,14 @@ def test_theil_sen_fitted_methods_and_error_paths():
     assert estimator.n_features_in_ == 1
     assert np.array_equal(estimator.predict([1.0, 2.0]), np.array([3.0, 5.0]))
     assert estimator.score([[1.0], [2.0]], [3.0, 5.0]) == 1.0
-    with pytest.raises(NotImplementedError, match="sample_weight"):
-        estimator.score([[1.0]], [3.0], sample_weight=[1.0])
+    X, y, weights = [[1.0], [2.0], [3.0]], [3.0, 4.0, 8.0], [1.0, 2.0, 3.0]
+    assert estimator.score(X, y, sample_weight=weights) == r2_score(
+        y, estimator.predict(X), sample_weight=weights
+    )
     with pytest.raises(ValueError, match="shape"):
         estimator.predict([[1.0, 2.0]])
-    with pytest.raises(ValueError, match="one-dimensional"):
-        estimator.score([[1.0]], [[3.0]])
+    with pytest.raises(ValueError, match="inconsistent numbers of samples"):
+        estimator.score([[1.0], [2.0]], [3.0])
 
 
 def test_theil_sen_constructor_and_aligned_domain_validation():
