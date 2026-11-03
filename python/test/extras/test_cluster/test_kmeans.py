@@ -1123,6 +1123,8 @@ def test_private_branch_selection_can_help_in_high_dimension():
     selected_acc = _best_label_accuracy(selected_pred, y, k=3)
     assert selected_acc > plain_acc
 
+    assert plain.cluster_centers_ is not None
+    assert selected.cluster_centers_ is not None
     plain_err = np.mean(_best_center_errors(plain.cluster_centers_, true_centers))
     selected_err = np.mean(_best_center_errors(selected.cluster_centers_, true_centers))
     assert selected_err <= plain_err
