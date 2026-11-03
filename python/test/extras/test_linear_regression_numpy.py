@@ -1,176 +1,137 @@
 import pytest
 
 pytest.importorskip("sklearn")
-from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-    make_pairwise_predict,
-)
+import numpy as np
 import opendp.prelude as dp
+from opendp.extras.sklearn.linear_model import _make_private_theil_sen as framework
+from opendp.extras.sklearn.linear_model import TheilSenRegressor
 
 
-def _training_data(size=20):
-    np = pytest.importorskip("numpy")
+def _training_data(size=20, sized=True):
     X = np.arange(size, dtype=float).reshape(-1, 1)
     y = 2.0 * X[:, 0] + 1.0
     domain = dp.sklearn.sklearn_fit_domain(
-        X=dp.numpy.array2_domain(num_columns=1, size=size, T=float, nan=False),
-        y=dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size),
+        X=dp.numpy.array2_domain(num_columns=1, size=size if sized else None, T=float),
+        y=dp.vector_domain(dp.atom_domain(T=float), size=size if sized else None),
     )
     return dp.sklearn.SklearnFit(X=X, y=y), domain
 
 
-def _estimator():
-    return dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=((-3.0, 25.0),), y_bounds=(-10.0, 60.0)
+def _estimator(**params):
+    return TheilSenRegressor(
+        **(dict(slope_bounds=(-5.0, 5.0), intercept_bounds=(-10.0, 10.0)) | params)
     )
 
 
-@pytest.mark.parametrize("d_in", [1, 2])
-def test_private_theil_sen_measurement_consumes_aligned_data(d_in):
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.linear_model import make_private_theil_sen
-
-    data, domain = _training_data()
-    measurement = make_private_theil_sen(
+def _make(domain, d_in=2, d_out=1.0, measure=None, **params):
+    return _estimator(**params).make(
         domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
-        d_in=d_in,
-        d_out=1.0,
-        x_bounds=((-3.0, 3.0),),
-        y_bounds=(-10.0, 60.0),
+        dp.max_divergence() if measure is None else measure,
+        d_in,
+        d_out,
     )
-    assert measurement.map(1) == 0
-    assert measurement.check(2, 1.0)
-    assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.SklearnFitDescriptor),
-        dp.sklearn.SklearnFitDescriptor,
-    )
-    slope, intercept = measurement(data)
-    assert np.asarray(slope).shape == ()
-    assert np.asarray(intercept).shape == ()
 
 
-def test_pairwise_predict_stability():
-    np = pytest.importorskip("numpy")
-    x_cuts = np.array([-1.0, 1.0])
-
-    unsized = make_pairwise_predict(
-        dp.sklearn.sklearn_fit_domain(
-            dp.numpy.array2_domain(num_columns=1, T=float),
-            dp.vector_domain(dp.atom_domain(T=float)),
-        ),
-        dp.symmetric_distance(),
-        x_cuts,
-        runs=2,
+@pytest.mark.parametrize("sized, d_in", [(False, 1), (True, 1), (True, 2)])
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+)
+def test_private_theil_sen_measurement_consumes_aligned_data(sized, d_in, measure):
+    data, domain = _training_data(sized=sized)
+    # Include the true coefficients in the candidate grids. Check recovery, not an
+    # exact noisy draw; very large budgets make failures overwhelmingly unlikely.
+    measurement = _make(
+        domain,
+        d_in,
+        1000.0,
+        measure,
+        slope_bounds=(-7.0, 2.0),
+        intercept_bounds=(-8.0, 1.0),
     )
-    assert unsized.map(1) == 4
-    assert unsized.map(2) == 8
+    assert measurement.input_domain == domain
+    assert measurement.check(d_in, 1000.0)
+    if sized:
+        assert measurement.check(2, 1000.0)  # meaningful even when d_in=1 is vacuous
+    np.testing.assert_allclose(measurement(data), [2.0, 1.0], atol=0.2, rtol=0)
 
-    sized = make_pairwise_predict(
-        dp.sklearn.sklearn_fit_domain(
-            dp.numpy.array2_domain(size=5, num_columns=1, T=float),
-            dp.vector_domain(dp.atom_domain(T=float)),
-        ),
-        dp.symmetric_distance(),
-        x_cuts,
-        runs=2,
-    )
-    assert sized.map(1) == 0
-    assert sized.map(2) == 4
-    assert sized.map(3) == 4
-    assert sized.map(4) == 8
-    assert sized.map(10) == 20
+
+def test_pairwise_slopes_stability():
+    for sized in (False, True):
+        _, domain = _training_data(5, sized)
+        transform = framework.make_pairwise_slopes(domain, dp.symmetric_distance())
+        for distance in [0, 1, 2, 3, 4, 10]:
+            expected = 2 * (distance // 2) if sized else 2 * distance
+            assert transform.map(distance) == expected
 
 
 @pytest.mark.parametrize("dtype", ["int32", "float32", "float64"])
-@pytest.mark.parametrize("cuts_dtype", ["float32", "float64"])
-def test_pairwise_predict_output_domain(dtype, cuts_dtype):
-    np = pytest.importorskip("numpy")
+def test_pairwise_slopes_output_domain(dtype):
     target_dtype = "int32" if dtype == "int32" else "float64"
-    trans = make_pairwise_predict(
-        dp.sklearn.sklearn_fit_domain(
-            dp.numpy.array2_domain(num_columns=1, T=np.dtype(dtype).type),
-            dp.vector_domain(dp.atom_domain(T=np.dtype(target_dtype).type)),
-        ),
-        dp.symmetric_distance(),
-        np.array([-1.0, 1.0], dtype=cuts_dtype),
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(num_columns=1, T=np.dtype(dtype).type),
+        dp.vector_domain(dp.atom_domain(T=np.dtype(target_dtype).type)),
     )
+    transform = framework.make_pairwise_slopes(domain, dp.symmetric_distance())
     data = dp.sklearn.SklearnFit(
-        np.array([[0], [1], [2], [3]], dtype=dtype),
-        np.array([0, 1, 2, 3], dtype=target_dtype),
+        np.arange(4, dtype=dtype).reshape(-1, 1),
+        np.arange(4, dtype=target_dtype),
     )
-    assert trans.input_domain.member(data)
-
-    output = trans(data)
-    assert output.dtype == np.float64
-    assert trans.output_domain.member(output)
-
-
-@pytest.mark.parametrize("T", ["bool", "String"])
-def test_pairwise_predict_rejects_nonnumeric(T):
-    np = pytest.importorskip("numpy")
-    with pytest.raises(ValueError, match="numeric"):
-        make_pairwise_predict(
-            dp.sklearn.sklearn_fit_domain(
-                dp.numpy.array2_domain(num_columns=1, T=T),
-                dp.vector_domain(dp.atom_domain(T=T)),
-            ),
-            dp.symmetric_distance(),
-            np.array([-1.0, 1.0]),
-        )
+    assert transform.input_domain.member(data)
+    output = transform(data)
+    assert np.asarray(output).dtype == np.float64
+    assert transform.output_domain.member(output)
 
 
-def test_pairwise_prediction_keeps_features_and_targets_aligned(monkeypatch):
-    np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-        pairwise_predict,
-    )
-
+def test_pairwise_slopes_keeps_features_and_targets_aligned(monkeypatch):
     data = dp.sklearn.SklearnFit(
         X=np.array([[0.0], [1.0], [3.0], [6.0]]),
         y=np.array([0.0, 1.0, 9.0, 36.0]),
     )
-
-    def reverse(values):
-        values[:] = values[::-1]
-
-    monkeypatch.setattr(np.random, "shuffle", reverse)
-    assert np.allclose(
-        pairwise_predict(data, np.array([0.0, 1.0])),
-        np.array([[-6.0, 1.0], [0.0, 3.0]]),
+    monkeypatch.setattr(
+        framework,
+        "_shuffle",
+        lambda indices: indices.__setitem__(slice(None), indices[::-1]),
     )
+    np.testing.assert_array_equal(framework.pairwise_slopes(data), [7.0, 3.0])
 
 
-@pytest.mark.parametrize("vertical_only", [False, True])
-def test_pairwise_prediction_filters_vertical_pairs_before_division(
-    vertical_only, monkeypatch
-):
-    import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-        pairwise_predict,
-    )
-
-    monkeypatch.setattr(np.random, "shuffle", lambda _: None)
-    # Pair rows 0 with 2 (vertical), and 1 with 3 (optionally vertical).
-    data = dp.sklearn.SklearnFit(
-        X=np.array([[0.0], [1.0], [0.0], [1.0 if vertical_only else 3.0]]),
-        y=np.array([0.0, 3.0, 1.0, 7.0]),
-    )
-    with np.errstate(divide="raise", invalid="raise"):
-        result = pairwise_predict(data, np.array([0.0, 1.0]))
-    expected = np.empty((0, 2)) if vertical_only else np.array([[1.0, 3.0]])
-    assert result.dtype == np.float64
-    assert result.shape == expected.shape
+@pytest.mark.parametrize(
+    "X, y, expected",
+    [
+        ([], [], []),
+        ([0], [1], []),
+        ([0, 1, 0, 1], [0, 3, 1, 7], []),
+        ([0, 1, 0, 3], [0, 3, 1, 7], [2.0]),
+        (
+            [0, 0, 1, np.finfo(float).smallest_subnormal],
+            [0, 0, np.inf, np.finfo(float).max],
+            [],
+        ),
+        ([0, np.nan, np.inf, 3], [np.nan, 0, 1, 7], []),
+    ],
+)
+def test_pairwise_slopes_empty_vertical_and_nonfinite(X, y, expected, monkeypatch):
+    monkeypatch.setattr(framework, "_shuffle", lambda _: None)
+    data = dp.sklearn.SklearnFit(np.array(X, dtype=float).reshape(-1, 1), np.array(y))
+    with np.errstate(all="raise"):
+        result = framework.pairwise_slopes(data)
+    assert result.dtype == np.float64 and result.ndim == 1
     np.testing.assert_array_equal(result, expected)
 
 
-def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
+def test_pairing_uses_secure_unseeded_randomness(monkeypatch):
+    from secrets import SystemRandom
+
+    assert isinstance(getattr(framework._shuffle, "__self__", None), SystemRandom)
+    monkeypatch.setattr(np.random, "shuffle", lambda _: pytest.fail("NumPy RNG used"))
+    data, _ = _training_data(9)
+    np.testing.assert_array_equal(framework.pairwise_slopes(data), np.full(4, 2.0))
+
+
+def test_pairwise_slopes_is_permutation_invariant_for_odd_rows(monkeypatch):
     from collections import Counter
     from itertools import permutations
-    import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-        pairwise_predict,
-    )
 
     X, y = np.array([[0.0], [1.0], [3.0]]), np.array([0.0, 1.0, 9.0])
     distributions = []
@@ -183,112 +144,314 @@ def test_pairwise_prediction_is_permutation_invariant_for_odd_rows(monkeypatch):
                 assert len(indices) == 3  # omit only after randomizing all rows
                 indices[:] = shuffle_order
 
-            monkeypatch.setattr(np.random, "shuffle", shuffle)
-            outcomes.append(tuple(pairwise_predict(data, np.array([0.0, 1.0])).ravel()))
+            monkeypatch.setattr(framework, "_shuffle", shuffle)
+            outcomes.append(tuple(framework.pairwise_slopes(data)))
         distributions.append(Counter(outcomes))
     assert all(distribution == distributions[0] for distribution in distributions)
     assert len(distributions[0]) == 3
 
 
-@pytest.mark.parametrize("runs", [1, 3])
-def test_pairwise_variable_size_stability_allows_replacing_a_pair(runs, monkeypatch):
+def test_pairwise_variable_size_stability_allows_replacing_a_pair(monkeypatch):
     from collections import Counter
-    import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-        make_pairwise_predict,
-    )
 
-    domain = dp.sklearn.sklearn_fit_domain(
-        dp.numpy.array2_domain(T=float, num_columns=1),
-        dp.vector_domain(dp.atom_domain(T=float)),
-    )
-    transform = make_pairwise_predict(
-        domain,
-        dp.symmetric_distance(),
-        np.array([0.0, 1.0]),
-        runs=runs,
-    )
-    assert transform.map(1) == 2 * runs
-    assert transform.map(2) == 4 * runs
+    _, domain = _training_data(sized=False)
+    transform = framework.make_pairwise_slopes(domain, dp.symmetric_distance())
+    assert transform.map(1) == 2 and transform.map(2) == 4
     monkeypatch.setattr(
-        np.random,
-        "shuffle",
+        framework,
+        "_shuffle",
         lambda indices: indices.__setitem__(slice(None), indices[::-1]),
     )
-    # Regression for #2950: one insertion can replace a pair prediction.
+    # Regression for #2950: one insertion can replace a matched slope.
     before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
     after = dp.sklearn.SklearnFit(np.array([[0.0], [1.0], [3.0]]), [0.0, 1.0, 9.0])
-    old_rows = Counter(map(tuple, transform(before)))
-    new_rows = Counter(map(tuple, transform(after)))
+    old_rows, new_rows = Counter(transform(before)), Counter(transform(after))
     distance = sum((old_rows - new_rows).values()) + sum((new_rows - old_rows).values())
-    assert distance == 2 * runs == transform.map(1)
+    assert distance == 2 == transform.map(1)
 
 
-def test_theil_sen_estimator_context_fit_and_methods():
-    pytest.importorskip("numpy")
-    sklearn = pytest.importorskip("sklearn")
-    assert sklearn.base.is_regressor(_estimator())
+@pytest.mark.parametrize(
+    "x_size, y_size", [(None, None), (5, None), (None, 5), (5, 5), (0, 0)]
+)
+def test_residual_stability_and_retention_of_known_size(x_size, y_size):
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, num_columns=1, size=x_size),
+        dp.vector_domain(dp.atom_domain(T=float), size=y_size),
+    )
+    bounds = [-10.0, 10.0]
+    transform = framework.make_residuals(domain, dp.symmetric_distance(), 2.0, bounds)
+    assert transform.output_domain.size == (x_size if x_size is not None else y_size)
+    assert transform.map(1) == 1 and transform.map(2) == 2
+    bounds[:] = [-1000.0, 1000.0]  # construction snapshots public sanitization bounds
+    largest = np.finfo(float).max
+    X = np.array([[-largest], [largest], [np.nan], [0.0], [1.0]])
+    y = np.array([largest, -largest, np.inf, np.nan, 50.0])
+    if x_size == 0:
+        X, y = X[:0], y[:0]
+    data = dp.sklearn.SklearnFit(X, y)
+    assert domain.member(data)
+    with np.errstate(all="raise"):
+        result = transform(data)
+    expected = [] if x_size == 0 else [10.0, -10.0, -10.0, -10.0, 48.0]
+    np.testing.assert_array_equal(result, expected)
+    assert transform.output_domain.member(result)
+    if len(X):
+        X[0], y[0] = [1.0], 3.0
+        np.testing.assert_array_equal(transform(data)[1:], result[1:])
+
+
+@pytest.mark.parametrize("sized", [False, True])
+@pytest.mark.parametrize(
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+)
+@pytest.mark.parametrize("loss", [1e-6, 0.1, 1.0000000000000002])
+def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
+    sized, measure, loss, monkeypatch
+):
+    data, domain = _training_data(sized=sized)
+    compositions, queries, slopes = [], [], []
+    original_compose = dp.c.make_adaptive_composition
+    original_postprocess = framework._new_pure_function
+    original_residuals = framework.make_residuals
+
+    def compose(*args):
+        compositions.append(args)
+        return original_compose(*args)
+
+    def postprocess(function):
+        def fit(queryable):
+            def query(measurement):
+                queries.append(measurement)
+                return queryable(measurement)
+
+            return function(query)
+
+        return original_postprocess(fit)
+
+    def residuals(domain, metric, slope, bounds):
+        slopes.append(slope)
+        return original_residuals(domain, metric, slope, bounds)
+
+    monkeypatch.setattr(dp.c, "make_adaptive_composition", compose)
+    monkeypatch.setattr(framework, "_new_pure_function", postprocess)
+    monkeypatch.setattr(framework, "make_residuals", residuals)
+    measurement = _make(domain, 1, loss, measure)
+    assert measurement.check(1, loss)
+    calibration_distance, allocations = compositions[-1][-2:]
+    assert calibration_distance == (2 if sized else 1)
+    assert allocations[0] == allocations[1] and allocations[0] > 0
+    slope, intercept = measurement(data)
+    assert len(queries) == 2 and slopes == [0.0, slope]
+    for query, allocation in zip(queries, allocations):
+        assert query.input_domain == domain  # both queries run on original private rows
+        assert query.check(calibration_distance, allocation)
+    assert np.isfinite([slope, intercept]).all()
+    if sized:
+        assert measurement.check(2, loss)
+
+
+@pytest.mark.parametrize("sized", [False, True])
+@pytest.mark.parametrize("kind", ["empty", "one", "vertical", "nonfinite"])
+def test_degenerate_private_fit_still_releases_two_candidates(sized, kind):
+    size = 0 if kind == "empty" else 1 if kind == "one" else 4
+    data, domain = _training_data(size, sized)
+    if kind == "vertical":
+        data.X[:] = 0.0
+    if kind == "nonfinite":
+        data.X[:] = np.inf
+        data.y[:] = np.nan
+    fitted = _estimator().fit(
+        data.X,
+        data.y,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=2 if sized else 1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+    assert -5.0 <= fitted.coef_[0] <= 5.0
+    assert -10.0 <= fitted.intercept_ <= 10.0
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        None,
+        [1],
+        [1, 2, 3],
+        [1, 1],
+        [2, 1],
+        [0, np.inf],
+        [np.nan, 1],
+        ["0", "1"],
+        [0, 10**1000],
+    ],
+)
+@pytest.mark.parametrize("name", ["slope_bounds", "intercept_bounds"])
+def test_public_bounds_validation(name, bounds):
+    with pytest.raises(ValueError, match=name):
+        _estimator(**{name: bounds})
+    _, domain = _training_data()
+    model = _estimator().set_params(**{name: bounds})
+    with pytest.raises(ValueError, match=name):
+        model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 2, 1.0)
+
+
+def test_constructor_and_unsupported_domain_validation(monkeypatch):
+    import inspect
+    from sklearn.base import clone
+
+    import opendp.extras.sklearn.linear_model as linear_model
+
+    assert set(linear_model.__all__) <= set(dir(linear_model))
+    parameters = inspect.signature(TheilSenRegressor).parameters
+    assert list(parameters) == ["slope_bounds", "intercept_bounds"]
+    assert all(
+        p.kind == inspect.Parameter.KEYWORD_ONLY
+        and p.default is inspect.Parameter.empty
+        for p in parameters.values()
+    )
+    bounds = [-5.0, 5.0]
+    model = _estimator(slope_bounds=bounds)
+    assert clone(model).slope_bounds is not bounds
+    assert model.get_params() == dict(
+        slope_bounds=bounds, intercept_bounds=(-10.0, 10.0)
+    )
+    for option in [
+        "x_bounds",
+        "y_bounds",
+        "runs",
+        "fraction_bounds",
+        "candidates_count",
+        "fit_intercept",
+        "n_subsamples",
+        "max_subpopulation",
+        "max_iter",
+        "tol",
+        "n_jobs",
+        "verbose",
+        "random_state",
+    ]:
+        with pytest.raises(TypeError, match=option):
+            _estimator(**{option: 1})
+    X = dp.numpy.array2_domain(T=float, num_columns=1, size=3)
+    y = dp.vector_domain(dp.atom_domain(T=float), size=3)
+    cases = [
+        (X, "SklearnFit input domain"),
+        (dp.sklearn.sklearn_fit_domain(X), "with y"),
+        (
+            dp.sklearn.sklearn_fit_domain(
+                dp.numpy.array2_domain(T=float, num_columns=2), y
+            ),
+            "one feature",
+        ),
+        (dp.sklearn.sklearn_fit_domain(X, X), "vector target"),
+        (
+            dp.sklearn.sklearn_fit_domain(X, dp.vector_domain(dp.atom_domain(T=str))),
+            "numeric",
+        ),
+        (
+            dp.sklearn.sklearn_fit_domain(
+                dp.numpy.array2_domain(T=bool, num_columns=1), y
+            ),
+            "numeric",
+        ),
+        (
+            dp.sklearn.sklearn_fit_domain(
+                X, dp.vector_domain(dp.atom_domain(T=float), size=2)
+            ),
+            "matching row counts",
+        ),
+    ]
+    for domain, error in cases:
+        with pytest.raises(ValueError, match=error):
+            _make(domain)
+    _, domain = _training_data()
+    with pytest.raises(ValueError, match="symmetric_distance"):
+        model.make(domain, dp.insert_delete_distance(), dp.max_divergence(), 2, 1.0)
+    with pytest.raises(ValueError, match="output_measure"):
+        _make(domain, measure=dp.smoothed_max_divergence())
+    for distance in [0, -1, True, 1.5]:
+        with pytest.raises(ValueError, match="d_in"):
+            _make(domain, d_in=distance)
+    for loss in [0.0, -1.0, np.nan, np.inf]:
+        with pytest.raises(ValueError, match="d_out"):
+            _make(domain, d_out=loss)
+    with pytest.raises(ValueError, match="too small"):
+        _make(domain, d_out=np.finfo(float).smallest_subnormal)
+    monkeypatch.setattr(dp.VectorDomain, "element_domain", property(lambda _: X))
+    with pytest.raises(ValueError, match="numeric"):
+        _make(domain)
+
+
+def test_extreme_candidate_intervals_remain_finite():
+    data, domain = _training_data()
+    largest = np.finfo(float).max
+    for bounds in [(-largest, largest), (largest / 2, largest)]:
+        with np.errstate(all="raise"):
+            grid = framework._candidate_grid(bounds)
+            measurement = _make(domain, slope_bounds=bounds, intercept_bounds=bounds)
+            assert np.isfinite(measurement(data)).all()
+        assert np.isfinite(grid).all() and np.all(grid[1:] >= grid[:-1])
+        assert measurement.check(2, 1.0)
+
+
+@pytest.mark.parametrize("route", ["standalone", "context"])
+def test_theil_sen_fitting_cloning_scoring_and_refitting(route):
+    import pickle
+    from sklearn.base import clone, is_regressor, RegressorMixin
+    from sklearn.metrics import r2_score
 
     data, domain = _training_data()
+    model = _estimator()
+    assert is_regressor(model) and type(model).score is RegressorMixin.score
+    with pytest.raises(ValueError, match="not fitted"):
+        model.predict([[1.0]])
     context = dp.Context.compositor(
-        data=data,
+        data,
+        dp.unit_of(contributions=2),
+        dp.loss_of(epsilon=2.0),
         domain=domain,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
+        split_evenly_over=2,
     )
-    estimator = _estimator()
-
-    assert not hasattr(estimator, "coef_")
-    template = estimator
-    estimator = context.query().sklearn(template).release()
-    assert estimator is not template
-    assert not hasattr(template, "coef_")
-    assert estimator.coef_.shape == (1,)
-    assert isinstance(estimator.intercept_, float)
-    assert estimator.n_features_in_ == 1
-    assert estimator.predict([[1.0], [2.0]]).shape == (2,)
-    assert estimator.score([[1.0], [2.0]], [3.0, 5.0]) <= 1.0
-
-
-def test_theil_sen_fit_and_query_sklearn_release_are_equivalent():
-    pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    data, domain = _training_data()
-    release_context = dp.Context.compositor(
-        data=data,
-        domain=domain,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
+    for _ in range(2):
+        previous = model
+        previous_state = previous.__dict__.copy()
+        old_coef = getattr(previous, "coef_", None)
+        if route == "context":
+            model = context.query().sklearn(previous).release()
+            assert model is not previous and previous.__dict__ == previous_state
+        else:
+            model = model.fit(
+                data.X,
+                data.y,
+                privacy_unit=dp.unit_of(contributions=1),
+                privacy_loss=dp.loss_of(epsilon=1.0),
+            )
+            assert model is previous
+        assert model.coef_.shape == (1,) and isinstance(model.intercept_, float)
+        assert model.n_features_in_ == 1 and np.isfinite(model.predict(data.X)).all()
+        assert model.coef_ is not old_coef
+        if route == "standalone":
+            restored = pickle.loads(pickle.dumps(model))
+            np.testing.assert_array_equal(
+                restored.predict(data.X), model.predict(data.X)
+            )
+        assert clone(model).get_params() == model.get_params()
+        assert not hasattr(clone(model), "coef_")
+    if route == "context":
+        assert context.current_privacy_loss() == [1.0, 1.0]
+    model._ingest_release((2.0, 1.0))
+    np.testing.assert_array_equal(model.predict([1.0, 2.0]), [3.0, 5.0])
+    X, y, weights = [[1.0], [2.0], [3.0]], [3.0, 4.0, 8.0], [1.0, 2.0, 3.0]
+    assert model.score(X, y, sample_weight=weights) == r2_score(
+        y, model.predict(X), sample_weight=weights
     )
-    fit_estimator, release_estimator = _estimator(), _estimator()
-
-    assert (
-        fit_estimator.fit(
-            data.X,
-            data.y,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1.0),
-        )
-        is fit_estimator
-    )
-
-    initial_state = release_estimator.__dict__.copy()
-    fitted_query = release_context.query().sklearn(release_estimator)
-    assert release_estimator.__dict__ == initial_state
-    fitted = fitted_query.release()
-    assert fitted is not release_estimator
-    assert release_estimator.__dict__ == initial_state
-    assert fit_estimator.coef_.shape == fitted.coef_.shape == (1,)
-    assert isinstance(fitted.intercept_, float)
+    with pytest.raises(ValueError, match="shape"):
+        model.predict([[1.0, 2.0]])
 
 
 def test_pca_transform_retains_private_targets_for_theil_sen():
     from opendp.extras.sklearn.decomposition import PCA
 
-    np = pytest.importorskip("numpy")
     data, original_domain = _training_data()
     X = np.column_stack([data.X[:, 0], np.ones(len(data.X))])
     domain = dp.sklearn.sklearn_fit_domain(
@@ -296,7 +459,6 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
         original_domain.cast(dp.sklearn.SklearnFitDescriptor).y,
     )
     inputs = dp.sklearn.SklearnFit(X.copy(), data.y)
-    # Exact-size domains protect replacement at two symmetric edits.
     context = dp.Context.compositor(
         inputs,
         dp.unit_of(contributions=2),
@@ -304,317 +466,84 @@ def test_pca_transform_retains_private_targets_for_theil_sen():
         domain=domain,
         split_evenly_over=2,
     )
-    pca = PCA(n_components=1, clip_norm=1.0)
-    pca = context.query().sklearn(pca).release()
+    pca = context.query().sklearn(PCA(n_components=1, clip_norm=1.0)).release()
     transform = pca.make_transform(domain, dp.symmetric_distance())
     assert transform(inputs).y is inputs.y
-    estimator = dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=((-30.0, 30.0),),
-        y_bounds=(-10.0, 60.0),
-    )
-    next_query = context.query().new_with(chain=transform)
-    fitted_query = next_query.sklearn(estimator)
+    estimator = _estimator()
+    fitted_query = context.query().new_with(chain=transform).sklearn(estimator)
     assert fitted_query.resolve().map(2) <= 1.0
     fitted = fitted_query.release()
-    assert fitted is not estimator
-    assert not hasattr(estimator, "coef_")
-    assert fitted.coef_.shape == (1,)
-    assert context.current_privacy_loss() == [1.0, 1.0]
+    assert fitted is not estimator and not hasattr(estimator, "coef_")
+    assert fitted.coef_.shape == (1,) and context.current_privacy_loss() == [1.0, 1.0]
     np.testing.assert_array_equal(inputs.X, X)
 
 
-@pytest.mark.parametrize("domain_kind", ["infer", "fit"])
-def test_theil_sen_standalone_and_serialization(domain_kind):
-    import pickle
-    import numpy as np
-    from sklearn.base import clone
-
-    data, fit_domain = _training_data()
-    domain = fit_domain if domain_kind == "fit" else None
-    estimator = _estimator()
-    assert (
-        estimator.fit(
-            data.X,
-            data.y,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1.0),
-        )
-        is estimator
-    )
-    restored = pickle.loads(pickle.dumps(estimator))
-    np.testing.assert_allclose(restored.predict(data.X), estimator.predict(data.X))
-    assert clone(estimator).get_params() == estimator.get_params()
-    assert not hasattr(clone(estimator), "coef_")
-
-
-def test_theil_sen_framework_make_is_non_mutating():
-    np = pytest.importorskip("numpy")
+def test_theil_sen_query_snapshots_configuration_and_is_lazy(monkeypatch):
     data, domain = _training_data()
-    estimator = _estimator()
-    initial_state = estimator.__dict__.copy()
-
-    measurement = estimator.make(
-        domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
-    )
-    assert measurement.map(1) <= 1.0
-    assert isinstance(
-        measurement.input_domain.cast(dp.sklearn.SklearnFitDescriptor),
-        dp.sklearn.SklearnFitDescriptor,
-    )
-    assert estimator.__dict__ == initial_state
-    slope, intercept = measurement(data)
-    assert estimator.__dict__ == initial_state
-    assert np.asarray(slope).shape == ()
-    assert np.asarray(intercept).shape == ()
-
-
-def test_theil_sen_fitted_methods_and_error_paths():
-    np = pytest.importorskip("numpy")
-    from sklearn.base import RegressorMixin
-    from sklearn.metrics import r2_score
-
-    estimator = _estimator()
-    assert type(estimator).score is RegressorMixin.score
-    with pytest.raises(ValueError, match="not fitted"):
-        estimator.predict([[1.0]])
-
-    estimator._ingest_release((2.0, 1.0))
-    assert np.array_equal(estimator.coef_, np.array([2.0]))
-    assert estimator.intercept_ == 1.0
-    assert estimator.n_features_in_ == 1
-    assert np.array_equal(estimator.predict([1.0, 2.0]), np.array([3.0, 5.0]))
-    assert estimator.score([[1.0], [2.0]], [3.0, 5.0]) == 1.0
-    X, y, weights = [[1.0], [2.0], [3.0]], [3.0, 4.0, 8.0], [1.0, 2.0, 3.0]
-    assert estimator.score(X, y, sample_weight=weights) == r2_score(
-        y, estimator.predict(X), sample_weight=weights
-    )
-    with pytest.raises(ValueError, match="shape"):
-        estimator.predict([[1.0, 2.0]])
-    with pytest.raises(ValueError, match="inconsistent numbers of samples"):
-        estimator.score([[1.0], [2.0]], [3.0])
-
-
-def test_theil_sen_constructor_and_aligned_domain_validation():
-    np = pytest.importorskip("numpy")
-    pytest.importorskip("sklearn")
-    from sklearn.base import clone
-
-    bounds = [(-3.0, 3.0)]
-    estimator = dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=bounds,
-        y_bounds=(-10.0, 10.0),
-    )
-    assert clone(estimator).x_bounds is not bounds
-    assert estimator.get_params()["x_bounds"] == bounds
-    assert estimator.set_params(runs=2) is estimator
-
-    with pytest.raises(ValueError, match="SklearnFit input domain"):
-        estimator.make(
-            dp.numpy.array2_domain(num_columns=2, size=10, T=float),
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            1,
-            1.0,
-        )
-
-    X_domain = dp.numpy.array2_domain(num_columns=1, size=10, T=float)
-    without_y = dp.sklearn.sklearn_fit_domain(X=X_domain)
-    with pytest.raises(ValueError, match="with y"):
-        estimator.make(without_y, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0)
-
-    mismatched = dp.sklearn.sklearn_fit_domain(
-        X=X_domain,
-        y=dp.vector_domain(dp.atom_domain(T=float), size=9),
-    )
-    assert not mismatched.member(dp.sklearn.SklearnFit(np.zeros((10, 1)), np.zeros(9)))
-
-
-def test_theil_sen_scale_is_not_bounded_by_response_range():
-    pytest.importorskip("numpy")
-    from opendp.extras.sklearn.linear_model import make_private_theil_sen
-
-    _, domain = _training_data()
-    measurement = make_private_theil_sen(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        d_in=1,
-        d_out=1e-6,
-        x_bounds=((-3.0, 3.0),),
-        y_bounds=(-1e-3, 1e-3),
-    )
-    assert measurement.map(1) <= 1e-6
-
-
-def test_theil_sen_fit_requires_privacy_and_rejects_unsupported_parameters(monkeypatch):
-    pytest.importorskip("sklearn")
-    from opendp.context import Query
-
-    _, domain = _training_data(size=10)
-    query = dp.Query(
-        (domain, dp.symmetric_distance()), dp.max_divergence(), d_in=1, d_out=1.0
-    )
-    estimator = _estimator()
-    released = []
-    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-
-    with pytest.raises(
-        TypeError,
-        match="required keyword-only arguments: 'privacy_unit' and 'privacy_loss'",
-    ):
-        estimator.fit(query, [1.0] * 10)
-    with pytest.raises(TypeError, match="unexpected keyword argument 'sample_weight'"):
-        estimator.fit(  # type: ignore[call-arg]
-            [[1.0]] * 10,
-            [1.0] * 10,
-            sample_weight=[1.0] * 10,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
-    assert released == []
-
-
-@pytest.mark.parametrize("route", ["standalone", "context"])
-def test_theil_sen_refitting_replaces_learned_state(route):
-    import numpy as np
-
-    data, domain = _training_data()
-    model = _estimator()
-    context = dp.Context.compositor(
-        data,
-        dp.unit_of(contributions=1),
-        dp.loss_of(epsilon=2),
-        domain=domain,
-        split_evenly_over=2,
-    )
-
-    def fit():
-        if route == "context":
-            return context.query().sklearn(model).release()
-        return model.fit(
-            data.X,
-            data.y,
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
-
-    first = fit()
-    if route == "context":
-        assert first is not model
-        assert not hasattr(model, "coef_")
-    else:
-        assert first is model
-    model = first
-    old_coef = model.coef_
-    model.coef_[:] = 1e6
-    model.intercept_ = -1e6
-    second = fit()
-    if route == "context":
-        assert second is not model
-        np.testing.assert_array_equal(model.coef_, [1e6])
-        assert model.intercept_ == -1e6
-    else:
-        assert second is model
-    model = second
-    assert model.coef_ is not old_coef
-    assert np.isfinite(model.predict(data.X)).all()
-    assert abs(model.coef_[0]) <= 5.0 + 1e-10
-    assert abs(model.intercept_) < 100
-    if route == "context":
-        assert context.current_privacy_loss() == [1.0, 1.0]
-
-
-def test_theil_sen_query_snapshots_mutable_configuration_and_is_lazy(monkeypatch):
-    import numpy as np
-    from opendp.extras.sklearn.linear_model import _make_private_theil_sen as framework
-
-    data, domain = _training_data()
-    x_bounds, y_bounds, fractions = (
-        np.array([[-3.0, 25.0]]),
-        [-10.0, 60.0],
-        [0.25, 0.75],
-    )
-    model = dp.sklearn.linear_model.TheilSenRegressor(
-        x_bounds=x_bounds,
-        y_bounds=y_bounds,
-        fraction_bounds=fractions,
-    )
+    slope_bounds, intercept_bounds = np.array([-5.0, 5.0]), [-10.0, 10.0]
+    model = _estimator(slope_bounds=slope_bounds, intercept_bounds=intercept_bounds)
     model._ingest_release((2.0, 1.0))
     old_coef = model.coef_
     context = dp.Context.compositor(
         data,
-        dp.unit_of(contributions=1),
-        dp.loss_of(epsilon=1),
+        dp.unit_of(contributions=2),
+        dp.loss_of(epsilon=1.0),
         domain=domain,
         split_evenly_over=1,
     )
-    cuts = []
-    original = framework.pairwise_predict
+    calls = []
+    original = framework.pairwise_slopes
 
-    def predict(data, x_cuts):
-        cuts.append(x_cuts.copy())
-        return original(data, x_cuts)
+    def slopes(data):
+        calls.append(True)
+        return original(data)
 
-    monkeypatch.setattr(framework, "pairwise_predict", predict)
+    monkeypatch.setattr(framework, "pairwise_slopes", slopes)
     query = context.query().sklearn(model)
     query.resolve()
-    assert cuts == [] and context.current_privacy_loss() == []
-    assert model.coef_ is old_coef and model.intercept_ == 1.0
-    x_bounds[:] = [[1000.0, 2000.0]]
-    y_bounds[:] = [10000.0, 20000.0]
-    fractions[:] = [0.1, 0.9]
-    model.set_params(runs=3, candidates_count=2)
+    assert calls == [] and context.current_privacy_loss() == []
+    slope_bounds[:] = [1000.0, 2000.0]
+    intercept_bounds[:] = [10000.0, 20000.0]
     fitted = query.release()
-    assert fitted is not model
+    assert fitted is not model and fitted.coef_ is not old_coef
+    assert len(calls) == 1 and context.current_privacy_loss() == [1.0]
     assert model.coef_ is old_coef and model.intercept_ == 1.0
-    assert fitted.runs == 1 and fitted.candidates_count == 100
-    assert len(cuts) == 1
-    np.testing.assert_array_equal(cuts[0], [4.0, 18.0])
-    predictions = fitted.predict([[4.0], [18.0]])
-    assert np.all(predictions >= -10.0 - 1e-10) and np.all(predictions <= 60.0 + 1e-10)
-    assert fitted.coef_ is not old_coef
-    assert context.current_privacy_loss() == [1.0]
+    assert -5.0 <= fitted.coef_[0] <= 5.0 and -10.0 <= fitted.intercept_ <= 10.0
     state = fitted.coef_.copy(), fitted.intercept_
     with pytest.raises(dp.OpenDPException, match="out of queries"):
         query.release()
     np.testing.assert_array_equal(fitted.coef_, state[0])
-    assert fitted.intercept_ == state[1] and len(cuts) == 1
-    assert model.coef_ is old_coef and model.intercept_ == 1.0
+    assert fitted.intercept_ == state[1] and len(calls) == 1
 
 
-def test_pairwise_constructor_snapshots_mutable_cuts(monkeypatch):
-    import numpy as np
-    from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-        make_pairwise_predict,
-    )
-
-    data, domain = _training_data()
-    monkeypatch.setattr(np.random, "shuffle", lambda indices: None)
-    cuts = np.array([4.0, 18.0])
-    transform = make_pairwise_predict(domain, dp.symmetric_distance(), cuts)
-    before = transform(data)
-    cuts[:] = [1000.0, 2000.0]
-    np.testing.assert_allclose(transform(data), before)
-    assert transform.map(1) == 0
-    assert transform.map(2) == 2
-
-
-def test_theil_sen_fit_rejects_aligned_input_without_target_before_release(monkeypatch):
-    pytest.importorskip("sklearn")
+def test_theil_sen_fit_requires_privacy_and_rejects_sample_weight(monkeypatch):
     from opendp.context import Query
 
-    X_domain = dp.numpy.array2_domain(num_columns=1, size=10, T=float)
+    data, domain = _training_data(10)
+    estimator = _estimator()
+    released = []
+    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
+    with pytest.raises(TypeError, match="privacy_unit.*privacy_loss"):
+        estimator.fit(data.X, data.y)
+    with pytest.raises(TypeError, match="sample_weight"):
+        estimator.fit(
+            data.X,
+            data.y,
+            sample_weight=np.ones(10),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+        )
     query = dp.Query(
-        (dp.sklearn.sklearn_fit_domain(X=X_domain), dp.symmetric_distance()),
+        (
+            dp.sklearn.sklearn_fit_domain(
+                X=domain.cast(dp.sklearn.SklearnFitDescriptor).X
+            ),
+            dp.symmetric_distance(),
+        ),
         dp.max_divergence(),
         d_in=1,
         d_out=1.0,
     )
-    released = []
-    monkeypatch.setattr(Query, "release", lambda self: released.append(True))
-
     with pytest.raises(ValueError, match="with y"):
-        query.sklearn(_estimator())
+        query.sklearn(estimator)
     assert released == []
