@@ -73,7 +73,7 @@ def test_context_infers_sparse_sklearn_fit_domain(with_target, rows):
         split_evenly_over=1,
     )
     domain = context.accountant.input_domain
-    desc = domain.cast(dp.sklearn.SklearnFitDomain)
+    desc = domain.cast(dp.sklearn.SklearnFitDescriptor)
     assert desc.X.cast(CSRArray2Domain) == CSRArray2Domain(3, None, "bool")
     if with_target:
         assert desc.y == dp.vector_domain(dp.atom_domain(T=int))
