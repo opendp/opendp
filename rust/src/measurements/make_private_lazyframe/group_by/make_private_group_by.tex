@@ -159,8 +159,11 @@ The measurement for each expression expects data set distances in terms of a tri
     This is bounded above by \texttt{bound.num\_groups} and more loosely by \texttt{margin.max\_groups},
     but can also be bounded by the $L^1$ distance on line \ref{line:l0-from-l1}.
     \item $L^\infty$: the greatest number of records that can be added or removed by any one individual in each partition.
-    This is bounded above by \texttt{bound.per\_group} and more loosely by \texttt{margin.max\_length},
+    This is bounded above by \texttt{bound.per\_group} and more loosely by twice \texttt{margin.max\_length},
     but can also be bounded by the $L^1$ distance on line \ref{line:li-from-l1}.
+    The factor of two is necessary because two groups of at most $k$ rows can differ
+    by up to $2k$ insertions and deletions under symmetric distance.
+    If twice the group size overflows the distance type, the privacy map returns an error.
     \item $L^1$: the greatest total number of records that can be added or removed across all partitions.
     This is bounded by per-group contributions when all data is in one group on line \ref{line:trivial-l1},
     but can also be bounded by the product of the $L^0$ and $L^\infty$ bounds on line \ref{line:l1-from-l0-li}.

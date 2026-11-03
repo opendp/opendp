@@ -21,6 +21,7 @@ Types matching those in the pseudocode.
     \item Generic \texttt{MI} implements \rustdoc{core/trait}{Metric}.
     \item Generic \texttt{MO} implements \rustdoc{measurements/combinators/sequential_composition/trait}{CompositionMeasure}.
     \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
+    \item \texttt{MI::Distance} implements \rustdoc{traits/trait}{ProductOrd}.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -90,6 +91,8 @@ Types matching those in the pseudocode.
 
     Now that we've shown a correspondence between the pseudocode and Algorithm~6 of \cite{haney2023concurrentcompositioninteractivedifferential},
     the proof from Appendix~B.1 shows that the pseudocode implements a valid $\mathcal{D}$ DP privacy loss accumulator for interactive mechanisms.
+
+    Line \ref{d-in-check} only rejects queries, so it does not affect the privacy analysis.
 
     The transition function is then used to construct a queryable on line \ref{queryable}.
 \end{proof}

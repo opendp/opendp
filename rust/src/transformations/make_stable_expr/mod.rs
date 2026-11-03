@@ -15,6 +15,9 @@ use super::traits::UnboundedMetric;
 mod ffi;
 
 #[cfg(feature = "contrib")]
+mod cast;
+
+#[cfg(feature = "contrib")]
 mod expr_alias;
 
 #[cfg(feature = "contrib")]

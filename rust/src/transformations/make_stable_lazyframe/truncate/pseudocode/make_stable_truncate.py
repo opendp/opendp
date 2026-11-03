@@ -29,13 +29,20 @@ def make_stable_truncate(
                     columns=middle_domain.series_domains,
                     context=Context.RowByRow,
                 ),
-                PartitionDistance(middle_metric[0]),
+                L0PInfDistance(middle_metric[0]),
                 key,
             )
 
     output_domain = middle_domain.clone()
     for truncation in truncations:  # |\label{line:truncation}|
         output_domain = truncate_domain(output_domain, truncation)
+
+    # The matcher permits only filters followed by an optional final group-by.
+    has_group_by = isinstance(truncations[-1], Truncation.GroupBy)
+    output_bys = [  # |\label{line:output-bys}|
+        materialize_grouping_keys(bound.by) if has_group_by else bound.by
+        for bound in truncation_bounds
+    ]
 
     def function(plan: DslPlan) -> DslPlan:
         for truncation in truncations:
@@ -63,17 +70,18 @@ def make_stable_truncate(
 
         # each truncation is used to derive row bounds
         new_bounds = []
-        for truncation_bound in truncation_bounds:  # |\label{line:truncation-bound}|
-            # each truncation is used to derive row bounds
-            new_bounds.append(
-                truncate_id_bound(  # |\label{line:truncate-id-bound}|
-                    id_bounds.get_bound(
-                        truncation_bound.by
-                    ),  # |\label{line:id-bound-by}|
-                    truncation_bound,
-                    total_num_ids,
-                )
+        for truncation_bound, output_by in zip(  # |\label{line:truncation-bound}|
+            truncation_bounds, output_bys
+        ):
+            # Look up the per-id bound using the original input expression.
+            row_bound = truncate_id_bound(  # |\label{line:truncate-id-bound}|
+                id_bounds.get_bound(truncation_bound.by),  # |\label{line:id-bound-by}|
+                truncation_bound,
+                total_num_ids,
             )
+            # Describe the resulting rows using materialized output columns.
+            row_bound.by = output_by  # |\label{line:output-bound-by}|
+            new_bounds.append(row_bound)
         return Bounds(new_bounds)
 
     t_truncate = Transformation.new(

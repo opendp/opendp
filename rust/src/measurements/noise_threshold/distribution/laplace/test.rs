@@ -165,8 +165,8 @@ fn test_make_noise_threshold_zexpfamily1_zero_scale() -> Fallible<()> {
     let meas: Measurement<_, _, Approximate<MaxDivergence>, _> =
         distribution.make_noise_threshold((domain, metric), ibig!(100))?;
 
-    let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
-    let expected = HashMap::from([(true, ibig!(100))]);
+    let data = HashMap::from([(false, ibig!(100)), (true, ibig!(101))]);
+    let expected = HashMap::from([(true, ibig!(101))]);
     assert_eq!(meas.invoke(&data)?, expected);
 
     assert_eq!(meas.map(&(1, rbig!(0), rbig!(0)))?, (0.0, 0.0));
@@ -181,8 +181,13 @@ fn test_laplace_threshold_int() -> Fallible<()> {
     let m_thresh =
         make_laplace_threshold(input_domain.clone(), input_metric.clone(), 0.0, 10, None)?;
 
+    // Equality with the threshold must be excluded.
     let release = m_thresh.invoke(&HashMap::from([(false, 9), (true, 10)]))?;
-    assert_eq!(release, HashMap::from([(true, 10)]));
+    assert!(release.is_empty());
+    assert_eq!(
+        m_thresh.invoke(&HashMap::from([(true, 11)]))?,
+        HashMap::from([(true, 11)])
+    );
     assert_eq!(m_thresh.map(&(1, 1, 1))?, (f64::INFINITY, 1.0));
 
     let m_thresh = make_laplace_threshold(input_domain, input_metric, 1.0, 10, None)?;
@@ -201,7 +206,7 @@ fn test_laplace_threshold_float() -> Fallible<()> {
     let m_thresh = make_laplace_threshold(input_domain, input_metric, 0.0, 10.0, None)?;
 
     let release = m_thresh.invoke(&HashMap::from([(false, 9.99999999), (true, 10.0)]))?;
-    assert_eq!(release, HashMap::from([(true, 10.0)]));
+    assert!(release.is_empty());
     assert_eq!(m_thresh.map(&(1, 1, 1))?, (f64::INFINITY, 1.0));
     Ok(())
 }
@@ -214,10 +219,106 @@ fn test_laplace_threshold_float_k() -> Fallible<()> {
     );
     let input_metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
     // k = -1 means grid is on 0.5 increments, so 9.74 rounds to 9.5 and 9.76 rounds to 10.0
-    let m_thresh = make_laplace_threshold(input_domain, input_metric, 0.0, 9.9, Some(-1))?;
+    let data = HashMap::from([(false, 9.74999), (true, 9.7500001)]);
+    for (threshold, releases_ten) in [(9.5, true), (9.6, true), (9.9, true), (10.0, false)] {
+        let m_thresh = make_laplace_threshold(
+            input_domain.clone(),
+            input_metric.clone(),
+            0.0,
+            threshold,
+            Some(-1),
+        )?;
+        let expected = if releases_ten {
+            HashMap::from([(true, 10.0)])
+        } else {
+            HashMap::new()
+        };
+        assert_eq!(m_thresh.invoke(&data)?, expected, "threshold={threshold}");
+        assert_eq!(m_thresh.map(&(1, 1, 1))?, (f64::INFINITY, 1.0));
+    }
+    Ok(())
+}
 
-    let release = m_thresh.invoke(&HashMap::from([(false, 9.74999), (true, 9.7500001)]))?;
-    assert_eq!(release, HashMap::from([(true, 10.0)]));
-    assert_eq!(m_thresh.map(&(1, 1, 1))?, (f64::INFINITY, 1.0));
+#[test]
+fn test_laplace_threshold_negative_strict() -> Fallible<()> {
+    let measurement = make_laplace_threshold(
+        MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default()),
+        L0PInfDistance(AbsoluteDistance::<i32>::default()),
+        0.0,
+        -10,
+        None,
+    )?;
+    let release = measurement.invoke(&HashMap::from([(false, -10), (true, -11)]))?;
+    assert_eq!(release, HashMap::from([(true, -11)]));
+    Ok(())
+}
+
+#[test]
+fn test_laplace_threshold_delta_empirical() -> Fallible<()> {
+    const N: u32 = 2048;
+    let domain = MapDomain::new(AtomDomain::<u32>::default(), AtomDomain::<i32>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+
+    // Match N, scale, positive threshold, and tolerance in
+    // make_private_lazyframe/group_by/test.rs::test_stable_keys_delta_empirical.
+    // Each key is unstable relative to the empty map, so its release probability
+    // must be at most delta. The margin controls sampling fluctuations.
+    for (count, threshold) in [(1, 2), (-1, -2)] {
+        let measurement =
+            make_laplace_threshold(domain.clone(), metric.clone(), 0.5, threshold, None)?;
+        let data: HashMap<_, _> = (0..N).map(|key| (key, count)).collect();
+        let release_rate = measurement.invoke(&data)?.len() as f64 / f64::from(N);
+        let delta = measurement.map(&(1, 1, 1))?.1;
+        assert!(
+            release_rate <= delta + 0.05,
+            "release rate {release_rate} exceeds delta {delta} (threshold {threshold})"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_laplace_threshold_zero_valued_keys() -> Fallible<()> {
+    let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+
+    for threshold in [-1, 1] {
+        let measurement =
+            make_laplace_threshold(domain.clone(), metric.clone(), 20.0, threshold, None)?;
+        assert_eq!(measurement.map(&(0, 0, 0))?, (0.0, 0.0));
+
+        // Zero-valued entries are indistinguishable from absent keys under L0PInfDistance.
+        // Opposite-sign nonzero entries must still be eligible for noise.
+        let mut released_opposite_sign = false;
+        for _ in 0..64 {
+            let result = measurement.invoke(&HashMap::from([(false, 0), (true, -threshold)]))?;
+            assert!(!result.contains_key(&false));
+            released_opposite_sign |= result.contains_key(&true);
+        }
+        assert!(
+            released_opposite_sign,
+            "opposite-sign values must still be sampled"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_laplace_threshold_float_rounded_to_zero() -> Fallible<()> {
+    let measurement = make_laplace_threshold(
+        MapDomain::new(
+            AtomDomain::<bool>::default(),
+            AtomDomain::<f64>::new_non_nan(),
+        ),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
+        20.0,
+        1.0,
+        Some(0),
+    )?;
+    // Both values round to zero on the integer grid.
+    for _ in 0..64 {
+        let result = measurement.invoke(&HashMap::from([(false, 0.0), (true, 0.125)]))?;
+        assert!(result.is_empty());
+    }
     Ok(())
 }

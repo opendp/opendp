@@ -331,7 +331,7 @@ if _decomposition is not None:
                 make_private_pca(
                     input_domain,
                     input_metric,
-                    self.epsilon / self.n_changes * 2,
+                    self.epsilon / self.n_changes,
                     norm=self.row_norm,
                     num_components=n_estimated_components,
                 )

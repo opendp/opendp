@@ -12,8 +12,9 @@
 
     # pairwise-predict
     >>> def pairwise_predict(data, x_cuts):
-    ...     data = np.array(data, copy=True)[: len(data) // 2 * 2]
+    ...     data = np.array(data, copy=True)
     ...     np.random.shuffle(data)
+    ...     data = data[: len(data) // 2 * 2]
     ...     p1, p2 = np.array_split(data, 2)
     ...     dx, dy = (p2 - p1).T
     ...     x_bar, y_bar = (p1 + p2).T / 2
@@ -36,7 +37,7 @@
     ...                 for _ in range(runs)
     ...             ]
     ...         ),
-    ...         stability_map=lambda d_in: d_in * runs,
+    ...         stability_map=lambda d_in: d_in * runs * 2,
     ...     )
     ...
 
@@ -104,7 +105,7 @@
     ...     dp.max_divergence(), x_bounds, y_bounds, scale=1.0
     ... )
     >>> meas.map(1)
-    2.0
+    4.0
 
     # /mechanism
 

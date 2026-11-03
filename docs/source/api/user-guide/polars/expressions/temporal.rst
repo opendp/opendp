@@ -90,7 +90,9 @@ the dates.
             ...     .group_by("YEAR", "MONTH")
             ...     .agg(dp.len(signed=True))
             ... )
-            >>> query.release().collect().sort("YEAR", "MONTH")
+            >>> query.release().collect().sort(
+            ...     "YEAR", "MONTH"
+            ... )  # doctest: +FUZZY_DF
             shape: (36, 3)
             ┌──────┬───────┬────────┐
             │ YEAR ┆ MONTH ┆ len    │

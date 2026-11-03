@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::FrameDistance;
+use crate::metrics::{Bounds, FrameDistance};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
@@ -51,7 +51,8 @@ where
         context: Context::RowByRow,
     };
     let t_exprs = exprs
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -89,12 +90,44 @@ where
                 });
         });
 
-    // only keep margins for series that have not changed
-    let new_series_names = new_series
-        .map(|series_domain| col(series_domain.name.clone()))
-        .collect();
+    // An identity projection preserves every grouping expression that references the column.
+    fn is_identity(expr: &Expr, name: &PlSmallStr) -> bool {
+        match expr {
+            Expr::Alias(inner, _) => is_identity(inner, name),
+            Expr::Column(column) => column == name,
+            _ => false,
+        }
+    }
+
+    let changed_columns = exprs
+        .iter()
+        .zip(t_exprs.iter())
+        .filter(|(expr, t)| !is_identity(expr, &t.output_domain.column.name))
+        .map(|(_, t)| t.output_domain.column.name.clone())
+        .collect::<HashSet<_>>();
+
+    fn unaffected(by: &HashSet<Expr>, changed_columns: &HashSet<PlSmallStr>) -> bool {
+        if changed_columns.is_empty() {
+            return true;
+        }
+        // Selectors may depend on columns without exposing them through root_names().
+        if by
+            .iter()
+            .any(|expr| expr.clone().meta().has_multiple_outputs())
+        {
+            return false;
+        }
+        let root_names = by
+            .iter()
+            .flat_map(|expr| expr.clone().meta().root_names())
+            .collect::<HashSet<_>>();
+
+        root_names.is_disjoint(changed_columns)
+    }
+
+    // Column changes invalidate grouping information in both domains and distances.
     let margins = (middle_domain.margins.iter())
-        .filter(|m| m.by.is_disjoint(&new_series_names))
+        .filter(|m| unaffected(&m.by, &changed_columns))
         .cloned()
         .collect();
 
@@ -116,7 +149,16 @@ where
                 options,
             })
         }),
-        StabilityMap::new(Clone::clone),
+        StabilityMap::new(move |bounds: &Bounds| {
+            Bounds(
+                bounds
+                    .0
+                    .iter()
+                    .filter(|b| unaffected(&b.by, &changed_columns))
+                    .cloned()
+                    .collect(),
+            )
+        }),
     )?;
 
     t_prior >> t_with_columns

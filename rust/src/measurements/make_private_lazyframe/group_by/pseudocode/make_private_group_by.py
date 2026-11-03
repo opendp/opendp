@@ -153,7 +153,10 @@ def make_private_group_by(
 
         # incorporate all information into optional bounds
         l0 = option_min(bound.num_groups, margin.max_groups)
-        li = option_min(bound.per_group, margin.max_length)
+        max_length = margin.max_length
+        if max_length is not None:
+            max_length = max_length.alerting_mul(2)
+        li = option_min(bound.per_group, max_length)
         l1 = d_in.get_bound(HashSet.new()).per_group  # |\label{line:trivial-l1}|
 
         # reduce optional bounds to concrete bounds

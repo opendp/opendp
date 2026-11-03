@@ -1456,7 +1456,7 @@ def assert_features(*features: str) -> None:
 M = TypeVar("M", Transformation, Measurement)
 
 
-def binary_search_chain(
+def binary_search_chain(  # noqa: UP047 (PEP 695 type parameters need Python 3.12)
     make_chain: Callable[[float], M],
     d_in: Any,
     d_out: Any,
@@ -1619,11 +1619,7 @@ def _call_rust_search(
     except OpenDPException as err:
         if first_exception is not None:
             exc = first_exception
-            if (
-                (bounds is None or bounds == (None, None))
-                and not had_success
-                and hasattr(exc, "add_note")
-            ):
+            if (bounds is None or bounds == (None, None)) and not had_success:
                 center = 0.0 if T in {"f32", "f64"} else 0
                 exc.add_note(
                     "Predicate in binary search always raises an exception. "
@@ -1812,12 +1808,9 @@ def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[i
         if not _is_type_error(e):
             # it didn't reject the type, but did fail with a different error
             return int
-
-        # enrich the error message if in Python 3.11+.
-        if hasattr(e, "add_note"):
-            e.add_note(
-                "Unable to infer type `T`; pass the type `T` or bounds. This exception is raised when the predicate is evaluated at 0"
-            )
+        e.add_note(
+            "Unable to infer type `T`; pass the type `T` or bounds. This exception is raised when the predicate is evaluated at 0"
+        )
         raise
 
 

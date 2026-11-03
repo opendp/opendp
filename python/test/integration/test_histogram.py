@@ -1,4 +1,5 @@
 import opendp.prelude as dp
+import pytest
 
 
 def test_count_by_categories():
@@ -82,3 +83,26 @@ def test_count_by_threshold():
     assert (pre >> dp.m.then_laplace_threshold(scale=0.0, threshold=threshold)).map(
         1
     ) == (float("inf"), 1.0)
+
+
+def test_b_ary_tree_output_metric():
+    domain = dp.vector_domain(dp.atom_domain(T=int), size=4)
+    l1 = dp.t.make_b_ary_tree(
+        domain, dp.l1_distance(T=int), dp.l1_distance(T=int), 4, 4
+    )
+    l2 = dp.t.make_b_ary_tree(
+        domain,
+        dp.l1_distance(T=int),
+        dp.l2_distance(T=float),
+        leaf_count=4,
+        branching_factor=4,
+    )
+    assert l1.map(1) == 2
+    assert 1.414 < l2.map(1) < 1.415
+    assert l2([1, 1, 1, 1]) == [4, 1, 1, 1, 1]
+
+    # L2 input is not supported: its stability cannot use the L1 bound.
+    with pytest.raises(Exception):
+        dp.t.make_b_ary_tree(
+            domain, dp.l2_distance(T=int), dp.l2_distance(T=float), 4, 4
+        )

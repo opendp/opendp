@@ -15,6 +15,12 @@ The members of this module will then be accessible at ``dp.ibis``.
     This is an early release, and is intended primarily to solicit feedback.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
+
+    For the moment, ``contrib`` must be enabled to use this functionality:
+
+    .. code:: pycon
+
+        >>> dp.enable_features("contrib")
 """
 
 __all__ = ["run_on_database", "get_connection", "scan_database"]
@@ -63,6 +69,8 @@ def run_on_database(query, connection, table_name: str):
     runs the query on the database,
     and returns the result.
 
+    The ``contrib`` feature must be enabled until we are confident in this code.
+
     :param query: A Polars query be translated to SQL.
     :param table_name: The name of the database table.
     :param connection: A connection object.
@@ -110,6 +118,8 @@ def run_on_database(query, connection, table_name: str):
     import opendp.prelude as dp
 
     from polars_to_ibis import split_polars_on_ffi
+
+    dp.assert_features("contrib")
 
     query_lf = query.release().lazy()
 

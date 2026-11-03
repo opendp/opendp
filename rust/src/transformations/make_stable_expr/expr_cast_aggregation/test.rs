@@ -50,7 +50,28 @@ fn test_make_cast_cannot_downcast() -> Fallible<()> {
             .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance));
 
         // Assert against a specific error message or variant
-        assert!(format!("{:?}", result.unwrap_err()).contains("cannot downcast"));
+        assert!(
+            format!("{:?}", result.unwrap_err()).contains("cannot preserve all possible values")
+        );
     }
+    Ok(())
+}
+
+#[test]
+fn test_make_cast_aggregation_widen_unsigned() -> Fallible<()> {
+    let input_domain = WildExprDomain {
+        columns: vec![],
+        context: Context::Aggregation {
+            margin: Margin::select(),
+        },
+    };
+
+    let transformation: Transformation<_, _, _, L1Distance<f64>> = len()
+        .cast(DataType::UInt64)
+        .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))?;
+    assert_eq!(
+        transformation.output_domain.column.dtype(),
+        DataType::UInt64
+    );
     Ok(())
 }

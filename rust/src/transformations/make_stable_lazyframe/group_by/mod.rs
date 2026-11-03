@@ -129,10 +129,11 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         (middle_domain.margins.iter().cloned())
             .filter(|m| m.by.is_subset(&h_keys))
             .map(|mut m| {
+                m.by = materialize_grouping_keys(&m.by)?;
                 m.invariant = None;
-                m
+                Ok(m)
             })
-            .collect(),
+            .collect::<Fallible<_>>()?,
     )?;
 
     let t_group_agg = Transformation::new(
@@ -182,6 +183,14 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     )?;
 
     t_prior >> t_group_agg
+}
+
+/// Express a subset of validated grouping keys as their materialized output columns.
+/// Re-evaluating a grouping expression after aggregation may describe different groups.
+pub(super) fn materialize_grouping_keys(by: &HashSet<Expr>) -> Fallible<HashSet<Expr>> {
+    by.iter()
+        .map(|key| Ok(col(key.clone().meta().output_name()?)))
+        .collect()
 }
 
 #[derive(Clone, Copy)]
@@ -436,6 +445,12 @@ fn check_infallible_function(
         FunctionExpr::Abs => check_inputs!(),
         FunctionExpr::Negate => check_inputs!(),
         FunctionExpr::NullCount => check_inputs!(aggregate),
+        FunctionExpr::Pow(PowFunction::Generic) => {
+            return fallible!(
+                MakeTransformation,
+                "pow may raise data-dependent errors due to integer exponent conversion."
+            );
+        }
         FunctionExpr::Pow(_) => check_inputs!(aligned_rows),
         FunctionExpr::Range(_) => check_inputs!(),
         FunctionExpr::FillNull => check_inputs!(),
@@ -468,7 +483,14 @@ fn check_infallible_function(
         FunctionExpr::LowerBound => check_inputs!(),
         FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
         FunctionExpr::Cut { .. } => check_inputs!(),
-        FunctionExpr::QCut { .. } => check_inputs!(),
+        FunctionExpr::QCut { .. } => {
+            // Duplicate quantiles are only one possible failure; even with
+            // allow_duplicates=true, quantile calculation depends on private values.
+            return fallible!(
+                MakeTransformation,
+                "qcut may raise data-dependent errors while computing quantiles."
+            );
+        }
         FunctionExpr::ToPhysical => check_inputs!(),
         FunctionExpr::Random { .. } => {
             return fallible!(

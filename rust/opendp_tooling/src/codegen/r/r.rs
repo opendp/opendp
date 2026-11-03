@@ -84,7 +84,7 @@ pub(crate) fn generate_r_function(
                 if func.supports_partial {
                     vec![
                         "output_domain(lhs)".to_string(),
-                        "output_metric(lhs)".to_string(),
+                        "opendp:::output_metric(lhs)".to_string(),
                     ]
                 } else {
                     vec![]

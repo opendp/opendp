@@ -1,3 +1,5 @@
+import pytest
+
 import opendp.prelude as dp
 
 
@@ -40,3 +42,9 @@ def test_bounded():
 
     ident_trans = bdd_trans >> dp.t.then_metric_unbounded()
     assert len(ident_trans(data)) == 3
+
+
+def test_bounded_rejects_ordered_metric():
+    domain = dp.vector_domain(dp.atom_domain(T=dp.i32), 3)
+    with pytest.raises(dp.OpenDPException, match="first call make_unordered"):
+        dp.t.make_metric_bounded(domain, dp.insert_delete_distance())

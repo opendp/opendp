@@ -28,6 +28,61 @@ def test_private_eigenvector():
     assert meas.map(2) == 100_000.0
 
 
+def test_private_eigenvector_acceptance_probability(monkeypatch):
+    import opendp.extras.sklearn._make_eigenvector as eigenvector
+
+    class FixedRNG:
+        def __init__(self):
+            self.proposals = iter((np.array([0.0, 1.0]), np.array([1.0, 0.0])))
+
+        def multivariate_normal(self, mean, cov):
+            return next(self.proposals)
+
+        def random(self):
+            return 0.5
+
+    monkeypatch.setattr(eigenvector, "get_np_csprng", FixedRNG)
+
+    space = (
+        _sscp_domain(num_features=2, norm=1.0, p=2, T=float),
+        dp.symmetric_distance(),
+    )
+    meas = space >> eigenvector.then_private_eigenvector(unit_epsilon=4.0)
+
+    # For C = diag(1, 0) and epsilon = 4:
+    #   A = diag(0, 1), b = sqrt(2), Omega = diag(1, 1 + sqrt(2)).
+    #
+    # The first proposal, u = e2, has acceptance probability ~0.84
+    # under the correct Bingham rejection sampler, but only ~0.14
+    # under the inverted formula in Amin et al., Algorithm 2.
+    #
+    # Fixing the uniform draw at 0.5 makes the test deterministic:
+    # the correct sampler accepts e2, whereas the buggy sampler
+    # rejects it and proceeds to the second proposal, e1.
+    assert np.array_equal(meas(np.diag([1.0, 0.0])), [0.0, 1.0])
+
+
+def test_private_eigenvector_distribution(monkeypatch):
+    from scipy.stats import kstest, vonmises  # type: ignore[import-untyped]
+    import opendp.extras.sklearn._make_eigenvector as eigenvector
+
+    monkeypatch.setattr(eigenvector, "get_np_csprng", lambda: np.random.default_rng(0))
+
+    space = (
+        _sscp_domain(num_features=2, norm=1.0, p=2, T=float),
+        dp.symmetric_distance(),
+    )
+    meas = space >> eigenvector.then_private_eigenvector(unit_epsilon=4.0)
+
+    # For C = diag(1, 0), the Bingham density is proportional to
+    # exp(-sin(theta)**2), so 2 * theta follows von Mises(0, 0.5).
+    samples = np.array([meas(np.diag([1.0, 0.0])) for _ in range(1024)])
+    angles = 2 * np.arctan2(samples[:, 1], samples[:, 0])
+    angles = (angles + np.pi) % (2 * np.pi) - np.pi
+
+    assert kstest(angles, vonmises(0.5).cdf).pvalue > 1e-6
+
+
 def test_eigenvector_integration():
     from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp

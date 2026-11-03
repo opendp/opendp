@@ -49,7 +49,7 @@ Dates can be parsed from strings via ``.str.strptime``, and its variants
             ...     .group_by("YEAR")
             ...     .agg(dp.len(signed=True))
             ... )
-            >>> query.release().collect().sort("YEAR")
+            >>> query.release().collect().sort("YEAR")  # doctest: +FUZZY_DF
             shape: (9, 2)
             ┌────────────┬────────┐
             │ YEAR       ┆ len    │

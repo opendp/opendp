@@ -135,7 +135,7 @@ impl SeriesDomain {
             DataType::Int16 => Arc::new(AtomDomain::<i16>::default()),
             DataType::Int32 => Arc::new(AtomDomain::<i32>::default()),
             DataType::Int64 => Arc::new(AtomDomain::<i64>::default()),
-            DataType::Float32 => Arc::new(AtomDomain::<f64>::default()),
+            DataType::Float32 => Arc::new(AtomDomain::<f32>::default()),
             DataType::Float64 => Arc::new(AtomDomain::<f64>::default()),
             DataType::String => Arc::new(AtomDomain::<String>::default()),
             DataType::Date => Arc::new(AtomDomain::<NaiveDate>::default()),

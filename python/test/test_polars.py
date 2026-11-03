@@ -284,7 +284,7 @@ def test_signed_counting_queries(signed_kwargs):
         assert len(caught) == 5
         for warning in caught:
             assert warning.category is FutureWarning
-            assert "default will be changing to signed=True" in str(warning.message)
+            assert "default value is now signed=True" in str(warning.message)
             assert warning.filename == __file__
     else:
         assert not caught
@@ -297,7 +297,7 @@ def test_signed_counting_queries(signed_kwargs):
     )
     result = measurement(lf).collect()
 
-    dtype = pl.Int64 if signed_kwargs.get("signed") else pl.UInt32
+    dtype = pl.UInt32 if signed_kwargs.get("signed") == False else pl.Int64
     expected = pl.DataFrame(
         {
             "frame_len": pl.Series([4], dtype=dtype),

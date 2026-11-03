@@ -82,7 +82,7 @@ where
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }
         (Date, Int32) => {
-            active_series.set_element_domain(AtomDomain::<u32>::default());
+            active_series.set_element_domain(AtomDomain::<i32>::default());
         }
         (Datetime(_, _) | Time | Duration(_), Int64) => {
             active_series.set_element_domain(AtomDomain::<i64>::default());

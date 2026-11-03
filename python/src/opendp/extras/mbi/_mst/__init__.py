@@ -132,7 +132,7 @@ class MST(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -143,13 +143,13 @@ class MST(Algorithm):
         d_measure = d_out * self.measure_split
         d_select = prior(prior(d_out - d_measure))
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         edges = list(itertools.combinations(input_domain.columns, 2))
 
         t_marginals = make_stable_marginals(
             input_domain,
             input_metric,
-            lp_metric,
             edges,  # type: ignore[arg-type]
         )
         d_marginals = t_marginals.map(d_in)
@@ -302,5 +302,5 @@ def _make_mst_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in.values()),
+        stability_map=lambda d_in: max(distance[1] for distance in d_in.values()),
     )

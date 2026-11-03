@@ -12,6 +12,7 @@ fn test_privacy_filter() -> Fallible<()> {
         AtomDomain::<bool>::default(),
         DiscreteDistance,
         MaxDivergence,
+        None,
     )?;
 
     let meas_filter = make_privacy_filter(odom_comp, 1, 1.0)?;
@@ -32,5 +33,25 @@ fn test_privacy_filter() -> Fallible<()> {
     assert!(q3.is_err());
     assert!(qbl_filter.privacy_loss(1).is_err());
 
+    Ok(())
+}
+
+#[test]
+fn test_privacy_filter_constructor_d_in() -> Fallible<()> {
+    let odometer = |d_in| {
+        make_fully_adaptive_composition(
+            AtomDomain::<bool>::default(),
+            DiscreteDistance,
+            MaxDivergence,
+            Some(d_in),
+        )
+    };
+    let m_rr = make_randomized_response_bool(0.51, false)?;
+
+    let mut qbl = make_privacy_filter(odometer(1)?, 1, 1.0)?.invoke(&true)?;
+    assert!(qbl.invoke(m_rr.clone()).is_ok());
+
+    let mut qbl = make_privacy_filter(odometer(2)?, 1, 1.0)?.invoke(&true)?;
+    assert!(qbl.invoke(m_rr).is_err());
     Ok(())
 }

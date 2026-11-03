@@ -50,7 +50,9 @@ predicates and grouping columns.
             ...     .group_by("SEX", "OVER_40")
             ...     .agg(dp.len(signed=True))
             ... )
-            >>> query.release().collect().sort("SEX", "OVER_40")
+            >>> query.release().collect().sort(
+            ...     "SEX", "OVER_40"
+            ... )  # doctest: +FUZZY_DF
             shape: (4, 3)
             ┌─────┬─────────┬────────┐
             │ SEX ┆ OVER_40 ┆ len    │

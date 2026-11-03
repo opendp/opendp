@@ -263,8 +263,8 @@ Bounded Metrics
 You may be more familiar with "bounded" differential privacy, where dataset distances are expressed in terms of the number of changed rows.
 Expressing dataset distances in this manner is more restrictive, as edit distances are only valid for datasets with a fixed size.
 Generally speaking, if a dataset differs from a neighboring dataset by no more than ``k`` edits, then they differ by no more than ``2k`` additions and removals.
-We therefore write all transformations in terms of the more general "unbounded"-dp metrics ``SymmetricDistance`` and ``InsertDeleteDistance``,
-and provide the following constructors to convert to/from "bounded"-dp metrics ``ChangeOneDistance`` and ``HammingDistance`` respectively.
+The constructors below convert between the unordered metrics ``SymmetricDistance`` and ``ChangeOneDistance``,
+and from ``HammingDistance`` to ``InsertDeleteDistance``.
 
 .. list-table::
    :header-rows: 1
@@ -277,10 +277,6 @@ and provide the following constructors to convert to/from "bounded"-dp metrics `
      - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``SymmetricDistance``
      - ``ChangeOneDistance``
-   * - :func:`~opendp.transformations.make_metric_bounded`
-     - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
-     - ``InsertDeleteDistance``
-     - ``HammingDistance``
    * - :func:`~opendp.transformations.make_metric_unbounded`
      - ``SizedDomain<VectorDomain<AtomDomain<TA>>>``
      - ``ChangeOneDistance``
@@ -349,8 +345,6 @@ If you set the output metric to ``L2Distance[TOA]``, you can chain with L2 mecha
 
 The constructor :func:`~opendp.transformations.make_count_by` does a similar aggregation as :func:`~opendp.transformations.make_count_by_categories`,
 but does not need a category set (you instead chain with :func:`~opendp.measurements.make_laplace_threshold`).
-
-The ``make_sized_bounded_covariance`` aggregator is Rust-only at this time because data loaders for data of type ``Vec<(T, T)>`` are not implemented.
 
 See the notebooks for code examples and deeper explanations:
 

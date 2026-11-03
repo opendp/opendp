@@ -54,6 +54,17 @@ fn test_expr_to_physical_categorical() -> Fallible<()> {
 }
 
 #[test]
+fn test_expr_to_physical_date() -> Fallible<()> {
+    let days = [-1_i32, 0, 1, 19_723];
+    assert_expr_to_physical(
+        AtomDomain::<chrono::NaiveDate>::default(),
+        Series::new("data".into(), days).cast(&DataType::Date)?,
+        AtomDomain::<i32>::default(),
+        Series::new("data".into(), days),
+    )
+}
+
+#[test]
 fn test_expr_to_physical_same() -> Fallible<()> {
     fn assert<D: 'static + SeriesElementDomain>(elem_domain: D, series: Series) -> Fallible<()> {
         assert_expr_to_physical(elem_domain.clone(), series.clone(), elem_domain, series)

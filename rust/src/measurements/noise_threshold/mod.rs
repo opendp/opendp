@@ -46,9 +46,9 @@ pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
     /// Otherwise the output is `Ok(privacy_map)`
     /// where `privacy_map` observes the following:
     ///
-    /// Define `function(x)` as a function that updates each pair `(k_i, v_i + Z_i)`
-    /// where `Z_i` are iid samples from `self`,
-    /// and discards pairs where `v_i + Z_i` has smaller magnitude than `|threshold|`.
+    /// Define `function(x)` as a function that discards entries with value zero,
+    /// then updates each remaining pair `(k_i, v_i + Z_i)` where `Z_i` are iid samples from `self`,
+    /// and discards pairs whose noisy value does not strictly exceed the threshold in its signed direction.
     /// The ordering of returned pairs is independent from the input ordering.
     ///
     /// For every pair of elements $x, x'$ in `MapDomain<AtomDomain<TK>, AtomDomain<IBig>>`,
@@ -97,9 +97,9 @@ where
         let privacy_map =
             self.noise_threshold_privacy_map(&input_metric, &output_measure, threshold_magnitude)?;
 
-        let inner = match threshold.sign() {
-            Sign::Positive => Ordering::Less,
-            Sign::Negative => Ordering::Greater,
+        let keep_ordering = match threshold.sign() {
+            Sign::Positive => Ordering::Greater,
+            Sign::Negative => Ordering::Less,
         };
 
         Measurement::new(
@@ -108,10 +108,15 @@ where
             output_measure,
             Function::new_fallible(move |data: &HashMap<TK, IBig>| {
                 data.into_iter()
+                    // Missing keys and explicit zero values are equivalent under the input metric.
+                    .filter(|(_, v)| *v != &IBig::ZERO)
                     // noise output count
                     .map(|(k, v)| Ok((k.clone(), self.sample(v)?)))
-                    // only keep keys with values gte threshold, and errors
-                    .filter(|r| r.as_ref().map_or(true, |p| p.1.cmp(&threshold) != inner))
+                    // retain only values strictly beyond the threshold, and errors
+                    .filter(|r| {
+                        r.as_ref()
+                            .map_or(true, |p| p.1.cmp(&threshold) == keep_ordering)
+                    })
                     // fail the whole computation if any noise addition failed
                     .collect()
             }),

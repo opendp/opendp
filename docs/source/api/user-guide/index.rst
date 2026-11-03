@@ -1,5 +1,7 @@
-API User Guide
-==============
+.. _user-guide:
+
+User Guide
+==========
 
 This user guide gives a top-down picture of OpenDP;
 it complements the bottom-up view provided by the :doc:`Python API Reference <../python/index>`.

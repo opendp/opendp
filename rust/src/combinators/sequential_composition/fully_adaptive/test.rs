@@ -17,6 +17,7 @@ fn test_privacy_odometer() -> Fallible<()> {
         AtomDomain::default(),
         DiscreteDistance::default(),
         MaxDivergence::default(),
+        None,
     )?;
 
     // pass dataset in and receive a queryable
@@ -88,10 +89,36 @@ fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
         AtomDomain::<bool>::default(),
         DiscreteDistance,
         Approximate(ZeroConcentratedDivergence),
+        None,
     )?;
 
     let mut qbl = m_odo.invoke(&false)?;
     assert!(qbl.invoke(m_query)?);
     assert_eq!(qbl.privacy_loss(1)?, (1.0, 1e-7));
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
+    let odometer = |d_in| {
+        make_fully_adaptive_composition::<_, _, _, bool>(
+            AtomDomain::default(),
+            DiscreteDistance,
+            MaxDivergence,
+            d_in,
+        )
+    };
+    let m_rr = make_randomized_response_bool(0.75, false)?;
+    let d_mid = m_rr.map(&1)?;
+
+    let mut qbl = odometer(Some(1))?.invoke(&true)?;
+    qbl.invoke(m_rr.clone())?;
+    assert_eq!(qbl.privacy_loss(1)?, d_mid);
+    assert!(qbl.privacy_loss(2).is_err());
+
+    let mut qbl = odometer(None)?.invoke(&true)?;
+    qbl.invoke(m_rr)?;
+    assert_eq!(qbl.privacy_loss(1)?, d_mid);
+    assert!(qbl.privacy_loss(2).is_ok());
     Ok(())
 }

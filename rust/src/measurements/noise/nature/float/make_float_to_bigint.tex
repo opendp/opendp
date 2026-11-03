@@ -76,6 +76,9 @@ None
             where the sensitivity is multiplied by a factor of $2^{-k}$.
     \end{itemize}
 
+    The stability map rejects non-finite and negative distances before adding the rounding allowance.
+    Zero distances remain valid.
+
     For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric},
     if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,

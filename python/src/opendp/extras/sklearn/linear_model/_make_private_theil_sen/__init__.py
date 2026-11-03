@@ -1,7 +1,8 @@
-from opendp.mod import Measure
+from opendp.mod import Domain, Measure, Metric
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 from opendp._internal import _new_pure_function
+from opendp.typing import _NUMERIC_TYPES
 
 
 def pairwise_predict(data, x_cuts):
@@ -12,11 +13,14 @@ def pairwise_predict(data, x_cuts):
     That is, it predicts the y values at `x_cuts`, pairwise.
     """
     np = import_optional_dependency("numpy")
-    # Get an even number of rows.
-    data = np.array(data, copy=True)[: len(data) // 2 * 2]
+    data = np.array(data, copy=True, dtype=np.float64)
 
     # Shuffling the data improves the utility of results.
     np.random.shuffle(data)
+
+    # Get an even number of rows after shuffling so that, on odd-sized
+    # datasets, the dropped row is uniformly random.
+    data = data[: len(data) // 2 * 2]
 
     # Split data into pairs, where pair i is (p1[i], p2[i]).
     p1, p2 = np.array_split(data, 2)
@@ -34,32 +38,58 @@ def pairwise_predict(data, x_cuts):
     return points.T[dx != 0]
 
 
-def make_pairwise_predict(x_cuts, runs: int = 1, T=float):
+def make_pairwise_predict(
+    input_domain: Domain,
+    input_metric: Metric,
+    x_cuts,
+    runs: int = 1,
+):
     """
     The parameter `runs` controls how many times randomized pairwise predictions are computed.
     The default is 1. Increasing `runs` can improve the robustness and accuracy of the results;
     however, it can also increase computational cost and amount of noise needed later in the algorithm.
     """
     np = import_optional_dependency("numpy")
+
+    if not str(input_domain).startswith("NPArray2Domain"):
+        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
+    if input_domain.descriptor.num_columns != 2:
+        raise ValueError("input_domain must have two columns")  # pragma: no cover
+    if input_metric != dp.symmetric_distance():
+        raise ValueError("input_metric must be symmetric distance")  # pragma: no cover
+
+    input_desc = input_domain.descriptor
+    if input_desc.T not in _NUMERIC_TYPES:
+        raise ValueError("input_domain must have numeric elements")
+    size = input_desc.size
+    x_cuts = np.asarray(x_cuts, dtype=np.float64)
+
+    if size is None:
+        # One input addition or removal can change one matched pair, replacing one
+        # pairwise prediction. This has symmetric distance two. A tighter 3/2-style
+        # bound is possible with a more careful coupling across multiple edits.
+        stability_map = lambda d_in: d_in * runs * 2
+    else:
+        # With known size, realizable symmetric distances are even and correspond
+        # to record replacements. Each replacement can change one matched pair.
+        stability_map = lambda d_in: 2 * runs * (d_in // 2)
+
     return dp.t.make_user_transformation(
-        # Outputs are Nx2 float numpy arrays.
-        input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
-        # Neighboring input datasets differ by addition/removal of rows.
-        input_metric=dp.symmetric_distance(),
+        input_domain=input_domain,
+        input_metric=input_metric,
         # Outputs are Nx2 float numpy arrays, but are half as long.
-        output_domain=dp.numpy.array2_domain(num_columns=2, T=T),
+        output_domain=dp.numpy.array2_domain(num_columns=2, T="f64"),
         # Neighboring output datasets also differ by additions/removals.
         output_metric=dp.symmetric_distance(),
         # Apply the function `runs` times.
         function=lambda x: np.vstack(
             [pairwise_predict(x, x_cuts) for _ in range(runs)]
         ),
-        # Each execution of pairwise predict contributes b_in records.
-        stability_map=lambda b_in: b_in * runs,
+        stability_map=stability_map,
     )
 
 
-def make_select_column(j, T=float):
+def make_select_column(j, T="f64"):
     return dp.t.make_user_transformation(
         input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
         input_metric=dp.symmetric_distance(),
@@ -92,6 +122,8 @@ def make_private_percentile_medians(
 
 
 def make_private_theil_sen(
+    input_domain: Domain,
+    input_metric: Metric,
     output_measure: Measure,
     x_bounds: tuple[float, float],
     y_bounds: tuple[float, float],
@@ -105,7 +137,16 @@ def make_private_theil_sen(
     and returns a (slope, intercept) tuple.
 
     >>> import numpy as np
-    >>> meas = make_private_theil_sen(dp.max_divergence(), (0, 100), (0, 100), scale=1.0)
+    >>> input_domain = dp.numpy.array2_domain(num_columns=2, T=float)
+    >>> input_metric = dp.symmetric_distance()
+    >>> meas = make_private_theil_sen(
+    ...     input_domain,
+    ...     input_metric,
+    ...     dp.max_divergence(),
+    ...     (0, 100),
+    ...     (0, 100),
+    ...     scale=1.0,
+    ... )
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
     """
     np = import_optional_dependency("numpy")
@@ -119,7 +160,7 @@ def make_private_theil_sen(
 
     return (
         # pairwise_predict will return a 2xN array of y values at the x_cuts.
-        make_pairwise_predict(x_cuts, runs)
+        make_pairwise_predict(input_domain, input_metric, x_cuts, runs)
         # privately select median y values for each x_cut
         >> make_private_percentile_medians(
             output_measure, y_bounds, scale, candidates_count=candidates_count
