@@ -65,8 +65,8 @@ def main():
         print(f"{path.name}: {as_of_commit} -> {earliest_commit} in place")
 
     if failures:
-        print(f"failures:\n{'\n'.join(failures)}")
-        sys.exit(1)
+        join_failures = "\n".join(failures)
+        sys.exit(f"failures:\n{join_failures}")
 
 
 if __name__ == "__main__":
