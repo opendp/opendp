@@ -64,6 +64,9 @@ def setup(app):
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 
+# Estimator wrappers require sklearn and scipy, both optional in the docs environment.
+autodoc_mock_imports = ["sklearn", "scipy"]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
@@ -113,6 +116,8 @@ nitpick_ignore = [
     # External dependencies may not exist when building docs
     ("py:class", "numpy.ndarray"),
     ("py:class", "sklearn.decomposition._pca.PCA"),
+    ("py:class", "sklearn.base.ClassifierMixin"),
+    ("py:class", "sklearn.decomposition.PCA"),
     # Base class of the sklearn estimators is in a private module
     ("py:class", "opendp.extras.sklearn._estimator.DPEstimator"),
     # Standard library reference fails to resolve

@@ -1,246 +1,364 @@
+import pickle
+
+import numpy as np
 import pytest
+import opendp.prelude as dp
 
-from opendp.extras.sklearn import DPEstimator
+pytest.importorskip("sklearn")
+from sklearn.base import TransformerMixin, clone
+
+from opendp.extras.sklearn._estimator import DPEstimator, DPTransformer
 
 
-class _DummyEstimator(DPEstimator):
-    def __init__(self, marker="default"):
-        self.marker = marker
+class _ConstantEstimator(DPEstimator):
+    def __init__(self, value=23):
+        self.value = value
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
-        raise NotImplementedError
+        value = self.value
+        return dp.m.make_user_measurement(
+            input_domain,
+            input_metric,
+            output_measure,
+            lambda _data: value,
+            lambda d: d_out * d / d_in,
+            TO=int,
+        )
 
     def _ingest_release(self, release):
         self.release_ = release
 
 
-class _BadQueryEstimator(_DummyEstimator):
-    def _prepare_fit_query(self, X, y=None, **fit_params):
-        return object()
-
-
-class _CountEstimator(DPEstimator):
-    def __init__(self, scale=1.0):
-        self.scale = scale
+class _OffsetTransformer(TransformerMixin, DPTransformer):
+    def __init__(self, offset):
+        self.offset = offset
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
-        import opendp.prelude as dp
-
-        return (
-            (input_domain, input_metric)
-            >> dp.t.then_count()
-            >> dp.m.then_laplace(self.scale)
+        offset = self.offset.copy()
+        return dp.m.make_user_measurement(
+            input_domain,
+            input_metric,
+            output_measure,
+            lambda _data: offset.copy(),
+            lambda d: d_out * d / d_in,
+            TO="Vec<f64>",
         )
 
     def _ingest_release(self, release):
-        self.count_ = release
+        self.offset_ = np.array(release, copy=True)
 
+    def transform(self, X):
+        return X + self.offset_
 
-def test_sklearn_estimator_is_abstract():
-    import opendp.prelude as dp
+    def make_transform(self, input_domain, input_metric):
+        from opendp._internal import _make_transformation
 
-    with pytest.raises(TypeError):
-        DPEstimator()
-
-    with pytest.raises(NotImplementedError):
-        DPEstimator.make(
-            _DummyEstimator(),
-            dp.atom_domain(T=int),
-            dp.absolute_distance(T=int),
-            dp.max_divergence(),
-            1,
-            1,
+        offset = self.offset_.copy()
+        desc = input_domain.cast(dp.sklearn.SklearnFitDescriptor)
+        X_desc = desc.X.cast(dp.numpy.NPArray2Domain)
+        output_domain = dp.sklearn.sklearn_fit_domain(
+            dp.numpy.array2_domain(
+                T=float, size=X_desc.size, num_columns=X_desc.num_columns
+            ),
+            desc.y,
         )
-    with pytest.raises(NotImplementedError):
-        DPEstimator._ingest_release(_DummyEstimator(), None)
+        return _make_transformation(
+            input_domain,
+            input_metric,
+            output_domain,
+            input_metric,
+            lambda data: dp.sklearn.SklearnFit(data.X + offset, data.y),
+            lambda d: d,
+        )
 
 
-def test_sklearn_estimator_clone_and_params():
-    pytest.importorskip("sklearn")
-    from sklearn.base import clone
-
-    estimator = _DummyEstimator(marker=[1, 2])
-    assert estimator.get_params() == {"marker": [1, 2]}
-    assert estimator.set_params(marker=[3]).marker == [3]
-    cloned = clone(estimator)
-    assert cloned is not estimator
-    assert cloned.get_params() == {"marker": [3]}
-
-
-def test_fit_requires_query():
-    estimator = _DummyEstimator()
-    with pytest.raises(TypeError, match="expects X to be a Query"):
-        estimator.fit([[1.0]])  # type: ignore[arg-type]
-
-
-def test_fit_rejects_unsupported_metadata():
-    import opendp.prelude as dp
-
-    estimator = _DummyEstimator()
-    query = dp.Query(
-        (dp.atom_domain(T=float), dp.absolute_distance(T=float)),
-        dp.max_divergence(),
-        d_in=1,
-        d_out=1.0,
+def _space():
+    return (
+        dp.sklearn.sklearn_fit_domain(dp.vector_domain(dp.atom_domain(T=int))),
+        dp.symmetric_distance(),
     )
-    with pytest.raises(TypeError, match="Unexpected fit parameters"):
-        estimator.fit(query, sample_weight=[1.0])
-    with pytest.raises(TypeError, match="does not accept y"):
-        estimator.fit(query, y=[1.0])
-    with pytest.raises(TypeError, match="must return an OpenDP Query"):
-        _BadQueryEstimator().fit(query)
 
 
-def test_query_sklearn_rejects_non_estimator():
-    import opendp.prelude as dp
-
-    query = dp.Query(
-        (dp.atom_domain(T=float), dp.absolute_distance(T=float)),
-        dp.max_divergence(),
-        d_in=1,
-        d_out=1.0,
+def _context():
+    return dp.Context.compositor(
+        dp.sklearn.SklearnFit([1, 2, 3]),
+        dp.unit_of(contributions=1),
+        dp.loss_of(epsilon=1),
+        domain=_space()[0],
+        split_evenly_over=1,
     )
-    with pytest.raises(ValueError, match="DPEstimator"):
-        query.sklearn(object())
 
 
-def test_query_sklearn_accepts_transformed_query_and_rejects_partial_chain():
-    import opendp.prelude as dp
+def test_fit_requires_explicit_privacy():
+    for kwargs in (
+        {},
+        {"privacy_unit": dp.unit_of(contributions=1)},
+        {"privacy_loss": dp.loss_of(epsilon=1)},
+    ):
+        with pytest.raises(TypeError, match="required keyword-only"):
+            _ConstantEstimator().fit([1, 2, 3], **kwargs)
+
+
+def test_sklearn_requires_an_estimator_and_resolved_input():
     from opendp.context import PartialChain
 
-    domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=3)
-    metric = dp.symmetric_distance()
-    transformation = (domain, metric) >> dp.t.then_clamp((0.0, 1.0))
-    transformed = dp.Query(transformation, dp.max_divergence(), d_in=1, d_out=1.0)
-    assert isinstance(transformed.sklearn(_CountEstimator()), dp.Query)
-
+    with pytest.raises(ValueError, match="OpenDP fitting capability"):
+        _context().query().sklearn(object())
     partial = dp.Query(
-        PartialChain(lambda _scale: transformation),
-        dp.max_divergence(),
-        d_in=1,
-        d_out=1.0,
+        PartialChain(lambda _: None), dp.max_divergence(), d_in=1, d_out=1
     )
     with pytest.raises(ValueError, match="requires all arguments"):
-        partial.sklearn(_CountEstimator())
+        partial.sklearn(_ConstantEstimator())
 
 
-def test_direct_measurement_and_context_fit_share_estimator_path():
-    import opendp.prelude as dp
+def test_standalone_fit_and_sklearn_compatibility():
+    model = _ConstantEstimator().set_params(value=24)
+    model.release_ = 99
+    assert (
+        model.fit(
+            [1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
+        is model
+    )
+    assert model.release_ == 24
+    assert model.get_params() == {"value": 24}
+    assert pickle.loads(pickle.dumps(model)).release_ == 24
+    assert clone(model).get_params() == model.get_params()
+    assert not hasattr(clone(model), "release_")
 
-    domain = dp.vector_domain(dp.atom_domain(T=int), size=3)
-    metric = dp.symmetric_distance()
-    estimator = _CountEstimator(scale=1.0)
-    measurement = estimator.make(domain, metric, dp.max_divergence(), 1, 1.0)
-    assert measurement.map(1) <= 1.0
 
+def test_context_constructs_once_and_executes_only_on_release():
+    calls = []
+
+    class RecordingEstimator(_ConstantEstimator):
+        def make(self, *args):
+            calls.append("make")
+
+            def execute(value):
+                calls.append("execute")
+                return value
+
+            return super().make(*args) >> execute
+
+    context = _context()
+    model = RecordingEstimator()
+    query = context.query().sklearn(model)
+    query.resolve()
+    query.resolve()
+    model.set_params(value=24)
+    assert calls == ["make"]
+    assert context.current_privacy_loss() == []
+    fitted = query.release()
+    assert fitted.value == fitted.release_ == 23
+    assert calls == ["make", "execute"]
+    assert context.current_privacy_loss() == [1.0]
+    with pytest.raises(dp.OpenDPException, match="out of queries"):
+        query.release()
+    assert calls == ["make", "execute"]
+
+
+def test_context_releases_independent_clones_without_mutating_model():
+    X = np.ones((2, 2))
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, num_columns=2)
+    )
+    model = _OffsetTransformer(np.array([1.0, 2.0]))
+    model.offset_ = np.array([99.0, 99.0])
     context = dp.Context.compositor(
-        data=[1, 2, 3],
+        dp.sklearn.SklearnFit(X),
+        dp.unit_of(contributions=1),
+        dp.loss_of(epsilon=2),
         domain=domain,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
+        split_evenly_over=2,
     )
-    assert estimator.fit(context.query()) is estimator  # type: ignore[arg-type]
-    assert isinstance(estimator.count_, int)
+    query = context.query().sklearn(model)
+    model.offset[:] = 9
+    first = query.release()
+    np.testing.assert_array_equal(first.offset_, [1.0, 2.0])
+    first.offset[:] = 10
+    first.offset_[:] = 20
+    second = query.release()
+    assert first is not second and first is not model and second is not model
+    np.testing.assert_array_equal(second.offset, [1.0, 2.0])
+    np.testing.assert_array_equal(second.offset_, [1.0, 2.0])
+    np.testing.assert_array_equal(first.offset_, [20.0, 20.0])
+    np.testing.assert_array_equal(model.offset, [9.0, 9.0])
+    np.testing.assert_array_equal(model.offset_, [99.0, 99.0])
+    assert clone(second).get_params()["offset"] is not second.offset
+    assert context.current_privacy_loss() == [1.0, 1.0]
 
 
-def test_logistic_regression_fit_through_context():
-    import opendp.prelude as dp
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+def test_resolved_measurement_supports_postprocessing():
+    import gc
+    import weakref
 
-    np = pytest.importorskip("numpy")
-    pytest.importorskip("scipy")
-
-    rng = np.random.default_rng(0)
-    X = rng.standard_normal((100, 3))
-    y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
-
-    domain = dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
-    metric = dp.symmetric_distance()
-    estimator = LogisticRegression(n_iters=50, learning_rate=0.3, clip_norm=5.0)
-
-    measurement = estimator.make(
-        domain, metric, dp.zero_concentrated_divergence(), 2, 1.0
+    data = dp.sklearn.SklearnFit([1, 2, 3])
+    reference = weakref.ref(data)
+    query = dp.Query(_space(), dp.max_divergence(), d_in=1, d_out=1.0).sklearn(
+        _ConstantEstimator()
     )
-    assert measurement.map(2) <= 1.0
+    measurement = query.resolve()
+    assert measurement(data).release_ == 23
+    # Serialize inside DP postprocessing, before the separate FFI invocation-
+    # metadata layer. That layer's private-input retention is fixed separately.
+    serialized = measurement >> pickle.dumps
+    fitted = pickle.loads(query.new_with(chain=serialized).release(data=data))
+    assert fitted.release_ == 23
+    assert vars(fitted) == {"value": 23, "release_": 23}
+    assert serialized.map(1) == measurement.map(1) == 1.0
+    del data
+    gc.collect()
+    assert reference() is None
 
-    context = dp.Context.compositor(
-        data=data,
-        domain=domain,
-        privacy_unit=dp.unit_of(contributions=2),
-        privacy_loss=dp.loss_of(rho=1.0),
-        split_evenly_over=1,
+
+def test_sklearn_receives_transformed_domain_metric_and_distance():
+    from opendp._internal import _make_transformation
+
+    input_domain, input_metric = _space()
+    output_domain = dp.sklearn.sklearn_fit_domain(
+        dp.vector_domain(dp.atom_domain(T=float))
     )
-    assert estimator.fit(context.query()) is estimator  # type: ignore[arg-type]
-    assert estimator.coef_.shape == (3,)
-    assert list(estimator.classes_) == [0, 1]
-
-    features = data[:, :-1]
-    proba = estimator.predict_proba(features)
-    assert proba.shape == (100, 2)
-    preds = estimator.predict(features)
-    assert set(np.unique(preds)).issubset({0, 1})
-
-
-def test_logistic_regression_matches_sklearn_regularized():
-    import opendp.prelude as dp
-
-    np = pytest.importorskip("numpy")
-    pytest.importorskip("scipy")
-    pytest.importorskip("sklearn")
-    from sklearn.linear_model import LogisticRegression as SkLR
-    from opendp.extras.sklearn.linear_model import LogisticRegression
-
-    rng = np.random.default_rng(0)
-    X = rng.standard_normal((100, 3))
-    y = (X[:, 0] + rng.standard_normal(100) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
-    dom = dp.numpy.array2_domain(num_columns=4, size=100, nan=False, T=float)
-
-    est = LogisticRegression(
-        n_iters=2000, learning_rate=0.5, clip_norm=100.0, penalty="l2", C=1.0
-    )
-    theta_dp = np.asarray(
-        est.make(
-            dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
-        )(data)
+    output_metric = dp.insert_delete_distance()
+    transform = _make_transformation(
+        input_domain,
+        input_metric,
+        output_domain,
+        output_metric,
+        lambda data: dp.sklearn.SklearnFit([float(x * 2) for x in data.X]),
+        lambda d: d * 4,
     )
 
-    Xb = np.hstack([X, np.ones((100, 1))])
-    sk = SkLR(C=1.0, fit_intercept=False, max_iter=10000).fit(Xb, y)
+    class CheckingEstimator(_ConstantEstimator):
+        def make(self, domain, metric, measure, d_in, d_out):
+            assert (domain, metric, measure, d_in, d_out) == (
+                output_domain,
+                output_metric,
+                dp.max_divergence(),
+                4,
+                1.0,
+            )
+            return dp.m.make_user_measurement(
+                domain,
+                metric,
+                measure,
+                lambda data: int(sum(data.X)),
+                lambda d: d_out * d / d_in,
+                TO=int,
+            )
 
-    print("DP:", np.round(theta_dp, 3), "sklearn:", np.round(sk.coef_[0], 3))
-    assert np.max(np.abs(theta_dp - sk.coef_[0])) < 0.5
+    context = _context()
+    query = context.query().new_with(chain=transform).sklearn(CheckingEstimator())
+    assert query.resolve().map(1) == 1.0
+    assert query.release().release_ == 12
+    assert context.current_privacy_loss() == [1.0]
 
 
-def test_logistic_regression_l1_sparsity():
-    import opendp.prelude as dp
+@pytest.mark.parametrize("route", ["standalone", "context"])
+def test_fitting_rejects_excess_privacy_loss(route):
+    executions = []
 
-    np = pytest.importorskip("numpy")
-    pytest.importorskip("scipy")
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+    class BudgetedEstimator(_ConstantEstimator):
+        def make(self, domain, metric, measure, d_in, d_out):
+            assert (domain, metric, measure, d_in, d_out) == (
+                *_space(),
+                dp.max_divergence(),
+                1,
+                1.0,
+            )
 
-    rng = np.random.default_rng(0)
-    X = rng.standard_normal((200, 3))
-    y = (X[:, 0] + 0.3 * rng.standard_normal(200) > 0).astype(float)
-    data = np.hstack([X, y[:, None]])
-    dom = dp.numpy.array2_domain(num_columns=4, size=200, nan=False, T=float)
-    est = LogisticRegression(
-        n_iters=2000,
-        learning_rate=0.5,
-        clip_norm=100.0,
-        penalty="l1",
-        C=0.05,
+            def execute(_data):
+                executions.append(True)
+                return 23
+
+            return dp.m.make_user_measurement(
+                domain,
+                metric,
+                measure,
+                execute,
+                lambda d: 2 * d_out * d / d_in,
+                TO=int,
+            )
+
+    context, model = _context(), BudgetedEstimator()
+    model.release_ = 99
+
+    def fit():
+        if route == "context":
+            return context.query().sklearn(model).release()
+        return model.fit(
+            [1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
+
+    with pytest.raises(ValueError, match="exceeds"):
+        fit()
+    assert executions == []
+    assert model.release_ == 99
+    assert context.current_privacy_loss() == []
+
+
+@pytest.mark.parametrize("route", ["standalone", "context"])
+def test_sklearn_preserves_measure_conversion(route):
+    class PureEstimator(_ConstantEstimator):
+        def make(self, domain, metric, measure, d_in, d_out):
+            assert measure == dp.zero_concentrated_divergence()
+            return super().make(domain, metric, dp.max_divergence(), d_in, 1.0)
+
+    model = PureEstimator()
+    if route == "context":
+        context = dp.Context.compositor(
+            dp.sklearn.SklearnFit([1, 2, 3]),
+            dp.unit_of(contributions=1),
+            dp.loss_of(rho=1),
+            domain=_space()[0],
+            split_evenly_over=1,
+        )
+        query = context.query().sklearn(model)
+        assert query.resolve().output_measure == dp.zero_concentrated_divergence()
+        assert query.resolve().map(1) == pytest.approx(0.5)
+        fitted = query.release()
+        assert context.current_privacy_loss() == [1.0]
+    else:
+        fitted = model.fit(
+            [1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(rho=1),
+        )
+    assert fitted.release_ == 23
+
+
+def test_framework_constructors_snapshot_parameters_without_fitting():
+    X, y = np.zeros((2, 2)), [0, 1]
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, norm=1, p=2, size=2, num_columns=2),
+        dp.vector_domain(dp.atom_domain(T=int)),
     )
-    theta = np.asarray(
-        est.make(
-            dom, dp.symmetric_distance(), dp.zero_concentrated_divergence(), 2, 1e8
-        )(data)
+    data, model = dp.sklearn.SklearnFit(X, y), _OffsetTransformer(np.array([2.0, 3.0]))
+    measurement = model.make(
+        domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
     )
-
-    coef = theta[:-1]
-    assert abs(coef[0]) > abs(coef[1])
-    assert abs(coef[0]) > abs(coef[2])
-    assert abs(coef[1]) < 0.1  # check that noisy features are close to 0
-    assert abs(coef[2]) < 0.1
+    model.offset[:] = 9
+    parameters = measurement(data)
+    assert not hasattr(model, "offset_")
+    model._ingest_release(parameters)
+    transform = model.make_transform(domain, dp.symmetric_distance())
+    model.offset_[:] = 10
+    transformed = (transform >> dp.t.make_identity(*transform.output_space))(data)
+    np.testing.assert_array_equal(transformed.X, X + [2.0, 3.0])
+    assert transformed.y is y
+    assert transform.output_domain.member(transformed)
+    assert transform.map(2) == 2
+    assert (
+        model.fit(
+            X,
+            y,
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
+        is model
+    )
+    np.testing.assert_array_equal(model.transform(X), X + 9)
