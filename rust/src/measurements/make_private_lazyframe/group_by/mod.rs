@@ -209,25 +209,20 @@ where
             }) => {
                 // Deduplicate before joining: duplicates repeat an existing group's
                 // noisy result but independently impute absent groups, revealing membership.
-                let public_on = match how {
-                    JoinType::Left => left_on.clone(),
-                    JoinType::Right => right_on.clone(),
-                    _ => unreachable!(
-                        "Invariant: by constructor checks, JoinType is only Left or Right"
-                    ),
+                let distinct = |on: &[Expr]| {
+                    Arc::new(DslPlan::Distinct {
+                        input: labels,
+                        options: DistinctOptionsDSL {
+                            subset: Some(on.to_vec()),
+                            keep_strategy: UniqueKeepStrategy::Any,
+                            maintain_order: false,
+                        },
+                    })
                 };
-                let labels = Arc::new(DslPlan::Distinct {
-                    input: labels,
-                    options: DistinctOptionsDSL {
-                        subset: Some(public_on),
-                        keep_strategy: UniqueKeepStrategy::Any,
-                        maintain_order: false,
-                    },
-                });
                 let (input_left, input_right) = match how {
-                    JoinType::Left => (labels, Arc::new(output)),
-                    JoinType::Right => (Arc::new(output), labels),
-                    _ => unreachable!(),
+                    JoinType::Left => (distinct(&left_on), Arc::new(output)),
+                    JoinType::Right => (Arc::new(output), distinct(&right_on)),
+                    _ => unreachable!("Join type validated by match_group_by"),
                 };
                 DslPlan::HStack {
                     input: Arc::new(DslPlan::Join {
