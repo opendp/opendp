@@ -68,6 +68,7 @@ __all__ = [
     "Measure",
     "ExtrinsicDivergence",
     "ApproximateDivergence",
+    "PrivacyGuarantee",
     "PrivacyProfile",
     "_PartialConstructor",
     "UnknownTypeException",
@@ -1356,6 +1357,60 @@ class PrivacyProfile(object):
             self.curve, [float(log_delta)] if scalar else log_delta
         )
         return result[0] if scalar else result
+
+
+class PrivacyGuarantee(object):
+    """Conjunctive, independently certified privacy representations.
+
+    Supply an ``approx_dp=(epsilon, delta)`` certificate, a ``profile``, or both
+    for the same privacy relation. Source parameters are retained exactly; zero
+    delta certifies pure DP. Certificates are not eagerly converted to profiles.
+    Queries return the tightest bound and propagate representation errors.
+    """
+
+    def __init__(
+        self,
+        *,
+        approx_dp: Optional[tuple[float, float]] = None,
+        profile: Optional[PrivacyProfile] = None,
+        _ptr: Any = None,
+    ):
+        if _ptr is not None:
+            if approx_dp is not None or profile is not None:
+                raise TypeError("_ptr cannot be combined with guarantee constructors")
+            self.guarantee = _ptr
+            return
+        if approx_dp is None and profile is None:
+            raise TypeError("expected at least one of approx_dp or profile")
+        if approx_dp is not None and (
+            not isinstance(approx_dp, tuple) or len(approx_dp) != 2
+        ):
+            raise TypeError("approx_dp must be an (epsilon, delta) tuple")
+        if profile is not None and not isinstance(profile, PrivacyProfile):
+            raise TypeError("profile must be a PrivacyProfile")
+
+        from opendp.measures import (
+            _new_privacy_guarantee,
+            _privacy_guarantee_with_approx_dp,
+            _privacy_guarantee_with_profile,
+        )
+
+        guarantee = _new_privacy_guarantee()
+        if approx_dp is not None:
+            guarantee = _privacy_guarantee_with_approx_dp(guarantee, *approx_dp)
+        if profile is not None:
+            guarantee = _privacy_guarantee_with_profile(guarantee, profile)
+        self.guarantee = guarantee.guarantee
+
+    def delta(self, epsilon):
+        from opendp.measures import privacy_guarantee_delta
+
+        return privacy_guarantee_delta(self.guarantee, epsilon)
+
+    def epsilon(self, delta):
+        from opendp.measures import privacy_guarantee_epsilon
+
+        return privacy_guarantee_epsilon(self.guarantee, delta)
 
 
 class _PartialConstructor(object):

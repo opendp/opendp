@@ -481,6 +481,45 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
     return privacy_profile;
 }
 
+// AnyObject: PrivacyGuarantee
+AnyObject *sexp_to_privacyguaranteeptr(SEXP value)
+{
+    PROTECT(value);
+
+    int errorOccurred;
+    SEXP class_expr = lang2(install("class"), value);
+    SEXP class = R_tryEval(class_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("could not determine class");
+
+    if (str_equal(sexp_to_charptr(class), "privacy_guarantee"))
+    {
+        SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
+        value = Rf_eval(call, R_GlobalEnv);
+        UNPROTECT(2);
+    }
+    Check_AnyObject_Ptr(value);
+
+    UNPROTECT(1);
+    return (AnyObject *)R_ExternalPtrAddr(value);
+}
+
+SEXP privacyguaranteeptr_to_sexp(AnyObject *input, SEXP info)
+{
+    SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
+    R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
+
+    int errorOccurred;
+    SEXP new_privacy_guarantee = get_private_func("new_privacy_guarantee_internal");
+    SEXP privacy_guarantee_expr = lang2(new_privacy_guarantee, XPtr);
+    SEXP privacy_guarantee = R_tryEval(privacy_guarantee_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("failed to construct privacy guarantee");
+
+    UNPROTECT(1);
+    return privacy_guarantee;
+}
+
 // AnyObject: Queryable
 AnyObject *sexp_to_anyqueryableptr(SEXP value)
 {

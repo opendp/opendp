@@ -30,6 +30,143 @@ pub struct PrivacyProfile {
     delta_slack: f64,
 }
 
+/// A single independently certified (epsilon, delta)-DP bound.
+///
+/// Source parameters are retained exactly, without conversion to log space.
+/// A zero delta certifies pure DP. Construction validates numerical ranges,
+/// not whether the certificate holds for a particular privacy relation.
+#[derive(Clone, Debug, PartialEq)]
+struct ApproxDPRepr {
+    epsilon: f64,
+    delta: f64,
+}
+
+impl ApproxDPRepr {
+    fn new(epsilon: f64, delta: f64) -> Fallible<Self> {
+        check_epsilon(epsilon)?;
+        if !epsilon.is_finite() {
+            return fallible!(FailedMap, "certificate epsilon must be finite");
+        }
+        check_delta(delta)?;
+        Ok(Self { epsilon, delta })
+    }
+
+    /// Materialize a staircase only when a profile is needed.
+    /// Source delta is additive slack, preserving exact plateau equality.
+    fn into_profile(self) -> Fallible<PrivacyProfile> {
+        PrivacyProfile::new_log(move |epsilons| {
+            Ok(epsilons
+                .iter()
+                .map(|&epsilon| {
+                    if epsilon < self.epsilon {
+                        0.0
+                    } else {
+                        f64::NEG_INFINITY
+                    }
+                })
+                .collect())
+        })
+        .with_delta_slack(self.delta)
+    }
+}
+
+/// Numeric privacy facts returned by a [`MultiDP`] privacy map.
+///
+/// Each populated field independently certifies the same privacy relation;
+/// the fields are conjunctive, not alternative materializations. Attaching one
+/// representation preserves the other. Approximate DP is not eagerly converted
+/// into a profile, and profile-specific delta slack remains owned by the profile.
+#[derive(Clone, Default)]
+pub struct PrivacyGuarantee {
+    approx_dp: Option<ApproxDPRepr>,
+    profile: Option<PrivacyProfile>,
+}
+
+impl PrivacyGuarantee {
+    /// Construct an empty guarantee.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Attach a single approximate-DP certificate, retaining the profile.
+    /// Validates the parameters, not whether the certificate holds.
+    pub fn with_approx_dp(mut self, epsilon: f64, delta: f64) -> Fallible<Self> {
+        self.approx_dp = Some(ApproxDPRepr::new(epsilon, delta)?);
+        Ok(self)
+    }
+
+    /// Attach a profile representation, retaining the approximate-DP certificate.
+    pub fn with_profile(mut self, profile: PrivacyProfile) -> Self {
+        self.profile = Some(profile);
+        self
+    }
+
+    /// Return the tightest delta bound, propagating representation errors.
+    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        check_epsilon(epsilon)?;
+        min_bound(
+            self.approx_dp.as_ref().map(|repr| {
+                if epsilon < repr.epsilon {
+                    1.0
+                } else {
+                    repr.delta
+                }
+            }),
+            self.profile
+                .as_ref()
+                .map(|profile| profile.delta(&[epsilon]).map(|values| values[0]))
+                .transpose()?,
+        )
+    }
+
+    /// Return the tightest epsilon bound, propagating representation errors.
+    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
+        check_delta(delta)?;
+        min_bound(
+            self.approx_dp.as_ref().map(|repr| {
+                if delta == 1.0 {
+                    0.0
+                } else if delta < repr.delta {
+                    f64::INFINITY
+                } else {
+                    repr.epsilon
+                }
+            }),
+            self.profile
+                .as_ref()
+                .map(|profile| profile.epsilon(&[delta]).map(|values| values[0]))
+                .transpose()?,
+        )
+    }
+
+    pub(crate) fn approx_dp(&self) -> Option<(f64, f64)> {
+        self.approx_dp
+            .as_ref()
+            .map(|repr| (repr.epsilon, repr.delta))
+    }
+
+    pub(crate) fn profile(&self) -> Option<&PrivacyProfile> {
+        self.profile.as_ref()
+    }
+}
+
+impl std::fmt::Debug for PrivacyGuarantee {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrivacyGuarantee")
+            .field("approx_dp", &self.approx_dp)
+            .field("profile", &self.profile.is_some())
+            .finish()
+    }
+}
+
+fn min_bound(certificate: Option<f64>, profile: Option<f64>) -> Fallible<f64> {
+    match (certificate, profile) {
+        (Some(bound), Some(other)) => Ok(bound.min(other)),
+        (Some(bound), None) | (None, Some(bound)) => Ok(bound),
+        (None, None) => fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
+    }
+}
+
 impl PrivacyProfile {
     /// Construct a profile from a vector-valued, upward-conservative delta callback.
     ///

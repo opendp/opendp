@@ -420,6 +420,7 @@ privacy_profile <- function(delta = NULL, log_delta = NULL, delta_slack = 0.) {
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
 new_privacy_profile_internal <- function(ptr) {
+  force(ptr)
   privacy_profile <- function(attr, epsilon, delta, log_delta, log_delta_at) {
     if (missing(attr) + missing(epsilon) + missing(delta) + missing(log_delta) + missing(log_delta_at) != 4) {
       stop("expected exactly one of attr, epsilon, delta, log_delta or log_delta_at", call. = FALSE)
@@ -446,6 +447,63 @@ new_privacy_profile_internal <- function(ptr) {
   }
   class(privacy_profile) <- "privacy_profile"
   privacy_profile
+}
+
+#' New privacy guarantee
+#'
+#' @concept mod
+#' @param ptr a pointer to a privacy guarantee
+new_privacy_guarantee_internal <- function(ptr) {
+  force(ptr)
+  privacy_guarantee <- function(attr, epsilon, delta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
+      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+    }
+
+    if (!missing(epsilon)) {
+      return(privacy_guarantee_delta(privacy_guarantee, epsilon))
+    }
+
+    if (!missing(delta)) {
+      return(privacy_guarantee_epsilon(privacy_guarantee, delta))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(privacy_guarantee) <- "privacy_guarantee"
+  privacy_guarantee
+}
+
+#' Construct a conjunctive privacy guarantee.
+#'
+#' Each representation must independently certify the same privacy relation.
+#' Source parameters are retained exactly, without eagerly making a profile.
+#' Queries return the tightest bound and propagate representation errors.
+#'
+#' @param approx_dp Numeric pair c(epsilon, delta); zero delta certifies pure DP.
+#' @param profile A PrivacyProfile object, independently certified.
+#' @export
+privacy_guarantee <- function(approx_dp = NULL, profile = NULL) {
+  if (is.null(approx_dp) && is.null(profile)) {
+    stop("expected at least one of approx_dp or profile", call. = FALSE)
+  }
+  if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
+    stop("approx_dp must be an (epsilon, delta) numeric pair", call. = FALSE)
+  }
+  if (!is.null(profile) && !inherits(profile, "privacy_profile")) {
+    stop("profile must be a privacy_profile", call. = FALSE)
+  }
+  guarantee <- `_new_privacy_guarantee`()
+  if (!is.null(approx_dp)) {
+    guarantee <- `_privacy_guarantee_with_approx_dp`(guarantee, approx_dp[[1]], approx_dp[[2]])
+  }
+  if (!is.null(profile)) {
+    guarantee <- `_privacy_guarantee_with_profile`(guarantee, profile)
+  }
+  guarantee
 }
 
 #' new queryable
