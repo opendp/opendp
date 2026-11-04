@@ -213,10 +213,10 @@ def test_private_expr():
 
 
 def test_private_lazyframe_median():
-    lf_domain, lf = example_lf(margin=["A"], invariant="keys", max_length=50)
+    lf_domain, lf = example_lf(margin=["D"], invariant="keys", max_length=50)
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
-    plan = seed(lf.collect_schema()).group_by("A").agg(expr)
+    plan = seed(lf.collect_schema()).group_by("D").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
@@ -225,7 +225,7 @@ def test_private_lazyframe_median():
         0.0,
     )
     expect = pl.DataFrame(
-        [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.Int64)]
+        [pl.Series("D", [2], dtype=pl.Int32), pl.Series("B", [3], dtype=pl.Int64)]
     )
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)

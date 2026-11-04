@@ -886,7 +886,8 @@ class LazyFrameQuery:
         """
         Start a group-by operation.
 
-        OpenDP currently requires that grouping keys be simple column expressions.
+        OpenDP requires grouping keys to be stable row-by-row expressions.
+        Floating-point keys must be cast to a non-floating-point type.
         """
         ...
 
