@@ -372,7 +372,7 @@ simply a single scalar, but more complicated expressions are valid:
             >>> (
             ...     context.query()
             ...     # prepare actual work hours as a valid fill column
-            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0.0))
+            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0))
             ...     # prepare usual work hours with actual work hours as a fill
             ...     .with_columns(
             ...         pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL)
