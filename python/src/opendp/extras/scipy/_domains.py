@@ -1,27 +1,35 @@
 from dataclasses import dataclass
 from operator import index
-from typing import Any
+
+import scipy.sparse as sp
 
 from opendp._internal import _extrinsic_domain
-from opendp._lib import import_optional_dependency
 from opendp.mod import Domain
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, _ELEMENTARY_TYPES
 
 
-def _sp() -> Any:
-    return import_optional_dependency("scipy.sparse")
-
-
 @dataclass(frozen=True)
-class CSRArray2Domain:
+class CSRArray2Descriptor:
     n_features: int
     max_rows: int | None
     T: str | RuntimeType
 
 
+def _member(x, desc: CSRArray2Descriptor) -> bool:
+    return (
+        isinstance(x, sp.csr_array)
+        and x.ndim == 2
+        and _ELEMENTARY_TYPES.get(x.dtype.type) == desc.T
+        and x.has_canonical_format
+        and bool(x.data.all())
+        and x.shape[1] == desc.n_features
+        and (desc.max_rows is None or x.shape[0] <= desc.max_rows)
+    )
+
+
 def csr_array2_domain(
     n_features: int,
-    max_rows: int | None,
+    max_rows: int | None = None,
     *,
     T: RuntimeTypeDescriptor,
 ) -> Domain:
@@ -34,21 +42,9 @@ def csr_array2_domain(
     max_rows = None if max_rows is None else index(max_rows)
 
     T = RuntimeType.parse(T)
-    descriptor = CSRArray2Domain(n_features, max_rows, T)
-
-    def member(x) -> bool:
-        return (
-            isinstance(x, _sp().csr_array)
-            and x.ndim == 2
-            and _ELEMENTARY_TYPES.get(x.dtype.type) == T
-            and x.has_canonical_format
-            and bool(x.data.all())
-            and x.shape[1] == n_features
-            and (max_rows is None or x.shape[0] <= max_rows)
-        )
-
+    descriptor = CSRArray2Descriptor(n_features, max_rows, T)
     return _extrinsic_domain(
-        str(descriptor),
-        member,
+        f"CSRArray2Domain(n_features={n_features}, max_rows={max_rows}, T={T})",
+        lambda x: _member(x, descriptor),
         descriptor,
     )

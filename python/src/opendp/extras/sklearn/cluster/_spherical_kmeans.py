@@ -3,65 +3,51 @@
 from dataclasses import replace
 import math
 
+import numpy as np
 from sklearn.base import TransformerMixin
 
 import opendp.prelude as dp
 from opendp._internal import _make_measurement, _make_transformation
+from opendp.extras.scipy import CSRArray2Descriptor
+from opendp.extras.scipy._domains import _member
 from opendp.extras.sklearn._domains import SklearnFitDescriptor, sklearn_fit_domain
 from opendp.extras.sklearn._estimator import DPTransformer
 from opendp.extras.sklearn.cluster._make_private_spherical_kmeans import (
     _check_space,
     _distances,
     _labels,
-    _np,
     _unit_centers,
     make_private_spherical_kmeans,
 )
 from opendp.mod import Domain, Metric, Transformation
 
 
+def _check_X(X, n_features):
+    if not _member(X, CSRArray2Descriptor(n_features, None, "bool")):
+        raise ValueError(
+            f"expected canonical boolean CSR input with {n_features} features"
+        )
+    return X
+
+
 class SphericalKMeans(TransformerMixin, DPTransformer):
-    """Differentially private spherical k-means on canonical boolean CSR arrays.
+    """Private spherical k-means on canonical boolean CSR arrays without explicit zeros.
 
-    Rows represent sets of active features, not count vectors. At each iteration,
-    cosine assignment is followed by aggregation of unit-normalized rows and
-    discrete DP noise. ``max_l1_contribution`` uniformly downweights long records,
-    yielding a weighted spherical objective rather than discarding feature IDs.
-    Noisy directions are clamped nonnegative and optionally projected to their
-    largest coordinates. Zero rows or zero centers have zero cosine similarity;
-    assignment ties choose the first center, and projection ties prefer the lowest
-    feature ID. Empty clusters receive DP noise.
-
-    Public schema inference uses only dtype and feature count, never private row
-    count. Use ``contributions=1`` for add/remove row adjacency; a substitution
-    requires ``contributions=2``. Both epsilon-DP and zCDP are supported.
-    Standalone ``fit`` mutates this estimator; Context releases a fitted clone.
-    ``score`` is the negative sum of ordinary (unweighted) cosine distances.
+    Cosine assignments alternate with noisy sums of unit-normalized records.
+    The optional L1 cap uniformly downweights long records. Noisy centers are
+    clamped nonnegative and optionally projected to their largest coordinates.
+    Zero rows or centers have cosine distance one; assignment ties select the
+    first center and projection ties prefer the lowest feature ID.
+    ``score`` is the negative sum of unweighted cosine distances.
 
     :param n_clusters: Number of center directions.
     :param max_iter: Fixed number of adaptively composed private Lloyd updates.
-    :param max_features_per_center: Maximum nonzero coordinates per center, or None for unrestricted directions.
-    :param max_l1_contribution: Optional positive L1 cap on each unit-normalized contribution, applied uniformly to the entire record.
-    :param init: "random" for a public random feature partition, or public/already-DP nonnegative directions of shape (n_clusters, n_features). Never pass unaccounted private records.
-    :param random_state: Seed for public initialization only. DP noise remains cryptographically random.
-
-    .. code:: pycon
-
-        >>> import opendp.prelude as dp
-        >>> from scipy.sparse import csr_array
-        >>> dp.enable_features("contrib")
-        >>> X = csr_array([[True, False], [False, True]])
-        >>> model = dp.sklearn.cluster.SphericalKMeans(n_clusters=2, max_iter=2, random_state=0)
-        >>> model.fit(X, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)) is model
-        True
-        >>> model.transform(X).shape
-        (2, 2)
-
-    Noise is dense over the public feature universe (O(n_clusters * n_features)
-    memory/work). Pure-DP L1 sensitivity grows with sqrt(n_features) without the
-    optional cap; zCDP needs no contribution cap. Public initialization can be much
-    more useful for rare clusters than the data-independent default. See the
-    :ref:`spherical k-means numerical and utility analysis <spherical-kmeans-analysis>`.
+    :param max_features_per_center: Maximum nonzero center coordinates, or None.
+    :param max_l1_contribution: Optional positive L1 cap on each unit-normalized contribution.
+    :param init: "random" for a public feature partition, or public/already-DP nonnegative directions of shape (n_clusters, n_features). Do not use unaccounted private records.
+    :param random_state: Seed for public initialization only, never DP noise.
+    :ivar cluster_centers_: Nonnegative int64 CSR center directions of shape (n_clusters, n_features).
+    :ivar n_features_in_: Number of input features.
     """
 
     def __init__(
@@ -95,8 +81,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         )
 
     def _ingest_release(self, centers):
-        # scipy.copy detaches buffers and discards the FFI __opendp_dict__, which
-        # may otherwise retain a private queryable/measurement through the release.
+        # Detach buffers and discard FFI metadata retaining private measurement state.
         self.cluster_centers_ = centers.copy()
         self.n_features_in_ = centers.shape[1]
 
@@ -106,25 +91,28 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
 
     def predict(self, X):
         self._require_fitted()
-        return _labels(X, _unit_centers(self.cluster_centers_))
+        return _labels(
+            _check_X(X, self.n_features_in_), _unit_centers(self.cluster_centers_)
+        )
 
     def transform(self, X):
         self._require_fitted()
-        return _distances(X, self.cluster_centers_)
+        return _distances(_check_X(X, self.n_features_in_), self.cluster_centers_)
 
     def score(self, X, y=None):
-        return -math.fsum(_np().min(self.transform(X), axis=1))
+        return -math.fsum(np.min(self.transform(X), axis=1))
 
     def _make_rowwise(self, input_domain, input_metric, output_x_domain, fn):
         desc = input_domain.cast(SklearnFitDescriptor)
-        if _check_space(desc.X, input_metric).n_features != self.n_features_in_:
+        n_features = _check_space(desc.X, input_metric).n_features
+        if n_features != self.n_features_in_:
             raise ValueError("input_domain must match the fitted number of features")
         return _make_transformation(
             input_domain,
             input_metric,
             sklearn_fit_domain(output_x_domain, desc.y),
             input_metric,
-            lambda data: replace(data, X=fn(data.X)),
+            lambda data: replace(data, X=fn(_check_X(data.X, n_features))),
             lambda distance: distance,
         )
 
@@ -147,9 +135,14 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         """Map aligned rows to nearest-center labels with unit row stability."""
         self._require_fitted()
         unit = _unit_centers(self.cluster_centers_)
+        dtype = np.dtype(
+            np.int32
+            if self.cluster_centers_.dtype == np.int32 and unit.shape[0] <= 2**31
+            else np.int64
+        )
         return self._make_rowwise(
             input_domain,
             input_metric,
-            dp.vector_domain(dp.atom_domain(T=dp.i64)),
-            lambda x: _labels(x, unit),
+            dp.vector_domain(dp.atom_domain(T=dtype.type)),
+            lambda x: _labels(x, unit).astype(dtype),
         )

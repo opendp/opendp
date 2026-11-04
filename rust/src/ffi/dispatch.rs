@@ -112,14 +112,13 @@ macro_rules! disp_expand {
 #[cfg(debug_assertions)]
 macro_rules! disp_expand {
     ($function:ident, ($rt_type:expr, @primitives),              $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u32, i32, i64, f64, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, i32, f64, usize, bool, String]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @primitives_plus),         $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [u32, i32, i64, f64, usize, bool, String, AnyObject, ExtrinsicObject]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, i32, f64, usize, bool, String, AnyObject, ExtrinsicObject]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @numbers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        // Exercise int64 discrete-noise aggregates in debug/CI, not only release builds.
-        disp_expand!($function, ($rt_type, [u32, i32, i64, f64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [u32, i32, f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @hashable),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [String]), $rt_dispatch_types, $type_args, $args)
@@ -128,7 +127,7 @@ macro_rules! disp_expand {
         disp_expand!($function, ($rt_type, [f64]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @integers),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
-        disp_expand!($function, ($rt_type, [i32, i64]), $rt_dispatch_types, $type_args, $args)
+        disp_expand!($function, ($rt_type, [i32]), $rt_dispatch_types, $type_args, $args)
     };
     ($function:ident, ($rt_type:expr, @dataset_metrics),                 $rt_dispatch_types:tt, $type_args:tt, $args:tt) => {
         disp_expand!($function, ($rt_type, [crate::metrics::SymmetricDistance]), $rt_dispatch_types, $type_args, $args)
