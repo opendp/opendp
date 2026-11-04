@@ -114,6 +114,57 @@ def test_algorithm_configuration_snapshots_lists():
     assert sequential.weights == (1.0, 2.0)
 
 
+def test_algorithm_configuration_can_change_before_capture():
+    from opendp.extras.mbi._utilities import _snapshot_algorithm
+
+    count = Count(("A",), weight=1.0)
+    first = Fixed(queries=[count])
+    nested = Sequential(
+        algorithms=[first, AIM(queries=[Count(("A",))])],
+        weights=[1.0, 2.0],
+    )
+    captured = _snapshot_algorithm(nested)
+
+    count.weight = 3.0
+    first.queries[0].weight = 4.0
+    first.queries = [Count(("B",))]
+    nested.algorithms = [MST()]
+    nested.weights = [9.0]
+
+    captured_fixed = captured.algorithms[0]
+    assert isinstance(captured_fixed, Fixed)
+    assert captured_fixed.queries[0].weight == 1.0
+    assert captured_fixed.queries[0].by == ("A",)
+    assert captured.weights == (1.0, 2.0)
+    assert len(captured.algorithms) == 2
+
+
+def test_fixed_direct_make_marginals_snapshots_configuration():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    algorithm = Fixed(queries=[Count(("A",))])
+    measurement = algorithm.make_marginals(
+        input_domain=dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 1)))]
+        ),
+        input_metric=dp.frame_distance(dp.symmetric_distance()),
+        output_measure=dp.max_divergence(),
+        d_in=[dp.polars.Bound(per_group=1)],
+        d_out=5.0,
+        marginals=Marginals(),
+        model=None,
+    )
+
+    def changed_estimator(*args, **kwargs):
+        raise AssertionError("configuration mutated after construction")
+
+    algorithm.estimator = changed_estimator
+    algorithm.queries = [Count(("B",))]
+    _, model = measurement(pl.LazyFrame({"A": pl.Series("A", [0, 1], dtype=pl.Int32)}))
+    assert model is not None
+
+
 def test_aim_rejects_mutable_query_objects():
     class QueryLike:
         by = ["A"]
@@ -187,6 +238,8 @@ def test_aim_scores_snapshot_workload():
     expected_score = transformation(data)
     expected_map = transformation.map(distance)
 
+    queries[0].weight = 100.0
+    queries[0].by = ("B",)
     queries.clear()
     expectations[clique] = 1_000.0
     assert transformation(data) == pytest.approx(expected_score)

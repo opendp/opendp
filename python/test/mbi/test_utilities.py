@@ -1,5 +1,3 @@
-from dataclasses import FrozenInstanceError
-
 import pytest
 from opendp.extras.mbi import Count, AIM
 import re
@@ -32,8 +30,8 @@ def test_count_post_init():
     count = Count(by, weight=1.0)  # type: ignore[arg-type]
     by[0] = "B"
     assert count.by == ("A",)
-    with pytest.raises(FrozenInstanceError):
-        count.weight = 2.0  # type: ignore[misc]
+    count.weight = 2.0
+    assert count.weight == 2.0
 
 
 def test_algorithm_post_init():

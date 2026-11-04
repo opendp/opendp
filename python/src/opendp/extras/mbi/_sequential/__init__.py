@@ -8,6 +8,7 @@ from opendp._lib import import_optional_dependency
 from opendp.combinators import make_adaptive_composition
 from opendp.extras.mbi._utilities import (
     Algorithm,
+    _snapshot_algorithm,
     get_associated_metric,
     get_cardinalities,
     _snapshot_bounds,
@@ -26,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class Sequential(Algorithm):
     """Release multiple algorithms sequentially.
 
@@ -59,9 +60,9 @@ class Sequential(Algorithm):
             if any(w <= 0 for w in self.weights):
                 raise ValueError(f"weights ({self.weights}) must be positive")
 
-            object.__setattr__(self, "weights", tuple(self.weights))
+            self.weights = tuple(self.weights)
 
-        object.__setattr__(self, "algorithms", tuple(self.algorithms))
+        self.algorithms = tuple(self.algorithms)
 
     def make_marginals(
         self,
@@ -100,8 +101,9 @@ class Sequential(Algorithm):
             raise ValueError("model must be a MarkovRandomField")
 
         d_in = _snapshot_bounds(d_in)
-        algorithms = tuple(self.algorithms)
-        weights = np.array(self.weights or [1] * len(algorithms))
+        algorithm = _snapshot_algorithm(self)
+        algorithms = algorithm.algorithms
+        weights = np.array(algorithm.weights or [1] * len(algorithms))
 
         scale = binary_search_param(
             lambda scale: make_adaptive_composition(

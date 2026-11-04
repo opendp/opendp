@@ -21,6 +21,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     Count,
     Algorithm,
+    _snapshot_algorithm,
     Marginals,
     _snapshot_bounds,
 )
@@ -47,7 +48,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class AIM(Algorithm):
     """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_.
 
@@ -138,7 +139,7 @@ class AIM(Algorithm):
                 raise ValueError("queries must not be empty")
             if not all(isinstance(query, Count) for query in self.queries):
                 raise ValueError("queries must be of type Count")
-            object.__setattr__(self, "queries", tuple(self.queries))
+            self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
 
         if not (0 < self.measure_split <= 1):
             raise ValueError(f"measure_split ({self.measure_split}) must be in (0, 1]")
@@ -174,8 +175,9 @@ class AIM(Algorithm):
             raise ValueError("model must be a MarkovRandomField")
 
         d_in = _snapshot_bounds(d_in)
-        queries = _expand_queries(self.queries, input_domain.columns)
-        algorithm = replace(self, queries=queries)
+        algorithm = _snapshot_algorithm(self)
+        queries = _expand_queries(algorithm.queries, input_domain.columns)
+        algorithm = replace(algorithm, queries=queries)
 
         # Reject unsupported measures before constructing the workload.
         get_associated_metric(output_measure)
@@ -355,6 +357,7 @@ def _make_aim_select(
         to_mu = sqrt(2 / pi)
 
     model = cast(mbi.MarkovRandomField, model)
+    queries = [replace(q, by=tuple(q.by)) for q in queries]
 
     def is_small(clique: tuple[str, ...]) -> bool:
         model_size = mbi.junction_tree.hypothetical_model_size(
@@ -406,7 +409,7 @@ def _make_aim_scores(
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
     model = cast(MarkovRandomField, model)
-    queries = tuple(queries)
+    queries = tuple(replace(q, by=tuple(q.by)) for q in queries)
     expectations = dict(expectations)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():

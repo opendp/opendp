@@ -16,6 +16,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     make_stable_marginals,
     Algorithm,
+    _snapshot_algorithm,
     Marginals,
 )
 from opendp.measurements import make_noisy_max
@@ -35,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class MST(Algorithm):
     """MST mechanism from `MMS21 <https://arxiv.org/abs/2108.04978>`_.
 
@@ -140,7 +141,8 @@ class MST(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        d_measure = d_out * self.measure_split
+        algorithm = _snapshot_algorithm(self)
+        d_measure = d_out * algorithm.measure_split
         d_select = prior(prior(d_out - d_measure))
 
         # Reject unsupported measures before constructing the workload.
@@ -166,7 +168,7 @@ class MST(Algorithm):
                 d_out=d_select,
                 edges=edges,
                 model=model,
-                num_selections=self.num_selections,
+                num_selections=algorithm.num_selections,
             )
 
             selected_cliques = qbl(m_select)
@@ -187,7 +189,7 @@ class MST(Algorithm):
             all_marginals = marginals.add(*qbl(m_measure))
 
             # GENERATE (fit a MarkovRandomField)
-            new_model = self.estimator(
+            new_model = algorithm.estimator(
                 model.domain,
                 all_marginals.flatten(),
                 potentials=model.potentials,

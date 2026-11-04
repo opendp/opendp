@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass, replace
 from typing import (
     Callable,
@@ -7,6 +8,7 @@ from typing import (
     Any,
     Iterator,
     Sequence,
+    TypeVar,
     get_args,
     TYPE_CHECKING,
 )
@@ -52,7 +54,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(frozen=True)
+@dataclass
 class Count:
     """Denotes a count query."""
 
@@ -66,7 +68,7 @@ class Count:
     """
 
     def __post_init__(self):
-        object.__setattr__(self, "by", tuple(self.by))
+        self.by = tuple(self.by)
         if self.weight < 0:
             raise ValueError(f"weight ({self.weight}) must be non-negative")
 
@@ -95,7 +97,7 @@ OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms."""
 
@@ -145,6 +147,16 @@ class Algorithm(ABC):
         marginals: "Marginals",
         model,  # MarkovRandomField
     ) -> Measurement: ...
+
+
+A = TypeVar("A", bound=Algorithm)
+
+
+def _snapshot_algorithm(algorithm: A) -> A:
+    """Detach and validate configuration before a measurement captures it."""
+    snapshot = deepcopy(algorithm)
+    snapshot.__post_init__()
+    return snapshot
 
 
 def typed_dict_domain(domains: dict[Any, Domain]) -> ExtrinsicDomain:
