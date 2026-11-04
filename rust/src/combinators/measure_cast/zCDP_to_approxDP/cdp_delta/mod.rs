@@ -133,13 +133,7 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
         a_max.inf_sub(&1.0)?
     };
     //  t1 = (α-1) (αρ - ε)
-    let t1 = match a_1.inf_mul(&ar_e) {
-        // if t1 is negative, then handle negative overflow by making t1 larger: the most negative finite float
-        // making t1 larger makes delta larger, so it's still a valid upper bound
-        Err(_) if a_1.is_sign_negative() != ar_e.is_sign_negative() => f64::MIN,
-        Ok(v) => v,
-        err => err?,
-    };
+    let t1 = a_1.inf_mul(&ar_e)?;
 
     //  t2 = α ln1p(-1/α): 1/α rounds down so the negative ln1p(-1/α) rounds up
     let t2 = a_max.inf_mul(&(1.0).neg_inf_div(&a_max)?.neg().inf_ln_1p()?)?;
