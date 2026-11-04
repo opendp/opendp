@@ -86,7 +86,7 @@ We now take a closer look at each of the struct members.
 
 The input and output domains strictly define the set of permissible
 input and output values. Examples of domains are ``AtomDomain``,
-``VectorDomain``, ``MapDomain`` and ``DataFrameDomain``. When you
+``VectorDomain`` and ``MapDomain``. When you
 attempt to chain any two transformations, the output domain of the first
 transformation must match the input domain of the second transformation
 (`via the PartialEq

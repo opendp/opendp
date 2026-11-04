@@ -1,7 +1,6 @@
 import opendp.prelude as dp
 from opendp.mod import enable_features
 
-import re
 import sys
 import pytest
 import math
@@ -44,11 +43,11 @@ def test_cast_inherent():
 
 def test_impute_constant_inherent():
     tester = (
-        dp.t.make_split_lines()
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
         >> dp.t.then_cast_inherent(TOA=float)
         >> dp.t.then_impute_constant(-1.0)
     )
-    assert tester("nan\n1.") == [-1.0, 1.0]
+    assert tester(["nan", "1."]) == [-1.0, 1.0]
 
 
 def test_cast_default():
@@ -131,79 +130,54 @@ def test_is_equal():
 
 def test_is_null():
     tester = (
-        dp.t.make_split_lines()
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
         >> dp.t.then_cast_inherent(TOA=float)
         >> dp.t.then_is_null()
     )
-    assert tester("nan\n1.\ninf") == [True, False, False]
+    assert tester(["nan", "1.", "inf"]) == [True, False, False]
 
-    tester = dp.t.make_split_lines() >> dp.t.then_cast(TOA=float) >> dp.t.then_is_null()
-    assert tester("nan\n1.\ninf") == [True, False, False]
+    tester = (
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
+        >> dp.t.then_cast(TOA=float)
+        >> dp.t.then_is_null()
+    )
+    assert tester(["nan", "1.", "inf"]) == [True, False, False]
 
 
-def test_split_lines__cast__impute():
-    assert dp.t.make_split_lines()("1\n2\n3") == ["1", "2", "3"]
+def test_cast_impute_pipeline():
     query = (
-        dp.t.make_split_lines()
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
         >> dp.t.then_cast(TOA=int)
         >> dp.t.then_impute_constant(constant=2)
     )
 
-    assert query("1\n2\n3") == [1, 2, 3]
+    assert query(["1", "2", "3"]) == [1, 2, 3]
     query.check(1, 1)
     assert query.map(1) == 1
 
 
 def test_inherent_cast__impute():
     casted = (
-        dp.t.make_split_lines()
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
         >> dp.t.then_cast_inherent(TOA=float)
         >> dp.t.then_impute_constant(constant=9.0)
     )
 
-    assert casted("a\n23.23\n12") == [9.0, 23.23, 12.0]
+    assert casted(["a", "23.23", "12"]) == [9.0, 23.23, 12.0]
     assert casted.check(1, 1)
 
 
 def test_inherent_cast__impute_uniform():
     casted = (
-        dp.t.make_split_lines()
+        (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance())
         >> dp.t.then_cast_inherent(TOA=float)
         >> dp.t.then_impute_uniform_float(bounds=(23.0, 32.5))
     )
 
-    res = casted("a\n23.23\n12")
+    res = casted(["a", "23.23", "12"])
     assert res[1:] == [23.23, 12.0]
     assert 23.0 <= res[0] <= 32.5
     assert casted.check(1, 1)
-
-
-def test_dataframe_pipeline():
-    from opendp.transformations import (
-        make_split_lines,
-        make_split_records,
-        make_create_dataframe,
-        make_select_column,
-    )
-
-    query = (
-        make_split_lines()
-        >> make_split_records(separator=",")
-        >> make_create_dataframe(col_names=["A", "B"])
-        >> make_select_column(key="A", TOA=str)
-    )
-    assert query("1,1.\n2,2.\n3,3.") == ["1", "2", "3"]
-    assert query.check(1, 1)
-
-
-def test_split_dataframe():
-    from opendp.transformations import make_split_dataframe, make_select_column
-
-    query = make_split_dataframe(
-        separator=",", col_names=["23", "17"]
-    ) >> make_select_column(key="23", TOA=str)
-    assert query("1,1.\n2,2.\n3,3.") == ["1", "2", "3"]
-    assert query.check(1, 1)
 
 
 def test_clamp():
@@ -413,52 +387,6 @@ def test_lipschitz_mul_float():
 
     assert trans([3.0] * 10) == 0.4
     assert trans.map(2) == 1.0000000000000153
-
-
-# pytest.mark will override pytest.ini and reenable DeprecationWarnings,
-# so we can confirm that they are in fact happening.
-@pytest.mark.filterwarnings("error::DeprecationWarning")
-def test_df_deprecation_warning():
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape(
-            "Call to deprecated function (or staticmethod) make_split_dataframe. "
-            "(Use Polars instead.) -- Deprecated since version 0.12.0."
-        ),
-    ):
-        dp.t.make_split_dataframe(separator=",", col_names=["A", "B"])
-
-
-def test_df_cast_default():
-    query = (
-        dp.t.make_split_dataframe(separator=",", col_names=["23", "17"])
-        >> dp.t.then_df_cast_default(column_name="23", TIA=str, TOA=int)
-        >> dp.t.then_df_cast_default(column_name="23", TIA=int, TOA=bool)
-        >> dp.t.make_select_column(key="23", TOA=bool)
-    )
-    assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, True, True, True]
-    assert query.check(1, 1)
-
-
-def test_df_is_equal():
-    query = (
-        dp.t.make_split_dataframe(separator=",", col_names=["23", "17"])
-        >> dp.t.then_df_is_equal(column_name="17", value="2.")
-        >> dp.t.make_select_column(key="17", TOA=bool)
-    )
-    assert query("0,0.\n1,1.\n2,2.\n3,3.") == [False, False, True, False]
-    assert query.check(1, 1)
-
-
-def test_df_subset():
-    query = (
-        dp.t.make_split_dataframe(separator=",", col_names=["A", "B"])
-        >> dp.t.then_df_is_equal(column_name="B", value="2.")
-        >> dp.t.make_subset_by(indicator_column="B", keep_columns=["A"])
-        >> dp.t.make_select_column(key="A", TOA=str)
-    )
-    assert query("0,0.\n1,1.\n2,2.\n3,3.") == ["2"]
-    assert query.check(1, 1)
 
 
 def test_lipschitz_b_ary_tree():

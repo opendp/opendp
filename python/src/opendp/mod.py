@@ -488,13 +488,15 @@ class Transformation(ctypes.POINTER(AnyTransformation)):  # type: ignore[misc]
 
     >>> # chain with more transformations from the trans module
     >>> chained = (
-    ...     dp.t.make_split_lines() >>
-    ...     dp.t.then_cast_default(TOA=int) >>
-    ...     count
+    ...     dp.t.make_cast_default(
+    ...         dp.vector_domain(dp.atom_domain(T=str)),
+    ...         dp.symmetric_distance(),
+    ...         TOA=int
+    ...     ) >> count
     ... )
 
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")
+    >>> chained(["1", "2", "3"])
     3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """

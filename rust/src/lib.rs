@@ -33,59 +33,55 @@
 //!
 //! ## Rust Application Example
 //!
-//! Here's a simple example of using OpenDP from Rust to create a private sum:
+//! Here's an example of creating a private sum from a vector:
 //! ```
 //! use opendp::error::Fallible;
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_impute_constant, then_clamp, then_sum};
-//!     use opendp::combinators::{make_chain_tt, make_chain_mt};
-//!     use opendp::measurements::then_laplace;
+//!     use opendp::combinators::{make_chain_mt, make_chain_tt};
+//!     use opendp::domains::{AtomDomain, VectorDomain};
+//!     use opendp::measures::MaxDivergence;
+//!     use opendp::measurements::{make_laplace, then_laplace};
+//!     use opendp::metrics::SymmetricDistance;
+//!     use opendp::transformations::{make_clamp, make_impute_constant, make_sum, then_clamp, then_impute_constant, then_sum};
 //!
-//!     let data = "56\n15\n97\n56\n6\n17\n2\n19\n16\n50".to_owned();
+//!     let data = vec![56., 15., f64::NAN, 56., 6., 17., 2., 19., 16., 50.];
 //!     let bounds = (0.0, 100.0);
 //!     let epsilon = 1.0;
-//!     // remove some epsilon to account for floating-point error
+//!     // Leave a little slack for floating-point error.
 //!     let sigma = (bounds.1 - bounds.0) / (epsilon - 0.0001);
 //!
-//!     // Construct a Transformation to parse a csv string.
-//!     let split_lines = make_split_lines()?;
+//!     let input_domain = VectorDomain::new(AtomDomain::<f64>::default());
+//!     let input_metric = SymmetricDistance;
 //!
-//!     // The next transformation wants to conform with the output domain and metric from `split_lines`.
-//!     let cast = make_cast_default::<_, String, f64>(
-//!         split_lines.output_domain.clone(),
-//!         split_lines.output_metric.clone())?;
+//!     // Impute NaN values with 0.0, producing a domain without NaNs.
+//!     // Clamping requires non-NaN input values.
+//!     let impute = make_impute_constant(input_domain.clone(), input_metric.clone(), 0.0)?;
 //!
-//!     // Since the domain and metric conforms, these two transformations may be chained.
-//!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
+//!     // A transformation's output domain and metric must match the next one's input.
+//!     let clamp = make_clamp(impute.output_domain.clone(), impute.output_metric.clone(), bounds)?;
+//!     let imputed_and_clamped = make_chain_tt(&clamp, &impute)?;
+//!     let sum = make_sum(clamp.output_domain.clone(), clamp.output_metric.clone())?;
+//!     let bounded_sum = make_chain_tt(&sum, &imputed_and_clamped)?;
 //!
-//!     // You can use the more convenient `>>` notation to chain instead.
-//!     // When you use the `then_` version of the constructor,
-//!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
-//!     let load_and_clamp = load_numbers >> then_impute_constant(0.0) >> then_clamp(bounds);
+//!     let laplace = make_laplace::<_, _, MaxDivergence>(
+//!         sum.output_domain.clone(), sum.output_metric.clone(), sigma, None
+//!     )?;
+//!     let noisy_sum = make_chain_mt(&laplace, &bounded_sum)?;
 //!
-//!     // After chaining, the resulting transformation is wrapped in a `Result`.
-//!     let load_and_sum = (load_and_clamp >> then_sum())?;
-//!
-//!     // Construct a Measurement to calculate a noisy sum.
-//!     let noisy_sum = load_and_sum >> then_laplace(sigma, None);
-//!
-//!     // The same measurement, written more succinctly:
-//!     let noisy_sum = (
-//!         make_split_lines()? >>
-//!         then_cast_default() >>
-//!         then_impute_constant(0.0) >>
-//!         then_clamp(bounds) >>
-//!         then_sum() >>
-//!         then_laplace(sigma, None)
+//!     // The >> operator and then_ constructors make the same chain more concise.
+//!     let concise_noisy_sum = (
+//!         (input_domain, input_metric)
+//!         >> then_impute_constant(0.0)
+//!         >> then_clamp(bounds)
+//!         >> then_sum()
+//!         >> then_laplace(sigma, None)
 //!     )?;
 //!
-//!     // Check that the pipeline is (1, 1.0)-close
 //!     assert!(noisy_sum.check(&1, &epsilon)?);
-//!
-//!     // Make a 1.0-epsilon-DP release
-//!     let release = noisy_sum.invoke(&data)?;
+//!     assert!(concise_noisy_sum.check(&1, &epsilon)?);
+//!     let release = concise_noisy_sum.invoke(&data)?;
 //!     println!("release = {}", release);
 //!     Ok(())
 //! }
