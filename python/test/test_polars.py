@@ -1158,8 +1158,9 @@ def test_out_of_range_datetime_component(time_unit):
         [dp.series_domain("t", dp.datetime_domain(time_unit=time_unit))]
     )
     query = seed({"t": dtype}).select(pl.col("t").dt.year())
-    with pytest.raises(dp.OpenDPException, match="out-of-range"):
+    with pytest.raises(dp.OpenDPException, match="out-of-range") as exc:
         dp.t.make_stable_lazyframe(domain, dp.symmetric_distance(), query)
+    assert "pl.Datetime('ns')" in str(exc.value)
 
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])

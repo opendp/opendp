@@ -64,7 +64,7 @@ where
         DataType::Datetime(_, _) => {
             return fallible!(
                 MakeTransformation,
-                "Datetime component extraction may panic on out-of-range millisecond or microsecond timestamps."
+                "Datetime component extraction may panic on out-of-range millisecond or microsecond timestamps. Use a nanosecond-resolution Datetime column (pl.Datetime('ns')) instead."
             );
         }
         _ => {
