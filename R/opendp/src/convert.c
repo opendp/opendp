@@ -70,30 +70,84 @@ static ExtrinsicObject sexp_to_extrinsicobject(SEXP value)
 
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 {
+    ExtrinsicObject object = sexp_to_extrinsicobject(value);
     ExtrinsicObject *output_obj = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
     if (!output_obj)
+    {
+        R_ReleaseObject(value);
+        free((void *)object._0);
         error("failed to allocate extrinsic object");
-    output_obj[0] = sexp_to_extrinsicobject(value);
+    }
+    output_obj[0] = object;
     return output_obj;
+}
+
+static void free_error(void *data)
+{
+    FfiError **owner = (FfiError **)data;
+    if (*owner)
+    {
+        FfiError *err = *owner;
+        *owner = NULL;
+        opendp_core___error_free(err);
+    }
+}
+
+static SEXP extract_error_body(void *data)
+{
+    FfiError *err = *(FfiError **)data;
+    // The original condition wins even if Rust changed the error's variant.
+    if (err->callback)
+    {
+        SEXP condition = PROTECT(extrinsic_object_to_sexp(err->callback));
+        free_error(data);
+        SEXP call = PROTECT(lang2(install("stop"), condition));
+        Rf_eval(call, R_BaseEnv);
+        UNPROTECT(2);
+        return R_NilValue;
+    }
+    const char *message = err->message ? err->message : "";
+    const char *backtrace = err->backtrace ? err->backtrace : "";
+    size_t msg_len = strlen(err->variant) + strlen(message) + 6;
+    char *msg = (char *)R_alloc(msg_len, sizeof(char));
+    snprintf(msg, msg_len, "[%s] : %s", err->variant, message);
+
+    if (*backtrace && !str_equal(backtrace, "backtrace disabled"))
+    {
+        size_t msg_len_bt = strlen(msg) + strlen(backtrace) + 2;
+        char *msg_backtrace = (char *)R_alloc(msg_len_bt, sizeof(char));
+        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, backtrace);
+        msg = msg_backtrace;
+    }
+
+    // Preserve Rust's structured provenance separately from the display text.
+    SEXP condition = PROTECT(allocVector(VECSXP, 5));
+    SEXP names = PROTECT(allocVector(STRSXP, 5));
+    const char *fields[] = {"message", "call", "variant", "raw_message", "backtrace"};
+    for (int i = 0; i < 5; i++)
+        SET_STRING_ELT(names, i, mkChar(fields[i]));
+    setAttrib(condition, R_NamesSymbol, names);
+    SET_VECTOR_ELT(condition, 0, mkString(msg));
+    SET_VECTOR_ELT(condition, 1, R_NilValue);
+    SET_VECTOR_ELT(condition, 2, mkString(err->variant));
+    SET_VECTOR_ELT(condition, 3, err->message ? mkString(err->message) : R_NilValue);
+    SET_VECTOR_ELT(condition, 4, err->backtrace ? mkString(err->backtrace) : R_NilValue);
+    SEXP classes = PROTECT(allocVector(STRSXP, 3));
+    SET_STRING_ELT(classes, 0, mkChar("opendp_error"));
+    SET_STRING_ELT(classes, 1, mkChar("error"));
+    SET_STRING_ELT(classes, 2, mkChar("condition"));
+    classgets(condition, classes);
+    free_error(data);
+    SEXP call = PROTECT(lang2(install("stop"), condition));
+    Rf_eval(call, R_BaseEnv);
+    UNPROTECT(4);
+    return R_NilValue;
 }
 
 SEXP extract_error(FfiError *err)
 {
-    int msg_len = strlen(err->variant) + strlen(err->message) + 6;
-    char *msg = (char *)R_alloc(1, msg_len * sizeof(char));
-    snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
-
-    if (str_equal(err->backtrace, "backtrace disabled"))
-        error("%s", msg);
-    else
-    {
-        int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
-        char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
-        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error("%s", msg_backtrace);
-    }
-
-    return (R_NilValue);
+    // Also release the Rust error if allocating/copying its R condition fails.
+    return R_ExecWithCleanup(extract_error_body, &err, free_error, &err);
 }
 
 const char *sexp_to_charptr(SEXP type_name)
@@ -618,9 +672,7 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
-        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
-        object[0] = sexp_to_extrinsicobject(value);
-        FfiSlice t = {.ptr = object, .len = 1};
+        FfiSlice t = {.ptr = sexp_to_extrinsicobjectptr(value), .len = 1};
         result = t;
     }
 
@@ -748,6 +800,9 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     // An AnyObject is an opaque C struct that contains the data in a rust-specific representation
     // AnyObjects may be used interchangeably in the majority of library APIs
     FfiResult_____AnyObject result = opendp_data__slice_as_object(&slice, c_type_name);
+    // Rust clones this scalar descriptor; release the temporary on either tag.
+    if (str_equal(c_type_name, "ExtrinsicObject"))
+        opendp_data__extrinsic_object_free((ExtrinsicObject *)slice.ptr);
 
     UNPROTECT(2);
 
@@ -757,12 +812,29 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     return result.ok;
 }
 
-SEXP anyobjectptr_to_sexp(AnyObject *obj)
+typedef struct ObjectConversion {
+    AnyObject *object; // Borrowed, never freed here.
+    char *type_name;
+    FfiSlice *slice;
+} ObjectConversion;
+
+static void free_conversion_metadata(void *data)
 {
+    ObjectConversion *conversion = (ObjectConversion *)data;
+    if (conversion->slice)
+        opendp_data__slice_free(conversion->slice);
+    if (conversion->type_name)
+        opendp_data__str_free(conversion->type_name);
+}
+
+static SEXP anyobjectptr_to_sexp_body(void *data)
+{
+    ObjectConversion *conversion = (ObjectConversion *)data;
+    AnyObject *obj = conversion->object;
     FfiResult_____c_char type_name_result = opendp_data__object_type(obj);
     if (type_name_result.tag == Err_____c_char)
         extract_error(type_name_result.err);
-    char *c_type_name = type_name_result.ok;
+    char *c_type_name = conversion->type_name = type_name_result.ok;
 
     SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
@@ -791,11 +863,18 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     FfiResult_____FfiSlice slice_result = opendp_data__object_as_slice(obj);
     if (slice_result.tag == Err_____FfiSlice)
         extract_error(slice_result.err);
-    FfiSlice *slice = slice_result.ok;
+    FfiSlice *slice = conversion->slice = slice_result.ok;
 
     SEXP value = slice_to_sexp(slice, type_name);
     UNPROTECT(1);
     return value;
+}
+
+SEXP anyobjectptr_to_sexp(AnyObject *obj)
+{
+    ObjectConversion conversion = {.object = obj, .type_name = NULL, .slice = NULL};
+    return R_ExecWithCleanup(anyobjectptr_to_sexp_body, &conversion,
+                             free_conversion_metadata, &conversion);
 }
 
 // https://stackoverflow.com/questions/73520428/is-there-a-way-of-passing-an-r-function-object-closxp-to-c-level-code-and-re
