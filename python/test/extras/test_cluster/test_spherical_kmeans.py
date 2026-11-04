@@ -39,13 +39,16 @@ def mechanism(kind="rho", **kwargs):
         dp.max_divergence() if kind == "epsilon" else dp.zero_concentrated_divergence()
     )
     return make_private_spherical_kmeans(
-        csr_array2_domain(4, T=bool),
-        METRIC,
-        measure,
-        3,
-        0.5,
-        T=dp.i32,
-        **(PARAMS | kwargs),
+        **{
+            "input_domain": csr_array2_domain(4, T=bool),
+            "input_metric": METRIC,
+            "output_measure": measure,
+            "d_in": 3,
+            "d_out": 0.5,
+            "T": dp.i32,
+            **PARAMS,
+            **kwargs,
+        }
     )
 
 
@@ -295,40 +298,18 @@ def test_invalid_configuration(params):
 
 def test_invalid_spaces_precision_and_unfitted_state():
     with pytest.raises(ValueError, match="T must"):
-        make_private_spherical_kmeans(
-            csr_array2_domain(4, T=bool), METRIC, dp.max_divergence(), 1, 1.0, T=dp.f64
-        )
+        mechanism(T=dp.f64)
     with pytest.raises(ValueError, match="quantize"):
-        make_private_spherical_kmeans(
-            csr_array2_domain(1024**2 + 1, T=bool),
-            METRIC,
-            dp.max_divergence(),
-            1,
-            1.0,
-            T=dp.i32,
-        )
-    for metric, measure in [
-        (dp.change_one_distance(), dp.max_divergence()),
-        (METRIC, dp.fixed_smoothed_max_divergence()),
-    ]:
-        with pytest.raises(ValueError):
-            make_private_spherical_kmeans(
-                csr_array2_domain(4, T=bool), metric, measure, 1, 1.0, T=dp.i32
-            )
+        mechanism(input_domain=csr_array2_domain(1024**2 + 1, T=bool))
+    with pytest.raises(ValueError, match="add/remove"):
+        mechanism(input_metric=dp.change_one_distance())
+    with pytest.raises(ValueError, match="zero_concentrated"):
+        mechanism(output_measure=dp.fixed_smoothed_max_divergence())
     with pytest.raises(ValueError, match="T=bool"):
-        make_private_spherical_kmeans(
-            csr_array2_domain(4, T=float), METRIC, dp.max_divergence(), 1, 1.0, T=dp.i32
-        )
+        mechanism(input_domain=csr_array2_domain(4, T=float))
     for budget in [0.0, math.nextafter(0.0, 1.0)]:
         with pytest.raises(ValueError):
-            make_private_spherical_kmeans(
-                csr_array2_domain(4, T=bool),
-                METRIC,
-                dp.max_divergence(),
-                1,
-                budget,
-                T=dp.i32,
-            )
+            mechanism(d_out=budget)
     model = SphericalKMeans(**PARAMS)
     with pytest.raises(ValueError, match="not been fitted"):
         model.predict(data())
