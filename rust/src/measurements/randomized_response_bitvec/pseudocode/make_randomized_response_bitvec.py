@@ -11,9 +11,14 @@ def make_randomized_response_bitvec(
         raise Exception("Probability must be in (0.0, 1]")
 
     m = input_domain.max_weight
-    if m is None:
+    if m is None:  # |\label{line:max-weight}|
         raise Exception(
             "make_randomized_response_bitvec requires a max_weight on the input_domain"
+        )
+
+    if input_domain.size is None:  # |\label{line:size}|
+        raise Exception(
+            "make_randomized_response_bitvec requires a size on the input_domain"
         )
 
     epsilon = 2 * m * log((2 - f) / f)
