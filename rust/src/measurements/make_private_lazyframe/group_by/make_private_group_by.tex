@@ -50,9 +50,12 @@ The function logic breaks down into parts:
     \end{enumerate}
 \end{enumerate}
 
-\rustdoc{measurements/make\_private\_lazyframe/group\_by/matching/fn}{match\_group\_by} on line \ref{line:match-group-by} returns
-\texttt{input} (the input plan), \texttt{group\_by} (the grouping keys), \texttt{aggs} (the list of expressions to compute per-partition),
-and \texttt{key\_sanitizer} (details on how to sanitize the key-set).
+By the proof definition of \rustdoc{measurements/make\_private\_lazyframe/group\_by/matching/fn}{match\_group\_by} on line \ref{line:match-group-by},
+the match returns the group-by input, grouping keys, aggregations, and an optional key sanitizer.
+In the join case, the sanitizer recognizes a public key set covering every grouping
+column. It requires join-key coalescing and forbids private-output column collisions and
+join slicing. The output function subsequently deduplicates the public join keys
+and imputes missing aggregates, preventing private group membership from leaking.
 
 \subsection{Stability of grouping}
 By the postcondition of \texttt{StableDslPlan.make\_stable}, \texttt{t\_prior} is a valid transformation (line \ref{line:tprior}).
@@ -64,8 +67,9 @@ Therefore data is grouped in a stable manner, with no data-dependent encoding or
 \subsection{Prepare to release \texttt{aggs}}
 \texttt{margin} denotes what is considered public information about the key set,
 pulled from descriptors in the input domain (line \ref{line:groupcols}).
-An upper bound on the total number of groups can be statically derived via the length of the public keys in the join.
-Line \ref{line:keys-len} retrieves this information from the public keys and assigns it to the margin.
+No bound on the number of groups is inferred from the public key frame: that frame may
+change independently between construction and invocation. Only input-domain and metric
+bounds are used to account for the private aggregates.
 \texttt{is\_join} indicates that key sanitization will occur via a join.
 
 Line \ref{line:joint} starts constructing a joint measurement
@@ -142,11 +146,16 @@ to \texttt{arg} grouped by \texttt{keys}.
 \texttt{key\_sanitizer} is conveyed into the plan, if set,
 to ensure that the keys are also released with differential privacy if necessary.
 
-In the case of the join sanitization, by the definition of \texttt{KeySanitizer},
-the join will either be a left or right join.
+In the join case, by the proof definition of \texttt{match\_group\_by}, the key set is public.
+By the definition of \texttt{KeySanitizer}, the join will either be a left or right join.
 The branching swaps the input plan and labels plan to ensure that the sensitive input data is always joined against the labels,
 but using the same join type as in the original plan.
+Before joining, the public side is deduplicated by its join-key columns, whether or not the
+caller's plan already performs deduplication.
 Once the join is applied, the fill imputation expressions are applied, hiding which partitions don't exist in the original data.
+Uniqueness of public join keys prevents differences in correlation between duplicated real and imputed groups.
+Coalescing prevents a nullable private key column from revealing group membership, while
+the absence of output-name collisions ensures the fill expressions target the private aggregates.
 
 It is assumed that the emitted DSL is executed in the same fashion as is done by Polars.
 This proof/implementation does not take into consideration side-channels involved in the execution of the DSL.
@@ -181,9 +190,11 @@ when grouped data sets may differ by this tightened distance triple,
 is \texttt{d\_out}.
 
 We also need to consider the privacy loss from releasing \texttt{keys}.
-On line \ref{line:privacy-map-static-keys} under the \texttt{public\_info} invariant, or under the join sanitization,
-releases on any neighboring datasets $x$ and $x'$ will share the same key-set,
-resulting in zero privacy loss.
+On line \ref{line:privacy-map-static-keys}, the \texttt{public\_info} invariant,
+or the join case of the proof definition of \texttt{match\_group\_by},
+establishes a public key set that is shared across neighboring datasets $x$ and $x'$.
+Together with imputation for absent partitions in the join case,
+the release of these keys incurs zero privacy loss.
 
 We now adapt the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7)
 to consider the case of stable key release from line \ref{line:privacy-map-threshold}.
