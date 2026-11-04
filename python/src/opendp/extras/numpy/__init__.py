@@ -126,6 +126,7 @@ def array2_domain(
         if origin.ndim not in {0, 1}:
             raise ValueError("origin must have 0 or 1 dimensions")  # pragma: no cover
 
+        # Do not retain a reference to the caller's array.
         origin = origin.copy()
 
     elif origin is not None:
@@ -160,7 +161,7 @@ def array2_domain(
     elif cardinalities is not None:
         raise ValueError("cardinalities must be a list, ndarray or None")
 
-    cardinalities_copy = (
+    cardinalities = (
         np.array(cardinalities, copy=True) if cardinalities is not None else None
     )
 
@@ -198,10 +199,10 @@ def array2_domain(
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
 
-        if cardinalities_copy is not None:
+        if cardinalities is not None:
             n_unique = np.array([len(np.unique(x_i)) for x_i in x.T])
-            if any(cardinalities_copy < n_unique):
-                msg = f"unique values in data ({n_unique}) must not exceed cardinalities ({cardinalities_copy})"
+            if any(cardinalities < n_unique):
+                msg = f"unique values in data ({n_unique}) must not exceed cardinalities ({cardinalities})"
                 raise ValueError(msg)
 
         return True
@@ -213,7 +214,7 @@ def array2_domain(
         size=size,
         num_columns=num_columns,
         nan=nan,
-        cardinalities=cardinalities_copy,
+        cardinalities=cardinalities,
         T=T,
     )
 

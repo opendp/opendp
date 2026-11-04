@@ -246,8 +246,8 @@ def _make_aim_marginal(
     model = cast(MarkovRandomField, model)
 
     cardinalities = {
-        c: d._cast(NPArrayDDomain).shape
-        for c, d in input_domain._cast(TypedDictDomain).items()
+        c: d.cast(NPArrayDDomain).shape
+        for c, d in input_domain.cast(TypedDictDomain).items()
     }
 
     # factors to convert stddev -> scale and scale -> half-distribution expectation
@@ -401,8 +401,8 @@ def _make_aim_scores(
 
     model = cast(MarkovRandomField, model)
 
-    for value_domain in input_domain._cast(TypedDictDomain).values():
-        value_domain._cast(NPArrayDDomain)  # pragma: no cover
+    for value_domain in input_domain.cast(TypedDictDomain).values():
+        value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
     def score_query(query: Count, exact: np.ndarray):
         penalty = expectations[query.by] * prod(exact.shape)

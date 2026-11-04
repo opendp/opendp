@@ -53,12 +53,12 @@ def make_pairwise_predict(
 
     if not str(input_domain).startswith("NPArray2Domain"):
         raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
-    if input_domain._descriptor.num_columns != 2:
+    if input_domain.descriptor.num_columns != 2:
         raise ValueError("input_domain must have two columns")  # pragma: no cover
     if input_metric != dp.symmetric_distance():
         raise ValueError("input_metric must be symmetric distance")  # pragma: no cover
 
-    input_desc = input_domain._descriptor
+    input_desc = input_domain.descriptor
     if input_desc.T not in _NUMERIC_TYPES:
         raise ValueError("input_domain must have numeric elements")
     size = input_desc.size
