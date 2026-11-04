@@ -8,7 +8,7 @@ use crate::accuracy::{
 };
 use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
@@ -72,34 +72,37 @@ where
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    for expr in &group_by {
-        // grouping keys must be stable
-        let t_group_by = expr.clone().make_stable(
-            WildExprDomain {
-                columns: middle_domain.series_domains.clone(),
-                context: Context::RowByRow,
-            },
-            L0PInfDistance(middle_metric.0.clone()),
-        )?;
+    let group_by_keys = group_by
+        .iter()
+        .map(|expr| {
+            // Grouping keys must be stable; preserve the normalized expression.
+            let t_key = expr.clone().make_stable(
+                WildExprDomain {
+                    columns: middle_domain.series_domains.clone(),
+                    context: Context::RowByRow,
+                },
+                L0PInfDistance(middle_metric.0.clone()),
+            )?;
 
-        let series_domain = &t_group_by.output_domain.column;
-        if contains_float(&series_domain.dtype()) {
-            return fallible!(
-                MakeMeasurement,
-                "Floating-point grouping keys are not supported because Polars may reveal distinct representations of signed zero or NaN. Convert {} to a non-floating-point type before grouping.",
-                series_domain.name
-            );
-        }
-        if let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() {
-            if domain.categories().is_none() {
+            let series_domain = &t_key.output_domain.column;
+            if contains_float(&series_domain.dtype()) {
                 return fallible!(
                     MakeMeasurement,
-                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.",
+                    "Floating-point grouping keys are not supported because Polars may reveal distinct representations of signed zero or NaN. Convert {} to a non-floating-point type before grouping.",
                     series_domain.name
                 );
             }
-        };
-    }
+            if matches!(series_domain.dtype(), DataType::Categorical(_, _)) {
+                return fallible!(
+                    MakeMeasurement,
+                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to String or Enum before grouping.",
+                    series_domain.name
+                );
+            }
+
+            Ok(t_key.invoke(&input)?.expr)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     // 2: prepare for release of `aggs`
     let group_by_id = HashSet::from_iter(group_by.iter().cloned());
@@ -183,7 +186,7 @@ where
         #[cfg(patch_polars)]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             predicates: vec![],
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
@@ -193,7 +196,7 @@ where
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,

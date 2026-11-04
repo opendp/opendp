@@ -21,7 +21,7 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         input_space,
         # Domains:
         atom,
-        dp.categorical_domain(["A", "B", "C"]),
+        dp.categorical_domain(),
         dp.series_domain("A", atom),
         dp.lazyframe_domain([dp.series_domain("A", atom)]),
         dp.wild_expr_domain([]),
