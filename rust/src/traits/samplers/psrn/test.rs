@@ -34,7 +34,8 @@ impl InverseCDF for UniformRV {
 fn test_value() -> Fallible<()> {
     let mut psrn = PartialSample::new(UniformRV);
     // sampled value will always be in [0, 1]
-    assert!((0f64..1f64).contains(&psrn.value()?));
+    let value: f64 = psrn.value()?;
+    assert!((0f64..1f64).contains(&value));
 
     Ok(())
 }
