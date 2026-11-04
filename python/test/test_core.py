@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 import opendp.prelude as dp
@@ -328,6 +330,84 @@ def test_custom_domain(new_domain):
     misc_data = {"A": january_1, "C": 1j + 2}  # type: ignore[assignment]
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
+
+
+def test_extrinsic_descriptors_are_copied():
+    domain_descriptor = {"members": [1]}
+    domain = _extrinsic_domain(
+        "TestDomain",
+        lambda x: x in domain_descriptor["members"],
+        domain_descriptor,
+    )
+    domain.descriptor["members"].append(2)
+    domain.cast(dict)["members"].append(3)
+    assert domain.descriptor == {"members": [1]}
+    assert domain.member(1)
+    assert not domain.member(2)
+
+    metric = _extrinsic_distance("TestMetric", ["distance"])
+    metric.descriptor.append("changed")
+    metric.cast(list).append("changed")
+    assert metric.descriptor == ["distance"]
+
+    measure = _extrinsic_divergence("TestMeasure", {"kind": "custom"})
+    measure.descriptor["kind"] = "changed"
+    measure.cast(dict)["kind"] = "changed"
+    assert measure.descriptor == {"kind": "custom"}
+
+    with pytest.raises(ValueError, match="domain descriptor must be a int"):
+        domain.cast(int)
+    with pytest.raises(ValueError, match="metric descriptor must be a int"):
+        metric.cast(int)
+    with pytest.raises(ValueError, match="measure descriptor must be a int"):
+        measure.cast(int)
+
+
+def test_extrinsic_descriptors_copy_nested_native_handles():
+    # Native-backed OpenDP handles are shared; mutable Python state is not.
+    value = {
+        "domain": dp.atom_domain(T=int),
+        "metric": dp.symmetric_distance(),
+        "measure": dp.max_divergence(),
+        "items": [1],
+    }
+    domain = _extrinsic_domain("Nested", lambda _: True, value)
+
+    descriptor = domain.cast(dict)
+    for key in ("domain", "metric", "measure"):
+        assert descriptor[key] is value[key]
+
+    descriptor["items"].append(2)
+    assert domain.descriptor["items"] == [1]
+
+
+def test_extrinsic_descriptors_without_hbc(monkeypatch):
+    import opendp.mod as mod
+
+    monkeypatch.setattr(
+        mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+    )
+    dp.enable_features("contrib")
+    assert "honest-but-curious" not in mod.GLOBAL_FEATURES
+
+    objects: list[tuple[Any, type]] = [
+        (_extrinsic_domain("TestDomain", lambda _: True, {"a": [1]}), dict),
+        (_extrinsic_distance("TestMetric", ["a"]), list),
+        (_extrinsic_divergence("TestMeasure", {"a": [1]}), dict),
+    ]
+    for obj, expected_type in objects:
+        value = obj.descriptor
+        assert isinstance(value, expected_type)
+        assert obj.cast(expected_type) == value
+
+    constructors: list[tuple[Any, tuple]] = [
+        (dp.user_domain, ("TestDomain", lambda _: True)),
+        (dp.user_distance, ("TestMetric",)),
+        (dp.user_divergence, ("TestMeasure",)),
+    ]
+    for constructor, args in constructors:
+        with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+            constructor(*args)
 
 
 def test_extrinsic_free():

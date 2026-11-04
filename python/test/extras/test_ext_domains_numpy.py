@@ -158,8 +158,43 @@ def test_array2_domain_snapshots_origin():
     origin[:] = np.nan
     stored = domain.descriptor.origin
     np.testing.assert_array_equal(stored, [1.0, 2.0])
-    stored[:] = np.nan  # Descriptor edits must not change membership.
+    stored[:] = np.nan  # Mutating the returned descriptor must not affect membership.
     assert domain.member(valid)
+
+
+def test_array2_domain_snapshots_cardinalities():
+    cardinalities = np.array([2, 3])
+    domain = dp.numpy.array2_domain(cardinalities=cardinalities, T="i64")
+    valid = np.array([[0, 0], [1, 1]], dtype=np.int64)
+    assert domain.member(valid)
+
+    cardinalities[:] = 1
+    stored = domain.descriptor.cardinalities
+    np.testing.assert_array_equal(stored, [2, 3])
+    stored[:] = 1
+    assert domain.member(valid)
+
+
+def test_numpy_descriptor_without_hbc(monkeypatch):
+    import opendp.mod as mod
+    from opendp.extras.numpy import NPArray2Domain
+
+    monkeypatch.setattr(
+        mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+    )
+    dp.enable_features("contrib", "idealized-numerics")
+    assert "honest-but-curious" not in mod.GLOBAL_FEATURES
+
+    domain = dp.numpy.array2_domain(T=float, num_columns=2)
+    assert domain.cast(NPArray2Domain).num_columns == 2
+    trans = (domain, dp.symmetric_distance()) >> dp.numpy.then_np_clamp(
+        norm=1.0, p=2, origin=np.array([1.0, 2.0])
+    )
+    expected = trans(np.array([[3.0, 4.0]]))
+    desc = trans.output_domain.descriptor
+    desc.origin[:] = np.nan
+    assert trans.output_domain.member(expected)
+    assert np.array_equal(trans(np.array([[3.0, 4.0]])), expected)
 
 
 @pytest.mark.parametrize("p", [1, 2])

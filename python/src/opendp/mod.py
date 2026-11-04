@@ -9,6 +9,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 
 from __future__ import annotations
 import ctypes
+from copy import deepcopy
 from dataclasses import asdict
 from typing import (
     Any,
@@ -876,8 +877,12 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDomain)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1025,12 +1030,10 @@ class ExtrinsicDomain(Domain):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.domains import _extrinsic_domain_descriptor
 
-        return _extrinsic_domain_descriptor(self)
+        return deepcopy(_extrinsic_domain_descriptor(self))
 
 
 class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
@@ -1092,8 +1095,12 @@ class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDistance)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1111,12 +1118,10 @@ class ExtrinsicDistance(Metric):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.metrics import _extrinsic_metric_descriptor
 
-        return _extrinsic_metric_descriptor(self)
+        return deepcopy(_extrinsic_metric_descriptor(self))
 
 
 class FrameDistance(Metric):
@@ -1230,8 +1235,12 @@ class Measure(ctypes.POINTER(AnyMeasure)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDivergence)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1249,12 +1258,10 @@ class ExtrinsicDivergence(Measure):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of measure. Used to retrieve the descriptor associated with measures defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.measures import _extrinsic_measure_descriptor
 
-        return _extrinsic_measure_descriptor(self)
+        return deepcopy(_extrinsic_measure_descriptor(self))
 
 
 class ApproximateDivergence(Measure):

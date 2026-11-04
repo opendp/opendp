@@ -161,6 +161,10 @@ def array2_domain(
     elif cardinalities is not None:
         raise ValueError("cardinalities must be a list, ndarray or None")
 
+    cardinalities = (
+        np.array(cardinalities, copy=True) if cardinalities is not None else None
+    )
+
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
         raise ValueError(
@@ -204,7 +208,7 @@ def array2_domain(
         return True
 
     desc = NPArray2Domain(
-        origin=origin.copy() if origin is not None else None,
+        origin=origin,
         norm=norm,
         p=p,
         size=size,
