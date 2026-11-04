@@ -93,6 +93,87 @@ def test_algorithm_err_elements(algorithm):
         )
 
 
+def test_algorithm_configuration_snapshots_lists():
+    count = Count(("A",))
+    fixed_queries = [count]
+    aim_queries = [count]
+    fixed = Fixed(queries=fixed_queries)
+    aim = AIM(queries=aim_queries)
+    algorithms = [fixed, aim]
+    weights = [1.0, 2.0]
+    sequential = Sequential(algorithms=algorithms, weights=weights)
+
+    fixed_queries.clear()
+    aim_queries.clear()
+    algorithms.clear()
+    weights[0] = 10.0
+
+    assert fixed.queries == (count,)
+    assert aim.queries == (count,)
+    assert sequential.algorithms == (fixed, aim)
+    assert sequential.weights == (1.0, 2.0)
+
+
+def test_algorithm_configuration_can_change_before_capture():
+    from opendp.extras.mbi._utilities import _snapshot_algorithm
+
+    count = Count(("A",), weight=1.0)
+    first = Fixed(queries=[count])
+    nested = Sequential(
+        algorithms=[first, AIM(queries=[Count(("A",))])],
+        weights=[1.0, 2.0],
+    )
+    captured = _snapshot_algorithm(nested)
+
+    count.weight = 3.0
+    first.queries[0].weight = 4.0
+    first.queries = [Count(("B",))]
+    nested.algorithms = [MST()]
+    nested.weights = [9.0]
+
+    captured_fixed = captured.algorithms[0]
+    assert isinstance(captured_fixed, Fixed)
+    assert captured_fixed.queries[0].weight == 1.0
+    assert captured_fixed.queries[0].by == ("A",)
+    assert captured.weights == (1.0, 2.0)
+    assert len(captured.algorithms) == 2
+
+
+def test_fixed_direct_make_marginals_snapshots_configuration():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    algorithm = Fixed(queries=[Count(("A",))])
+    measurement = algorithm.make_marginals(
+        input_domain=dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 1)))]
+        ),
+        input_metric=dp.frame_distance(dp.symmetric_distance()),
+        output_measure=dp.max_divergence(),
+        d_in=[dp.polars.Bound(per_group=1)],
+        d_out=5.0,
+        marginals=Marginals(),
+        model=None,
+    )
+
+    def changed_estimator(*args, **kwargs):
+        raise AssertionError("configuration mutated after construction")
+
+    algorithm.estimator = changed_estimator
+    algorithm.queries = [Count(("B",))]
+    _, model = measurement(pl.LazyFrame({"A": pl.Series("A", [0, 1], dtype=pl.Int32)}))
+    assert model is not None
+
+
+def test_aim_rejects_mutable_query_objects():
+    class QueryLike:
+        by = ["A"]
+        weight = 1.0
+
+    with pytest.raises(ValueError, match="queries must be of type Count"):
+        AIM(queries=[QueryLike()])  # type: ignore[list-item]
+
+
 @pytest.mark.parametrize(
     "kwargs,message",
     [
@@ -121,10 +202,48 @@ def test_mst_and_aim_scores_use_l1_sensitivity():
     model = mirror_descent(mbi.Domain(clique, (9, 9)), [])
     distance = {clique: (9, 9, 1)}
 
-    mst = _make_mst_scores(domain, metric, [clique], model)
+    edge = ["A", "B"]
+    mst = _make_mst_scores(domain, metric, [edge], model)  # type: ignore[list-item]
     aim = _make_aim_scores(domain, metric, [Count(clique)], {clique: 0.0}, model)
     assert mst.map(distance) == 9.0
     assert aim.map(distance) == 9.0
+
+    import numpy as np  # type: ignore[import-not-found]
+
+    exact = {clique: np.zeros((9, 9), dtype=np.int32)}
+    original_score = mst(exact)
+    edge[0] = "B"
+    assert mst(exact) == original_score
+
+
+def test_aim_scores_snapshot_workload():
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    from opendp.extras.mbi._aim import _make_aim_scores
+    from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
+
+    clique: tuple[str, ...] = ("A",)
+    queries = [Count(clique, weight=2.0)]
+    expectations = {clique: 1.0}
+    transformation = _make_aim_scores(
+        typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(2,), T="i32")}),
+        typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32"))),
+        queries,
+        expectations,
+        mirror_descent(mbi.Domain(clique, (2,)), []),
+    )
+    data = {clique: np.array([1, 0], dtype=np.int32)}
+    distance = {clique: (1, 1, 1)}
+    expected_score = transformation(data)
+    expected_map = transformation.map(distance)
+
+    queries[0].weight = 100.0
+    queries[0].by = ("B",)
+    queries.clear()
+    expectations[clique] = 1_000.0
+    assert transformation(data) == pytest.approx(expected_score)
+    assert transformation.map(distance) == expected_map
 
 
 def test_aim_exhaustion():
