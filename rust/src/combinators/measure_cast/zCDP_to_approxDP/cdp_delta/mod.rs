@@ -48,7 +48,7 @@ use num::Zero;
 use opendp_derive::proven;
 
 use crate::{
-    error::Fallible,
+    error::{ErrorVariant, Fallible},
     traits::{InfAdd, InfDiv, InfExp, InfLn1P, InfMul, InfSub},
 };
 
@@ -61,11 +61,11 @@ pub(crate) mod test;
 /// For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
 /// or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
-    if rho.is_sign_negative() {
+    if rho < 0.0 {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
 
-    if eps.is_sign_negative() {
+    if eps < 0.0 {
         return fallible!(FailedMap, "epsilon ({}) must be non-negative", eps);
     }
 
@@ -90,10 +90,18 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
     // We now choose bounds for the binary search over alpha.
 
     // The optimal alpha is no greater than (ε+1)/(2ρ)
-    let mut a_max = eps
-        .inf_add(&1.0)?
-        .inf_div(&(2.0).neg_inf_mul(&rho)?)?
-        .inf_add(&2.0)?;
+    let alpha_bound = || {
+        eps.inf_add(&1.0)?
+            .inf_div(&(2.0).neg_inf_mul(&rho)?)?
+            .inf_add(&2.0)
+    };
+    let mut a_max = match alpha_bound() {
+        Ok(alpha) => alpha,
+        // Any alpha > 1 certifies a bound. If the optimization heuristic
+        // overflows, use alpha=2 rather than interpreting the error as delta.
+        Err(error) if error.variant == ErrorVariant::Overflow => 2.0,
+        Err(error) => return Err(error),
+    };
 
     // Don't let alpha be too small, due to numerical stability.
     // We only encounter α <= 1.01 when eps <= rho or close to it.

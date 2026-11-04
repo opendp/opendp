@@ -33,22 +33,21 @@ where
         measurement.input_metric.clone(),
         SmoothedMaxDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .map(|(eps, delta)| PrivacyProfile::new(fixed_approx_dp_privacy_curve(eps, delta)))
+            privacy_map.eval(d_in).and_then(|(eps, delta)| {
+                PrivacyProfile::new_log(move |epsilon| {
+                    Ok(epsilon
+                        .iter()
+                        .map(|&epsilon| {
+                            if epsilon < eps {
+                                0.0
+                            } else {
+                                f64::NEG_INFINITY
+                            }
+                        })
+                        .collect())
+                })
+                .with_delta_slack(delta)
+            })
         }),
     )
-}
-
-fn fixed_approx_dp_privacy_curve(
-    fixed_epsilon: f64,
-    fixed_delta: f64,
-) -> impl Fn(f64) -> Fallible<f64> {
-    move |epsilon: f64| {
-        Ok(if epsilon >= fixed_epsilon {
-            fixed_delta
-        } else {
-            1.0
-        })
-    }
 }

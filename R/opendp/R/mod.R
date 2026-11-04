@@ -392,22 +392,51 @@ new_function_internal <- function(ptr, log) {
   opendp_function
 }
 
+#' Construct a vector-valued privacy profile
+#'
+#' Callbacks receive a nondecreasing numeric vector, including for singleton
+#' queries, and return one conservative bound per input. Duplicates are allowed.
+#' Ordinary delta values convert upward to log space; zero must be exact.
+#' Epsilon queries use generic monotone inversion.
+#'
+#' @concept mod
+#' @param delta vector-valued core delta callback
+#' @param log_delta vector-valued core log-delta callback, instead of delta
+#' @param delta_slack additive delta slack belonging to this profile
+#' @return a privacy profile accepting scalar or vector queries
+#' @export
+privacy_profile <- function(delta = NULL, log_delta = NULL, delta_slack = 0.) {
+  if (is.null(delta) == is.null(log_delta)) {
+    stop("expected exactly one of delta or log_delta", call. = FALSE)
+  }
+  `_new_privacy_profile`(
+    log_delta %||% delta,
+    is_log = !is.null(log_delta), delta_slack = delta_slack
+  )
+}
+
 #' new privacy profile
 #'
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
 new_privacy_profile_internal <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+  privacy_profile <- function(attr, epsilon, delta, log_delta, log_delta_at) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(log_delta) + missing(log_delta_at) != 4) {
+      stop("expected exactly one of attr, epsilon, delta, log_delta or log_delta_at", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
-      return(privacy_profile_delta(ptr, epsilon))
+      return(privacy_profile_delta(ptr, as.double(epsilon)))
     }
 
     if (!missing(delta)) {
-      return(privacy_profile_epsilon(ptr, delta))
+      return(privacy_profile_epsilon(ptr, as.double(delta)))
+    }
+    if (!missing(log_delta)) {
+      return(privacy_profile_epsilon_from_log_delta(ptr, as.double(log_delta)))
+    }
+    if (!missing(log_delta_at)) {
+      return(privacy_profile_log_delta(ptr, as.double(log_delta_at)))
     }
 
     switch(attr,
