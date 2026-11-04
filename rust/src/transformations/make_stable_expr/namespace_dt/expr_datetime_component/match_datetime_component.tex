@@ -12,7 +12,7 @@
 \contrib
 Proves soundness of \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{match\_datetime\_component} in \asOfCommit{mod.rs}{f5bb719}.
 
-\texttt{match\_datetime\_component} returns the data type and number of possible unique values of a compute operation that retrieves a datetime component.
+\texttt{match\_datetime\_component} returns the data type of a recognized temporal component extraction operation.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -30,14 +30,14 @@ None
 \subsection*{Postcondition}
 \begin{theorem}
     For any choice of \texttt{temporal\_function},
-    returns the data type of the output if the input is an infallible row-by-row temporal expression,
-    otherwise returns none.
+    returns the output data type if the function extracts a row-by-row temporal component,
+    otherwise returns none. This matcher does not certify infallibility for arbitrary input data types.
 \end{theorem}
 
 \begin{proof}
     For each choice of \texttt{temporal\_function},
     the data type is directly verified via testing.
-    Infallible row-by-row is verified by inspection of the Polars source code.
+    Whether execution is infallible must be established separately for the input data type.
 \end{proof}
 
 \end{document}

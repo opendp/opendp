@@ -45,8 +45,8 @@ useful in predicates and grouping functions.
 Date/Time Components
 --------------------
 
-- Date expressions (can be applied to ``pl.Date`` and ``pl.Datetime``
-  dtypes)
+- Date expressions (can be applied to ``pl.Date`` and nanosecond-resolution
+  ``pl.Datetime`` dtypes)
 
   - ``.dt.year``
   - ``.dt.iso_year``
@@ -57,8 +57,8 @@ Date/Time Components
   - ``.dt.day``
   - ``.dt.ordinal_day``
 
-- Time expressions (can be applied to ``pl.Time`` and ``pl.Datetime``
-  dtypes)
+- Time expressions (can be applied to ``pl.Time`` and nanosecond-resolution
+  ``pl.Datetime`` dtypes)
 
   - ``.dt.hour``
   - ``.dt.minute``
@@ -66,6 +66,10 @@ Date/Time Components
   - ``.dt.millisecond``
   - ``.dt.microsecond``
   - ``.dt.nanosecond``
+
+Millisecond- and microsecond-resolution ``pl.Datetime`` columns are not
+supported for component extraction: out-of-range timestamp values can cause
+data-dependent execution failures.
 
 An example of their use can be seen below, where a string column is
 parsed into dates, and then year and month components are retrieved from
