@@ -7,6 +7,7 @@
 pub(crate) mod ffi;
 
 pub(crate) mod rdp_to_approxdp;
+pub(crate) mod zcdp;
 
 pub(crate) mod curves;
 pub use curves::*;
@@ -100,6 +101,7 @@ pub(crate) struct PrivacyCapabilities {
     approx_dp: Option<Purity>,
     profile: Option<Purity>,
     renyi: Option<Purity>,
+    zcdp: Option<Purity>,
 }
 
 impl PrivacyCapabilities {
@@ -108,6 +110,7 @@ impl PrivacyCapabilities {
             approx_dp,
             profile,
             renyi: None,
+            zcdp: None,
         }
     }
 
@@ -115,6 +118,14 @@ impl PrivacyCapabilities {
         self.renyi = Some(purity);
         self
     }
+    pub(crate) fn with_zcdp(mut self, purity: Purity) -> Self {
+        self.zcdp = Some(purity);
+        self
+    }
+    pub(crate) fn zcdp(&self) -> Option<Purity> {
+        self.zcdp
+    }
+
     pub(crate) fn renyi(&self) -> Option<Purity> {
         self.renyi
     }
@@ -142,6 +153,10 @@ pub struct MultiDP {
 impl MultiDP {
     pub(crate) fn new(capabilities: PrivacyCapabilities) -> Self {
         Self { capabilities }
+    }
+
+    pub(crate) fn with_zcdp(purity: Purity) -> Self {
+        Self::new(PrivacyCapabilities::default().with_zcdp(purity))
     }
 
     pub(crate) fn with_renyi(purity: Purity) -> Self {

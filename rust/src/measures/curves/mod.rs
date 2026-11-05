@@ -12,6 +12,8 @@ mod profile_to_tradeoff;
 mod renyidp;
 #[cfg(feature = "ffi")]
 mod renyidp_ffi;
+#[cfg(feature = "ffi")]
+mod zcdp_ffi;
 
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
@@ -89,6 +91,7 @@ pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
     renyi: Option<RenyiRepresentation>,
+    zcdp: Option<ZCDPRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -141,6 +144,15 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a rho-zCDP representation with additive source-delta semantics.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64, source_delta: f64) -> Fallible<Self> {
+        check_rho(rho)?;
+        check_delta(source_delta)?;
+        self.zcdp = Some(ZCDPRepresentation { rho, source_delta });
+        Ok(self)
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
@@ -162,6 +174,10 @@ impl PrivacyGuarantee {
                     .map(|repr| {
                         renyidp::delta_via_renyiDP(repr.curve.as_ref(), repr.source_delta, epsilon)
                     })
+                    .transpose()?,
+                self.zcdp
+                    .as_ref()
+                    .map(|repr| renyidp::delta_via_zCDP(repr.rho, repr.source_delta, epsilon))
                     .transpose()?,
             ],
             f64::min,
@@ -201,6 +217,10 @@ impl PrivacyGuarantee {
                         )
                     })
                     .transpose()?,
+                self.zcdp
+                    .as_ref()
+                    .map(|repr| renyidp::epsilon_via_zCDP(repr.rho, repr.source_delta, delta))
+                    .transpose()?,
             ],
             f64::min,
         )
@@ -237,6 +257,10 @@ impl PrivacyGuarantee {
                                     alpha,
                                 )
                             })
+                            .transpose()?,
+                        self.zcdp
+                            .as_ref()
+                            .map(|repr| renyidp::beta_via_zCDP(repr.rho, repr.source_delta, alpha))
                             .transpose()?,
                     ],
                     f64::max,
@@ -291,6 +315,15 @@ impl PrivacyGuarantee {
                         )
                     })
                     .transpose()?,
+                self.zcdp
+                    .as_ref()
+                    .map(|repr| {
+                        invert_beta_callback(
+                            |alpha| renyidp::beta_via_zCDP(repr.rho, repr.source_delta, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
             ],
             f64::max,
         )
@@ -313,6 +346,7 @@ impl std::fmt::Debug for PrivacyGuarantee {
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
             .field("renyi", &self.renyi.is_some())
+            .field("zcdp", &self.zcdp.is_some())
             .finish()
     }
 }
@@ -322,6 +356,12 @@ type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
 #[derive(Clone)]
 struct RenyiRepresentation {
     curve: Arc<RenyiFn>,
+    source_delta: f64,
+}
+
+#[derive(Clone, Copy)]
+struct ZCDPRepresentation {
+    rho: f64,
     source_delta: f64,
 }
 
@@ -596,7 +636,7 @@ fn check_beta(beta: f64) -> Fallible<()> {
 }
 
 fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
-    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+    if !value.is_finite() || value < 0.0 || value > 1.0 {
         return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
     }
     Ok(())
@@ -608,6 +648,13 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
             FailedMap,
             "epsilon ({epsilon}) must be non-negative and not NaN"
         );
+    }
+    Ok(())
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() || rho < 0.0 {
+        return fallible!(FailedMap, "rho must be non-negative and not NaN");
     }
     Ok(())
 }

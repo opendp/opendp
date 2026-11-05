@@ -103,11 +103,11 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 }
 
 #[test]
-fn test_cdp_delta_rounding_regression() -> Fallible<()> {
+fn test_zcdp_delta_rounding_regression() -> Fallible<()> {
     // previously rounded 1 ulp lower
-    assert_eq!(cdp_delta(0.05, 0.25)?, 8.177275310369558e-2);
+    assert_eq!(zcdp_delta(0.05, 0.25)?, 8.177275310369558e-2);
     // optimal alpha exceeds 2^53, to verify (α - 1) rounds
-    assert_eq!(cdp_delta(5e-30, 1e-13)?, 2.6196763297300477e-234);
+    assert_eq!(zcdp_delta(5e-30, 1e-13)?, 2.6196763297300477e-234);
     Ok(())
 }
 
@@ -115,7 +115,7 @@ fn test_cdp_delta_rounding_regression() -> Fallible<()> {
 fn test_numeric_errors_propagate() {
     for (rho, eps) in [(f64::NAN, 0.1), (0.1, f64::NAN)] {
         assert_eq!(
-            cdp_delta(rho, eps).unwrap_err().variant,
+            zcdp_delta(rho, eps).unwrap_err().variant,
             ErrorVariant::NumericError
         );
     }
@@ -123,7 +123,7 @@ fn test_numeric_errors_propagate() {
 
 #[test]
 fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
-    let delta = cdp_delta(0.03125, f64::MAX)?;
+    let delta = zcdp_delta(0.03125, f64::MAX)?;
     // A finite epsilon has no certified pure-DP endpoint here. A rounded-up
     // subnormal is valid; silently returning mathematical zero would not be.
     assert!(delta > 0.0 && delta < f64::MIN_POSITIVE);
@@ -133,17 +133,17 @@ fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
 #[test]
 fn test_edge_cases() -> Fallible<()> {
     // Signed zero is mathematically zero and is accepted.
-    assert_eq!(cdp_delta(-0., 0.)?, 0.);
-    assert_eq!(cdp_delta(0., -0.)?, 0.);
-    assert_eq!(cdp_delta(0., 0.)?, 0.);
+    assert_eq!(zcdp_delta(-0., 0.)?, 0.);
+    assert_eq!(zcdp_delta(0., -0.)?, 0.);
+    assert_eq!(zcdp_delta(0., 0.)?, 0.);
 
-    let delta = cdp_delta(0.5, 0.)?;
+    let delta = zcdp_delta(0.5, 0.)?;
     assert_eq!(delta, 0.5588356393474351);
     assert_eq!(cdp_epsilon(0.5, delta)?, 0.0);
 
-    assert!(cdp_delta(0.1, 0.1)? > 0.);
-    assert_eq!(cdp_delta(0.1, f64::INFINITY)?, 0.);
-    assert_eq!(cdp_delta(f64::INFINITY, 1.)?, 1.0);
+    assert!(zcdp_delta(0.1, 0.1)? > 0.);
+    assert_eq!(zcdp_delta(0.1, f64::INFINITY)?, 0.);
+    assert_eq!(zcdp_delta(f64::INFINITY, 1.)?, 1.0);
 
     Ok(())
 }
