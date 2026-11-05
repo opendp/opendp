@@ -165,26 +165,31 @@ def make_private_theil_sen(
     size = _input_size(input_domain, input_metric)
     if isinstance(d_in, bool) or not isinstance(d_in, Integral) or d_in <= 0:
         raise ValueError("d_in must be a positive integer")
-    if not isinstance(d_out, Real) or not math.isfinite(d_out) or d_out <= 0:
+    if size is not None and d_in % 2:
+        raise ValueError("d_in must be even for fixed-size domains")
+    if (
+        isinstance(d_out, bool)
+        or not isinstance(d_out, Real)
+        or not math.isfinite(d_out)
+        or d_out <= 0
+    ):
         raise ValueError("d_out must be finite and positive")
     if output_measure not in (dp.max_divergence(), dp.zero_concentrated_divergence()):
         raise ValueError("output_measure must be max divergence or zCDP")
-    # Distance 1 is vacuous for fixed-size inputs. Calibrate at least a replacement.
-    calibration_d_in = max(d_in, 2) if size is not None else d_in
 
     def compose(budget):
         return dp.c.make_adaptive_composition(
             input_domain,
             input_metric,
             output_measure,
-            calibration_d_in,
+            d_in,
             [budget, budget],
         )
 
     # Search using OpenDP's upward-rounded composition map, rather than d_out / 2.
     budget = dp.binary_search_param(
         compose,
-        d_in=calibration_d_in,
+        d_in=d_in,
         d_out=float(d_out),
         bounds=(0.0, float(d_out)),
         T=float,
@@ -202,7 +207,7 @@ def make_private_theil_sen(
                 output_measure, slope_candidates, alpha=0.5, scale=scale
             )
         ),
-        d_in=calibration_d_in,
+        d_in=d_in,
         d_out=budget,
         T=float,
     )
@@ -229,7 +234,7 @@ def make_private_theil_sen(
                 scale=scale,
             )
         ),
-        d_in=calibration_d_in,
+        d_in=d_in,
         d_out=budget,
         T=float,
     )
