@@ -199,3 +199,13 @@ fn zcdp_capability_preserves_other_presence_promises() {
         MultiDP::with_zcdp(Purity::Approximate)
     );
 }
+
+#[test]
+fn gaussian_capability_preserves_other_presence_promises() {
+    let capabilities =
+        PrivacyCapabilities::new(Some(Purity::Pure), Some(Purity::Approximate)).with_gaussian();
+    assert!(capabilities.gaussian());
+    assert_eq!(capabilities.approx_dp(), Some(Purity::Pure));
+    assert_eq!(capabilities.profile(), Some(Purity::Approximate));
+    assert_eq!(MultiDP::with_gaussian(), MultiDP::default());
+}
