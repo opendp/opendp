@@ -26,7 +26,7 @@ const DEFAULT_SIZE_LIMIT: usize = 1_048_576;
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 #[deprecated(
     note = "Use Polars or NumPy aggregation APIs instead.",
-    since = "0.16.0"
+    since = "0.17.0"
 )]
 /// Make a Transformation that computes the sum of bounded data.
 /// Use `make_clamp` to bound data. Bounds must exclude NaN and be finite.
