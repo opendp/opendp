@@ -112,3 +112,107 @@ fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
     assert!(!qbl.eval(&m1)?);
     Ok(())
 }
+
+#[test]
+fn test_adaptive_failed_postprocessing_consumes_budget() -> Fallible<()> {
+    let rr = make_randomized_response_bool(0.75, false)?;
+    let budget = rr.map(&1)?;
+    let failing = (rr.clone()
+        >> Function::new_fallible(|_: &bool| {
+            // A constructor called after a private release may fail.
+            make_randomized_response_bool(-1.0, false)?;
+            Ok(false)
+        }))?;
+    let mut qbl = make_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+        vec![budget],
+    )?
+    .invoke(&true)?;
+
+    assert!(qbl.eval(&failing).is_err());
+    let error = qbl.eval(&rr).unwrap_err();
+    assert_eq!(error.message.as_deref(), Some("out of queries"));
+    Ok(())
+}
+
+#[test]
+fn test_adaptive_pre_invocation_rejection_preserves_budget() -> Fallible<()> {
+    let rr = make_randomized_response_bool(0.75, false)?;
+    let mut qbl = make_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+        vec![rr.map(&1)?],
+    )?
+    .invoke(&true)?;
+    assert!(
+        qbl.eval(&make_randomized_response_bool(0.9, false)?)
+            .is_err()
+    );
+    assert!(qbl.eval(&rr).is_ok());
+    Ok(())
+}
+
+#[test]
+fn test_adaptive_failure_retires_previous_sequential_child() -> Fallible<()> {
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let failing = (child.clone()
+        >> Function::new_fallible(|_: &Queryable<(), bool>| {
+            fallible!(FailedFunction, "postprocessing failed") as Fallible<Queryable<(), bool>>
+        }))?;
+    let mut qbl = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        1,
+        vec![(1.0, 1e-7); 2],
+    )?
+    .invoke(&true)?;
+
+    let mut previous: Queryable<(), bool> = qbl.eval_poly(&child.into_poly())?;
+    assert!(previous.eval(&())?);
+    assert!(qbl.eval(&failing.into_poly()).is_err());
+    assert!(previous.eval(&()).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_adaptive_failed_postprocessing_child_keeps_sequential_wrapper() -> Fallible<()> {
+    let escaped = Rc::new(RefCell::new(None));
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(true))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let failing = (child.clone()
+        >> Function::new_fallible(enclose!(escaped, move |qbl: &Queryable<(), bool>| {
+            *escaped.borrow_mut() = Some(qbl.clone());
+            fallible!(FailedFunction, "postprocessing failed") as Fallible<Queryable<(), bool>>
+        })))?;
+    let mut qbl = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        1,
+        vec![(1.0, 1e-7); 2],
+    )?
+    .invoke(&true)?;
+
+    assert!(qbl.eval(&failing.into_poly()).is_err());
+    let mut current: Queryable<(), bool> = qbl.eval_poly(&child.into_poly())?;
+    assert!(current.eval(&())?);
+    assert!(escaped.borrow_mut().as_mut().unwrap().eval(&()).is_err());
+    Ok(())
+}

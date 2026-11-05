@@ -46,6 +46,9 @@ use super::CompositionMeasure;
 /// this compositor allows you to spawn multiple interactive mechanisms
 /// and interleave your queries amongst them.
 ///
+/// Once validation accepts a query, its budget entry is consumed before invocation.
+/// An invocation or postprocessing error does not refund that entry.
+///
 /// # Runtime
 /// Construction is `O(q)` in the number of budget entries `q = d_mids.len()`.
 /// Each accepted query adds `O(1)` compositor bookkeeping
@@ -163,17 +166,18 @@ where
                         ))
                     });
 
-                    // evaluate the query and wrap the answer
-                    let answer = meas.invoke_wrap(&data, seq_wrapper)?;
+                    // Reserve the entry before accessing the data. An invocation
+                    // may fail after a private release, so errors cannot refund it.
+                    d_mids.pop();
+
+                    // Retain the result until sequentiality is enforced, even on error.
+                    let answer = meas.invoke_wrap(&data, seq_wrapper);
 
                     // start enforcing sequentiality
                     *enforce_sequentiality.borrow_mut() = true;
 
-                    // we've now increased our privacy spend. This is our only state modification
-                    d_mids.pop();
-
                     // done!
-                    return Ok(Answer::External(answer));
+                    return Ok(Answer::External(answer?));
                 }
 
                 // if the query is internal (passed by the framework)

@@ -30,6 +30,9 @@ mod ffi;
 )]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
+/// Every invocation that passes supporting-element validation is accounted for,
+/// including invocations whose postprocessing returns an error.
+///
 /// # Citations
 /// * [WRRW23 Fully Adaptive Composition in Differential Privacy](https://arxiv.org/abs/2203.05481)
 /// * [VZ23 Concurrent Composition Theorems for Differential Privacy](http://dx.doi.org/10.1145/3564246.3585241)
@@ -136,7 +139,7 @@ where
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
@@ -144,17 +147,18 @@ where
                         ))
                     });
 
-                    // evaluate the query and wrap the answer
-                    let answer = meas.invoke_wrap(&data, seq_wrapper)?;
+                    // Account before accessing the data. A failed invocation may
+                    // already have produced a private release during postprocessing.
+                    privacy_maps.push(meas.privacy_map.clone());
+
+                    // Retain the result until sequentiality is enforced, even on error.
+                    let answer = meas.invoke_wrap(&data, seq_wrapper);
 
                     // start enforcing sequentiality
                     *enforce_sequentiality.borrow_mut() = true;
 
-                    // we've now increased our privacy spend. This is our only state modification
-                    privacy_maps.push(meas.privacy_map.clone());
-
                     // done!
-                    Answer::External(OdometerAnswer::Invoke(answer))
+                    Answer::External(OdometerAnswer::Invoke(answer?))
                 }
                 // evaluate external map query
                 Query::External(OdometerQuery::PrivacyLoss(d_in_q)) => {

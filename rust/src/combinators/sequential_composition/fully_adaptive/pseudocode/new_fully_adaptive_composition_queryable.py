@@ -62,13 +62,14 @@ def new_fully_adaptive_composition_queryable(
                 else:
                     seq_wrapper = None
 
-                answer = meas.invoke_wrap(data, seq_wrapper)  # `\label{invoke}`
-
-                enforce_sequentiality = True
-
-                # We've now increased our privacy spend.
-                # This is our only state modification
+                # Reserve the privacy loss before invoking the measurement.
+                # A fallible postprocessor cannot refund an internal release.
                 privacy_maps.push(meas.privacy_map)  # `\label{child-privacy-map}`
+
+                try:
+                    answer = meas.invoke_wrap(data, seq_wrapper)  # `\label{invoke}`
+                finally:
+                    enforce_sequentiality = True
 
                 return Answer.External(OdometerAnswer.Invoke(answer))
 

@@ -50,6 +50,9 @@ Types matching those in the pseudocode.
         \item When an odometer invokes $\mathcal{M}_{k+1}$,
         the OpenDP Library implementation eagerly accounts for all future privacy loss of the child mechanism immediately (on line \ref{child-privacy-map}),
         even if the analyst never interacts with the spawned interactive mechanism.
+        This accounting precedes invocation on line \ref{invoke},
+        so an error during invocation or fallible postprocessing does not remove the child's privacy map.
+        The sequentiality hook is enabled before either a successful answer or an invocation error is returned.
         \item The OpenDP Library represents interactive mechanisms via queryables,
         where the state $s$ is hidden from the adversary. When invoking $\mathcal{M}_k$,
         no initial state $\lambda$ is passed, and the response is a queryable with hidden state.
@@ -87,6 +90,8 @@ Types matching those in the pseudocode.
     By line \ref{ask-permission-handler}, permission is only granted
     if the most recently spawned child is asking for permission to execute a query.
     This ensures that an adversary may only interact with the most recently spawned child mechanism.
+    An invocation that returns an error still advances this state, so a previous child
+    is not re-enabled by a failed invocation and a retained child remains subject to the hook.
 
 
     Now that we've shown a correspondence between the pseudocode and Algorithm~6 of \cite{haney2023concurrentcompositioninteractivedifferential},
