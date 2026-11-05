@@ -4,6 +4,8 @@ Covers gem_plus and GemPlusModel's interface, the input checks, and end-to-end
 releases with Gem+ as the estimator inside OpenDP's AIM and MST.
 """
 
+from collections import Counter
+
 import pytest
 
 pytest.importorskip("mbi")
@@ -108,7 +110,8 @@ def _release_with_gem_plus(make_algorithm):
     """Releases a contingency table with gem_plus as the estimator and checks
     every point where OpenDP touches the model: the table's first fit
     (potentials=None), warm starts after that, one z for the whole run, and
-    synthesize(). Returns the keyword arguments of each estimator call."""
+    synthesize(). Returns the keyword arguments and measured cliques of each
+    estimator call."""
     pl = pytest.importorskip("polars")
     import opendp.prelude as dp
 
@@ -122,10 +125,11 @@ def _release_with_gem_plus(make_algorithm):
     data = pl.LazyFrame({"a": a, "b": b, "c": c})
     keys = {"a": [0, 1, 2], "b": [0, 1], "c": [0, 1, 2, 3]}
 
-    calls, fitted = [], []
+    calls, fitted, measured = [], [], []
 
     def estimator(domain, loss_fn, **kwargs):
         calls.append(kwargs)
+        measured.append([m.clique for m in loss_fn])
         model = gem_plus(domain, loss_fn, **kwargs, **FAST)
         fitted.append(model)
         return model
@@ -151,14 +155,29 @@ def _release_with_gem_plus(make_algorithm):
     synth = table.synthesize()
     assert set(synth.columns) == {"a", "b", "c"}
     assert synth.height > 0
-    return calls
+    return calls, measured
 
 
 def test_aim_end_to_end_with_gem_plus():
-    calls = _release_with_gem_plus(lambda dp, est: dp.mbi.AIM(estimator=est, rounds=3))
+    calls, _ = _release_with_gem_plus(
+        lambda dp, est: dp.mbi.AIM(estimator=est, rounds=3)
+    )
     assert len(calls) >= 2, "AIM ran no rounds"
 
 
+def test_aim_with_gem_plus_does_not_reselect():
+    # More rounds than the 3 columns have marginals, so without the filter
+    # AIM would select some marginal twice.
+    _, measured = _release_with_gem_plus(
+        lambda dp, est: dp.mbi.AIM(estimator=est, rounds=20)
+    )
+    # each round adds its selected marginal; no two rounds select the same one
+    added = []
+    for before, after in zip(measured, measured[1:]):
+        added += list((Counter(after) - Counter(before)).elements())
+    assert len(added) == len(set(added))
+
+
 def test_mst_end_to_end_with_gem_plus():
-    calls = _release_with_gem_plus(lambda dp, est: dp.mbi.MST(estimator=est))
+    calls, _ = _release_with_gem_plus(lambda dp, est: dp.mbi.MST(estimator=est))
     assert len(calls) == 2  # the table's first fit, then one fit on the tree

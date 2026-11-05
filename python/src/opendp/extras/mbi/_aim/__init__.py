@@ -193,7 +193,22 @@ class AIM(Algorithm):
             d_step = d_out / T
             d_spent = 0.0
 
+            selected: set[tuple[str, ...]] = set()
+
             while d_step:
+                algorithm_aim_round = algorithm
+                if isinstance(current_model, MarkovRandomField):
+                    algorithm_aim_round = algorithm
+                else:
+                    algorithm_aim_round = replace(
+                        algorithm,
+                        queries=[
+                            q
+                            for q in cast(list[Count], algorithm.queries)
+                            if q.by not in selected
+                        ],
+                    )
+
                 m_step = _make_aim_marginal(
                     *t_marginals.output_space,
                     output_measure,
@@ -202,13 +217,18 @@ class AIM(Algorithm):
                     marginals=current_marginals,
                     model=current_model,
                     max_size=algorithm.max_size * (d_spent + d_step) / d_out,
-                    algorithm=algorithm,
+                    algorithm=algorithm_aim_round,
                 )
                 if not m_step:
                     break
 
-                R: TypeAlias = tuple[Marginals, MarkovRandomField, bool]
-                current_marginals, current_model, is_significant = cast(R, qbl(m_step))
+                R: TypeAlias = tuple[
+                    Marginals, MarkovRandomField, bool, tuple[str, ...]
+                ]
+                current_marginals, current_model, is_significant, selected_clique = (
+                    cast(R, qbl(m_step))
+                )
+                selected.add(selected_clique)
 
                 if not is_significant:
                     d_step *= 4
@@ -280,7 +300,7 @@ def _make_aim_marginal(
 
     def function(
         qbl: Queryable,
-    ) -> tuple[Marginals, MarkovRandomField, bool]:
+    ) -> tuple[Marginals, MarkovRandomField, bool, tuple[str, ...]]:
         # SELECT a query that best reduces the error
         selected_clique = qbl(m_select)
 
@@ -325,7 +345,7 @@ def _make_aim_marginal(
         #    is greater than the expectation of the noise's half-distribution.
         is_significant = diff > mean
 
-        return all_marginals, new_model, is_significant
+        return all_marginals, new_model, is_significant, selected_clique
 
     return make_adaptive_composition(
         input_domain,
