@@ -1366,6 +1366,10 @@ class PrivacyGuarantee(object):
     for the same privacy relation. Source parameters are retained exactly; zero
     delta certifies pure DP. Certificates are not eagerly converted to profiles.
     Queries return the tightest bound and propagate representation errors.
+
+    Beta and alpha report f-DP lower bounds derived from these representations;
+    no tradeoff representation is stored. Queries accept scalars or
+    nondecreasing vectors, permitting duplicates, and preserve that shape.
     """
 
     def __init__(
@@ -1381,7 +1385,7 @@ class PrivacyGuarantee(object):
             self.guarantee = _ptr
             return
         if approx_dp is None and profile is None:
-            raise TypeError("expected at least one of approx_dp or profile")
+            raise TypeError("expected at least one privacy representation")
         if approx_dp is not None and (
             not isinstance(approx_dp, tuple) or len(approx_dp) != 2
         ):
@@ -1411,6 +1415,24 @@ class PrivacyGuarantee(object):
         from opendp.measures import privacy_guarantee_epsilon
 
         return privacy_guarantee_epsilon(self.guarantee, delta)
+
+    def beta(self, alpha):
+        from opendp.measures import _privacy_guarantee_beta
+
+        scalar = isinstance(alpha, Real)
+        result = _privacy_guarantee_beta(
+            self.guarantee, [float(alpha)] if scalar else alpha
+        )
+        return result[0] if scalar else result
+
+    def alpha(self, beta):
+        from opendp.measures import _privacy_guarantee_alpha
+
+        scalar = isinstance(beta, Real)
+        result = _privacy_guarantee_alpha(
+            self.guarantee, [float(beta)] if scalar else beta
+        )
+        return result[0] if scalar else result
 
 
 class _PartialConstructor(object):

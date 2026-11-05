@@ -6,7 +6,12 @@ use crate::{
     utilities::search::{Bands, fallible_binary_search},
 };
 
+mod approxdp;
 pub(crate) mod logspace;
+mod profile_to_tradeoff;
+
+#[cfg(feature = "ffi")]
+mod reporting_ffi;
 use logspace::{
     check_delta, check_log_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked,
     log_to_delta_upper, logaddexp_upper,
@@ -139,6 +144,84 @@ impl PrivacyGuarantee {
         )
     }
 
+    /// Return the strongest beta lower bounds for nondecreasing alpha inputs.
+    /// Every attached representation is evaluated; its errors propagate.
+    pub fn beta(&self, alphas: &[f64]) -> Fallible<Vec<f64>> {
+        check_inputs(alphas, check_alpha)?;
+        let certificate = self
+            .approx_dp
+            .as_ref()
+            .map(|repr| {
+                alphas
+                    .iter()
+                    .map(|&alpha| approxdp::beta_via_approx_dp(repr.epsilon, repr.delta, alpha))
+                    .collect::<Fallible<Vec<_>>>()
+            })
+            .transpose()?;
+        let profile = self
+            .profile
+            .as_ref()
+            .map(|profile| {
+                alphas
+                    .iter()
+                    .map(|&alpha| profile_to_tradeoff::beta_via_profile(profile, alpha))
+                    .collect::<Fallible<Vec<_>>>()
+            })
+            .transpose()?;
+        alphas
+            .iter()
+            .enumerate()
+            .map(|(index, &alpha)| {
+                if alpha == 1.0 {
+                    return Ok(0.0);
+                }
+                combine_bounds(
+                    [
+                        certificate.as_ref().map(|values| values[index]),
+                        profile.as_ref().map(|values| values[index]),
+                    ],
+                    f64::max,
+                )
+            })
+            .collect()
+    }
+
+    /// Return the strongest left-inverse lower bounds for nondecreasing beta inputs.
+    /// Inversion evaluates the source representations at singleton candidates.
+    pub fn alpha(&self, betas: &[f64]) -> Fallible<Vec<f64>> {
+        check_inputs(betas, check_beta)?;
+        betas.iter().map(|&beta| self.alpha_single(beta)).collect()
+    }
+
+    fn alpha_single(&self, beta: f64) -> Fallible<f64> {
+        if beta == 1.0 {
+            return Ok(0.0);
+        }
+        combine_bounds(
+            [
+                self.approx_dp
+                    .as_ref()
+                    .map(|repr| {
+                        invert_beta_callback(
+                            |alpha| approxdp::beta_via_approx_dp(repr.epsilon, repr.delta, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
+                self.profile
+                    .as_ref()
+                    .map(|profile| {
+                        invert_beta_callback(
+                            |alpha| profile_to_tradeoff::beta_via_profile(profile, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
+            ],
+            f64::max,
+        )
+    }
+
     pub(crate) fn approx_dp(&self) -> Option<(f64, f64)> {
         self.approx_dp
             .as_ref()
@@ -165,6 +248,14 @@ fn min_bound(certificate: Option<f64>, profile: Option<f64>) -> Fallible<f64> {
         (Some(bound), None) | (None, Some(bound)) => Ok(bound),
         (None, None) => fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
     }
+}
+
+fn combine_bounds(bounds: [Option<f64>; 2], combine: fn(f64, f64) -> f64) -> Fallible<f64> {
+    bounds
+        .into_iter()
+        .flatten()
+        .reduce(combine)
+        .ok_or_else(|| err!(FailedFunction, "PrivacyGuarantee has no representation"))
 }
 
 impl PrivacyProfile {
@@ -354,7 +445,7 @@ fn check_inputs(values: &[f64], check: fn(f64) -> Fallible<()>) -> Fallible<()> 
         check(value)?;
     }
     if values.windows(2).any(|pair| pair[0] > pair[1]) {
-        return fallible!(FailedMap, "privacy profile inputs must be nondecreasing");
+        return fallible!(FailedMap, "privacy inputs must be nondecreasing");
     }
     Ok(())
 }
@@ -363,7 +454,7 @@ fn check_length(inputs: &[f64], outputs: &[f64]) -> Fallible<()> {
     if outputs.len() != inputs.len() {
         return fallible!(
             FailedMap,
-            "privacy profile callback output length ({}) must match input length ({})",
+            "privacy callback output length ({}) must match input length ({})",
             outputs.len(),
             inputs.len()
         );
@@ -400,6 +491,37 @@ fn invert_decreasing_callback(
         lower = upper;
     }
     Ok(f64::INFINITY)
+}
+
+/// Lower-bound the left generalized inverse with strict numerical witnesses.
+fn invert_beta_callback(beta: impl Fn(f64) -> Fallible<f64>, target: f64) -> Fallible<f64> {
+    let predicate = |alpha: &f64| {
+        let value = beta(*alpha)?;
+        check_beta(value)?;
+        Ok(value > target)
+    };
+    if !predicate(&0.0)? {
+        return Ok(0.0);
+    }
+    if predicate(&1.0)? {
+        return Ok(1.0);
+    }
+    fallible_binary_search(predicate, (0.0, 1.0))
+}
+
+fn check_alpha(alpha: f64) -> Fallible<()> {
+    check_unit_interval(alpha, "alpha")
+}
+
+fn check_beta(beta: f64) -> Fallible<()> {
+    check_unit_interval(beta, "beta")
+}
+
+fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
+    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+        return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {

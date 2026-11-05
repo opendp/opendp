@@ -270,6 +270,48 @@ test_that("privacy guarantee construction validates representations", {
   expect_error(empty(delta = 1.), "no representation")
 })
 
+test_that("privacy guarantee f-DP reporting supports scalars and vectors", {
+  profile <- privacy_profile(log_delta = function(epsilon) rep(-Inf, length(epsilon)))
+  for (guarantee in list(
+    privacy_guarantee(approx_dp = c(0., 0.)),
+    privacy_guarantee(profile = profile),
+    privacy_guarantee(approx_dp = c(0., 0.), profile = profile)
+  )) {
+    expect_equal(guarantee(alpha = 0.3), 0.7)
+    expect_equal(guarantee(beta = 0.7), 0.3)
+    expect_equal(guarantee(alpha = c(0., 0.25, 0.25, 1.)), c(1., 0.75, 0.75, 0.))
+    expect_equal(guarantee(beta = c(0.25, 0.5, 0.5, 1.)), c(0.75, 0.5, 0.5, 0.))
+    expect_equal(guarantee(alpha = numeric()), numeric())
+    expect_equal(guarantee(beta = numeric()), numeric())
+    expect_lt(guarantee(beta = 0.), 1.)
+    expect_gt(guarantee(beta = 0.), 1. - .Machine$double.eps)
+    expect_equal(guarantee(beta = 1.), 0.)
+    expect_error(guarantee(alpha = c(0.5, 0.25)), "nondecreasing")
+    expect_error(guarantee(beta = c(0.5, 0.25)), "nondecreasing")
+    for (bad in list(-0.1, 1.1, NaN, Inf)) {
+      expect_error(guarantee(alpha = bad))
+      expect_error(guarantee(beta = bad))
+    }
+  }
+})
+
+test_that("f-DP reporting propagates source profile failures", {
+  failure <- privacy_guarantee(
+    approx_dp = c(0., 0.),
+    profile = privacy_profile(log_delta = function(epsilon) stop("profile failed", call. = FALSE))
+  )
+  expect_error(failure(alpha = 0.5), "profile failed")
+  expect_error(failure(beta = 0.5), "profile failed")
+  for (output in list(numeric(), c(0., 0.), NaN, 0.1)) {
+    invalid <- privacy_guarantee(
+      approx_dp = c(0., 0.),
+      profile = privacy_profile(log_delta = function(epsilon) output)
+    )
+    expect_error(invalid(alpha = 0.5))
+    expect_error(invalid(beta = 0.5))
+  }
+})
+
 test_that("test_vector_discrete_laplace", {
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
   meas <- input_space |> then_laplace(scale = 2.)

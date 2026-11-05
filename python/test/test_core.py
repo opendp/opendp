@@ -440,7 +440,9 @@ def test_privacy_guarantee_builders_do_not_require_hbc(monkeypatch):
 
 
 @pytest.mark.parametrize("approx_dp", [None, (1.0, 0.1)])
-@pytest.mark.parametrize("query, budget", [("delta", 1.0), ("epsilon", 0.1)])
+@pytest.mark.parametrize(
+    "query, budget", [("delta", 1.0), ("epsilon", 0.1), ("beta", 0.5), ("alpha", 0.5)]
+)
 def test_privacy_guarantee_propagates_representation_errors(approx_dp, query, budget):
     from opendp.mod import PrivacyGuarantee, PrivacyProfile
 
@@ -513,6 +515,56 @@ def test_privacy_guarantee_and_profile_pointer_roundtrips():
     del roundtrip
     gc.collect()
     assert reference() is None
+
+
+def test_privacy_guarantee_fdp_reporting():
+    import math
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile
+
+    profile = PrivacyProfile(log_delta=lambda eps: [-math.inf] * len(eps))
+    for guarantee in [
+        PrivacyGuarantee(approx_dp=(0.0, 0.0)),
+        PrivacyGuarantee(profile=profile),
+        PrivacyGuarantee(approx_dp=(0.0, 0.0), profile=profile),
+    ]:
+        assert guarantee.beta(alpha=0.3) == pytest.approx(0.7)
+        assert guarantee.alpha(beta=0.7) == pytest.approx(0.3)
+        assert guarantee.alpha(beta=0.0) < 1.0
+        assert guarantee.alpha(beta=1.0) == 0.0
+        assert guarantee.beta([0.0, 0.25, 0.25, 1.0]) == pytest.approx(
+            [1.0, 0.75, 0.75, 0.0]
+        )
+        assert guarantee.alpha([0.25, 0.5, 0.5, 1.0]) == pytest.approx(
+            [0.75, 0.5, 0.5, 0.0]
+        )
+        assert guarantee.beta([]) == []
+        assert guarantee.alpha([]) == []
+
+
+def test_fdp_reporting_validates_vectors_before_source_queries():
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile, OpenDPException
+
+    def unexpected(_):
+        raise AssertionError("invalid query must be rejected before source evaluation")
+
+    guarantee = PrivacyGuarantee(profile=PrivacyProfile(log_delta=unexpected))
+    for query in [guarantee.beta, guarantee.alpha]:
+        for invalid in [[0.5, 0.1], [float("nan")], [-0.1], [1.1]]:
+            with pytest.raises(OpenDPException):
+                query(invalid)
+
+
+@pytest.mark.parametrize("output", [[], [0.0, 0.0], [float("nan")], [0.1]])
+def test_fdp_reporting_propagates_invalid_source_results(output):
+    from opendp.mod import PrivacyGuarantee, PrivacyProfile, OpenDPException
+
+    guarantee = PrivacyGuarantee(
+        approx_dp=(0.0, 0.0),
+        profile=PrivacyProfile(log_delta=lambda _: output),
+    )
+    for query in [guarantee.beta, guarantee.alpha]:
+        with pytest.raises(OpenDPException):
+            query(0.5)
 
 
 def test_member():
