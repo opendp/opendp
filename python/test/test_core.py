@@ -567,6 +567,23 @@ def test_fdp_reporting_propagates_invalid_source_results(output):
             query(0.5)
 
 
+def test_privacy_guarantee_renyi_representation():
+    from opendp.mod import PrivacyGuarantee
+
+    with pytest.raises(TypeError, match="renyiDP_delta requires renyiDP"):
+        PrivacyGuarantee(approx_dp=(1.0, 0.1), renyiDP_delta=0.2)
+
+    guarantee = PrivacyGuarantee(renyiDP=lambda alpha: 0.5 * alpha)
+    assert guarantee.epsilon(delta=0.1) > 0.0
+    assert guarantee.delta(epsilon=1.0) < 1.0
+
+    approximate = PrivacyGuarantee(
+        renyiDP=lambda _alpha: 0.0,
+        renyiDP_delta=0.2,
+    )
+    assert approximate.delta(epsilon=float("inf")) == 0.2
+
+
 def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance

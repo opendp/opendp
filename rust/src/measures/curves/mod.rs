@@ -9,6 +9,9 @@ use crate::{
 mod approxdp;
 pub(crate) mod logspace;
 mod profile_to_tradeoff;
+mod renyidp;
+#[cfg(feature = "ffi")]
+mod renyidp_ffi;
 
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
@@ -85,6 +88,7 @@ impl ApproxDPRepr {
 pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
+    renyi: Option<RenyiRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -106,41 +110,99 @@ impl PrivacyGuarantee {
         self
     }
 
+    /// Attach an RDP representation with OpenDP's additive source-delta semantics.
+    #[cfg(feature = "honest-but-curious")]
+    #[allow(non_snake_case)]
+    pub fn with_renyiDP(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        source_delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(source_delta)?;
+        self.renyi = Some(RenyiRepresentation {
+            curve: Arc::new(curve),
+            source_delta,
+        });
+        Ok(self)
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_snake_case)]
+    pub(crate) fn with_renyiDP_trusted(
+        mut self,
+        curve: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync,
+        source_delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(source_delta)?;
+        self.renyi = Some(RenyiRepresentation {
+            curve: Arc::new(curve),
+            source_delta,
+        });
+        Ok(self)
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         check_epsilon(epsilon)?;
-        min_bound(
-            self.approx_dp.as_ref().map(|repr| {
-                if epsilon < repr.epsilon {
-                    1.0
-                } else {
-                    repr.delta
-                }
-            }),
-            self.profile
-                .as_ref()
-                .map(|profile| profile.delta(&[epsilon]).map(|values| values[0]))
-                .transpose()?,
+        combine_bounds(
+            [
+                self.approx_dp.as_ref().map(|repr| {
+                    if epsilon < repr.epsilon {
+                        1.0
+                    } else {
+                        repr.delta
+                    }
+                }),
+                self.profile
+                    .as_ref()
+                    .map(|profile| profile.delta(&[epsilon]).map(|v| v[0]))
+                    .transpose()?,
+                self.renyi
+                    .as_ref()
+                    .map(|repr| {
+                        renyidp::delta_via_renyiDP(repr.curve.as_ref(), repr.source_delta, epsilon)
+                    })
+                    .transpose()?,
+            ],
+            f64::min,
         )
     }
 
     /// Return the tightest epsilon bound, propagating representation errors.
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         check_delta(delta)?;
-        min_bound(
-            self.approx_dp.as_ref().map(|repr| {
-                if delta == 1.0 {
-                    0.0
-                } else if delta < repr.delta {
-                    f64::INFINITY
-                } else {
-                    repr.epsilon
-                }
-            }),
-            self.profile
-                .as_ref()
-                .map(|profile| profile.epsilon(&[delta]).map(|values| values[0]))
-                .transpose()?,
+        combine_bounds(
+            [
+                self.approx_dp.as_ref().map(|repr| {
+                    if delta == 1.0 {
+                        0.0
+                    } else if delta < repr.delta {
+                        f64::INFINITY
+                    } else {
+                        repr.epsilon
+                    }
+                }),
+                self.profile
+                    .as_ref()
+                    .map(|profile| profile.epsilon(&[delta]).map(|v| v[0]))
+                    .transpose()?,
+                self.renyi
+                    .as_ref()
+                    .map(|repr| {
+                        invert_decreasing_callback(
+                            |epsilon| {
+                                renyidp::delta_via_renyiDP(
+                                    repr.curve.as_ref(),
+                                    repr.source_delta,
+                                    epsilon,
+                                )
+                            },
+                            delta,
+                        )
+                    })
+                    .transpose()?,
+            ],
+            f64::min,
         )
     }
 
@@ -148,37 +210,34 @@ impl PrivacyGuarantee {
     /// Every attached representation is evaluated; its errors propagate.
     pub fn beta(&self, alphas: &[f64]) -> Fallible<Vec<f64>> {
         check_inputs(alphas, check_alpha)?;
-        let certificate = self
-            .approx_dp
-            .as_ref()
-            .map(|repr| {
-                alphas
-                    .iter()
-                    .map(|&alpha| approxdp::beta_via_approx_dp(repr.epsilon, repr.delta, alpha))
-                    .collect::<Fallible<Vec<_>>>()
-            })
-            .transpose()?;
-        let profile = self
-            .profile
-            .as_ref()
-            .map(|profile| {
-                alphas
-                    .iter()
-                    .map(|&alpha| profile_to_tradeoff::beta_via_profile(profile, alpha))
-                    .collect::<Fallible<Vec<_>>>()
-            })
-            .transpose()?;
         alphas
             .iter()
-            .enumerate()
-            .map(|(index, &alpha)| {
+            .map(|&alpha| {
                 if alpha == 1.0 {
                     return Ok(0.0);
                 }
                 combine_bounds(
                     [
-                        certificate.as_ref().map(|values| values[index]),
-                        profile.as_ref().map(|values| values[index]),
+                        self.approx_dp
+                            .as_ref()
+                            .map(|repr| {
+                                approxdp::beta_via_approx_dp(repr.epsilon, repr.delta, alpha)
+                            })
+                            .transpose()?,
+                        self.profile
+                            .as_ref()
+                            .map(|profile| profile_to_tradeoff::beta_via_profile(profile, alpha))
+                            .transpose()?,
+                        self.renyi
+                            .as_ref()
+                            .map(|repr| {
+                                renyidp::beta_via_renyiDP(
+                                    repr.curve.clone(),
+                                    repr.source_delta,
+                                    alpha,
+                                )
+                            })
+                            .transpose()?,
                     ],
                     f64::max,
                 )
@@ -217,6 +276,21 @@ impl PrivacyGuarantee {
                         )
                     })
                     .transpose()?,
+                self.renyi
+                    .as_ref()
+                    .map(|repr| {
+                        invert_beta_callback(
+                            |alpha| {
+                                renyidp::beta_via_renyiDP(
+                                    repr.curve.clone(),
+                                    repr.source_delta,
+                                    alpha,
+                                )
+                            },
+                            beta,
+                        )
+                    })
+                    .transpose()?,
             ],
             f64::max,
         )
@@ -238,19 +312,23 @@ impl std::fmt::Debug for PrivacyGuarantee {
         f.debug_struct("PrivacyGuarantee")
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
+            .field("renyi", &self.renyi.is_some())
             .finish()
     }
 }
 
-fn min_bound(certificate: Option<f64>, profile: Option<f64>) -> Fallible<f64> {
-    match (certificate, profile) {
-        (Some(bound), Some(other)) => Ok(bound.min(other)),
-        (Some(bound), None) | (None, Some(bound)) => Ok(bound),
-        (None, None) => fallible!(FailedFunction, "PrivacyGuarantee has no representation"),
-    }
+type RenyiFn = dyn Fn(f64) -> Fallible<f64> + Send + Sync;
+
+#[derive(Clone)]
+struct RenyiRepresentation {
+    curve: Arc<RenyiFn>,
+    source_delta: f64,
 }
 
-fn combine_bounds(bounds: [Option<f64>; 2], combine: fn(f64, f64) -> f64) -> Fallible<f64> {
+fn combine_bounds<const N: usize>(
+    bounds: [Option<f64>; N],
+    combine: fn(f64, f64) -> f64,
+) -> Fallible<f64> {
     bounds
         .into_iter()
         .flatten()
