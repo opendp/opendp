@@ -200,7 +200,7 @@ it under ``dp.t``:
             >>> # `bounded_sum`. Notice that `make_sum` expects an input
             >>> # domain consisting of bounded data:
             >>> input_domain = dp.vector_domain(
-            ...     dp.atom_domain(bounds=(0.0, 5.0))
+            ...     dp.atom_domain(bounds=(0.0, 5.0), nan=False)
             ... )
             >>> bounded_sum = dp.t.make_sum(
             ...     input_domain, dp.symmetric_distance()

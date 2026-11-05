@@ -44,7 +44,11 @@ def test_stuck():
         bounds=(0.0, real_v * 2.0),
         d_out=epsilon,
     )
-    assert discovered_scale == 192307694098.6973
+    # Independently account for both endpoint errors of a depth-20 pairwise sum.
+    n, h, u = 2**20, 20, 2.0**-53
+    relaxation = 2 * n * sens * (h * u) / (1 - h * u)
+    expected_scale = (sens + relaxation) / epsilon
+    assert discovered_scale == pytest.approx(expected_scale, rel=1e-14)
 
 
 def test_binary_search():
@@ -143,7 +147,7 @@ def test_exponential_bounds_search():
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
             dp.symmetric_distance(),
         )
 
@@ -151,7 +155,7 @@ def test_type_inference():
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-20.0, 20.0)), size=n),
+            dp.vector_domain(dp.atom_domain(bounds=(-20.0, 20.0), nan=False), size=n),
             dp.symmetric_distance(),
         )
 
@@ -159,7 +163,7 @@ def test_type_inference():
 
     def mean_chainer_b(b):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
             dp.symmetric_distance(),
         )
 

@@ -1,15 +1,14 @@
-mod checked;
-use std::marker::PhantomData;
-
-pub use checked::*;
-
-mod ordered;
-pub use ordered::*;
-
 use crate::{
+    core::{Metric, StabilityMap},
     error::Fallible,
-    traits::{Float, InfAdd},
+    metrics::{AbsoluteDistance, IntDistance},
+    traits::{
+        CastInternalRational, Float, InfCast,
+        sum::{round_up, sum_magnitude, sum_relaxation},
+    },
 };
+use dashu::{integer::IBig, rational::RBig};
+use std::marker::PhantomData;
 
 /// Marker type to represent sequential, or recursive summation
 pub struct Sequential<T>(PhantomData<T>);
@@ -18,40 +17,62 @@ pub struct Sequential<T>(PhantomData<T>);
 pub struct Pairwise<T>(PhantomData<T>);
 
 #[doc(hidden)]
-pub trait SumRelaxation {
+pub trait UncheckedSum {
     type Item: Float;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item>;
-    fn relaxation(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
-        let error = Self::error(size, lower, upper)?;
-        error.inf_add(&error)
+    /// Maximum number of rounded additions on a leaf-to-root path.
+    fn depth(size: usize) -> usize;
+    fn unchecked_sum(arg: &[Self::Item]) -> Self::Item;
+}
+impl<T: Float> UncheckedSum for Sequential<T> {
+    type Item = T;
+    fn depth(size: usize) -> usize {
+        size.saturating_sub(1)
+    }
+    fn unchecked_sum(arg: &[T]) -> T {
+        arg.iter().sum()
+    }
+}
+impl<T: Float> UncheckedSum for Pairwise<T> {
+    type Item = T;
+    fn depth(size: usize) -> usize {
+        if size <= 1 {
+            0
+        } else {
+            (usize::BITS - (size - 1).leading_zeros()) as usize
+        }
+    }
+    fn unchecked_sum(arg: &[T]) -> T {
+        match arg.len() {
+            0 => T::zero(),
+            1 => arg[0],
+            n => {
+                let m = n / 2;
+                Self::unchecked_sum(&arg[..m]) + Self::unchecked_sum(&arg[m..])
+            }
+        }
     }
 }
 
-impl<T: Float> SumRelaxation for Sequential<T> {
-    type Item = T;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
-        let size = T::exact_int_cast(size)?;
-        let _2 = T::exact_int_cast(2)?;
-
-        // n^2 / 2^(k - 1) max(|L|, U)
-        size.inf_mul(&size)?
-            .inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?
-            .inf_mul(&lower.alerting_abs()?.total_max(upper)?)
-    }
-}
-
-impl<T: Float> SumRelaxation for Pairwise<T> {
-    type Item = T;
-    fn error(size: usize, lower: Self::Item, upper: Self::Item) -> Fallible<Self::Item> {
-        let size = T::exact_int_cast(size)?;
-        let _2 = T::exact_int_cast(2)?;
-        // u * k where k = log_2(n)
-        let uk = size
-            .inf_log2()?
-            .inf_div(&_2.inf_powi(T::MANTISSA_BITS.into())?)?;
-        // (uk / (1 - uk)) n max(|L|, U)
-        uk.inf_div(&T::one().neg_inf_sub(&uk)?)?
-            .inf_mul(&size)?
-            .inf_mul(&lower.alerting_abs()?.total_max(upper)?)
-    }
+pub(super) fn stability_map<MI, S>(
+    max_size: usize,
+    (lower, upper): (S::Item, S::Item),
+    fixed: bool,
+) -> Fallible<StabilityMap<MI, AbsoluteDistance<S::Item>>>
+where
+    MI: Metric<Distance = IntDistance>,
+    S: UncheckedSum,
+    S::Item: InfCast<RBig>,
+{
+    let magnitude = sum_magnitude((lower, upper))?;
+    let relaxation = sum_relaxation(max_size, S::depth(max_size), magnitude)?;
+    let range = upper.into_rational()? - lower.into_rational()?;
+    let sensitivity = if fixed {
+        range
+    } else {
+        magnitude.into_rational()?.max(range)
+    };
+    Ok(StabilityMap::new_fallible(move |d: &IntDistance| {
+        let d = if fixed { *d / 2 } else { *d };
+        round_up::<S::Item>(RBig::from(IBig::from(d)) * &sensitivity + &relaxation)
+    }))
 }
