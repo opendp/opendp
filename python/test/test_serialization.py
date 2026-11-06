@@ -48,7 +48,6 @@ odometer = dp.c.make_fully_adaptive_composition(
         dp.m.then_gaussian(1),
         # Compositions:
         chained,
-        dp.c.make_population_amplification(chained, population_size=100),
         dp.m.make_laplace(
             dp.vector_domain(dp.atom_domain(T=int)),
             dp.l1_distance(T=int),

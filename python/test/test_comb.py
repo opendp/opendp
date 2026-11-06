@@ -1,20 +1,134 @@
+import math
+
 import opendp.prelude as dp
 import pytest
 
 
 def test_amplification():
-    input_space = (
-        dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0), nan=False), size=10),
-        dp.symmetric_distance(),
+    sample_map = lambda d: float(d)
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.max_divergence(),
+        sample_map,
+        population_size=100,
+        sample_size=10,
     )
-    meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
+    assert amplified(0) == 0.0
+    assert 0.158 < amplified(1) < 0.159
+    assert 0.316 < amplified(2) < 0.318
 
-    amplified = dp.c.make_population_amplification(meas, population_size=100)
-    print("amplified base laplace:", amplified([1.0] * 10))
-    assert meas.check(2, 2.0 + 1e-6)
-    assert not meas.check(2, 2.0)
-    assert amplified.check(2, 1.494)
-    assert not amplified.check(2, 0.494)
+    # A returned Function can itself be passed as a privacy-map callback.
+    composed = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.max_divergence(),
+        amplified,
+        population_size=100,
+        sample_size=10,
+    )
+    assert 0 < composed(1) < amplified(1)
+
+
+def test_amplification_approximate():
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.approximate(dp.max_divergence()),
+        lambda d: (float(d), 0.01 * d),
+        population_size=100,
+        sample_size=10,
+    )
+    assert amplified(0) == (0.0, 0.0)
+    eps1, delta1 = amplified(1)
+    eps2, delta2 = amplified(2)
+    assert 0.158 < eps1 < 0.159
+    assert abs(delta1 - 0.001) < 1e-12
+    assert abs(eps2 - 2 * eps1) < 1e-12
+    assert delta2 > delta1
+
+
+def test_amplification_rejects_invalid_inputs():
+    sample_map = lambda d: float(d)
+
+    with pytest.raises(dp.OpenDPException):
+        dp.c.amplify_without_replacement(
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            sample_map,
+            population_size=100,
+            sample_size=10,
+        )
+
+    with pytest.raises(dp.OpenDPException):
+        dp.c.amplify_without_replacement(
+            dp.change_one_distance(),
+            dp.zero_concentrated_divergence(),
+            sample_map,
+            population_size=100,
+            sample_size=10,
+        )
+
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.max_divergence(),
+        sample_map,
+        population_size=100,
+        sample_size=10,
+    )
+    with pytest.raises(dp.OpenDPException):
+        amplified(-1)
+
+
+@pytest.mark.parametrize("epsilon", [-1.0, float("nan"), float("-inf")])
+def test_amplification_invalid_epsilon(epsilon):
+    with pytest.raises(dp.OpenDPException, match="epsilon"):
+        dp.c.amplify_without_replacement(
+            dp.change_one_distance(),
+            dp.max_divergence(),
+            lambda _d: epsilon,
+            population_size=10,
+            sample_size=5,
+        )
+
+
+@pytest.mark.parametrize("delta", [-0.1, 1.1, float("nan"), float("inf")])
+def test_amplification_invalid_delta(delta):
+    with pytest.raises(dp.OpenDPException, match="delta"):
+        dp.c.amplify_without_replacement(
+            dp.change_one_distance(),
+            dp.approximate(dp.max_divergence()),
+            lambda _d: (0.0, delta),
+            population_size=10,
+            sample_size=5,
+        )
+
+
+@pytest.mark.parametrize("epsilon", [0.0, -0.0])
+@pytest.mark.parametrize("delta", [0.0, -0.0, 1.0])
+def test_amplification_signed_zero(epsilon, delta):
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.approximate(dp.max_divergence()),
+        lambda _d: (epsilon, delta),
+        population_size=10,
+        sample_size=10,
+    )
+    for d in (1, 2):
+        result_epsilon, result_delta = amplified(d)
+        assert math.copysign(1.0, result_epsilon) == 1.0
+        assert result_epsilon == 0.0
+        assert math.copysign(1.0, result_delta) == 1.0
+        assert result_delta == abs(delta)
+
+
+def test_amplification_infinite_epsilon():
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.max_divergence(),
+        lambda _d: float("inf"),
+        population_size=10,
+        sample_size=5,
+    )
+    assert amplified(0) == 0.0
+    assert amplified(1) == float("inf")
 
 
 def test_fix_delta():
