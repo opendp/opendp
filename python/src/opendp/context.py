@@ -1164,12 +1164,10 @@ def _check_sized_contributions(domain: Domain, input_metric: Metric, d_in) -> No
     elif isinstance(domain, LazyFrameDomain):
         sized = domain.get_margin([]).invariant == "lengths"
     elif isinstance(domain, ExtrinsicDomain):
-        from opendp.extras.numpy import NPArray2Domain, NPArrayDDomain
+        from opendp.extras.numpy import NPArray2Domain
 
         descriptor = domain.descriptor
-        sized = isinstance(descriptor, NPArrayDDomain) or (
-            isinstance(descriptor, NPArray2Domain) and descriptor.size is not None
-        )
+        sized = isinstance(descriptor, NPArray2Domain) and descriptor.size is not None
     else:
         sized = False
 

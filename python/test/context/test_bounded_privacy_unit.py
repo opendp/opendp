@@ -61,14 +61,9 @@ def test_unknown_vector_size_accepts_odd_contributions():
     assert isinstance(context.query().count().laplace().release(), int)
 
 
-@pytest.mark.parametrize("array_domain", ["array2", "arrayd"])
-def test_fixed_numpy_shape_rejects_odd_contributions(array_domain):
+def test_fixed_numpy_rows_reject_odd_contributions():
     np = pytest.importorskip("numpy")
-    domain = (
-        dp.numpy.array2_domain(size=3, num_columns=2, T=float)
-        if array_domain == "array2"
-        else dp.numpy.arrayd_domain(shape=(3, 2), T=float)
-    )
+    domain = dp.numpy.array2_domain(size=3, num_columns=2, T=float)
     with pytest.raises(ValueError, match="Contribution bounds must be even"):
         dp.Context.compositor(
             data=np.zeros((3, 2)),
@@ -77,6 +72,21 @@ def test_fixed_numpy_shape_rejects_odd_contributions(array_domain):
             privacy_loss=dp.loss_of(epsilon=1.0),
             split_evenly_over=1,
         )
+
+
+@pytest.mark.parametrize("ordered", [False, True])
+def test_numpy_array_shape_is_not_interpreted_as_dataset_size(ordered):
+    np = pytest.importorskip("numpy")
+    privacy_unit = dp.unit_of(contributions=1, ordered=ordered)
+    context = dp.Context.compositor(
+        data=np.zeros((3, 2)),
+        domain=dp.numpy.arrayd_domain(shape=(3, 2), T=float),
+        privacy_unit=privacy_unit,
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    assert context.d_in == 1
+    assert context.accountant.input_metric == privacy_unit[0]
 
 
 def test_numpy_integer_contribution_bound_is_checked():
