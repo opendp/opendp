@@ -50,7 +50,12 @@ where
     }
     let input_domain = measurements[0].input_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
-    let output_measure = measurements[0].output_measure.clone();
+    let output_measure = MO::compose_measure(
+        &measurements
+            .iter()
+            .map(|measurement| measurement.output_measure.clone())
+            .collect::<Vec<_>>(),
+    )?;
 
     if !measurements.iter().all(|v| input_domain == v.input_domain) {
         return fallible!(DomainMismatch, "All input domains must be the same");
@@ -58,13 +63,6 @@ where
     if !measurements.iter().all(|v| input_metric == v.input_metric) {
         return fallible!(MetricMismatch, "All input metrics must be the same");
     }
-    if !measurements
-        .iter()
-        .all(|v| output_measure == v.output_measure)
-    {
-        return fallible!(MetricMismatch, "All output measures must be the same");
-    }
-
     let functions = measurements
         .iter()
         .map(|m| m.function.clone())
