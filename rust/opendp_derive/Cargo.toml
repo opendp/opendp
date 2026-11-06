@@ -23,3 +23,6 @@ opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.16.
 [features]
 full = ["syn", "quote", "opendp_tooling"]
 partials = ["full"]
+
+[package.metadata.docs.rs]
+features = ["full"]
