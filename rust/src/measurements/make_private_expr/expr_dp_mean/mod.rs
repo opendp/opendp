@@ -99,7 +99,7 @@ where
     };
 
     let sum = apply_plugin(
-        vec![input.clone(), lower, upper, scale],
+        vec![input.clone(), lower, upper, scale, lit(false)],
         expr.clone(),
         DPSumShim,
     );

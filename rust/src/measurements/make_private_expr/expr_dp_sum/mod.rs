@@ -11,6 +11,9 @@ use polars::{
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+mod test;
+
 use crate::{
     core::{Measurement, MetricSpace},
     domains::{ExprDomain, ExprPlan, WildExprDomain},
@@ -52,9 +55,11 @@ impl AnonymousColumnsUdf for DPSumShim {
         _: &polars::prelude::Schema,
         fields: &[polars::prelude::Field],
     ) -> PolarsResult<polars::prelude::Field> {
-        <&[polars::prelude::Field; 1]>::try_from(fields)
-            .map_err(|_| polars_err!(InvalidOperation: "{} expects one column", Self::NAME))
-            .map(|[x]| x.clone())
+        let [input, _lower, _upper, _scale, _signed] = <&[polars::prelude::Field; 5]>::try_from(
+            fields,
+        )
+        .map_err(|_| polars_err!(InvalidOperation: "{} expects five arguments", Self::NAME))?;
+        Ok(input.clone())
     }
 }
 
@@ -85,9 +90,23 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some([mut input, lower, upper, scale]) = match_shim::<DPSumShim, _>(&expr)? else {
+    let Some([mut input, lower, upper, scale, signed]) = match_shim::<DPSumShim, 5>(&expr)? else {
         return fallible!(MakeMeasurement, "Expected {} function", DPSumShim::NAME);
     };
+
+    let series_domain = input
+        .clone()
+        .make_stable(input_domain.clone(), input_metric.clone())?
+        .output_domain
+        .column;
+    let input_dtype = series_domain.dtype();
+    let signed = literal_value_of::<bool>(&signed)?.unwrap_or(input_dtype == DataType::UInt32);
+    if signed && input_dtype == DataType::UInt64 {
+        return fallible!(
+            MakeMeasurement,
+            "signed=True is unsupported for UInt64 sums; use signed=False or cast values to a signed type"
+        );
+    }
 
     fn is_null(expr: &Expr) -> bool {
         let Expr::Literal(LiteralValue::Scalar(scalar)) = expr else {
@@ -98,11 +117,6 @@ where
 
     match (is_null(&lower), is_null(&upper)) {
         (false, false) => {
-            let t_prior = input
-                .clone()
-                .make_stable(input_domain.clone(), input_metric.clone())?;
-            let series_domain = t_prior.output_domain.column.clone();
-
             fn get_midpoint<T: Number + ExtractValue + Literal>(
                 lower: &Expr,
                 upper: &Expr,
@@ -149,7 +163,14 @@ where
         }
     };
 
-    apply_plugin(vec![input.sum(), scale], expr, NoiseShim).make_private(
+    let sum = input.sum();
+    let sum = if signed && input_dtype == DataType::UInt32 {
+        sum.cast(DataType::Int64)
+    } else {
+        sum
+    };
+
+    apply_plugin(vec![sum, scale], expr, NoiseShim).make_private(
         input_domain,
         input_metric,
         output_measure,
