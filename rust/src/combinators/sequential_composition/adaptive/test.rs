@@ -89,6 +89,34 @@ fn test_sequential_composition() -> Fallible<()> {
 }
 
 #[test]
+fn test_empty_adaptive_composition() -> Fallible<()> {
+    let compositor = make_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+        vec![],
+    )?;
+    assert_eq!(compositor.map(&0)?, 0.0);
+    assert_eq!(compositor.map(&1)?, 0.0);
+
+    let mut queryable = compositor.invoke(&true)?;
+    let rr = make_randomized_response_bool(0.5, false)?;
+    let err = queryable.eval(&rr).unwrap_err();
+    assert_eq!(err.message.as_deref(), Some("out of queries"));
+
+    let approx_compositor = make_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        1,
+        vec![],
+    )?;
+    assert_eq!(approx_compositor.map(&1)?, (0.0, 0.0));
+    Ok(())
+}
+
+#[test]
 fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
     let mc = make_adaptive_composition::<_, _, _, bool>(
         AtomDomain::<bool>::default().clone(),
