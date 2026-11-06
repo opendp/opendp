@@ -66,6 +66,13 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
+    // Integer casts expose the data-dependent physical encoding of categorical values.
+    if matches!(from_dtype, DataType::Categorical(_, _)) && to_type_dtype.is_integer() {
+        return fallible!(
+            MakeTransformation,
+            "Casting Categorical to an integer exposes data-dependent encodings. Cast to Enum first."
+        );
+    }
     data_column.set_dtype(to_type_dtype.clone())?;
     // Non-strict casts may introduce nulls, even from non-null inputs.
     data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);

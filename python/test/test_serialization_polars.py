@@ -26,13 +26,6 @@ def test_deserialize_polars_plan_error():
     "dp_domain,in_value,out_value",
     [
         (atom, 10, 100),
-        # TODO: Might not be specifying categorical values correctly,
-        # but shouldn't error, regardless.
-        # https://github.com/opendp/opendp/issues/2264
-        # (dp.categorical_domain(['A', 'B', 'C']),
-        #  pl.lit("A", dtype=pl.Categorical),
-        #  pl.lit("Z", dtype=pl.Categorical)
-        # ),
         (
             dp.series_domain("name", atom),
             pl.Series("name", [1.0, 2.0, 3.0]),

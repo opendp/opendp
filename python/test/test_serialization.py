@@ -26,7 +26,7 @@ odometer = dp.c.make_fully_adaptive_composition(
         input_space,
         # Domains:
         atom,
-        dp.categorical_domain(["A", "B", "C"]),
+        dp.categorical_domain(),
         dp.series_domain("A", atom),
         dp.lazyframe_domain([dp.series_domain("A", atom)]),
         dp.wild_expr_domain([]),

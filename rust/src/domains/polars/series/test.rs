@@ -70,3 +70,17 @@ fn test_series_nan_with_option() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_series_small_unsigned() -> Fallible<()> {
+    for dtype in [DataType::UInt8, DataType::UInt16] {
+        let mut domain = SeriesDomain::new_from_field(Field::new("A".into(), dtype.clone()))?;
+        assert_eq!(domain.dtype(), dtype);
+        assert!(domain.nullable);
+        domain.drop_bounds()?;
+
+        let series = Series::new("A".into(), [1u32, 2, 3]).cast(&dtype)?;
+        assert!(domain.member(&series)?);
+    }
+    Ok(())
+}
