@@ -1,0 +1,43 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{impl TopKMeasure for MultiDP}}
+\author{\MichaelShoemateAuthor}
+\begin{document}
+\maketitle
+
+This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} for \texttt{MultiDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}: types are consistent with the PureDP and zCDP top-$k$ accounting implementations.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}: \texttt{d\_in} is non-null and non-negative, and \texttt{scale} is non-null and non-negative.
+\end{itemize}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The implementation is consistent with the associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
+    For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$, \texttt{privacy\_map} returns a \texttt{PrivacyGuarantee} containing a valid bound for the selected top-$k$ mechanism.
+\end{theorem}
+
+\begin{proof}
+    For the exponential distribution, the implementation uses the established PureDP bound
+    $\epsilon = k d_\mathrm{in}/\mathrm{scale}$ and embeds it as an ApproxDP profile.
+    For the Gumbel distribution, it uses the established zCDP bound
+    $\rho = k(d_\mathrm{in}/\mathrm{scale})^2/8$.
+    Both bounds are composed over the $k$ peeling rounds, and the corresponding
+    representation is attached to the aggregate MultiDP guarantee without weakening
+    the certified bound. Directed arithmetic rounds the final multiplication upward.
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

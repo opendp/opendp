@@ -20,7 +20,10 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure")),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure"),
+        distribution(c_type = "char *", rust_type = b"null", default = b"null")
+    ),
     generics(MI(suppress), MO(suppress), T(suppress)),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
@@ -46,6 +49,7 @@ mod ffi;
 /// * `candidates` - Potential quantiles to score
 /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
 /// * `scale` - the scale of the noise added
+/// * `distribution` - Optional selection distribution: `"exponential"` or `"gumbel"`.
 ///
 /// # Generics
 /// * `MI` - Input Metric.
@@ -57,6 +61,7 @@ pub fn make_private_quantile<MI: 'static + UnboundedMetric, MO: TopKMeasure, T: 
     mut candidates: Vec<T>,
     alpha: f64,
     scale: f64,
+    distribution: Option<String>,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, MI, MO, T>>
 where
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
@@ -86,6 +91,7 @@ where
         output_measure,
         scale * denominator as f64,
         true,
+        distribution,
     )?;
     let p_index = Function::new(move |idx: &usize| candidates[*idx]);
 
