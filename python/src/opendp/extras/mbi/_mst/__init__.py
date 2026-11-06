@@ -6,7 +6,7 @@ from typing import Any, Optional, Sequence, cast, TYPE_CHECKING
 
 from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.combinators import then_adaptive_composition
+from opendp.combinators import make_adaptive_composition, then_adaptive_composition
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDistance,
@@ -29,7 +29,8 @@ from opendp.mod import (
     Measure,
     Measurement,
     Queryable,
-    binary_search_chain,
+    binary_search,
+    binary_search_param,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -174,17 +175,20 @@ class MST(Algorithm):
             selected_cliques = qbl(m_select)
 
             # MEASURE selected marginals with noise
-            m_measure = binary_search_chain(
-                lambda s: make_noise_marginals(
+            def make_measurement(s):
+                return make_noise_marginals(
                     *t_marginals.output_space,
                     output_measure,
                     selected_cliques,
                     scale=s,
-                ),
-                d_in=d_marginals,
-                d_out=d_measure,
+                )
+
+            scale = binary_search(
+                lambda s: s > 0 and make_measurement(s).check(d_marginals, d_measure),
+                bounds=(0.0, None),
                 T=float,
             )
+            m_measure = make_measurement(scale)
 
             all_marginals = marginals.add(*qbl(m_measure))
 
@@ -226,10 +230,24 @@ def _make_mst_select(
 
     max_selections = len(model.domain.attributes) - 1
     num_selections = min(max(0, num_selections or max_selections), max_selections)
-    d_select = prior(d_out / num_selections)
-
     t_mst_scores = _make_mst_scores(input_domain, input_metric, edges, model)
     d_mst_scores = t_mst_scores.map(d_in)
+
+    # Calibrate against the conservative composition map, not d_out / n:
+    # rounding up each term can otherwise exceed the parent's allocation.
+    d_select = binary_search_param(
+        lambda budget: make_adaptive_composition(
+            input_domain=t_mst_scores.output_domain,
+            input_metric=t_mst_scores.output_metric,
+            output_measure=output_measure,
+            d_in=d_mst_scores,
+            d_mids=[budget] * num_selections,
+        ),
+        d_in=d_mst_scores,
+        d_out=d_out,
+        bounds=(0.0, None),
+        T=float,
+    )
 
     def function(qbl: Queryable) -> list[tuple[str, str]]:
         selected_edges = []
@@ -248,16 +266,21 @@ def _make_mst_select(
                 stability_map=lambda d_in: d_in,
             )
 
-            m_rnm = binary_search_chain(
-                lambda s: make_noisy_max(
-                    *t_unconnected.output_space, output_measure=output_measure, scale=s
-                ),
-                d_in=d_mst_scores,
-                d_out=d_select,
+            def make_measurement(s):
+                return t_unconnected >> make_noisy_max(
+                    *t_unconnected.output_space,
+                    output_measure=output_measure,
+                    scale=s,
+                )
+
+            scale = binary_search(
+                lambda s: s > 0 and make_measurement(s).check(d_mst_scores, d_select),
+                bounds=(0.0, None),
                 T=float,
             )
+            m_rnm = make_measurement(scale)
 
-            selected_edge = edges[unconnected[qbl(t_unconnected >> m_rnm)]]
+            selected_edge = edges[unconnected[qbl(m_rnm)]]
 
             selected_edges.append(selected_edge)
             components.merge(*selected_edge)

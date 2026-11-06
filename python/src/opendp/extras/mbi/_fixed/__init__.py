@@ -22,7 +22,7 @@ from opendp.mod import (
     LazyFrameDomain,
     Measure,
     Measurement,
-    binary_search_chain,
+    binary_search,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -101,7 +101,12 @@ class Fixed(Algorithm):
                 input_domain, input_metric, cliques
             ) >> then_noise_marginals(output_measure, cliques, scale, weights)  # type: ignore[return-type]
 
-        m_marginals = binary_search_chain(make, d_in, d_out, T=float)
+        scale = binary_search(
+            lambda s: s > 0 and make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        m_marginals = make(scale)
 
         def function(
             new_releases: list,

@@ -38,7 +38,7 @@ from opendp.mod import (
     OdometerQueryable,
     Queryable,
     Transformation,
-    binary_search_chain,
+    binary_search,
 )
 from opendp._internal import _make_transformation, _new_pure_function
 
@@ -289,18 +289,21 @@ def _make_aim_marginal(
         selected_clique = qbl(m_select)
 
         # MEASURE selected marginal with noise
-        m_measure = binary_search_chain(
-            lambda s: make_noise_marginal(
+        def make_measurement(s):
+            return make_noise_marginal(
                 input_domain,
                 input_metric,
                 output_measure,
                 clique=selected_clique,
                 scale=s,
-            ),
-            d_in=d_in,
-            d_out=d_measure,
+            )
+
+        scale = binary_search(
+            lambda s: s > 0 and make_measurement(s).check(d_in, d_measure),
+            bounds=(0.0, None),
             T=float,
         )
+        m_measure = make_measurement(scale)
 
         new_marginal: LinearMeasurement = qbl(m_measure)
 
@@ -368,7 +371,7 @@ def _make_aim_select(
     # only keep queries that fit the memory constraint
     candidates = [q for q in queries if is_small(q.by)]
 
-    if not candidates:
+    if not candidates or d_out <= 0 or d_measure <= 0:
         return None
 
     # penalize candidates by the expected error of the upcoming MEASURE step,
@@ -387,9 +390,12 @@ def _make_aim_select(
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
-        return binary_search_chain(
-            make, d_in=d_in, d_out=d_out, T=float
-        ) >> _new_pure_function(lambda idx: candidates[idx].by)
+        scale = binary_search(
+            lambda s: s > 0 and make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        return make(scale) >> _new_pure_function(lambda idx: candidates[idx].by)
     except ValueError:  # pragma: no cover
         # can fail in the unlikely scenario where
         #    d_out is so small that no scale is suitable

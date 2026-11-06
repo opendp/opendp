@@ -652,17 +652,20 @@ class Context(object):
             if self.d_out is None:
                 raise ValueError("The privacy loss is unbounded.")
 
-            def _sub(a, b):
-                if (
-                    isinstance(a, tuple)
-                    and isinstance(b, tuple)
-                    and len(a) == len(b) == 2
-                ):
-                    return a[0] - b[0], a[1] - b[1]
-                else:
-                    return a - b
+            from math import inf, nextafter
 
-            return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
+            def conservative_sub(total, spent):
+                if spent >= total:
+                    return 0.0
+                if spent == 0 or total == inf:
+                    return total
+                # Downward rounding makes the remainder safe under inf_add.
+                return nextafter(total - spent, -inf)
+
+            spent = self.queryable.privacy_loss(self.d_in)
+            if isinstance(self.d_out, tuple):
+                return tuple(map(conservative_sub, self.d_out, spent))
+            return conservative_sub(self.d_out, spent)
 
         return None if self.d_mids is None else self.d_mids.copy()
 
