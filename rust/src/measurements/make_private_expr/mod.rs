@@ -163,7 +163,7 @@ where
         counting_query!(DPNullCountShim, make_expr_dp_null_count);
         counting_query!(DPNUniqueShim, make_expr_dp_n_unique);
 
-        if match_shim::<DPSumShim, 4>(&self)?.is_some() {
+        if match_shim::<DPSumShim, 5>(&self)?.is_some() {
             return expr_dp_sum::make_expr_dp_sum(
                 input_domain,
                 input_metric,
