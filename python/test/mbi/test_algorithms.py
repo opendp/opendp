@@ -422,3 +422,99 @@ def test_mst_init(kwargs, message):
 def test_sequential_init(kwargs, message):
     with pytest.raises(ValueError, match=re.escape(message)):
         Sequential(**kwargs)
+
+
+def test_mst_selection_budget_respects_conservative_composition():
+    # Repeated rounded-up privacy losses can exceed a naively divided budget.
+    pytest.importorskip("mbi")
+    import itertools
+    import mbi  # type: ignore[import-untyped,import-not-found]
+
+    from opendp.extras.mbi._mst import _make_mst_select
+    from opendp.extras.mbi._utilities import make_stable_marginals
+
+    columns = tuple(f"C{i}" for i in range(9))
+    edges = list(itertools.combinations(columns, 2))
+    domain = dp.lazyframe_domain(
+        [dp.series_domain(c, dp.atom_domain(T="u32", bounds=(0, 1))) for c in columns]
+    )
+    metric = dp.frame_distance(dp.symmetric_distance())
+    d_in = [dp.polars.Bound(per_group=1)]
+    t_marginals = make_stable_marginals(domain, metric, edges)
+    d_marginals = t_marginals.map(d_in)
+    budget = 0.01
+    m_select = _make_mst_select(
+        *t_marginals.output_space,
+        output_measure=dp.zero_concentrated_divergence(),
+        d_in=d_marginals,
+        d_out=budget,
+        edges=edges,
+        model=mirror_descent(mbi.Domain(columns, (2,) * len(columns)), []),
+    )
+
+    assert m_select.check(d_marginals, budget)
+
+
+def test_aim_selection_requires_positive_budget():
+    # An exhausted selection allocation must not search negative noise scales.
+    pytest.importorskip("mbi")
+    import mbi  # type: ignore[import-untyped,import-not-found]
+
+    from opendp.extras.mbi._aim import _make_aim_select
+    from opendp.extras.mbi._utilities import make_stable_marginals
+
+    columns = ("A", "B")
+    queries = [Count(("A",)), Count(("B",))]
+    domain = dp.lazyframe_domain(
+        [dp.series_domain(c, dp.atom_domain(T="u32", bounds=(0, 1))) for c in columns]
+    )
+    metric = dp.frame_distance(dp.symmetric_distance())
+    t_marginals = make_stable_marginals(domain, metric, [q.by for q in queries])
+    d_in = t_marginals.map([dp.polars.Bound(per_group=1)])
+    model = mirror_descent(mbi.Domain(columns, (2, 2)), [])
+
+    assert (
+        _make_aim_select(
+            *t_marginals.output_space,
+            output_measure=dp.zero_concentrated_divergence(),
+            d_in=d_in,
+            d_out=0.0,
+            d_measure=1.0,
+            queries=queries,
+            model=model,
+            max_size=80.0,
+        )
+        is None
+    )
+
+
+def test_fixed_noise_scale_search_is_nonnegative(monkeypatch):
+    pytest.importorskip("mbi")
+    from opendp.extras.mbi import _fixed
+
+    original_search = _fixed.binary_search
+    seen_bounds = []
+
+    def search(predicate, *args, **kwargs):
+        seen_bounds.append(kwargs.get("bounds"))
+        assert predicate(0.0) is False
+        return original_search(predicate, *args, **kwargs)
+
+    monkeypatch.setattr(_fixed, "binary_search", search)
+
+    domain = dp.lazyframe_domain(
+        [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 1)))]
+    )
+    d_in = [dp.polars.Bound(per_group=1)]
+    measurement = Fixed(queries=[Count(("A",))]).make_marginals(
+        domain,
+        dp.frame_distance(dp.symmetric_distance()),
+        dp.zero_concentrated_divergence(),
+        d_in=d_in,
+        d_out=0.2,
+        marginals=Marginals(),
+        model=None,
+    )
+
+    assert seen_bounds == [(0.0, None)]
+    assert measurement.check(d_in, 0.2)

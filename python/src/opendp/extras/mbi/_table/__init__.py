@@ -44,7 +44,6 @@ from opendp.mod import (
     OpenDPException,
     Queryable,
     binary_search,
-    binary_search_param,
 )
 from opendp.domains import _lazyframe_from_domain
 from opendp.transformations import make_stable_lazyframe
@@ -585,8 +584,10 @@ def _make_oneway_marginals(
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
     if isinstance(output_measure, ApproximateDivergence):
-        compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
-        scale = binary_search(compare_s, T=float)
+        compare_s = lambda s: (
+            s > 0 and _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]
+        )  # type: ignore[index]
+        scale = binary_search(compare_s, bounds=(0.0, None), T=float)
 
         try:
             _make(scale, threshold=None)
@@ -596,7 +597,11 @@ def _make_oneway_marginals(
             threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]
 
     else:
-        scale = binary_search_param(_make, d_in, d_out, T=float)
+        scale = binary_search(
+            lambda s: s > 0 and _make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
         threshold = None
 
     return _make(scale, threshold), scale, threshold
