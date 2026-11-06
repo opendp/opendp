@@ -145,8 +145,16 @@ class ContingencyTable:
 
         attrs = [attrs] if isinstance(attrs, str) else list(attrs)
 
+        unknown = [attr for attr in attrs if attr not in self.keys]
+        if unknown:
+            raise ValueError(f"attrs ({unknown}) are not present in keys")
+
         lengths_arr = np.asarray(self.project(attrs).ravel())
         lengths = pl.Series("len", lengths_arr).to_frame()
+
+        if not attrs:
+            # A zero-way projection has one row.
+            return lengths
 
         return row_major_order(self.keys[attr] for attr in attrs).hstack(lengths)
 
@@ -246,7 +254,20 @@ def make_contingency_table(
     }
 
     cuts_pl: dict[str, pl.Series] = {
-        col: _unique(_increasing(pl.Series(col, cutset, dtype=schema.get(col))), "cuts")
+        col: _unique(
+            _increasing(
+                _exact_integer_cuts(
+                    _exterior_representable(
+                        _finite(
+                            _non_null(
+                                _nonempty(pl.Series(col, cutset, dtype=schema.get(col)))
+                            )
+                        )
+                    )
+                )
+            ),
+            "cuts",
+        )
         for col, cutset in (cuts or dict()).items()
     }
 
@@ -292,21 +313,31 @@ def make_contingency_table(
         message = f"delta ({delta}) must be nonzero because keys and cuts don't span all columns"
         raise ValueError(message)
 
-    if algorithm.oneway == ONEWAY_UNKEYED and all_keys_known:
+    if algorithm.oneway_split is None:
+        oneway_split = 0.5
+        if algorithm.oneway == ONEWAY_UNKEYED:
+            columns = set(input_domain.columns)
+            oneway_split *= len(columns - set(keys_pl)) / len(columns)
+    else:
+        oneway_split = algorithm.oneway_split
+
+    if oneway_split == 0:
+        if algorithm.needs_model and model is None:
+            raise ValueError(
+                "oneway_split must be positive without a prior model for adaptive algorithms"
+            )
+        # the oneway phase is the only place private keys are discovered for
+        # columns without a known keyset, so it can't be skipped for those
+        if not all_keys_known:
+            message = "oneway_split must be positive when discovering private keysets"
+            raise ValueError(message)
+
         d_multiway: Union[float | tuple[float, float]] = d_out
         d_mids = [d_multiway if delta is None else (d_multiway, 0.0)]
         m_oneway = None
         scale, threshold = None, None
 
     else:
-        if algorithm.oneway_split is None:
-            oneway_split = 0.5
-            if algorithm.oneway == ONEWAY_UNKEYED:
-                columns = set(input_domain.columns)
-                oneway_split *= len(columns - set(keys_pl)) / len(columns)
-        else:
-            oneway_split = algorithm.oneway_split
-
         d_oneway = d_out * oneway_split
         d_multiway = float(prior(prior(d_out - d_oneway)))
         if delta is not None:
@@ -357,9 +388,13 @@ def make_contingency_table(
 
         mbi_domain = mbi.Domain.fromdict({c: len(k) for c, k in stable_keys.items()})
 
-        potentials = None
-        if isinstance(model, mbi.MarkovRandomField):
-            potentials = replace(model.potentials, domain=mbi_domain)
+        same_domain = (
+            isinstance(model, mbi.MarkovRandomField)
+            and model.domain.config == mbi_domain.config
+        )
+        potentials = (
+            replace(model.potentials, domain=mbi_domain) if same_domain else None
+        )
 
         current_model = (
             algorithm.estimator(
@@ -367,6 +402,8 @@ def make_contingency_table(
             )
             if algorithm.needs_model
             else model
+            if same_domain
+            else None
         )
 
         t_index = make_stable_lazyframe(
@@ -427,13 +464,76 @@ def _unique(series, arg: str):
 
 def _increasing(series):
     """raise error if elements are not increasing"""
-    import polars as pl
-
-    diff = series.cast(pl.Float64).diff(null_behavior="drop")
-    if diff.le(0).any():  # pragma: no cover
+    if (
+        series.len() > 1 and series.slice(1).le(series.slice(0, series.len() - 1)).any()
+    ):  # pragma: no cover
         # this is actually tested, but coverage doesn't see it
         message = f'cuts must be strictly increasing: "{series.name}" is not strictly increasing'
         raise ValueError(message)
+    return series
+
+
+def _nonempty(series):
+    """raise error if a cutset is empty"""
+    if series.len() == 0:
+        raise ValueError(f'cuts must not be empty: "{series.name}" has no cut points')
+    return series
+
+
+def _non_null(series):
+    """Reject null cut points."""
+    if series.null_count():
+        raise ValueError(f'cuts must not contain null values: "{series.name}"')
+    return series
+
+
+def _finite(series):
+    """raise error if a float cutset contains nan, +inf, or -inf"""
+    if series.dtype.is_float() and not series.is_finite().all():
+        message = (
+            f'cuts must be finite: "{series.name}" contains a nan or infinite value'
+        )
+        raise ValueError(message)
+    return series
+
+
+def _exterior_representable(series):
+    """Require a representable value above the last cut."""
+    import numpy as np  # type: ignore[import-not-found]
+
+    cut_values = series.to_numpy()
+
+    if series.dtype.is_integer():
+        info = np.iinfo(cut_values.dtype)
+        if cut_values[-1] == info.max:
+            message = (
+                f'"{series.name}" integer cuts: the last cut cannot be the '
+                f"dtype maximum ({info.max}), since the final exterior bin "
+                "would contain no representable value"
+            )
+            raise ValueError(message)
+
+    elif series.dtype.is_float():
+        with np.errstate(over="ignore"):
+            next_value = np.nextafter(cut_values[-1], np.inf)
+        if not np.isfinite(next_value):
+            message = (
+                f'"{series.name}" float cuts must leave a finite representable '
+                "value above the final cut"
+            )
+            raise ValueError(message)
+
+    return series
+
+
+def _exact_integer_cuts(series):
+    """Limit integer cuts to values exactly ordered by Float64 binning."""
+    if series.dtype.is_integer() and any(
+        not -(2**53) < int(cut) < 2**53 for cut in series
+    ):
+        raise ValueError(
+            f'"{series.name}" integer cuts must lie strictly between -2**53 and 2**53'
+        )
     return series
 
 
@@ -608,17 +708,55 @@ def _make_oneway_marginals(
 
 
 def _deindex(indices, keys, cuts=None):
-    """Translate keyset indices into categorical data."""
+    """Map bin indices to values in left-open, right-closed bins."""
     import numpy as np
 
     if cuts is None:
         return keys[indices]
 
-    if cuts.dtype.is_integer():
-        # cuts are left-open
-        sampler = lambda lower, upper: np.random.randint(lower + 1, upper + 1)
-    elif cuts.dtype.is_float():
-        sampler = np.random.uniform  # type: ignore[assignment]
+    cut_values = cuts.to_numpy()
+    indices = np.asarray(indices)
+    values = np.empty(indices.shape, dtype=cut_values.dtype)
 
-    edges = np.array([cuts[0] - 1, *cuts, cuts[-1] + 1])
-    return sampler(edges[indices], edges[indices + 1])
+    first = indices == 0
+    last = indices == len(cut_values)
+    interior = ~(first | last)
+
+    # The first bin includes its upper cut.
+    values[first] = cut_values[0]
+
+    bin_indices = indices[interior]
+    lower = cut_values[bin_indices - 1]
+    upper = cut_values[bin_indices]
+
+    if cuts.dtype.is_integer():
+        # The last cut is below the dtype maximum.
+        values[last] = cut_values[-1] + 1
+        if lower.size:
+            values[interior] = np.random.randint(
+                lower + 1, upper + 1, size=lower.shape, dtype=cut_values.dtype
+            )
+
+    elif cuts.dtype.is_float():
+        with np.errstate(over="ignore"):
+            values[last] = np.nextafter(cut_values[-1], np.inf)
+
+        if lower.size:
+            # Avoid overflow across zero; clip to the open lower bound.
+            lower_open = np.nextafter(lower, upper)
+            fraction = np.random.random(size=lower.shape)
+            opposite = np.signbit(lower) != np.signbit(upper)
+            sampled = np.empty(lower.shape, dtype=np.float64)
+            same = ~opposite
+            sampled[same] = lower[same] + (upper[same] - lower[same]) * fraction[same]
+            sampled[opposite] = (
+                lower[opposite] * (1.0 - fraction[opposite])
+                + upper[opposite] * fraction[opposite]
+            )
+            sampled = sampled.astype(cut_values.dtype)
+            values[interior] = np.clip(sampled, lower_open, upper)
+
+    else:
+        raise TypeError(f"cuts must be integer or float, got {cuts.dtype}")
+
+    return values
