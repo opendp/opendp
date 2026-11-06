@@ -36,10 +36,13 @@ pub trait AmplifyWithoutReplacement: Measure {
 }
 
 fn amplify_epsilon(epsilon: f64, sampling_rate: f64) -> Fallible<f64> {
-    // Reject invalid budgets, including negative zero. Genuine infinity is a
-    // valid (vacuous) privacy guarantee, distinct from finite overflow.
-    if epsilon.is_nan() || epsilon.is_sign_negative() {
+    // Both signs of zero represent a valid zero privacy loss. Normalize to
+    // positive zero before directed arithmetic.
+    if epsilon.is_nan() || epsilon < 0.0 {
         return fallible!(FailedMap, "epsilon ({epsilon:?}) must be non-negative");
+    }
+    if epsilon == 0.0 {
+        return Ok(0.0);
     }
     if epsilon == f64::INFINITY {
         return Ok(f64::INFINITY);
@@ -127,9 +130,11 @@ impl AmplifyWithoutReplacement for Approximate<MaxDivergence> {
         let sampling_rate =
             f64::exact_int_cast(sample_size)?.inf_div(&f64::exact_int_cast(population_size)?)?;
         let (epsilon, delta) = privacy_map.eval(&1)?;
-        if delta.is_nan() || delta.is_sign_negative() || delta > 1.0 {
+        if delta.is_nan() || !(0.0..=1.0).contains(&delta) {
             return fallible!(FailedMap, "delta ({delta:?}) must be between zero and one");
         }
+        // Avoid propagating a signed zero through the amplified privacy map.
+        let delta = if delta == 0.0 { 0.0 } else { delta };
         let adjacent_loss = (
             amplify_epsilon(epsilon, sampling_rate)?,
             delta.inf_mul(&sampling_rate)?,

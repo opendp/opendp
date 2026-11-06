@@ -226,7 +226,7 @@ fn test_amplify_privacy_parameter_validation() -> Fallible<()> {
     use crate::measures::{Approximate, MaxDivergence};
     use crate::metrics::ChangeOneDistance;
 
-    for epsilon in [-1.0, -0.0, f64::NEG_INFINITY, f64::NAN] {
+    for epsilon in [-1.0, f64::NEG_INFINITY, f64::NAN] {
         let result = amplify_without_replacement(
             ChangeOneDistance,
             MaxDivergence,
@@ -240,7 +240,7 @@ fn test_amplify_privacy_parameter_validation() -> Fallible<()> {
         );
     }
 
-    for delta in [-0.1, -0.0, 1.01, f64::NAN, f64::INFINITY] {
+    for delta in [-0.1, 1.01, f64::NAN, f64::INFINITY] {
         let result = amplify_without_replacement(
             ChangeOneDistance,
             Approximate(MaxDivergence),
@@ -254,16 +254,35 @@ fn test_amplify_privacy_parameter_validation() -> Fallible<()> {
         );
     }
 
-    // Epsilon zero, delta zero, and delta one are all valid.
-    for delta in [0.0, 1.0] {
-        let map = amplify_without_replacement(
+    // Epsilon and delta may be negative zero, which is normalized to +0.
+    // Delta one and full-population sampling are valid boundary cases.
+    for epsilon in [0.0, -0.0] {
+        let pure = amplify_without_replacement(
             ChangeOneDistance,
-            Approximate(MaxDivergence),
-            PrivacyMap::new(move |_: &u32| (0.0, delta)),
+            MaxDivergence,
+            PrivacyMap::new(move |_: &u32| epsilon),
             10,
             10,
         )?;
-        assert_eq!(map.eval(&1)?, (0.0, delta));
+        for d in [1, 2] {
+            assert_eq!(pure.eval(&d)?.to_bits(), 0.0f64.to_bits());
+        }
+
+        for delta in [0.0, -0.0, 1.0] {
+            let map = amplify_without_replacement(
+                ChangeOneDistance,
+                Approximate(MaxDivergence),
+                PrivacyMap::new(move |_: &u32| (epsilon, delta)),
+                10,
+                10,
+            )?;
+            let (epsilon_out, delta_out) = map.eval(&1)?;
+            assert_eq!(epsilon_out.to_bits(), 0.0f64.to_bits());
+            assert_eq!(delta_out.to_bits(), delta.abs().to_bits());
+            let (epsilon_out, delta_out) = map.eval(&2)?;
+            assert_eq!(epsilon_out.to_bits(), 0.0f64.to_bits());
+            assert_eq!(delta_out.to_bits(), delta.abs().to_bits());
+        }
     }
 
     // Sampling the whole population, and empty populations, are distinct cases.

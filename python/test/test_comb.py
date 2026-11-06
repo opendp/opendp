@@ -1,3 +1,5 @@
+import math
+
 import opendp.prelude as dp
 import pytest
 
@@ -75,7 +77,7 @@ def test_amplification_rejects_invalid_inputs():
         amplified(-1)
 
 
-@pytest.mark.parametrize("epsilon", [-1.0, -0.0, float("nan"), float("-inf")])
+@pytest.mark.parametrize("epsilon", [-1.0, float("nan"), float("-inf")])
 def test_amplification_invalid_epsilon(epsilon):
     with pytest.raises(dp.OpenDPException, match="epsilon"):
         dp.c.amplify_without_replacement(
@@ -87,7 +89,7 @@ def test_amplification_invalid_epsilon(epsilon):
         )
 
 
-@pytest.mark.parametrize("delta", [-0.1, -0.0, 1.1, float("nan"), float("inf")])
+@pytest.mark.parametrize("delta", [-0.1, 1.1, float("nan"), float("inf")])
 def test_amplification_invalid_delta(delta):
     with pytest.raises(dp.OpenDPException, match="delta"):
         dp.c.amplify_without_replacement(
@@ -97,6 +99,24 @@ def test_amplification_invalid_delta(delta):
             population_size=10,
             sample_size=5,
         )
+
+
+@pytest.mark.parametrize("epsilon", [0.0, -0.0])
+@pytest.mark.parametrize("delta", [0.0, -0.0, 1.0])
+def test_amplification_signed_zero(epsilon, delta):
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.approximate(dp.max_divergence()),
+        lambda _d: (epsilon, delta),
+        population_size=10,
+        sample_size=10,
+    )
+    for d in (1, 2):
+        result_epsilon, result_delta = amplified(d)
+        assert math.copysign(1.0, result_epsilon) == 1.0
+        assert result_epsilon == 0.0
+        assert math.copysign(1.0, result_delta) == 1.0
+        assert result_delta == abs(delta)
 
 
 def test_amplification_infinite_epsilon():
