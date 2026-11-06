@@ -84,7 +84,9 @@ This is extremely powerful!
     >>> # finds the smallest n
     >>> dp.binary_search_param(
     ...     lambda n: dp.t.make_mean(
-    ...         dp.vector_domain(dp.atom_domain((0.0, 10.0)), n),
+    ...         dp.vector_domain(
+    ...             dp.atom_domain((0.0, 10.0), nan=False), n
+    ...         ),
     ...         dp.symmetric_distance(),
     ...     )
     ...     >> dp.m.then_gaussian(scale=1.0),
@@ -101,14 +103,16 @@ This is extremely powerful!
     >>> # finds the largest clipping bounds
     >>> dp.binary_search_param(
     ...     lambda c: dp.t.make_sum(
-    ...         dp.vector_domain(dp.atom_domain(bounds=(-c, c))),
+    ...         dp.vector_domain(
+    ...             dp.atom_domain(bounds=(-c, c), nan=False)
+    ...         ),
     ...         dp.symmetric_distance(),
     ...     )
     ...     >> dp.m.then_gaussian(scale=1.0),
     ...     d_in=2,
     ...     d_out=1.0,
     ... )
-    0.353553389770093...
+    0.35355339...
 
 The API documentation on these functions have more specific usage examples.
 

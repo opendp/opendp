@@ -21,6 +21,7 @@ mod operations;
 pub use operations::*;
 
 pub mod samplers;
+pub(crate) mod sum;
 
 /// A type that can be used as a stability or privacy constant to scale a distance.
 ///
