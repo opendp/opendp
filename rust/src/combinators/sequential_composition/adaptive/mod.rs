@@ -84,10 +84,6 @@ where
     MO::Distance: 'static + ProductOrd + Clone + Debug,
     (DI, MI): MetricSpace,
 {
-    if d_mids.len() == 0 {
-        return fallible!(MakeMeasurement, "d_mids must have at least one element");
-    }
-
     // we'll iteratively pop from the end
     d_mids.reverse();
 
