@@ -36,6 +36,15 @@ pub trait AmplifyWithoutReplacement: Measure {
 }
 
 fn amplify_epsilon(epsilon: f64, sampling_rate: f64) -> Fallible<f64> {
+    // Reject invalid budgets, including negative zero. Genuine infinity is a
+    // valid (vacuous) privacy guarantee, distinct from finite overflow.
+    if epsilon.is_nan() || epsilon.is_sign_negative() {
+        return fallible!(FailedMap, "epsilon ({epsilon:?}) must be non-negative");
+    }
+    if epsilon == f64::INFINITY {
+        return Ok(f64::INFINITY);
+    }
+
     // BBG18 Theorem 9 gives ln(1 + q * (exp(epsilon) - 1)).
     // Directed rounding of each operation yields a conservative upper bound.
     epsilon.inf_exp_m1()?.inf_mul(&sampling_rate)?.inf_ln_1p()
@@ -60,9 +69,10 @@ impl AmplifyWithoutReplacement for MaxDivergence {
             if *d_in == 0 {
                 return Ok(0.0);
             }
-            epsilon
-                .inf_mul(&f64::exact_int_cast(*d_in)?)
-                .or(Ok(f64::INFINITY))
+            if epsilon == f64::INFINITY {
+                return Ok(f64::INFINITY);
+            }
+            epsilon.inf_mul(&f64::exact_int_cast(*d_in)?)
         }))
     }
 }
@@ -73,8 +83,8 @@ fn group_privacy_approx((epsilon, delta): (f64, f64), group_size: u32) -> Fallib
     // (d * epsilon, delta * sum_{j=0}^{d-1} exp(j * epsilon)).
     // For positive epsilon, the sum is expm1(d * epsilon) / expm1(epsilon).
     // The numerator is rounded up, the denominator down, and the quotient and
-    // final product up. On arithmetic failure, infinity bounds the result.
-    // Since every privacy delta is at most one, capping at one is sound.
+    // final product up. Arithmetic errors propagate; successfully computed
+    // delta bounds are capped at one.
     if group_size == 0 {
         return Ok((0.0, 0.0));
     }
@@ -82,24 +92,23 @@ fn group_privacy_approx((epsilon, delta): (f64, f64), group_size: u32) -> Fallib
         return Ok((epsilon, delta));
     }
 
-    let epsilon_group = epsilon
-        .inf_mul(&f64::exact_int_cast(group_size)?)
-        .unwrap_or(f64::INFINITY);
+    // Infinity is an actual input guarantee, not finite arithmetic overflow.
+    if epsilon == f64::INFINITY {
+        return Ok((f64::INFINITY, if delta == 0.0 { 0.0 } else { 1.0 }));
+    }
+
+    let epsilon_group = epsilon.inf_mul(&f64::exact_int_cast(group_size)?)?;
     if delta == 0.0 {
         return Ok((epsilon_group, 0.0));
     }
 
     let group_size = f64::exact_int_cast(group_size)?;
     let delta_group = if epsilon == 0.0 {
-        delta.inf_mul(&group_size).unwrap_or(f64::INFINITY)
+        delta.inf_mul(&group_size)?
     } else {
-        let sum = (|| -> Fallible<f64> {
-            let numerator = epsilon.inf_mul(&group_size)?.inf_exp_m1()?;
-            let denominator = epsilon.neg_inf_exp_m1()?;
-            numerator.inf_div(&denominator)
-        })()
-        .unwrap_or(f64::INFINITY);
-        delta.inf_mul(&sum).unwrap_or(f64::INFINITY)
+        let numerator = epsilon.inf_mul(&group_size)?.inf_exp_m1()?;
+        let denominator = epsilon.neg_inf_exp_m1()?;
+        delta.inf_mul(&numerator.inf_div(&denominator)?)?
     };
     Ok((epsilon_group, delta_group.min(1.0)))
 }
@@ -118,6 +127,9 @@ impl AmplifyWithoutReplacement for Approximate<MaxDivergence> {
         let sampling_rate =
             f64::exact_int_cast(sample_size)?.inf_div(&f64::exact_int_cast(population_size)?)?;
         let (epsilon, delta) = privacy_map.eval(&1)?;
+        if delta.is_nan() || delta.is_sign_negative() || delta > 1.0 {
+            return fallible!(FailedMap, "delta ({delta:?}) must be between zero and one");
+        }
         let adjacent_loss = (
             amplify_epsilon(epsilon, sampling_rate)?,
             delta.inf_mul(&sampling_rate)?,
@@ -142,7 +154,7 @@ impl AmplifyWithoutReplacement for Approximate<MaxDivergence> {
 /// disclosed, and the supplied privacy map must account for all releases
 /// involving the sample.
 pub fn amplify_without_replacement<MO>(
-    _input_metric: ChangeOneDistance,
+    input_metric: ChangeOneDistance,
     output_measure: MO,
     privacy_map: PrivacyMap<ChangeOneDistance, MO>,
     population_size: usize,
@@ -152,12 +164,13 @@ where
     MO: 'static + AmplifyWithoutReplacement,
     MO::Distance: 'static,
 {
+    let _ = input_metric;
     // The sample-size check establishes 1 <= sample_size <= population_size.
     // The output map satisfies the population-level privacy guarantee by the
     // proof definition of AmplifyWithoutReplacement::amplify_map.
     if sample_size == 0 || sample_size > population_size {
         return fallible!(
-            MakeMeasurement,
+            FailedMap,
             "sample size ({:?}) must be between 1 and population size ({:?})",
             sample_size,
             population_size

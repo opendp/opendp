@@ -75,6 +75,42 @@ def test_amplification_rejects_invalid_inputs():
         amplified(-1)
 
 
+@pytest.mark.parametrize("epsilon", [-1.0, -0.0, float("nan"), float("-inf")])
+def test_amplification_invalid_epsilon(epsilon):
+    with pytest.raises(dp.OpenDPException, match="epsilon"):
+        dp.c.amplify_without_replacement(
+            dp.change_one_distance(),
+            dp.max_divergence(),
+            lambda _d: epsilon,
+            population_size=10,
+            sample_size=5,
+        )
+
+
+@pytest.mark.parametrize("delta", [-0.1, -0.0, 1.1, float("nan"), float("inf")])
+def test_amplification_invalid_delta(delta):
+    with pytest.raises(dp.OpenDPException, match="delta"):
+        dp.c.amplify_without_replacement(
+            dp.change_one_distance(),
+            dp.approximate(dp.max_divergence()),
+            lambda _d: (0.0, delta),
+            population_size=10,
+            sample_size=5,
+        )
+
+
+def test_amplification_infinite_epsilon():
+    amplified = dp.c.amplify_without_replacement(
+        dp.change_one_distance(),
+        dp.max_divergence(),
+        lambda _d: float("inf"),
+        population_size=10,
+        sample_size=5,
+    )
+    assert amplified(0) == 0.0
+    assert amplified(1) == float("inf")
+
+
 def test_fix_delta():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 

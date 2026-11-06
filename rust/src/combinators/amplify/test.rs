@@ -28,8 +28,11 @@ fn test_amplify_without_replacement() -> Fallible<()> {
     let (epsilon_3, delta_3) = amplified.eval(&3)?;
     assert!((epsilon_3 - 3.0 * epsilon).abs() < 1e-12);
     assert!((delta_3 - delta * (1.0 + epsilon.exp() + (2.0 * epsilon).exp())).abs() < 1e-12);
-    let (_, delta_large) = amplified.eval(&u32::MAX)?;
-    assert!(delta_large <= 1.0);
+    // A huge group distance overflows before its delta bound can be computed.
+    assert_eq!(
+        amplified.eval(&u32::MAX).unwrap_err().variant,
+        crate::error::ErrorVariant::Overflow
+    );
 
     assert!(
         amplify_without_replacement(
@@ -176,7 +179,8 @@ fn test_amplify_numerical_overflow() -> Fallible<()> {
     use crate::measures::{Approximate, MaxDivergence};
     use crate::metrics::ChangeOneDistance;
 
-    // The group-privacy geometric series overflows, so delta must saturate.
+    // Intermediate overflow must remain distinguishable from a computed
+    // delta bound that legitimately saturates at one.
     let amplified = amplify_without_replacement(
         ChangeOneDistance,
         Approximate(MaxDivergence),
@@ -184,11 +188,22 @@ fn test_amplify_numerical_overflow() -> Fallible<()> {
         2,
         1,
     )?;
-    let (epsilon, delta) = amplified.eval(&100)?;
-    assert!(epsilon.is_finite() && epsilon >= 4900.0);
-    assert_eq!(delta, 1.0);
+    assert_eq!(
+        amplified.eval(&100).unwrap_err().variant,
+        crate::error::ErrorVariant::Overflow
+    );
 
-    // Exponentiation at construction may fail, or return a conservative bound.
+    // The exact delta bound can even be much smaller than one, despite an
+    // overflowing intermediate expm1; returning delta=1 would lose this fact.
+    assert_eq!(
+        super::group_privacy_approx((1.0, 1e-320), 711)
+            .unwrap_err()
+            .variant,
+        crate::error::ErrorVariant::Overflow
+    );
+
+    // A finite epsilon beyond the expm1 range is a typed overflow,
+    // not a valid infinite budget.
     let large = amplify_without_replacement(
         ChangeOneDistance,
         MaxDivergence,
@@ -196,10 +211,120 @@ fn test_amplify_numerical_overflow() -> Fallible<()> {
         2,
         1,
     );
-    if let Ok(amplified) = large {
-        if let Ok(epsilon) = amplified.eval(&1) {
-            assert!(!epsilon.is_nan() && epsilon >= 999.0);
-        }
+    assert_eq!(
+        large.err().expect("epsilon=1000 must overflow").variant,
+        crate::error::ErrorVariant::Overflow
+    );
+    Ok(())
+}
+
+#[test]
+fn test_amplify_privacy_parameter_validation() -> Fallible<()> {
+    use crate::combinators::amplify_without_replacement;
+    use crate::core::PrivacyMap;
+    use crate::error::ErrorVariant;
+    use crate::measures::{Approximate, MaxDivergence};
+    use crate::metrics::ChangeOneDistance;
+
+    for epsilon in [-1.0, -0.0, f64::NEG_INFINITY, f64::NAN] {
+        let result = amplify_without_replacement(
+            ChangeOneDistance,
+            MaxDivergence,
+            PrivacyMap::new(move |_: &u32| epsilon),
+            10,
+            5,
+        );
+        assert_eq!(
+            result.err().expect("invalid epsilon").variant,
+            ErrorVariant::FailedMap
+        );
     }
+
+    for delta in [-0.1, -0.0, 1.01, f64::NAN, f64::INFINITY] {
+        let result = amplify_without_replacement(
+            ChangeOneDistance,
+            Approximate(MaxDivergence),
+            PrivacyMap::new(move |_: &u32| (0.0, delta)),
+            10,
+            5,
+        );
+        assert_eq!(
+            result.err().expect("invalid delta").variant,
+            ErrorVariant::FailedMap
+        );
+    }
+
+    // Epsilon zero, delta zero, and delta one are all valid.
+    for delta in [0.0, 1.0] {
+        let map = amplify_without_replacement(
+            ChangeOneDistance,
+            Approximate(MaxDivergence),
+            PrivacyMap::new(move |_: &u32| (0.0, delta)),
+            10,
+            10,
+        )?;
+        assert_eq!(map.eval(&1)?, (0.0, delta));
+    }
+
+    // Sampling the whole population, and empty populations, are distinct cases.
+    let empty = amplify_without_replacement(
+        ChangeOneDistance,
+        MaxDivergence,
+        PrivacyMap::new(|_: &u32| 0.0),
+        0,
+        0,
+    );
+    assert_eq!(
+        empty.err().expect("empty population").variant,
+        ErrorVariant::FailedMap
+    );
+    Ok(())
+}
+
+#[test]
+fn test_amplify_genuine_infinity_and_error_propagation() -> Fallible<()> {
+    use crate::combinators::amplify_without_replacement;
+    use crate::core::PrivacyMap;
+    use crate::error::ErrorVariant;
+    use crate::measures::{Approximate, MaxDivergence};
+    use crate::metrics::ChangeOneDistance;
+
+    let pure = amplify_without_replacement(
+        ChangeOneDistance,
+        MaxDivergence,
+        PrivacyMap::new(|_: &u32| f64::INFINITY),
+        10,
+        5,
+    )?;
+    assert_eq!(pure.eval(&0)?, 0.0);
+    assert_eq!(pure.eval(&1)?, f64::INFINITY);
+    assert_eq!(pure.eval(&2)?, f64::INFINITY);
+
+    let approx = amplify_without_replacement(
+        ChangeOneDistance,
+        Approximate(MaxDivergence),
+        PrivacyMap::new(|_: &u32| (f64::INFINITY, 0.2)),
+        10,
+        5,
+    )?;
+    assert_eq!(approx.eval(&0)?, (0.0, 0.0));
+    assert_eq!(approx.eval(&1)?, (f64::INFINITY, 0.1));
+    assert_eq!(approx.eval(&2)?, (f64::INFINITY, 1.0));
+
+    let approx_pure = amplify_without_replacement(
+        ChangeOneDistance,
+        Approximate(MaxDivergence),
+        PrivacyMap::new(|_: &u32| (f64::INFINITY, 0.0)),
+        10,
+        5,
+    )?;
+    assert_eq!(approx_pure.eval(&2)?, (f64::INFINITY, 0.0));
+
+    // Saturation is valid only after delta was successfully computed.
+    assert_eq!(super::group_privacy_approx((1.0, 0.5), 3)?.1, 1.0);
+
+    // Non-overflow numerical failures must also propagate.
+    let error = super::group_privacy_approx((f64::NAN, 0.5), 2).unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::NumericError);
     Ok(())
 }
