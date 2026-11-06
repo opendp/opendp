@@ -12,6 +12,7 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
+from numbers import Integral
 from typing import (
     Any,
     Callable,
@@ -58,6 +59,8 @@ from opendp.metrics import (
 from opendp.mod import (
     ApproximateDivergence,
     Domain,
+    ExtrinsicDomain,
+    LazyFrameDomain,
     Measurement,
     Metric,
     _PartialConstructor,
@@ -66,6 +69,7 @@ from opendp.mod import (
     Queryable,
     Transformation,
     Measure,
+    VectorDomain,
     binary_search,
     binary_search_param,
 )
@@ -525,6 +529,10 @@ class Context(object):
 
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
+
+        For fixed-size data, contribution bounds must be even because a replacement
+        requires both a removal and an insertion. For one replacement, use
+        ``unit_of(contributions=2)`` or ``unit_of(changes=1)``.
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
@@ -1143,6 +1151,33 @@ class PartialChain(object):
         return _inner
 
 
+def _check_sized_contributions(domain: Domain, input_metric: Metric, d_in) -> None:
+    if (
+        input_metric.type not in {"SymmetricDistance", "InsertDeleteDistance"}
+        or not isinstance(d_in, Integral)
+        or d_in % 2 == 0
+    ):
+        return
+
+    if isinstance(domain, VectorDomain):
+        sized = domain.size is not None
+    elif isinstance(domain, LazyFrameDomain):
+        sized = domain.get_margin([]).invariant == "lengths"
+    elif isinstance(domain, ExtrinsicDomain):
+        from opendp.extras.numpy import NPArray2Domain
+
+        descriptor = domain.descriptor
+        sized = isinstance(descriptor, NPArray2Domain) and descriptor.size is not None
+    else:
+        sized = False
+
+    if sized:
+        raise ValueError(
+            "Contribution bounds must be even when dataset size is known. "
+            "For one replacement, use unit_of(contributions=2) or unit_of(changes=1)."
+        )
+
+
 def _normalize_compositor(
     domain: Domain,
     privacy_unit: tuple[Metric, Union[float, Sequence[Bound]]],
@@ -1172,6 +1207,8 @@ def _normalize_compositor(
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
+
+    _check_sized_contributions(domain, input_metric, d_in)
 
     if split_evenly_over is not None and split_by_weights is not None:
         raise ValueError(
