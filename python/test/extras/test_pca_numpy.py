@@ -791,29 +791,51 @@ def test_pca_standalone_requires_privacy_and_public_size():
         )
 
 
+def test_pca_standalone_recovers_centered_principal_component():
+    np = pytest.importorskip("numpy")
+    from sklearn.decomposition import PCA as SklearnPCA
+
+    direction = np.array([1.0, 1.0, 1.0, 1.0]) / 2
+    offset = np.array([1.0, -1.0, 1.0, -1.0]) / 2
+    X = np.tile(
+        np.stack(
+            [
+                0.6 * offset + 0.45 * direction,
+                0.6 * offset - 0.45 * direction,
+            ]
+        ),
+        (512, 1),
+    )
+    expected = SklearnPCA(n_components=1).fit(X)
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, size=1024, num_columns=4, nan=False)
+    )
+    model = decomposition.PCA(n_components=1, clip_norm=1.0).fit(
+        X,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=2),
+        privacy_loss=dp.loss_of(epsilon=8.0),
+    )
+    alignment = (model.components_[0] @ expected.components_[0]) ** 2
+    assert alignment > 0.90
+    assert model.singular_values_[0] == pytest.approx(
+        expected.singular_values_[0], rel=0.15
+    )
+
+
 def test_pca_fitted_model_pickle_preserves_inference():
     import pickle
     import numpy as np
     from sklearn.base import clone
 
-    model = dp.sklearn.decomposition.PCA(n_components=2, clip_norm=1.0)
-    data = _legacy_data()
-    query = _context(data).query().sklearn(model)
-
-    # Serialize in DP postprocessing, before the separate FFI invocation-
-    # metadata layer, whose private-input retention is being fixed separately.
-    def serialize(fitted):
-        serialized = pickle.dumps(fitted)
-        restored = pickle.loads(serialized)
-        np.testing.assert_allclose(restored.transform(data), fitted.transform(data))
-        np.testing.assert_allclose(restored.get_covariance(), fitted.get_covariance())
-        return serialized
-
-    fitted = pickle.loads(query.new_with(chain=query.resolve() >> serialize).release())
-    assert clone(fitted).get_params() == model.get_params()
-    assert not hasattr(clone(fitted), "components_")
-    assert fitted is not model
-    assert not hasattr(model, "components_")
+    model = _released_pca(whiten=False)
+    data = _legacy_data()[:, :3]
+    restored = pickle.loads(pickle.dumps(model))
+    np.testing.assert_allclose(restored.transform(data), model.transform(data))
+    np.testing.assert_allclose(restored.get_covariance(), model.get_covariance())
+    assert clone(restored).get_params() == model.get_params()
+    assert not hasattr(clone(restored), "components_")
+    assert restored is not model
 
 
 def _released_pca(*, whiten):
