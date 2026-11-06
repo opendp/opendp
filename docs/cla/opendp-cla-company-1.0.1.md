@@ -7,7 +7,7 @@ output: pdf_document
 
 This Contributor License Agreement (the “CLA”) is entered into by and between President and Fellows of Harvard College, (“Harvard”), and _______________________ (“Contributor”), in connection with Contributor’s participation in the OpenDP initiative at Harvard University.
 
-1. Contributor accepts and agrees to the terms and conditions of this CLA, which govern any present or future original work of authorship (including but not limited to modifications or additions to an existing work) intentionally submitted by Contributor to Harvard in connection with the OpenDP initiative, for inclusion in, or documentation of, any product owned or managed by Harvard (the “Work”).
+1. Contributor accepts and agrees to the terms and conditions of this CLA, which govern any present or future original work of authorship (the “Contribution”) (including but not limited to modifications or additions to an existing work) intentionally submitted by Contributor to Harvard in connection with the OpenDP initiative, for inclusion in, or documentation of, any product owned or managed by Harvard (the “Work”).
 2. Except for the license granted herein to Harvard and recipients of software distributed by Harvard, Contributor reserves all right, title, and interest in and to Contributions, including but not limited to any copyrights therein.
 3. Subject to the terms and conditions of this CLA, Contributor grants to Harvard and to recipients of software distributed by Harvard a perpetual, irrevocable, non-exclusive, worldwide, royalty-free license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute Contributions and such derivative works.
 4. Subject to the terms and conditions of this CLA, Contributor grants to Harvard and to recipients of software distributed by Harvard a perpetual, irrevocable, non-exclusive, worldwide, royalty-free patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work. Such license applies only to those patent claims licensable by Contributor that are necessarily infringed by Contributor’s Contribution(s) alone or by combination of Contributor’s Contribution(s) with the Work to which such Contribution(s) was submitted. If any entity institutes patent litigation against Contributor or any other entity (including a cross-claim or counterclaim in a lawsuit) alleging that your Contribution, or the Work to which Contributor has contributed, constitutes direct or contributory patent infringement, then any patent licenses granted to that entity under this Agreement for that Contribution or Work shall terminate as of the date such litigation is commenced.
@@ -66,4 +66,4 @@ In order to complete the agreement, please follow these steps:
 
 ---
 
-Form Contributor License Agreement w/Company Consent — Version 1.0.0 — 2022-03-08
+OpenDP Contributor License Agreement w/Company Consent — Version 1.0.1 — 2026-11-05
