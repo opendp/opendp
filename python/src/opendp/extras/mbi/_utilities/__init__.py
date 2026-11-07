@@ -13,7 +13,7 @@ from typing import (
     TYPE_CHECKING,
 )
 from functools import reduce
-from math import inf, nextafter, sqrt
+from math import inf, isfinite, nextafter, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -56,7 +56,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class Count:
-    """Denotes a count query."""
+    """Denotes a count query with finite, non-negative weight."""
 
     by: tuple[str, ...]
     """Columns to group by."""
@@ -68,9 +68,12 @@ class Count:
     """
 
     def __post_init__(self):
-        self.by = tuple(self.by)
-        if self.weight < 0:
-            raise ValueError(f"weight ({self.weight}) must be non-negative")
+        if not all(isinstance(col, str) for col in self.by):
+            raise ValueError("by must contain column names as strings")
+        self.by = tuple(str(col) for col in self.by)
+        self.weight = float(self.weight)
+        if not isfinite(self.weight) or self.weight < 0:
+            raise ValueError(f"weight ({self.weight}) must be finite and non-negative")
 
 
 def mirror_descent(
@@ -99,7 +102,10 @@ ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
 @dataclass(kw_only=True)
 class Algorithm(ABC):
-    """Base class for configuration of contingency table algorithms."""
+    """Base class for configuration of contingency table algorithms.
+
+    Custom subclasses and estimators require "honest-but-curious".
+    """
 
     estimator: Callable = mirror_descent
     """Optimizer to use to fit a MarkovRandomField.
@@ -107,6 +113,7 @@ class Algorithm(ABC):
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
     Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
+    Custom estimators require enabling "honest-but-curious".
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
     oneway: OnewayType = ONEWAY_ALL
@@ -152,8 +159,28 @@ class Algorithm(ABC):
 A = TypeVar("A", bound=Algorithm)
 
 
+def _check_algorithm_features(algorithm: Algorithm) -> None:
+    from opendp.extras.mbi import AIM, Fixed, MST, Sequential
+    from opendp.mod import assert_features
+
+    # Only the library implementations and the default estimator are trusted.
+    # Extra instance attributes may override methods, including __post_init__,
+    # which runs immediately after this check.
+    if (
+        type(algorithm) not in (AIM, Fixed, MST, Sequential)
+        or vars(algorithm).keys() - type(algorithm).__dataclass_fields__.keys()
+        or algorithm.estimator is not mirror_descent
+    ):
+        assert_features("honest-but-curious")
+
+    if type(algorithm) is Sequential:
+        for child in algorithm.algorithms:
+            _check_algorithm_features(child)
+
+
 def _snapshot_algorithm(algorithm: A) -> A:
     """Detach and validate configuration before a measurement captures it."""
+    _check_algorithm_features(algorithm)
     snapshot = deepcopy(algorithm)
     snapshot.__post_init__()
     return snapshot
