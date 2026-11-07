@@ -15,6 +15,7 @@ With this release, users of AIM may experience a slowdown. This is the result of
 
 ### Features
 
+- Add private top-k selection for fixed-size score arrays in the Polars expression API.
 - Signed counts:
     - Deprecate unsigned defaults for counting queries [#2842](https://github.com/opendp/opendp/pull/2842)
     - Add signed in all count apis [#2840](https://github.com/opendp/opendp/pull/2840)
