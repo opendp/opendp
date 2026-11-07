@@ -12,6 +12,7 @@ use crate::{
 use polars::prelude::*;
 use std::{
     fs,
+    path::PathBuf,
     process::Command,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -47,19 +48,48 @@ fn python(script: &str, args: &[&Path]) {
     );
 }
 
-/// Serialize in Rust before the file exists, then materialize and execute in Python.
+/// Both native stages serialize before IPC exists; deserialized sinks write the
+/// files, and Python then executes the file-backed scan without noise.
 #[test]
 fn ipc_before_materialization() -> Fallible<()> {
     let dir = WorkDir::new();
+    let (deterministic, _) = split_plan(
+        data()?.select([noisy(col("value").sum(), 0.)]).logical_plan,
+        &dir.0,
+    )?;
+    assert!(!dir.0.exists());
     fs::create_dir_all(&dir.0).unwrap();
-    let ipc = dir.0.join("missing.arrow");
-    let plan = ipc_scan(&ipc)?;
-    let serialized = dir.0.join("continuation.bin");
-    plan.serialize_versioned(fs::File::create(&serialized).unwrap(), Default::default())?;
+    let ipc = sinks(&deterministic)[0].1.to_path_buf();
+    let mut bytes = vec![];
+    deterministic.serialize_versioned(&mut bytes, Default::default())?;
+    let restored = DslPlan::deserialize_versioned(bytes.as_slice())?;
+    assert_eq!(
+        sinks(&restored)
+            .iter()
+            .map(|(_, path)| *path)
+            .collect::<Vec<_>>(),
+        sinks(&deterministic)
+            .iter()
+            .map(|(_, path)| *path)
+            .collect::<Vec<_>>()
+    );
+    let serialized_sinks = dir.0.join("deterministic.bin");
+    fs::write(&serialized_sinks, bytes).unwrap();
+    let serialized_scan = dir.0.join("continuation.bin");
+    ipc_scan(&ipc)?.serialize_versioned(
+        fs::File::create(&serialized_scan).unwrap(),
+        Default::default(),
+    )?;
     assert!(!ipc.exists());
     python(
-        "import polars as pl, sys\npl.DataFrame({'x': [1, 2]}).write_ipc(sys.argv[1])\nassert pl.LazyFrame.deserialize(sys.argv[2]).collect().to_dict(as_series=False) == {'x': [1, 2]}",
-        &[&ipc, &serialized],
+        "import polars as pl, sys\npl.LazyFrame.deserialize(sys.argv[1])\npl.LazyFrame.deserialize(sys.argv[2])",
+        &[&serialized_sinks, &serialized_scan],
+    );
+    assert!(!ipc.exists());
+    materialize(&restored, &dir.0)?;
+    python(
+        "import polars as pl, sys\nassert pl.LazyFrame.deserialize(sys.argv[1]).collect().to_dict(as_series=False) == {'__opendp_split_0': [10]}",
+        &[&serialized_scan],
     );
     Ok(())
 }
@@ -133,7 +163,13 @@ fn walk(plan: &DslPlan, f: &mut impl FnMut(&DslPlan)) {
         | DslPlan::Filter { input, .. }
         | DslPlan::HStack { input, .. }
         | DslPlan::Distinct { input, .. }
-        | DslPlan::IR { dsl: input, .. } => walk(input, f),
+        | DslPlan::IR { dsl: input, .. }
+        | DslPlan::Sink { input, .. } => walk(input, f),
+        DslPlan::SinkMultiple { inputs } => {
+            for input in inputs {
+                walk(input, f);
+            }
+        }
         DslPlan::Join {
             input_left,
             input_right,
@@ -174,37 +210,64 @@ fn noise_parameters(plan: &DslPlan) -> Vec<NoisePlugin> {
     parameters
 }
 
-/// Rust execution is only a test oracle/materializer. The splitter itself never
-/// calls collect, resolves a schema, or adds an execution-engine dependency.
-fn materialize(split: &SplitPlan, dir: &Path) -> Fallible<()> {
-    fs::create_dir_all(dir).unwrap();
-    for (fragment, path) in &split.fragments {
-        let mut df = LazyFrame::from(fragment.clone()).collect()?;
-        IpcWriter::new(fs::File::create(path).unwrap()).finish(&mut df)?;
+/// Inspect native sinks, also asserting their format and distinct local paths.
+fn sinks(plan: &DslPlan) -> Vec<(&DslPlan, &Path)> {
+    let DslPlan::SinkMultiple { inputs } = plan else {
+        panic!("expected SinkMultiple")
+    };
+    let sinks: Vec<_> = inputs
+        .iter()
+        .map(|head| {
+            let DslPlan::Sink {
+                input,
+                payload: SinkType::File(options),
+            } = head
+            else {
+                panic!("expected file sink")
+            };
+            assert!(matches!(options.file_format.as_ref(), FileType::Ipc(_)));
+            let SinkTarget::Path(PlPath::Local(path)) = &options.target else {
+                panic!("expected local path")
+            };
+            (input.as_ref(), path.as_ref())
+        })
+        .collect();
+    let unique: HashSet<_> = sinks.iter().map(|(_, path)| *path).collect();
+    assert_eq!(unique.len(), sinks.len());
+    sinks
+}
+
+fn base(plan: &DslPlan) -> &DslPlan {
+    match sinks(plan)[0].0 {
+        DslPlan::Select { input, .. } | DslPlan::GroupBy { input, .. } => input,
+        _ => panic!("expected private aggregate head"),
     }
+}
+
+/// Execute actual native IPC sinks using Rust Polars only as a test oracle.
+fn materialize(deterministic: &DslPlan, dir: &Path) -> Fallible<()> {
+    fs::create_dir_all(dir).unwrap();
+    let DslPlan::SinkMultiple { inputs } = deterministic else {
+        panic!()
+    };
+    LazyFrame::collect_all_with_engine(inputs.clone(), Engine::InMemory, Default::default())?;
     Ok(())
 }
 
-fn compare(plan: DslPlan, expected_fragments: usize, grouped: bool) -> Fallible<SplitPlan> {
+fn compare(plan: DslPlan, expected_heads: usize, grouped: bool) -> Fallible<(DslPlan, DslPlan)> {
     let dir = WorkDir::new();
-    let split = split_plan(plan.clone(), &dir.0)?;
+    let (deterministic, continuation) = split_plan(plan.clone(), &dir.0)?;
     assert!(
         !dir.0.exists(),
         "splitter must not create the working directory"
     );
-    assert_eq!(split.fragments.len(), expected_fragments);
-    assert_eq!(noise_count(&split.base), 0);
-    assert_eq!(
-        noise_parameters(&split.continuation),
-        noise_parameters(&plan)
-    );
-    for (fragment, _) in &split.fragments {
-        assert_eq!(noise_count(fragment), 0);
-    }
-    walk(&split.continuation, &mut |node| {
+    assert_eq!(sinks(&deterministic).len(), expected_heads);
+    assert_eq!(noise_count(&deterministic), 0);
+    assert_eq!(noise_parameters(&continuation), noise_parameters(&plan));
+    walk(&continuation, &mut |node| {
         assert!(!matches!(node, DslPlan::DataFrameScan { .. }))
     });
-    materialize(&split, &dir.0)?;
+    materialize(&deterministic, &dir.0)?;
     let collect = |plan| -> Fallible<DataFrame> {
         let lf = LazyFrame::from(plan);
         Ok(if grouped {
@@ -214,19 +277,19 @@ fn compare(plan: DslPlan, expected_fragments: usize, grouped: bool) -> Fallible<
         }
         .collect()?)
     };
-    assert_eq!(collect(split.continuation.clone())?, collect(plan)?);
-    Ok(split)
+    assert_eq!(collect(continuation.clone())?, collect(plan)?);
+    Ok((deterministic, continuation))
 }
 
 #[test]
 fn ungrouped_sum_and_private_select() -> Fallible<()> {
     let input = data()?;
-    let split = compare(
+    let (deterministic, _) = compare(
         resolve(&input, input.clone().select([sum()]), false, None)?,
         1,
         false,
     )?;
-    let DslPlan::Select { expr, .. } = &split.fragments[0].0 else {
+    let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
         panic!()
     };
     assert_eq!(expr.len(), 1);
@@ -247,12 +310,12 @@ fn mean_and_compatible_aggregates_share_fragment() -> Fallible<()> {
     let input = data()?;
     for exprs in [vec![mean()], vec![sum(), count(), mean()]] {
         let plan = resolve(&input, input.clone().select(exprs), false, None)?;
-        let split = compare(plan, 1, false)?;
-        let DslPlan::Select { expr, .. } = &split.fragments[0].0 else {
+        let (deterministic, continuation) = compare(plan, 1, false)?;
+        let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
             panic!()
         };
-        assert_eq!(expr.len(), noise_count(&split.continuation));
-        let DslPlan::Select { expr, .. } = &split.continuation else {
+        assert_eq!(expr.len(), noise_count(&continuation));
+        let DslPlan::Select { expr, .. } = &continuation else {
             panic!()
         };
         assert!(expr.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
@@ -271,18 +334,21 @@ fn grouped_count_and_threshold() -> Fallible<()> {
     let input = data()?;
     for threshold in [None, Some(1)] {
         let query = input.clone().group_by([col("key")]).agg([count()]);
-        let split = compare(
+        let (deterministic, continuation) = compare(
             resolve(&input, query, threshold.is_none(), threshold)?,
             1,
             true,
         )?;
-        let DslPlan::GroupBy { keys, .. } = &split.fragments[0].0 else {
+        let DslPlan::GroupBy { keys, .. } = sinks(&deterministic)[0].0 else {
             panic!()
         };
         assert_eq!(keys, &[col("key")]);
         if threshold.is_some() {
-            assert!(matches!(&split.continuation, DslPlan::Filter { .. }));
-            assert!(!matches!(&split.fragments[0].0, DslPlan::Filter { .. }));
+            assert!(matches!(&continuation, DslPlan::Filter { .. }));
+            assert!(!matches!(
+                sinks(&deterministic)[0].0,
+                DslPlan::Filter { .. }
+            ));
         }
     }
     Ok(())
@@ -304,10 +370,10 @@ fn public_key_join_multiple_fragments() -> Fallible<()> {
         } else {
             private.join(keys, [col("key")], [col("key")], JoinType::Right.into())
         };
-        let split = compare(resolve(&input, query, false, None)?, 2, true)?;
-        assert!(matches!(&split.continuation, DslPlan::HStack { .. }));
+        let (_, continuation) = compare(resolve(&input, query, false, None)?, 2, true)?;
+        assert!(matches!(&continuation, DslPlan::HStack { .. }));
         let mut distinct = 0;
-        walk(&split.continuation, &mut |p| {
+        walk(&continuation, &mut |p| {
             if matches!(p, DslPlan::Distinct { .. }) {
                 distinct += 1;
             }
@@ -329,15 +395,96 @@ fn preprocessing_and_name_collisions() -> Fallible<()> {
             .sum((lit(0i64), lit(5i64)), Some(0.))
             .alias("__opendp_split_0")]);
     let plan = resolve(&input, query, false, None)?;
-    let split = compare(plan, 1, false)?;
-    assert!(matches!(&split.base, DslPlan::HStack { .. }));
-    let DslPlan::Select { expr, .. } = &split.fragments[0].0 else {
+    let (deterministic, _) = compare(plan, 1, false)?;
+    assert!(matches!(base(&deterministic), DslPlan::HStack { .. }));
+    let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
         panic!()
     };
     assert_ne!(
         expr[0].clone().meta().output_name()?.as_str(),
         "__opendp_split_0"
     );
+    Ok(())
+}
+
+#[test]
+fn names_are_reserved_across_heads_and_join_branches() -> Fallible<()> {
+    let input = df!("__opendp_split_0" => [0i32, 1], "value" => [2i32, 3])?.lazy();
+    let private = input.group_by([col("__opendp_split_0")]).agg([
+        noisy(col("value").sum(), 0.).alias("__opendp_split_1"),
+        noisy(len().cast(DataType::Int64), 0.).alias("count"),
+    ]);
+    let public = df!("__opendp_split_0" => [1i32, 0], "__opendp_split_2" => [7i32, 8])?.lazy();
+    for left in [true, false] {
+        let joined = if left {
+            public.clone().join(
+                private.clone(),
+                [col("__opendp_split_0")],
+                [col("__opendp_split_0")],
+                JoinType::Left.into(),
+            )
+        } else {
+            private.clone().join(
+                public.clone(),
+                [col("__opendp_split_0")],
+                [col("__opendp_split_0")],
+                JoinType::Right.into(),
+            )
+        }
+        .select([
+            col("__opendp_split_0"),
+            col("__opendp_split_1").alias("__opendp_split_3"),
+            col("__opendp_split_2"),
+            col("count"),
+        ]);
+        let dir = WorkDir::new();
+        let (deterministic, continuation) = split_plan(joined.logical_plan.clone(), &dir.0)?;
+        let heads = sinks(&deterministic);
+        assert_eq!(heads.len(), 2);
+        assert!(
+            heads
+                .iter()
+                .all(|(_, path)| path.parent() == Some(dir.0.as_path()))
+        );
+        let aggs = heads
+            .iter()
+            .find_map(|(head, _)| match head {
+                DslPlan::GroupBy { aggs, .. } => Some(aggs),
+                _ => None,
+            })
+            .expect("aggregate head");
+        let names = aggs
+            .iter()
+            .map(|agg| agg.clone().meta().output_name())
+            .collect::<PolarsResult<Vec<_>>>()?;
+        assert_eq!(
+            names.iter().map(|name| name.as_str()).collect::<Vec<_>>(),
+            ["__opendp_split_4", "__opendp_split_5"]
+        );
+        let schema = |head: &DslPlan| -> Fallible<HashSet<PlSmallStr>> {
+            Ok(LazyFrame::from(head.clone())
+                .collect_schema()?
+                .iter_names()
+                .cloned()
+                .collect())
+        };
+        let first = schema(heads[0].0)?;
+        let second = schema(heads[1].0)?;
+        assert_eq!(
+            first
+                .intersection(&second)
+                .map(|name| name.as_str())
+                .collect::<Vec<_>>(),
+            ["__opendp_split_0"]
+        );
+        materialize(&deterministic, &dir.0)?;
+        let collect = |plan| {
+            LazyFrame::from(plan)
+                .sort(["__opendp_split_0"], Default::default())
+                .collect()
+        };
+        assert_eq!(collect(continuation)?, collect(joined.logical_plan)?);
+    }
     Ok(())
 }
 
@@ -374,10 +521,9 @@ fn base_is_opaque_and_preserved_verbatim() -> Fallible<()> {
             options: Default::default(),
         };
         let dir = WorkDir::new();
-        let split = split_plan(plan, &dir.0)?;
+        let (deterministic, _) = split_plan(plan, &dir.0)?;
         assert!(!dir.0.exists());
-        assert_eq!(format!("{:?}", split.base), format!("{:?}", base));
-        let DslPlan::Select { input, .. } = &split.fragments[0].0 else {
+        let DslPlan::Select { input, .. } = sinks(&deterministic)[0].0 else {
             panic!()
         };
         assert!(
@@ -407,9 +553,9 @@ fn contribution_bounding_and_derived_keys_stay_upstream() -> Fallible<()> {
         .clone()
         .group_by([col("key").cast(DataType::Int64)])
         .agg([noisy(col("value").sum(), 0.).alias("sum")]);
-    let split = compare(query.logical_plan, 1, true)?;
+    let (deterministic, _) = compare(query.logical_plan, 1, true)?;
     assert_eq!(
-        format!("{:?}", split.base),
+        format!("{:?}", self::base(&deterministic)),
         format!("{:?}", base.logical_plan)
     );
     Ok(())
@@ -474,10 +620,10 @@ fn randomized_occurrences_are_not_deduplicated() -> Fallible<()> {
         ])
         .logical_plan;
     let dir = WorkDir::new();
-    let split = split_plan(plan, &dir.0)?;
-    assert_eq!(noise_count(&split.continuation), 2);
-    materialize(&split, &dir.0)?;
-    let output = LazyFrame::from(split.continuation).collect()?;
+    let (deterministic, continuation) = split_plan(plan, &dir.0)?;
+    assert_eq!(noise_count(&continuation), 2);
+    materialize(&deterministic, &dir.0)?;
+    let output = LazyFrame::from(continuation).collect()?;
     assert_eq!(output.shape(), (1, 2));
     Ok(())
 }
@@ -499,21 +645,48 @@ fn literal_noise_keeps_scalar_broadcasting() -> Fallible<()> {
         ])
         .logical_plan;
     let dir = WorkDir::new();
-    let split = split_plan(plan, &dir.0)?;
-    let DslPlan::GroupBy { aggs, .. } = &split.fragments[0].0 else {
+    let (deterministic, continuation) = split_plan(plan, &dir.0)?;
+    let DslPlan::GroupBy { aggs, .. } = sinks(&deterministic)[0].0 else {
         panic!()
     };
     assert_eq!(aggs.len(), 1, "literal input must not become a column");
-    materialize(&split, &dir.0)?;
-    let output = LazyFrame::from(split.continuation).collect()?;
+    materialize(&deterministic, &dir.0)?;
+    let output = LazyFrame::from(continuation).collect()?;
     assert_eq!(output.column("n")?.n_unique()?, 1);
+    Ok(())
+}
+
+#[test]
+fn deterministic_operations_are_left_to_the_translator() -> Fallible<()> {
+    // Opaque callbacks are not SQL compatibility errors for the splitter. Their
+    // deterministic expression subtree must remain intact below the cut.
+    let input = data()?;
+    let expression = callback_expr().sum();
+    let (deterministic, continuation) = compare(
+        input.select([noisy(expression.clone(), 0.)]).logical_plan,
+        1,
+        false,
+    )?;
+    let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
+        panic!()
+    };
+    let Expr::Alias(actual, _) = &expr[0] else {
+        panic!()
+    };
+    assert_eq!(actual.as_ref(), &expression);
+    assert_eq!(noise_count(&continuation), 1);
+    // Gather is postprocessing in the original context, not something the
+    // splitter needs to whitelist for either SQL or scalar extraction.
+    let input = data()?;
+    let resolved = resolve(&input, input.clone().select([sum()]), false, None)?;
+    let postprocessed = LazyFrame::from(resolved).select([col("sum").gather(lit(0)).alias("out")]);
+    compare(postprocessed.logical_plan, 1, false)?;
     Ok(())
 }
 
 #[test]
 fn unsupported_shapes_fail_explicitly() -> Fallible<()> {
     let input = data()?;
-    let callback = callback_expr();
     let hidden_noise = col("value").quantile(
         noisy(lit(0i64).cast(DataType::Int64), 0.),
         QuantileMethod::Nearest,
@@ -528,10 +701,6 @@ fn unsupported_shapes_fail_explicitly() -> Fallible<()> {
         input
             .clone()
             .select([noisy(hidden_noise.sum(), 0.)])
-            .logical_plan,
-        input
-            .clone()
-            .select([noisy(callback.sum(), 0.)])
             .logical_plan,
         input
             .clone()
@@ -590,7 +759,10 @@ fn unsupported_shapes_fail_explicitly() -> Fallible<()> {
 #[test]
 #[ignore = "requires OPENDP_POLARS_LIB_PATH pointing to a matching OpenDP plugin binary"]
 fn python_noise_ffi_round_trip() -> Fallible<()> {
-    use crate::polars::OpenDPPlugin;
+    use crate::{
+        measurements::{expr_dp_mean::DPMeanShim, expr_dp_sum::DPSumShim},
+        polars::{OpenDPPlugin, apply_plugin},
+    };
     let lib = std::env::var("OPENDP_POLARS_LIB_PATH").expect("set OPENDP_POLARS_LIB_PATH");
     let plugin = |input| Expr::Function {
         input: vec![input],
@@ -612,7 +784,8 @@ fn python_noise_ffi_round_trip() -> Fallible<()> {
         },
     };
     let input = data()?;
-    let query = input
+    let threshold = input
+        .clone()
         .group_by([col("key")])
         .agg([
             plugin(col("value").sum()).alias("sum"),
@@ -624,18 +797,57 @@ fn python_noise_ffi_round_trip() -> Fallible<()> {
             .alias("mean"),
         ])
         .filter(col("sum").gt(lit(4)));
-    let dir = WorkDir::new();
-    let split = split_plan(query.logical_plan, &dir.0)?;
-    fs::create_dir_all(&dir.0).unwrap();
-    let serialized = dir.0.join("continuation.bin");
-    split
-        .continuation
-        .serialize_versioned(fs::File::create(&serialized).unwrap(), Default::default())?;
-    assert!(split.fragments.iter().all(|(_, p)| !p.exists()));
-    materialize(&split, &dir.0)?;
-    python(
-        "import polars as pl, sys\nresult = pl.LazyFrame.deserialize(sys.argv[1]).collect().to_dict(as_series=False)\nassert result == {'key': [0], 'sum': [7], 'mean': [3.5]}, result",
-        &[&serialized],
-    );
+    // Resolve actual FFI shims through OpenDP, including public-key imputation.
+    let sum = apply_plugin(
+        vec![col("value"), lit(0), lit(5), lit(0.)],
+        plugin(col("value")),
+        DPSumShim,
+    )
+    .alias("sum");
+    let mean = apply_plugin(
+        vec![col("value"), lit(0), lit(5), lit(0.)],
+        plugin(col("value")),
+        DPMeanShim,
+    )
+    .alias("mean");
+    let public = df!("key" => [2i32, 0, 2, 1])?.lazy();
+    let joined = input
+        .clone()
+        .group_by([col("key")])
+        .agg([sum.clone(), mean])
+        .join(public, [col("key")], [col("key")], JoinType::Right.into());
+    let plans = [
+        (
+            threshold.logical_plan,
+            "assert result == {'key': [0], 'sum': [7], 'mean': [3.5]}, result",
+        ),
+        (
+            resolve(&input, input.clone().select([sum]), false, None)?,
+            "assert result == {'sum': [9]}, result",
+        ),
+        (
+            resolve(&input, joined, false, None)?,
+            "assert result['key'] == [0, 1, 2], result\nassert result['sum'] == [6, 3, 0], result\nassert result['mean'][:2] == [3.0, 3.0] and math.isnan(result['mean'][2]), result",
+        ),
+    ];
+    for (plan, expected) in plans {
+        let dir = WorkDir::new();
+        let (deterministic, continuation) = split_plan(plan, &dir.0)?;
+        fs::create_dir_all(&dir.0).unwrap();
+        let serialized = dir.0.join("continuation.bin");
+        continuation
+            .serialize_versioned(fs::File::create(&serialized).unwrap(), Default::default())?;
+        let mut bytes = vec![];
+        deterministic.serialize_versioned(&mut bytes, Default::default())?;
+        let deterministic = DslPlan::deserialize_versioned(bytes.as_slice())?;
+        assert!(sinks(&deterministic).iter().all(|(_, p)| !p.exists()));
+        materialize(&deterministic, &dir.0)?;
+        python(
+            &format!(
+                "import polars as pl, sys, math\nresult = pl.LazyFrame.deserialize(sys.argv[1]).collect()\nif 'key' in result.columns: result = result.sort('key')\nresult = result.to_dict(as_series=False)\n{expected}"
+            ),
+            &[&serialized],
+        );
+    }
     Ok(())
 }
