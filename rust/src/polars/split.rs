@@ -4,13 +4,12 @@
 use std::{collections::HashSet, path::Path, sync::Arc};
 
 use polars::{
-    error::{PolarsResult, polars_bail, polars_err},
+    error::{PolarsResult, polars_err},
     prelude::{DslPlan, Expr, PlSmallStr, col},
 };
 use polars_plan::{
-    dsl::FunctionExpr,
-    plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker, VisitRecursion, Visitor},
-    prelude::{AggExpr, DslBuilder, FileSinkOptions, FileType, ScanSources, SinkTarget, SinkType},
+    plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker},
+    prelude::{DslBuilder, FileSinkOptions, FileType, ScanSources, SinkTarget, SinkType},
 };
 use polars_utils::plpath::PlPath;
 
@@ -68,12 +67,6 @@ fn has_noise(expr: &Expr) -> PolarsResult<bool> {
     for node in expr {
         if noise(node)? {
             return Ok(true);
-        }
-        // Polars' Expr iterator visits the quantile input, but not its parameter.
-        if let Expr::Agg(AggExpr::Quantile { quantile, .. }) = node {
-            if has_noise(quantile)? {
-                return Ok(true);
-            }
         }
     }
     Ok(false)
@@ -295,12 +288,6 @@ impl Splitter<'_> {
                 Ok(expr.clone().rewrite(&mut extract, &mut ())?.alias(name))
             })
             .collect::<PolarsResult<Vec<_>>>()?;
-        if extract.aggs.is_empty() {
-            return fallible!(
-                FailedFunction,
-                "private operation has no deterministic aggregate input"
-            );
-        }
         *exprs = extract.aggs;
         Ok(DslPlan::Select {
             input: Arc::new(self.externalize(plan)?),
@@ -320,29 +307,14 @@ impl RewritingVisitor for Extract<'_> {
     type Arena = ();
 
     fn pre_visit(&mut self, expr: &Expr, _: &mut ()) -> PolarsResult<RewriteRecursion> {
-        if has_noise(expr)? {
-            // Dynamic cast targets may depend on base columns absent from IPC.
-            if matches!(expr, Expr::Cast { dtype, .. } if dtype.as_literal().is_none()) {
-                polars_bail!(InvalidOperation: "schema-dependent cast across private boundary");
-            }
-            // Preserve scalar arithmetic, not aggregation/reshaping of noise.
-            if !noise(expr)?
-                && !matches!(
-                    expr,
-                    Expr::Alias(..) | Expr::Cast { .. } | Expr::BinaryExpr { .. }
-                )
-            {
-                polars_bail!(InvalidOperation: "unsupported operation on randomized values");
-            }
-            return Ok(RewriteRecursion::NoMutateAndContinue);
-        }
-        expr.visit(&mut Scalar, &())?;
-        // Literal-only noise inputs must remain scalar: Polars broadcasts one
-        // draw for these even in GroupBy, rather than sampling per group.
-        Ok(if expr.into_iter().any(is_aggregate) {
-            RewriteRecursion::MutateAndStop
-        } else {
+        Ok(if has_noise(expr)? {
+            // Keep each trusted plugin and its surrounding postprocessing;
+            // only its deterministic inputs (and public operands) are cut.
+            RewriteRecursion::NoMutateAndContinue
+        } else if scalar_literals(expr)? {
             RewriteRecursion::Stop
+        } else {
+            RewriteRecursion::MutateAndStop
         })
     }
 
@@ -353,53 +325,20 @@ impl RewritingVisitor for Extract<'_> {
     }
 }
 
-fn is_aggregate(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::Agg(_)
-            | Expr::Len
-            | Expr::Function {
-                function: FunctionExpr::NullCount,
-                ..
-            }
-    )
-}
-
-/// Narrow scalar checks prevent broadcasting a vector before noise, or changing
-/// a group-list aggregate into one scalar per key. Aggregate interiors stay intact
-/// and are the external translator's responsibility, not a SQL whitelist here.
-struct Scalar;
-impl Visitor for Scalar {
-    type Node = Expr;
-    type Arena = ();
-    fn pre_visit(&mut self, node: &Expr, _: &()) -> PolarsResult<VisitRecursion> {
-        match node {
-            Expr::Agg(
-                AggExpr::Sum(_)
-                | AggExpr::Count { .. }
-                | AggExpr::NUnique(_)
-                | AggExpr::Min { .. }
-                | AggExpr::Max { .. }
-                | AggExpr::Mean(_),
-            )
-            | Expr::Len
-            | Expr::Function {
-                function: FunctionExpr::NullCount,
-                ..
-            } => Ok(VisitRecursion::Skip),
-            Expr::Literal(value) if value.is_scalar() => Ok(VisitRecursion::Skip),
-            Expr::Cast { dtype, .. } if dtype.as_literal().is_none() => {
-                polars_bail!(InvalidOperation: "schema-dependent cast across private boundary")
-            }
-            Expr::Alias(..)
-            | Expr::Cast { .. }
-            | Expr::BinaryExpr { .. }
-            | Expr::Ternary { .. } => Ok(VisitRecursion::Continue),
-            _ => {
-                polars_bail!(InvalidOperation: "unsupported non-scalar or non-aggregate private input")
-            }
+/// Analysis establishes validity, not Polars' literal broadcasting state.
+/// Turning a literal-only input into an IPC column would turn one shared noise
+/// draw into a draw per group. Leave these trees intact, recognizing only their
+/// scalar literal leaves, not their operators. Nullary context inputs such as
+/// len() are not literals and must still be computed in the original context.
+fn scalar_literals(expr: &Expr) -> PolarsResult<bool> {
+    for node in expr {
+        if node.clone().meta().pop(None)?.is_empty()
+            && !matches!(node, Expr::Literal(value) if value.is_scalar())
+        {
+            return Ok(false);
         }
     }
+    Ok(true)
 }
 
 #[cfg(test)]
