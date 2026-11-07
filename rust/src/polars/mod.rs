@@ -34,7 +34,7 @@ use polars_plan::{
 use serde::{Deserialize, Serialize};
 
 pub mod accuracy;
-pub mod split;
+pub(crate) mod split;
 
 #[cfg(test)]
 mod test;
