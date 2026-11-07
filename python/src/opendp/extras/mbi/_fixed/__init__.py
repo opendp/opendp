@@ -1,6 +1,6 @@
 """Releases all queries in a fixed workload."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
@@ -59,7 +59,7 @@ class Fixed(Algorithm):
         if not all(isinstance(q, Count) for q in self.queries):
             raise ValueError("queries must be of type Count")
 
-        self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
+        self.queries = tuple(Count(q.by, q.weight) for q in self.queries)
 
     def make_marginals(
         self,

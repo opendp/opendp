@@ -43,6 +43,7 @@ from opendp.mod import (
     Measurement,
     OpenDPException,
     Queryable,
+    assert_features,
     binary_search,
 )
 from opendp.domains import _lazyframe_from_domain
@@ -228,9 +229,12 @@ def make_contingency_table(
     :param d_out: upper bound on the privacy loss
     :param keys: dictionary of column names and unique categories
     :param cuts: dictionary of column names and left-open bin edges
-    :param table: ContingencyTable from prior release
+    :param table: ContingencyTable from prior release; requires "honest-but-curious"
     :param algorithm: configuration for internal estimation algorithm
     """
+    if table is not None:
+        assert_features("honest-but-curious")
+
     import_optional_dependency("mbi")
     import polars as pl
     import mbi
@@ -259,7 +263,7 @@ def make_contingency_table(
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
 
-    if table:
+    if table is not None:
         keys_pl |= table.keys
         cuts_pl |= table.cuts
         model = cast(mbi.MarkovRandomField, table.model)

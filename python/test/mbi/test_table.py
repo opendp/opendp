@@ -263,6 +263,23 @@ def test_contingency_table_project():
     assert_frame_equal(table.project_melted(("A", "B")), pl.DataFrame(expected))
 
 
+def test_contingency_table_reuse_requires_hbc(monkeypatch):
+    import opendp.mod as mod
+    from opendp.extras.mbi._table import make_contingency_table
+
+    with monkeypatch.context() as patch:
+        patch.setattr(mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"})
+        with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+            make_contingency_table(
+                input_domain=None,  # type: ignore[arg-type]
+                input_metric=None,  # type: ignore[arg-type]
+                output_measure=None,  # type: ignore[arg-type]
+                d_in=[],
+                d_out=1.0,
+                table=object(),  # type: ignore[arg-type]
+            )
+
+
 def test_make_contingency_table_multi_fit():
     pytest.importorskip("mbi")
     import polars as pl  # type: ignore[import-not-found]
