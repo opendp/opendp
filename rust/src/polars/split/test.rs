@@ -163,6 +163,7 @@ fn walk(plan: &DslPlan, f: &mut impl FnMut(&DslPlan)) {
         | DslPlan::Filter { input, .. }
         | DslPlan::HStack { input, .. }
         | DslPlan::Distinct { input, .. }
+        | DslPlan::MapFunction { input, .. }
         | DslPlan::IR { dsl: input, .. }
         | DslPlan::Sink { input, .. } => walk(input, f),
         DslPlan::SinkMultiple { inputs } => {
@@ -264,6 +265,11 @@ fn compare(plan: DslPlan, expected_heads: usize, grouped: bool) -> Fallible<(Dsl
     assert_eq!(sinks(&deterministic).len(), expected_heads);
     assert_eq!(noise_count(&deterministic), 0);
     assert_eq!(noise_parameters(&continuation), noise_parameters(&plan));
+    assert_eq!(
+        noisy_max_parameters(&continuation),
+        noisy_max_parameters(&plan)
+    );
+    assert!(noisy_max_parameters(&deterministic).is_empty());
     walk(&continuation, &mut |node| {
         assert!(!matches!(node, DslPlan::DataFrameScan { .. }))
     });
@@ -315,7 +321,20 @@ fn mean_and_compatible_aggregates_share_fragment() -> Fallible<()> {
             panic!()
         };
         assert_eq!(expr.len(), noise_count(&continuation));
-        let DslPlan::Select { expr, .. } = &continuation else {
+        let DslPlan::Select {
+            input, expr: outer, ..
+        } = &continuation
+        else {
+            panic!()
+        };
+        assert!(!outer.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
+            e,
+            Expr::BinaryExpr {
+                op: Operator::TrueDivide,
+                ..
+            }
+        )));
+        let DslPlan::Select { expr, .. } = input.as_ref() else {
             panic!()
         };
         assert!(expr.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
@@ -917,6 +936,823 @@ fn python_noise_ffi_round_trip() -> Fallible<()> {
             ),
             &[&serialized],
         );
+    }
+    Ok(())
+}
+
+fn noisy_max_parameters(plan: &DslPlan) -> Vec<(bool, u64, bool)> {
+    let mut out = vec![];
+    walk(plan, &mut |node| {
+        let exprs = match node {
+            DslPlan::Select { expr, .. }
+            | DslPlan::GroupBy { aggs: expr, .. }
+            | DslPlan::HStack { exprs: expr, .. } => expr.as_slice(),
+            _ => &[],
+        };
+        out.extend(
+            exprs
+                .iter()
+                .flat_map(|expr| expr.into_iter())
+                .filter_map(|expr| {
+                    match_trusted_plugin::<NoisyMaxPlugin>(expr)
+                        .unwrap()
+                        .map(|(_, p)| (p.replacement, p.scale.to_bits(), p.negate))
+                }),
+        );
+    });
+    out.sort();
+    out
+}
+
+fn quantile() -> Expr {
+    col("value")
+        .dp()
+        .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
+        .alias("quantile")
+}
+
+#[test]
+fn quantiles_medians_and_scalar_combinations() -> Fallible<()> {
+    let input = data()?;
+    for grouped in [false, true] {
+        for exprs in [
+            vec![quantile()],
+            vec![
+                col("value")
+                    .dp()
+                    .median(Series::new("".into(), [1i32, 3, 6]), Some(0.))
+                    .alias("median"),
+            ],
+            vec![quantile(), sum(), count(), mean()],
+            vec![
+                quantile(),
+                col("value")
+                    .dp()
+                    .quantile(0.5, Series::new("".into(), [0i32, 1, 3, 6, 7]), Some(0.))
+                    .alias("other"),
+            ],
+            vec![
+                (quantile() + lit(2)).alias("offset"),
+                (quantile() - mean()).alias("difference"),
+            ],
+        ] {
+            let expected = if exprs.len() == 1 {
+                1
+            } else if exprs.len() == 4 {
+                2
+            } else if exprs[0].clone().meta().output_name()? == "offset" {
+                3
+            } else {
+                2
+            };
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg(exprs)
+            } else {
+                input.clone().select(exprs)
+            };
+            let plan = resolve(&input, query, grouped, None)?;
+            let base = match &plan {
+                DslPlan::Select { input, .. } | DslPlan::GroupBy { input, .. } => input.clone(),
+                _ => panic!(),
+            };
+            let (deterministic, _) = compare(plan, expected, grouped)?;
+            // All deterministic heads retain the exact same analyzed base.
+            for (head, _) in sinks(&deterministic) {
+                let mut found = false;
+                walk(head, &mut |node| {
+                    if std::ptr::eq(node, base.as_ref()) {
+                        found = true;
+                    }
+                });
+                assert!(found);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn postprocessing_is_placed_by_head_dependencies() -> Fallible<()> {
+    let input = data()?;
+    let plan = resolve(
+        &input,
+        input
+            .clone()
+            .select([(quantile() - mean()).alias("difference")]),
+        false,
+        None,
+    )?;
+    let (_, continuation) = compare(plan, 2, false)?;
+    let DslPlan::Select { input, expr, .. } = continuation else {
+        panic!()
+    };
+    assert!(expr.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
+        e,
+        Expr::BinaryExpr {
+            op: Operator::Minus,
+            ..
+        }
+    )));
+    let DslPlan::Join {
+        input_left,
+        input_right,
+        ..
+    } = input.as_ref()
+    else {
+        panic!()
+    };
+    let mut divides = 0;
+    let mut lookups = 0;
+    for local in [input_left, input_right] {
+        let DslPlan::Select { expr, .. } = local.as_ref() else {
+            panic!()
+        };
+        for node in expr.iter().flat_map(|e| e.into_iter()) {
+            divides += usize::from(matches!(
+                node,
+                Expr::BinaryExpr {
+                    op: Operator::TrueDivide,
+                    ..
+                }
+            ));
+            lookups += usize::from(
+                match_trusted_plugin::<
+                    crate::measurements::expr_index_candidates::IndexCandidatesPlugin,
+                >(node)?
+                .is_some(),
+            );
+            assert!(!matches!(
+                node,
+                Expr::BinaryExpr {
+                    op: Operator::Minus,
+                    ..
+                }
+            ));
+        }
+    }
+    assert_eq!((divides, lookups), (1, 1));
+    Ok(())
+}
+
+#[test]
+fn empty_quantile_inputs_and_public_missing_groups() -> Fallible<()> {
+    // A singleton candidate avoids random tie-breaking when every score is zero.
+    let q = || {
+        col("value")
+            .dp()
+            .quantile(0.5, Series::new("".into(), [3i32]), Some(0.))
+            .alias("quantile")
+    };
+    for input in [
+        data()?,
+        df!("key" => Vec::<i32>::new(), "value" => Vec::<i32>::new())?.lazy(),
+    ] {
+        compare(
+            resolve(
+                &input,
+                input.clone().select([q(), sum(), count()]),
+                false,
+                None,
+            )?,
+            2,
+            false,
+        )?;
+        compare(
+            resolve(
+                &input,
+                input.clone().group_by([col("key")]).agg([q(), count()]),
+                true,
+                None,
+            )?,
+            2,
+            true,
+        )?;
+        for private_left in [true, false] {
+            let private = input
+                .clone()
+                .group_by([col("key")])
+                .agg([q(), sum(), count(), mean()]);
+            let public = df!("key" => [2i32, 0, 2, 1])?.lazy();
+            let query = if private_left {
+                private.join(public, [col("key")], [col("key")], JoinType::Right.into())
+            } else {
+                public.join(private, [col("key")], [col("key")], JoinType::Left.into())
+            };
+            let (_, continuation) = compare(resolve(&input, query, false, None)?, 3, true)?;
+            let mut dedup = 0;
+            let mut public_joins = 0;
+            walk(&continuation, &mut |node| {
+                dedup += usize::from(matches!(node, DslPlan::Distinct { .. }));
+                if let DslPlan::Join { options, .. } = node {
+                    public_joins +=
+                        usize::from(matches!(options.args.how, JoinType::Left | JoinType::Right));
+                }
+            });
+            assert_eq!((dedup, public_joins), (1, 1));
+            assert!(matches!(continuation, DslPlan::HStack { .. }));
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn multiple_heads_share_one_threshold() -> Fallible<()> {
+    let input = data()?;
+    let query = input
+        .clone()
+        .group_by([col("key")])
+        .agg([quantile(), sum(), count(), mean()]);
+    let (_, continuation) = compare(resolve(&input, query, false, Some(1))?, 2, true)?;
+    let mut filters = 0;
+    walk(&continuation, &mut |node| {
+        filters += usize::from(matches!(node, DslPlan::Filter { .. }));
+    });
+    assert_eq!(filters, 1);
+    assert!(matches!(continuation, DslPlan::Filter { .. }));
+    Ok(())
+}
+
+#[test]
+fn quantile_null_keys_and_null_nan_preprocessing() -> Fallible<()> {
+    use crate::domains::OptionDomain;
+    let input = df!("key" => [None, None, Some(1i32)], "value" => [1i32, 6, 3])?.lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", OptionDomain::new(AtomDomain::<i32>::default())),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["key"])
+            .with_max_length(10)
+            .with_invariant_keys(),
+    )?;
+    let query = input
+        .clone()
+        .group_by([col("key")])
+        .agg([quantile(), mean()]);
+    let plan = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        query,
+        Some(1.),
+        None,
+    )?
+    .invoke(&input)?
+    .lazyframe()
+    .logical_plan;
+    compare(plan, 2, true)?;
+    let input =
+        df!("key" => [0i32; 5], "value" => [Some(1f64), None, Some(f64::NAN), Some(3.), Some(6.)])?
+            .lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", OptionDomain::new(AtomDomain::<f64>::default())),
+    ])?
+    .with_margin(Margin::select().with_max_length(10))?
+    .with_margin(
+        Margin::by(["key"])
+            .with_max_length(10)
+            .with_invariant_keys(),
+    )?;
+    for grouped in [false, true] {
+        let q = col("value")
+            .dp()
+            .quantile(0.5, Series::new("".into(), [1f64, 3., 6.]), Some(0.))
+            .alias("q");
+        let query = if grouped {
+            input.clone().group_by([col("key")]).agg([q])
+        } else {
+            input.clone().select([q])
+        };
+        let plan = make_private_lazyframe(
+            domain.clone(),
+            SymmetricDistance,
+            Approximate(MaxDivergence),
+            query,
+            Some(1.),
+            None,
+        )?
+        .invoke(&input)?
+        .lazyframe()
+        .logical_plan;
+        compare(plan, 1, grouped)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn histogram_names_do_not_collide() -> Fallible<()> {
+    let input =
+        df!("key" => [0i32, 0, 1], "value" => [1i32, 6, 3], "__opendp_split_0" => [1,2,3])?.lazy();
+    let query = input.clone().group_by([col("key")]).agg([
+        quantile().alias("__opendp_split_1"),
+        sum().alias("__opendp_split_2"),
+        quantile().alias("__opendp_split_3"),
+    ]);
+    let public = df!("key" => [0i32, 1], "__opendp_split_4" => [4,5])?.lazy();
+    let query = query.join(public, [col("key")], [col("key")], JoinType::Right.into());
+    compare(resolve(&input, query, false, None)?, 4, true)?;
+    Ok(())
+}
+
+#[test]
+fn native_histograms_reproduce_original_score_arrays_exactly() -> Fallible<()> {
+    let mut cases: Vec<(Series, Series)> = vec![];
+    for candidates in [vec![0i64], vec![-3, 0, 2], vec![-4, -1, 0, 1, 5, 9]] {
+        cases.push((
+            Series::new(
+                "value".into(),
+                [-8i64, -4, -4, -3, -2, -1, 0, 0, 1, 2, 3, 5, 9, 12],
+            ),
+            Series::new("".into(), candidates),
+        ));
+    }
+    cases.extend([
+        (
+            Series::new(
+                "value".into(),
+                [0u64, 1 << 53, (1 << 53) + 1, u64::MAX - 1, u64::MAX],
+            ),
+            Series::new("".into(), [1 << 53, (1 << 53) + 1, u64::MAX - 1]),
+        ),
+        (
+            Series::new("value".into(), [i64::MIN, i64::MIN + 1, -1, 0, i64::MAX]),
+            Series::new("".into(), [i64::MIN + 1, 0, i64::MAX]),
+        ),
+        (
+            Series::new(
+                "value".into(),
+                [f64::NEG_INFINITY, -1., -0., 0., 1., f64::INFINITY],
+            ),
+            Series::new("".into(), [-1f64, 0., 1.]),
+        ),
+        (
+            Series::new(
+                "value".into(),
+                [f32::NEG_INFINITY, -1., -0., 0., 1., f32::INFINITY],
+            ),
+            Series::new("".into(), [-1f32, 0., 1.]),
+        ),
+        (
+            Series::new("value".into(), Vec::<i64>::new()),
+            Series::new("".into(), [-1i64, 0, 1]),
+        ),
+        (
+            Series::new(
+                "value".into(),
+                [Some(-1f64), None, Some(f64::NAN), Some(1.)],
+            ),
+            Series::new("".into(), [-1f64, 0., 1.]),
+        ),
+    ]);
+    for (values, candidates) in cases {
+        for alpha in [(0, 1), (1, 2), (1, 1), (2, 7)] {
+            for size_limit in [0u64, 1, 100] {
+                let input = DataFrame::new(vec![values.clone().into_column()])?.lazy();
+                let mut expr = col("value").fill_null(lit(0));
+                if values.dtype().is_float() {
+                    expr = expr.fill_nan(lit(0));
+                }
+                let scorer = DiscreteQuantileScorePlugin {
+                    candidates: candidates.clone(),
+                    alpha,
+                    size_limit,
+                };
+                let scores = apply_anonymous_function(vec![expr], scorer);
+                let expected = input
+                    .clone()
+                    .select([scores.clone().alias("score")])
+                    .collect()?;
+                let query = input.select([apply_anonymous_function(
+                    vec![scores],
+                    NoisyMaxPlugin {
+                        replacement: false,
+                        scale: 0.,
+                        negate: true,
+                    },
+                )]);
+                let dir = WorkDir::new();
+                let (heads, _) = split_plan(query.logical_plan, &dir.0)?;
+                assert_eq!(sinks(&heads).len(), 1);
+                materialize(&heads, &dir.0)?;
+                let (DslPlan::GroupBy { keys, aggs, .. }, path) = sinks(&heads)[0] else {
+                    panic!()
+                };
+                let bucket = keys.last().unwrap().clone().meta().output_name()?;
+                let count = aggs[0].clone().meta().output_name()?;
+                let score = apply_anonymous_function(
+                    vec![col(bucket), col(count)],
+                    HistogramQuantileScorePlugin {
+                        num_candidates: candidates.len(),
+                        alpha,
+                        size_limit,
+                    },
+                )
+                .alias("score");
+                let actual = LazyFrame::from(ipc_scan(path)?).select([score]).collect()?;
+                assert_eq!(
+                    actual,
+                    expected,
+                    "dtype {:?}, alpha {alpha:?}, limit {size_limit}",
+                    values.dtype()
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn comparison_tree_is_balanced() -> Fallible<()> {
+    fn depth(expr: &Expr) -> usize {
+        match expr {
+            Expr::Ternary { truthy, falsy, .. } => 1 + depth(truthy).max(depth(falsy)),
+            _ => 0,
+        }
+    }
+    for k in [1usize, 2, 3, 7, 8, 31, 32, 127] {
+        let candidates = Series::new("".into(), (0..k as i64).collect::<Vec<_>>());
+        let assignment = buckets(col("value"), &candidates, 0, k)?;
+        assert!(depth(&assignment) <= 2 * (k.ilog2() as usize + 1));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "polars-ffi")]
+#[test]
+#[ignore = "requires rebuilt OPENDP_POLARS_LIB_PATH with histogram scorer"]
+fn python_quantile_ffi_round_trip() -> Fallible<()> {
+    use crate::{
+        measurements::{
+            expr_dp_mean::DPMeanShim, expr_dp_median::DPMedianShim,
+            expr_dp_quantile::DPQuantileShim, expr_dp_sum::DPSumShim,
+        },
+        polars::{OpenDPPlugin, apply_plugin},
+    };
+    let lib = std::env::var("OPENDP_POLARS_LIB_PATH").expect("set OPENDP_POLARS_LIB_PATH");
+    let template = Expr::Function {
+        input: vec![],
+        function: FunctionExpr::FfiPlugin {
+            lib: lib.into(),
+            symbol: NoisePlugin::NAME.into(),
+            kwargs: Default::default(),
+            flags: NoisePlugin::function_options(),
+        },
+    };
+    let q = |single: bool| {
+        apply_plugin(
+            vec![
+                col("value"),
+                lit(0.5),
+                lit(Series::new(
+                    "".into(),
+                    if single { vec![3i32] } else { vec![1, 3, 6] },
+                )),
+                lit(0.),
+            ],
+            template.clone(),
+            DPQuantileShim,
+        )
+        .alias("quantile")
+    };
+    let mean = || {
+        apply_plugin(
+            vec![col("value"), lit(0), lit(5), lit(0.)],
+            template.clone(),
+            DPMeanShim,
+        )
+        .alias("mean")
+    };
+    let sum = || {
+        apply_plugin(
+            vec![col("value"), lit(0), lit(5), lit(0.)],
+            template.clone(),
+            DPSumShim,
+        )
+        .alias("sum")
+    };
+    let input = data()?;
+    let public = df!("key" => [2i32,0,2,1])?.lazy();
+    let joined = input
+        .clone()
+        .group_by([col("key")])
+        .agg([q(true), sum(), mean()])
+        .join(public, [col("key")], [col("key")], JoinType::Right.into());
+    let empty = df!("key" => Vec::<i32>::new(), "value" => Vec::<i32>::new())?.lazy();
+    let median = apply_plugin(
+        vec![
+            col("value"),
+            lit(Series::new("".into(), [1i32, 3, 6])),
+            lit(0.),
+        ],
+        template.clone(),
+        DPMedianShim,
+    )
+    .alias("median");
+    let removed = apply_plugin(
+        vec![
+            col("value").filter(col("value").gt(lit(10))),
+            lit(0.5),
+            lit(Series::new("".into(), [3i32])),
+            lit(0.),
+        ],
+        template.clone(),
+        DPQuantileShim,
+    )
+    .alias("removed");
+    let plans = [
+        (
+            resolve(
+                &input,
+                input
+                    .clone()
+                    .group_by([col("key")])
+                    .agg([removed, sum(), mean()]),
+                true,
+                None,
+            )?,
+            "assert result == {'key':[0,1], 'removed':[3,3], 'sum':[6,3], 'mean':[3.0,3.0]}, result",
+        ),
+        (
+            resolve(&input, input.clone().select([median]), false, None)?,
+            "assert result == {'median':[3]}, result",
+        ),
+        (
+            resolve(
+                &input,
+                input
+                    .clone()
+                    .select([(q(false) - mean()).alias("difference")]),
+                false,
+                None,
+            )?,
+            "assert result == {'difference': [0.0]}, result",
+        ),
+        (
+            resolve(
+                &input,
+                input.clone().group_by([col("key")]).agg([
+                    q(false),
+                    sum(),
+                    mean(),
+                    q(false).alias("independent"),
+                ]),
+                true,
+                None,
+            )?,
+            "assert result == {'key':[0,1], 'quantile':[3,3], 'sum':[6,3], 'mean':[3.0,3.0], 'independent':[3,3]}, result",
+        ),
+        (
+            resolve(&input, joined, false, None)?,
+            "assert result['key'] == [0,1,2] and result['quantile'] == [3,3,3] and result['sum'] == [6,3,0], result\nassert result['mean'][:2] == [3.0,3.0] and math.isnan(result['mean'][2]), result",
+        ),
+        (
+            resolve(&empty, empty.clone().select([q(true), sum()]), false, None)?,
+            "assert result == {'quantile':[3], 'sum':[0]}, result",
+        ),
+    ];
+    for (plan, expected) in plans {
+        let dir = WorkDir::new();
+        let (heads, continuation) = split_plan(plan, &dir.0)?;
+        assert!(!dir.0.exists());
+        fs::create_dir_all(&dir.0).unwrap();
+        let serialized = dir.0.join("continuation.bin");
+        continuation
+            .serialize_versioned(fs::File::create(&serialized).unwrap(), Default::default())?;
+        let mut bytes = vec![];
+        heads.serialize_versioned(&mut bytes, Default::default())?;
+        let restored = DslPlan::deserialize_versioned(bytes.as_slice())?;
+        assert!(sinks(&restored).iter().all(|(_, p)| !p.exists()));
+        python(
+            "import polars as pl,sys\npl.LazyFrame.deserialize(sys.argv[1])",
+            &[&serialized],
+        );
+        materialize(&restored, &dir.0)?;
+        python(
+            &format!(
+                "import polars as pl,sys,math\nresult=pl.LazyFrame.deserialize(sys.argv[1]).collect()\nif 'key' in result.columns: result=result.sort('key')\nresult=result.to_dict(as_series=False)\n{expected}"
+            ),
+            &[&serialized],
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn literal_scorer_inputs_retain_one_value_per_group() -> Fallible<()> {
+    for input in [
+        data()?,
+        df!("key" => Vec::<i32>::new(), "value" => Vec::<i32>::new())?.lazy(),
+    ] {
+        for grouped in [false, true] {
+            let scorer = apply_anonymous_function(
+                vec![(lit(1i32) + lit(2i32)).cast(DataType::Int32)],
+                DiscreteQuantileScorePlugin {
+                    candidates: Series::new("".into(), [1i32, 3, 6]),
+                    alpha: (1, 2),
+                    size_limit: 10,
+                },
+            );
+            let expected = if grouped {
+                input
+                    .clone()
+                    .group_by([col("key")])
+                    .agg([scorer.clone().alias("scores")])
+            } else {
+                input.clone().select([scorer.clone().alias("scores")])
+            };
+            let randomized = apply_anonymous_function(
+                vec![scorer],
+                NoisyMaxPlugin {
+                    replacement: false,
+                    scale: 0.,
+                    negate: true,
+                },
+            )
+            .alias("index");
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg([randomized])
+            } else {
+                input.clone().select([randomized])
+            };
+            let dir = WorkDir::new();
+            let (heads, continuation) = split_plan(query.logical_plan, &dir.0)?;
+            materialize(&heads, &dir.0)?;
+            let DslPlan::Select { input: local, .. } = continuation else {
+                panic!()
+            };
+            let DslPlan::Select { input: scoring, .. } = local.as_ref() else {
+                panic!()
+            };
+            let name = match scoring.as_ref() {
+                DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => {
+                    expr[0].clone().meta().output_name()?
+                }
+                _ => panic!(),
+            };
+            let mut exprs = vec![];
+            if grouped {
+                exprs.push(col("key"));
+            }
+            exprs.push(col(name).alias("scores"));
+            let actual = LazyFrame::from(scoring.as_ref().clone()).select(exprs);
+            let (actual, expected) = if grouped {
+                (
+                    actual.sort(["key"], Default::default()),
+                    expected.sort(["key"], Default::default()),
+                )
+            } else {
+                (actual, expected)
+            };
+            assert_eq!(actual.collect()?, expected.collect()?);
+            let q = lit(3i32)
+                .dp()
+                .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
+                .alias("q");
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg([q])
+            } else {
+                input.clone().select([q])
+            };
+            compare(resolve(&input, query, grouped, None)?, 1, grouped)?;
+        }
+    }
+    Ok(())
+}
+
+/// Compare the reconstructed arrays, not sampled indices: all-removed groups
+/// have tied zero scores even when the requested noise scale is zero.
+fn compare_resolved_score_arrays(plan: DslPlan, grouped: bool) -> Fallible<()> {
+    let mut expected = plan.clone();
+    let exprs = match &mut expected {
+        DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
+        _ => panic!("expected private aggregation"),
+    };
+    let score = exprs
+        .iter()
+        .flat_map(|expr| expr.into_iter())
+        .find(|expr| score_plugin(expr).unwrap().is_some())
+        .unwrap()
+        .clone();
+    *exprs = vec![score.alias("scores")];
+    let dir = WorkDir::new();
+    let (heads, continuation) = split_plan(plan, &dir.0)?;
+    materialize(&heads, &dir.0)?;
+    let mut reconstruction = None;
+    walk(&continuation, &mut |node| {
+        let exprs = match node {
+            DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
+            _ => return,
+        };
+        if let Some(expr) = exprs.iter().find(|expr| {
+            expr.into_iter().any(|node| {
+                match_trusted_plugin::<HistogramQuantileScorePlugin>(node)
+                    .unwrap()
+                    .is_some()
+            })
+        }) {
+            reconstruction = Some((node.clone(), expr.clone().meta().output_name().unwrap()));
+        }
+    });
+    let (reconstruction, name) = reconstruction.unwrap();
+    let mut outputs = vec![];
+    if grouped {
+        outputs.push(col("key"));
+    }
+    outputs.push(col(name).alias("scores"));
+    let actual = LazyFrame::from(reconstruction).select(outputs);
+    let expected = LazyFrame::from(expected);
+    let (actual, expected) = if grouped {
+        (
+            actual.sort(["key"], Default::default()),
+            expected.sort(["key"], Default::default()),
+        )
+    } else {
+        (actual, expected)
+    };
+    assert_eq!(actual.collect()?, expected.collect()?);
+    Ok(())
+}
+
+#[test]
+fn aggregation_local_removals_preserve_exact_scores_and_observed_groups() -> Fallible<()> {
+    use crate::domains::OptionDomain;
+    let keys = [Some(0i32), Some(0), None, None, Some(2)];
+    let integers = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", OptionDomain::new(AtomDomain::<i32>::default())),
+        SeriesDomain::new("value", OptionDomain::new(AtomDomain::<i32>::default())),
+    ])?
+    .with_margin(Margin::select().with_max_length(10))?
+    .with_margin(
+        Margin::by(["key"])
+            .with_max_length(10)
+            .with_invariant_keys(),
+    )?;
+    let floats = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", OptionDomain::new(AtomDomain::<i32>::default())),
+        SeriesDomain::new("value", OptionDomain::new(AtomDomain::<f64>::default())),
+    ])?
+    .with_margin(Margin::select().with_max_length(10))?
+    .with_margin(
+        Margin::by(["key"])
+            .with_max_length(10)
+            .with_invariant_keys(),
+    )?;
+    let cases = [
+        (df!("key" => keys, "value" => [Some(1i32),Some(3),Some(2),Some(4),Some(5)])?.lazy(), integers.clone(), col("value").filter(col("value").gt(lit(3)))),
+        (df!("key" => keys, "value" => [Some(1i32),Some(3),Some(2),Some(4),Some(5)])?.lazy(), integers.clone(), col("value").filter(col("value").gt(lit(10)))),
+        (df!("key" => keys, "value" => [Some(1i32),None,None,None,Some(5)])?.lazy(), integers.clone(), col("value").drop_nulls()),
+        (df!("key" => keys, "value" => [None::<i32>;5])?.lazy(), integers.clone(), col("value").drop_nulls()),
+        (df!("key" => keys, "value" => [Some(1f64),Some(f64::NAN),Some(f64::NAN),Some(f64::NAN),Some(5.)])?.lazy(), floats.clone(), col("value").drop_nans()),
+        (df!("key" => keys, "value" => [Some(f64::NAN);5])?.lazy(), floats.clone(), col("value").drop_nans()),
+        (df!("key" => keys, "value" => [Some(1f64),None,Some(f64::NAN),None,Some(5.)])?.lazy(), floats, col("value").drop_nulls().drop_nans()),
+        (df!("key" => Vec::<Option<i32>>::new(), "value" => Vec::<Option<i32>>::new())?.lazy(), integers, col("value").filter(col("value").gt(lit(3)))),
+    ];
+    for (input, domain, source) in cases {
+        for grouped in [false, true] {
+            let resolve_case = |query| -> Fallible<DslPlan> {
+                Ok(make_private_lazyframe(
+                    domain.clone(),
+                    SymmetricDistance,
+                    Approximate(MaxDivergence),
+                    query,
+                    Some(1.),
+                    None,
+                )?
+                .invoke(&input)?
+                .lazyframe()
+                .logical_plan)
+            };
+            let q = source
+                .clone()
+                .dp()
+                .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
+                .alias("q");
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg([q])
+            } else {
+                input.clone().select([q])
+            };
+            compare_resolved_score_arrays(resolve_case(query)?, grouped)?;
+            // Singleton candidates make zero-observation complete results exact.
+            // The scalar count still counts original rows, not filtered values.
+            let q = source
+                .clone()
+                .dp()
+                .quantile(0.5, Series::new("".into(), [3i32]), Some(0.))
+                .alias("q");
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg([q, count()])
+            } else {
+                input.clone().select([q, count()])
+            };
+            compare(resolve_case(query.clone())?, 2, grouped)?;
+            if grouped {
+                let public = df!("key" => [Some(9i32),Some(0),None,Some(2),Some(9)])?.lazy();
+                let joined = query.join(public, [col("key")], [col("key")], JoinType::Right.into());
+                compare(resolve_case(joined)?, 3, true)?;
+            }
+        }
     }
     Ok(())
 }

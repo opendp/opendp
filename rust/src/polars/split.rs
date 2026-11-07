@@ -1,20 +1,35 @@
 //! Partition a resolved private plan into native IPC-writing and IPC-reading
 //! stages. This is not a privacy validator or a SQL compatibility checker.
 
-use std::{collections::HashSet, path::Path, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    sync::Arc,
+};
 
 use polars::{
     error::{PolarsResult, polars_err},
-    prelude::{DslPlan, Expr, PlSmallStr, col},
+    prelude::{
+        DataType, DslPlan, ExplodeOptions, Expr, JoinArgs, JoinCoalesce, JoinType, LiteralValue,
+        PlSmallStr, Scalar, col, cols, lit, when,
+    },
 };
 use polars_plan::{
     plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker},
-    prelude::{DslBuilder, FileSinkOptions, FileType, ScanSources, SinkTarget, SinkType},
+    prelude::{
+        DslBuilder, FileSinkOptions, FileType, JoinOptions, ScanSources, SinkTarget, SinkType,
+    },
 };
 use polars_utils::plpath::PlPath;
 
-use super::match_trusted_plugin;
-use crate::{error::Fallible, measurements::expr_noise::NoisePlugin};
+use super::{apply_plugin, match_trusted_plugin};
+use crate::{
+    error::Fallible,
+    measurements::{expr_noise::NoisePlugin, expr_noisy_max::NoisyMaxPlugin},
+    transformations::expr_discrete_quantile_score::{
+        DiscreteQuantileScorePlugin, HistogramQuantileScorePlugin,
+    },
+};
 
 /// Return (IPC SinkMultiple, randomized continuation), without I/O or schema
 /// resolution. Inputs preceding the private Select/GroupBy are retained verbatim.
@@ -58,9 +73,12 @@ fn ipc_scan(path: &Path) -> Fallible<DslPlan> {
 }
 
 fn noise(expr: &Expr) -> PolarsResult<bool> {
-    match_trusted_plugin::<NoisePlugin>(expr)
-        .map(|matched| matched.is_some())
-        .map_err(|e| polars_err!(InvalidOperation: "{e}"))
+    Ok(match_trusted_plugin::<NoisePlugin>(expr)
+        .map_err(|e| polars_err!(InvalidOperation: "{e}"))?
+        .is_some()
+        || match_trusted_plugin::<NoisyMaxPlugin>(expr)
+            .map_err(|e| polars_err!(InvalidOperation: "{e}"))?
+            .is_some())
 }
 
 fn has_noise(expr: &Expr) -> PolarsResult<bool> {
@@ -248,11 +266,12 @@ impl Splitter<'_> {
             DslPlan::Select { options, .. } => options.clone(),
             _ => Default::default(),
         };
-        let (exprs, keys) = match &mut plan {
-            DslPlan::Select { expr, .. } => (expr, vec![]),
+        let (exprs, keys, base) = match &plan {
+            DslPlan::Select { expr, input, .. } => (expr.clone(), vec![], input.clone()),
             DslPlan::GroupBy {
                 aggs,
                 keys,
+                input,
                 apply,
                 options,
                 #[cfg(patch_polars)]
@@ -269,47 +288,135 @@ impl Splitter<'_> {
                 if !predicates.is_empty() {
                     return fallible!(FailedFunction, "group-by predicates are unsupported");
                 }
-                (aggs, keys.clone())
+                (aggs.clone(), keys.clone(), input.clone())
             }
             _ => unreachable!(),
         };
         let key_columns = keys
-            .into_iter()
-            .map(|key| Ok(col(key.meta().output_name()?)))
+            .iter()
+            .map(|key| Ok(col(key.clone().meta().output_name()?)))
             .collect::<PolarsResult<Vec<_>>>()?;
         let mut extract = Extract {
+            splitter: self,
+            base,
+            keys,
+            // Slot zero is the compatible scalar head. It is only materialized
+            // if used; the other slots are native histogram continuations.
+            locals: vec![plan.clone()],
             aggs: vec![],
-            names: &mut self.names,
+            owners: HashMap::new(),
         };
         let rewritten = exprs
             .iter()
-            .map(|expr| {
-                let name = expr.clone().meta().output_name()?;
-                Ok(expr.clone().rewrite(&mut extract, &mut ())?.alias(name))
+            .map(|expr| expr.clone().rewrite(&mut extract, &mut ()))
+            .collect::<PolarsResult<Vec<_>>>()?;
+        let Extract {
+            mut locals,
+            aggs,
+            owners,
+            ..
+        } = extract;
+        match &mut plan {
+            DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => *expr = aggs,
+            _ => unreachable!(),
+        }
+        let scalar_used = rewritten
+            .iter()
+            .map(|e| dependencies(e, &owners))
+            .collect::<PolarsResult<Vec<_>>>()?
+            .iter()
+            .any(|deps| deps.contains(&0));
+        if scalar_used {
+            locals[0] = self.externalize(plan)?;
+        }
+        let mut outputs = vec![vec![]; locals.len()];
+        let mut place = Place {
+            owners: &owners,
+            outputs: &mut outputs,
+            names: &mut self.names,
+        };
+        let rewritten = rewritten
+            .into_iter()
+            .zip(exprs)
+            .map(|(expr, original)| {
+                Ok(expr
+                    .rewrite(&mut place, &mut ())?
+                    .alias(original.meta().output_name()?))
             })
             .collect::<PolarsResult<Vec<_>>>()?;
-        *exprs = extract.aggs;
+        let mut completed = locals
+            .into_iter()
+            .zip(outputs)
+            .filter_map(|(input, outputs)| {
+                if outputs.is_empty() {
+                    return None;
+                }
+                Some(DslPlan::Select {
+                    input: Arc::new(input),
+                    expr: key_columns.iter().cloned().chain(outputs).collect(),
+                    options: Default::default(),
+                })
+            });
+        // These one-row/group plans are black boxes to combination. Mechanism
+        // internals and missing-group fills never enter the join logic.
+        let mut combined = completed.next().expect("a randomized boundary has a head");
+        for right in completed {
+            let mut args = JoinArgs::new(if key_columns.is_empty() {
+                JoinType::Cross
+            } else {
+                JoinType::Inner
+            });
+            args.nulls_equal = true;
+            args.coalesce = JoinCoalesce::CoalesceColumns;
+            combined = DslPlan::Join {
+                input_left: Arc::new(combined),
+                input_right: Arc::new(right),
+                left_on: key_columns.clone(),
+                right_on: key_columns.clone(),
+                predicates: vec![],
+                options: Arc::new(JoinOptions {
+                    args,
+                    ..Default::default()
+                }),
+            };
+        }
         Ok(DslPlan::Select {
-            input: Arc::new(self.externalize(plan)?),
+            input: Arc::new(combined),
             expr: key_columns.into_iter().chain(rewritten).collect(),
             options: projection_options,
         })
     }
 }
 
-struct Extract<'a> {
+struct Extract<'a, 'b> {
+    splitter: &'a mut Splitter<'b>,
+    base: Arc<DslPlan>,
+    keys: Vec<Expr>,
+    locals: Vec<DslPlan>,
     aggs: Vec<Expr>,
-    names: &'a mut Names,
+    owners: HashMap<PlSmallStr, usize>,
 }
 
-impl RewritingVisitor for Extract<'_> {
+fn score_plugin(expr: &Expr) -> PolarsResult<Option<(&Vec<Expr>, DiscreteQuantileScorePlugin)>> {
+    match_trusted_plugin::<DiscreteQuantileScorePlugin>(expr)
+        .map_err(|e| polars_err!(InvalidOperation: "{e}"))
+}
+
+impl RewritingVisitor for Extract<'_, '_> {
     type Node = Expr;
     type Arena = ();
 
     fn pre_visit(&mut self, expr: &Expr, _: &mut ()) -> PolarsResult<RewriteRecursion> {
-        Ok(if has_noise(expr)? {
-            // Keep each trusted plugin and its surrounding postprocessing;
-            // only its deterministic inputs (and public operands) are cut.
+        if score_plugin(expr)?.is_some() {
+            return Ok(RewriteRecursion::MutateAndStop);
+        }
+        let contains_score = expr
+            .into_iter()
+            .map(score_plugin)
+            .collect::<PolarsResult<Vec<_>>>()?
+            .iter()
+            .any(Option::is_some);
+        Ok(if has_noise(expr)? || contains_score {
             RewriteRecursion::NoMutateAndContinue
         } else if scalar_literals(expr)? {
             RewriteRecursion::Stop
@@ -319,8 +426,178 @@ impl RewritingVisitor for Extract<'_> {
     }
 
     fn mutate(&mut self, expr: Expr, _: &mut ()) -> PolarsResult<Expr> {
+        let name = self.splitter.names.fresh();
+        if let Some((inputs, scorer)) = score_plugin(&expr)? {
+            let bucket = self.splitter.names.fresh();
+            let count = self.splitter.names.fresh();
+            // Evaluate in the original aggregation context: scorer inputs can
+            // filter/drop observations without dropping their observed group.
+            // Implode also preserves literal and empty-global semantics without
+            // classifying the input's operators or cardinality.
+            let assignment = buckets(
+                inputs[0].clone(),
+                &scorer.candidates,
+                0,
+                scorer.candidates.len(),
+            )?
+            .cast(DataType::UInt64)
+            .implode()
+            .alias(bucket.clone());
+            let collected = if self.keys.is_empty() {
+                DslPlan::Select {
+                    input: self.base.clone(),
+                    expr: vec![assignment],
+                    options: Default::default(),
+                }
+            } else {
+                group_by(self.base.clone(), self.keys.clone(), vec![assignment])
+            };
+            let exploded = DslBuilder::from(collected)
+                .explode(
+                    cols([bucket.clone()]),
+                    ExplodeOptions {
+                        empty_as_null: true,
+                        keep_nulls: true,
+                    },
+                    false,
+                )
+                .0;
+            let histogram = group_by(
+                exploded,
+                self.keys
+                    .iter()
+                    .map(|key| Ok(col(key.clone().meta().output_name()?)))
+                    .chain([Ok(col(bucket.clone())
+                        .fill_null(lit(0u64).cast(DataType::UInt64))
+                        .alias(bucket.clone()))])
+                    .collect::<PolarsResult<_>>()?,
+                // Empty-list sentinels keep the group with bucket zero/count
+                // zero. Count the original non-null buckets, not sentinel rows.
+                vec![
+                    col(bucket.clone())
+                        .count()
+                        .cast(DataType::UInt64)
+                        .alias(count.clone()),
+                ],
+            );
+            let scan = self
+                .splitter
+                .externalize(histogram)
+                .map_err(|e| polars_err!(InvalidOperation: "{e}"))?;
+            let scores = apply_plugin(
+                vec![col(bucket), col(count)],
+                expr.clone(),
+                HistogramQuantileScorePlugin {
+                    num_candidates: scorer.candidates.len(),
+                    alpha: scorer.alpha,
+                    size_limit: scorer.size_limit,
+                },
+            )
+            .alias(name.clone());
+            let local = if self.keys.is_empty() {
+                DslPlan::Select {
+                    input: Arc::new(scan),
+                    expr: vec![scores],
+                    options: Default::default(),
+                }
+            } else {
+                group_by(
+                    scan,
+                    self.keys
+                        .iter()
+                        .map(|key| Ok(col(key.clone().meta().output_name()?)))
+                        .collect::<PolarsResult<_>>()?,
+                    vec![scores],
+                )
+            };
+            self.owners.insert(name.clone(), self.locals.len());
+            self.locals.push(local);
+        } else {
+            self.aggs.push(expr.alias(name.clone()));
+            self.owners.insert(name.clone(), 0);
+        }
+        Ok(col(name))
+    }
+}
+
+fn group_by(input: impl Into<Arc<DslPlan>>, keys: Vec<Expr>, aggs: Vec<Expr>) -> DslPlan {
+    DslPlan::GroupBy {
+        input: input.into(),
+        keys,
+        aggs,
+        apply: None,
+        maintain_order: false,
+        options: Default::default(),
+        #[cfg(patch_polars)]
+        predicates: vec![],
+    }
+}
+
+/// Native CASE decisions have logarithmic depth, and distinguish equality from
+/// each adjacent open interval. Resolved candidates already have the input dtype.
+fn buckets(
+    input: Expr,
+    candidates: &polars::series::Series,
+    start: usize,
+    end: usize,
+) -> PolarsResult<Expr> {
+    if start == end {
+        return Ok(lit(2 * start as u64));
+    }
+    let mid = start + (end - start) / 2;
+    let candidate = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        candidates.dtype().clone(),
+        candidates.get(mid)?.into_static(),
+    )));
+    Ok(when(input.clone().lt(candidate.clone()))
+        .then(buckets(input.clone(), candidates, start, mid)?)
+        .otherwise(
+            when(input.clone().eq(candidate))
+                .then(lit(2 * mid as u64 + 1))
+                .otherwise(buckets(input, candidates, mid + 1, end)?),
+        ))
+}
+
+fn dependencies(expr: &Expr, owners: &HashMap<PlSmallStr, usize>) -> PolarsResult<HashSet<usize>> {
+    let mut deps = HashSet::new();
+    for node in expr {
+        if let Expr::Column(name) = node {
+            if let Some(owner) = owners.get(name) {
+                deps.insert(*owner);
+            }
+        }
+        // Literal noise still belongs to the scalar head, where Polars retains
+        // its one-draw broadcasting semantics even when there are many keys.
+        if noise(node)?
+            && !node
+                .into_iter()
+                .any(|node| matches!(node, Expr::Column(name) if owners.contains_key(name)))
+        {
+            deps.insert(0);
+        }
+    }
+    Ok(deps)
+}
+
+struct Place<'a> {
+    owners: &'a HashMap<PlSmallStr, usize>,
+    outputs: &'a mut [Vec<Expr>],
+    names: &'a mut Names,
+}
+impl RewritingVisitor for Place<'_> {
+    type Node = Expr;
+    type Arena = ();
+    fn pre_visit(&mut self, expr: &Expr, _: &mut ()) -> PolarsResult<RewriteRecursion> {
+        Ok(if dependencies(expr, self.owners)?.len() == 1 {
+            RewriteRecursion::MutateAndStop
+        } else {
+            RewriteRecursion::NoMutateAndContinue
+        })
+    }
+    fn mutate(&mut self, expr: Expr, _: &mut ()) -> PolarsResult<Expr> {
+        let owner = *dependencies(&expr, self.owners)?.iter().next().unwrap();
         let name = self.names.fresh();
-        self.aggs.push(expr.alias(name.clone()));
+        self.outputs[owner].push(expr.alias(name.clone()));
         Ok(col(name))
     }
 }
