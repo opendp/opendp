@@ -385,13 +385,26 @@ class DPExpr(object):
             returns_scalar=True,
         )
 
-    def sum(self, bounds: tuple[float, float], scale: float | None = None):
+    def sum(
+        self,
+        bounds: tuple[float, float],
+        scale: float | None = None,
+        signed: bool | None = None,
+    ):
         """Compute the differentially private sum.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        UInt32 sums use signed Int64 output by default, preserving negative
+        noisy results. Set ``signed=False`` for the previous unsigned output.
+
+        UInt64 sums retain unsigned output by default. They do not support
+        ``signed=True`` because the sum may not fit in Int64.
+        Other numeric sum types are unaffected by this option.
+
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameter for the noise distribution
+        :param signed: use signed output for UInt32 and unsigned output for UInt64 by default
 
         :example:
 
@@ -425,10 +438,13 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
 
+        if signed is not None and not isinstance(signed, bool):
+            raise TypeError("signed must be a bool or None")
+
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_sum",
-            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale, signed),
             returns_scalar=True,
             changes_length=True,
         )

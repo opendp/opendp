@@ -325,14 +325,14 @@ def test_signed_counting_queries(signed_kwargs):
 
 
 @pytest.mark.parametrize(
-    ("dtype", "T", "values", "bounds", "expected"),
+    ("dtype", "T", "values", "bounds", "expected", "expected_dtype"),
     [
-        ("UInt32", dp.u32, [1, 2], (0, 2), 3),
-        ("UInt64", dp.u64, [2**63 - 1, 1], (0, 2**63 - 1), 2**63),
+        ("UInt32", dp.u32, [1, 2], (0, 2), 3, "Int64"),
+        ("UInt64", dp.u64, [2**63 - 1, 1], (0, 2**63 - 1), 2**63, "UInt64"),
     ],
 )
-def test_unsigned_sum(dtype, T, values, bounds, expected):
-    """Signed counting defaults do not change unsigned sums or clip them to Int64."""
+def test_signed_sum_default(dtype, T, values, bounds, expected, expected_dtype):
+    """UInt32 defaults to signed; UInt64 preserves the full range."""
     dp.enable_features("contrib")
 
     lf = pl.LazyFrame({"A": pl.Series(values, dtype=getattr(pl, dtype))})
@@ -342,16 +342,57 @@ def test_unsigned_sum(dtype, T, values, bounds, expected):
     )
     plan = lf.select(pl.col("A").dp.sum(bounds, scale=0.0))
     measurement = dp.m.make_private_lazyframe(
-        lf_domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        plan,
-        0.0,
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
     )
     result = measurement(lf).collect()
-
-    assert result.schema["A"] == getattr(pl, dtype)
+    assert result.schema["A"] == getattr(pl, expected_dtype)
     assert result["A"][0] == expected
+
+
+@pytest.mark.parametrize(
+    ("dtype", "T", "signed", "expected_dtype"),
+    [
+        ("UInt32", dp.u32, None, "Int64"),
+        ("UInt32", dp.u32, True, "Int64"),
+        ("UInt32", dp.u32, False, "UInt32"),
+        ("UInt64", dp.u64, None, "UInt64"),
+        ("UInt64", dp.u64, False, "UInt64"),
+    ],
+)
+def test_signed_sum_explicit(dtype, T, signed, expected_dtype):
+    dp.enable_features("contrib")
+    lf = pl.LazyFrame({"A": pl.Series([1, 2], dtype=getattr(pl, dtype))})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=T))]),
+        dp.polars.Margin(max_length=2),
+    )
+    plan = lf.select(pl.col("A").dp.sum((0, 2), scale=0.0, signed=signed))
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+    result = measurement(lf).collect()
+    assert result.schema["A"] == getattr(pl, expected_dtype)
+    assert result["A"][0] == 3
+
+
+def test_signed_u64_sum_rejected():
+    dp.enable_features("contrib")
+    lf = pl.LazyFrame({"A": pl.Series([1, 2], dtype=pl.UInt64)})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=dp.u64))]),
+        dp.polars.Margin(max_length=2),
+    )
+    plan = lf.select(pl.col("A").dp.sum((0, 2), scale=0.0, signed=True))
+    with pytest.raises(dp.OpenDPException, match="UInt64"):
+        dp.m.make_private_lazyframe(
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+        )
+
+
+@pytest.mark.parametrize("signed", [1, 0, "True", [], object()])
+def test_signed_sum_rejects_non_bool(signed):
+    with pytest.raises(TypeError, match="signed must be a bool or None"):
+        pl.col.A.dp.sum((0, 1), scale=0.0, signed=signed)
 
 
 @pytest.mark.parametrize("signed", [1, 0, "True", [], object()])

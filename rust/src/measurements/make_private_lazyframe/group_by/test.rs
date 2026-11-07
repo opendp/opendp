@@ -239,7 +239,10 @@ fn test_explicit_keys() -> Fallible<()> {
     key_values.push(0); // Public key zero occurs twice; output must still have N_SAMPLES rows.
     let keys = df!("A" => key_values)?.lazy();
 
-    let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
+    let sum_expr = col("B")
+        .dp()
+        .sum((lit(0.0), lit(1.0)), None, None)
+        .alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
     let median_expr = col("B")
         .fill_nan(0.0)
@@ -572,7 +575,10 @@ fn test_fill_after_filter_privacy_map() -> Fallible<()> {
 
     let filtered = col("x").filter(col("x").gt(lit(1i64)));
     for expr in [
-        filtered.clone().dp().sum((lit(2i64), lit(3i64)), Some(1.0)),
+        filtered
+            .clone()
+            .dp()
+            .sum((lit(2i64), lit(3i64)), Some(1.0), None),
         filtered
             .fill_null(2i64)
             .clip(lit(2i64), lit(3i64))
@@ -661,7 +667,7 @@ fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
         SymmetricDistance,
         MaxDivergence,
         x.group_by(&[col("A")])
-            .agg(&[col("B").dp().sum((lit(-10), lit(10)), Some(30.0))]),
+            .agg(&[col("B").dp().sum((lit(-10), lit(10)), Some(30.0), None)]),
         None,
         None,
     )?;
