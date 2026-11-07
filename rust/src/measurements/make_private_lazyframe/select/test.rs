@@ -1,8 +1,12 @@
-use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
+use crate::domains::{AtomDomain, SeriesDomain};
+#[cfg(not(feature = "polars-ffi"))]
+use crate::domains::{LazyFrameDomain, Margin};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
 
@@ -11,6 +15,7 @@ use crate::metrics::SymmetricDistance;
 use super::*;
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_select_no_margin() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
@@ -34,6 +39,7 @@ fn test_select_no_margin() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_select() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?

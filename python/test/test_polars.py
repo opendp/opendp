@@ -368,6 +368,8 @@ def test_signed_counting_rejects_non_bool(signed):
 
 
 def test_onceframe_multi_collect():
+    import copy
+
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0, signed=True))
     m_lf = dp.m.make_private_lazyframe(
@@ -375,9 +377,89 @@ def test_onceframe_multi_collect():
     )
 
     of = m_lf(lf)
+    alias = copy.copy(of)
+    assert alias is not of
     of.collect()
-    with pytest.raises(dp.OpenDPException):
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        alias.collect()
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
         of.collect()
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        of.lazy()
+
+
+def test_onceframe_collect_without_hbc(monkeypatch):
+    import opendp.mod as mod
+
+    monkeypatch.setattr(
+        mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+    )
+    lf_domain, lf = example_lf()
+    plan = seed(lf.collect_schema()).select(dp.len(0.0, signed=True))
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+    )
+    onceframe = measurement(lf)
+    with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+        onceframe.lazy()
+    assert onceframe.collect()["len"][0] == 50
+
+    taken = measurement(lf)
+    assert isinstance(taken._take_lazy(), pl.LazyFrame)
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        taken._take_lazy()
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        taken.collect()
+
+
+@pytest.mark.parametrize("failure", ["collect", "shuffle"])
+def test_onceframe_failed_collect_exhausts(monkeypatch, failure):
+    lf_domain, lf = example_lf()
+    plan = seed(lf.collect_schema()).select(dp.len(0.0, signed=True))
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+    )
+    onceframe = measurement(lf)
+
+    def fail(*args, **kwargs):
+        raise ValueError(f"{failure} failed")
+
+    if failure == "collect":
+        monkeypatch.setattr(pl.LazyFrame, "collect", fail)
+    else:
+        monkeypatch.setattr(pl.DataFrame, "sample", fail)
+
+    with pytest.raises(ValueError, match=f"{failure} failed"):
+        onceframe.collect()
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        onceframe.collect()
+    with pytest.raises(dp.OpenDPException, match="OnceFrame has been exhausted"):
+        onceframe._take_lazy()
+
+
+@pytest.mark.parametrize("height", [0, 1, 10])
+def test_onceframe_shuffle(monkeypatch, height):
+    from opendp.extras.polars import OnceFrame
+
+    expected = pl.DataFrame({"A": range(height)})
+    monkeypatch.setattr(OnceFrame, "_take_lazy", lambda _: expected.lazy())
+    original_sample = pl.DataFrame.sample
+    calls = []
+
+    def sample(frame, *, n, shuffle):
+        calls.append((n, shuffle))
+        return original_sample(frame, n=n, shuffle=shuffle)
+
+    monkeypatch.setattr(pl.DataFrame, "sample", sample)
+    result = OnceFrame(object()).collect()
+    assert calls == [(height, True)]
+    pl_testing.assert_frame_equal(result.sort("A"), expected)
+
+
+def test_lazyframe_membership_unsupported():
+    domain, frame = example_lf()
+    with pytest.raises(dp.OpenDPException, match="membership is unsupported"):
+        domain.member(frame)
 
 
 def test_onceframe_lazy():
@@ -1369,8 +1451,7 @@ def test_cast_enum():
         .agg(dp.len(signed=True))
         .release()
         .collect()["alpha"]
-        .sort()
-        .cast(enum_dtype),
+        .sort(),
         pl.Series("alpha", ["A", "B", "C"], enum_dtype),
     )
 
