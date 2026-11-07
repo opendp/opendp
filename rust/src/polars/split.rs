@@ -9,10 +9,7 @@ use std::{
 
 use polars::{
     error::{PolarsResult, polars_err},
-    prelude::{
-        DataType, DslPlan, ExplodeOptions, Expr, JoinArgs, JoinCoalesce, JoinType, LiteralValue,
-        PlSmallStr, Scalar, col, cols, lit, when,
-    },
+    prelude::{DslPlan, Expr, JoinArgs, JoinCoalesce, JoinType, PlSmallStr, col},
 };
 use polars_plan::{
     plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker},
@@ -27,7 +24,8 @@ use crate::{
     error::Fallible,
     measurements::{expr_noise::NoisePlugin, expr_noisy_max::NoisyMaxPlugin},
     transformations::expr_discrete_quantile_score::{
-        DiscreteQuantileScorePlugin, HistogramQuantileScorePlugin,
+        DiscreteQuantileHistogramPlugin, DiscreteQuantileScorePlugin, HistogramQuantileScorePlugin,
+        sparse_histogram_plan,
     },
 };
 
@@ -266,12 +264,11 @@ impl Splitter<'_> {
             DslPlan::Select { options, .. } => options.clone(),
             _ => Default::default(),
         };
-        let (exprs, keys, base) = match &plan {
-            DslPlan::Select { expr, input, .. } => (expr.clone(), vec![], input.clone()),
+        let (exprs, keys) = match &plan {
+            DslPlan::Select { expr, .. } => (expr.clone(), vec![]),
             DslPlan::GroupBy {
                 aggs,
                 keys,
-                input,
                 apply,
                 options,
                 #[cfg(patch_polars)]
@@ -288,7 +285,7 @@ impl Splitter<'_> {
                 if !predicates.is_empty() {
                     return fallible!(FailedFunction, "group-by predicates are unsupported");
                 }
-                (aggs.clone(), keys.clone(), input.clone())
+                (aggs.clone(), keys.clone())
             }
             _ => unreachable!(),
         };
@@ -298,7 +295,6 @@ impl Splitter<'_> {
             .collect::<PolarsResult<Vec<_>>>()?;
         let mut extract = Extract {
             splitter: self,
-            base,
             keys,
             // Slot zero is the compatible scalar head. It is only materialized
             // if used; the other slots are native histogram continuations.
@@ -390,7 +386,6 @@ impl Splitter<'_> {
 
 struct Extract<'a, 'b> {
     splitter: &'a mut Splitter<'b>,
-    base: Arc<DslPlan>,
     keys: Vec<Expr>,
     locals: Vec<DslPlan>,
     aggs: Vec<Expr>,
@@ -430,56 +425,17 @@ impl RewritingVisitor for Extract<'_, '_> {
         if let Some((inputs, scorer)) = score_plugin(&expr)? {
             let bucket = self.splitter.names.fresh();
             let count = self.splitter.names.fresh();
-            // Evaluate in the original aggregation context: scorer inputs can
-            // filter/drop observations without dropping their observed group.
-            // Implode also preserves literal and empty-global semantics without
-            // classifying the input's operators or cardinality.
-            let assignment = buckets(
-                inputs[0].clone(),
-                &scorer.candidates,
-                0,
-                scorer.candidates.len(),
-            )?
-            .cast(DataType::UInt64)
-            .implode()
-            .alias(bucket.clone());
-            let collected = if self.keys.is_empty() {
-                DslPlan::Select {
-                    input: self.base.clone(),
-                    expr: vec![assignment],
-                    options: Default::default(),
-                }
-            } else {
-                group_by(self.base.clone(), self.keys.clone(), vec![assignment])
-            };
-            let exploded = DslBuilder::from(collected)
-                .explode(
-                    cols([bucket.clone()]),
-                    ExplodeOptions {
-                        empty_as_null: true,
-                        keep_nulls: true,
-                    },
-                    false,
-                )
-                .0;
-            let histogram = group_by(
-                exploded,
-                self.keys
-                    .iter()
-                    .map(|key| Ok(col(key.clone().meta().output_name()?)))
-                    .chain([Ok(col(bucket.clone())
-                        .fill_null(lit(0u64).cast(DataType::UInt64))
-                        .alias(bucket.clone()))])
-                    .collect::<PolarsResult<_>>()?,
-                // Empty-list sentinels keep the group with bucket zero/count
-                // zero. Count the original non-null buckets, not sentinel rows.
-                vec![
-                    col(bucket.clone())
-                        .count()
-                        .cast(DataType::UInt64)
-                        .alias(count.clone()),
-                ],
+            let histogram_name = self.splitter.names.fresh();
+            let source = apply_plugin(
+                inputs.clone(),
+                expr.clone(),
+                DiscreteQuantileHistogramPlugin {
+                    scorer: scorer.clone(),
+                    bucket_name: bucket.clone(),
+                    count_name: count.clone(),
+                },
             );
+            let histogram = sparse_histogram_plan(self.locals[0].clone(), source, histogram_name);
             let scan = self
                 .splitter
                 .externalize(histogram)
@@ -531,31 +487,6 @@ fn group_by(input: impl Into<Arc<DslPlan>>, keys: Vec<Expr>, aggs: Vec<Expr>) ->
         #[cfg(patch_polars)]
         predicates: vec![],
     }
-}
-
-/// Native CASE decisions have logarithmic depth, and distinguish equality from
-/// each adjacent open interval. Resolved candidates already have the input dtype.
-fn buckets(
-    input: Expr,
-    candidates: &polars::series::Series,
-    start: usize,
-    end: usize,
-) -> PolarsResult<Expr> {
-    if start == end {
-        return Ok(lit(2 * start as u64));
-    }
-    let mid = start + (end - start) / 2;
-    let candidate = Expr::Literal(LiteralValue::Scalar(Scalar::new(
-        candidates.dtype().clone(),
-        candidates.get(mid)?.into_static(),
-    )));
-    Ok(when(input.clone().lt(candidate.clone()))
-        .then(buckets(input.clone(), candidates, start, mid)?)
-        .otherwise(
-            when(input.clone().eq(candidate))
-                .then(lit(2 * mid as u64 + 1))
-                .otherwise(buckets(input, candidates, mid + 1, end)?),
-        ))
 }
 
 fn dependencies(expr: &Expr, owners: &HashMap<PlSmallStr, usize>) -> PolarsResult<HashSet<usize>> {
