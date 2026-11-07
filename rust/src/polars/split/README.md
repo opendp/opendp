@@ -20,14 +20,24 @@ populated DataFrame scans out of the continuation, **not** the deterministic
 plan: serializing the sink plan can still embed base or public-key DataFrames.
 Both plans and their private intermediates must remain executor-only.
 
-The splitter is neither a privacy validator nor a SQL compatibility checker.
-There is no expression whitelist for the base or deterministic aggregate
-interiors; SQL support belongs to the external translator. Narrow checks reject
-unsupported splitting semantics, such as vector-valued private inputs,
-aggregation/reshaping after noise, schema-dependent casts across the boundary,
-and multiple private boundaries. Quantile/noisy-max splitting is not supported.
-Rust anonymous UDFs retain their original serialization limitations; use
-FFI-backed noise plugins for Python execution.
+The splitter trusts OpenDP's stability and privacy analysis. Trusted NoisePlugin
+occurrences identify the randomized boundaries; deterministic input subtrees
+are extracted intact, without classifying their operators. Postprocessing is
+rewritten structurally, not validated. Public deterministic operands (such as
+an exact length already proven public) also retain their original context.
+SQL support belongs to the external translator.
+
+One structural distinction remains: an expression whose terminal nodes are all
+scalar literals stays in the continuation. OpenDP's validity analysis does not
+change Polars' literal broadcasting state. Replacing that expression with an
+IPC column would turn one shared noise draw into independent draws per group.
+Nullary context inputs such as len() are not literal leaves and are extracted.
+This is not an operator whitelist or a second cardinality analysis.
+
+Only trusted NoisePlugin boundaries are split; noisy-max/DP-quantile mechanisms
+and multiple private boundaries remain unsupported. Rust anonymous UDFs retain
+their original serialization limitations; use FFI-backed plugins for Python
+execution.
 
 Splitting performs no execution, I/O, or schema resolution. The eventual trusted
 OnceFrame integration must enforce protected IPC files, consistent snapshots,

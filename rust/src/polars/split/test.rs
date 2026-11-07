@@ -330,6 +330,46 @@ fn mean_and_compatible_aggregates_share_fragment() -> Fallible<()> {
 }
 
 #[test]
+fn public_lengths_remain_in_the_original_aggregation_context() -> Fallible<()> {
+    let input = data()?;
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::select()
+            .with_max_length(10)
+            .with_invariant_lengths(),
+    )?
+    .with_margin(
+        Margin::by(["key"])
+            .with_max_length(10)
+            .with_invariant_lengths(),
+    )?;
+    for grouped in [false, true] {
+        let exprs = [len().alias("exact_count"), sum()];
+        let query = if grouped {
+            input.clone().group_by([col("key")]).agg(exprs)
+        } else {
+            input.clone().select(exprs)
+        };
+        let plan = make_private_lazyframe(
+            domain.clone(),
+            SymmetricDistance,
+            Approximate(MaxDivergence),
+            query,
+            Some(1.),
+            None,
+        )?
+        .invoke(&input)?
+        .lazyframe()
+        .logical_plan;
+        compare(plan, 1, grouped)?;
+    }
+    Ok(())
+}
+
+#[test]
 fn grouped_count_and_threshold() -> Fallible<()> {
     let input = data()?;
     for threshold in [None, Some(1)] {
@@ -629,6 +669,25 @@ fn randomized_occurrences_are_not_deduplicated() -> Fallible<()> {
 }
 
 #[test]
+fn literal_only_releases_preserve_cardinality() -> Fallible<()> {
+    for input in [
+        df!("key" => [0i32, 1])?.lazy(),
+        df!("key" => Vec::<i32>::new())?.lazy(),
+    ] {
+        for grouped in [false, true] {
+            let expression = noisy((lit(0i64) + lit(1i64)).cast(DataType::Int64), 0.).alias("n");
+            let query = if grouped {
+                input.clone().group_by([col("key")]).agg([expression])
+            } else {
+                input.clone().select([expression])
+            };
+            compare(query.logical_plan, 1, grouped)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn literal_noise_keeps_scalar_broadcasting() -> Fallible<()> {
     let input = df!("key" => (0..100i32).collect::<Vec<_>>())?.lazy();
     let plan = input
@@ -644,6 +703,13 @@ fn literal_noise_keeps_scalar_broadcasting() -> Fallible<()> {
             noisy(len().cast(DataType::Int64), 0.).alias("count"),
         ])
         .logical_plan;
+    assert_eq!(
+        LazyFrame::from(plan.clone())
+            .collect()?
+            .column("n")?
+            .n_unique()?,
+        1
+    );
     let dir = WorkDir::new();
     let (deterministic, continuation) = split_plan(plan, &dir.0)?;
     let DslPlan::GroupBy { aggs, .. } = sinks(&deterministic)[0].0 else {
@@ -653,6 +719,49 @@ fn literal_noise_keeps_scalar_broadcasting() -> Fallible<()> {
     materialize(&deterministic, &dir.0)?;
     let output = LazyFrame::from(continuation).collect()?;
     assert_eq!(output.column("n")?.n_unique()?, 1);
+    Ok(())
+}
+
+#[test]
+fn deterministic_noise_inputs_are_preserved_without_an_operator_whitelist() -> Fallible<()> {
+    for expression in [
+        (col("value") * lit(2)).sum().abs(),
+        col("value").product(),
+        col("value").sum().clip(lit(0), lit(5)),
+    ] {
+        for grouped in [false, true] {
+            let input = data()?;
+            let release = noisy(expression.clone(), 0.).alias("release");
+            let query = if grouped {
+                input.group_by([col("key")]).agg([release])
+            } else {
+                input.select([release])
+            };
+            let (deterministic, _) = compare(query.logical_plan, 1, grouped)?;
+            let exprs = match sinks(&deterministic)[0].0 {
+                DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
+                _ => panic!(),
+            };
+            let Expr::Alias(actual, _) = &exprs[0] else {
+                panic!()
+            };
+            assert_eq!(actual.as_ref(), &expression);
+        }
+    }
+    // Pointwise postprocessing of noise is kept without an operator list too.
+    for grouped in [false, true] {
+        let input = data()?;
+        let release = noisy(col("value").sum(), 0.)
+            .abs()
+            .clip(lit(0), lit(5))
+            .alias("release");
+        let query = if grouped {
+            input.group_by([col("key")]).agg([release])
+        } else {
+            input.select([release])
+        };
+        compare(query.logical_plan, 1, grouped)?;
+    }
     Ok(())
 }
 
@@ -685,49 +794,9 @@ fn deterministic_operations_are_left_to_the_translator() -> Fallible<()> {
 }
 
 #[test]
-fn unsupported_shapes_fail_explicitly() -> Fallible<()> {
+fn unsupported_plan_structures_fail_explicitly() -> Fallible<()> {
     let input = data()?;
-    let hidden_noise = col("value").quantile(
-        noisy(lit(0i64).cast(DataType::Int64), 0.),
-        QuantileMethod::Nearest,
-    );
     let plans = [
-        input
-            .clone()
-            .select([
-                noisy(col("value").sum(), 0.).cast(DataTypeExpr::OfExpr(Box::new(col("value"))))
-            ])
-            .logical_plan,
-        input
-            .clone()
-            .select([noisy(hidden_noise.sum(), 0.)])
-            .logical_plan,
-        input
-            .clone()
-            .select([col("value").dp().sum((lit(0), lit(5)), None)])
-            .logical_plan, // unresolved shim
-        input
-            .clone()
-            .select([noisy(col("value"), 1.), noisy(len(), 1.).alias("n")])
-            .logical_plan, // mixed vector/scalar
-        input
-            .clone()
-            .select([noisy(col("value"), 1.).sum()])
-            .logical_plan, // aggregate after noise
-        input
-            .clone()
-            .group_by([col("key")])
-            .agg([noisy(col("value").sum(), 0.).sort(Default::default())])
-            .logical_plan,
-        input
-            .clone()
-            .group_by([col("key")])
-            .agg([noisy(len(), 0.), col("key").alias("raw_key")])
-            .logical_plan,
-        input
-            .clone()
-            .select([noisy(col("value").implode(), 1.)])
-            .logical_plan, // unsupported scoring/list aggregate
         input.clone().select([col("value").sum()]).logical_plan, // no private boundary
         input
             .clone()
