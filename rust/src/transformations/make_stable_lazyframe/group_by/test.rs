@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::core::Domain;
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::metrics::SymmetricDistance;
@@ -60,6 +61,7 @@ fn test_group_by_materializes_computed_margin_keys() -> Fallible<()> {
         t.output_domain.margins,
         vec![Margin::by([col("A")]).with_max_groups(4).with_max_length(1)]
     );
+    #[cfg(not(feature = "polars-ffi"))]
     assert!(t.output_domain.member(&t.invoke(&lf)?)?);
     assert_eq!(t.map(&Bounds::from(1))?, Bounds::from(2));
     Ok(())

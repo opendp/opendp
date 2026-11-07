@@ -1,3 +1,6 @@
+// These integration tests execute releases through the Rust-only collect API.
+#![cfg(not(feature = "polars-ffi"))]
+
 use polars::df;
 use polars::prelude::{IntoLazy, NamedFrom, col, lit};
 use polars::series::Series;

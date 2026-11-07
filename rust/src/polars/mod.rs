@@ -504,18 +504,31 @@ pub enum OnceFrameAnswer {
 
 pub(crate) struct ExtractLazyFrame;
 
+/// Extracts the DP plan once without executing it. Not HBC-gated; callers
+/// must follow the requirements documented on `OnceFrame::lazyframe`.
+pub(crate) struct TakeLazyFrame;
+
 pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
 
 impl From<LazyFrame> for OnceFrame {
     fn from(value: LazyFrame) -> Self {
         let mut state = Some(value);
         Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
-            let Some(lazyframe) = state.clone() else {
-                return fallible!(FailedFunction, "OnceFrame has been exhausted");
-            };
             Ok(match query {
+                // Python owns execution and shuffling in FFI builds.
+                #[cfg(feature = "polars-ffi")]
+                Query::External(_) => {
+                    return fallible!(
+                        FailedFunction,
+                        "Rust-side OnceFrame collection is unsupported with polars-ffi"
+                    );
+                }
+                #[cfg(not(feature = "polars-ffi"))]
                 Query::External(q_external) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
+                        let Some(lazyframe) = state.clone() else {
+                            return fallible!(FailedFunction, "OnceFrame has been exhausted");
+                        };
                         let dataframe = lazyframe.collect()?;
                         let n = dataframe.height();
                         let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
@@ -524,7 +537,15 @@ impl From<LazyFrame> for OnceFrame {
                     }
                 }),
                 Query::Internal(q_internal) => Answer::Internal({
-                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                    if q_internal.downcast_ref::<TakeLazyFrame>().is_some() {
+                        let Some(lazyframe) = state.take() else {
+                            return fallible!(FailedFunction, "OnceFrame has been exhausted");
+                        };
+                        Box::new(lazyframe)
+                    } else if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                        let Some(lazyframe) = state.clone() else {
+                            return fallible!(FailedFunction, "OnceFrame has been exhausted");
+                        };
                         Box::new(lazyframe)
                     } else {
                         return fallible!(FailedFunction, "Unrecognized internal query");

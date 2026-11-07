@@ -73,6 +73,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_make_laplace_grouped() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;

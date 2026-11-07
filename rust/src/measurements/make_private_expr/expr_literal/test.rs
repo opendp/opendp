@@ -27,6 +27,7 @@ fn test_make_expr_private_lit() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_make_expr_private_lit_groupby() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
 

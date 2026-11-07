@@ -4,6 +4,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 
 use opendp_derive::proven;
+#[cfg(not(feature = "polars-ffi"))]
 use polars::lazy::dsl::len;
 use polars::prelude::*;
 
@@ -27,12 +28,15 @@ pub trait Frame: Clone + Send + Sync {
     fn lazyframe(self) -> LazyFrame;
     /// # Proof Definition
     /// Returns a [`DataFrame`] containing the same data as in `self`.
+    /// Only used by execution-dependent domain membership checks in Rust builds.
+    #[cfg(not(feature = "polars-ffi"))]
     fn dataframe(self) -> Fallible<DataFrame>;
 }
 impl Frame for LazyFrame {
     fn lazyframe(self) -> LazyFrame {
         self
     }
+    #[cfg(not(feature = "polars-ffi"))]
     fn dataframe(self) -> Fallible<DataFrame> {
         self.collect().map_err(Into::into)
     }
@@ -41,6 +45,7 @@ impl Frame for DslPlan {
     fn lazyframe(self) -> LazyFrame {
         LazyFrame::from(self)
     }
+    #[cfg(not(feature = "polars-ffi"))]
     fn dataframe(self) -> Fallible<DataFrame> {
         self.lazyframe().collect().map_err(Into::into)
     }
@@ -49,6 +54,7 @@ impl Frame for DataFrame {
     fn lazyframe(self) -> LazyFrame {
         IntoLazy::lazy(self)
     }
+    #[cfg(not(feature = "polars-ffi"))]
     fn dataframe(self) -> Fallible<DataFrame> {
         Ok(self)
     }
@@ -215,7 +221,7 @@ impl<F: Frame> FrameDomain<F> {
         plan: impl Fn(LazyFrame) -> LazyFrame,
     ) -> Fallible<Schema> {
         let output = plan(DataFrame::empty_with_schema(&self.schema()).lazy())
-            .collect()
+            .collect_schema()
             .map_err(|e| {
                 err!(
                     MakeTransformation,
@@ -223,7 +229,7 @@ impl<F: Frame> FrameDomain<F> {
                     e
                 )
             })?;
-        Ok((&**output.schema()).clone())
+        Ok((*output).clone())
     }
 
     /// # Proof Definition
@@ -341,6 +347,15 @@ impl<F: Frame> Debug for FrameDomain<F> {
 
 impl<F: Frame> Domain for FrameDomain<F> {
     type Carrier = F;
+    #[cfg(feature = "polars-ffi")]
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        fallible!(
+            NotImplemented,
+            "FrameDomain membership is unsupported with polars-ffi"
+        )
+    }
+
+    #[cfg(not(feature = "polars-ffi"))]
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         let val_df = val.clone().dataframe()?;
 
@@ -445,6 +460,15 @@ impl Margin {
 
     /// # Proof Definition
     /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
+    #[cfg(feature = "polars-ffi")]
+    pub(crate) fn member(&self, _value: LazyFrame) -> Fallible<bool> {
+        fallible!(
+            NotImplemented,
+            "Margin membership is unsupported with polars-ffi"
+        )
+    }
+
+    #[cfg(not(feature = "polars-ffi"))]
     pub(crate) fn member(&self, value: LazyFrame) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
