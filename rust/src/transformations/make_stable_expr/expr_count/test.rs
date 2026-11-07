@@ -93,8 +93,8 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
 
         // The sensitivity is slightly higher to account for potential rounding errors.
         println!("sens: {:?}", sensitivity);
-        assert!(sensitivity > (3.16227).into());
-        assert!(sensitivity < (3.162278).into());
+        assert!(sensitivity > 3.16227f64);
+        assert!(sensitivity < 3.162278f64);
 
         let actual = lf
             .clone()

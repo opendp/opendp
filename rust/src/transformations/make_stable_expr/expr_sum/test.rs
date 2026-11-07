@@ -71,8 +71,8 @@ fn test_grouped_make_sum_expr() -> Fallible<()> {
 
     // The sensitivity is slightly higher to account for potential rounding errors.
     println!("sens: {:?}", sens);
-    assert!(sens > (3.16227).into());
-    assert!(sens < (3.162278).into());
+    assert!(sens > 3.16227f64);
+    assert!(sens < 3.162278f64);
     Ok(())
 }
 
