@@ -59,6 +59,9 @@ mod expr_postprocess;
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_noisy_max;
 
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_noisy_top_k;
+
 #[bootstrap(
     features("contrib", "honest-but-curious"),
     arguments(
@@ -209,6 +212,15 @@ where
 
         if expr_noisy_max::match_noisy_max(&self)?.is_some() {
             return expr_noisy_max::make_expr_noisy_max(
+                input_domain,
+                input_metric,
+                self,
+                global_scale,
+            );
+        }
+
+        if expr_noisy_top_k::match_noisy_top_k(&self)?.is_some() {
+            return expr_noisy_top_k::make_expr_noisy_top_k(
                 input_domain,
                 input_metric,
                 self,

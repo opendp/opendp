@@ -14,6 +14,7 @@ use crate::{
         expr_dp_sum::DPSumShim,
         expr_noise::NoiseShim,
         expr_noisy_max::NoisyMaxShim,
+        expr_noisy_top_k::NoisyTopKShim,
     },
 };
 use polars::prelude::AnonymousColumnsUdf;
@@ -452,6 +453,23 @@ impl DPExpr {
         let negate = lit(negate);
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
         apply_anonymous_function(vec![self.0, negate, scale], NoisyMaxShim)
+    }
+
+    /// Privately select the indices of the k largest values in each fixed-size score array.
+    ///
+    /// The candidate array must have a public, fixed length. The result is a list of selected
+    /// indices; the privacy cost is accounted for by the selected mechanism.
+    ///
+    /// # Arguments
+    /// * `k` - Number of indices to select. Must be between 1 and the array width.
+    /// * `negate` - Flip signs to select the k smallest values.
+    /// * `scale` - Noise scale parameter for the selection mechanism.
+    pub fn noisy_top_k(self, k: usize, negate: bool, scale: Option<f64>) -> Expr {
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(
+            vec![self.0, lit(k as u64), lit(negate), scale],
+            NoisyTopKShim,
+        )
     }
 
     /// Compute a differentially private quantile.
