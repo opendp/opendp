@@ -1,84 +1,47 @@
-"""The native splitter, real SQL heads, and native randomized continuation."""
+"""Database execution, Arrow IPC, and the interactive OnceFrame postprocessor."""
 
+from contextlib import contextmanager
 import io
-import json
 from pathlib import Path
-import pickle
-import re
 import stat
-import warnings
+from types import SimpleNamespace
 
 import pytest
 
 import opendp.prelude as dp
 from opendp.extras import ibis as dp_ibis
-from opendp.extras.polars import _domain_from_dtype, _get_opendp_polars_lib_path
+from opendp.extras.polars import _domain_from_dtype
 
 pl = pytest.importorskip("polars")
-pl_testing = pytest.importorskip("polars.testing")
+assert_frame_equal = pytest.importorskip("polars.testing").assert_frame_equal
+pa = pytest.importorskip("pyarrow")
 ibis = pytest.importorskip("ibis")
-p2i = pytest.importorskip("polars_to_ibis")
+pytest.importorskip("polars_to_ibis")
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore:fetch_arrow_table.*:DeprecationWarning"),
     pytest.mark.filterwarnings("ignore:The 'future.infer_string' option is deprecated"),
-    pytest.mark.filterwarnings(
-        "ignore:'json' (de)?serialization format of LazyFrame is deprecated:UserWarning"
-    ),
-    pytest.mark.filterwarnings("ignore:.*to_polars.*:FutureWarning"),
+    pytest.mark.filterwarnings("ignore:.*to_pyarrow_batches.*:FutureWarning"),
 ]
 
 
-def wire(frame):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return json.loads(frame.serialize(format="json"))
-
-
-def restore(node):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        return pl.LazyFrame.deserialize(io.StringIO(json.dumps(node)), format="json")
-
-
-def walk(node):
-    yield node
-    if isinstance(node, dict):
-        for child in node.values():
-            yield from walk(child)
-    elif isinstance(node, list):
-        for child in node:
-            yield from walk(child)
-
-
-def sink_inputs(sinks):
-    return [node["Sink"] for node in wire(sinks)["SinkMultiple"]["inputs"]]
-
-
-def assert_equal(actual, expected):
-    assert actual.schema == expected.schema
-    columns = actual.columns
-    pl_testing.assert_frame_equal(
-        actual.sort(columns), expected.sort(columns), check_exact=True
-    )
-
-
-def resolve(source, query, *, public_keys=True, threshold=None):
-    domains = []
+def measurement(source, plan, *, public_keys=True):
+    columns = []
     for name, dtype in source.schema.items():
         domain = _domain_from_dtype(dtype)
         if source[name].null_count():
             domain = dp.option_domain(domain)
-        domains.append(dp.series_domain(name, domain))
-    domain = dp.lazyframe_domain(domains)
-    domain = dp.with_margin(domain, dp.polars.Margin(max_length=10, max_groups=1))
+        columns.append(dp.series_domain(name, domain))
+    domain = dp.with_margin(
+        dp.lazyframe_domain(columns), dp.polars.Margin(max_length=10)
+    )
     if "key" in source.columns:
         domain = dp.with_margin(
             domain,
             dp.polars.Margin(
                 by=[pl.col("key")],
                 max_length=10,
-                max_groups=2,
+                max_groups=4,
                 invariant="keys" if public_keys else None,
             ),
         )
@@ -86,398 +49,323 @@ def resolve(source, query, *, public_keys=True, threshold=None):
         domain,
         dp.symmetric_distance(),
         dp.approximate(dp.max_divergence()),
-        query,
+        plan,
         global_scale=1.0,
-        threshold=threshold,
-    )(source.lazy())
-
-
-def plugin(name, *args):
-    from polars.plugins import register_plugin_function
-
-    return register_plugin_function(
-        plugin_path=_get_opendp_polars_lib_path(),
-        function_name=name,
-        args=args,
-        returns_scalar=True,
-        changes_length=True,
     )
 
 
-def quantile(value=None, candidates=None):
-    value = pl.col("value") if value is None else value
-    candidates = [1, 3, 6] if candidates is None else candidates
-    return value.dp.quantile(0.5, candidates, scale=0.0).alias("q")
+def quantile(candidates=(1, 3, 6)):
+    return pl.col("value").dp.quantile(0.5, candidates, scale=0.0).alias("q")
 
 
-def sum_expr():
-    return pl.col("value").dp.sum((0, 5), scale=0.0).alias("sum")
-
-
-def mean_expr():
-    return pl.col("value").dp.mean((0, 5), scale=0.0).alias("mean")
-
-
-def example():
-    return pl.DataFrame(
-        {"key": [0, 0, 1], "value": [1, 6, 3]},
-        schema={"key": pl.Int32, "value": pl.Int32},
-    )
+@contextmanager
+def snapshot(connection):
+    """DuckDB's transaction is a repeatable snapshot, not a generic SQL recipe."""
+    connection.raw_sql("BEGIN TRANSACTION")
+    try:
+        yield connection
+    finally:
+        connection.raw_sql("ROLLBACK")
 
 
 @pytest.fixture
 def connection():
     pytest.importorskip("duckdb")
-    backend = ibis.duckdb.connect()
-    yield backend
-    backend.disconnect()
+    connection = ibis.duckdb.connect()
+    yield connection
+    connection.disconnect()
 
 
 @pytest.fixture
-def audit(monkeypatch):
-    """Observe production execution, never replace the real converter or SQL."""
-    captured: dict[str, list] = {"heads": [], "sql": [], "directories": []}
-    convert = p2i.convert_polars_to_ibis
-    materialize = dp_ibis._materialize_sinks
+def execution(monkeypatch):
+    """Observe only the native boundary and IPC schemas, never execute a head in Polars."""
+    from opendp import _data
 
-    def checked_convert(head, table_name, backend):
-        query = convert(head, table_name=table_name, backend=backend)
-        sql = str(query.to_sql())
-        captured["sql"].append(sql)
-        assert not re.search(r"\b(?:ARRAY_AGG|LIST|UNNEST)\s*\(", sql, re.IGNORECASE), (
-            sql
-        )
-        assert not re.search(
-            r"\b(?:discrete_quantile_score_plugin|discrete_quantile_histogram_plugin|"
-            r"histogram_quantile_score_plugin|noise_plugin|noisy_max_plugin|"
-            r"index_candidates_plugin)\s*\(",
-            sql,
-            re.IGNORECASE,
-        ), sql
-        plan = wire(head)
-        if "GroupBy" in plan and "HStack" in plan["GroupBy"]["input"]:
-            assert re.search(r"\bCOUNT\s*\(\s*\*\s*\)", sql, re.IGNORECASE), sql
-            assert len(re.findall(r"\bGROUP\s+BY\b", sql, re.IGNORECASE)) == 1, sql
-        assert_equal(backend.to_polars(query, limit=None), head.collect())
-        return query
+    calls: list[tuple[Path, list, list]] = []
+    directories: list[Path] = []
+    split, collect = _data.onceframe_split, pl.LazyFrame.collect
 
-    def checked_materialize(sinks, backend, table_name):
-        nodes = sink_inputs(sinks)
-        paths = [Path(node["payload"]["File"]["target"]["Local"]) for node in nodes]
-        assert len(set(paths)) == len(paths)
-        directory = paths[0].parent
-        captured["directories"].append(directory)
+    def record_split(onceframe, work_dir):
+        directory = Path(work_dir)
+        directories.append(directory)
         assert stat.S_IMODE(directory.stat().st_mode) == 0o700
-        assert all(path.parent == directory and not path.exists() for path in paths)
-        references = [restore(node["input"]).collect() for node in nodes]
-        captured["heads"].extend(references)
-        materialize(sinks, backend, table_name)
-        for path, reference in zip(paths, references):
-            assert_equal(pl.read_ipc(path), reference)
+        assert not list(directory.iterdir())
+        plans = split(onceframe, work_dir)
+        calls.append((directory, plans, []))
+        return plans
 
-    monkeypatch.setattr(p2i, "convert_polars_to_ibis", checked_convert)
-    monkeypatch.setattr(dp_ibis, "_materialize_sinks", checked_materialize)
-    yield captured
-    assert all(not directory.exists() for directory in captured["directories"])
-
-
-CASES = [
-    "mixed",
-    "difference",
-    "median",
-    "independent",
-    "empty-global",
-    "empty-grouped",
-    "public",
-    "public-empty",
-    "null-keys",
-    "null-nan",
-    "u64",
-    "i64",
-    "threshold",
-    "collision",
-    "overflow-global",
-    "overflow-grouped",
-    "f32-weak-global",
-    "f32-weak-grouped",
-    "f32-typed-global",
-    "f32-typed-grouped",
-    "noise-filter",
-    "sum",
-]
-
-
-def make_case(case):
-    source = example()
-    public_keys, threshold = True, None
-    expressions = [quantile(), sum_expr(), mean_expr()]
-    grouped = True
-    if case.startswith("empty") or case == "public-empty":
-        source = source.clear()
-    if case.startswith("empty"):
-        expressions = [quantile(candidates=[3]), sum_expr()]
-        grouped = case == "empty-grouped"
-    elif case.startswith("public"):
-        expressions = [quantile(candidates=[3]), sum_expr(), mean_expr()]
-    elif case == "null-keys":
-        source = source.with_columns(pl.Series("key", [None, None, 1], dtype=pl.Int32))
-    elif case == "null-nan":
-        source = pl.DataFrame(
-            {"key": [0, 0, 0, 1, 1], "value": [1.0, None, float("nan"), 3.0, 6.0]},
-            schema={"key": pl.Int32, "value": pl.Float64},
-        )
-        expressions = [quantile(candidates=[3.0]), sum_expr(), mean_expr()]
-    elif case in {"u64", "i64"}:
-        dtype = pl.UInt64 if case == "u64" else pl.Int64
-        values = (
-            [0, 2**53, 2**53 + 1, 2**64 - 2, 2**64 - 1]
-            if case == "u64"
-            else [-(2**63), -(2**63) + 1, 0, 2**63 - 2, 2**63 - 1]
-        )
-        candidates = pl.Series(
-            [2**53, 2**53 + 1, 2**64 - 2]
-            if case == "u64"
-            else [-(2**63), 0, 2**63 - 1],
-            dtype=dtype,
-        )
-        source = pl.DataFrame(
-            {
-                "key": pl.Series([0] * 5, dtype=pl.Int32),
-                "value": pl.Series(values, dtype=dtype),
-            }
-        )
-        scores = plugin(
-            "discrete_quantile_score", pl.col("value"), pl.lit(0.5), pl.lit(candidates)
-        )
-        index = plugin("noisy_max", scores, pl.lit(True), pl.lit(0.0))
-        expressions = [plugin("index_candidates", index, pl.lit(candidates)).alias("q")]
-        grouped = False
-    elif case == "threshold":
-        expressions = [quantile(), sum_expr(), pl.len().dp.noise(0.0).alias("count")]
-        public_keys, threshold = False, 1
-    elif case == "collision":
-        expressions = [
-            quantile().alias("__opendp_split_0"),
-            sum_expr().alias("__opendp_split_1"),
-        ]
-    elif case.startswith("overflow"):
-        source = pl.DataFrame(
-            {"key": [0, 0, 0, 1, 1], "value": [128, -129, 0, 300, -300]},
-            schema={"key": pl.Int32, "value": pl.Int32},
-        )
-        expressions = [quantile(pl.col("value").cast(pl.Int8).fill_null(0), [-1, 0, 1])]
-        grouped = case.endswith("grouped")
-    elif case.startswith("f32"):
-        source = pl.DataFrame(
-            {
-                "key": pl.Series([0, 0, 0, 1, 1], dtype=pl.Int32),
-                "value": pl.Series(
-                    [None, 0.1, float("nan"), 0.1, 0.1], dtype=pl.Float32
-                ),
-            }
-        )
-        if "typed" in case:
-            value = (
-                pl.col("value").fill_null(pl.lit(0.1, dtype=pl.Float32))
-                - pl.lit(0.1, dtype=pl.Float32)
-            ).fill_nan(pl.lit(0.0, dtype=pl.Float32))
-            candidates = [-1e-10, 0.0, 1e-10]
-        else:
-            value = pl.col("value").fill_null(0.1).fill_nan(0.1)
-            candidates = [0.0, 0.1, 1.0]
-        expressions = [quantile(value, candidates)]
-        grouped = case.endswith("grouped")
-    elif case == "difference":
-        expressions, grouped = [(quantile() - mean_expr()).alias("difference")], False
-    elif case == "median":
-        expressions, grouped = (
-            [pl.col("value").dp.median([1, 3, 6], scale=0.0).alias("median")],
-            False,
-        )
-    elif case == "independent":
-        expressions.append(quantile().alias("independent"))
-    elif case == "noise-filter":
-        total = pl.col("value").clip(0, 10).sum()
-        expressions = [
-            total.dp.noise(0.0).alias("sum"),
-            (total.dp.noise(0.0) / pl.len().dp.noise(0.0)).alias("mean"),
-        ]
-    elif case == "sum":
-        expressions, grouped = [sum_expr()], False
-    query = (
-        source.lazy().group_by("key").agg(expressions)
-        if grouped
-        else source.lazy().select(expressions)
-    )
-    if case.startswith("public"):
-        public = pl.DataFrame({"key": [2, 0, 2, 1]}, schema={"key": pl.Int32}).lazy()
-        query = query.join(public, on="key", how="right")
-        public_keys = False
-    elif case == "collision":
-        public = pl.DataFrame(
-            {"key": [0, 1], "__opendp_split_2": [4, 5]},
-            schema={"key": pl.Int32, "__opendp_split_2": pl.Int32},
-        ).lazy()
-        query = query.join(public, on="key", how="right")
-        public_keys = False
-    elif case == "noise-filter":
-        query = query.filter(pl.col("sum") > 4)
-    return source, resolve(source, query, public_keys=public_keys, threshold=threshold)
-
-
-@pytest.mark.parametrize("case", CASES)
-def test_native_heads_through_real_sql(case, connection, audit):
-    source, onceframe = make_case(case)
-    native = onceframe.lazy()
-    plan = wire(native)
-    if case.startswith("overflow"):
-        casts = [
-            node["Cast"]
-            for node in walk(plan)
-            if isinstance(node, dict) and "Cast" in node
-        ]
-        assert any(
-            cast["options"] == "NonStrict" and "Int8" in str(cast["dtype"])
-            for cast in casts
-        )
-    if case.startswith("f32"):
-        scorers = [
-            node["FfiPlugin"]
-            for node in walk(plan)
-            if isinstance(node, dict)
-            and "FfiPlugin" in node
-            and node["FfiPlugin"]["symbol"] == "discrete_quantile_score_plugin"
-        ]
-        assert len(scorers) == 1
-        # Only inspect trusted native arguments; never recreate a scorer or noise.
-        candidates = pickle.loads(bytes(scorers[0]["kwargs"]))["candidates"]
-        assert (
-            pl.DataFrame.deserialize(io.BytesIO(candidates)).to_series().dtype
-            == pl.Float32
-        )
-    expected = native.collect()
-    connection.create_table("source", source, overwrite=True)
-    result = dp_ibis._run_on_database(onceframe, connection, "source")
-    assert isinstance(result, pl.DataFrame)
-    assert_equal(result, expected)
-    assert audit["sql"]
-    expected_heads = (
-        3
-        if case == "independent"
-        else 2
-        if case
-        in {
-            "mixed",
-            "difference",
-            "empty-global",
-            "empty-grouped",
-            "null-keys",
-            "null-nan",
-            "threshold",
+    def collect_continuation(plan, *args, **kwargs):
+        if not calls or not calls[-1][0].exists():
+            return collect(plan, *args, **kwargs)
+        directory, plans, schemas = calls[-1]
+        assert plan is plans[-1]
+        assert {path.name for path in directory.iterdir()} == {
+            f"{i}.arrow" for i in range(len(plans) - 1)
         }
-        else 1
+        for i in range(len(plans) - 1):
+            with pa.memory_map(str(directory / f"{i}.arrow"), "r") as file:
+                schemas.append(pa.ipc.open_file(file).schema)
+        return collect(plan, *args, **kwargs)
+
+    monkeypatch.setattr(_data, "onceframe_split", record_split)
+    monkeypatch.setattr(pl.LazyFrame, "collect", collect_continuation)
+    yield calls
+    assert all(not directory.exists() for directory in directories)
+
+
+def assert_consumed(onceframe):
+    with pytest.raises(dp.OpenDPException, match="exhaust"):
+        onceframe.collect()
+
+
+def test_grouped_quantiles_and_mixed_statistics(connection, execution, monkeypatch):
+    source = pl.DataFrame(
+        {"key": [0, 0, 1, None], "value": [3, 3, 6, 1]},
+        schema={"key": pl.Int32, "value": pl.Int32},
     )
-    if case.startswith("public") or case == "collision":
-        expected_heads = 3
-    assert len(audit["heads"]) == expected_heads
-    ordered = result.sort("key") if "key" in result.columns else result
-    if case in {"mixed", "independent"}:
-        expected_dict = {"key": [0, 1], "q": [3, 3], "sum": [6, 3], "mean": [3.0, 3.0]}
-        if case == "independent":
-            expected_dict["independent"] = [3, 3]
-        assert ordered.to_dict(as_series=False) == expected_dict
-    if case == "independent":
-        assert (
-            sum(
-                node.get("symbol") == "noisy_max_plugin"
-                for node in walk(plan)
-                if isinstance(node, dict)
-            )
-            == 2
+    connection.create_table("source", source)
+    plan = (
+        source.lazy()
+        .group_by("key")
+        .agg(
+            quantile(),
+            quantile((1, 3, 6, 8)).alias("other"),
+            pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum"),
+            pl.col("value").dp.mean((0, 6), scale=0.0).alias("mean"),
         )
-    if case in {"median", "difference", "empty-global", "noise-filter", "sum"}:
-        assert (
-            ordered.to_dict(as_series=False)
-            == {
-                "median": {"median": [3]},
-                "difference": {"difference": [0.0]},
-                "empty-global": {"q": [3], "sum": [0]},
-                "noise-filter": {"key": [0], "sum": [7], "mean": [3.5]},
-                "sum": {"sum": [9]},
-            }[case]
-        )
-    if case.startswith("public"):
-        assert ordered["key"].to_list() == [0, 1, 2]
-        assert ordered["q"].to_list() == [3, 3, 3]
-        assert ordered["sum"].to_list() == (
-            [0, 0, 0] if case == "public-empty" else [6, 3, 0]
-        )
-        assert ordered["mean"].is_nan().to_list() == (
-            [True] * 3 if case == "public-empty" else [False, False, True]
-        )
-
-
-def assert_consumed(onceframe, path):
-    from opendp._data import onceframe_split
-
-    for operation in [
-        onceframe.collect,
-        onceframe.lazy,
-        lambda: onceframe_split(onceframe.queryable, str(path)),
-    ]:
-        with pytest.raises(dp.OpenDPException, match="exhaust|collect|consum"):
-            operation()
-
-
-@pytest.mark.parametrize("case", ["sum", "median", "independent"])
-def test_ffi_serialization_before_ipc(case, tmp_path):
-    from opendp._data import onceframe_split
-
-    _, onceframe = make_case(case)
-    expected = onceframe.lazy().collect()
-    directory = tmp_path / "not-created"
-    sinks, continuation = onceframe_split(onceframe.queryable, str(directory))
-    assert isinstance(sinks, pl.LazyFrame) and isinstance(continuation, pl.LazyFrame)
-    assert not directory.exists()
-    restored_sinks = pl.LazyFrame.deserialize(io.BytesIO(sinks.serialize()))
-    restored_continuation = pl.LazyFrame.deserialize(
-        io.BytesIO(continuation.serialize())
     )
-    assert sink_inputs(restored_sinks) == sink_inputs(sinks)
-    nodes = sink_inputs(restored_sinks)
-    paths = [Path(node["payload"]["File"]["target"]["Local"]) for node in nodes]
-    assert all(path.parent == directory and not path.exists() for path in paths)
-    assert all(str(path) in json.dumps(wire(restored_continuation)) for path in paths)
-    assert not directory.exists()
-    assert_consumed(onceframe, directory)
-    directory.mkdir()
-    for node in nodes:
-        restore({"Sink": node}).collect()
-    assert all(path.exists() for path in paths)
-    assert_equal(restored_continuation.collect(), expected)
+    onceframe = measurement(source, plan)(source.lazy())
+    samples = []
+    sample = pl.DataFrame.sample
+
+    def shuffled(frame, **kwargs):
+        samples.append((frame.height, kwargs))
+        return sample(frame, **kwargs)
+
+    monkeypatch.setattr(pl.DataFrame, "sample", shuffled)
+    executor = dp_ibis.make_executor(connection, "source", snapshot=snapshot)
+    assert isinstance(executor, dp.Function)
+    result = executor(onceframe)
+    expected = pl.DataFrame(
+        {
+            "key": [None, 0, 1],
+            "q": [1, 3, 6],
+            "other": [1, 3, 6],
+            "sum": [1, 6, 6],
+            "mean": [1.0, 3.0, 6.0],
+        },
+        schema={
+            "key": pl.Int32,
+            "q": pl.Int64,
+            "other": pl.Int64,
+            "sum": pl.Int32,
+            "mean": pl.Float64,
+        },
+    )
+    assert_frame_equal(result.sort("key"), expected, check_exact=True)
+    assert (
+        len(execution[0][1]) == 4
+    )  # two independent histograms, scalar head, continuation
+    assert len(execution[0][2]) == 3
+    assert samples == [(3, {"fraction": 1.0, "shuffle": True})]
+    assert_consumed(onceframe)
 
 
-def test_ffi_split_failure_still_consumes(tmp_path):
+@pytest.mark.parametrize("empty", [False, True])
+def test_arrow_schema_and_empty_results(empty, connection, execution):
+    source = pl.DataFrame(
+        {"key": [2**53 + 1, 2**64 - 1], "value": [1.0, 3.0]},
+        schema={"key": pl.UInt64, "value": pl.Float32},
+    )
+    if empty:
+        source = source.clear()
+    connection.create_table("source", source)
+    candidates = pl.Series([1.0, 3.0], dtype=pl.Float32)
+    plan = (
+        source.lazy()
+        .group_by("key")
+        .agg(
+            quantile(candidates),
+            pl.col("value")
+            .fill_nan(pl.lit(0.0, dtype=pl.Float32))
+            .clip(pl.lit(0.0, dtype=pl.Float32), pl.lit(3.0, dtype=pl.Float32))
+            .sum()
+            .dp.noise(0.0)
+            .alias("sum"),
+        )
+    )
+    onceframe = measurement(source, plan)(source.lazy())
+    # A capability-only proxy deliberately has no backend name or transaction API.
+    backend = SimpleNamespace(
+        has_operation=connection.has_operation,
+        to_pyarrow_batches=connection.to_pyarrow_batches,
+    )
+
+    @contextmanager
+    def scope(_):
+        with snapshot(connection):
+            yield backend
+
+    result = dp_ibis.make_executor(backend, "source", snapshot=scope)(onceframe)
+    expected = source.rename({"value": "q"}).with_columns(pl.col("q").alias("sum"))
+    assert_frame_equal(result.sort("key"), expected, check_exact=True)
+    schema = execution[0][2][0]
+    assert schema.field("key").type == pa.uint64()
+    assert all(field.type == pa.uint64() for field in schema)
+    assert execution[0][2][1].types == [pa.uint64(), pa.float32()]
+    assert result.schema == {"key": pl.UInt64, "q": pl.Float32, "sum": pl.Float32}
+
+
+def test_ffi_ordered_vector_and_serialization(tmp_path):
     from opendp._data import onceframe_split
 
-    source = example()
-    query = source.lazy().select(quantile(pl.lit(3, dtype=pl.Int32)))
-    onceframe = resolve(source, query)
+    source = pl.DataFrame({"value": [3, 3]}, schema={"value": pl.Int32})
+    plan = source.lazy().select(
+        quantile(), pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum")
+    )
+    onceframe = measurement(source, plan)(source.lazy())
     directory = tmp_path / "absent"
-    with pytest.raises(dp.OpenDPException, match="literal"):
-        onceframe_split(onceframe.queryable, str(directory))
+    plans = onceframe_split(onceframe.queryable, str(directory))
+    assert len(plans) == 3 and all(isinstance(plan, pl.LazyFrame) for plan in plans)
+    restored = [
+        pl.LazyFrame.deserialize(io.BytesIO(plan.serialize())) for plan in plans
+    ]
+    assert restored[0].collect_schema().dtypes() == [pl.UInt64, pl.UInt64]
+    assert restored[1].collect_schema().dtypes() == [pl.Int32]
     assert not directory.exists()
-    assert_consumed(onceframe, directory)
+    assert_consumed(onceframe)
+
+
+def test_additional_public_source_is_rejected(connection, execution, monkeypatch):
+    source = pl.DataFrame(
+        {"key": [0], "value": [3]}, schema={"key": pl.Int32, "value": pl.Int32}
+    )
+    plan = (
+        source.lazy()
+        .group_by("key")
+        .agg(quantile())
+        .join(
+            pl.LazyFrame({"key": [0, 1]}).cast({"key": pl.Int32}), on="key", how="right"
+        )
+    )
+    onceframe = measurement(source, plan, public_keys=False)(source.lazy())
+
+    def forbid_execution(*args, **kwargs):
+        raise AssertionError("an additional source must fail before database execution")
+
+    monkeypatch.setattr(connection, "to_pyarrow_batches", forbid_execution)
+    with pytest.raises(
+        dp.OpenDPException, match="additional.*source|in-memory|multiple.*source"
+    ):
+        dp_ibis.make_executor(connection, "source", snapshot=snapshot)(onceframe)
+    assert_consumed(onceframe)
+
+
+def test_multiple_heads_require_snapshot(connection, execution):
+    source = pl.DataFrame({"value": [3, 3]}, schema={"value": pl.Int32})
+    plan = source.lazy().select(
+        quantile(), pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum")
+    )
+    onceframe = measurement(source, plan)(source.lazy())
+    # No table exists: fail before any database read, but after consuming the release.
+    with pytest.raises(dp.OpenDPException, match="snapshot"):
+        dp_ibis.make_executor(connection, "source")(onceframe)
+    assert_consumed(onceframe)
+
+
+def test_repeatable_snapshot_between_heads(tmp_path, monkeypatch):
+    pytest.importorskip("duckdb")
+    database = str(tmp_path / "snapshot.duckdb")
+    connection, writer = ibis.duckdb.connect(database), ibis.duckdb.connect(database)
+    try:
+        source = pl.DataFrame({"value": [3, 3]}, schema={"value": pl.Int32})
+        connection.create_table("source", source)
+        plan = source.lazy().select(
+            quantile(), pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum")
+        )
+        onceframe = measurement(source, plan)(source.lazy())
+        stream = connection.to_pyarrow_batches
+        calls: list[object] = []
+
+        def update_between_heads(expression, **kwargs):
+            if calls:
+                writer.raw_sql("INSERT INTO source VALUES (6)")
+            calls.append(expression)
+            assert kwargs == {"limit": None}
+            return stream(expression, **kwargs)
+
+        monkeypatch.setattr(connection, "to_pyarrow_batches", update_between_heads)
+        result = dp_ibis.make_executor(connection, "source", snapshot=snapshot)(
+            onceframe
+        )
+        assert result.to_dict(as_series=False) == {"q": [3], "sum": [6]}
+        assert len(calls) == 2
+        assert writer.execute(writer.table("source").count()) == 3
+    finally:
+        writer.disconnect()
+        connection.disconnect()
+
+
+@pytest.mark.parametrize("failure", ["query", "batches", "continuation"])
+def test_failure_cleanup_and_consumption(failure, connection, execution, monkeypatch):
+    source = pl.DataFrame({"value": [3]}, schema={"value": pl.Int32})
+    connection.create_table("source", source)
+    onceframe = measurement(source, source.lazy().select(quantile()))(source.lazy())
+    exited, faults = [], []
+
+    @contextmanager
+    def scope(backend):
+        with snapshot(backend) as bound:
+            try:
+                yield bound
+            finally:
+                exited.append(True)
+
+    if failure == "batches":
+        stream = connection.to_pyarrow_batches
+
+        def broken_stream(expression, **kwargs):
+            batches = stream(expression, **kwargs)
+
+            def fail_after_batches():
+                with batches:
+                    yield from batches
+                    faults.append("batches")
+                    raise RuntimeError("private intermediate: sentinel batch value")
+
+            return pa.RecordBatchReader.from_batches(
+                batches.schema, fail_after_batches()
+            )
+
+        monkeypatch.setattr(connection, "to_pyarrow_batches", broken_stream)
+    elif failure == "continuation":
+
+        def broken_collect(*args, **kwargs):
+            faults.append("continuation")
+            raise RuntimeError("private intermediate: sentinel continuation value")
+
+        monkeypatch.setattr(pl.LazyFrame, "collect", broken_collect)
+    table = "missing" if failure == "query" else "source"
+    with pytest.raises(dp.OpenDPException, match="Database execution failed") as error:
+        dp_ibis.make_executor(connection, table, snapshot=scope)(onceframe)
+    assert "sentinel" not in str(error.value)
+    assert "missing" not in str(error.value)
+    assert faults == ([] if failure == "query" else [failure])
+    assert exited == [True]
+    assert_consumed(onceframe)
+    # The provider's transaction has exited even when a batch iterator raised.
+    with snapshot(connection):
+        pass
 
 
 @pytest.mark.parametrize("backend", ["sqlite", "duckdb"])
-def test_public_run_on_database(backend):
+def test_released_query_and_function_composition(backend):
     if backend == "duckdb":
         pytest.importorskip("duckdb")
-    connection = dp_ibis.get_connection(backend)
+    connection = getattr(ibis, backend).connect()
     try:
-        source = example()
-        connection.create_table("source", source, overwrite=True)
+        source = pl.DataFrame({"value": [1, 2, 3]})
+        connection.create_table("source", source)
         context = dp.Context.compositor(
             data=dp_ibis.scan_database(connection, "source"),
             privacy_unit=dp.unit_of(contributions=1),
@@ -486,131 +374,46 @@ def test_public_run_on_database(backend):
             margins=[dp.polars.Margin(max_length=10)],
         )
         query = context.query().select(dp.len(signed=False))
-        result = dp_ibis.run_on_database(query, connection, "source")
-        assert isinstance(result, pl.DataFrame)
-        assert result.shape == (1, 1)
-        assert result.schema == {"len": pl.UInt32}
+        executor = dp_ibis.make_executor(connection, "source")
+        onceframe = query.release()
+        result = executor(onceframe)
+        assert result.shape == (1, 1) and result.schema == {"len": pl.UInt32}
+        assert_consumed(onceframe)
+        plan = source.lazy().select(pl.len().dp.noise(1.0).alias("count"))
+        private = measurement(source, plan)
+        composed = private >> executor
+        assert composed.map(1) == private.map(1)
+        assert composed(source.lazy()).schema == {"count": pl.UInt32}
     finally:
         connection.disconnect()
 
 
-@pytest.mark.parametrize("failure", ["sql", "continuation"])
-def test_cleanup_and_rollback_on_failure(failure, connection, monkeypatch):
-    source, onceframe = make_case("mixed")
-    connection.create_table("source", source, overwrite=True)
-    directories, statements = [], []
-    materialize, execute, raw_sql = (
-        dp_ibis._materialize_sinks,
-        connection.to_polars,
-        connection.raw_sql,
-    )
+def test_snapshot_entry_failure_does_not_rollback_caller(
+    connection, execution, monkeypatch
+):
+    source = pl.DataFrame({"value": [3]}, schema={"value": pl.Int32})
+    onceframe = measurement(source, source.lazy().select(quantile()))(source.lazy())
+    connection.raw_sql("BEGIN TRANSACTION")
+    raw_sql, statements = connection.raw_sql, []
 
-    def record_sql(statement, *args, **kwargs):
+    def record(statement):
         statements.append(statement)
-        return raw_sql(statement, *args, **kwargs)
+        return raw_sql(statement)
 
-    def fail_sql(*args, **kwargs):
-        execute(*args, **kwargs)
-        raise RuntimeError("after real SQL")
-
-    def fail_materialize(sinks, backend, table_name):
-        paths = [
-            Path(node["payload"]["File"]["target"]["Local"])
-            for node in sink_inputs(sinks)
-        ]
-        directories.append(paths[0].parent)
-        assert stat.S_IMODE(paths[0].parent.stat().st_mode) == 0o700
-        raw_sql("INSERT INTO source VALUES (9, 9)")
-        materialize(sinks, backend, table_name)
-        for path in paths:
-            path.unlink()
-
-    monkeypatch.setattr(connection, "raw_sql", record_sql)
-    monkeypatch.setattr(dp_ibis, "_materialize_sinks", fail_materialize)
-    if failure == "sql":
-        monkeypatch.setattr(connection, "to_polars", fail_sql)
-    with pytest.raises(
-        Exception, match="after real SQL|No such file|not found|cannot find"
-    ):
-        dp_ibis._run_on_database(onceframe, connection, "source")
-    assert statements == ["BEGIN TRANSACTION", "ROLLBACK"]
-    assert directories and all(not directory.exists() for directory in directories)
-    assert_consumed(onceframe, directories[0])
-    assert execute(connection.table("source"), limit=None).height == source.height
-
-
-def test_failed_begin_consumes_without_rollback(connection, monkeypatch):
-    _, onceframe = make_case("sum")
-    statements = []
-
-    def fail_begin(statement):
-        statements.append(statement)
-        raise RuntimeError("begin failed")
-
-    monkeypatch.setattr(connection, "raw_sql", fail_begin)
-    with pytest.raises(RuntimeError, match="begin failed"):
-        dp_ibis._run_on_database(onceframe, connection, "source")
-    assert statements == ["BEGIN TRANSACTION"]
-    assert_consumed(onceframe, Path("unused"))
-
-
-def test_unsupported_backend_fails_closed():
-    from types import SimpleNamespace
-
-    _, onceframe = make_case("sum")
-    with pytest.raises(NotImplementedError, match="snapshot"):
-        dp_ibis._run_on_database(
-            onceframe, SimpleNamespace(name="unsupported"), "source"
-        )
-    # Rejection occurs before FFI consumption.
-    assert onceframe.collect().item() == 9
-
-
-def test_heads_share_a_database_snapshot(tmp_path, monkeypatch):
-    pytest.importorskip("duckdb")
-    database = str(tmp_path / "snapshot.duckdb")
-    connection = ibis.duckdb.connect(database)
-    writer = ibis.duckdb.connect(database)
+    monkeypatch.setattr(connection, "raw_sql", record)
     try:
-        source, onceframe = make_case("mixed")
-        expected = onceframe.lazy().collect()
-        connection.create_table("source", source, overwrite=True)
-        execute = connection.to_polars
-        calls = []
-
-        def update_after_first_head(*args, **kwargs):
-            result = execute(*args, **kwargs)
-            calls.append(result)
-            if len(calls) == 1:
-                writer.raw_sql("INSERT INTO source VALUES (0, 5)")
-            return result
-
-        monkeypatch.setattr(connection, "to_polars", update_after_first_head)
-        result = dp_ibis._run_on_database(onceframe, connection, "source")
-        assert len(calls) == 2
-        assert_equal(result, expected)
-        assert writer.to_polars(writer.table("source"), limit=None).height == 4
+        with pytest.raises(dp.OpenDPException, match="Database execution failed"):
+            dp_ibis.make_executor(connection, "source", snapshot=snapshot)(onceframe)
+        assert statements == ["BEGIN TRANSACTION"]
+        assert_consumed(onceframe)
     finally:
-        writer.disconnect()
-        connection.disconnect()
+        raw_sql("ROLLBACK")
 
 
-def test_complete_final_result_is_shuffled(connection, monkeypatch):
-    source, onceframe = make_case("mixed")
-    expected = onceframe.lazy().collect()
-    connection.create_table("source", source, overwrite=True)
-    sample = pl.DataFrame.sample
-    calls = []
-
-    def record(frame, *args, **kwargs):
-        calls.append((frame.clone(), args, kwargs))
-        return sample(frame, *args, **kwargs)
-
-    monkeypatch.setattr(pl.DataFrame, "sample", record)
-    result = dp_ibis._run_on_database(onceframe, connection, "source")
-    assert len(calls) == 1
-    frame, args, kwargs = calls[0]
-    assert_equal(frame, expected)
-    assert args == ()
-    assert kwargs == {"fraction": 1.0, "shuffle": True}
-    assert_equal(result, expected)
+def test_executor_requires_trusted_execution():
+    dp.disable_features("honest-but-curious")
+    try:
+        with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+            dp_ibis.make_executor(None, "source")
+    finally:
+        dp.enable_features("honest-but-curious")

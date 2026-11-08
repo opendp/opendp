@@ -1,5 +1,5 @@
-//! Partition a resolved private plan into native IPC-writing and IPC-reading
-//! stages. This is not a privacy validator or a SQL compatibility checker.
+//! Partition a resolved private plan into deterministic heads and an IPC-reading
+//! continuation. This is not a privacy validator or a SQL compatibility checker.
 
 use std::{
     collections::{HashMap, HashSet},
@@ -16,9 +16,7 @@ use polars::{
 };
 use polars_plan::{
     plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker},
-    prelude::{
-        DslBuilder, FileSinkOptions, FileType, JoinOptions, ScanSources, SinkTarget, SinkType,
-    },
+    prelude::{DslBuilder, JoinOptions, ScanSources},
 };
 use polars_utils::plpath::PlPath;
 
@@ -31,22 +29,24 @@ use crate::{
     },
 };
 
-/// Return (IPC SinkMultiple, randomized continuation), without I/O or schema
-/// resolution. Inputs preceding the private Select/GroupBy are retained verbatim.
+/// Return ordinary executable deterministic heads followed by the randomized
+/// continuation, without I/O or schema resolution. Head i must be materialized
+/// at work_dir/i.arrow. Inputs preceding the private Select/GroupBy are retained
+/// verbatim. Additional sources outside that opaque private boundary are unsupported.
 ///
 /// The trusted executor must enforce protected intermediates, a consistent
 /// snapshot, one-shot execution, final shuffling and cleanup. Cross-process
 /// serialization retains the input plan's requirements for FFI-backed plugins.
 #[cfg_attr(not(feature = "ffi"), allow(dead_code))]
-pub(crate) fn split_plan(plan: DslPlan, work_dir: &Path) -> Fallible<(DslPlan, DslPlan)> {
+pub(crate) fn split_plan(plan: DslPlan, work_dir: &Path) -> Fallible<Vec<DslPlan>> {
     let mut splitter = Splitter {
         work_dir,
         heads: vec![],
         found_private: false,
         names: Names::default(),
     };
-    // Reserve names before rewriting either join branch, including public
-    // DataFrame schemas. Do not inspect the already-analyzed private base.
+    // Reserve names in the continuation and private expressions. Do not inspect
+    // the already-analyzed private base.
     splitter.names.reserve_plan(&plan)?;
     let continuation = splitter.split(plan)?;
     if !splitter.found_private {
@@ -55,12 +55,8 @@ pub(crate) fn split_plan(plan: DslPlan, work_dir: &Path) -> Fallible<(DslPlan, D
             "no resolved private aggregation or selection"
         );
     }
-    Ok((
-        DslPlan::SinkMultiple {
-            inputs: splitter.heads,
-        },
-        continuation,
-    ))
+    splitter.heads.push(continuation);
+    Ok(splitter.heads)
 }
 
 fn ipc_scan(path: &Path) -> Fallible<DslPlan> {
@@ -170,14 +166,7 @@ impl Names {
                 self.reserve_plan(input)?;
             }
             DslPlan::IR { dsl, .. } => self.reserve_plan(dsl)?,
-            DslPlan::DataFrameScan { schema, .. } => self.used.extend(schema.iter_names().cloned()),
-            DslPlan::Scan {
-                unified_scan_args, ..
-            } => {
-                if let Some(schema) = &unified_scan_args.schema {
-                    self.used.extend(schema.iter_names().cloned());
-                }
-            }
+            DslPlan::DataFrameScan { .. } | DslPlan::Scan { .. } => {}
             _ => {
                 return fallible!(
                     FailedFunction,
@@ -200,14 +189,7 @@ impl Splitter<'_> {
     fn externalize(&mut self, plan: DslPlan) -> Fallible<DslPlan> {
         let path = self.work_dir.join(format!("{}.arrow", self.heads.len()));
         let scan = ipc_scan(&path)?;
-        self.heads.push(DslPlan::Sink {
-            input: Arc::new(plan),
-            payload: SinkType::File(FileSinkOptions {
-                target: SinkTarget::Path(PlPath::Local(path.into())),
-                file_format: Arc::new(FileType::Ipc(Default::default())),
-                unified_sink_args: Default::default(),
-            }),
-        });
+        self.heads.push(plan);
         Ok(scan)
     }
 
@@ -242,8 +224,12 @@ impl Splitter<'_> {
                 *input_left = Arc::new(self.split((**input_left).clone())?);
                 *input_right = Arc::new(self.split((**input_right).clone())?);
             }
-            DslPlan::DataFrameScan { .. } => return self.externalize(plan),
-            DslPlan::Scan { .. } => {}
+            DslPlan::DataFrameScan { .. } | DslPlan::Scan { .. } => {
+                return fallible!(
+                    FailedFunction,
+                    "unsupported additional source outside the private boundary"
+                );
+            }
             _ => {
                 return fallible!(
                     FailedFunction,

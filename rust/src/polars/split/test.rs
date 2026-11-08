@@ -33,38 +33,42 @@ impl Drop for WorkDir {
     }
 }
 
-/// Both stages round-trip before IPC exists; restored sinks then populate the scan.
+/// Every ordinary head and IPC scan can round-trip before its file exists.
 #[test]
-fn ipc_before_materialization() -> Fallible<()> {
+fn ordered_heads_roundtrip_before_materialization() -> Fallible<()> {
     let dir = WorkDir::new();
-    let (heads, _) = split_plan(
-        data()?.select([noisy(col("value").sum(), 0.)]).logical_plan,
-        &dir.0,
-    )?;
-    assert!(!dir.0.exists());
-    let ipc = sinks(&heads)[0].1.to_path_buf();
-    let mut bytes = vec![];
-    heads.serialize_versioned(&mut bytes, Default::default())?;
-    let restored = DslPlan::deserialize_versioned(bytes.as_slice())?;
-    assert_eq!(
-        sinks(&restored)
-            .iter()
-            .map(|(_, path)| *path)
-            .collect::<Vec<_>>(),
-        sinks(&heads)
-            .iter()
-            .map(|(_, path)| *path)
-            .collect::<Vec<_>>()
-    );
-    let mut bytes = vec![];
-    ipc_scan(&ipc)?.serialize_versioned(&mut bytes, Default::default())?;
-    let scan = DslPlan::deserialize_versioned(bytes.as_slice())?;
-    assert!(!ipc.exists());
+    let plan = data()?.select([quantile(), sum()]);
+    let input = data()?;
+    let (heads, continuation) = split(resolve(&input, plan, false, None)?, &dir.0)?;
+    let mut scans = vec![];
+    walk(&continuation, &mut |node| {
+        if let DslPlan::Scan {
+            sources: ScanSources::Paths(paths),
+            ..
+        } = node
+        {
+            scans.extend(paths.iter().cloned());
+        }
+    });
+    let expected = (0..heads.len())
+        .map(|i| PlPath::Local(dir.0.join(format!("{i}.arrow")).into()))
+        .collect::<Vec<_>>();
+    // Continuation traversal order need not match head emission order.
+    assert_eq!(scans.len(), expected.len());
+    assert!(expected.iter().all(|path| scans.contains(path)));
+    let mut restored = vec![];
+    for (i, head) in heads.iter().enumerate() {
+        let mut bytes = vec![];
+        head.serialize_versioned(&mut bytes, Default::default())?;
+        restored.push(DslPlan::deserialize_versioned(bytes.as_slice())?);
+        bytes.clear();
+        ipc_scan(&dir.0.join(format!("{i}.arrow")))?
+            .serialize_versioned(&mut bytes, Default::default())?;
+        let _ = DslPlan::deserialize_versioned(bytes.as_slice())?;
+    }
     assert!(!dir.0.exists());
     materialize(&restored, &dir.0)?;
-    let result = LazyFrame::from(scan).collect()?;
-    assert_eq!(result.shape(), (1, 1));
-    assert_eq!(result.get_columns()[0].i32()?.get(0), Some(10));
+    assert_eq!(collect_sorted(continuation, None)?.shape(), (1, 2));
     Ok(())
 }
 
@@ -173,13 +177,7 @@ fn walk(plan: &DslPlan, f: &mut impl FnMut(&DslPlan)) {
         | DslPlan::HStack { input, .. }
         | DslPlan::Distinct { input, .. }
         | DslPlan::MapFunction { input, .. }
-        | DslPlan::IR { dsl: input, .. }
-        | DslPlan::Sink { input, .. } => walk(input, f),
-        DslPlan::SinkMultiple { inputs } => {
-            for input in inputs {
-                walk(input, f);
-            }
-        }
+        | DslPlan::IR { dsl: input, .. } => walk(input, f),
         DslPlan::Join {
             input_left,
             input_right,
@@ -206,16 +204,15 @@ fn noise_count(plan: &DslPlan) -> usize {
     noise_parameters(plan).len()
 }
 
-fn noise_parameters(plan: &DslPlan) -> Vec<NoisePlugin> {
+fn plugins<P: crate::polars::OpenDPPlugin>(plan: &DslPlan) -> Vec<P> {
     let mut parameters = vec![];
     walk(plan, &mut |node| {
-        let exprs = expressions(node);
         parameters.extend(
-            exprs
+            expressions(node)
                 .iter()
                 .flat_map(|expr| expr.into_iter())
                 .filter_map(|expr| {
-                    match_trusted_plugin::<NoisePlugin>(expr)
+                    match_trusted_plugin::<P>(expr)
                         .unwrap()
                         .map(|(_, args)| args)
                 }),
@@ -224,56 +221,34 @@ fn noise_parameters(plan: &DslPlan) -> Vec<NoisePlugin> {
     parameters
 }
 
-/// Inspect native sinks, also asserting their format and distinct local paths.
-fn sinks(plan: &DslPlan) -> Vec<(&DslPlan, &Path)> {
-    let DslPlan::SinkMultiple { inputs } = plan else {
-        panic!("expected SinkMultiple")
-    };
-    let sinks: Vec<_> = inputs
-        .iter()
-        .map(|head| {
-            let DslPlan::Sink {
-                input,
-                payload: SinkType::File(options),
-            } = head
-            else {
-                panic!("expected file sink")
-            };
-            assert!(matches!(options.file_format.as_ref(), FileType::Ipc(_)));
-            let SinkTarget::Path(PlPath::Local(path)) = &options.target else {
-                panic!("expected local path")
-            };
-            (input.as_ref(), path.as_ref())
-        })
-        .collect();
-    let unique: HashSet<_> = sinks.iter().map(|(_, path)| *path).collect();
-    assert_eq!(unique.len(), sinks.len());
-    sinks
+fn noise_parameters(plan: &DslPlan) -> Vec<NoisePlugin> {
+    plugins::<NoisePlugin>(plan)
 }
 
-fn base(plan: &DslPlan) -> &DslPlan {
-    match sinks(plan)[0].0 {
+/// Tests execute ordinary heads themselves, using the same positional IPC contract
+/// as the trusted executor. No native sink plan or Python runtime is involved.
+fn split(plan: DslPlan, dir: &Path) -> Fallible<(Vec<DslPlan>, DslPlan)> {
+    let mut plans = split_plan(plan, dir)?;
+    let continuation = plans.pop().expect("final continuation");
+    assert!(!plans.is_empty());
+    Ok((plans, continuation))
+}
+
+fn base(heads: &[DslPlan]) -> &DslPlan {
+    match &heads[0] {
         DslPlan::Select { input, .. } | DslPlan::GroupBy { input, .. } => input,
         _ => panic!("expected private aggregate head"),
     }
 }
 
-/// Execute actual native IPC sinks using Rust Polars only as a test oracle.
-fn materialize(deterministic: &DslPlan, dir: &Path) -> Fallible<()> {
+fn materialize(heads: &[DslPlan], dir: &Path) -> Fallible<()> {
     fs::create_dir_all(dir).unwrap();
-    let DslPlan::SinkMultiple { inputs } = deterministic else {
-        panic!()
-    };
-    LazyFrame::collect_all_with_engine(inputs.clone(), Engine::InMemory, Default::default())?;
-    Ok(())
-}
-
-fn public_join(private: LazyFrame, public: LazyFrame, key: &str, public_left: bool) -> LazyFrame {
-    if public_left {
-        public.join(private, [col(key)], [col(key)], JoinType::Left.into())
-    } else {
-        private.join(public, [col(key)], [col(key)], JoinType::Right.into())
+    for (i, head) in heads.iter().enumerate() {
+        let mut result = LazyFrame::from(head.clone()).collect()?;
+        IpcWriter::new(fs::File::create(dir.join(format!("{i}.arrow"))).unwrap())
+            .finish(&mut result)?;
     }
+    Ok(())
 }
 
 fn collect_sorted(plan: DslPlan, key: Option<&str>) -> Fallible<DataFrame> {
@@ -285,92 +260,50 @@ fn collect_sorted(plan: DslPlan, key: Option<&str>) -> Fallible<DataFrame> {
     .collect()?)
 }
 
-fn compare(plan: DslPlan, expected_heads: usize, grouped: bool) -> Fallible<(DslPlan, DslPlan)> {
+fn compare(
+    plan: DslPlan,
+    expected_heads: usize,
+    grouped: bool,
+) -> Fallible<(Vec<DslPlan>, DslPlan)> {
+    compare_key(plan, expected_heads, grouped.then_some("key"))
+}
+
+fn compare_key(
+    plan: DslPlan,
+    expected_heads: usize,
+    key: Option<&str>,
+) -> Fallible<(Vec<DslPlan>, DslPlan)> {
     let dir = WorkDir::new();
-    let (deterministic, continuation) = split_plan(plan.clone(), &dir.0)?;
+    let (deterministic, continuation) = split(plan.clone(), &dir.0)?;
     assert!(
         !dir.0.exists(),
         "splitter must not create the working directory"
     );
-    assert_eq!(sinks(&deterministic).len(), expected_heads);
-    assert_eq!(noise_count(&deterministic), 0);
+    assert_eq!(deterministic.len(), expected_heads);
+    for head in &deterministic {
+        assert_eq!(noise_count(head), 0);
+        assert!(noisy_max_parameters(head).is_empty());
+        walk(head, &mut |node| {
+            assert!(!matches!(
+                node,
+                DslPlan::Sink { .. } | DslPlan::SinkMultiple { .. }
+            ))
+        });
+    }
     assert_eq!(noise_parameters(&continuation), noise_parameters(&plan));
     assert_eq!(
         noisy_max_parameters(&continuation),
         noisy_max_parameters(&plan)
     );
-    assert!(noisy_max_parameters(&deterministic).is_empty());
     walk(&continuation, &mut |node| {
         assert!(!matches!(node, DslPlan::DataFrameScan { .. }))
     });
     materialize(&deterministic, &dir.0)?;
-    let key = grouped.then_some("key");
     assert_eq!(
         collect_sorted(continuation.clone(), key)?,
         collect_sorted(plan, key)?
     );
     Ok((deterministic, continuation))
-}
-
-#[test]
-fn ungrouped_sum_and_private_select() -> Fallible<()> {
-    let input = data()?;
-    let (deterministic, _) = compare(
-        resolve(&input, input.clone().select([sum()]), false, None)?,
-        1,
-        false,
-    )?;
-    let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
-        panic!()
-    };
-    assert_eq!(expr.len(), 1);
-    assert!(
-        expr[0]
-            .into_iter()
-            .any(|e| matches!(e, Expr::Agg(AggExpr::Sum(_))))
-    );
-    let query = input
-        .clone()
-        .select([count(), (sum() + lit(1)).alias("plus_one")]);
-    compare(resolve(&input, query, false, None)?, 1, false)?;
-    Ok(())
-}
-
-#[test]
-fn mean_and_compatible_aggregates_share_fragment() -> Fallible<()> {
-    let input = data()?;
-    for exprs in [vec![mean()], vec![sum(), count(), mean()]] {
-        let plan = resolve(&input, input.clone().select(exprs), false, None)?;
-        let (deterministic, continuation) = compare(plan, 1, false)?;
-        let DslPlan::Select { expr, .. } = sinks(&deterministic)[0].0 else {
-            panic!()
-        };
-        assert_eq!(expr.len(), noise_count(&continuation));
-        let DslPlan::Select {
-            input, expr: outer, ..
-        } = &continuation
-        else {
-            panic!()
-        };
-        assert!(!outer.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
-            e,
-            Expr::BinaryExpr {
-                op: Operator::TrueDivide,
-                ..
-            }
-        )));
-        let DslPlan::Select { expr, .. } = input.as_ref() else {
-            panic!()
-        };
-        assert!(expr.iter().flat_map(|e| e.into_iter()).any(|e| matches!(
-            e,
-            Expr::BinaryExpr {
-                op: Operator::TrueDivide,
-                ..
-            }
-        )));
-    }
-    Ok(())
 }
 
 #[test]
@@ -399,47 +332,18 @@ fn public_lengths_remain_in_the_original_aggregation_context() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn grouped_count_and_threshold() -> Fallible<()> {
-    let input = data()?;
-    for threshold in [None, Some(1)] {
-        let query = input.clone().group_by([col("key")]).agg([count()]);
-        let (deterministic, continuation) = compare(
-            resolve(&input, query, threshold.is_none(), threshold)?,
-            1,
-            true,
-        )?;
-        let DslPlan::GroupBy { keys, .. } = sinks(&deterministic)[0].0 else {
-            panic!()
-        };
-        assert_eq!(keys, &[col("key")]);
-        if threshold.is_some() {
-            assert!(matches!(&continuation, DslPlan::Filter { .. }));
-            assert!(!matches!(
-                sinks(&deterministic)[0].0,
-                DslPlan::Filter { .. }
-            ));
-        }
-    }
-    Ok(())
-}
-
 fn assert_collision_safe(
     plan: DslPlan,
     expected_heads: usize,
     key: Option<&str>,
     reserved: &[&str],
-) -> Fallible<DslPlan> {
-    let dir = WorkDir::new();
-    let (heads, continuation) = split_plan(plan.clone(), &dir.0)?;
+) -> Fallible<Vec<DslPlan>> {
+    let (heads, _) = compare_key(plan, expected_heads, key)?;
     let mut schemas = vec![];
     let mut generated = HashSet::new();
-    assert!(!dir.0.exists());
-    assert_eq!(sinks(&heads).len(), expected_heads);
-    for (head, path) in sinks(&heads) {
-        assert_eq!(path.parent(), Some(dir.0.as_path()));
+    for head in &heads {
         // Private aliases and histogram intermediates must be globally unique
-        // and disjoint from all input/public/downstream reserved names.
+        // and disjoint from key, release and downstream reserved names.
         let exprs = match head {
             DslPlan::Select { expr, .. } => expr.clone(),
             DslPlan::GroupBy { keys, aggs, .. } => keys
@@ -448,7 +352,7 @@ fn assert_collision_safe(
                 .chain(aggs)
                 .cloned()
                 .collect(),
-            _ => vec![], // public head keeps its original schema
+            _ => panic!("expected private aggregate head"),
         };
         for expr in exprs {
             let name = expr.meta().output_name()?;
@@ -471,16 +375,11 @@ fn assert_collision_safe(
         }
         schemas.push(schema);
     }
-    materialize(&heads, &dir.0)?;
-    assert_eq!(
-        collect_sorted(continuation, key)?,
-        collect_sorted(plan, key)?
-    );
     Ok(heads)
 }
 
 #[test]
-fn names_are_reserved_across_preprocessing_heads_and_join_branches() -> Fallible<()> {
+fn names_are_reserved_across_preprocessing_heads_and_postprocessing() -> Fallible<()> {
     let input = data()?;
     let query = input
         .clone()
@@ -499,50 +398,59 @@ fn names_are_reserved_across_preprocessing_heads_and_join_branches() -> Fallible
     assert!(matches!(base(&heads), DslPlan::HStack { .. }));
 
     let key = "__opendp_split_0";
-    let input = df!(key => [0i32, 1], "value" => [2i32, 3])?.lazy();
-    let private = input.group_by([col(key)]).agg([
-        noisy(col("value").sum(), 0.).alias("__opendp_split_1"),
-        noisy(len().cast(DataType::Int64), 0.).alias("count"),
-    ]);
-    let public = df!(key => [1i32, 0], "__opendp_split_2" => [7i32, 8])?.lazy();
-    let reserved = [
-        key,
-        "__opendp_split_1",
-        "__opendp_split_2",
-        "__opendp_split_3",
-    ];
-    for left in [true, false] {
-        let joined = public_join(private.clone(), public.clone(), key, left).select([
-            col(key),
-            col("__opendp_split_1").alias("__opendp_split_3"),
-            col("__opendp_split_2"),
-            col("count"),
-        ]);
-        assert_collision_safe(joined.logical_plan, 2, Some(key), &reserved)?;
-    }
+    let query = aggregate(
+        &input,
+        [
+            quantile().alias("__opendp_split_1"),
+            sum().alias("__opendp_split_2"),
+            quantile().alias("__opendp_split_3"),
+        ],
+        true,
+    );
+    let mut plan = resolve(&input, query, true, None)?;
+    let DslPlan::GroupBy { keys, .. } = &mut plan else {
+        panic!()
+    };
+    *keys = vec![col("key").alias(key)];
+    let plan = LazyFrame::from(plan)
+        .with_column(col("__opendp_split_1").alias("__opendp_split_4"))
+        .with_column(col("__opendp_split_2").alias("__opendp_split_5"));
+    assert_collision_safe(
+        plan.logical_plan,
+        3,
+        Some(key),
+        &[
+            key,
+            "__opendp_split_1",
+            "__opendp_split_2",
+            "__opendp_split_3",
+            "__opendp_split_4",
+            "__opendp_split_5",
+        ],
+    )?;
+    Ok(())
+}
 
-    let input =
-        df!("key" => [0i32, 0, 1], "value" => [1i32, 6, 3], "__opendp_split_0" => [1,2,3])?.lazy();
-    let private = input.clone().group_by([col("key")]).agg([
-        quantile().alias("__opendp_split_1"),
-        sum().alias("__opendp_split_2"),
-        quantile().alias("__opendp_split_3"),
-    ]);
-    let public = df!("key" => [0i32, 1], "__opendp_split_4" => [4,5])?.lazy();
-    for left in [true, false] {
-        let query = public_join(private.clone(), public.clone(), "key", left);
-        assert_collision_safe(
-            resolve(&input, query, false, None)?,
-            4,
-            Some("key"),
-            &[
-                "__opendp_split_0",
-                "__opendp_split_1",
-                "__opendp_split_2",
-                "__opendp_split_3",
-                "__opendp_split_4",
-            ],
-        )?;
+#[test]
+fn additional_sources_outside_the_private_boundary_are_rejected() -> Fallible<()> {
+    let private = data()?.select([noisy(col("value").sum(), 0.)]);
+    let dir = WorkDir::new();
+    for source in [
+        data()?.logical_plan,
+        ipc_scan(&dir.0.join("missing.arrow"))?,
+    ] {
+        for source_on_left in [false, true] {
+            let source = LazyFrame::from(source.clone());
+            let (left, right) = if source_on_left {
+                (source, private.clone())
+            } else {
+                (private.clone(), source)
+            };
+            let plan = left.join(right, [col("value")], [col("value")], JoinType::Left.into());
+            let err = split_plan(plan.logical_plan, &dir.0).unwrap_err();
+            assert!(format!("{err:?}").contains("unsupported additional source"));
+            assert!(!dir.0.exists());
+        }
     }
     Ok(())
 }
@@ -581,6 +489,22 @@ fn opaque_bases_and_histogram_inputs_are_preserved_verbatim() -> Fallible<()> {
             inputs: vec![input.logical_plan.clone(), input.logical_plan.clone()],
             args: Default::default(),
         },
+    ));
+    bases.push((
+        "join",
+        input
+            .clone()
+            .join(
+                input.clone(),
+                [col("key")],
+                [col("key")],
+                JoinType::Inner.into(),
+            )
+            .logical_plan,
+    ));
+    bases.push((
+        "unresolved scan",
+        ipc_scan(Path::new("missing-input.arrow"))?,
     ));
     bases.push(("filter", input.filter(col("value").gt(lit(1))).logical_plan));
     #[cfg(feature = "polars-ffi")]
@@ -634,10 +558,10 @@ fn opaque_bases_and_histogram_inputs_are_preserved_verbatim() -> Fallible<()> {
                 _ => panic!(),
             }
             let dir = WorkDir::new();
-            let (heads, _) = split_plan(plan, &dir.0)?;
+            let (heads, _) = split(plan, &dir.0)?;
             let mut actual = self::base(&heads);
             if histogram {
-                let DslPlan::GroupBy { keys, .. } = sinks(&heads)[0].0 else {
+                let DslPlan::GroupBy { keys, .. } = &heads[0] else {
                     panic!()
                 };
                 assert_eq!(keys[0], key);
@@ -744,8 +668,16 @@ fn randomized_occurrences_are_not_deduplicated() -> Fallible<()> {
         ])
         .logical_plan;
     let dir = WorkDir::new();
-    let (deterministic, continuation) = split_plan(plan, &dir.0)?;
+    let (deterministic, continuation) = split(plan, &dir.0)?;
     assert_eq!(noise_count(&continuation), 2);
+    let DslPlan::Select { expr, .. } = &deterministic[0] else {
+        panic!()
+    };
+    assert_eq!(expr.len(), 2, "each occurrence gets its own input slot");
+    assert_ne!(
+        expr[0].clone().meta().output_name()?,
+        expr[1].clone().meta().output_name()?
+    );
     materialize(&deterministic, &dir.0)?;
     let output = LazyFrame::from(continuation).collect()?;
     assert_eq!(output.shape(), (1, 2));
@@ -791,8 +723,8 @@ fn literal_noise_keeps_scalar_broadcasting() -> Fallible<()> {
         1
     );
     let dir = WorkDir::new();
-    let (deterministic, continuation) = split_plan(plan, &dir.0)?;
-    let DslPlan::GroupBy { aggs, .. } = sinks(&deterministic)[0].0 else {
+    let (deterministic, continuation) = split(plan, &dir.0)?;
+    let DslPlan::GroupBy { aggs, .. } = &deterministic[0] else {
         panic!()
     };
     assert_eq!(aggs.len(), 1, "literal input must not become a column");
@@ -816,7 +748,7 @@ fn deterministic_noise_inputs_are_preserved_without_an_operator_whitelist() -> F
             let query = aggregate(&input, [release], grouped);
             let (deterministic, continuation) = compare(query.logical_plan, 1, grouped)?;
             assert_eq!(noise_count(&continuation), 1);
-            let exprs = match sinks(&deterministic)[0].0 {
+            let exprs = match &deterministic[0] {
                 DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
                 _ => panic!(),
             };
@@ -875,33 +807,12 @@ fn unsupported_plan_structures_fail_explicitly() -> Fallible<()> {
 }
 
 fn noisy_max_parameters(plan: &DslPlan) -> Vec<(bool, u64, bool)> {
-    let mut out = vec![];
-    walk(plan, &mut |node| {
-        let exprs = expressions(node);
-        out.extend(
-            exprs
-                .iter()
-                .flat_map(|expr| expr.into_iter())
-                .filter_map(|expr| {
-                    match_trusted_plugin::<NoisyMaxPlugin>(expr)
-                        .unwrap()
-                        .map(|(_, p)| (p.replacement, p.scale.to_bits(), p.negate))
-                }),
-        );
-    });
-    out.sort();
-    out
-}
-
-fn argmax(score: Expr) -> Expr {
-    apply_anonymous_function(
-        vec![score],
-        NoisyMaxPlugin {
-            replacement: false,
-            scale: 0.,
-            negate: true,
-        },
-    )
+    let mut parameters = plugins::<NoisyMaxPlugin>(plan)
+        .into_iter()
+        .map(|p| (p.replacement, p.scale.to_bits(), p.negate))
+        .collect::<Vec<_>>();
+    parameters.sort();
+    parameters
 }
 
 fn quantile() -> Expr {
@@ -912,11 +823,16 @@ fn quantile() -> Expr {
 }
 
 #[test]
-fn quantiles_medians_and_scalar_combinations() -> Fallible<()> {
+fn compatible_aggregates_and_independent_histograms() -> Fallible<()> {
     let input = data()?;
     for grouped in [false, true] {
         for (exprs, expected) in [
+            (
+                vec![sum(), count(), mean(), (sum() + lit(1)).alias("offset")],
+                1,
+            ),
             (vec![quantile()], 1),
+            (vec![quantile().alias("a"), quantile().alias("b")], 2),
             (
                 vec![
                     col("value")
@@ -953,7 +869,7 @@ fn quantiles_medians_and_scalar_combinations() -> Fallible<()> {
             };
             let (deterministic, _) = compare(plan, expected, grouped)?;
             // All deterministic heads retain the exact same analyzed base.
-            for (head, _) in sinks(&deterministic) {
+            for head in &deterministic {
                 let mut found = false;
                 walk(head, &mut |node| {
                     if std::ptr::eq(node, base.as_ref()) {
@@ -1031,7 +947,7 @@ fn postprocessing_is_placed_by_head_dependencies() -> Fallible<()> {
 }
 
 #[test]
-fn empty_quantile_inputs_and_public_missing_groups() -> Fallible<()> {
+fn empty_quantile_inputs_preserve_output_cardinality() -> Fallible<()> {
     // A singleton candidate avoids random tie-breaking when every score is zero.
     let q = || {
         col("value")
@@ -1060,50 +976,38 @@ fn empty_quantile_inputs_and_public_missing_groups() -> Fallible<()> {
             2,
             true,
         )?;
-        let mut releases = vec![(vec![q(), sum(), count(), mean()], 3)];
-        if input.clone().collect()?.height() > 0 {
-            releases.push((vec![sum(), count(), mean()], 2));
-        }
-        for (exprs, expected_heads) in releases {
-            for public_left in [true, false] {
-                let private = aggregate(&input, exprs.clone(), true);
-                let public = df!("key" => [2i32, 0, 2, 1])?.lazy();
-                let query = public_join(private, public, "key", public_left);
-                let (_, continuation) =
-                    compare(resolve(&input, query, false, None)?, expected_heads, true)?;
-                let mut dedup = 0;
-                let mut public_joins = 0;
-                walk(&continuation, &mut |node| {
-                    dedup += usize::from(matches!(node, DslPlan::Distinct { .. }));
-                    if let DslPlan::Join { options, .. } = node {
-                        public_joins += usize::from(matches!(
-                            options.args.how,
-                            JoinType::Left | JoinType::Right
-                        ));
-                    }
-                });
-                assert_eq!((dedup, public_joins), (1, 1));
-                assert!(matches!(continuation, DslPlan::HStack { .. }));
-            }
-        }
     }
     Ok(())
 }
 
 #[test]
-fn multiple_heads_share_one_threshold() -> Fallible<()> {
+fn one_threshold_follows_combination() -> Fallible<()> {
     let input = data()?;
-    let query = input
-        .clone()
-        .group_by([col("key")])
-        .agg([quantile(), sum(), count(), mean()]);
-    let (_, continuation) = compare(resolve(&input, query, false, Some(1))?, 2, true)?;
-    let mut filters = 0;
-    walk(&continuation, &mut |node| {
-        filters += usize::from(matches!(node, DslPlan::Filter { .. }));
-    });
-    assert_eq!(filters, 1);
-    assert!(matches!(continuation, DslPlan::Filter { .. }));
+    for exprs in [vec![count()], vec![quantile(), sum(), count(), mean()]] {
+        for threshold in [None, Some(1)] {
+            let query = aggregate(&input, exprs.clone(), true);
+            let expected_heads = 1 + usize::from(exprs.len() > 1);
+            let (heads, continuation) = compare(
+                resolve(&input, query, threshold.is_none(), threshold)?,
+                expected_heads,
+                true,
+            )?;
+            let mut filters = 0;
+            walk(&continuation, &mut |node| {
+                filters += usize::from(matches!(node, DslPlan::Filter { .. }))
+            });
+            assert_eq!(filters, usize::from(threshold.is_some()));
+            if threshold.is_some() {
+                assert!(matches!(continuation, DslPlan::Filter { .. }));
+            }
+            for head in heads {
+                let DslPlan::GroupBy { keys, .. } = head else {
+                    panic!()
+                };
+                assert_eq!(keys[0], col("key"));
+            }
+        }
+    }
     Ok(())
 }
 
@@ -1149,10 +1053,22 @@ fn quantile_null_keys_and_null_nan_preprocessing() -> Fallible<()> {
 #[test]
 fn histogram_heads_preserve_the_resolved_scorer_contract() -> Fallible<()> {
     let input = data()?;
-    let plan = resolve(
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::by(["key"]).with_max_length(7).with_invariant_keys())?;
+    let plan = resolve_domain(
         &input,
-        input.clone().group_by([col("key")]).agg([quantile()]),
-        true,
+        input
+            .clone()
+            .group_by([col("key")])
+            .agg([col("value").dp().quantile(
+                0.25,
+                Series::new("".into(), [1i32, 3, 6]),
+                Some(0.),
+            )]),
+        domain,
         None,
     )?;
     let DslPlan::GroupBy {
@@ -1169,13 +1085,13 @@ fn histogram_heads_preserve_the_resolved_scorer_contract() -> Fallible<()> {
         .find_map(|e| score_plugin(e).unwrap())
         .unwrap();
     let dir = WorkDir::new();
-    let (heads, continuation) = split_plan(plan.clone(), &dir.0)?;
+    let (heads, continuation) = split(plan.clone(), &dir.0)?;
     let DslPlan::GroupBy {
         input: buckets,
         keys,
         aggs,
         ..
-    } = sinks(&heads)[0].0
+    } = &heads[0]
     else {
         panic!()
     };
@@ -1231,299 +1147,28 @@ fn histogram_heads_preserve_the_resolved_scorer_contract() -> Fallible<()> {
 }
 
 #[test]
-fn native_histograms_reproduce_original_score_arrays_exactly() -> Fallible<()> {
-    let mut cases: Vec<(Series, Series)> = vec![];
-    for candidates in [vec![0i64], vec![-3, 0, 2], vec![-4, -1, 0, 1, 5, 9]] {
-        cases.push((
-            Series::new(
-                "value".into(),
-                [-8i64, -4, -4, -3, -2, -1, 0, 0, 1, 2, 3, 5, 9, 12],
-            ),
-            Series::new("".into(), candidates),
-        ));
-    }
-    cases.extend([
-        (
-            Series::new(
-                "value".into(),
-                [0u64, 1 << 53, (1 << 53) + 1, u64::MAX - 1, u64::MAX],
-            ),
-            Series::new("".into(), [1 << 53, (1 << 53) + 1, u64::MAX - 1]),
-        ),
-        (
-            Series::new("value".into(), [i64::MIN, i64::MIN + 1, -1, 0, i64::MAX]),
-            Series::new("".into(), [i64::MIN + 1, 0, i64::MAX]),
-        ),
-        (
-            Series::new(
-                "value".into(),
-                [f64::NEG_INFINITY, -1., -0., 0., 1., f64::INFINITY],
-            ),
-            Series::new("".into(), [-1f64, 0., 1.]),
-        ),
-        (
-            Series::new(
-                "value".into(),
-                [f32::NEG_INFINITY, -1., -0., 0., 1., f32::INFINITY],
-            ),
-            Series::new("".into(), [-1f32, 0., 1.]),
-        ),
-        (
-            Series::new("value".into(), Vec::<i64>::new()),
-            Series::new("".into(), [-1i64, 0, 1]),
-        ),
-        (
-            Series::new(
-                "value".into(),
-                [Some(-1f64), None, Some(f64::NAN), Some(1.)],
-            ),
-            Series::new("".into(), [-1f64, 0., 1.]),
-        ),
-    ]);
-    for dtype in [DataType::Int8, DataType::Int16, DataType::Int32] {
-        cases.push((
-            Series::new("value".into(), [-8i64, -3, -1, 0, 0, 1, 2, 12]).cast(&dtype)?,
-            Series::new("".into(), [-3i64, 0, 2]).cast(&dtype)?,
-        ));
-    }
-    cases.push((
-        Series::new("value".into(), [0u32, 1, 2, 2, 3, u32::MAX]),
-        Series::new("".into(), [0u32, 2, u32::MAX]),
-    ));
-    assert_eq!(cases.len(), 13);
-    let mut constructions = 0;
-    let mut comparisons = 0;
-    for (values, candidates) in cases {
-        let input = DataFrame::new(vec![values.clone().into_column()])?.lazy();
-        let mut expr = col("value").fill_null(lit(0));
-        if values.dtype().is_float() {
-            expr = expr.fill_nan(lit(0));
-        }
-        let scorer = DiscreteQuantileScorePlugin {
-            candidates: candidates.clone(),
-            alpha: (2, 7),
-            size_limit: 1,
-        };
-        let scores = apply_anonymous_function(vec![expr.clone()], scorer);
-        let query = input.clone().select([argmax(scores)]);
-        let dir = WorkDir::new();
-        let (heads, continuation) = split_plan(query.logical_plan, &dir.0)?;
-        assert_eq!(sinks(&heads).len(), 1);
-        let mut reconstructed = 0;
-        walk(&continuation, &mut |node| {
-            for expr in expressions(node).iter().flat_map(|expr| expr.into_iter()) {
-                if let Some((_, scorer)) =
-                    match_trusted_plugin::<HistogramQuantileScorePlugin>(expr).unwrap()
-                {
-                    assert_eq!((scorer.alpha, scorer.size_limit), ((2, 7), 1));
-                    assert_eq!(scorer.num_candidates, candidates.len());
-                    reconstructed += 1;
-                }
-            }
-        });
-        assert_eq!(reconstructed, 1);
-        materialize(&heads, &dir.0)?;
-        let (head, path) = sinks(&heads)[0];
-        let DslPlan::GroupBy { keys, aggs, .. } = head else {
-            panic!()
-        };
-        let bucket = keys.last().unwrap().clone().meta().output_name()?;
-        let count = aggs[0].clone().meta().output_name()?;
-        let histogram = LazyFrame::from(ipc_scan(path)?).collect()?;
-        assert_eq!(histogram.column(&bucket)?.dtype(), &DataType::UInt64);
-        assert_eq!(histogram.column(&count)?.dtype(), &DataType::UInt64);
-        let projected = DataFrame::new(vec![values.clone().into_column()])?
-            .lazy()
-            .select([expr.clone().cast(candidates.dtype().clone()).alias("value")])
-            .collect()?;
-        let mut expected_counts = vec![0u64; 2 * candidates.len() + 1];
-        for value in projected.column("value")?.as_materialized_series().iter() {
-            let less = candidates
-                .iter()
-                .filter(|c| c.partial_cmp(&value) == Some(std::cmp::Ordering::Less))
-                .count();
-            let equal = candidates.iter().filter(|c| *c == value).count();
-            expected_counts[2 * less + equal] += 1;
-        }
-        let mut actual_counts = vec![0u64; expected_counts.len()];
-        for (bucket, count) in histogram
-            .column(&bucket)?
-            .u64()?
-            .into_no_null_iter()
-            .zip(histogram.column(&count)?.u64()?.into_no_null_iter())
-        {
-            assert!(count > 0, "no scaffold rows");
-            actual_counts[bucket as usize] = count;
-        }
-        assert_eq!(
-            actual_counts,
-            expected_counts,
-            "exact typed buckets: {:?}",
-            values.dtype()
-        );
-        if values.is_empty() {
-            assert_eq!(histogram.height(), 0);
-        }
-        constructions += 1;
-        for alpha in [(0, 1), (1, 2), (1, 1), (2, 7)] {
-            for size_limit in [0u64, 1, 100] {
-                let expected = input
-                    .clone()
-                    .select([apply_anonymous_function(
-                        vec![expr.clone()],
-                        DiscreteQuantileScorePlugin {
-                            candidates: candidates.clone(),
-                            alpha,
-                            size_limit,
-                        },
-                    )
-                    .alias("score")])
-                    .collect()?;
-                let score = apply_anonymous_function(
-                    vec![col(bucket.clone()), col(count.clone())],
-                    HistogramQuantileScorePlugin {
-                        num_candidates: candidates.len(),
-                        alpha,
-                        size_limit,
-                    },
-                )
-                .alias("score");
-                let actual = histogram.clone().lazy().select([score]).collect()?;
-                assert_eq!(
-                    actual,
-                    expected,
-                    "dtype {:?}, alpha {alpha:?}, limit {size_limit}",
-                    values.dtype()
-                );
-                comparisons += 1;
-            }
-        }
-    }
-    assert_eq!((constructions, comparisons), (13, 156));
-    Ok(())
-}
-
-#[test]
 fn literal_scorer_inputs_are_rejected() -> Fallible<()> {
+    let input = data()?;
     let typed = |value| {
         Expr::Literal(LiteralValue::Scalar(Scalar::new(
             DataType::Int32,
             AnyValue::Int32(value),
         )))
     };
-    for input in [data()?, empty_data()?] {
-        for grouped in [false, true] {
-            for source in [typed(3), (typed(1) + typed(2)).cast(DataType::Int32)] {
-                let scorer = apply_anonymous_function(
-                    vec![source.clone()],
-                    DiscreteQuantileScorePlugin {
-                        candidates: Series::new("".into(), [1i32, 3, 6]),
-                        alpha: (1, 2),
-                        size_limit: 10,
-                    },
-                );
-                let randomized = argmax(scorer);
-                let query = aggregate(&input, [randomized], grouped);
-                let dir = WorkDir::new();
-                assert!(
-                    format!("{:?}", split_plan(query.logical_plan, &dir.0).unwrap_err())
-                        .contains("literal-only scorer")
-                );
-                let q = source
-                    .dp()
-                    .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
-                    .alias("q");
-                let query = aggregate(&input, [q], grouped);
-                assert!(
-                    format!(
-                        "{:?}",
-                        split_plan(resolve(&input, query, grouped, None)?, &dir.0).unwrap_err()
-                    )
-                    .contains("literal-only scorer")
-                );
-                assert!(!dir.0.exists());
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Compare reconstructed arrays rather than tied random indices on empty input.
-fn compare_resolved_score_arrays(plan: DslPlan, grouped: bool) -> Fallible<()> {
-    let mut expected = plan.clone();
-    let exprs = match &mut expected {
-        DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
-        _ => panic!("expected private aggregation"),
-    };
-    let score = exprs
-        .iter()
-        .flat_map(|expr| expr.into_iter())
-        .find(|expr| score_plugin(expr).unwrap().is_some())
-        .unwrap()
-        .clone();
-    *exprs = vec![score.alias("scores")];
-    let dir = WorkDir::new();
-    let (heads, continuation) = split_plan(plan, &dir.0)?;
-    materialize(&heads, &dir.0)?;
-    let mut reconstruction = None;
-    walk(&continuation, &mut |node| {
-        let exprs = match node {
-            DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr,
-            _ => return,
-        };
-        if let Some(expr) = exprs.iter().find(|expr| {
-            expr.into_iter().any(|node| {
-                match_trusted_plugin::<HistogramQuantileScorePlugin>(node)
-                    .unwrap()
-                    .is_some()
-            })
-        }) {
-            reconstruction = Some((node.clone(), expr.clone().meta().output_name().unwrap()));
-        }
-    });
-    let (reconstruction, name) = reconstruction.unwrap();
-    let mut outputs = vec![];
-    if grouped {
-        outputs.push(col("key"));
-    }
-    outputs.push(col(name).alias("scores"));
-    let actual = LazyFrame::from(reconstruction).select(outputs);
-    let expected = LazyFrame::from(expected);
-    let (actual, expected) = if grouped {
-        (
-            actual.sort(["key"], Default::default()),
-            expected.sort(["key"], Default::default()),
-        )
-    } else {
-        (actual, expected)
-    };
-    let (actual, expected) = (actual.collect()?, expected.collect()?);
-    assert_eq!(actual, expected);
-    if !grouped {
-        assert_eq!(actual.height(), 1);
-        assert_eq!(
-            actual
-                .column("scores")?
-                .array()?
-                .get_as_series(0)
-                .unwrap()
-                .u64()?
-                .into_no_null_iter()
-                .collect::<Vec<_>>(),
-            vec![0, 0, 0]
-        );
-    } else {
-        assert_eq!(actual.height(), 0);
-    }
-    Ok(())
-}
-
-#[test]
-fn empty_histograms_reconstruct_exact_zero_arrays() -> Fallible<()> {
-    let input = empty_data()?;
     for grouped in [false, true] {
-        let query = aggregate(&input, [quantile()], grouped);
-        compare_resolved_score_arrays(resolve(&input, query, grouped, None)?, grouped)?;
+        for source in [typed(3), (typed(1) + typed(2)).cast(DataType::Int32)] {
+            let query = aggregate(
+                &input,
+                [source
+                    .dp()
+                    .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))],
+                grouped,
+            );
+            let dir = WorkDir::new();
+            let err = split_plan(resolve(&input, query, grouped, None)?, &dir.0).unwrap_err();
+            assert!(format!("{err:?}").contains("literal-only scorer"));
+            assert!(!dir.0.exists());
+        }
     }
     Ok(())
 }
@@ -1531,42 +1176,29 @@ fn empty_histograms_reconstruct_exact_zero_arrays() -> Fallible<()> {
 #[test]
 fn aggregation_local_removals_are_rejected() -> Fallible<()> {
     use crate::domains::OptionDomain;
-    let keys = [Some(0i32), Some(0), None, None, Some(2)];
-    let integers = test_domain(
-        SeriesDomain::new("key", OptionDomain::new(AtomDomain::<i32>::default())),
-        SeriesDomain::new("value", OptionDomain::new(AtomDomain::<i32>::default())),
-        true,
-    )?;
-    let floats = test_domain(
-        SeriesDomain::new("key", OptionDomain::new(AtomDomain::<i32>::default())),
+    let input = df!("key" => [0i32; 3], "value" => [Some(1f64), None, Some(f64::NAN)])?.lazy();
+    let domain = test_domain(
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
         SeriesDomain::new("value", OptionDomain::new(AtomDomain::<f64>::default())),
         true,
     )?;
-    let cases = [
-        (df!("key" => keys, "value" => [Some(1i32),Some(3),Some(2),Some(4),Some(5)])?.lazy(), integers.clone(), col("value").filter(col("value").gt(lit(3)))),
-        (df!("key" => keys, "value" => [Some(1i32),Some(3),Some(2),Some(4),Some(5)])?.lazy(), integers.clone(), col("value").filter(col("value").gt(lit(10)))),
-        (df!("key" => keys, "value" => [Some(1i32),None,None,None,Some(5)])?.lazy(), integers.clone(), col("value").drop_nulls()),
-        (df!("key" => keys, "value" => [None::<i32>;5])?.lazy(), integers.clone(), col("value").drop_nulls()),
-        (df!("key" => keys, "value" => [Some(1f64),Some(f64::NAN),Some(f64::NAN),Some(f64::NAN),Some(5.)])?.lazy(), floats.clone(), col("value").drop_nans()),
-        (df!("key" => keys, "value" => [Some(f64::NAN);5])?.lazy(), floats.clone(), col("value").drop_nans()),
-        (df!("key" => keys, "value" => [Some(1f64),None,Some(f64::NAN),None,Some(5.)])?.lazy(), floats, col("value").drop_nulls().drop_nans()),
-        (df!("key" => Vec::<Option<i32>>::new(), "value" => Vec::<Option<i32>>::new())?.lazy(), integers, col("value").filter(col("value").gt(lit(3)))),
-    ];
-    for (input, domain, source) in cases {
+    for source in [
+        col("value").filter(col("value").gt(lit(3))),
+        col("value").drop_nulls(),
+        col("value").drop_nans(),
+        col("value").drop_nulls().drop_nans(),
+    ] {
         for grouped in [false, true] {
-            let q = source
-                .clone()
-                .dp()
-                .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
-                .alias("q");
+            let q =
+                source
+                    .clone()
+                    .dp()
+                    .quantile(0.5, Series::new("".into(), [1f64, 3., 6.]), Some(0.));
             let query = aggregate(&input, [q], grouped);
             let dir = WorkDir::new();
-            let err = format!(
-                "{:?}",
-                split_plan(resolve_domain(&input, query, domain.clone(), None)?, &dir.0)
-                    .unwrap_err()
-            );
-            assert!(err.contains("cardinality-changing scorer"), "{err}");
+            let err = split_plan(resolve_domain(&input, query, domain.clone(), None)?, &dir.0)
+                .unwrap_err();
+            assert!(format!("{err:?}").contains("cardinality-changing scorer"));
             assert!(!dir.0.exists());
         }
     }

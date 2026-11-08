@@ -127,7 +127,15 @@ fn histogram_quantile_score_plugin(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::transformations::score_candidates_constants;
+    use crate::error::Fallible;
+    use crate::{
+        measurements::expr_noisy_max::NoisyMaxPlugin,
+        polars::{apply_anonymous_function, split::split_plan},
+        transformations::{
+            expr_discrete_quantile_score::DiscreteQuantileScorePlugin, score_candidates_constants,
+        },
+    };
+    use polars::prelude::*;
 
     #[test]
     fn score_tails_are_clipped_only_after_exact_prefixes() -> crate::error::Fallible<()> {
@@ -161,6 +169,161 @@ mod test {
                     })
                     .collect::<Vec<_>>();
                 assert_eq!(histogram_scores(&histogram, (num, den), limit), expected);
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn typed_histograms_match_original_scores() -> Fallible<()> {
+        let mut cases: Vec<(Series, Series)> = vec![];
+        for candidates in [vec![0i64], vec![-3, 0, 2], vec![-4, -1, 0, 1, 5, 9]] {
+            cases.push((
+                Series::new(
+                    "value".into(),
+                    [-8i64, -4, -4, -3, -2, -1, 0, 0, 1, 2, 3, 5, 9, 12],
+                ),
+                Series::new("".into(), candidates),
+            ));
+        }
+        cases.extend([
+            (
+                Series::new(
+                    "value".into(),
+                    [0u64, 1 << 53, (1 << 53) + 1, u64::MAX - 1, u64::MAX],
+                ),
+                Series::new("".into(), [1 << 53, (1 << 53) + 1, u64::MAX - 1]),
+            ),
+            (
+                Series::new("value".into(), [i64::MIN, i64::MIN + 1, -1, 0, i64::MAX]),
+                Series::new("".into(), [i64::MIN + 1, 0, i64::MAX]),
+            ),
+            (
+                Series::new(
+                    "value".into(),
+                    [f64::NEG_INFINITY, -1., -0., 0., 1., f64::INFINITY],
+                ),
+                Series::new("".into(), [-1f64, 0., 1.]),
+            ),
+            (
+                Series::new(
+                    "value".into(),
+                    [f32::NEG_INFINITY, -1., -0., 0., 1., f32::INFINITY],
+                ),
+                Series::new("".into(), [-1f32, 0., 1.]),
+            ),
+            (
+                Series::new("value".into(), Vec::<i64>::new()),
+                Series::new("".into(), [-1i64, 0, 1]),
+            ),
+            (
+                Series::new(
+                    "value".into(),
+                    [Some(-1f64), None, Some(f64::NAN), Some(1.)],
+                ),
+                Series::new("".into(), [-1f64, 0., 1.]),
+            ),
+        ]);
+        for dtype in [DataType::Int8, DataType::Int16, DataType::Int32] {
+            cases.push((
+                Series::new("value".into(), [-8i64, -3, -1, 0, 0, 1, 2, 12]).cast(&dtype)?,
+                Series::new("".into(), [-3i64, 0, 2]).cast(&dtype)?,
+            ));
+        }
+        cases.push((
+            Series::new("value".into(), [0u32, 1, 2, 2, 3, u32::MAX]),
+            Series::new("".into(), [0u32, 2, u32::MAX]),
+        ));
+        for (values, candidates) in cases {
+            let input = DataFrame::new(vec![values.clone().into_column()])?.lazy();
+            let mut expr = col("value").fill_null(lit(0));
+            if values.dtype().is_float() {
+                expr = expr.fill_nan(lit(0));
+            }
+            let scorer = DiscreteQuantileScorePlugin {
+                candidates: candidates.clone(),
+                alpha: (2, 7),
+                size_limit: 1,
+            };
+            let scores = apply_anonymous_function(vec![expr.clone()], scorer);
+            let query = input.clone().select([apply_anonymous_function(
+                vec![scores],
+                NoisyMaxPlugin {
+                    replacement: false,
+                    scale: 0.,
+                    negate: true,
+                },
+            )]);
+            let plans = split_plan(query.logical_plan, std::path::Path::new("unused"))?;
+            let DslPlan::GroupBy { keys, aggs, .. } = &plans[0] else {
+                panic!()
+            };
+            let bucket = keys.last().unwrap().clone().meta().output_name()?;
+            let count = aggs[0].clone().meta().output_name()?;
+            let histogram = LazyFrame::from(plans[0].clone()).collect()?;
+            let projected = DataFrame::new(vec![values.clone().into_column()])?
+                .lazy()
+                .select([expr.clone().cast(candidates.dtype().clone()).alias("value")])
+                .collect()?;
+            let mut expected_counts = vec![0u64; 2 * candidates.len() + 1];
+            for value in projected.column("value")?.as_materialized_series().iter() {
+                let less = candidates
+                    .iter()
+                    .filter(|c| c.partial_cmp(&value) == Some(std::cmp::Ordering::Less))
+                    .count();
+                let equal = candidates.iter().filter(|c| *c == value).count();
+                expected_counts[2 * less + equal] += 1;
+            }
+            let mut actual_counts = vec![0u64; expected_counts.len()];
+            for (bucket, count) in histogram
+                .column(&bucket)?
+                .u64()?
+                .into_no_null_iter()
+                .zip(histogram.column(&count)?.u64()?.into_no_null_iter())
+            {
+                assert!(count > 0, "no scaffold rows");
+                actual_counts[bucket as usize] = count;
+            }
+            assert_eq!(
+                actual_counts,
+                expected_counts,
+                "exact typed buckets: {:?}",
+                values.dtype()
+            );
+            if values.is_empty() {
+                assert_eq!(histogram.height(), 0);
+            }
+            for alpha in [(0, 1), (1, 2), (1, 1), (2, 7)] {
+                for size_limit in [0u64, 1, 100] {
+                    let expected = input
+                        .clone()
+                        .select([apply_anonymous_function(
+                            vec![expr.clone()],
+                            DiscreteQuantileScorePlugin {
+                                candidates: candidates.clone(),
+                                alpha,
+                                size_limit,
+                            },
+                        )
+                        .alias("score")])
+                        .collect()?;
+                    let score = apply_anonymous_function(
+                        vec![col(bucket.clone()), col(count.clone())],
+                        HistogramQuantileScorePlugin {
+                            num_candidates: candidates.len(),
+                            alpha,
+                            size_limit,
+                        },
+                    )
+                    .alias("score");
+                    let actual = histogram.clone().lazy().select([score]).collect()?;
+                    assert_eq!(
+                        actual,
+                        expected,
+                        "dtype {:?}, alpha {alpha:?}, limit {size_limit}",
+                        values.dtype()
+                    );
+                }
             }
         }
         Ok(())
