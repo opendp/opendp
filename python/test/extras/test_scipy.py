@@ -1,10 +1,10 @@
 import pytest
 
-import opendp.prelude as dp
-from opendp.extras.scipy import CSRArray2Domain, csr_array2_domain
-
 np = pytest.importorskip("numpy")
 sparse = pytest.importorskip("scipy.sparse")
+
+import opendp.prelude as dp
+from opendp.extras.scipy import CSRArray2Descriptor, csr_array2_domain
 
 dp.enable_features("contrib")
 
@@ -21,7 +21,7 @@ dp.enable_features("contrib")
 )
 def test_csr_array2_domain_atom_type(T, dtype, expected):
     domain = csr_array2_domain(3, max_rows=2, T=T)
-    assert domain.cast(CSRArray2Domain) == CSRArray2Domain(3, 2, expected)
+    assert domain.cast(CSRArray2Descriptor) == CSRArray2Descriptor(3, 2, expected)
     assert domain.member(sparse.csr_array([[1, 0, 2]], dtype=dtype))
     assert domain.member(sparse.csr_array((0, 3), dtype=dtype))
     other_dtype = np.float64 if expected != "f64" else np.int32
@@ -42,7 +42,7 @@ def test_csr_array2_domain_atom_type(T, dtype, expected):
 def test_csr_domain_inference_leaves_row_count_unspecified(dtype, T, rows):
     data = sparse.csr_array(np.ones((rows, 3), dtype=dtype))
     domain = dp.domain_of(data, infer=True)
-    assert domain.cast(CSRArray2Domain) == CSRArray2Domain(3, None, T)
+    assert domain.cast(CSRArray2Descriptor) == CSRArray2Descriptor(3, None, T)
     for size in (0, 1, 5):
         assert domain.member(sparse.csr_array(np.ones((size, 3), dtype=dtype)))
     assert not domain.member(sparse.csr_array(np.ones((rows, 4), dtype=dtype)))
@@ -74,7 +74,7 @@ def test_context_infers_sparse_sklearn_fit_domain(with_target, rows):
     )
     domain = context.accountant.input_domain
     desc = domain.cast(dp.sklearn.SklearnFitDescriptor)
-    assert desc.X.cast(CSRArray2Domain) == CSRArray2Domain(3, None, "bool")
+    assert desc.X.cast(CSRArray2Descriptor) == CSRArray2Descriptor(3, None, "bool")
     if with_target:
         assert desc.y == dp.vector_domain(dp.atom_domain(T=int))
         assert desc.y.size is None
@@ -103,9 +103,7 @@ def test_csr_array2_domain_rejects_invalid_schema(n_features, max_rows, message)
 
 
 def test_csr_array2_domain_normalizes_atom_type():
-    assert csr_array2_domain(3, max_rows=None, T=bool) == csr_array2_domain(
-        3, max_rows=None, T="bool"
-    )
+    assert csr_array2_domain(3, T=bool) == csr_array2_domain(3, max_rows=None, T="bool")
     assert csr_array2_domain(3, max_rows=None, T=np.float32) != csr_array2_domain(
         3, max_rows=None, T=np.float64
     )

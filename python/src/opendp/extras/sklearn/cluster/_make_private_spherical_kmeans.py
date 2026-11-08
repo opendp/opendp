@@ -1,10 +1,4 @@
-"""Discrete normalized spherical Lloyd updates on boolean CSR records.
-
-For a row with r active features, the fixed-point contribution is w(r) * x,
-where w(r) = floor(Q / sqrt(r)), optionally capped by floor(Q * B / r).
-Integer square roots and rational arithmetic establish the sensitivity bounds;
-cosine assignment is row-local and need not be exact for the privacy argument.
-"""
+"""Discrete normalized spherical Lloyd updates on boolean CSR records."""
 
 from __future__ import annotations
 
@@ -13,22 +7,15 @@ from fractions import Fraction
 from numbers import Real
 from operator import index
 
+import numpy as np
+import scipy.sparse as sp
+
 import opendp.prelude as dp
 from opendp._internal import _make_transformation, _new_pure_function
-from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import to_then
-from opendp.extras.scipy import CSRArray2Domain
+from opendp.extras.scipy import CSRArray2Descriptor
 from opendp.mod import Domain, Measure, Measurement, Metric
-
-_MAX = (1 << 63) - 1
-
-
-def _np():
-    return import_optional_dependency("numpy")
-
-
-def _sp():
-    return import_optional_dependency("scipy.sparse")
+from opendp.typing import RuntimeType, RuntimeTypeDescriptor
 
 
 def _positive_int(value, name):
@@ -43,7 +30,7 @@ def _positive_int(value, name):
 def _check_space(domain, metric):
     if metric != dp.symmetric_distance():
         raise ValueError("expected symmetric_distance() (add/remove adjacency)")
-    desc = domain.cast(CSRArray2Domain)
+    desc = domain.cast(CSRArray2Descriptor)
     if desc.T != "bool":
         raise ValueError("expected a boolean CSR domain (T=bool)")
     return desc
@@ -68,24 +55,7 @@ def _cap(value):
     return cap
 
 
-def _quantization(d, cap):
-    # At least 24 significant bits in even the smallest nonzero row weight.
-    # Usually Q=2**32. Increase it using only the public feature count and cap.
-    required = math.isqrt(d - 1) + 1
-    if cap is not None:
-        required = max(
-            required, (d * cap.denominator + cap.numerator - 1) // cap.numerator
-        )
-    q = 1 << max(32, (required * (1 << 24) - 1).bit_length())
-    if q > _MAX:
-        raise ValueError(
-            "feature count and contribution cap exceed int64 fixed-point precision"
-        )
-    return q
-
-
-def _row_weights(x, q, cap):
-    np = _np()
+def _row_weights(x, q, cap, dtype):
     sizes, inverse = np.unique(np.diff(x.indptr), return_inverse=True)
     weights = []
     for r in map(int, sizes):
@@ -93,20 +63,16 @@ def _row_weights(x, q, cap):
         if cap is not None and r:
             w = min(w, q * cap.numerator // (cap.denominator * r))
         weights.append(w)
-    return np.asarray(weights, dtype=np.int64)[inverse]
+    return np.asarray(weights, dtype=dtype)[inverse]
 
 
 def _aggregate(x, labels, weights, k):
-    """Coordinatewise min(sum_i w_i*x_i, INT64_MAX), without overflowing.
-
-    Each sparse product has at most INT64_MAX // max(w) rows. Thus *every*
-    nonnegative intermediate sum fits int64, regardless of the SciPy summation
-    order. Ordinary datasets use one A @ X product. The fallback saturates between
-    safe blocks by adding min(block, INT64_MAX - total), never clipping a wrap.
-    """
-    np, sp = _np(), _sp()
+    """Saturating sums in the weights' integer dtype, with no overflowing product."""
     n, d = x.shape
-    block_size = _MAX // max(1, int(weights.max(initial=0)))
+    limit = int(np.iinfo(weights.dtype).max)
+    # Each nonnegative product sums at most limit // max(weight) rows, so every
+    # intermediate fits. Saturate between safe blocks, never after a wrapped sum.
+    block_size = limit // max(1, int(weights.max(initial=0)))
 
     def block(start, stop):
         a = sp.csr_array(
@@ -117,15 +83,14 @@ def _aggregate(x, labels, weights, k):
 
     if n and n <= block_size:
         return block(0, n)
-    total = np.zeros(k * d, dtype=np.int64)
+    total = np.zeros(k * d, dtype=weights.dtype)
     for start in range(0, n, block_size):
         values = block(start, min(start + block_size, n))
-        total += np.minimum(values, _MAX - total)
+        total += np.minimum(values, limit - total)
     return total
 
 
 def _unit_centers(centers):
-    np = _np()
     unit = centers.astype(np.float64)
     # Scale before squaring: supplied public directions may be near float64 limits.
     maxima = unit.max(axis=1).toarray().ravel()
@@ -141,52 +106,47 @@ def _labels(x, unit_centers):
 
 
 def _distances(x, centers):
-    np = _np()
     scores = (x @ _unit_centers(centers).T).toarray()
     norms = np.sqrt(np.diff(x.indptr).astype(np.float64))
     return 1.0 - np.clip(scores / np.maximum(norms[:, None], 1.0), 0.0, 1.0)
 
 
 def _initialize(k, d, init, seed):
-    np, sp = _np(), _sp()
     if isinstance(init, str):
         if init != "random":
             raise ValueError(
                 "init must be 'random' or public nonnegative center directions"
             )
-        # A public feature-to-cluster hash table: every feature is represented,
-        # unlike sparse random directions that miss almost all rare features.
+        # Public random partition of the full feature universe.
         buckets = np.random.default_rng(seed).integers(k, size=d)
         return sp.csr_array((np.ones(d), (buckets, np.arange(d))), shape=(k, d))
     source = init if sp.issparse(init) else np.asarray(init)
+    if source.dtype.kind not in "biuf":
+        raise ValueError("init must contain real public directions")
+    # Convert before combining duplicate coordinates to avoid integer overflow.
+    centers = sp.csr_array(source.astype(np.float64), copy=True)
+    centers.sum_duplicates()
     if (
-        source.shape != (k, d)
-        or source.dtype.kind not in "biuf"
-        or not np.isfinite(source.data if sp.issparse(source) else source).all()
-        or ((source.data if sp.issparse(source) else source) < 0).any()
+        centers.shape != (k, d)
+        or not np.isfinite(centers.data).all()
+        or (centers.data < 0).any()
     ):
         raise ValueError(
             "init must contain finite nonnegative public centers of shape (n_clusters, n_features)"
         )
-    # Canonicalize *public* input in floating point, avoiding integer duplicate overflow.
-    centers = sp.csr_array(source.astype(np.float64), copy=True)
-    centers.sum_duplicates()
-    if not np.isfinite(centers.data).all():
-        raise ValueError("init contains overflowing duplicate entries")
     centers.eliminate_zeros()
     return centers
 
 
-def _project(noisy, k, d, m):
-    np, sp = _np(), _sp()
-    values = np.maximum(np.asarray(noisy, dtype=np.int64).reshape(k, d), 0)
+def _project(noisy, k, d, m, dtype):
+    values = np.maximum(np.asarray(noisy, dtype=dtype).reshape(k, d), 0)
     if m < d:
         for row in values:
             threshold = np.partition(row, -m)[-m]
             above = np.flatnonzero(row > threshold)
             ties = np.flatnonzero(row == threshold)[: m - above.size]
             keep = np.concatenate((above, ties))
-            projected = np.zeros(d, dtype=np.int64)
+            projected = np.zeros(d, dtype=dtype)
             projected[keep] = row[keep]
             row[:] = projected
     return sp.csr_array(values)
@@ -198,10 +158,12 @@ def _upper_float(value):
     return math.nextafter(bound, math.inf) if bound < value else bound
 
 
-def _make_sums(domain, metric, centers, q, cap, norm):
-    d = domain.cast(CSRArray2Domain).n_features
+def _make_sums(domain, metric, centers, q, cap, norm, dtype):
+    d = domain.cast(CSRArray2Descriptor).n_features
     k = centers.shape[0]
     unit = _unit_centers(centers)
+    # A row contributes at one fixed-center assignment: r*w*w <= Q*Q and
+    # r*w <= floor(Q*sqrt(d)). Saturation is nonexpansive in both L1 and L2.
     sensitivity = q if norm == 2 else math.isqrt(q * q * d)
     if cap is not None:
         # L2 is also bounded by L1, useful when the public cap is below one.
@@ -210,9 +172,9 @@ def _make_sums(domain, metric, centers, q, cap, norm):
     return _make_transformation(
         domain,
         metric,
-        dp.vector_domain(dp.atom_domain(T=dp.i64), size=k * d),
+        dp.vector_domain(dp.atom_domain(T=dtype.type), size=k * d),
         output_metric,
-        lambda x: _aggregate(x, _labels(x, unit), _row_weights(x, q, cap), k),
+        lambda x: _aggregate(x, _labels(x, unit), _row_weights(x, q, cap, dtype), k),
         lambda distance: _upper_float(index(distance) * sensitivity),
     )
 
@@ -230,20 +192,26 @@ def make_private_spherical_kmeans(
     max_l1_contribution: float | None = None,
     init="random",
     random_state: int | None = None,
+    T: RuntimeTypeDescriptor = dp.i64,
 ) -> Measurement:
-    """Release normalized spherical Lloyd centers on a public boolean CSR schema.
+    """Release sparse center directions using private normalized spherical Lloyd updates.
 
-    Each record contributes its unit direction, optionally uniformly downweighted
-    to L1 norm at most ``max_l1_contribution``. Conservative fixed-point int64 sums
-    receive discrete Laplace (pure DP) or discrete Gaussian (zCDP) noise. All
-    iterations use equal adaptively composed privacy allocations. Negative noisy
-    coordinates are clamped, followed by optional top-coordinate projection.
+    Uses discrete Laplace noise for pure DP or discrete Gaussian noise for zCDP,
+    with equal adaptively composed iteration budgets. Returns nonnegative CSR
+    centers of dtype ``T``. Noise requires O(n_clusters * n_features) memory.
 
-    ``init`` is a public random feature partition or supplied public nonnegative
-    directions of shape ``(n_clusters, n_features)``. Never initialize from private
-    records without accounting for that access. ``random_state`` affects only
-    public initialization, not DP noise. Noise requires O(n_clusters * n_features)
-    work and memory, even when input and released centers are sparse.
+    :param input_domain: Canonical boolean CSR domain with a public feature count.
+    :param input_metric: Symmetric distance (add/remove row adjacency).
+    :param output_measure: Max divergence or zero-concentrated divergence.
+    :param d_in: Positive group distance; a replacement costs two row edits.
+    :param d_out: Positive finite privacy allowance.
+    :param n_clusters: Number of center directions.
+    :param max_iter: Fixed number of private Lloyd updates.
+    :param max_features_per_center: Maximum nonzero center coordinates, or None.
+    :param max_l1_contribution: Optional L1 cap, uniformly downweighting unit-normalized records.
+    :param init: "random" for a public feature partition, or public/already-DP nonnegative center directions of shape (n_clusters, n_features).
+    :param random_state: Seed for public initialization only, never DP noise.
+    :param T: Integer aggregate/noise dtype: i64 (default) or i32. Configurations that could quantize nonempty records to zero are rejected.
     """
     d = _check_space(input_domain, input_metric).n_features
     if output_measure not in (dp.max_divergence(), dp.zero_concentrated_divergence()):
@@ -265,7 +233,17 @@ def make_private_spherical_kmeans(
         else min(d, _positive_int(max_features_per_center, "max_features_per_center"))
     )
     cap = _cap(max_l1_contribution)
-    q = _quantization(d, cap)
+    T = RuntimeType.parse(T)
+    if T not in (dp.i32, dp.i64):
+        raise ValueError("T must be i32 or i64")
+    dtype = np.dtype(np.int32 if T == dp.i32 else np.int64)
+    # Fractional resolution versus headroom: about 2 million (i32) or 5e11 (i64)
+    # unit contributions fit in one coordinate before saturation.
+    q = 1 << (10 if T == dp.i32 else 24)
+    if d > q * q or (cap is not None and q * cap.numerator < d * cap.denominator):
+        raise ValueError(
+            "feature count and L1 cap may quantize nonempty records to zero"
+        )
     centers0 = _initialize(k, d, init, random_state)
     norm = 1 if output_measure == dp.max_divergence() else 2
 
@@ -285,7 +263,7 @@ def make_private_spherical_kmeans(
     if budget == 0:
         raise ValueError("d_out is too small to allocate positive iteration budgets")
     composition = compose(budget)
-    first = _make_sums(input_domain, input_metric, centers0, q, cap, norm)
+    first = _make_sums(input_domain, input_metric, centers0, q, cap, norm, dtype)
     noise = dp.binary_search_chain(
         lambda scale: dp.m.make_noise(
             first.output_domain, first.output_metric, output_measure, scale=scale
@@ -298,8 +276,8 @@ def make_private_spherical_kmeans(
     def fit(queryable):
         centers = centers0
         for _ in range(iterations):
-            sums = _make_sums(input_domain, input_metric, centers, q, cap, norm)
-            centers = _project(queryable(sums >> noise), k, d, m)
+            sums = _make_sums(input_domain, input_metric, centers, q, cap, norm, dtype)
+            centers = _project(queryable(sums >> noise), k, d, m, dtype)
         return centers
 
     return composition >> _new_pure_function(fit)
