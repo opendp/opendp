@@ -9,6 +9,13 @@ from opendp.extras.scipy import CSRArray2Descriptor, csr_array2_domain
 dp.enable_features("contrib")
 
 
+def test_lazy_scipy_prelude_exports():
+    assert dp.scipy.csr_array2_domain is csr_array2_domain
+    assert dp.scipy.CSRArray2Descriptor is CSRArray2Descriptor
+    with pytest.raises(AttributeError):
+        _ = dp.scipy.not_an_opendp_export
+
+
 @pytest.mark.parametrize(
     ("T", "dtype", "expected"),
     [

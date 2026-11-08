@@ -13,7 +13,7 @@ if find_spec("sklearn") is None:
         "src/opendp/extras/sklearn/cluster",
     ]
 if find_spec("scipy") is None:
-    collect_ignore.append("src/opendp/extras/scipy")
+    collect_ignore.append("src/opendp/extras/scipy")  # pragma: no cover
 
 
 @pytest.fixture(autouse=True)
