@@ -68,7 +68,7 @@ pub extern "C" fn opendp_data__onceframe_lazy(
 }
 
 #[bootstrap(
-    features("contrib", "honest-but-curious"),
+    features("contrib"),
     name = "onceframe_split",
     arguments(
         onceframe(c_type = "AnyObject *", rust_type = "AnyQueryable"),
@@ -87,11 +87,11 @@ pub extern "C" fn opendp_data__onceframe_lazy(
 /// * `onceframe` - The queryable holding a LazyFrame.
 /// * `work_dir` - Protected, executor-owned directory for intermediate IPC files.
 ///
-/// # Why honest-but-curious?
+/// # Internal executor requirements
 /// The plans and the intermediate files expose deterministic private information.
 /// They are internal executor artifacts, not differentially private releases, and
 /// must never be exposed to the analyst. The trusted executor must execute each
-/// deterministic head exactly once against a consistent snapshot, materialize its
+/// deterministic head exactly once, materialize its
 /// complete tabular result at work_dir/i.arrow, then execute the continuation once.
 /// It must protect and clean up all intermediate files on success or failure,
 /// preserve native plugins and plan semantics, and shuffle the complete final

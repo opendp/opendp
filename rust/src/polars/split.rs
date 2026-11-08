@@ -35,7 +35,7 @@ use crate::{
 /// verbatim. Additional sources outside that opaque private boundary are unsupported.
 ///
 /// The trusted executor must enforce protected intermediates, a consistent
-/// snapshot, one-shot execution, final shuffling and cleanup. Cross-process
+/// one-shot execution, final shuffling and cleanup. Cross-process
 /// serialization retains the input plan's requirements for FFI-backed plugins.
 #[cfg_attr(not(feature = "ffi"), allow(dead_code))]
 pub(crate) fn split_plan(plan: DslPlan, work_dir: &Path) -> Fallible<Vec<DslPlan>> {

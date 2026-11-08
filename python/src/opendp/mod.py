@@ -779,9 +779,8 @@ class Function(ctypes.POINTER(AnyFunction)):  # type: ignore[misc]
 
     def __call__(self, arg):
         from opendp.core import function_eval
-        from opendp.typing import RuntimeType
 
-        return function_eval(self, arg, TI=str(RuntimeType.infer(arg, py_object=True)))
+        return function_eval(self, arg)
 
     def __del__(self):
         try:

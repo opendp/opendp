@@ -1,6 +1,5 @@
 """Database execution, Arrow IPC, and the interactive OnceFrame postprocessor."""
 
-from contextlib import contextmanager
 import io
 from pathlib import Path
 import stat
@@ -56,16 +55,6 @@ def measurement(source, plan, *, public_keys=True):
 
 def quantile(candidates=(1, 3, 6)):
     return pl.col("value").dp.quantile(0.5, candidates, scale=0.0).alias("q")
-
-
-@contextmanager
-def snapshot(connection):
-    """DuckDB's transaction is a repeatable snapshot, not a generic SQL recipe."""
-    connection.raw_sql("BEGIN TRANSACTION")
-    try:
-        yield connection
-    finally:
-        connection.raw_sql("ROLLBACK")
 
 
 @pytest.fixture
@@ -143,7 +132,7 @@ def test_grouped_quantiles_and_mixed_statistics(connection, execution, monkeypat
         return sample(frame, **kwargs)
 
     monkeypatch.setattr(pl.DataFrame, "sample", shuffled)
-    executor = dp_ibis.make_executor(connection, "source", snapshot=snapshot)
+    executor = dp_ibis.make_executor(connection, "source")
     assert isinstance(executor, dp.Function)
     result = executor(onceframe)
     expected = pl.DataFrame(
@@ -201,12 +190,7 @@ def test_arrow_schema_and_empty_results(empty, connection, execution):
         to_pyarrow_batches=connection.to_pyarrow_batches,
     )
 
-    @contextmanager
-    def scope(_):
-        with snapshot(connection):
-            yield backend
-
-    result = dp_ibis.make_executor(backend, "source", snapshot=scope)(onceframe)
+    result = dp_ibis.make_executor(backend, "source")(onceframe)
     expected = source.rename({"value": "q"}).with_columns(pl.col("q").alias("sum"))
     assert_frame_equal(result.sort("key"), expected, check_exact=True)
     schema = execution[0][2][0]
@@ -257,53 +241,8 @@ def test_additional_public_source_is_rejected(connection, execution, monkeypatch
     with pytest.raises(
         dp.OpenDPException, match="additional.*source|in-memory|multiple.*source"
     ):
-        dp_ibis.make_executor(connection, "source", snapshot=snapshot)(onceframe)
-    assert_consumed(onceframe)
-
-
-def test_multiple_heads_require_snapshot(connection, execution):
-    source = pl.DataFrame({"value": [3, 3]}, schema={"value": pl.Int32})
-    plan = source.lazy().select(
-        quantile(), pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum")
-    )
-    onceframe = measurement(source, plan)(source.lazy())
-    # No table exists: fail before any database read, but after consuming the release.
-    with pytest.raises(dp.OpenDPException, match="snapshot"):
         dp_ibis.make_executor(connection, "source")(onceframe)
     assert_consumed(onceframe)
-
-
-def test_repeatable_snapshot_between_heads(tmp_path, monkeypatch):
-    pytest.importorskip("duckdb")
-    database = str(tmp_path / "snapshot.duckdb")
-    connection, writer = ibis.duckdb.connect(database), ibis.duckdb.connect(database)
-    try:
-        source = pl.DataFrame({"value": [3, 3]}, schema={"value": pl.Int32})
-        connection.create_table("source", source)
-        plan = source.lazy().select(
-            quantile(), pl.col("value").dp.sum((0, 6), scale=0.0).alias("sum")
-        )
-        onceframe = measurement(source, plan)(source.lazy())
-        stream = connection.to_pyarrow_batches
-        calls: list[object] = []
-
-        def update_between_heads(expression, **kwargs):
-            if calls:
-                writer.raw_sql("INSERT INTO source VALUES (6)")
-            calls.append(expression)
-            assert kwargs == {"limit": None}
-            return stream(expression, **kwargs)
-
-        monkeypatch.setattr(connection, "to_pyarrow_batches", update_between_heads)
-        result = dp_ibis.make_executor(connection, "source", snapshot=snapshot)(
-            onceframe
-        )
-        assert result.to_dict(as_series=False) == {"q": [3], "sum": [6]}
-        assert len(calls) == 2
-        assert writer.execute(writer.table("source").count()) == 3
-    finally:
-        writer.disconnect()
-        connection.disconnect()
 
 
 @pytest.mark.parametrize("failure", ["query", "batches", "continuation"])
@@ -311,16 +250,7 @@ def test_failure_cleanup_and_consumption(failure, connection, execution, monkeyp
     source = pl.DataFrame({"value": [3]}, schema={"value": pl.Int32})
     connection.create_table("source", source)
     onceframe = measurement(source, source.lazy().select(quantile()))(source.lazy())
-    exited, faults = [], []
-
-    @contextmanager
-    def scope(backend):
-        with snapshot(backend) as bound:
-            try:
-                yield bound
-            finally:
-                exited.append(True)
-
+    faults = []
     if failure == "batches":
         stream = connection.to_pyarrow_batches
 
@@ -347,15 +277,11 @@ def test_failure_cleanup_and_consumption(failure, connection, execution, monkeyp
         monkeypatch.setattr(pl.LazyFrame, "collect", broken_collect)
     table = "missing" if failure == "query" else "source"
     with pytest.raises(dp.OpenDPException, match="Database execution failed") as error:
-        dp_ibis.make_executor(connection, table, snapshot=scope)(onceframe)
+        dp_ibis.make_executor(connection, table)(onceframe)
     assert "sentinel" not in str(error.value)
     assert "missing" not in str(error.value)
     assert faults == ([] if failure == "query" else [failure])
-    assert exited == [True]
     assert_consumed(onceframe)
-    # The provider's transaction has exited even when a batch iterator raised.
-    with snapshot(connection):
-        pass
 
 
 @pytest.mark.parametrize("backend", ["sqlite", "duckdb"])
@@ -388,32 +314,10 @@ def test_released_query_and_function_composition(backend):
         connection.disconnect()
 
 
-def test_snapshot_entry_failure_does_not_rollback_caller(
-    connection, execution, monkeypatch
-):
-    source = pl.DataFrame({"value": [3]}, schema={"value": pl.Int32})
-    onceframe = measurement(source, source.lazy().select(quantile()))(source.lazy())
-    connection.raw_sql("BEGIN TRANSACTION")
-    raw_sql, statements = connection.raw_sql, []
-
-    def record(statement):
-        statements.append(statement)
-        return raw_sql(statement)
-
-    monkeypatch.setattr(connection, "raw_sql", record)
-    try:
-        with pytest.raises(dp.OpenDPException, match="Database execution failed"):
-            dp_ibis.make_executor(connection, "source", snapshot=snapshot)(onceframe)
-        assert statements == ["BEGIN TRANSACTION"]
-        assert_consumed(onceframe)
-    finally:
-        raw_sql("ROLLBACK")
-
-
 def test_executor_requires_trusted_execution():
-    dp.disable_features("honest-but-curious")
+    dp.disable_features("contrib")
     try:
-        with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+        with pytest.raises(dp.OpenDPException, match="contrib"):
             dp_ibis.make_executor(None, "source")
     finally:
-        dp.enable_features("honest-but-curious")
+        dp.enable_features("contrib")

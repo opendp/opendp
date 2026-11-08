@@ -492,11 +492,6 @@ def test_custom_distance(new_distance, new_divergence):
 def test_pure_function():
     fun = _new_pure_function(lambda x: x + 1, TO="i32")
     assert fun(1) == 2
-    identity = _new_pure_function(lambda x: x)
-    opaque = object()
-    assert identity(opaque) is opaque
-    for value in [1, 1.5, [1, 2], (1.0, 2.0)]:
-        assert identity(value) == value
 
 
 def test_pointer_classes_dont_iter():

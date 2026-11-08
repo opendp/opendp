@@ -331,6 +331,11 @@ class RuntimeType(object):
             if isinstance(public_example, pl.Expr):
                 return Expr
 
+            from opendp.extras.polars import OnceFrame
+
+            if isinstance(public_example, OnceFrame):
+                return "ExtrinsicObject"
+
         if isinstance(public_example, tuple):
             return RuntimeType(
                 "Tuple", [cls.infer(e, py_object) for e in public_example]
