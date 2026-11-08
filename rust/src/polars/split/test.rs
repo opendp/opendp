@@ -1260,44 +1260,80 @@ fn histogram_heads_preserve_the_resolved_scorer_contract() -> Fallible<()> {
     let input = data()?;
     let plan = resolve(
         &input,
-        input.clone().group_by([col("key")]).agg([col("value")
-            .filter(col("value").gt(lit(1)))
-            .dp()
-            .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
-            .alias("q")]),
+        input.clone().group_by([col("key")]).agg([quantile()]),
         true,
         None,
     )?;
-    let mut original = None;
-    walk(&plan, &mut |node| {
-        if let DslPlan::GroupBy { aggs, .. } = node {
-            for expr in aggs.iter().flat_map(|e| e.into_iter()) {
-                if let Some((inputs, scorer)) =
-                    match_trusted_plugin::<DiscreteQuantileScorePlugin>(expr).unwrap()
-                {
-                    original = Some((inputs.clone(), scorer));
-                }
-            }
-        }
-    });
-    let original = original.unwrap();
+    let DslPlan::GroupBy {
+        input: original_base,
+        aggs,
+        ..
+    } = &plan
+    else {
+        panic!()
+    };
+    let (original_inputs, original) = aggs
+        .iter()
+        .flat_map(|e| e.into_iter())
+        .find_map(|e| score_plugin(e).unwrap())
+        .unwrap();
     let dir = WorkDir::new();
-    let (heads, _) = split_plan(plan, &dir.0)?;
+    let (heads, continuation) = split_plan(plan.clone(), &dir.0)?;
+    let DslPlan::GroupBy {
+        input: buckets,
+        keys,
+        aggs,
+        ..
+    } = sinks(&heads)[0].0
+    else {
+        panic!()
+    };
+    assert_eq!(keys.len(), 2);
+    assert_eq!(keys[0], col("key"));
+    assert!(aggs[0].into_iter().any(|e| matches!(e, Expr::Len)));
+    let DslPlan::HStack {
+        input: values,
+        exprs,
+        ..
+    } = buckets.as_ref()
+    else {
+        panic!()
+    };
+    assert!(
+        exprs[0]
+            .into_iter()
+            .any(|e| matches!(e, Expr::Ternary { .. }))
+    );
+    let DslPlan::HStack {
+        input: base, exprs, ..
+    } = values.as_ref()
+    else {
+        panic!()
+    };
+    let Expr::Alias(projected, _) = &exprs[0] else {
+        panic!()
+    };
+    assert_eq!(
+        projected.as_ref(),
+        &original_inputs[0]
+            .clone()
+            .cast(original.candidates.dtype().clone())
+    );
+    assert!(Arc::ptr_eq(base, original_base));
     let mut found = 0;
-    walk(sinks(&heads)[0].0, &mut |node| {
-        if let DslPlan::GroupBy { keys, aggs, .. } = node {
-            assert_eq!(keys, &vec![col("key")]);
-            for expr in aggs.iter().flat_map(|e| e.into_iter()) {
-                if let Some((inputs, source)) =
-                    match_trusted_plugin::<DiscreteQuantileHistogramPlugin>(expr).unwrap()
-                {
-                    assert_eq!(inputs, &original.0);
-                    assert!(source.scorer.candidates.equals(&original.1.candidates));
-                    assert_eq!(source.scorer.alpha, original.1.alpha);
-                    assert_eq!(source.scorer.size_limit, original.1.size_limit);
-                    assert_ne!(source.bucket_name, source.count_name);
-                    found += 1;
-                }
+    walk(&continuation, &mut |node| {
+        let exprs = match node {
+            DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => expr.as_slice(),
+            _ => &[],
+        };
+        for e in exprs.iter().flat_map(|e| e.into_iter()) {
+            if let Some((_, scorer)) =
+                match_trusted_plugin::<HistogramQuantileScorePlugin>(e).unwrap()
+            {
+                assert_eq!(scorer.num_candidates, original.candidates.len());
+                assert_eq!(scorer.alpha, original.alpha);
+                assert_eq!(scorer.size_limit, original.size_limit);
+                found += 1;
             }
         }
     });
@@ -1356,6 +1392,16 @@ fn native_histograms_reproduce_original_score_arrays_exactly() -> Fallible<()> {
             Series::new("".into(), [-1f64, 0., 1.]),
         ),
     ]);
+    for dtype in [DataType::Int8, DataType::Int16, DataType::Int32] {
+        cases.push((
+            Series::new("value".into(), [-8i64, -3, -1, 0, 0, 1, 2, 12]).cast(&dtype)?,
+            Series::new("".into(), [-3i64, 0, 2]).cast(&dtype)?,
+        ));
+    }
+    cases.push((
+        Series::new("value".into(), [0u32, 1, 2, 2, 3, u32::MAX]),
+        Series::new("".into(), [0u32, 2, u32::MAX]),
+    ));
     for (values, candidates) in cases {
         for alpha in [(0, 1), (1, 2), (1, 1), (2, 7)] {
             for size_limit in [0u64, 1, 100] {
@@ -1369,7 +1415,7 @@ fn native_histograms_reproduce_original_score_arrays_exactly() -> Fallible<()> {
                     alpha,
                     size_limit,
                 };
-                let scores = apply_anonymous_function(vec![expr], scorer);
+                let scores = apply_anonymous_function(vec![expr.clone()], scorer);
                 let expected = input
                     .clone()
                     .select([scores.clone().alias("score")])
@@ -1387,25 +1433,46 @@ fn native_histograms_reproduce_original_score_arrays_exactly() -> Fallible<()> {
                 assert_eq!(sinks(&heads).len(), 1);
                 materialize(&heads, &dir.0)?;
                 let (head, path) = sinks(&heads)[0];
-                let mut args = None;
-                walk(head, &mut |node| {
-                    let exprs = match node {
-                        DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => {
-                            expr.as_slice()
-                        }
-                        _ => &[],
-                    };
-                    for e in exprs.iter().flat_map(|e| e.into_iter()) {
-                        if let Some((_, kw)) =
-                            match_trusted_plugin::<DiscreteQuantileHistogramPlugin>(e).unwrap()
-                        {
-                            args = Some(kw);
-                        }
-                    }
-                });
-                let args = args.unwrap();
-                let bucket = args.bucket_name;
-                let count = args.count_name;
+                let DslPlan::GroupBy { keys, aggs, .. } = head else {
+                    panic!()
+                };
+                let bucket = keys.last().unwrap().clone().meta().output_name()?;
+                let count = aggs[0].clone().meta().output_name()?;
+                let histogram = LazyFrame::from(ipc_scan(path)?).collect()?;
+                assert_eq!(histogram.column(&bucket)?.dtype(), &DataType::UInt64);
+                assert_eq!(histogram.column(&count)?.dtype(), &DataType::UInt64);
+                let projected = DataFrame::new(vec![values.clone().into_column()])?
+                    .lazy()
+                    .select([expr.clone().cast(candidates.dtype().clone()).alias("value")])
+                    .collect()?;
+                let mut expected_counts = vec![0u64; 2 * candidates.len() + 1];
+                for value in projected.column("value")?.as_materialized_series().iter() {
+                    let less = candidates
+                        .iter()
+                        .filter(|c| c.partial_cmp(&value) == Some(std::cmp::Ordering::Less))
+                        .count();
+                    let equal = candidates.iter().filter(|c| *c == value).count();
+                    expected_counts[2 * less + equal] += 1;
+                }
+                let mut actual_counts = vec![0u64; expected_counts.len()];
+                for (bucket, count) in histogram
+                    .column(&bucket)?
+                    .u64()?
+                    .into_no_null_iter()
+                    .zip(histogram.column(&count)?.u64()?.into_no_null_iter())
+                {
+                    assert!(count > 0, "no scaffold rows");
+                    actual_counts[bucket as usize] = count;
+                }
+                assert_eq!(
+                    actual_counts,
+                    expected_counts,
+                    "exact typed buckets: {:?}",
+                    values.dtype()
+                );
+                if values.is_empty() {
+                    assert_eq!(histogram.height(), 0);
+                }
                 let score = apply_anonymous_function(
                     vec![col(bucket), col(count)],
                     HistogramQuantileScorePlugin {
@@ -1499,30 +1566,7 @@ fn python_quantile_ffi_round_trip() -> Fallible<()> {
         DPMedianShim,
     )
     .alias("median");
-    let removed = apply_plugin(
-        vec![
-            col("value").filter(col("value").gt(lit(10))),
-            lit(0.5),
-            lit(Series::new("".into(), [3i32])),
-            lit(0.),
-        ],
-        template.clone(),
-        DPQuantileShim,
-    )
-    .alias("removed");
     let plans = [
-        (
-            resolve(
-                &input,
-                input
-                    .clone()
-                    .group_by([col("key")])
-                    .agg([removed, sum(), mean()]),
-                true,
-                None,
-            )?,
-            "assert result == {'key':[0,1], 'removed':[3,3], 'sum':[6,3], 'mean':[3.0,3.0]}, result",
-        ),
         (
             resolve(&input, input.clone().select([median]), false, None)?,
             "assert result == {'median':[3]}, result",
@@ -1589,89 +1633,69 @@ fn python_quantile_ffi_round_trip() -> Fallible<()> {
 }
 
 #[test]
-fn literal_scorer_inputs_retain_one_value_per_group() -> Fallible<()> {
+fn literal_scorer_inputs_are_rejected() -> Fallible<()> {
+    let typed = |value| {
+        Expr::Literal(LiteralValue::Scalar(Scalar::new(
+            DataType::Int32,
+            AnyValue::Int32(value),
+        )))
+    };
     for input in [
         data()?,
         df!("key" => Vec::<i32>::new(), "value" => Vec::<i32>::new())?.lazy(),
     ] {
         for grouped in [false, true] {
-            let scorer = apply_anonymous_function(
-                vec![(lit(1i32) + lit(2i32)).cast(DataType::Int32)],
-                DiscreteQuantileScorePlugin {
-                    candidates: Series::new("".into(), [1i32, 3, 6]),
-                    alpha: (1, 2),
-                    size_limit: 10,
-                },
-            );
-            let expected = if grouped {
-                input
-                    .clone()
-                    .group_by([col("key")])
-                    .agg([scorer.clone().alias("scores")])
-            } else {
-                input.clone().select([scorer.clone().alias("scores")])
-            };
-            let randomized = apply_anonymous_function(
-                vec![scorer],
-                NoisyMaxPlugin {
-                    replacement: false,
-                    scale: 0.,
-                    negate: true,
-                },
-            )
-            .alias("index");
-            let query = if grouped {
-                input.clone().group_by([col("key")]).agg([randomized])
-            } else {
-                input.clone().select([randomized])
-            };
-            let dir = WorkDir::new();
-            let (heads, continuation) = split_plan(query.logical_plan, &dir.0)?;
-            materialize(&heads, &dir.0)?;
-            let DslPlan::Select { input: local, .. } = continuation else {
-                panic!()
-            };
-            let DslPlan::Select { input: scoring, .. } = local.as_ref() else {
-                panic!()
-            };
-            let name = match scoring.as_ref() {
-                DslPlan::Select { expr, .. } | DslPlan::GroupBy { aggs: expr, .. } => {
-                    expr[0].clone().meta().output_name()?
-                }
-                _ => panic!(),
-            };
-            let mut exprs = vec![];
-            if grouped {
-                exprs.push(col("key"));
+            for source in [typed(3), (typed(1) + typed(2)).cast(DataType::Int32)] {
+                let scorer = apply_anonymous_function(
+                    vec![source.clone()],
+                    DiscreteQuantileScorePlugin {
+                        candidates: Series::new("".into(), [1i32, 3, 6]),
+                        alpha: (1, 2),
+                        size_limit: 10,
+                    },
+                );
+                let randomized = apply_anonymous_function(
+                    vec![scorer],
+                    NoisyMaxPlugin {
+                        replacement: false,
+                        scale: 0.,
+                        negate: true,
+                    },
+                );
+                let query = if grouped {
+                    input.clone().group_by([col("key")]).agg([randomized])
+                } else {
+                    input.clone().select([randomized])
+                };
+                let dir = WorkDir::new();
+                assert!(
+                    format!("{:?}", split_plan(query.logical_plan, &dir.0).unwrap_err())
+                        .contains("literal-only scorer")
+                );
+                let q = source
+                    .dp()
+                    .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
+                    .alias("q");
+                let query = if grouped {
+                    input.clone().group_by([col("key")]).agg([q])
+                } else {
+                    input.clone().select([q])
+                };
+                assert!(
+                    format!(
+                        "{:?}",
+                        split_plan(resolve(&input, query, grouped, None)?, &dir.0).unwrap_err()
+                    )
+                    .contains("literal-only scorer")
+                );
+                assert!(!dir.0.exists());
             }
-            exprs.push(col(name).alias("scores"));
-            let actual = LazyFrame::from(scoring.as_ref().clone()).select(exprs);
-            let (actual, expected) = if grouped {
-                (
-                    actual.sort(["key"], Default::default()),
-                    expected.sort(["key"], Default::default()),
-                )
-            } else {
-                (actual, expected)
-            };
-            assert_eq!(actual.collect()?, expected.collect()?);
-            let q = lit(3i32)
-                .dp()
-                .quantile(0.5, Series::new("".into(), [1i32, 3, 6]), Some(0.))
-                .alias("q");
-            let query = if grouped {
-                input.clone().group_by([col("key")]).agg([q])
-            } else {
-                input.clone().select([q])
-            };
-            compare(resolve(&input, query, grouped, None)?, 1, grouped)?;
         }
     }
     Ok(())
 }
 
-/// Compare the reconstructed arrays, not sampled indices: all-removed groups
-/// have tied zero scores even when the requested noise scale is zero.
+/// Compare reconstructed arrays rather than tied random indices on empty input.
 fn compare_resolved_score_arrays(plan: DslPlan, grouped: bool) -> Fallible<()> {
     let mut expected = plan.clone();
     let exprs = match &mut expected {
@@ -1720,12 +1744,43 @@ fn compare_resolved_score_arrays(plan: DslPlan, grouped: bool) -> Fallible<()> {
     } else {
         (actual, expected)
     };
-    assert_eq!(actual.collect()?, expected.collect()?);
+    let (actual, expected) = (actual.collect()?, expected.collect()?);
+    assert_eq!(actual, expected);
+    if !grouped {
+        assert_eq!(actual.height(), 1);
+        assert_eq!(
+            actual
+                .column("scores")?
+                .array()?
+                .get_as_series(0)
+                .unwrap()
+                .u64()?
+                .into_no_null_iter()
+                .collect::<Vec<_>>(),
+            vec![0, 0, 0]
+        );
+    } else {
+        assert_eq!(actual.height(), 0);
+    }
     Ok(())
 }
 
 #[test]
-fn aggregation_local_removals_preserve_exact_scores_and_observed_groups() -> Fallible<()> {
+fn empty_histograms_reconstruct_exact_zero_arrays() -> Fallible<()> {
+    let input = df!("key" => Vec::<i32>::new(), "value" => Vec::<i32>::new())?.lazy();
+    for grouped in [false, true] {
+        let query = if grouped {
+            input.clone().group_by([col("key")]).agg([quantile()])
+        } else {
+            input.clone().select([quantile()])
+        };
+        compare_resolved_score_arrays(resolve(&input, query, grouped, None)?, grouped)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn aggregation_local_removals_are_rejected() -> Fallible<()> {
     use crate::domains::OptionDomain;
     let keys = [Some(0i32), Some(0), None, None, Some(2)];
     let integers = LazyFrameDomain::new(vec![
@@ -1783,25 +1838,13 @@ fn aggregation_local_removals_preserve_exact_scores_and_observed_groups() -> Fal
             } else {
                 input.clone().select([q])
             };
-            compare_resolved_score_arrays(resolve_case(query)?, grouped)?;
-            // Singleton candidates make zero-observation complete results exact.
-            // The scalar count still counts original rows, not filtered values.
-            let q = source
-                .clone()
-                .dp()
-                .quantile(0.5, Series::new("".into(), [3i32]), Some(0.))
-                .alias("q");
-            let query = if grouped {
-                input.clone().group_by([col("key")]).agg([q, count()])
-            } else {
-                input.clone().select([q, count()])
-            };
-            compare(resolve_case(query.clone())?, 2, grouped)?;
-            if grouped {
-                let public = df!("key" => [Some(9i32),Some(0),None,Some(2),Some(9)])?.lazy();
-                let joined = query.join(public, [col("key")], [col("key")], JoinType::Right.into());
-                compare(resolve_case(joined)?, 3, true)?;
-            }
+            let dir = WorkDir::new();
+            let err = format!(
+                "{:?}",
+                split_plan(resolve_case(query)?, &dir.0).unwrap_err()
+            );
+            assert!(err.contains("cardinality-changing scorer"), "{err}");
+            assert!(!dir.0.exists());
         }
     }
     Ok(())
@@ -1881,25 +1924,6 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
             None,
         )?,
         resolve(
-            &input,
-            input.clone().group_by([col("key")]).agg([
-                q(col("value").filter(col("value").gt(lit(10))), true),
-                s(),
-                m(),
-            ]),
-            true,
-            None,
-        )?,
-        resolve(
-            &input,
-            input
-                .clone()
-                .group_by([col("key")])
-                .agg([q(col("value").filter(col("value").gt(lit(1))), true), s()]),
-            true,
-            None,
-        )?,
-        resolve(
             &empty,
             empty.clone().select([q(col("value"), true), s()]),
             false,
@@ -1914,33 +1938,17 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
             true,
             None,
         )?,
-        resolve(
-            &input,
-            input.clone().select([q(lit(3i32), false)]),
-            false,
-            None,
-        )?,
-        resolve(
-            &empty,
-            empty.clone().select([q(lit(3i32), false)]),
-            false,
-            None,
-        )?,
     ];
     for input in [input.clone(), empty] {
         let public = df!("key" => [2i32,0,2,1])?.lazy();
         let query = input
             .clone()
             .group_by([col("key")])
-            .agg([
-                q(col("value").filter(col("value").gt(lit(10))), true),
-                s(),
-                m(),
-            ])
+            .agg([q(col("value"), true), s(), m()])
             .join(public, [col("key")], [col("key")], JoinType::Right.into());
         plans.push(resolve(&input, query, false, None)?);
     }
-    // Keep observed null keys and all-filtered groups while mixing scalar heads.
+    // Keep observed null keys while mixing scalar heads.
     let null_keys = df!("key" => [None, None, Some(1i32)], "value" => [1i32, 6, 3])?.lazy();
     let domain = LazyFrameDomain::new(vec![
         SeriesDomain::new(
@@ -1986,80 +1994,84 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
             .with_max_groups(2)
             .with_invariant_keys(),
     )?;
-    for value in [
-        col("value"),
-        col("value").drop_nulls().drop_nans(),
-        col("value").drop_nans(),
-        col("value").drop_nulls(),
-        col("value").filter(col("value").gt(lit(10))).drop_nans(),
-    ] {
-        let quantile = apply_plugin(
-            vec![
-                value,
-                lit(0.5),
-                lit(Series::new("".into(), [3f64])),
-                lit(0.),
-            ],
-            template.clone(),
-            DPQuantileShim,
-        )
-        .alias("q");
-        plans.push(
-            make_private_lazyframe(
-                domain.clone(),
-                SymmetricDistance,
-                Approximate(MaxDivergence),
-                floats
-                    .clone()
-                    .group_by([col("key")])
-                    .agg([quantile, s(), m()]),
-                Some(1.),
-                None,
-            )?
-            .invoke(&floats)?
-            .lazyframe()
-            .logical_plan,
-        );
-    }
-    let large =
-        df!("key" => [0i32;5], "value" => [0u64,1<<53,(1<<53)+1,u64::MAX-1,u64::MAX])?.lazy();
-    let domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("key", AtomDomain::<i32>::default()),
-        SeriesDomain::new("value", AtomDomain::<u64>::default()),
-    ])?
-    .with_margin(Margin::select().with_max_length(10))?;
-    // Resolve the existing score/noisy-max/index shims directly: DPQuantile's
-    // automatic floating midpoint fill would itself coerce these adjacent u64s.
-    let candidates = Series::new("".into(), [1u64 << 53, (1 << 53) + 1, u64::MAX - 1]);
-    let large_score = apply_plugin(
-        vec![col("value"), lit(0.5), lit(candidates.clone())],
+    let quantile = apply_plugin(
+        vec![
+            col("value"),
+            lit(0.5),
+            lit(Series::new("".into(), [3f64])),
+            lit(0.),
+        ],
         template.clone(),
-        crate::transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
-    );
-    let large_index = apply_plugin(
-        vec![large_score, lit(true), lit(0.)],
-        template.clone(),
-        crate::measurements::expr_noisy_max::NoisyMaxShim,
-    );
-    let large_q = apply_plugin(
-        vec![large_index, lit(candidates)],
-        template.clone(),
-        crate::measurements::expr_index_candidates::IndexCandidatesShim,
+        DPQuantileShim,
     )
     .alias("q");
     plans.push(
         make_private_lazyframe(
-            domain,
+            domain.clone(),
             SymmetricDistance,
             Approximate(MaxDivergence),
-            large.clone().select([large_q]),
+            floats
+                .clone()
+                .group_by([col("key")])
+                .agg([quantile, s(), m()]),
             Some(1.),
             None,
         )?
-        .invoke(&large)?
+        .invoke(&floats)?
         .lazyframe()
         .logical_plan,
     );
+    // Resolve existing score/noisy-max/index shims directly: DPQuantile's
+    // automatic floating midpoint fill would coerce these extreme integers.
+    for (large, candidates, value_domain) in [
+        (
+            df!("key" => [0i32;5], "value" => [0u64, 1<<53, (1<<53)+1, u64::MAX-1, u64::MAX])?
+                .lazy(),
+            Series::new("".into(), [1u64 << 53, (1 << 53) + 1, u64::MAX - 1]),
+            SeriesDomain::new("value", AtomDomain::<u64>::default()),
+        ),
+        (
+            df!("key" => [0i32;5], "value" => [i64::MIN, i64::MIN+1, 0, i64::MAX-1, i64::MAX])?
+                .lazy(),
+            Series::new("".into(), [i64::MIN, 0, i64::MAX]),
+            SeriesDomain::new("value", AtomDomain::<i64>::default()),
+        ),
+    ] {
+        let domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("key", AtomDomain::<i32>::default()),
+            value_domain,
+        ])?
+        .with_margin(Margin::select().with_max_length(10))?;
+        let large_score = apply_plugin(
+            vec![col("value"), lit(0.5), lit(candidates.clone())],
+            template.clone(),
+            crate::transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
+        );
+        let large_index = apply_plugin(
+            vec![large_score, lit(true), lit(0.)],
+            template.clone(),
+            crate::measurements::expr_noisy_max::NoisyMaxShim,
+        );
+        let large_q = apply_plugin(
+            vec![large_index, lit(candidates)],
+            template.clone(),
+            crate::measurements::expr_index_candidates::IndexCandidatesShim,
+        )
+        .alias("q");
+        plans.push(
+            make_private_lazyframe(
+                domain,
+                SymmetricDistance,
+                Approximate(MaxDivergence),
+                large.clone().select([large_q]),
+                Some(1.),
+                None,
+            )?
+            .invoke(&large)?
+            .lazyframe()
+            .logical_plan,
+        );
+    }
     let threshold_count = apply_plugin(
         vec![len(), lit(0.)],
         template.clone(),
@@ -2130,8 +2142,8 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
         );
         plans.push(plan);
     }
-    // Dynamic literals coerce contextually to Float32 at each operation. A
-    // final Float32 cast cannot repair the erroneous ~1.49e-9 Double residual.
+    // Native value projection preserves the resolved Float32 comparison dtype.
+    // Intermediate arithmetic is explicitly typed, not contextually inferred.
     let weak_floats = df!("key" => [0i32,0,0,1,1], "value" => [None,Some(0.1f32),Some(f32::NAN),Some(0.1f32),Some(0.1f32)])?.lazy();
     let domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("key", AtomDomain::<i32>::default()),
@@ -2152,7 +2164,17 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
             Series::new("".into(), [0f32, 0.1, 1.]),
         ),
         (
-            (col("value").fill_null(lit(0.1f64)) - lit(0.1f64)).fill_nan(lit(0f64)),
+            (col("value").fill_null(Expr::Literal(LiteralValue::Scalar(Scalar::new(
+                DataType::Float32,
+                AnyValue::Float32(0.1),
+            )))) - Expr::Literal(LiteralValue::Scalar(Scalar::new(
+                DataType::Float32,
+                AnyValue::Float32(0.1),
+            ))))
+            .fill_nan(Expr::Literal(LiteralValue::Scalar(Scalar::new(
+                DataType::Float32,
+                AnyValue::Float32(0.),
+            )))),
             Series::new("".into(), [-1e-10f32, 0., 1e-10]),
         ),
     ] {
@@ -2235,6 +2257,122 @@ fn python_sparse_histogram_ibis_round_trip() -> Fallible<()> {
             include_str!("test_ibis.py"),
             &[&dir.0, Path::new(&case.to_string())],
         );
+    }
+    Ok(())
+}
+
+#[test]
+fn ordinary_bucket_ids_are_exact_and_balanced() -> Fallible<()> {
+    fn depth(expr: &Expr) -> usize {
+        expr.clone()
+            .meta()
+            .pop(None)
+            .unwrap()
+            .iter()
+            .map(depth)
+            .max()
+            .unwrap_or(0)
+            + 1
+    }
+    for k in [1usize, 3, 6, 31, 127] {
+        let candidates = Series::new("".into(), (0..k).map(|i| 2 * i as i64).collect::<Vec<_>>());
+        let values = (-1..=(2 * k as i64 - 1)).collect::<Vec<_>>();
+        let bucket = quantile_bucket(col("value"), &candidates, 0, k)?;
+        assert!(
+            depth(&bucket) <= 2 * (k + 1).ilog2() as usize + 5,
+            "k={k}, depth={}",
+            depth(&bucket)
+        );
+        let result = df!("value" => values)?
+            .lazy()
+            .select([bucket.alias("bucket")])
+            .collect()?;
+        assert_eq!(
+            result
+                .column("bucket")?
+                .u64()?
+                .into_no_null_iter()
+                .collect::<Vec<_>>(),
+            (0..=(2 * k) as u64).collect::<Vec<_>>()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn histogram_base_plugins_and_filters_are_opaque() -> Fallible<()> {
+    let input = data()?;
+    #[cfg(feature = "polars-ffi")]
+    let plugin = Expr::Function {
+        input: vec![col("value")],
+        function: FunctionExpr::FfiPlugin {
+            lib: "unknown-library".into(),
+            symbol: "unknown-plugin".into(),
+            kwargs: vec![1, 2, 3].into(),
+            flags: Default::default(),
+        },
+    };
+    for base in [
+        input
+            .clone()
+            .with_column(callback_expr().alias("value"))
+            .logical_plan,
+        #[cfg(feature = "polars-ffi")]
+        input
+            .clone()
+            .with_column(plugin.alias("value"))
+            .logical_plan,
+        input.clone().filter(col("value").gt(lit(1))).logical_plan,
+        input
+            .clone()
+            .with_column(col("value").drop_nulls())
+            .logical_plan,
+        input.with_column(col("value").drop_nans()).logical_plan,
+    ] {
+        let base = Arc::new(base);
+        let plan = DslPlan::GroupBy {
+            input: base.clone(),
+            keys: vec![(col("value") + lit(1)).alias("derived")],
+            aggs: vec![apply_anonymous_function(
+                vec![apply_anonymous_function(
+                    vec![col("value")],
+                    DiscreteQuantileScorePlugin {
+                        candidates: Series::new("".into(), [1i32, 3, 6]),
+                        alpha: (1, 2),
+                        size_limit: 10,
+                    },
+                )],
+                NoisyMaxPlugin {
+                    replacement: false,
+                    scale: 0.,
+                    negate: true,
+                },
+            )],
+            apply: None,
+            maintain_order: false,
+            options: Default::default(),
+            #[cfg(patch_polars)]
+            predicates: vec![],
+        };
+        let dir = WorkDir::new();
+        let (heads, _) = split_plan(plan, &dir.0)?;
+        let DslPlan::GroupBy {
+            input: buckets,
+            keys,
+            ..
+        } = sinks(&heads)[0].0
+        else {
+            panic!()
+        };
+        assert_eq!(keys[0], (col("value") + lit(1)).alias("derived"));
+        let DslPlan::HStack { input: values, .. } = buckets.as_ref() else {
+            panic!()
+        };
+        let DslPlan::HStack { input: actual, .. } = values.as_ref() else {
+            panic!()
+        };
+        assert!(Arc::ptr_eq(actual, &base));
+        assert!(!dir.0.exists());
     }
     Ok(())
 }

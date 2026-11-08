@@ -9,7 +9,10 @@ use std::{
 
 use polars::{
     error::{PolarsResult, polars_err},
-    prelude::{DslPlan, Expr, JoinArgs, JoinCoalesce, JoinType, PlSmallStr, col},
+    prelude::{
+        DataType, DslPlan, Expr, FunctionExpr, JoinArgs, JoinCoalesce, JoinType, LiteralValue,
+        PlSmallStr, Scalar, Series, col, len, when,
+    },
 };
 use polars_plan::{
     plans::visitor::{RewriteRecursion, RewritingVisitor, TreeWalker},
@@ -24,8 +27,7 @@ use crate::{
     error::Fallible,
     measurements::{expr_noise::NoisePlugin, expr_noisy_max::NoisyMaxPlugin},
     transformations::expr_discrete_quantile_score::{
-        DiscreteQuantileHistogramPlugin, DiscreteQuantileScorePlugin, HistogramQuantileScorePlugin,
-        sparse_histogram_plan,
+        DiscreteQuantileScorePlugin, HistogramQuantileScorePlugin,
     },
 };
 
@@ -425,17 +427,62 @@ impl RewritingVisitor for Extract<'_, '_> {
         if let Some((inputs, scorer)) = score_plugin(&expr)? {
             let bucket = self.splitter.names.fresh();
             let count = self.splitter.names.fresh();
-            let histogram_name = self.splitter.names.fresh();
-            let source = apply_plugin(
-                inputs.clone(),
-                expr.clone(),
-                DiscreteQuantileHistogramPlugin {
-                    scorer: scorer.clone(),
-                    bucket_name: bucket.clone(),
-                    count_name: count.clone(),
-                },
+            let [input] = inputs.as_slice() else {
+                return Err(
+                    polars_err!(InvalidOperation: "quantile extraction expects one scorer input"),
+                );
+            };
+            if scalar_literals(input)? {
+                return Err(
+                    polars_err!(InvalidOperation: "quantile extraction does not support literal-only scorer inputs"),
+                );
+            }
+            for node in input {
+                if matches!(
+                    node,
+                    Expr::Filter { .. }
+                        | Expr::Function {
+                            function: FunctionExpr::DropNulls | FunctionExpr::DropNans,
+                            ..
+                        }
+                ) {
+                    return Err(
+                        polars_err!(InvalidOperation: "quantile extraction does not support cardinality-changing scorer inputs (filter/drop_nulls/drop_nans)"),
+                    );
+                }
+            }
+            let value = self.splitter.names.fresh();
+            let base = match &self.locals[0] {
+                DslPlan::Select { input, .. } | DslPlan::GroupBy { input, .. } => input.clone(),
+                _ => unreachable!(),
+            };
+            let values = DslPlan::HStack {
+                input: base,
+                exprs: vec![
+                    input
+                        .clone()
+                        .cast(scorer.candidates.dtype().clone())
+                        .alias(value.clone()),
+                ],
+                options: Default::default(),
+            };
+            let buckets = DslPlan::HStack {
+                input: Arc::new(values),
+                exprs: vec![
+                    quantile_bucket(col(value), &scorer.candidates, 0, scorer.candidates.len())?
+                        .alias(bucket.clone()),
+                ],
+                options: Default::default(),
+            };
+            let histogram = group_by(
+                buckets,
+                self.keys
+                    .iter()
+                    .cloned()
+                    .chain([col(bucket.clone())])
+                    .collect(),
+                vec![len().cast(DataType::UInt64).alias(count.clone())],
             );
-            let histogram = sparse_histogram_plan(self.locals[0].clone(), source, histogram_name);
             let scan = self
                 .splitter
                 .externalize(histogram)
@@ -474,6 +521,38 @@ impl RewritingVisitor for Extract<'_, '_> {
         }
         Ok(col(name))
     }
+}
+
+fn bucket_literal(value: u64) -> Expr {
+    Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        DataType::UInt64,
+        value.into(),
+    )))
+}
+
+/// Balanced exact typed comparisons: open intervals have even IDs and
+/// candidate equalities have odd IDs. No conversion through floating point.
+fn quantile_bucket(
+    value: Expr,
+    candidates: &Series,
+    start: usize,
+    end: usize,
+) -> PolarsResult<Expr> {
+    if start == end {
+        return Ok(bucket_literal((2 * start) as u64));
+    }
+    let mid = start + (end - start) / 2;
+    let pivot = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        candidates.dtype().clone(),
+        candidates.get(mid)?.into_static(),
+    )));
+    Ok(when(value.clone().lt(pivot.clone()))
+        .then(quantile_bucket(value.clone(), candidates, start, mid)?)
+        .otherwise(
+            when(value.clone().eq(pivot))
+                .then(bucket_literal((2 * mid + 1) as u64))
+                .otherwise(quantile_bucket(value, candidates, mid + 1, end)?),
+        ))
 }
 
 fn group_by(input: impl Into<Arc<DslPlan>>, keys: Vec<Expr>, aggs: Vec<Expr>) -> DslPlan {

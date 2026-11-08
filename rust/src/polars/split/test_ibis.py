@@ -47,7 +47,14 @@ for path in sorted(root.glob("head_*.bin")):
     sql = str(query.to_sql())
     (root / f"sql_{index}.txt").write_text(sql)
     assert not re.search(r"\b(?:ARRAY_AGG|LIST|UNNEST)\s*\(", sql, re.IGNORECASE), sql
-    if "discrete_quantile_histogram_plugin" in json.dumps(wire):
+    assert not re.search(
+        r"\b(?:discrete_quantile_score_plugin|discrete_quantile_histogram_plugin|"
+        r"histogram_quantile_score_plugin|noise_plugin|noisy_max_plugin|"
+        r"index_candidates_plugin)\s*\(",
+        sql,
+        re.IGNORECASE,
+    ), sql
+    if "GroupBy" in wire and "HStack" in wire["GroupBy"]["input"]:
         assert re.search(r"\bCOUNT\s*\(\s*\*\s*\)", sql, re.IGNORECASE), sql
         assert len(re.findall(r"\bGROUP\s+BY\b", sql, re.IGNORECASE)) == 1, sql
     result = connection.to_polars(query)

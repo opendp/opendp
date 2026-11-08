@@ -18,10 +18,8 @@ use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
 mod plugin_histogram;
-mod plugin_histogram_source;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
 pub(crate) use plugin_histogram::HistogramQuantileScorePlugin;
-pub(crate) use plugin_histogram_source::{DiscreteQuantileHistogramPlugin, sparse_histogram_plan};
 use polars::prelude::{AnyValue, LiteralValue, NamedFrom, PolarsPhysicalType, Scalar};
 use polars::series::Series;
 
