@@ -24,7 +24,7 @@ from opendp._internal import (
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import to_then
 from opendp.extras.sklearn._domains import SklearnFitDomain, sklearn_fit_domain
-from opendp.extras.sklearn._estimator import _DPTransformer
+from opendp.extras.sklearn._estimator import DPTransformer
 from opendp.measurements import then_noise
 from opendp.mod import Domain, Measure, Measurement, Metric, Transformation
 
@@ -45,7 +45,9 @@ def _int(value, name: str, *, allow_zero: bool = False) -> int:
     except TypeError:
         raise TypeError(f"{name} must be an integer") from None
     if value < (0 if allow_zero else 1):
-        raise ValueError(f"{name} must be {'nonnegative' if allow_zero else 'positive'}")
+        raise ValueError(
+            f"{name} must be {'nonnegative' if allow_zero else 'positive'}"
+        )
     return value
 
 
@@ -87,7 +89,9 @@ def _check_centers(centers, n_features: int):
         or centers.shape[0] == 0
         or centers.shape[1] != n_features
     ):
-        raise ValueError("expected nonempty canonical int32 CSR centers of matching width")
+        raise ValueError(
+            "expected nonempty canonical int32 CSR centers of matching width"
+        )
     return centers
 
 
@@ -132,11 +136,12 @@ def nearest_center_labels(x, centers):
 def _cluster_feature_sums(x, centers, max_active: int):
     """Saturating per-cluster int32 feature counts, flattened in row-major order."""
     np = _np()
-    x = _clip_rows(x, max_active)
+    # Match prediction by assigning on the full record. Only its contribution
+    # is clipped: each row still adds at most max_active unit feature counts.
     labels = nearest_center_labels(x, centers)
+    x = _clip_rows(x, max_active)
     positions = (
-        np.repeat(labels.astype(np.int64), np.diff(x.indptr)) * x.shape[1]
-        + x.indices
+        np.repeat(labels.astype(np.int64), np.diff(x.indptr)) * x.shape[1] + x.indices
     )
     counts = np.bincount(positions, minlength=centers.shape[0] * x.shape[1])
     counts = np.minimum(counts, np.iinfo(np.int32).max)
@@ -245,7 +250,10 @@ def make_private_spherical_kmeans(
     def release_for(centers):
         return (
             make_cluster_feature_sums(
-                input_domain, input_metric, centers=centers, max_active=L,
+                input_domain,
+                input_metric,
+                centers=centers,
+                max_active=L,
                 norm=norm,
             )
             >> then_noise(output_measure, scale)
@@ -274,7 +282,7 @@ def make_private_spherical_kmeans(
 then_private_spherical_kmeans = to_then(make_private_spherical_kmeans)
 
 
-class SphericalKMeans(TransformerMixin, _DPTransformer):
+class SphericalKMeans(TransformerMixin, DPTransformer):
     """Private spherical k-means on boolean CSR arrays."""
 
     def __init__(
@@ -296,7 +304,11 @@ class SphericalKMeans(TransformerMixin, _DPTransformer):
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         fit_desc = input_domain.cast(SklearnFitDomain)
         measurement = make_private_spherical_kmeans(
-            fit_desc.X, input_metric, output_measure, d_in, d_out,
+            fit_desc.X,
+            input_metric,
+            output_measure,
+            d_in,
+            d_out,
             n_clusters=self.n_clusters,
             max_iter=self.max_iter,
             max_features_per_record=self.max_features_per_record,
@@ -304,8 +316,11 @@ class SphericalKMeans(TransformerMixin, _DPTransformer):
             random_state=self.random_state,
         )
         return _make_measurement(
-            input_domain, input_metric, measurement.output_measure,
-            lambda data: measurement(data.X), measurement.map,
+            input_domain,
+            input_metric,
+            measurement.output_measure,
+            lambda data: measurement(data.X),
+            measurement.map,
         )
 
     def _ingest_release(self, centers):
@@ -342,32 +357,42 @@ class SphericalKMeans(TransformerMixin, _DPTransformer):
             raise ValueError("expected a boolean CSR domain (T=bool)")
         if desc.n_features != self.n_features_in_:
             raise ValueError("input_domain must match the fitted number of features")
-        
+
         output_domain = sklearn_fit_domain(output_x_domain, fit_desc.y)
         function = lambda data: replace(data, X=fn(data.X))
         return _make_transformation(
-            input_domain, input_metric, output_domain, input_metric,
-            function, lambda d: d,
+            input_domain,
+            input_metric,
+            output_domain,
+            input_metric,
+            function,
+            lambda d: d,
         )
 
-    def make_transform(self, input_domain: Domain, input_metric: Metric) -> Transformation:
+    def make_transform(
+        self, input_domain: Domain, input_metric: Metric
+    ) -> Transformation:
         """Map input rows to cosine distances from the released centers."""
         self._require_fitted()
         centers = self.cluster_centers_.copy()
-        output_domain = dp.numpy.array2_domain(
-            T=float, num_columns=centers.shape[0]
-        )
+        output_domain = dp.numpy.array2_domain(T=float, num_columns=centers.shape[0])
         return self._make_rowwise(
-            input_domain, input_metric, output_domain,
+            input_domain,
+            input_metric,
+            output_domain,
             lambda x: _cosine_distances(x, centers),
         )
 
-    def make_predict(self, input_domain: Domain, input_metric: Metric) -> Transformation:
+    def make_predict(
+        self, input_domain: Domain, input_metric: Metric
+    ) -> Transformation:
         """Map input rows to nearest-center labels with unit row stability."""
         self._require_fitted()
         centers = self.cluster_centers_.copy()
         output_domain = dp.vector_domain(dp.atom_domain(T=dp.i32))
         return self._make_rowwise(
-            input_domain, input_metric, output_domain,
+            input_domain,
+            input_metric,
+            output_domain,
             lambda x: nearest_center_labels(x, centers),
         )

@@ -5,15 +5,15 @@ import pickle
 
 import pytest
 
+np = pytest.importorskip("numpy")
+sparse = pytest.importorskip("scipy.sparse")
+pytest.importorskip("sklearn")
+
 import opendp.prelude as dp
 from opendp._internal import _make_transformation
 from opendp.extras.scipy import CSRArray2Domain, csr_array2_domain
 from opendp.extras.sklearn.cluster import SphericalKMeans, make_private_spherical_kmeans
 from opendp.extras.sklearn.cluster import _spherical_lloyd_binary as spherical
-
-np = pytest.importorskip("numpy")
-sparse = pytest.importorskip("scipy.sparse")
-pytest.importorskip("sklearn")
 
 dp.enable_features("contrib")
 
@@ -68,7 +68,9 @@ def _measure(kind):
 
 def _measurement(domain=None, *, kind="rho", d_in=1, budget=0.5, **params):
     return make_private_spherical_kmeans(
-        domain if domain is not None else csr_array2_domain(6, max_rows=2**31 - 1, T=bool),
+        domain
+        if domain is not None
+        else csr_array2_domain(6, max_rows=2**31 - 1, T=bool),
         _METRIC,
         _measure(kind),
         d_in,
@@ -78,7 +80,10 @@ def _measurement(domain=None, *, kind="rho", d_in=1, budget=0.5, **params):
 
 
 def _fit(est=None, x=None, *, kind="rho", **kwargs):
-    kwargs.setdefault("domain", dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)))
+    kwargs.setdefault(
+        "domain",
+        dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
+    )
     return (est if est is not None else SphericalKMeans(**_PARAMS)).fit(
         x if x is not None else _two_blob_data(),
         privacy_unit=(_METRIC, 1),
@@ -92,7 +97,9 @@ def _context(x, *, kind="rho", domain=None, split=1):
         dp.sklearn.SklearnFit(x) if domain is None else x,
         (_METRIC, 1),
         (_measure(kind), 0.5),
-        domain=domain if domain is not None else dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
+        domain=domain
+        if domain is not None
+        else dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
         split_evenly_over=split,
     )
 
@@ -136,11 +143,19 @@ def test_invalid_seed_metric_and_measure():
         _measurement(random_state=-1)
     with pytest.raises(ValueError, match="add/remove"):
         make_private_spherical_kmeans(
-            csr_array2_domain(6, max_rows=2**31 - 1, T=bool), dp.change_one_distance(), _measure("rho"), 1, 0.5
+            csr_array2_domain(6, max_rows=2**31 - 1, T=bool),
+            dp.change_one_distance(),
+            _measure("rho"),
+            1,
+            0.5,
         )
     with pytest.raises(ValueError, match="max_divergence.*zero_concentrated"):
         make_private_spherical_kmeans(
-            csr_array2_domain(6, max_rows=2**31 - 1, T=bool), _METRIC, dp.fixed_smoothed_max_divergence(), 1, 0.5
+            csr_array2_domain(6, max_rows=2**31 - 1, T=bool),
+            _METRIC,
+            dp.fixed_smoothed_max_divergence(),
+            1,
+            0.5,
         )
     with pytest.raises(TypeError, match="config"):
         _measurement(config=object())
@@ -193,7 +208,9 @@ def test_domain_rejects_noncanonical_or_nonboolean_input(invalid):
 @pytest.mark.parametrize("max_rows", [None, 2**31])
 def test_counts_allow_unbounded_or_large_row_bounds(max_rows):
     domain = csr_array2_domain(6, max_rows=max_rows, T=bool)
-    transform = spherical.make_cluster_feature_sums(domain, _METRIC, centers=_centers(), max_active=3)
+    transform = spherical.make_cluster_feature_sums(
+        domain, _METRIC, centers=_centers(), max_active=3
+    )
     assert transform.map(1) == pytest.approx(math.sqrt(3))
     assert _measurement(domain).map(1) <= 0.5
 
@@ -237,7 +254,10 @@ def test_count_saturation_precedes_int32_cast(monkeypatch):
 def test_feature_count_constructor_snapshots_centers():
     centers = _centers()
     transform = spherical.make_cluster_feature_sums(
-        csr_array2_domain(6, max_rows=None, T=bool), _METRIC, centers=centers, max_active=3,
+        csr_array2_domain(6, max_rows=None, T=bool),
+        _METRIC,
+        centers=centers,
+        max_active=3,
     )
     before = transform(_two_blob_data())
     centers.data[:] = 0
@@ -258,6 +278,32 @@ def test_clipping_is_binary_and_keeps_lowest_feature_ids():
     np.testing.assert_array_equal(
         spherical._cluster_feature_sums(x, centers, 2), [1, 1, 1, 0]
     )
+
+
+@pytest.mark.parametrize("norm", [1, 2])
+def test_assignment_uses_full_record_before_clipping_contributions(norm):
+    if norm == 1:
+        _require_i64_dispatch()
+    x = sparse.csr_array([[1, 1, 1]], dtype=bool)
+    centers = sparse.csr_array([[1, 0, 0], [0, 1, 1]], dtype=np.int32)
+    model = SphericalKMeans(n_clusters=2, max_features_per_record=1)
+    model._ingest_release(centers)
+    np.testing.assert_array_equal(model.predict(x), [1])
+    # Clipping before assignment would instead choose cluster zero.
+    np.testing.assert_array_equal(
+        spherical.nearest_center_labels(spherical._clip_rows(x, 1), centers), [0]
+    )
+    transform = spherical.make_cluster_feature_sums(
+        csr_array2_domain(3, max_rows=None, T=bool),
+        _METRIC,
+        centers=centers,
+        max_active=1,
+        norm=norm,
+    )
+    counts = np.asarray(transform(x)).reshape(2, 3)
+    np.testing.assert_array_equal(counts, [[0, 0, 0], [1, 0, 0]])
+    assert transform.map(1) == 1
+    np.testing.assert_array_equal(x.toarray(), [[1, 1, 1]])
 
 
 def test_cosine_assignment_normalizes_centers_and_handles_zeros():
@@ -303,6 +349,46 @@ def test_standalone_fit_with_explicit_domain(kind):
     assert np.isfinite(est.score(_two_blob_data()))
 
 
+@pytest.mark.parametrize("route", ["standalone", "context"])
+@pytest.mark.parametrize("with_target", [False, True])
+@pytest.mark.parametrize("empty", [False, True])
+def test_fitting_infers_sparse_sklearn_domain(route, with_target, empty):
+    X = sparse.csr_array((0, 6), dtype=bool) if empty else _two_blob_data()
+    y = np.zeros(X.shape[0], dtype=np.int32) if with_target else None
+    data = dp.sklearn.SklearnFit(X, y)
+    model = SphericalKMeans(**_PARAMS)
+    if route == "standalone":
+        fitted = model.fit(
+            X,
+            y,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(rho=0.5),
+        )
+        assert fitted is model
+    else:
+        context = dp.Context.compositor(
+            data,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(rho=0.5),
+            split_evenly_over=1,
+        )
+        fitted = context.query().sklearn(model).release()
+        assert fitted is not model
+        assert vars(model) == _PARAMS
+        assert context.current_privacy_loss() == [0.5]
+    assert fitted.get_params() == _PARAMS
+    assert fitted.n_features_in_ == 6
+    assert fitted.cluster_centers_.shape == (2, 6)
+    domain = dp.domain_of(data, infer=True)
+    assert (
+        domain.cast(dp.sklearn.SklearnFitDomain).X.cast(CSRArray2Domain).max_rows
+        is None
+    )
+    assert fitted.make_transform(domain, _METRIC).output_domain.member(
+        dp.sklearn.SklearnFit(fitted.transform(X), y)
+    )
+
+
 def test_standalone_empty_input_releases_valid_centers():
     empty = sparse.csr_array((0, 6), dtype=bool)
     est = _fit(x=empty)
@@ -315,8 +401,10 @@ def test_standalone_empty_input_releases_valid_centers():
 
 def test_fit_requires_privacy_and_rejects_unknown_params():
     est = SphericalKMeans(**_PARAMS)
-    with pytest.raises(TypeError, match="explicit privacy_unit and privacy_loss"):
-        est.fit(_two_blob_data())
+    with pytest.raises(
+        TypeError, match="required keyword-only.*'privacy_unit'.*'privacy_loss'"
+    ):
+        est.fit(_two_blob_data())  # type: ignore[call-arg]
     with pytest.raises(TypeError, match="unexpected keyword argument 'unknown'"):
         _fit(est, unknown=True)
 
@@ -324,7 +412,13 @@ def test_fit_requires_privacy_and_rejects_unknown_params():
 def test_make_is_calibrated_and_does_not_mutate():
     est = SphericalKMeans(**_PARAMS)
     state = est.__dict__.copy()
-    args = (dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)), _METRIC, _measure("rho"), 1, 0.5)
+    args = (
+        dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
+        _METRIC,
+        _measure("rho"),
+        1,
+        0.5,
+    )
     assert est.make(*args).map(1) <= 0.5
     assert est.__dict__ == state
 
@@ -342,16 +436,28 @@ def test_clone_get_params_set_params_and_fitted_center_authority():
     np.testing.assert_array_equal(est.transform(_two_blob_data()), before)
     assert (
         est.make_transform(
-            dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)), _METRIC
+            dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
+            _METRIC,
         ).output_domain.descriptor.X.descriptor.num_columns
         == 2
     )
 
 
 @pytest.mark.parametrize("kind", ["epsilon", "rho"])
-def test_query_is_lazy_refits_supplied_estimator_and_charges_exactly_once(kind, monkeypatch):
+def test_query_is_lazy_releases_fitted_clone_and_charges_exactly_once(
+    kind, monkeypatch
+):
     calls = []
+    releases = []
     original = spherical._cluster_feature_sums
+    original_project = spherical._project_centers
+
+    def record_release(*args):
+        centers = original_project(*args)
+        releases.append(centers.copy())
+        return centers
+
+    monkeypatch.setattr(spherical, "_project_centers", record_release)
 
     def count_calls(*args):
         calls.append(1)
@@ -361,18 +467,30 @@ def test_query_is_lazy_refits_supplied_estimator_and_charges_exactly_once(kind, 
     ctx = _context(_two_blob_data(), kind=kind)
     template = SphericalKMeans(**_PARAMS)
     template._ingest_release(_centers())
-    state = template.cluster_centers_.copy()
+    original_centers = template.cluster_centers_
+    state = original_centers.copy()
     query = ctx.query()
     chain = query._chain
     fitted_query = query.sklearn(template)
     assert fitted_query.resolve().map(1) <= 0.5
-    assert calls == [] and ctx.current_privacy_loss() == []
+    assert calls == [] and releases == [] and ctx.current_privacy_loss() == []
     np.testing.assert_array_equal(template.cluster_centers_.toarray(), state.toarray())
     template.set_params(n_clusters=3)
     fitted = fitted_query.release()
-    assert fitted is template
+    assert fitted is not template
+    assert fitted.get_params() == _PARAMS
     assert fitted.cluster_centers_.shape == (2, 6)
-    assert template.n_clusters == 3
+    np.testing.assert_array_equal(
+        fitted.cluster_centers_.toarray(), releases[-1].toarray()
+    )
+    assert template.get_params() == {**_PARAMS, "n_clusters": 3}
+    assert template.cluster_centers_ is original_centers
+    np.testing.assert_array_equal(template.cluster_centers_.toarray(), state.toarray())
+    for name in ("data", "indices", "indptr"):
+        assert not np.shares_memory(
+            getattr(fitted.cluster_centers_, name),
+            getattr(template.cluster_centers_, name),
+        )
     assert query._chain is chain
     assert len(calls) == _PARAMS["max_iter"]
     assert ctx.current_privacy_loss() == [0.5]
@@ -381,7 +499,10 @@ def test_query_is_lazy_refits_supplied_estimator_and_charges_exactly_once(kind, 
     released_centers = fitted.cluster_centers_.copy()
     with pytest.raises(dp.OpenDPException, match="out of queries"):
         fitted_query.release()
-    np.testing.assert_array_equal(template.cluster_centers_.toarray(), released_centers.toarray())
+    np.testing.assert_array_equal(
+        fitted.cluster_centers_.toarray(), released_centers.toarray()
+    )
+    np.testing.assert_array_equal(template.cluster_centers_.toarray(), state.toarray())
     assert len(calls) == _PARAMS["max_iter"]
 
 
@@ -394,7 +515,9 @@ def test_preceding_nonidentity_transformation_calibrates_distance(kind, monkeypa
         _METRIC,
         domain,
         _METRIC,
-        lambda data: dp.sklearn.SklearnFit(sparse.vstack([data.X, data.X], format="csr")),
+        lambda data: dp.sklearn.SklearnFit(
+            sparse.vstack([data.X, data.X], format="csr")
+        ),
         lambda distance: distance * 2,
     )
     calls = []
@@ -428,7 +551,9 @@ def test_preceding_nonidentity_transformation_calibrates_distance(kind, monkeypa
 
 def _fit_data():
     vector = dp.vector_domain(dp.atom_domain(T=int))
-    domain = dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool), vector)
+    domain = dp.sklearn.sklearn_fit_domain(
+        csr_array2_domain(6, max_rows=None, T=bool), vector
+    )
     data = dp.sklearn.SklearnFit(_two_blob_data(), list(range(6)))
     return domain, data
 
@@ -439,14 +564,19 @@ def test_fit_supports_private_targets(route):
     template = SphericalKMeans(**_PARAMS)
     if route != "query":
         fitted = _fit(
-            template, data.X, y=data.y, domain=domain,
+            template,
+            data.X,
+            y=data.y,
+            domain=domain,
         )
         assert fitted is template
     else:
         # Context inputs are always a complete, privately aligned carrier.
         ctx = _context(data, domain=domain)
         fitted = ctx.query().sklearn(template).release()
-        assert fitted is template
+        assert fitted is not template
+        assert vars(template) == _PARAMS
+        assert ctx.current_privacy_loss() == [0.5]
     assert fitted.n_features_in_ == 6
     assert domain.member(data)
     assert "y" not in vars(fitted)
@@ -455,11 +585,15 @@ def test_fit_supports_private_targets(route):
 @pytest.mark.parametrize("standalone", [False, True])
 def test_release_copy_detaches_opendp_metadata_and_pickle_inference(standalone):
     x = _two_blob_data()
-    est = (
-        _fit()
-        if standalone
-        else _context(x).query().sklearn(SphericalKMeans(**_PARAMS)).release()
-    )
+    if standalone:
+        est = _fit()
+    else:
+        query = _context(x).query().sklearn(SphericalKMeans(**_PARAMS))
+        # Serialize inside DP postprocessing, before the generic FFI invocation
+        # metadata layer (as in the shared estimator tests).
+        est = pickle.loads(
+            query.new_with(chain=query.resolve() >> pickle.dumps).release()
+        )
     assert "__opendp_dict__" not in vars(est.cluster_centers_)
     assert set(vars(est)) == set(_PARAMS) | {"cluster_centers_", "n_features_in_"}
     restored = pickle.loads(pickle.dumps(est))
@@ -467,7 +601,9 @@ def test_release_copy_detaches_opendp_metadata_and_pickle_inference(standalone):
     np.testing.assert_array_equal(restored.transform(x), est.transform(x))
     assert restored.score(x) == est.score(x)
     domain = dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool))
-    assert restored.make_transform(domain, _METRIC).output_domain.member(dp.sklearn.SklearnFit(restored.transform(x)))
+    assert restored.make_transform(domain, _METRIC).output_domain.member(
+        dp.sklearn.SklearnFit(restored.transform(x))
+    )
 
 
 @pytest.mark.parametrize("route", ["standalone", "context"])
@@ -478,17 +614,34 @@ def test_refitting_replaces_centers_and_keeps_old_transform_valid(route):
     context = _context(data, domain=domain, split=2)
 
     def fit():
-        return _fit(model) if route == "standalone" else context.query().sklearn(model).release()
+        return (
+            _fit(model)
+            if route == "standalone"
+            else context.query().sklearn(model).release()
+        )
 
-    assert fit() is model
+    template = model
+    model = fit()
+    if route == "standalone":
+        assert model is template
+    else:
+        assert model is not template
+        assert vars(template) == _PARAMS
     old_centers = model.cluster_centers_
     transform = model.make_transform(domain, _METRIC)
     before = transform(data).X
     model.cluster_centers_.data[:] = 0
     model.set_params(n_clusters=3, max_iter=1)
-    assert fit() is model
-    assert model.cluster_centers_ is not old_centers
-    assert model.cluster_centers_.shape == (3, 6)
+    refitted = fit()
+    if route == "standalone":
+        assert refitted is model
+    else:
+        assert refitted is not model
+        assert model.cluster_centers_ is old_centers
+        assert not model.cluster_centers_.data.any()
+    assert refitted.cluster_centers_ is not old_centers
+    assert refitted.cluster_centers_.shape == (3, 6)
+    assert refitted.get_params() == {**_PARAMS, "n_clusters": 3, "max_iter": 1}
     np.testing.assert_array_equal(transform(data).X, before)
     assert transform.output_domain.descriptor.X.descriptor.num_columns == 2
     if route == "context":
@@ -499,8 +652,12 @@ def test_inherited_fit_transform_uses_private_fit():
     model = SphericalKMeans(**_PARAMS)
     X = _two_blob_data()
     result = model.fit_transform(
-        X, domain=dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
-        privacy_unit=(_METRIC, 1), privacy_loss=(_measure("rho"), 0.5),
+        X,
+        domain=dp.sklearn.sklearn_fit_domain(
+            csr_array2_domain(6, max_rows=None, T=bool)
+        ),
+        privacy_unit=(_METRIC, 1),
+        privacy_loss=(_measure("rho"), 0.5),
     )
     np.testing.assert_array_equal(result, model.transform(X))
     assert result.shape == (6, 2)
@@ -535,15 +692,11 @@ def test_rowwise_transform_predict_preserve_targets_and_empty_inputs():
         result = t(value)
         assert t.output_domain.member(result)
         assert t.map(0) == 0 and t.map(3) == 3
-        np.testing.assert_array_equal(
-            result.X, inference(data.X)
-        )
+        np.testing.assert_array_equal(result.X, inference(data.X))
         assert result.y is data.y
         retained = dp.sklearn.SklearnFit(data.X[:1], data.y[:1])
         out = t(retained)
-        np.testing.assert_array_equal(
-            result.X[:1], out.X
-        )
+        np.testing.assert_array_equal(result.X[:1], out.X)
         empty_x = sparse.csr_array((0, 6), dtype=bool)
         empty = dp.sklearn.SklearnFit(empty_x, [])
         out_empty = t(empty)
@@ -553,9 +706,7 @@ def test_rowwise_transform_predict_preserve_targets_and_empty_inputs():
     before = snapshot(value)
     est.cluster_centers_.data[:] = 0
     after = snapshot(value)
-    np.testing.assert_array_equal(
-        before.X, after.X
-    )
+    np.testing.assert_array_equal(before.X, after.X)
 
 
 def test_postprocessing_requires_fitted_matching_domain_metric_and_score_bound():
@@ -565,16 +716,29 @@ def test_postprocessing_requires_fitted_matching_domain_metric_and_score_bound()
     est._ingest_release(_centers())
     for method in (est.make_transform, est.make_predict):
         with pytest.raises(ValueError, match="number of features"):
-            method(dp.sklearn.sklearn_fit_domain(csr_array2_domain(5, max_rows=None, T=bool)), _METRIC)
+            method(
+                dp.sklearn.sklearn_fit_domain(
+                    csr_array2_domain(5, max_rows=None, T=bool)
+                ),
+                _METRIC,
+            )
         with pytest.raises(ValueError, match="add/remove"):
-            method(dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)), dp.change_one_distance())
+            method(
+                dp.sklearn.sklearn_fit_domain(
+                    csr_array2_domain(6, max_rows=None, T=bool)
+                ),
+                dp.change_one_distance(),
+            )
+
 
 @pytest.mark.parametrize("kind", ["epsilon", "rho"])
 def test_recovers_well_separated_blobs_with_supported_input(kind):
     est = SphericalKMeans(**_PARAMS)
     est.fit(
         _two_blob_data(reps=200),
-        domain=dp.sklearn.sklearn_fit_domain(csr_array2_domain(6, max_rows=None, T=bool)),
+        domain=dp.sklearn.sklearn_fit_domain(
+            csr_array2_domain(6, max_rows=None, T=bool)
+        ),
         privacy_unit=(_METRIC, 1),
         privacy_loss=(_measure(kind), 50.0),
     )
@@ -589,7 +753,9 @@ def test_spherical_constructors_require_boolean_domains(T):
     with pytest.raises(ValueError, match="T=bool"):
         _measurement(domain)
     with pytest.raises(ValueError, match="T=bool"):
-        spherical.make_cluster_feature_sums(domain, _METRIC, centers=_centers(), max_active=3)
+        spherical.make_cluster_feature_sums(
+            domain, _METRIC, centers=_centers(), max_active=3
+        )
     est = SphericalKMeans(**_PARAMS)
     est._ingest_release(_centers())
     for method in (est.make_transform, est.make_predict):
