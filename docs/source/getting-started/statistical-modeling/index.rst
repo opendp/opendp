@@ -17,4 +17,5 @@ this may be a good option.
 
   linear-regression
   pca
+  spherical-kmeans
   synthetic-data
