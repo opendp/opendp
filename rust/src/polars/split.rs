@@ -37,7 +37,7 @@ use crate::{
 /// The trusted executor must enforce protected intermediates, a consistent
 /// snapshot, one-shot execution, final shuffling and cleanup. Cross-process
 /// serialization retains the input plan's requirements for FFI-backed plugins.
-#[allow(dead_code)] // Pending trusted OnceFrame integration.
+#[cfg_attr(not(feature = "ffi"), allow(dead_code))]
 pub(crate) fn split_plan(plan: DslPlan, work_dir: &Path) -> Fallible<(DslPlan, DslPlan)> {
     let mut splitter = Splitter {
         work_dir,

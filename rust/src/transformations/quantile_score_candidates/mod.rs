@@ -264,8 +264,9 @@ pub(crate) fn score_candidates<TIA: PartialOrd>(
     let (mut lt, mut le) = (0u64, 0u64);
 
     let counts = zip(hist_ro, hist_lo).map(move |(ro, lo)| {
-        // Prefix sums count records strictly below and at-or-below each candidate.
+        // cumsum the right-open histogram to get the total number of records less than the candidate
         lt += ro;
+        // cumsum the left-open histogram to get the total number of records lt or equal to the candidate
         le += lo;
         (lt, le)
     });
@@ -283,7 +284,11 @@ pub(crate) fn score_candidate_counts(
 ) -> impl Iterator<Item = u64> {
     counts.map(move |(lt, le)| {
         let gt = n - le;
+
+        // ensures the score calculation won't overflow
         let (lt_lim, gt_lim) = (lt.min(size_limit), gt.min(size_limit));
+
+        // |     (1 - α)         * #(x < c)    -           α * #(x > c)| * α_den
         ((alpha_den - alpha_num) * lt_lim).abs_diff(alpha_num * gt_lim)
     })
 }

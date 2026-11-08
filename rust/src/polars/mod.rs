@@ -505,13 +505,21 @@ pub enum OnceFrameAnswer {
 
 pub(crate) struct ExtractLazyFrame;
 
+/// Consume the plan before handing it to a trusted external executor.
+pub(crate) struct TakeLazyFrame;
+
 pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
 
 impl From<LazyFrame> for OnceFrame {
     fn from(value: LazyFrame) -> Self {
         let mut state = Some(value);
         Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
-            let Some(lazyframe) = state.clone() else {
+            let lazyframe = if matches!(&query, Query::Internal(q) if q.is::<TakeLazyFrame>()) {
+                state.take()
+            } else {
+                state.clone()
+            };
+            let Some(lazyframe) = lazyframe else {
                 return fallible!(FailedFunction, "OnceFrame has been exhausted");
             };
             Ok(match query {
@@ -525,7 +533,7 @@ impl From<LazyFrame> for OnceFrame {
                     }
                 }),
                 Query::Internal(q_internal) => Answer::Internal({
-                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                    if q_internal.is::<ExtractLazyFrame>() || q_internal.is::<TakeLazyFrame>() {
                         Box::new(lazyframe)
                     } else {
                         return fallible!(FailedFunction, "Unrecognized internal query");

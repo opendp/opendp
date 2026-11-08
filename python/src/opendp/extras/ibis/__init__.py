@@ -16,11 +16,11 @@ The members of this module will then be accessible at ``dp.ibis``.
     It supports only a limited set of polars expressions,
     and in the future the API may change.
 
-    For the moment, ``contrib`` must be enabled to use this functionality:
+    For the moment, ``contrib`` and ``honest-but-curious`` must be enabled:
 
     .. code:: pycon
 
-        >>> dp.enable_features("contrib")
+        >>> dp.enable_features("contrib", "honest-but-curious")
 """
 
 __all__ = ["run_on_database", "get_connection", "scan_database"]
@@ -69,11 +69,14 @@ def run_on_database(query, connection, table_name: str):
     runs the query on the database,
     and returns the result.
 
-    The ``contrib`` feature must be enabled until we are confident in this code.
+    Requires ``contrib`` and ``honest-but-curious``. The connection and executor
+    must be trusted with private data. The query is consumed even if execution
+    fails; intermediate IPC files are protected and removed before returning.
 
     :param query: A Polars query be translated to SQL.
     :param table_name: The name of the database table.
-    :param connection: A connection object.
+    :param connection: A DuckDB or SQLite connection with no active transaction.
+    :returns: A Polars DataFrame containing the complete randomized result.
 
     :example:
 
@@ -110,67 +113,61 @@ def run_on_database(query, connection, table_name: str):
         ...     warnings.simplefilter("ignore")
         ...     result = run_on_database(query, connection, table_name)
 
-        >>> print("DP result:", result)
+        >>> print("DP result:", list(result.row(0)))
         DP result: [...]
         >>> connection.disconnect()
 
     """
     import opendp.prelude as dp
 
-    from polars_to_ibis import split_polars_on_ffi
+    dp.assert_features("contrib", "honest-but-curious")
+    return _run_on_database(query.release(), connection, table_name)
 
-    dp.assert_features("contrib")
 
-    query_lf = query.release().lazy()
+def _run_on_database(onceframe, connection, table_name: str):
+    from tempfile import TemporaryDirectory
 
-    ibis_table, param_dicts = split_polars_on_ffi(
-        query_lf,
-        table_name=table_name,
-        backend=connection,
-        # In the future, add a parameter to specify the plugin to split on?
-    )
+    from opendp._data import onceframe_split
 
-    # Use ibis_table:
-
-    private_result = connection.to_polars(ibis_table).to_dict(as_series=False)
-    # For now, assume result dataframe is only a single row,
-    # so pull out single values with [0],
-    # but I'm not sure that will always be true.
-    private_items = [v[0] for v in private_result.values()]
-
-    # Use param_dicts:
-
-    # TODO: Find an alternative to pickle.
-    # https://github.com/opendp/opendp/issues/2989
-    import pickle
-
-    unpickled_kwargs = []
-    for param_dict in param_dicts:
-        unpickled_kwargs.append(pickle.loads(bytes(param_dict["kwargs"])))
-
-    if len(private_items) != len(unpickled_kwargs):
-        raise dp.OpenDPException(
-            "Some operations (like dp.mean) are not currently supported "
-            "because the plugin-parameters are not 1-1 with the private values."
-        )  # pragma: no cover
-
-    dp_results = []
-    for private_item, kwargs in zip(private_items, unpickled_kwargs):
-        support = {
-            "Integer": int,
-            "Float": float,
-        }[kwargs["support"]]
-        input_space = (
-            dp.atom_domain(T=support, nan=False),
-            dp.absolute_distance(T=support),
+    if connection.name not in {"duckdb", "sqlite"}:
+        raise NotImplementedError(
+            "Database execution currently requires a DuckDB or SQLite snapshot."
         )
 
-        make = {
-            "Laplace": dp.m.make_laplace,
-            "Gaussian": dp.m.make_gaussian,
-        }[kwargs["distribution"]]
-        measurement = make(*input_space, scale=kwargs["scale"])
+    with TemporaryDirectory(prefix="opendp-ibis-") as work_dir:
+        sinks, continuation = onceframe_split(onceframe.queryable, work_dir)
+        connection.raw_sql("BEGIN TRANSACTION")
+        try:
+            _materialize_sinks(sinks, connection, table_name)
+            return continuation.collect().sample(fraction=1.0, shuffle=True)
+        finally:
+            connection.raw_sql("ROLLBACK")
 
-        dp_results.append(measurement(private_item))
 
-    return dp_results
+def _materialize_sinks(sinks, connection, table_name: str):
+    import io
+    import json
+    import warnings
+
+    import polars as pl
+    from polars_to_ibis import convert_polars_to_ibis
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        inputs = json.loads(sinks.serialize(format="json"))["SinkMultiple"]["inputs"]
+
+    for node in inputs:
+        sink = node["Sink"]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            head = pl.LazyFrame.deserialize(
+                io.StringIO(json.dumps(sink["input"])), format="json"
+            )
+        if "DataFrameScan" in sink["input"]:
+            result = head.collect()
+        else:
+            query = convert_polars_to_ibis(
+                head, table_name=table_name, backend=connection
+            )
+            result = connection.to_polars(query, limit=None)
+        result.write_ipc(sink["payload"]["File"]["target"]["Local"])
