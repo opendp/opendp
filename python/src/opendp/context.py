@@ -461,6 +461,7 @@ class Context(object):
     :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
     :param d_out: An upper bound on the overall privacy loss. Used for filters.
     :param query_space: The input space of queries to the context. If not specified, it defaults to the input space of the compositor.
+    :param measurement_adapter: Optional adapter applied after Polars query calibration.
     """
 
     accountant: Union[Measurement, Odometer]
@@ -478,6 +479,7 @@ class Context(object):
         d_mids: Optional[Union[list[float], list[tuple[float, float]]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
         query_space: Optional[tuple[Domain, Metric]] = None,
+        measurement_adapter: Optional[Callable[[Measurement], Measurement]] = None,
     ):
         self.accountant = accountant
         self.queryable = queryable
@@ -487,7 +489,7 @@ class Context(object):
 
         self.d_mids_consumed: Union[list[float], list[tuple[float, float]]] = []
         self.query_space = query_space
-        self._is_ibis = False
+        self._measurement_adapter = measurement_adapter
 
     def __repr__(self) -> str:
         return f"""Context(
@@ -547,7 +549,11 @@ class Context(object):
         :param split_by_weights: A list of weights for each intermediate privacy loss.
         :param domain: The domain of the data.
         :param margins: Descriptors for grouped data."""
-        from opendp.extras.ibis import _IbisSource, _ibis_domain
+        from opendp.extras.ibis import (
+            _IbisSource,
+            _ibistable_domain,
+            _adapt_ibis_measurement,
+        )
 
         is_ibis = isinstance(data, _IbisSource)
         if domain is None:
@@ -573,9 +579,13 @@ class Context(object):
                 domain = with_margin(domain, margin)
 
         query_space = None
+        measurement_adapter = None
         if is_ibis:
+            # Keep analysis-space adjacency checks before erasing the carrier.
+            _check_sized_contributions(domain, *privacy_unit)
             query_space = (domain, privacy_unit[0])
-            domain = _ibis_domain(domain)
+            domain = _ibistable_domain(domain)
+            measurement_adapter = partial(_adapt_ibis_measurement, source_domain=domain)
             data = data.table
             if not domain.member(data):
                 raise ValueError(
@@ -599,16 +609,15 @@ class Context(object):
                 )
             raise e
 
-        context = Context(
+        return Context(
             accountant=accountant,
             queryable=queryable,
             d_in=privacy_unit[1],
             d_mids=d_mids,
             d_out=d_out,
             query_space=query_space,
+            measurement_adapter=measurement_adapter,
         )
-        context._is_ibis = is_ibis
-        return context
 
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
@@ -667,7 +676,7 @@ class Context(object):
 
             # creates an empty lazyframe to hold the query plan
             polars_plan = _lazyframe_from_domain(chain[0])
-            return LazyFrameQuery(polars_plan, query)
+            return LazyFrameQuery(polars_plan, query, self._measurement_adapter)
 
         return query
 

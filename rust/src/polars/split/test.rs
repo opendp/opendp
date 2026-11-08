@@ -1174,7 +1174,7 @@ fn literal_scorer_inputs_are_rejected() -> Fallible<()> {
 }
 
 #[test]
-fn aggregation_local_removals_are_rejected() -> Fallible<()> {
+fn aggregation_local_removals_are_preserved_in_histogram_heads() -> Fallible<()> {
     use crate::domains::OptionDomain;
     let input = df!("key" => [0i32; 3], "value" => [Some(1f64), None, Some(f64::NAN)])?.lazy();
     let domain = test_domain(
@@ -1196,9 +1196,18 @@ fn aggregation_local_removals_are_rejected() -> Fallible<()> {
                     .quantile(0.5, Series::new("".into(), [1f64, 3., 6.]), Some(0.));
             let query = aggregate(&input, [q], grouped);
             let dir = WorkDir::new();
-            let err = split_plan(resolve_domain(&input, query, domain.clone(), None)?, &dir.0)
-                .unwrap_err();
-            assert!(format!("{err:?}").contains("cardinality-changing scorer"));
+            let plans = split_plan(resolve_domain(&input, query, domain.clone(), None)?, &dir.0)?;
+            assert_eq!(plans.len(), 2);
+            let DslPlan::GroupBy { input: buckets, .. } = &plans[0] else {
+                panic!("expected histogram head");
+            };
+            let DslPlan::HStack { input: values, .. } = buckets.as_ref() else {
+                panic!("expected bucket computation");
+            };
+            let DslPlan::HStack { exprs, .. } = values.as_ref() else {
+                panic!("expected scorer input computation");
+            };
+            assert!(exprs[0].into_iter().any(|node| node == &source));
             assert!(!dir.0.exists());
         }
     }

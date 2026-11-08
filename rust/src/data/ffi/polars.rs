@@ -6,11 +6,52 @@ use polars::lazy::frame::LazyFrame;
 use crate::{
     core::FfiResult,
     ffi::{
-        any::{AnyObject, AnyQueryable, Downcast},
-        util,
+        any::{AnyObject, AnyQueryable, CallbackFn, Downcast, QueryType, wrap_func},
+        util::{self, Type},
     },
-    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery, TakeLazyFrame, split::split_plan},
+    interactive::{Answer, Query},
+    polars::{
+        ExtractLazyFrame, OnceFrame, OnceFrameAnswer, OnceFrameQuery, TakeLazyFrame,
+        split::split_plan,
+    },
 };
+
+#[bootstrap(
+    features("contrib"),
+    name = "onceframe_with_collector",
+    arguments(collector(rust_type = "$pass_through(DataFrame)")),
+    returns(c_type = "FfiResult<AnyObject *>", rust_type = "AnyQueryable")
+)]
+/// Internal function. Constructs a one-shot OnceFrame without an extractable plan.
+/// The collector must shuffle the final output.
+///
+/// # Arguments
+/// * `collector` - A callback taking false and returning the collected DataFrame.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__onceframe_with_collector(
+    collector: *const CallbackFn,
+) -> FfiResult<*mut AnyObject> {
+    let collector = wrap_func(try_as_ref!(collector).clone());
+    let mut onceframe =
+        OnceFrame::with_collector(move || collector(&AnyObject::new(false))?.downcast());
+    let queryable = AnyQueryable::new_raw(move |_, query: Query<AnyObject>| {
+        Ok(match query {
+            Query::External(query) => {
+                Answer::External(AnyObject::new(onceframe.eval(query.downcast_ref()?)?))
+            }
+            Query::Internal(query) => {
+                if query.is::<QueryType>() {
+                    return Ok(Answer::internal(Type::of::<OnceFrameQuery>()));
+                }
+                let Answer::Internal(answer) = onceframe.eval_query(Query::Internal(query))? else {
+                    return fallible!(FailedFunction, "internal query returned external answer");
+                };
+                Answer::Internal(answer)
+            }
+        })
+    });
+    Ok(AnyObject::new(queryable)).into()
+}
 
 #[bootstrap(
     name = "onceframe_collect",
@@ -116,96 +157,4 @@ pub extern "C" fn opendp_data__onceframe_split(
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-    use crate::error::Fallible;
-    use crate::{
-        ffi::any::{AnyObject, AnyQueryable, Downcast},
-        interactive::{Answer, Query},
-        measurements::expr_noisy_max::NoisyMaxPlugin,
-        polars::{OnceFrame, apply_anonymous_function},
-        transformations::expr_discrete_quantile_score::DiscreteQuantileScorePlugin,
-    };
-    use polars::prelude::*;
-    use std::ffi::CString;
-
-    #[test]
-    fn test_onceframe_split_ffi_vector_and_consumption() -> Fallible<()> {
-        let input = df!("A" => [1i32, 3, 6])?.lazy();
-        let scores = apply_anonymous_function(
-            vec![col("A")],
-            DiscreteQuantileScorePlugin {
-                candidates: Series::new("".into(), [1i32, 3, 6]),
-                alpha: (1, 2),
-                size_limit: 10,
-            },
-        );
-        let release = apply_anonymous_function(
-            vec![scores],
-            NoisyMaxPlugin {
-                replacement: false,
-                scale: 0.,
-                negate: true,
-            },
-        );
-        let private = input
-            .clone()
-            .select([release.clone().alias("a"), release.alias("b")]);
-        let extra_source =
-            private
-                .clone()
-                .join(input.clone(), [col("a")], [col("A")], JoinType::Left.into());
-        let work_dir = CString::new("unused").unwrap();
-        // Success, unsupported plans/sources, and invalid UTF-8 all exhaust the
-        // same shared state before returning across the FFI.
-        for (plan, path, succeeds) in [
-            (private, work_dir.clone(), true),
-            (extra_source, work_dir.clone(), false),
-            (input.clone(), work_dir, false),
-            (input, CString::new(vec![0xff]).unwrap(), false),
-        ] {
-            let mut onceframe = OnceFrame::from(plan);
-            let mut alias = onceframe.clone();
-            let queryable = AnyQueryable::new_raw(move |_, query: Query<AnyObject>| {
-                Ok(match query {
-                    Query::External(q) => {
-                        Answer::External(AnyObject::new(onceframe.eval(q.downcast_ref()?)?))
-                    }
-                    Query::Internal(q) => {
-                        let Answer::Internal(a) = onceframe.eval_query(Query::Internal(q))? else {
-                            unreachable!()
-                        };
-                        Answer::Internal(a)
-                    }
-                })
-            });
-            let mut object = AnyObject::new(queryable);
-            let result: Fallible<AnyObject> =
-                opendp_data__onceframe_split(&mut object, path.as_ptr()).into();
-            if succeeds {
-                let plans: Vec<AnyObject> = result?.downcast()?;
-                assert_eq!(
-                    plans.len(),
-                    3,
-                    "two deterministic heads, final continuation"
-                );
-                let plans = plans
-                    .into_iter()
-                    .map(|p| p.downcast::<LazyFrame>())
-                    .collect::<Fallible<Vec<_>>>()?;
-                assert!(matches!(plans[0].logical_plan, DslPlan::GroupBy { .. }));
-                assert!(matches!(plans[1].logical_plan, DslPlan::GroupBy { .. }));
-                assert!(matches!(plans[2].logical_plan, DslPlan::Select { .. }));
-            } else {
-                assert!(result.is_err());
-            }
-            assert!(alias.eval(&OnceFrameQuery::Collect).is_err());
-            assert!(alias.eval_internal::<LazyFrame>(&ExtractLazyFrame).is_err());
-            assert!(alias.eval_internal::<LazyFrame>(&TakeLazyFrame).is_err());
-            let retry: Fallible<AnyObject> =
-                opendp_data__onceframe_split(&mut object, path.as_ptr()).into();
-            assert!(retry.is_err());
-        }
-        Ok(())
-    }
-}
+mod test;

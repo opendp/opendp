@@ -545,6 +545,25 @@ impl From<LazyFrame> for OnceFrame {
 }
 
 impl OnceFrame {
+    /// Construct a one-shot collector. The collector must shuffle the final output.
+    pub fn with_collector(collector: impl FnOnce() -> Fallible<DataFrame> + 'static) -> Self {
+        let mut collector = Some(collector);
+        Self::new_raw(
+            move |_self: &Self, query: Query<OnceFrameQuery>| match query {
+                Query::External(OnceFrameQuery::Collect) => {
+                    let collect = collector
+                        .take()
+                        .ok_or_else(|| err!(FailedFunction, "OnceFrame has been exhausted"))?;
+                    Ok(Answer::External(OnceFrameAnswer::Collect(collect()?)))
+                }
+                Query::Internal(_) => fallible!(
+                    FailedFunction,
+                    "Collector-backed OnceFrame has no LazyFrame"
+                ),
+            },
+        )
+    }
+
     pub fn collect(mut self) -> Fallible<DataFrame> {
         if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
             self.eval_query(Query::External(&OnceFrameQuery::Collect))?

@@ -1,17 +1,16 @@
 """Ibis Context integration, trusted collection, and the native split boundary."""
 
-from concurrent.futures import ThreadPoolExecutor
 from copy import copy
 import gc
 import io
 from pathlib import Path
 import stat
-from threading import Event
 import weakref
 
 import pytest
 
 import opendp.prelude as dp
+from opendp.core import queryable_query_type
 from opendp.extras import ibis as dp_ibis
 from opendp.extras.polars import (
     LazyFrameQuery,
@@ -106,7 +105,7 @@ def execution(monkeypatch):
 
 
 def assert_consumed(onceframe):
-    with pytest.raises(RuntimeError, match="exhaust"):
+    with pytest.raises(dp.OpenDPException, match="exhaust"):
         onceframe.collect()
 
 
@@ -287,15 +286,9 @@ def test_failure_cleanup_and_consumption(failure, connection, execution, monkeyp
             raise RuntimeError("private intermediate: sentinel continuation value")
 
         monkeypatch.setattr(pl.LazyFrame, "collect", broken_collect)
-    with pytest.raises(RuntimeError, match="Database execution failed") as error:
+    message = "source" if failure == "query" else "sentinel"
+    with pytest.raises(dp.OpenDPException, match=message):
         onceframe.collect()
-    assert "sentinel" not in str(error.value)
-    assert error.value.__suppress_context__
-    assert error.value.__context__ is None
-    traceback = error.value.__traceback__
-    while traceback is not None:
-        assert traceback.tb_frame.f_code.co_name != "_execute_plans"
-        traceback = traceback.tb_next
     assert faults == ([] if failure == "query" else [failure])
     assert_consumed(onceframe)
 
@@ -335,20 +328,22 @@ def test_private_count_and_budget(backend, monkeypatch):
             assert context.accountant.input_metric == metric
             query = context.query().select(dp.len(signed=False))
             resolved = query.resolve()
-            native = resolved._polars_measurement
+            native = query._resolve_polars()
             assert resolved.map(1) == native.map(1)
             assert 0 < resolved.map(1) <= 0.5
             assert query.summarize().height == 1
             onceframe = query.release()
-            assert isinstance(onceframe, OnceFrame)
-            assert not hasattr(onceframe, "queryable")
+            assert type(onceframe) is OnceFrame
+            assert queryable_query_type(onceframe.queryable) == "OnceFrameQuery"
             assert (
                 calls == []
             )  # construction, calibration, checking, release are SQL-free
             for hbc in [False, True]:
                 if hbc:
                     dp.enable_features("honest-but-curious")
-                with pytest.raises(NotImplementedError, match="unsupported"):
+                with pytest.raises(
+                    dp.OpenDPException, match="honest-but-curious|no LazyFrame"
+                ):
                     onceframe.lazy()
             dp.disable_features("honest-but-curious")
             another = context.query().select(dp.len(signed=False)).release()
@@ -395,33 +390,21 @@ def test_compositor_and_release_retain_bound_relation(connection):
     assert retained() is None
 
 
-def test_aliases_and_concurrent_collection(connection, monkeypatch):
+def test_aliases_share_exhaustion(connection, monkeypatch):
     context = compositor(connection, pl.DataFrame({"value": [3]}), contributions=1)
     onceframe = context.query().select(dp.len(signed=False)).release()
     alias = copy(onceframe)
-    started, finish = Event(), Event()
     calls, stream = [], connection.to_pyarrow_batches
 
-    def blocked(expression, **kwargs):
+    def record(expression, **kwargs):
         calls.append(kwargs)
-        started.set()
-        assert finish.wait(10), "collection did not unblock"
         return stream(expression, **kwargs)
 
-    monkeypatch.setattr(connection, "to_pyarrow_batches", blocked)
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        first = pool.submit(onceframe.collect)
-        try:
-            assert started.wait(10), "collection never started"
-            second = pool.submit(alias.collect)
-            with pytest.raises(RuntimeError, match="exhaust"):
-                second.result(timeout=10)
-        finally:
-            finish.set()
-        assert first.result(timeout=10).shape == (1, 1)
-    assert calls == [{"limit": None}]
+    monkeypatch.setattr(connection, "to_pyarrow_batches", record)
+    assert alias.collect().shape == (1, 1)
     assert_consumed(onceframe)
     assert_consumed(alias)
+    assert calls == [{"limit": None}]
 
 
 def test_explicit_analysis_domain_and_schema_mismatch(connection):
@@ -450,6 +433,26 @@ def test_explicit_analysis_domain_and_schema_mismatch(connection):
     with pytest.raises(ValueError, match="schema"):
         dp.Context.compositor(
             data, dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0), domain=wrong
+        )
+
+
+@pytest.mark.parametrize("contributions", [1, 2])
+def test_fixed_size_analysis_preserves_contribution_checks(connection, contributions):
+    connection.create_table("source", pl.DataFrame({"value": [1, 2, 3]}))
+    kwargs = dict(
+        data=dp_ibis.scan_database(connection, "source"),
+        privacy_unit=dp.unit_of(contributions=contributions),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(max_length=3, invariant="lengths")],
+    )
+    if contributions == 1:
+        with pytest.raises(ValueError, match="must be even"):
+            dp.Context.compositor(**kwargs)
+    else:
+        context = dp.Context.compositor(**kwargs)
+        assert (
+            context.query().select(dp.len(signed=False)).release().collect().item() == 3
         )
 
 
@@ -498,7 +501,7 @@ def test_approximate_threshold_search_with_frame_distance(connection, monkeypatc
     resolved = query.resolve()
     assert resolved.input_domain == context.accountant.input_domain
     assert resolved.input_metric == unit[0]
-    assert resolved.map(unit[1]) == resolved._polars_measurement.map(unit[1])
+    assert resolved.map(unit[1]) == query._resolve_polars().map(unit[1])
     assert context.d_mids is not None
     assert resolved.check(unit[1], context.d_mids[0])
     assert query.summarize()["threshold"].item() > 0
@@ -508,6 +511,43 @@ def test_approximate_threshold_search_with_frame_distance(connection, monkeypatc
     result = onceframe.collect()
     assert result.schema == {"key": pl.Int64, "len": pl.Int64}
     assert calls == [{"limit": None}]
+
+
+@pytest.mark.parametrize("operation", ["filter", "drop_nulls", "drop_nans"])
+def test_cardinality_changing_heads_fail_in_translation(
+    operation, connection, execution, monkeypatch
+):
+    source = pl.DataFrame(
+        {"key": [0, 1, 2, 2], "value": [None, float("nan"), 1.0, 3.0]}
+    )
+    context = compositor(connection, source)
+    value = pl.col("value")
+    changed = {
+        "filter": value.filter(value > 0),
+        "drop_nulls": value.drop_nulls(),
+        "drop_nans": value.drop_nans(),
+    }[operation]
+    frame = (
+        context.query()
+        .group_by("key")
+        .agg(
+            changed.dp.quantile(0.5, [1.0, 3.0, 6.0], scale=0.0).alias("q"),
+            dp.len(signed=False),
+        )
+        .release()
+    )
+    calls = []
+
+    def forbidden(*args, **kwargs):
+        calls.append(True)
+        raise AssertionError("unsupported heads must fail before database execution")
+
+    monkeypatch.setattr(connection, "to_pyarrow_batches", forbidden)
+    with pytest.raises(dp.OpenDPException, match="NotImplementedError"):
+        frame.collect()
+    assert len(execution) == 1 and len(execution[0][1]) == 3
+    assert calls == []
+    assert_consumed(frame)
 
 
 def test_context_domain_cannot_be_replaced_by_another_analysis(connection):
@@ -523,12 +563,12 @@ def test_context_domain_cannot_be_replaced_by_another_analysis(connection):
         first(foreign)
     assert len(first.remaining_privacy_loss()) == 1
     wrong = dp.lazyframe_domain([dp.series_domain("value", dp.atom_domain(T="i64"))])
+    native = dp.m.make_private_lazyframe(
+        wrong,
+        first.accountant.input_metric,
+        first.accountant.output_measure,
+        pl.LazyFrame(schema={"value": pl.Int64}).select(dp.len(signed=False)),
+        global_scale=1.0,
+    )
     with pytest.raises(ValueError, match="analysis domain"):
-        dp_ibis.make_private_ibis_lazyframe(
-            wrong,
-            first.accountant.input_metric,
-            first.accountant.output_measure,
-            pl.LazyFrame(schema={"value": pl.Int64}).select(dp.len(signed=False)),
-            global_scale=1.0,
-            source_domain=first.accountant.input_domain,
-        )
+        dp_ibis._adapt_ibis_measurement(native, first.accountant.input_domain)

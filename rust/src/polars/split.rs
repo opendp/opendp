@@ -10,8 +10,8 @@ use std::{
 use polars::{
     error::{PolarsResult, polars_err},
     prelude::{
-        DataType, DslPlan, Expr, FunctionExpr, JoinArgs, JoinCoalesce, JoinType, LiteralValue,
-        PlSmallStr, Scalar, Series, col, len, when,
+        DataType, DslPlan, Expr, JoinArgs, JoinCoalesce, JoinType, LiteralValue, PlSmallStr,
+        Scalar, Series, col, len, when,
     },
 };
 use polars_plan::{
@@ -422,20 +422,6 @@ impl RewritingVisitor for Extract<'_, '_> {
                 return Err(
                     polars_err!(InvalidOperation: "quantile extraction does not support literal-only scorer inputs"),
                 );
-            }
-            for node in input {
-                if matches!(
-                    node,
-                    Expr::Filter { .. }
-                        | Expr::Function {
-                            function: FunctionExpr::DropNulls | FunctionExpr::DropNans,
-                            ..
-                        }
-                ) {
-                    return Err(
-                        polars_err!(InvalidOperation: "quantile extraction does not support cardinality-changing scorer inputs (filter/drop_nulls/drop_nans)"),
-                    );
-                }
             }
             let value = self.splitter.names.fresh();
             let base = match &self.locals[0] {
