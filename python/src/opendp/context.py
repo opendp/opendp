@@ -487,6 +487,7 @@ class Context(object):
 
         self.d_mids_consumed: Union[list[float], list[tuple[float, float]]] = []
         self.query_space = query_space
+        self._is_ibis = False
 
     def __repr__(self) -> str:
         return f"""Context(
@@ -546,8 +547,16 @@ class Context(object):
         :param split_by_weights: A list of weights for each intermediate privacy loss.
         :param domain: The domain of the data.
         :param margins: Descriptors for grouped data."""
+        from opendp.extras.ibis import _IbisSource, _ibis_domain
+
+        is_ibis = isinstance(data, _IbisSource)
         if domain is None:
-            domain = domain_of(data, infer=True)
+            if is_ibis:
+                from opendp.extras.polars import _lazyframe_domain_from_schema
+
+                domain = _lazyframe_domain_from_schema(data.schema)
+            else:
+                domain = domain_of(data, infer=True)
 
         if margins:
             # allows dictionaries of {[by]: [margin]}
@@ -563,6 +572,16 @@ class Context(object):
             for margin in margins:
                 domain = with_margin(domain, margin)
 
+        query_space = None
+        if is_ibis:
+            query_space = (domain, privacy_unit[0])
+            domain = _ibis_domain(domain)
+            data = data.table
+            if not domain.member(data):
+                raise ValueError(
+                    "Ibis relation schema does not match the analysis domain."
+                )
+
         accountant, d_mids, d_out = _normalize_compositor(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
@@ -570,6 +589,8 @@ class Context(object):
         try:
             queryable = accountant(data)
         except TypeError as e:
+            if is_ibis:
+                raise
             inferred_domain = domain_of(data, infer=True)
             if vector_domain(domain) == inferred_domain:
                 # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
@@ -578,13 +599,16 @@ class Context(object):
                 )
             raise e
 
-        return Context(
+        context = Context(
             accountant=accountant,
             queryable=queryable,
             d_in=privacy_unit[1],
             d_mids=d_mids,
             d_out=d_out,
+            query_space=query_space,
         )
+        context._is_ibis = is_ibis
+        return context
 
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
@@ -642,7 +666,7 @@ class Context(object):
             from opendp.domains import _lazyframe_from_domain
 
             # creates an empty lazyframe to hold the query plan
-            polars_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            polars_plan = _lazyframe_from_domain(chain[0])
             return LazyFrameQuery(polars_plan, query)
 
         return query

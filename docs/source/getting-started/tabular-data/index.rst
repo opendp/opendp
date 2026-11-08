@@ -127,7 +127,7 @@ We'll use ``scan_csv`` to load data, but Polars can also read a number of `other
     Another option is to reference the database directly,
     either `reading a database table into memory <https://docs.pola.rs/user-guide/io/database/>`_,
     or (experimental feature) running your query on the database
-    with :py:func:`~opendp.extras.ibis.make_executor`.
+    with :py:func:`~opendp.extras.ibis.scan_database` and the Context API.
 
     Using ``ignore_errors=True`` avoids some parsing failures,
     but it may silently change the loaded data and reduce utility,

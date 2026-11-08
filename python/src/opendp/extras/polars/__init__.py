@@ -1054,9 +1054,18 @@ class LazyFrameQuery:
         query = object.__getattribute__(self, "_query")
         input_domain, input_metric = query._chain
         d_in, d_out = query._d_in, query._d_out
+        make_private = make_private_lazyframe
+        if query._context is not None and query._context._is_ibis:
+            from functools import partial
+            from opendp.extras.ibis import make_private_ibis_lazyframe
+
+            make_private = partial(
+                make_private_ibis_lazyframe,
+                source_domain=query._context.accountant.input_domain,
+            )
 
         def _make(scale, threshold=None):
-            return make_private_lazyframe(
+            return make_private(
                 input_domain=input_domain,
                 input_metric=input_metric,
                 output_measure=query._output_measure,
@@ -1175,7 +1184,11 @@ class LazyFrameQuery:
         """
         from opendp.accuracy import summarize_polars_measurement
 
-        return summarize_polars_measurement(self.resolve(), alpha)
+        measurement = self.resolve()
+        return summarize_polars_measurement(
+            cast(Measurement, getattr(measurement, "_polars_measurement", measurement)),
+            alpha,
+        )
 
     def contingency_table(
         self,
