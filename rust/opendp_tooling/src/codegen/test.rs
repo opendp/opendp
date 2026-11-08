@@ -163,7 +163,7 @@ fn test_r_partial_constructor_uses_declared_space_argument_names() {
     let actual_code = r::r::generate_r_function("fake_module", &function, &hierarchy);
 
     assert!(actual_code.contains("domain = output_domain(base_lhs)"));
-    assert!(actual_code.contains("metric = output_metric(base_lhs)"));
+    assert!(actual_code.contains("metric = opendp:::output_metric(base_lhs)"));
     assert!(!actual_code.contains("input_domain = output_domain(base_lhs)"));
-    assert!(!actual_code.contains("input_metric = output_metric(base_lhs)"));
+    assert!(!actual_code.contains("input_metric = opendp:::output_metric(base_lhs)"));
 }

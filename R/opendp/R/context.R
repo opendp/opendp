@@ -218,6 +218,48 @@ normalize_measure_distance <- function(dist) {
   }
 }
 
+# A one-ULP downward adjustment, without introducing a package dependency.
+# Remaining privacy loss is nonnegative, so only positive finite values need
+# their predecessor in the IEEE-754 double representation.
+next_double_down <- function(value) {
+  if (value <= 0) {
+    return(0.0)
+  }
+  if (is.infinite(value)) {
+    return(.Machine$double.xmax)
+  }
+
+  bytes <- writeBin(as.double(value), raw(), size = 8L, endian = "little")
+  for (i in seq_along(bytes)) {
+    byte <- as.integer(bytes[[i]])
+    if (byte > 0L) {
+      bytes[[i]] <- as.raw(byte - 1L)
+      break
+    }
+    bytes[[i]] <- as.raw(255L)
+  }
+  readBin(bytes, what = "double", n = 1L, size = 8L, endian = "little")
+}
+
+conservative_subtract <- function(total, spent) {
+  total <- normalize_measure_distance(total)
+  spent <- normalize_measure_distance(spent)
+  if (length(total) != length(spent)) {
+    stop("Mismatched privacy loss dimensions.", call. = FALSE)
+  }
+
+  remainder <- vapply(seq_along(total), function(i) {
+    if (spent[[i]] >= total[[i]]) {
+      return(0.0)
+    }
+    if (spent[[i]] == 0 || is.infinite(total[[i]])) {
+      return(as.numeric(total[[i]]))
+    }
+    next_double_down(total[[i]] - spent[[i]])
+  }, numeric(1))
+  normalize_measure_distance(remainder)
+}
+
 measure_type_string <- function(measure) {
   rt_to_string(get_type(measure))
 }
@@ -313,6 +355,26 @@ translate_measure_distance <- function(d_from, from_measure, to_measure, alpha =
   )
 }
 
+check_sized_contributions <- function(domain, input_metric, d_in) {
+  metric_type <- rt_to_string(get_type(input_metric))
+  if (!(metric_type %in% c("SymmetricDistance", "InsertDeleteDistance")) ||
+      length(d_in) != 1L || !is.numeric(d_in) || !is.finite(d_in) ||
+      d_in %% 2 != 1) {
+    return(invisible(NULL))
+  }
+
+  # The current R domain interface exposes size via its debug representation.
+  # A sized VectorDomain ends with ", size=N)".
+  if (grepl("^VectorDomain\\(.*?, size=[0-9]+\\)$", domain_debug(domain))) {
+    stop(
+      "Contribution bounds must be even when dataset size is known. ",
+      "For one replacement, use unit_of(contributions=2) or unit_of(changes=1).",
+      call. = FALSE
+    )
+  }
+  invisible(NULL)
+}
+
 normalize_compositor <- function(domain, privacy_unit, privacy_loss,
                                  split_evenly_over = NULL, split_by_weights = NULL) {
   input_metric <- privacy_unit[[1]]
@@ -320,48 +382,49 @@ normalize_compositor <- function(domain, privacy_unit, privacy_loss,
   output_measure <- privacy_loss[[1]]
   d_out <- privacy_loss[[2]]
 
+  check_sized_contributions(domain, input_metric, d_in)
+
   if (!is.null(split_evenly_over) && !is.null(split_by_weights)) {
     stop("Cannot specify both split_evenly_over and split_by_weights", call. = FALSE)
   }
 
   if (!is.null(split_evenly_over) || !is.null(split_by_weights)) {
-    if (length(d_out) != 1) {
-      stop(
-        "Static split privacy losses are only implemented for scalar losses in the R Context API.",
-        call. = FALSE
+    weights <- if (!is.null(split_evenly_over)) {
+      rep(1.0, split_evenly_over)
+    } else {
+      as.numeric(split_by_weights)
+    }
+    if (length(weights) == 0L || any(!is.finite(weights)) || any(weights < 0)) {
+      stop("Split weights must be finite, nonnegative, and nonempty.", call. = FALSE)
+    }
+
+    loss <- as.numeric(unlist(d_out, use.names = FALSE))
+    scale_mids <- function(scale) {
+      if (length(loss) == 1L) {
+        return(loss * weights * scale)
+      }
+      lapply(weights, function(weight) as.list(loss * weight * scale))
+    }
+
+    make_accountant <- function(scale) {
+      make_adaptive_composition(
+        input_domain = domain,
+        input_metric = input_metric,
+        output_measure = output_measure,
+        d_in = d_in,
+        d_mids = scale_mids(scale)
       )
     }
 
-    weights <- if (!is.null(split_evenly_over)) {
-      rep(d_out, split_evenly_over)
-    } else {
-      as.numeric(split_by_weights) * d_out
-    }
-
     scale <- binary_search_param(
-      function(scale) {
-        make_adaptive_composition(
-          input_domain = domain,
-          input_metric = input_metric,
-          output_measure = output_measure,
-          d_in = d_in,
-          d_mids = weights * scale
-        )
-      },
+      make_accountant,
       d_in = d_in,
       d_out = d_out,
       .T = "float"
     )
 
-    d_mids <- as.list(weights * scale)
-    accountant <- make_adaptive_composition(
-      input_domain = domain,
-      input_metric = input_metric,
-      output_measure = output_measure,
-      d_in = d_in,
-      d_mids = weights * scale
-    )
-    return(list(accountant, d_mids, NULL))
+    d_mids <- as.list(scale_mids(scale))
+    return(list(make_accountant(scale), d_mids, NULL))
   }
 
   odometer <- make_fully_adaptive_composition(
@@ -808,6 +871,22 @@ resolve.opendp_query <- function(x, allow_transformations = FALSE, bounds = NULL
   if (!allow_transformations && inherits(chain, "transformation")) {
     stop("Query is not yet a measurement or odometer.", call. = FALSE)
   }
+
+  if (inherits(chain, "measurement") && !is.null(x$d_in) && !is.null(x$d_out)) {
+    actual <- as.numeric(unlist(normalize_measure_distance(chain(d_in = x$d_in))))
+    budget <- as.numeric(unlist(normalize_measure_distance(x$d_out)))
+    if (length(actual) != length(budget) || anyNA(actual) || anyNA(budget)) {
+      stop("Resolved measurement has an incompatible privacy loss.", call. = FALSE)
+    }
+    if (any(actual > budget)) {
+      stop(
+        "Resolved measurement exceeds the requested privacy budget ",
+        paste(budget, collapse = ", "), " (actual: ",
+        paste(actual, collapse = ", "), ").",
+        call. = FALSE
+      )
+    }
+  }
   chain
 }
 
@@ -985,8 +1064,9 @@ compositor.opendp_query <- function(x, split_evenly_over = NULL, split_by_weight
   }
   reservation_d_out <- reservation_d_out %||% requested_d_out
 
+  wrap_state <- new.env(parent = emptyenv())
   wrap_release <- function(queryable, measurement) {
-    metadata <- attr(measurement, "opendp_context_metadata")
+    metadata <- wrap_state$metadata
     new_context(
       accountant = metadata$accountant,
       queryable = queryable,
@@ -1011,9 +1091,8 @@ compositor.opendp_query <- function(x, split_evenly_over = NULL, split_by_weight
           split_by_weights = split_by_weights,
           alpha = alpha
         )
-        submission_accountant <- meta$submission_accountant %||% meta$accountant
-        attr(submission_accountant, "opendp_context_metadata") <- meta
-        submission_accountant
+        wrap_state$metadata <- meta
+        meta$submission_accountant %||% meta$accountant
       },
       auto_name = attr(x$chain, "auto_name") %||% "param"
     )
@@ -1030,8 +1109,8 @@ compositor.opendp_query <- function(x, split_evenly_over = NULL, split_by_weight
     split_by_weights = split_by_weights,
     alpha = alpha
   )
+  wrap_state$metadata <- meta
   submission_accountant <- meta$submission_accountant %||% meta$accountant
-  attr(submission_accountant, "opendp_context_metadata") <- meta
   clone_query(x, chain = submission_accountant, wrap_release = wrap_release)
 }
 
@@ -1078,8 +1157,7 @@ remaining_privacy_loss.opendp_context <- function(x) {
       stop("The privacy loss is unbounded.", call. = FALSE)
     }
     return(
-      normalize_measure_distance(x$d_out) -
-        normalize_measure_distance(x$queryable(d_in = x$d_in))
+      conservative_subtract(x$d_out, x$queryable(d_in = x$d_in))
     )
   }
   x$d_mids

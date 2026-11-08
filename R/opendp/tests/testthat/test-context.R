@@ -536,3 +536,108 @@ test_that("transformation-chained unbounded compositors are supported", {
   expect_equal(current_privacy_loss(subcontext), 0.5)
   expect_equal(remaining_privacy_loss(subcontext), 0.5)
 })
+
+test_that("resolved measurements must satisfy their declared privacy bound", {
+  q <- Query(
+    chain = space_of("Vec<i32>"),
+    output_measure = max_divergence(),
+    d_in = 1L,
+    d_out = 0.1
+  ) |>
+    then_count() |>
+    then_laplace(1.0)
+
+  expect_error(resolve(q), "exceeds the requested privacy budget")
+  expect_error(release(q, data = c(1L, 2L)), "exceeds the requested privacy budget")
+
+  context <- Context$compositor(
+    data = c(1L, 2L, 3L),
+    privacy_unit = unit_of(contributions = 1L),
+    privacy_loss = loss_of(epsilon = 1),
+    split_evenly_over = 1L
+  )
+  q_context <- query(context) |> then_count() |> then_laplace(0.5)
+  expect_error(resolve(q_context), "exceeds the requested privacy budget")
+  expect_equal(length(current_privacy_loss(context)), 0L)
+})
+
+test_that("fixed-size vector contexts require even contribution bounds", {
+  domain <- vector_domain(atom_domain(.T = "i32"), size = 3L)
+  expect_error(
+    Context$compositor(
+      data = c(1L, 2L, 3L),
+      domain = domain,
+      privacy_unit = unit_of(contributions = 1L),
+      privacy_loss = loss_of(epsilon = 1),
+      split_evenly_over = 1L
+    ),
+    "Contribution bounds must be even"
+  )
+
+  context <- Context$compositor(
+    data = c(1L, 2L, 3L),
+    domain = domain,
+    privacy_unit = unit_of(changes = 1L),
+    privacy_loss = loss_of(epsilon = 1),
+    split_evenly_over = 1L
+  )
+  expect_s3_class(context, "opendp_context")
+})
+
+test_that("static approximate-DP composition scales each loss component", {
+  context <- Context$compositor(
+    data = c(1L, 2L, 3L),
+    privacy_unit = unit_of(contributions = 1L),
+    privacy_loss = loss_of(epsilon = 1, delta = 1e-6),
+    split_by_weights = c(1, 2)
+  )
+
+  mids <- remaining_privacy_loss(context)
+  expect_length(mids, 2L)
+  expect_equal(unlist(mids[[1]]), c(1 / 3, 1e-6 / 3), tolerance = 1e-6)
+  expect_equal(unlist(mids[[2]]), c(2 / 3, 2e-6 / 3), tolerance = 1e-6)
+
+  q <- query(context) |> then_count() |> then_laplace(auto())
+  expect_type(release(q, .T = "float"), "integer")
+  expect_length(current_privacy_loss(context), 1L)
+  expect_length(remaining_privacy_loss(context), 1L)
+})
+
+test_that("nested contexts retain their metadata after output-measure casting", {
+  parent <- Context$compositor(
+    data = c(1L, 2L, 3L),
+    privacy_unit = unit_of(contributions = 1L),
+    privacy_loss = loss_of(epsilon = 2, delta = 1e-6),
+    split_evenly_over = 1L
+  )
+
+  child <- query(parent) |>
+    compositor(
+      output_measure = zero_concentrated_divergence(),
+      split_evenly_over = 1L
+    ) |>
+    release()
+
+  expect_s3_class(child, "opendp_context")
+  expect_equal(
+    toString(child$accountant("output_measure")),
+    "ZeroConcentratedDivergence"
+  )
+  expect_type(
+    release(query(child) |> then_count() |> then_gaussian(auto()), .T = "float"),
+    "integer"
+  )
+})
+
+test_that("remaining privacy loss is conservatively rounded down", {
+  subtract <- get_context_internal("conservative_subtract")
+  expect_equal(subtract(1.0, 0), 1.0)
+  expect_equal(subtract(1.0, 1.0), 0.0)
+  expect_equal(subtract(Inf, 0.5), Inf)
+  expect_lt(subtract(1.0, 0.2), 1.0 - 0.2)
+
+  remainder <- subtract(c(1.0, 1e-6), c(0.2, 2e-7))
+  expect_length(remainder, 2L)
+  expect_lt(remainder[[1]], 1.0 - 0.2)
+  expect_lt(remainder[[2]], 1e-6 - 2e-7)
+})
