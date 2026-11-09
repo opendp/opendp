@@ -277,7 +277,9 @@ def _plan(plan, table):
         expected = {name: _type_name(dtype) for name, dtype in fields.items()}
         actual = {name: str(dtype) for name, dtype in table.schema().items()}
         if expected != actual:
-            raise ValueError(f"Bound database schema does not match Polars scan: {expected} != {actual}")
+            raise ValueError(
+                f"Bound database schema does not match Polars scan: {expected} != {actual}"
+            )
         return table
     if tag == "Select":
         source = _plan(payload["input"], table)
@@ -288,7 +290,9 @@ def _plan(plan, table):
         if len(scalars) == len(values):
             return source.aggregate(**values)
         if any(value.op().relations for value in scalars):
-            raise NotImplementedError("Mixed reductions and row-wise projections are unsupported")
+            raise NotImplementedError(
+                "Mixed reductions and row-wise projections are unsupported"
+            )
         return source.select(**values)
     if tag == "HStack":
         source = _plan(payload["input"], table)
