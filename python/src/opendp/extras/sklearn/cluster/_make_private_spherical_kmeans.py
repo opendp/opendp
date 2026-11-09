@@ -159,7 +159,8 @@ def _upper_float(value):
 
 
 def _make_sums(domain, metric, centers, q, cap, norm, dtype):
-    d = domain.cast(CSRArray2Descriptor).n_features
+    desc = domain.cast(CSRArray2Descriptor)
+    d = desc.n_features
     k = centers.shape[0]
     unit = _unit_centers(centers)
     # A row contributes at one fixed-center assignment: r*w*w <= Q*Q and
@@ -169,13 +170,26 @@ def _make_sums(domain, metric, centers, q, cap, norm, dtype):
         # L2 is also bounded by L1, useful when the public cap is below one.
         sensitivity = min(sensitivity, q * cap.numerator // cap.denominator)
     output_metric = dp.l1_distance(T=float) if norm == 1 else dp.l2_distance(T=float)
+
+    def map_distance(distance):
+        distance = index(distance)
+        if norm == 2 and desc.size is not None:
+            # With fixed size, two symmetric edits replace one record. Each side
+            # has a nonnegative L2-bounded sum, giving a sqrt(2) rather than 2
+            # factor. Round the bound upward using exact integer arithmetic.
+            replacements = (distance + 1) // 2
+            squared = 2 * (replacements * sensitivity) ** 2
+            bound = math.isqrt(squared)
+            return _upper_float(bound + (bound * bound < squared))
+        return _upper_float(distance * sensitivity)
+
     return _make_transformation(
         domain,
         metric,
         dp.vector_domain(dp.atom_domain(T=dtype.type), size=k * d),
         output_metric,
         lambda x: _aggregate(x, _labels(x, unit), _row_weights(x, q, cap, dtype), k),
-        lambda distance: _upper_float(index(distance) * sensitivity),
+        map_distance,
     )
 
 
@@ -200,8 +214,8 @@ def make_private_spherical_kmeans(
     with equal adaptively composed iteration budgets. Returns nonnegative CSR
     centers of dtype ``T``. Noise requires O(n_clusters * n_features) memory.
 
-    :param input_domain: Canonical boolean CSR domain with a public feature count.
-    :param input_metric: Symmetric distance (add/remove row adjacency).
+    :param input_domain: Canonical boolean CSR domain with a public feature count and optional exact row count.
+    :param input_metric: Symmetric distance; a replacement costs two edits.
     :param output_measure: Max divergence or zero-concentrated divergence.
     :param d_in: Positive group distance; a replacement costs two row edits.
     :param d_out: Positive finite privacy allowance.

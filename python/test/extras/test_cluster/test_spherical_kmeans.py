@@ -129,6 +129,51 @@ def test_integer_sensitivity_and_upward_rounding(norm, cap):
     assert skm._upper_float(2**60) == 2**60
 
 
+@pytest.mark.parametrize("norm", [1, 2])
+@pytest.mark.parametrize("cap", [None, Fraction(1, 2)])
+def test_fixed_size_replacement_sensitivity(norm, cap):
+    q, d = 1024, 4
+    domain = csr_array2_domain(d, size=2, T=bool)
+    center = sp.csr_array(np.ones((1, d)))
+    fixed = skm._make_sums(domain, METRIC, center, q, cap, norm, np.dtype(np.int32))
+    variable = skm._make_sums(
+        csr_array2_domain(d, T=bool),
+        METRIC,
+        center,
+        q,
+        cap,
+        norm,
+        np.dtype(np.int32),
+    )
+    single = q if cap is None else q // 2
+    if norm == 1:
+        assert fixed.map(2) >= 2 * single
+        assert fixed.map(2) == variable.map(2)
+    else:
+        assert fixed.map(2) == math.ceil(math.sqrt(2) * single)
+        assert fixed.map(2) < variable.map(2)
+        assert fixed.map(4) >= 2 * math.sqrt(2) * single
+
+    # The disjoint one-hot records realize the replacement bound, including
+    # for two simultaneous replacements (symmetric distance four).
+    for replacements in (1, 2):
+        left = sp.csr_array([[1, 0, 0, 0]] * replacements, dtype=bool)
+        right = sp.csr_array([[0, 1, 0, 0]] * replacements, dtype=bool)
+        if replacements == 1:
+            filler = sp.csr_array([[0, 0, 1, 0]], dtype=bool)
+            left = sp.vstack((left, filler), format="csr")
+            right = sp.vstack((right, filler), format="csr")
+        diff = np.asarray(fixed(left), dtype=np.int64) - np.asarray(
+            fixed(right), dtype=np.int64
+        )
+        actual = (
+            sum(abs(int(x)) for x in diff)
+            if norm == 1
+            else math.sqrt(sum(int(x) ** 2 for x in diff))
+        )
+        assert actual <= fixed.map(2 * replacements)
+
+
 def test_initialization_cosine_and_sparse_projection():
     public = centers()
     snapshot = skm._initialize(2, 4, public, 0)
@@ -181,6 +226,13 @@ def test_i32_native_noise_group_distance_and_adaptive_iterations(
         == dp.i64
     )
     assert "T" not in SphericalKMeans().get_params()
+
+
+@pytest.mark.parametrize("kind", ["epsilon", "rho"])
+def test_fixed_size_private_fit(kind):
+    m = mechanism(kind, input_domain=csr_array2_domain(4, size=5, T=bool), d_in=2)
+    assert m.map(2) <= 0.5
+    assert m(data()).shape == (2, 4)
 
 
 @pytest.mark.parametrize("route", ["standalone", "context"])

@@ -266,7 +266,7 @@ def domain_of(T, infer: bool = False) -> Domain:
             from opendp.extras.scipy import csr_array2_domain
 
             return csr_array2_domain(
-                T.shape[1], max_rows=None, T=_ELEMENTARY_TYPES[T.dtype.type]
+                T.shape[1], T=_ELEMENTARY_TYPES[T.dtype.type]
             )
     # normalize to a type descriptor
     if infer:

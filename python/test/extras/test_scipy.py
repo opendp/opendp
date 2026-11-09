@@ -27,10 +27,11 @@ def test_lazy_scipy_prelude_exports():
     ],
 )
 def test_csr_array2_domain_atom_type(T, dtype, expected):
-    domain = csr_array2_domain(3, max_rows=2, T=T)
+    domain = csr_array2_domain(3, size=2, T=T)
     assert domain.cast(CSRArray2Descriptor) == CSRArray2Descriptor(3, 2, expected)
-    assert domain.member(sparse.csr_array([[1, 0, 2]], dtype=dtype))
-    assert domain.member(sparse.csr_array((0, 3), dtype=dtype))
+    assert domain.member(sparse.csr_array([[1, 0, 2], [0, 3, 0]], dtype=dtype))
+    assert not domain.member(sparse.csr_array([[1, 0, 2]], dtype=dtype))
+    assert not domain.member(sparse.csr_array((0, 3), dtype=dtype))
     other_dtype = np.float64 if expected != "f64" else np.int32
     assert not domain.member(sparse.csr_array([[1, 0, 2]], dtype=other_dtype))
 
@@ -98,19 +99,26 @@ def test_context_infers_sparse_sklearn_fit_domain(with_target, rows):
 
 
 @pytest.mark.parametrize(
-    ("n_features", "max_rows", "message"),
+    ("n_features", "size", "message"),
     [
         (0, None, "n_features must be positive"),
-        (3, -1, "max_rows must be non-negative"),
+        (3, -1, "size must be non-negative"),
+        (3, True, "size must be non-negative"),
     ],
 )
-def test_csr_array2_domain_rejects_invalid_schema(n_features, max_rows, message):
+def test_csr_array2_domain_rejects_invalid_schema(n_features, size, message):
     with pytest.raises(ValueError, match=message):
-        csr_array2_domain(n_features, max_rows=max_rows, T=bool)
+        csr_array2_domain(n_features, size=size, T=bool)
+
+
+def test_csr_array2_domain_exact_zero_size():
+    domain = csr_array2_domain(3, size=0, T=bool)
+    assert domain.member(sparse.csr_array((0, 3), dtype=bool))
+    assert not domain.member(sparse.csr_array([[1, 0, 0]], dtype=bool))
 
 
 def test_csr_array2_domain_normalizes_atom_type():
-    assert csr_array2_domain(3, T=bool) == csr_array2_domain(3, max_rows=None, T="bool")
-    assert csr_array2_domain(3, max_rows=None, T=np.float32) != csr_array2_domain(
-        3, max_rows=None, T=np.float64
+    assert csr_array2_domain(3, T=bool) == csr_array2_domain(3, size=None, T="bool")
+    assert csr_array2_domain(3, size=None, T=np.float32) != csr_array2_domain(
+        3, size=None, T=np.float64
     )
