@@ -128,6 +128,8 @@ class AIM(Algorithm):
     """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
+    gem_filter: bool = False
+    """Filter for queries. Only applies to GEM+"""
 
     def __post_init__(self):
         super().__post_init__()
@@ -198,6 +200,8 @@ class AIM(Algorithm):
             while d_step:
                 algorithm_aim_round = algorithm
                 if isinstance(current_model, MarkovRandomField):
+                    algorithm_aim_round = algorithm
+                elif self.gem_filter is False:
                     algorithm_aim_round = algorithm
                 else:
                     algorithm_aim_round = replace(

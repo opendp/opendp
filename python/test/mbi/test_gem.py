@@ -169,7 +169,7 @@ def test_aim_with_gem_plus_does_not_reselect():
     # More rounds than the 3 columns have marginals, so without the filter
     # AIM would select some marginal twice.
     _, measured = _release_with_gem_plus(
-        lambda dp, est: dp.mbi.AIM(estimator=est, rounds=20)
+        lambda dp, est: dp.mbi.AIM(estimator=est, rounds=20, gem_filter=False)
     )
     # each round adds its selected marginal; no two rounds select the same one
     added = []
