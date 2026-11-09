@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sklearn.base import RegressorMixin
+from sklearn.utils.validation import check_is_fitted
 
 from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._estimator import DPEstimator
@@ -13,25 +14,18 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
 
 
 class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
-    """Differentially private, Theil-Sen-inspired regression.
+    """Differentially private univariate Theil–Sen regression.
 
-    Fits one numeric feature and target by privately estimating the median slope
-    of one secure random matching, then the median residual conditional on that
-    slope. This approximates matched-pair medians, not the classical all-pairs
-    Theil-Sen estimator. Each stage receives half the privacy budget.
-    With size-free component domains, ``privacy_unit=dp.unit_of(contributions=1)``
-    protects one aligned row insertion or removal under symmetric distance
-    (unbounded DP). No public sample count is required. An exact-size domain
-    instead uses ``contributions=2`` to protect one row replacement.
+    Estimates a median of sampled pairwise slopes, then a median residual
+    conditional on the released slope. Unlike the classical Theil–Sen estimator,
+    it does not compute all pairs.
 
-    Standalone ``fit(X, y, ...)`` updates and returns this estimator. In a
-    :class:`~opendp.context.Context`, ``context.query().sklearn(model).release()``
-    returns a fitted clone, leaving ``model`` unchanged.
-
-    Both coefficient intervals are required public, finite, strictly increasing
-    pairs. They specify candidate intervals, not clipping constraints on private
-    features or targets. Nonfinite slopes are discarded; nonfinite residuals are
-    replaced per row by finite interval endpoints, without dropping rows.
+    With unsized domains, ``contributions=1`` protects an aligned row insertion
+    or removal; with fixed-size domains, ``contributions=2`` protects replacement.
+    Standalone ``fit`` updates and returns this estimator; a
+    :class:`~opendp.context.Context` releases a fitted clone instead.
+    Both required bounds are finite, strictly increasing public candidate
+    intervals, not clipping bounds on private features or targets.
 
     :param slope_bounds: Public candidate interval ``(lower, upper)`` for the slope.
     :param intercept_bounds: Public candidate interval ``(lower, upper)`` for the intercept.
@@ -45,15 +39,11 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
         >>> dp.enable_features("contrib", "idealized-numerics", "honest-but-curious")
         >>> X = np.array([[-1.], [0.], [1.], [2.]])
         >>> y = np.array([-1., 1., 3., 5.])
-        >>> domain = dp.sklearn.sklearn_fit_domain(
-        ...     X=dp.numpy.array2_domain(T=float, num_columns=1),
-        ...     y=dp.vector_domain(dp.atom_domain(T=float)),
-        ... )
         >>> model = dp.sklearn.linear_model.TheilSenRegressor(
         ...     slope_bounds=(-5., 5.), intercept_bounds=(-10., 10.)
         ... )
         >>> _ = model.fit(
-        ...     X, y, domain=domain,
+        ...     X, y,
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ... )
@@ -92,10 +82,6 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
         self.intercept_ = float(intercept)
         self.n_features_in_ = 1
 
-    def _check_is_fitted(self):
-        if not hasattr(self, "coef_"):
-            raise ValueError("TheilSenRegressor instance is not fitted yet")
-
     def _prepare_X(self, X):
         np = import_optional_dependency("numpy")
         X = np.asarray(X)
@@ -106,6 +92,6 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
         return X
 
     def predict(self, X):
-        self._check_is_fitted()
+        check_is_fitted(self)
         X = self._prepare_X(X)
         return X[:, 0] * self.coef_[0] + self.intercept_

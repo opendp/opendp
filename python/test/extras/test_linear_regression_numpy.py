@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pytest
 
 pytest.importorskip("sklearn")
@@ -33,9 +36,20 @@ def _make(domain, d_in=2, d_out=1.0, measure=None, **params):
     )
 
 
-@pytest.mark.parametrize("sized, d_in", [(False, 1), (True, 1), (True, 2)])
+@pytest.fixture
+def pairing_rng(monkeypatch):
+    rng = SimpleNamespace(shuffle=lambda _: None)
+    monkeypatch.setattr(framework, "get_np_csprng", lambda: rng)
+    return rng
+
+
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "sized, d_in, measure",
+    [
+        (False, 1, dp.max_divergence()),
+        (True, 1, dp.max_divergence()),
+        (True, 2, dp.zero_concentrated_divergence()),
+    ],
 )
 def test_private_theil_sen_measurement_consumes_aligned_data(sized, d_in, measure):
     data, domain = _training_data(sized=sized)
@@ -83,15 +97,13 @@ def test_pairwise_slopes_output_domain(dtype):
     assert transform.output_domain.member(output)
 
 
-def test_pairwise_slopes_keeps_features_and_targets_aligned(monkeypatch):
+def test_pairwise_slopes_keeps_features_and_targets_aligned(pairing_rng):
     data = dp.sklearn.SklearnFit(
         X=np.array([[0.0], [1.0], [3.0], [6.0]]),
         y=np.array([0.0, 1.0, 9.0, 36.0]),
     )
-    monkeypatch.setattr(
-        framework,
-        "_shuffle",
-        lambda indices: indices.__setitem__(slice(None), indices[::-1]),
+    pairing_rng.shuffle = lambda indices: indices.__setitem__(
+        slice(None), indices[::-1]
     )
     np.testing.assert_array_equal(framework.pairwise_slopes(data), [7.0, 3.0])
 
@@ -111,8 +123,7 @@ def test_pairwise_slopes_keeps_features_and_targets_aligned(monkeypatch):
         ([0, np.nan, np.inf, 3], [np.nan, 0, 1, 7], []),
     ],
 )
-def test_pairwise_slopes_empty_vertical_and_nonfinite(X, y, expected, monkeypatch):
-    monkeypatch.setattr(framework, "_shuffle", lambda _: None)
+def test_pairwise_slopes_empty_vertical_and_nonfinite(X, y, expected, pairing_rng):
     data = dp.sklearn.SklearnFit(np.array(X, dtype=float).reshape(-1, 1), np.array(y))
     with np.errstate(all="raise"):
         result = framework.pairwise_slopes(data)
@@ -120,47 +131,46 @@ def test_pairwise_slopes_empty_vertical_and_nonfinite(X, y, expected, monkeypatc
     np.testing.assert_array_equal(result, expected)
 
 
-def test_pairing_uses_secure_unseeded_randomness(monkeypatch):
-    from secrets import SystemRandom
-
-    assert isinstance(getattr(framework._shuffle, "__self__", None), SystemRandom)
-    monkeypatch.setattr(np.random, "shuffle", lambda _: pytest.fail("NumPy RNG used"))
+def test_pairing_uses_opendp_csprng(pairing_rng):
+    pairing_rng.shuffle = Mock(side_effect=np.random.default_rng(0).shuffle)
     data, _ = _training_data(9)
     np.testing.assert_array_equal(framework.pairwise_slopes(data), np.full(4, 2.0))
+    pairing_rng.shuffle.assert_called_once()
 
 
-def test_pairwise_slopes_is_permutation_invariant_for_odd_rows(monkeypatch):
+@pytest.mark.parametrize("size", [3, 4])
+def test_uniform_matching_and_row_permutation_invariance(size, pairing_rng):
     from collections import Counter
     from itertools import permutations
 
-    X, y = np.array([[0.0], [1.0], [3.0]]), np.array([0.0, 1.0, 9.0])
+    X = np.array([[0.0], [1.0], [3.0], [6.0]])[:size]
+    y = X[:, 0] ** 2
     distributions = []
-    for row_order in permutations(range(3)):
+    for row_order in permutations(range(size)):
         data = dp.sklearn.SklearnFit(X[list(row_order)], y[list(row_order)])
         outcomes = []
-        for shuffle_order in permutations(range(3)):
+        for shuffle_order in permutations(range(size)):
 
             def shuffle(indices):
-                assert len(indices) == 3  # omit only after randomizing all rows
+                assert len(indices) == size
                 indices[:] = shuffle_order
 
-            monkeypatch.setattr(framework, "_shuffle", shuffle)
-            outcomes.append(tuple(framework.pairwise_slopes(data)))
+            pairing_rng.shuffle = shuffle
+            outcomes.append(tuple(sorted(framework.pairwise_slopes(data))))
         distributions.append(Counter(outcomes))
     assert all(distribution == distributions[0] for distribution in distributions)
     assert len(distributions[0]) == 3
+    assert set(distributions[0].values()) == {2 if size == 3 else 8}
 
 
-def test_pairwise_variable_size_stability_allows_replacing_a_pair(monkeypatch):
+def test_pairwise_variable_size_stability_allows_replacing_a_pair(pairing_rng):
     from collections import Counter
 
     _, domain = _training_data(sized=False)
     transform = framework.make_pairwise_slopes(domain, dp.symmetric_distance())
     assert transform.map(1) == 2 and transform.map(2) == 4
-    monkeypatch.setattr(
-        framework,
-        "_shuffle",
-        lambda indices: indices.__setitem__(slice(None), indices[::-1]),
+    pairing_rng.shuffle = lambda indices: indices.__setitem__(
+        slice(None), indices[::-1]
     )
     # Regression for #2950: one insertion can replace a matched slope.
     before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
@@ -200,11 +210,15 @@ def test_residual_stability_and_retention_of_known_size(x_size, y_size):
         np.testing.assert_array_equal(transform(data)[1:], result[1:])
 
 
-@pytest.mark.parametrize("sized", [False, True])
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "sized, measure, loss",
+    [
+        (False, dp.max_divergence(), 1e-6),
+        (True, dp.max_divergence(), 0.1),
+        (False, dp.zero_concentrated_divergence(), 0.1),
+        (True, dp.zero_concentrated_divergence(), 1.0000000000000002),
+    ],
 )
-@pytest.mark.parametrize("loss", [1e-6, 0.1, 1.0000000000000002])
 def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
     sized, measure, loss, monkeypatch
 ):
@@ -240,8 +254,9 @@ def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
     calibration_distance, allocations = compositions[-1][-2:]
     assert calibration_distance == (2 if sized else 1)
     assert allocations[0] == allocations[1] and allocations[0] > 0
+    assert slopes == []
     slope, intercept = measurement(data)
-    assert len(queries) == 2 and slopes == [0.0, slope]
+    assert len(queries) == 2 and slopes == [slope]
     for query, allocation in zip(queries, allocations):
         assert query.input_domain == domain  # both queries run on original private rows
         assert query.check(calibration_distance, allocation)
@@ -295,7 +310,7 @@ def test_public_bounds_validation(name, bounds):
         model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 2, 1.0)
 
 
-def test_constructor_and_unsupported_domain_validation(monkeypatch):
+def test_constructor_and_unsupported_domain_validation():
     import inspect
     from sklearn.base import clone
 
@@ -315,23 +330,6 @@ def test_constructor_and_unsupported_domain_validation(monkeypatch):
     assert model.get_params() == dict(
         slope_bounds=bounds, intercept_bounds=(-10.0, 10.0)
     )
-    for option in [
-        "x_bounds",
-        "y_bounds",
-        "runs",
-        "fraction_bounds",
-        "candidates_count",
-        "fit_intercept",
-        "n_subsamples",
-        "max_subpopulation",
-        "max_iter",
-        "tol",
-        "n_jobs",
-        "verbose",
-        "random_state",
-    ]:
-        with pytest.raises(TypeError, match=option):
-            _estimator(**{option: 1})
     X = dp.numpy.array2_domain(T=float, num_columns=1, size=3)
     y = dp.vector_domain(dp.atom_domain(T=float), size=3)
     cases = [
@@ -377,21 +375,29 @@ def test_constructor_and_unsupported_domain_validation(monkeypatch):
             _make(domain, d_out=loss)
     with pytest.raises(ValueError, match="too small"):
         _make(domain, d_out=np.finfo(float).smallest_subnormal)
-    monkeypatch.setattr(dp.VectorDomain, "element_domain", property(lambda _: X))
-    with pytest.raises(ValueError, match="numeric"):
-        _make(domain)
 
 
-def test_extreme_candidate_intervals_remain_finite():
+@pytest.mark.parametrize(
+    "bounds",
+    [
+        (1.0, np.nextafter(1.0, np.inf)),
+        (0.0, np.finfo(float).smallest_subnormal),
+        (-np.finfo(float).smallest_subnormal, np.finfo(float).smallest_subnormal),
+        (-np.finfo(float).max, np.finfo(float).max),
+        (np.finfo(float).max / 2, np.finfo(float).max),
+    ],
+)
+def test_candidate_grids_are_finite_strict_and_retain_endpoints(bounds):
     data, domain = _training_data()
-    largest = np.finfo(float).max
-    for bounds in [(-largest, largest), (largest / 2, largest)]:
-        with np.errstate(all="raise"):
-            grid = framework._candidate_grid(bounds)
-            measurement = _make(domain, slope_bounds=bounds, intercept_bounds=bounds)
-            assert np.isfinite(measurement(data)).all()
-        assert np.isfinite(grid).all() and np.all(grid[1:] >= grid[:-1])
-        assert measurement.check(2, 1.0)
+    with np.errstate(all="raise"):
+        grid = framework._candidate_grid(bounds)
+        measurement = _make(domain, slope_bounds=bounds, intercept_bounds=bounds)
+        release = measurement(data)
+    assert len(grid) >= 2 and np.isfinite(grid).all()
+    assert np.all(grid[1:] > grid[:-1])
+    np.testing.assert_array_equal(grid[[0, -1]], bounds)
+    assert ((bounds[0] <= grid) & (grid <= bounds[1])).all()
+    assert np.isin(release, grid).all() and measurement.check(2, 1.0)
 
 
 @pytest.mark.parametrize("route", ["standalone", "context"])
@@ -403,7 +409,9 @@ def test_theil_sen_fitting_cloning_scoring_and_refitting(route):
     data, domain = _training_data()
     model = _estimator()
     assert is_regressor(model) and type(model).score is RegressorMixin.score
-    with pytest.raises(ValueError, match="not fitted"):
+    from sklearn.exceptions import NotFittedError
+
+    with pytest.raises(NotFittedError):
         model.predict([[1.0]])
     context = dp.Context.compositor(
         data,

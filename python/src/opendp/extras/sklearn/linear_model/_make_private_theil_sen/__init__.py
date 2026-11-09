@@ -4,17 +4,13 @@ from __future__ import annotations
 
 import math
 from numbers import Integral, Real
-from secrets import SystemRandom
 
 from opendp._internal import _new_pure_function
-from opendp._lib import import_optional_dependency
+from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
 from opendp.mod import AtomDomain, Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
-# SystemRandom.shuffle uses OS entropy and unbiased integer rejection sampling.
-# Neither NumPy's RNG nor an analyst-provided seed controls the matching.
-_shuffle = SystemRandom().shuffle
 _CANDIDATE_COUNT = 100
 
 
@@ -72,7 +68,7 @@ def pairwise_slopes(data: SklearnFit):
     np = _numpy()
     X, y = np.asarray(data.X, dtype=np.float64), np.asarray(data.y, dtype=np.float64)
     indices = np.arange(len(X))
-    _shuffle(indices)
+    get_np_csprng().shuffle(indices)
     # Shuffle before omitting the last row, so the omitted row is uniform too.
     first, second = np.array_split(indices[: len(X) // 2 * 2], 2)
     with np.errstate(all="ignore"):
@@ -85,15 +81,12 @@ def pairwise_slopes(data: SklearnFit):
 def make_pairwise_slopes(input_domain, input_metric):
     """Make the randomized matched-pair slope transformation.
 
-    Uniform shuffling gives a uniform matching and, for odd sizes, a uniformly
-    omitted row. Couple insertion into an even-sized input by choosing the new
-    omitted row uniformly: omit the new row and keep the old matching, or replace
-    an omitted old row with the new row in its pair. At most one slope is replaced
-    (two symmetric edits). For an odd-sized input, pair the previously omitted row
-    with the new row, adding at most one slope. These couplings have the correct
-    uniform matching marginals. Filtering slopes is deterministic and row-local
-    on the matched pairs, so it cannot increase distance. Permutations do not
-    change the output distribution.
+    Even to odd: with probability 1/(n+1), omit the inserted row and keep the old
+    matching. Otherwise select an old row uniformly, pair its previous partner
+    with the inserted row, and omit the displaced row: at most one slope changes.
+    Odd to even: pair the inserted row with the previously omitted row, adding
+    one slope. Both couplings have uniform matching marginals. Deterministic
+    pair-level filtering of invalid slopes cannot increase symmetric distance.
     """
     import opendp.prelude as dp
 
@@ -144,7 +137,8 @@ def _candidate_grid(bounds):
             # Avoid overflow in upper - lower for wide finite candidate intervals.
             weights = np.linspace(0.0, 1.0, _CANDIDATE_COUNT)
             values = (1.0 - weights) * bounds[0] + weights * bounds[1]
-    return np.clip(values, *bounds)
+    values[0], values[-1] = bounds
+    return np.unique(np.clip(values, *bounds))
 
 
 def make_private_theil_sen(
@@ -162,8 +156,7 @@ def make_private_theil_sen(
     The two required public bounds are finite, strictly increasing candidate
     intervals, not clipping constraints on private data. Supports numeric
     SklearnFit inputs with one feature, symmetric distance, and epsilon-DP or
-    zCDP. One secure random matching and 100 candidates per coefficient are used.
-    Half the privacy budget is allocated to each stage through OpenDP composition.
+    zCDP, with adaptive composition of the two private estimates.
     """
     import opendp.prelude as dp
 
@@ -214,9 +207,7 @@ def make_private_theil_sen(
         T=float,
     )
 
-    residual_domain = make_residuals(
-        input_domain, input_metric, 0.0, intercept_bounds
-    ).output_domain
+    residual_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size)
     residual_space = (residual_domain, input_metric)
     if size == 0:
         # The native quantile constructor currently divides by zero for size=0.
