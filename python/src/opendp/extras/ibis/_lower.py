@@ -230,8 +230,10 @@ def _name(expr):
         return _name(payload)
     if tag in ("Sum", "Mean", "Min", "Max"):
         return _name(payload["input"] if isinstance(payload, dict) else payload)
-    if tag in ("Count", "Cast"):
-        return _name(payload["input"] if tag == "Count" else payload["expr"])
+    if tag == "Count":
+        return _name(payload[0] if isinstance(payload, list) else payload["input"])
+    if tag == "Cast":
+        return _name(payload["expr"])
     if tag in ("Var", "Std"):
         return _name(payload[0])
     if tag == "Function":
@@ -282,15 +284,18 @@ def _plan(plan, table):
         values = _named(payload["expr"], source)
         if not values:
             raise NotImplementedError("Empty projections are unsupported")
-        if all(isinstance(v, ir.Scalar) for v in values.values()):
+        scalars = [value for value in values.values() if isinstance(value, ir.Scalar)]
+        if len(scalars) == len(values):
             return source.aggregate(**values)
-        if any(isinstance(v, ir.Scalar) for v in values.values()):
-            raise NotImplementedError("Mixed scalar and row-wise projections are unsupported")
+        if any(value.op().relations for value in scalars):
+            raise NotImplementedError("Mixed reductions and row-wise projections are unsupported")
         return source.select(**values)
     if tag == "HStack":
         source = _plan(payload["input"], table)
         values = _named(payload["exprs"], source)
-        if any(isinstance(v, ir.Scalar) for v in values.values()):
+        if any(
+            isinstance(v, ir.Scalar) and v.op().relations for v in values.values()
+        ):
             raise NotImplementedError("Aggregation inside with_columns is unsupported")
         return source.mutate(**values)
     if tag == "GroupBy":

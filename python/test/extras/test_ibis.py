@@ -22,7 +22,6 @@ pl = pytest.importorskip("polars")
 assert_frame_equal = pytest.importorskip("polars.testing").assert_frame_equal
 pa = pytest.importorskip("pyarrow")
 ibis = pytest.importorskip("ibis")
-pytest.importorskip("polars_to_ibis")
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore:fetch_arrow_table.*:DeprecationWarning"),
