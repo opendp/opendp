@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.extras.sklearn._aligned import SklearnFit, SklearnFitDomain
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDomain
 from opendp.mod import Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
@@ -51,20 +51,26 @@ def make_pairwise_predict(input_domain, input_metric, x_cuts, runs: int = 1, T=f
     import opendp.prelude as dp
 
     np = _numpy()
-    if not str(input_domain).startswith("NPArray2Domain"):
-        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
-    if input_domain.descriptor.num_columns != 2:
-        raise ValueError("input_domain must have two columns")  # pragma: no cover
+    desc = input_domain.cast(SklearnFitDomain)
+    input_desc = desc.X.cast(dp.numpy.NPArray2Domain)
+    if input_desc.num_columns != 1:
+        raise ValueError("input_domain must have one feature column")
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input_metric must be symmetric distance")  # pragma: no cover
-    input_desc = input_domain.descriptor
-    if input_desc.T not in _NUMERIC_TYPES:
+        raise ValueError("input_metric must be symmetric distance")
+    if not isinstance(desc.y, VectorDomain):
+        raise ValueError("input_domain must have a vector target domain")
+    if (
+        input_desc.T not in _NUMERIC_TYPES
+        or str(desc.y.element_domain.carrier_type) not in _NUMERIC_TYPES
+    ):
         raise ValueError("input_domain must have numeric elements")
-    size = input_desc.size
-    x_cuts = np.asarray(x_cuts, dtype=np.float64)
+    size = input_desc.size if input_desc.size is not None else desc.y.size
+    x_cuts = np.array(x_cuts, dtype=np.float64, copy=True)
     if size is None:
         stability_map = lambda d_in: d_in * runs * 2
     else:
+        # Fixed-size inputs have even realizable distances: each replacement
+        # can replace one matched prediction (two symmetric edits per run).
         stability_map = lambda d_in: 2 * runs * (d_in // 2)
     return dp.t.make_user_transformation(
         input_domain=input_domain,
@@ -141,8 +147,6 @@ def _make_private_theil_sen_with_scale(
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
     if desc.y is None:
         raise ValueError("TheilSenRegressor requires a SklearnFit input domain with y")
-    if desc.sample_weight is not None or desc.groups is not None:
-        raise ValueError("TheilSenRegressor supports only SklearnFit.X and SklearnFit.y")
     if getattr(getattr(desc.X, "descriptor", None), "num_columns", None) != 1:
         raise ValueError("TheilSenRegressor requires exactly one feature column")
     if not isinstance(desc.y, VectorDomain):
@@ -216,9 +220,18 @@ def make_private_theil_sen(
             fraction_bounds=fraction_bounds,
         )
 
+    desc = getattr(input_domain, "descriptor", None)
+    if not isinstance(desc, SklearnFitDomain):
+        raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
+    size = desc.X.cast(dp.numpy.NPArray2Domain).size
+    if size is None and isinstance(desc.y, VectorDomain):
+        size = desc.y.size
+    # Fixed-size inputs have no neighbors at one symmetric edit. Calibrate
+    # at least one replacement instead of searching for an unconstrained scale.
+    calibration_d_in = max(d_in, 2) if size is not None else d_in
     return dp.binary_search_chain(
         make,
-        d_in=d_in,
+        d_in=calibration_d_in,
         d_out=d_out,
         T=float,
     )
