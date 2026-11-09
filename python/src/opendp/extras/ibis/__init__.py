@@ -80,7 +80,7 @@ def _collect(native, table):
     from pathlib import Path
     from tempfile import TemporaryDirectory
     import pyarrow as pa  # type: ignore[import-untyped]
-    from polars_to_ibis import convert_polars_to_ibis
+    from ._lower import convert_polars_to_ibis
     from opendp._data import onceframe_split
 
     with TemporaryDirectory(prefix="opendp-ibis-") as work_dir:
