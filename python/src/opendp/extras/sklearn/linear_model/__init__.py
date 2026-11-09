@@ -137,15 +137,3 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
         self._check_is_fitted()
         X = self._prepare_X(X)
         return X[:, 0] * self.coef_[0] + self.intercept_
-
-    def score(self, X, y, sample_weight=None):
-        if sample_weight is not None:
-            raise NotImplementedError("sample_weight is not supported")
-        np = import_optional_dependency("numpy")
-        y = np.asarray(y)
-        predictions = self.predict(X)
-        if y.ndim != 1 or y.shape[0] != predictions.shape[0]:
-            raise ValueError("y must be a one-dimensional array matching X")
-        residual = np.sum((y - predictions) ** 2)
-        centered = np.sum((y - np.mean(y)) ** 2)
-        return 1.0 - residual / centered if centered else 1.0 if residual == 0 else 0.0

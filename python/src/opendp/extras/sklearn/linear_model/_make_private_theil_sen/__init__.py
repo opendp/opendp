@@ -30,9 +30,10 @@ def pairwise_predict(data: SklearnFit, x_cuts):
     x1, x2 = X[first, 0], X[second, 0]
     y1, y2 = y[first], y[second]
     dx, dy = x2 - x1, y2 - y1
-    x_bar, y_bar = (x1 + x2) / 2, (y1 + y2) / 2
-    points = dy / dx * (x_cuts[None].T - x_bar) + y_bar
-    return points.T[dx != 0]
+    valid = dx != 0
+    x_bar, y_bar = ((x1 + x2) / 2)[valid], ((y1 + y2) / 2)[valid]
+    points = dy[valid] / dx[valid] * (x_cuts[None].T - x_bar) + y_bar
+    return points.T
 
 
 def make_pairwise_predict(input_domain, input_metric, x_cuts, runs: int = 1, T=float):
