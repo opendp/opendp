@@ -3,13 +3,13 @@ Linear Regression
 
 Theil-Sen regression is documented with examples in the API Reference
 (:py:mod:`opendp.extras.sklearn.linear_model`). Private feature and target data
-are represented by :class:`opendp.extras.sklearn.Aligned`, which preserves their
+are represented by :class:`opendp.extras.sklearn.SklearnFit`, which preserves their
 row correspondence while a whole aligned row remains one adjacency event::
 
     import opendp.prelude as dp
 
-    training = dp.sklearn.Aligned(X=X[:, :1], y=y)
-    domain = dp.sklearn.aligned_domain(
+    training = dp.sklearn.SklearnFit(X=X[:, :1], y=y)
+    domain = dp.sklearn.sklearn_fit_domain(
         X=dp.numpy.array2_domain(
             num_columns=1, size=len(training.X), T=float, nan=False
         ),
