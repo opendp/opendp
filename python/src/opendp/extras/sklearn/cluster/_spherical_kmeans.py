@@ -41,6 +41,21 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
     :param random_state: Seed for public initialization only, never DP noise.
     :ivar cluster_centers_: Nonnegative int64 CSR center directions of shape (n_clusters, n_features).
     :ivar n_features_in_: Number of input features.
+
+    :example:
+
+    >>> import scipy.sparse as sp
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    >>> X = sp.csr_array([[1, 0, 0], [1, 1, 0], [0, 0, 1]], dtype=bool)
+    >>> model = dp.sklearn.cluster.SphericalKMeans(n_clusters=2)
+    >>> _ = model.fit(
+    ...     X,
+    ...     privacy_unit=dp.unit_of(contributions=1),
+    ...     privacy_loss=dp.loss_of(epsilon=1.0),
+    ... )
+    >>> model.cluster_centers_.shape
+    (2, 3)
     """
 
     def __init__(
