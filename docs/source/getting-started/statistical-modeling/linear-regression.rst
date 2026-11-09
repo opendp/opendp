@@ -25,7 +25,7 @@ row correspondence while a whole aligned row remains one adjacency event::
     model = dp.sklearn.linear_model.TheilSenRegressor(
         x_bounds=((-3.0, 3.0),), y_bounds=(-10.0, 10.0)
     )
-    model.fit(context.query())
+    model = context.query().sklearn(model).release()
 
 The underlying algorithm is also used as
 `an example of a plug-in <../../api/user-guide/plugins/theil-sen-regression.html>`_.
