@@ -32,10 +32,49 @@ __all__ = ["TheilSenRegressor", "make_private_theil_sen", "LogisticRegression"]
 class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
     """Differentially private Theil-Sen regression.
 
-    The private training query contains a :class:`~opendp.extras.sklearn.SklearnFit`
-    value with one feature column in ``X`` and a target vector in ``y``. Privacy
-    allocation and the input domain are supplied to standalone ``fit(X, y, ...)``
-    or by an OpenDP Context via ``query.sklearn(model).release()``.
+    Fits a line to one numeric feature column and a numeric target vector.
+    With size-free component domains, ``privacy_unit=dp.unit_of(contributions=1)``
+    protects one aligned row insertion or removal under symmetric distance
+    (unbounded DP). No public sample count is required. An exact-size domain
+    instead uses ``contributions=2`` to protect one row replacement.
+
+    Standalone ``fit(X, y, ...)`` updates and returns this estimator. In a
+    :class:`~opendp.context.Context`, ``context.query().sklearn(model).release()``
+    returns a fitted clone, leaving ``model`` unchanged.
+
+    :param x_bounds: Public feature interval, as a single pair ``((lower, upper),)``,
+        used to locate the two reference points.
+    :param y_bounds: Public interval ``(lower, upper)`` for candidate predictions
+        at the reference points.
+    :param runs: Positive number of randomized pairings. Defaults to 1.
+    :param candidates_count: Number of equally spaced candidate predictions in
+        ``y_bounds``; at least 2. Defaults to 100.
+    :param fraction_bounds: Two increasing fractions strictly between 0 and 1
+        locating reference points within ``x_bounds``. Defaults to ``(0.25, 0.75)``.
+
+    Example:
+
+    .. code:: pycon
+
+        >>> import numpy as np
+        >>> import opendp.prelude as dp
+        >>> dp.enable_features("contrib", "idealized-numerics", "honest-but-curious")
+        >>> X = np.array([[-1.], [0.], [1.], [2.]])
+        >>> y = np.array([-1., 1., 3., 5.])
+        >>> domain = dp.sklearn.sklearn_fit_domain(
+        ...     X=dp.numpy.array2_domain(T=float, num_columns=1),
+        ...     y=dp.vector_domain(dp.atom_domain(T=float)),
+        ... )
+        >>> model = dp.sklearn.linear_model.TheilSenRegressor(
+        ...     x_bounds=((-2., 3.),), y_bounds=(-5., 10.)
+        ... )
+        >>> _ = model.fit(
+        ...     X, y, domain=domain,
+        ...     privacy_unit=dp.unit_of(contributions=1),
+        ...     privacy_loss=dp.loss_of(epsilon=1.0),
+        ... )
+        >>> model.predict(np.array([[0.], [1.]])).shape
+        (2,)
     """
 
     def __init__(
