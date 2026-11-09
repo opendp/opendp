@@ -47,7 +47,7 @@ def pairing_rng(monkeypatch):
     "sized, d_in, measure",
     [
         (False, 1, dp.max_divergence()),
-        (True, 1, dp.max_divergence()),
+        (True, 2, dp.max_divergence()),
         (True, 2, dp.zero_concentrated_divergence()),
     ],
 )
@@ -65,8 +65,6 @@ def test_private_theil_sen_measurement_consumes_aligned_data(sized, d_in, measur
     )
     assert measurement.input_domain == domain
     assert measurement.check(d_in, 1000.0)
-    if sized:
-        assert measurement.check(2, 1000.0)  # meaningful even when d_in=1 is vacuous
     np.testing.assert_allclose(measurement(data), [2.0, 1.0], atol=0.2, rtol=0)
 
 
@@ -211,16 +209,16 @@ def test_residual_stability_and_retention_of_known_size(x_size, y_size):
 
 
 @pytest.mark.parametrize(
-    "sized, measure, loss",
+    "sized, d_in, measure, loss",
     [
-        (False, dp.max_divergence(), 1e-6),
-        (True, dp.max_divergence(), 0.1),
-        (False, dp.zero_concentrated_divergence(), 0.1),
-        (True, dp.zero_concentrated_divergence(), 1.0000000000000002),
+        (False, 1, dp.max_divergence(), 1e-6),
+        (True, 2, dp.max_divergence(), 0.1),
+        (False, 3, dp.zero_concentrated_divergence(), 0.1),
+        (True, 4, dp.zero_concentrated_divergence(), 1.0000000000000002),
     ],
 )
 def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
-    sized, measure, loss, monkeypatch
+    sized, d_in, measure, loss, monkeypatch
 ):
     data, domain = _training_data(sized=sized)
     compositions, queries, slopes = [], [], []
@@ -249,10 +247,10 @@ def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
     monkeypatch.setattr(dp.c, "make_adaptive_composition", compose)
     monkeypatch.setattr(framework, "_new_pure_function", postprocess)
     monkeypatch.setattr(framework, "make_residuals", residuals)
-    measurement = _make(domain, 1, loss, measure)
-    assert measurement.check(1, loss)
+    measurement = _make(domain, d_in, loss, measure)
+    assert measurement.check(d_in, loss)
     calibration_distance, allocations = compositions[-1][-2:]
-    assert calibration_distance == (2 if sized else 1)
+    assert calibration_distance == d_in
     assert allocations[0] == allocations[1] and allocations[0] > 0
     assert slopes == []
     slope, intercept = measurement(data)
@@ -302,12 +300,29 @@ def test_degenerate_private_fit_still_releases_two_candidates(sized, kind):
 )
 @pytest.mark.parametrize("name", ["slope_bounds", "intercept_bounds"])
 def test_public_bounds_validation(name, bounds):
+    model = _estimator(**{name: bounds})
+    assert getattr(model, name) is bounds
+    data, domain = _training_data()
     with pytest.raises(ValueError, match=name):
-        _estimator(**{name: bounds})
-    _, domain = _training_data()
-    model = _estimator().set_params(**{name: bounds})
+        _make(domain, **{name: bounds})
     with pytest.raises(ValueError, match=name):
         model.make(domain, dp.symmetric_distance(), dp.max_divergence(), 2, 1.0)
+    with pytest.raises(ValueError, match=name):
+        model.fit(
+            data.X,
+            data.y,
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=2),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+        )
+
+
+@pytest.mark.parametrize("size", [0, 20])
+@pytest.mark.parametrize("d_in", [1, 3])
+def test_fixed_size_rejects_odd_distances(size, d_in):
+    _, domain = _training_data(size)
+    with pytest.raises(ValueError, match="d_in must be even for fixed-size domains"):
+        _make(domain, d_in=d_in)
 
 
 def test_constructor_and_unsupported_domain_validation():
@@ -370,7 +385,7 @@ def test_constructor_and_unsupported_domain_validation():
     for distance in [0, -1, True, 1.5]:
         with pytest.raises(ValueError, match="d_in"):
             _make(domain, d_in=distance)
-    for loss in [0.0, -1.0, np.nan, np.inf]:
+    for loss in [0.0, -1.0, np.nan, np.inf, True]:
         with pytest.raises(ValueError, match="d_out"):
             _make(domain, d_out=loss)
     with pytest.raises(ValueError, match="too small"):

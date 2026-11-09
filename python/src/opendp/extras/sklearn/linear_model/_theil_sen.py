@@ -8,7 +8,6 @@ from sklearn.utils.validation import check_is_fitted
 from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
-    _validate_bounds,
     make_private_theil_sen,
 )
 
@@ -52,8 +51,6 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
     """
 
     def __init__(self, *, slope_bounds, intercept_bounds):
-        _validate_bounds(slope_bounds, "slope_bounds")
-        _validate_bounds(intercept_bounds, "intercept_bounds")
         self.slope_bounds = slope_bounds
         self.intercept_bounds = intercept_bounds
 
