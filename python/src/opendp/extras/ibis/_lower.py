@@ -230,8 +230,10 @@ def _name(expr):
         return "literal"
     if tag == "Agg":
         return _name(payload)
-    if tag in ("Sum", "Mean", "Min", "Max"):
-        return _name(payload["input"] if isinstance(payload, dict) else payload)
+    if tag in ("Sum", "Mean"):
+        return _name(payload)
+    if tag in ("Min", "Max"):
+        return _name(payload["input"])
     if tag == "Count":
         return _name(payload[0] if isinstance(payload, list) else payload["input"])
     if tag == "Cast":
