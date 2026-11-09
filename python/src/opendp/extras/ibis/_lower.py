@@ -64,7 +64,8 @@ def _literal(payload):
         dtype, value = _node(value)
         if dtype == "Int":
             # Keep constants as expressions, even when they are used on the left.
-            return ibis.literal(value, type="int64")
+            dtype = "int32" if -(2**31) <= value < 2**31 else "int64"
+            return ibis.literal(value, type=dtype)
         if dtype == "Float":
             return ibis.literal(value, type="float64")
     elif kind == "Scalar":
@@ -151,7 +152,8 @@ def _value(expr, table):
             output = ibis.dtype("int64")
         else:
             output = dtype
-        return value.sum().fill_null(ibis.literal(0, type=output)).cast(output)
+        summand = value.cast("uint32") if dtype.is_boolean() else value
+        return summand.sum().fill_null(ibis.literal(0, type=output)).cast(output)
     if tag == "Mean":
         value = _value(payload, table)
         dtype = value.type()
