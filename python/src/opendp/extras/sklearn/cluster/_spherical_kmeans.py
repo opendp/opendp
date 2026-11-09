@@ -31,14 +31,7 @@ def _check_X(X, n_features):
 
 
 class SphericalKMeans(TransformerMixin, DPTransformer):
-    """Private spherical k-means on canonical boolean CSR arrays without explicit zeros.
-
-    Cosine assignments alternate with noisy sums of unit-normalized records.
-    The optional L1 cap uniformly downweights long records. Noisy centers are
-    clamped nonnegative and optionally projected to their largest coordinates.
-    Zero rows or centers have cosine distance one; assignment ties select the
-    first center and projection ties prefer the lowest feature ID.
-    ``score`` is the negative sum of unweighted cosine distances.
+    """Private spherical k-means on canonical boolean CSR arrays.
 
     :param n_clusters: Number of center directions.
     :param max_iter: Fixed number of adaptively composed private Lloyd updates.
