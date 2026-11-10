@@ -126,7 +126,8 @@ def update_version(version):
 
     # robots.txt
     with open("docs/robots.txt", "a") as f:
-        print(f"Disallow: /en/{version}/", file=f)
+        stem_version = str(version).replace("-dev", "")
+        print(f"Disallow: /en/v{stem_version}/", file=f)
 
     # cargo versions
     # cargo doesn't like build metadata in dependency references, so we strip that for those.
