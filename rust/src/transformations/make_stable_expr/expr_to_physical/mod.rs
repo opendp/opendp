@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
@@ -66,20 +66,14 @@ where
     // this code is written intentionally to fail or change if polars behavior changes
     match (in_dtype.clone(), in_dtype.to_physical()) {
         (in_dtype, out_dtype) if in_dtype == out_dtype => (),
-        (Categorical(_, _), UInt32) => {
-            let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
-
-            if cat_domain.categories().is_none() {
-                return fallible!(
-                    MakeTransformation,
-                    "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first."
-                );
-            }
-
-            active_series.set_element_domain(AtomDomain::<u32>::default());
+        (Categorical(_, _), _) => {
+            return fallible!(
+                MakeTransformation,
+                "to_physical: categorical encodings are data-dependent. Cast to Enum first."
+            );
         }
-        (Enum(_, _), UInt32) => {
-            active_series.set_element_domain(AtomDomain::<u32>::default());
+        (Enum(_, _), dtype @ (UInt8 | UInt16 | UInt32)) => {
+            active_series.set_dtype(dtype)?;
         }
         (Date, Int32) => {
             active_series.set_element_domain(AtomDomain::<i32>::default());
@@ -102,7 +96,7 @@ where
             middle_metric.clone(),
             output_domain,
             middle_metric,
-            Function::then_expr(move |expr| expr.to_physical()),
+            Function::then_expr(|expr| expr.to_physical()),
             StabilityMap::new(Clone::clone),
         )?
 }

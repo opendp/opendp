@@ -2,7 +2,7 @@ use polars::prelude::DataType;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
@@ -33,12 +33,12 @@ where
         input,
         function: FunctionExpr::FillNull { .. },
         ..
-    } = expr
+    } = &expr
     else {
         return fallible!(MakeTransformation, "expected fill_null expression");
     };
 
-    let Ok([data, fill]) = <[_; 2]>::try_from(input) else {
+    let [data, fill] = input.as_slice() else {
         return fallible!(MakeTransformation, "fill_null expects 2 arguments");
     };
 
@@ -46,7 +46,7 @@ where
     let is_column_fill = !fill.clone().meta().root_names().is_empty();
     let expr_domain = if is_column_fill {
         input_domain.as_row_by_row()
-    } else if let Expr::Literal(value) = fill.clone() {
+    } else if let Expr::Literal(value) = fill {
         if !value.is_scalar() {
             return fallible!(MakeTransformation, "fill expression must be broadcastable");
         }
@@ -88,12 +88,36 @@ where
         return fallible!(MakeTransformation, "fill expression must not be nullable");
     }
 
+    let data_dtype = data_domain.column.dtype();
+    let fill_dtype = fill_domain.column.dtype();
+    let is_numeric = |dtype: &DataType| dtype.is_primitive_numeric() || *dtype == DataType::Boolean;
+    if data_dtype != fill_dtype && !(is_numeric(&data_dtype) && is_numeric(&fill_dtype)) {
+        return fallible!(
+            MakeTransformation,
+            "fill_null with different input and filler types is only supported for numeric data"
+        );
+    }
+
+    let can_be_nan = |column: &SeriesDomain| -> Fallible<bool> {
+        Ok(match column.dtype() {
+            DataType::Float32 => column.atom_domain::<f32>()?.nan(),
+            DataType::Float64 => column.atom_domain::<f64>()?.nan(),
+            _ => false,
+        })
+    };
+    let output_nan = can_be_nan(&data_domain.column)?
+        || (data_domain.column.nullable && can_be_nan(&fill_domain.column)?);
     let mut output_domain = data_domain.clone();
+    output_domain
+        .column
+        .set_dtype(super::infer_output_dtype(&expr, &input_domain)?)?;
+    output_domain.column.nullable = false;
+    if !output_nan && output_domain.column.dtype().is_float() {
+        output_domain.column.set_non_nan()?;
+    }
     if is_column_fill {
         output_domain.context = input_domain.context.clone();
     }
-    output_domain.column.drop_bounds().ok();
-    output_domain.column.nullable = false;
 
     Transformation::new(
         input_domain,

@@ -132,6 +132,63 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         test_cov(clique)
 
 
+def test_contingency_table_snapshots_mutable_algorithm():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+    from opendp.extras.mbi._table import make_contingency_table
+
+    algorithm = Fixed(queries=[Count(("A",))])
+    measurement, _, _ = make_contingency_table(
+        input_domain=dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 1)))]
+        ),
+        input_metric=dp.frame_distance(dp.symmetric_distance()),
+        output_measure=dp.max_divergence(),
+        d_in=[dp.polars.Bound(per_group=1)],
+        d_out=5.0,
+        keys={"A": [0, 1]},
+        algorithm=algorithm,
+    )
+
+    def changed_estimator(*args, **kwargs):
+        raise AssertionError("configuration mutated after construction")
+
+    algorithm.estimator = changed_estimator
+    algorithm.queries = [Count(("B",))]
+    result = measurement(pl.LazyFrame({"A": pl.Series("A", [0, 1], dtype=pl.Int32)}))
+    assert result.model is not None
+
+
+@pytest.mark.parametrize("oneway", ["unkeyed", "all"])
+@pytest.mark.parametrize("with_null", [False, True])
+def test_contingency_table_cut_enum_indexing(oneway, with_null):
+    pytest.importorskip("mbi")
+    import polars as pl
+
+    # Both one-way and final indexing must use the Enum encoding of cut bins,
+    # including nulls, while the released labels remain strings.
+    values: list[float | None] = [-1.0, 0.0, 1.0, 2.0]
+    if with_null:
+        values[0] = None
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": values}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=10.0),
+    )
+    table = (
+        context.query(epsilon=10.0)
+        .contingency_table(
+            cuts={"A": [0.5]},
+            algorithm=Fixed(queries=[Count(("A",))], oneway=oneway),
+        )
+        .release()
+    )
+
+    assert table.keys["A"].to_list() == ["(-inf, 0.5]", "(0.5, inf]"]
+    assert table.schema == {"A": pl.String}
+    assert table.project(["A"]).shape == (2,)
+
+
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
     from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]

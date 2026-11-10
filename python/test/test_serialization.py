@@ -10,6 +10,11 @@ from opendp._lib import import_optional_dependency
 atom = dp.atom_domain(bounds=(0.0, 10.0), nan=False)
 input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()
 chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
+odometer = dp.c.make_fully_adaptive_composition(
+    dp.vector_domain(dp.atom_domain(T=int)),
+    dp.symmetric_distance(),
+    dp.max_divergence(),
+)
 
 
 @pytest.mark.parametrize(
@@ -21,7 +26,7 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         input_space,
         # Domains:
         atom,
-        dp.categorical_domain(["A", "B", "C"]),
+        dp.categorical_domain(),
         dp.series_domain("A", atom),
         dp.lazyframe_domain([dp.series_domain("A", atom)]),
         dp.wild_expr_domain([]),
@@ -34,12 +39,22 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         dp.m.max_divergence(),
         dp.m.approximate(dp.m.max_divergence()),
         dp.m.user_divergence("user_divergence"),
+        # Functions:
+        dp.as_array(),
+        # Odometers:
+        odometer,
         # Measurements:
         dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
         dp.m.then_gaussian(1),
         # Compositions:
         chained,
-        dp.c.make_population_amplification(chained, population_size=100),
+        dp.m.make_laplace(
+            dp.vector_domain(dp.atom_domain(T=int)),
+            dp.l1_distance(T=int),
+            scale=2.0,
+        )
+        >> dp.as_array(),
+        dp.c.make_privacy_filter(odometer, d_in=1, d_out=2.0),
     ],
     ids=lambda arg: str(arg),
 )

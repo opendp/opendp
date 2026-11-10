@@ -2,10 +2,9 @@ import pytest
 import opendp.prelude as dp
 from ..helpers import optional_dependency
 
-from opendp.extras.sklearn.decomposition import then_private_pca
-
 np = pytest.importorskip("numpy")
 sklearn = pytest.importorskip("sklearn")
+from opendp.extras.sklearn import decomposition
 
 
 def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
@@ -37,7 +36,7 @@ def test_pca():
         ),
         dp.symmetric_distance(),
     )
-    m_pca = space >> then_private_pca(unit_epsilon=1.0)
+    m_pca = space >> decomposition.then_private_pca(unit_epsilon=1.0)
 
     print(
         "m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))",
@@ -64,7 +63,9 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
     assert np.array_equal(sscp(data), (data - origin).T @ (data - origin))
     # Debug native libraries only support f64 in the full PCA constructor.
     if T == dp.f64:
-        pca = (domain, dp.symmetric_distance()) >> then_private_pca(unit_epsilon=1.0)
+        pca = (domain, dp.symmetric_distance()) >> decomposition.then_private_pca(
+            unit_epsilon=1.0
+        )
         assert pca.check(2, 1.0)
 
 

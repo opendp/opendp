@@ -166,6 +166,49 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
+    use crate::domains::CategoricalDomain;
+
+    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+
+    for dtype in [
+        DataType::UInt8,
+        DataType::UInt16,
+        DataType::UInt32,
+        DataType::UInt64,
+        DataType::Int8,
+        DataType::Int16,
+        DataType::Int32,
+        DataType::Int64,
+    ] {
+        let result = make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("category").cast(dtype),
+        );
+        assert!(result.is_err());
+    }
+
+    // Logical string values and fixed Enum codes remain safe.
+    let categories = FrozenCategories::new(["A", "B"])?;
+    for dtype in [
+        DataType::String,
+        DataType::Enum(categories.clone(), categories.mapping().clone()),
+    ] {
+        make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("category").cast(dtype),
+        )?;
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_make_expr_cast_nullability() -> Fallible<()> {
     // Non-strict casts can introduce nulls into otherwise non-nullable columns.
     let lf = df!("x" => &["1", "not-an-integer"])?.lazy();

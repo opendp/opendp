@@ -3,12 +3,12 @@ use std::collections::HashSet;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::FrameDistance;
+use crate::metrics::{Bounds, FrameDistance};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
-use super::StableDslPlan;
+use super::{StableDslPlan, is_identity, retain_bounds, retain_margins};
 
 #[cfg(test)]
 mod test;
@@ -38,6 +38,17 @@ where
         return fallible!(MakeTransformation, "Expected select logical plan");
     };
 
+    // Without a row-dependent expression, select can collapse the frame to one row.
+    if exprs
+        .iter()
+        .all(|expr| expr.clone().meta().root_names().is_empty())
+    {
+        return fallible!(
+            MakeTransformation,
+            "select requires a row-dependent expression"
+        );
+    }
+
     let t_prior = input
         .as_ref()
         .clone()
@@ -50,7 +61,8 @@ where
         context: Context::RowByRow,
     };
     let t_exprs = exprs
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -71,7 +83,23 @@ where
         }
     }
 
-    let output_domain = DslPlanDomain::new(series_domains)?;
+    let retained_columns = exprs
+        .iter()
+        .zip(t_exprs.iter())
+        .filter(|(expr, t)| is_identity(expr, &t.output_domain.column.name))
+        .map(|(_, t)| t.output_domain.column.name.clone())
+        .collect::<HashSet<_>>();
+
+    let changed_columns = middle_domain
+        .series_domains
+        .iter()
+        .map(|s| s.name.clone())
+        .chain(t_exprs.iter().map(|t| t.output_domain.column.name.clone()))
+        .filter(|name| !retained_columns.contains(name))
+        .collect::<HashSet<_>>();
+
+    let margins = retain_margins(&middle_domain.margins, &changed_columns);
+    let output_domain = DslPlanDomain::new_with_margins(series_domains, margins)?;
 
     let t_select = Transformation::new(
         middle_domain,
@@ -88,7 +116,7 @@ where
                 options,
             })
         }),
-        StabilityMap::new(Clone::clone),
+        StabilityMap::new(move |bounds: &Bounds| retain_bounds(bounds, &changed_columns)),
     )?;
 
     t_prior >> t_select

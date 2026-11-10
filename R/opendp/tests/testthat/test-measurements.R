@@ -253,7 +253,7 @@ test_that("test_randomized_response_bitvec", {
   xx <- raw(3)
   xx[1] <- charToRaw("A")
   xx[2] <- as.raw(1L)
-  input_space <- c(bitvector_domain(max_weight = 4L), discrete_distance())
+  input_space <- c(bitvector_domain(max_weight = 4L, size = 24L), discrete_distance())
   m_rr <- input_space |> then_randomized_response_bitvec(f = 0.95)
   # epsilon is 2 * m * ln((2 - f) / f)
   # where m = 4 and f = .95

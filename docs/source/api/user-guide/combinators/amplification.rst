@@ -1,22 +1,30 @@
 Amplification
 -------------
 
-If your dataset is a simple sample from a larger population,
-you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
-:func:`~opendp.combinators.make_population_amplification`.
+If your dataset is a simple sample from a larger population, you can make the
+privacy relation more permissive by accounting for privacy amplification by
+sampling without replacement.
+
+:func:`~opendp.combinators.amplify_without_replacement` takes the privacy map
+of an analysis on the sample and returns a privacy map for the larger
+population. Both datasets have a fixed size, and distances count substitutions
+(``ChangeOneDistance``).
 
 .. note::
 
-    The amplifier requires a looser trust model, as the population size can be set arbitrarily.
+    The privacy guarantees are only valid if the input dataset is a simple
+    random sample from a population with `population_size` records. Sampling
+    must be independent of the data, and sample membership must remain
+    confidential. The input privacy map must account for all processing and
+    releases involving the sample.
 
     .. code:: pycon
-
 
         >>> dp.enable_features("honest-but-curious")
 
-
-In order to demonstrate this API, we'll first create a measurement with a sized input domain.
-The resulting measurement expects the size of the input dataset to be 10.
+In order to demonstrate this API, consider an analysis of a sample of 10
+records from a population of 100. The privacy map below spends one epsilon
+for each substitution in the sample.
 
 .. tab-set::
 
@@ -24,50 +32,18 @@ The resulting measurement expects the size of the input dataset to be 10.
 
     .. code:: pycon
 
-        >>> atom_domain = dp.atom_domain(bounds=(0.0, 10.0), nan=False)
-        >>> input_space = (
-        ...     dp.vector_domain(atom_domain, size=10),
-        ...     dp.symmetric_distance(),
+        >>> sample_map = lambda d: float(d)
+        >>> population_map = dp.c.amplify_without_replacement(
+        ...     dp.change_one_distance(),
+        ...     dp.max_divergence(),
+        ...     sample_map,
+        ...     population_size=100,
+        ...     sample_size=10,
         ... )
-        >>> meas = (
-        ...     input_space
-        ...     >> dp.t.then_mean()
-        ...     >> dp.m.then_laplace(scale=0.5)
-        ... )
-        >>> print(
-        ...     "standard mean:", meas([1.0] * 10)
-        ... )  # -> 1.03 # doctest: +ELLIPSIS
-        standard mean: ...
+        >>> assert sample_map(1) == 1.0
+        >>> assert 0.158 < population_map(1) < 0.159
+        >>> assert 0.316 < population_map(2) < 0.318
 
-We can now use the amplification combinator to construct an amplified measurement.
-The function on the amplified measurement is identical to the standard measurement.
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. code:: pycon
-
-      >>> amplified = dp.c.make_population_amplification(
-      ...     meas, population_size=100
-      ... )
-      >>> print(
-      ...     "amplified mean:", amplified([1.0] * 10)
-      ... )  # -> .97 # doctest: +ELLIPSIS
-      amplified mean: ...
-
-The privacy relation on the amplified measurement takes into account that the input dataset of size 10
-is a simple sample of individuals from a theoretical larger dataset that captures the entire population, with 100 rows.
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. code:: pycon
-
-        >>> # Where we once had a privacy utilization of ~2 epsilon...
-        >>> assert meas.check(2, 2.0 + 1e-6)
-        >>> # ...we now have a privacy utilization of ~.4941 epsilon.
-        >>> assert amplified.check(2, 0.4941)
-
-The efficacy of this combinator improves as n gets larger.
+The privacy relation on the population takes into account that the input
+dataset of size 10 is a simple sample of individuals from a larger dataset
+with 100 rows.

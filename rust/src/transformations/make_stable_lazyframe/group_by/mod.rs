@@ -99,11 +99,15 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     };
 
     // each expression must be stable row by row
-    keys.iter().try_for_each(|key| {
-        key.clone()
-            .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
-            .map(|_: Transformation<_, _, _, L01InfDistance<M>>| ())
-    })?;
+    let stable_keys = keys
+        .iter()
+        .map(|key| {
+            let t_key: Transformation<_, _, _, L01InfDistance<M>> = key
+                .clone()
+                .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))?;
+            Ok(t_key.invoke(&input)?.expr)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     // check that aggregations are infallible. Aggregations are allowed to resize data
     aggs.iter()
@@ -118,7 +122,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
 
     // use Polars to compute the output dtype
     let series_domains = middle_domain
-        .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
+        .simulate_schema(|lf| lf.group_by(&stable_keys).agg(&aggs))?
         .iter_fields()
         .map(SeriesDomain::new_from_field)
         .collect::<Fallible<_>>()?;
@@ -145,7 +149,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             #[cfg(patch_polars)]
             let output = DslPlan::GroupBy {
                 input: Arc::new(plan.clone()),
-                keys: keys.clone(),
+                keys: stable_keys.clone(),
                 predicates: vec![],
                 aggs: aggs.clone(),
                 apply: None,
@@ -155,7 +159,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             #[cfg(not(patch_polars))]
             let output = DslPlan::GroupBy {
                 input: Arc::new(plan.clone()),
-                keys: keys.clone(),
+                keys: stable_keys.clone(),
                 aggs: aggs.clone(),
                 apply: None,
                 maintain_order: false,
@@ -445,6 +449,12 @@ fn check_infallible_function(
         FunctionExpr::Abs => check_inputs!(),
         FunctionExpr::Negate => check_inputs!(),
         FunctionExpr::NullCount => check_inputs!(aggregate),
+        FunctionExpr::Pow(PowFunction::Generic) => {
+            return fallible!(
+                MakeTransformation,
+                "pow may raise data-dependent errors due to integer exponent conversion."
+            );
+        }
         FunctionExpr::Pow(_) => check_inputs!(aligned_rows),
         FunctionExpr::Range(_) => check_inputs!(),
         FunctionExpr::FillNull => check_inputs!(),
@@ -477,7 +487,14 @@ fn check_infallible_function(
         FunctionExpr::LowerBound => check_inputs!(),
         FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
         FunctionExpr::Cut { .. } => check_inputs!(),
-        FunctionExpr::QCut { .. } => check_inputs!(),
+        FunctionExpr::QCut { .. } => {
+            // Duplicate quantiles are only one possible failure; even with
+            // allow_duplicates=true, quantile calculation depends on private values.
+            return fallible!(
+                MakeTransformation,
+                "qcut may raise data-dependent errors while computing quantiles."
+            );
+        }
         FunctionExpr::ToPhysical => check_inputs!(),
         FunctionExpr::Random { .. } => {
             return fallible!(
@@ -745,7 +762,10 @@ fn check_infallible_function(
         },
 
         FunctionExpr::TemporalExpr(temporal_function) => match temporal_function {
-            // Component extraction / conversions (value-safe; null-propagating).
+            // These conversions may panic on out-of-range physical Datetime values.
+            // Unlike stable expressions, this checker has no input domain to
+            // establish that a timestamp is representable.
+            // Component extraction / conversions.
             TemporalFunction::Millennium
             | TemporalFunction::Century
             | TemporalFunction::Year
@@ -767,21 +787,29 @@ fn check_infallible_function(
             | TemporalFunction::Millisecond
             | TemporalFunction::Microsecond
             | TemporalFunction::Nanosecond
-            | TemporalFunction::TotalDays { .. }
+            | TemporalFunction::ToString(_)
+            | TemporalFunction::BaseUtcOffset
+            | TemporalFunction::DSTOffset => {
+                return fallible!(
+                    MakeTransformation,
+                    "Temporal component extraction may panic on out-of-range datetime values."
+                );
+            }
+
+            // Duration arithmetic and timestamp reinterpretation do not
+            // convert timestamps through a calendar datetime.
+            TemporalFunction::TotalDays { .. }
             | TemporalFunction::TotalHours { .. }
             | TemporalFunction::TotalMinutes { .. }
             | TemporalFunction::TotalSeconds { .. }
             | TemporalFunction::TotalMilliseconds { .. }
             | TemporalFunction::TotalMicroseconds { .. }
             | TemporalFunction::TotalNanoseconds { .. }
-            | TemporalFunction::ToString(_)
             | TemporalFunction::Duration(_)
             | TemporalFunction::CastTimeUnit(_)
             | TemporalFunction::WithTimeUnit(_)
             | TemporalFunction::ConvertTimeZone(_)
-            | TemporalFunction::TimeStamp(_)
-            | TemporalFunction::BaseUtcOffset
-            | TemporalFunction::DSTOffset => check_inputs!(),
+            | TemporalFunction::TimeStamp(_) => check_inputs!(),
 
             // These can raise depending on values around DST ambiguity/non-existent local times.
             TemporalFunction::Truncate | TemporalFunction::Round | TemporalFunction::Replace => {

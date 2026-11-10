@@ -475,20 +475,25 @@ impl<D: Domain> Domain for VectorDomain<D> {
 /// Alias for BitVec<u8,Lsb0>
 pub type BitVector = BitVec<u8, Lsb0>;
 
-/// A domain that contains all vectors of only Boolean values
+/// A domain that contains all vectors of only Boolean values.
 ///
-/// If a maximum weight is specified, then it is restricted to all vectors up to a specified Hamming weight
+/// If a maximum weight is specified, it restricts the number of true bits.
+/// If size is specified, vectors must have exactly that many bits.
 #[derive(Clone, PartialEq)]
 pub struct BitVectorDomain {
     pub max_weight: Option<usize>,
+    pub size: Option<usize>,
 }
 impl Debug for BitVectorDomain {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let weight_str = self
-            .max_weight
-            .map(|max_weight| format!("weight={:?}", max_weight))
-            .unwrap_or_default();
-        write!(f, "BitVectorDomain({})", weight_str)
+        match (self.size, self.max_weight) {
+            (Some(size), Some(weight)) => {
+                write!(f, "BitVectorDomain(size={size}, weight={weight})")
+            }
+            (Some(size), None) => write!(f, "BitVectorDomain(size={size})"),
+            (None, Some(weight)) => write!(f, "BitVectorDomain(weight={weight})"),
+            (None, None) => write!(f, "BitVectorDomain()"),
+        }
     }
 }
 impl Default for BitVectorDomain {
@@ -498,7 +503,10 @@ impl Default for BitVectorDomain {
 }
 impl BitVectorDomain {
     pub fn new() -> Self {
-        BitVectorDomain { max_weight: None }
+        BitVectorDomain {
+            max_weight: None,
+            size: None,
+        }
     }
     pub fn with_max_weight(mut self, max_weight: usize) -> Self {
         self.max_weight = Some(max_weight);
@@ -508,15 +516,26 @@ impl BitVectorDomain {
         self.max_weight = None;
         self
     }
+    pub fn with_size(mut self, size: usize) -> Self {
+        self.size = Some(size);
+        self
+    }
+    pub fn without_size(mut self) -> Self {
+        self.size = None;
+        self
+    }
 }
 impl Domain for BitVectorDomain {
-    type Carrier = BitVector; //
+    type Carrier = BitVector;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        Ok(if let Some(max_weight) = self.max_weight {
-            val.count_ones() <= max_weight
-        } else {
-            true
-        })
+        if let Some(size) = self.size {
+            if val.len() != size {
+                return Ok(false);
+            }
+        }
+        Ok(self
+            .max_weight
+            .map_or(true, |max_weight| val.count_ones() <= max_weight))
     }
 }
 

@@ -9,6 +9,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 
 from __future__ import annotations
 import ctypes
+from copy import deepcopy
 from dataclasses import asdict
 from typing import (
     Any,
@@ -488,13 +489,15 @@ class Transformation(ctypes.POINTER(AnyTransformation)):  # type: ignore[misc]
 
     >>> # chain with more transformations from the trans module
     >>> chained = (
-    ...     dp.t.make_split_lines() >>
-    ...     dp.t.then_cast_default(TOA=int) >>
-    ...     count
+    ...     dp.t.make_cast_default(
+    ...         dp.vector_domain(dp.atom_domain(T=str)),
+    ...         dp.symmetric_distance(),
+    ...         TOA=int
+    ...     ) >> count
     ... )
 
     >>> # the resulting transformation has the same features
-    >>> chained("1\\n2\\n3")
+    >>> chained(["1", "2", "3"])
     3
     >>> assert chained.check(1, 1)  # both chained transformations were 1-stable
     """
@@ -874,8 +877,12 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDomain)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1023,12 +1030,10 @@ class ExtrinsicDomain(Domain):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.domains import _extrinsic_domain_descriptor
 
-        return _extrinsic_domain_descriptor(self)
+        return deepcopy(_extrinsic_domain_descriptor(self))
 
 
 class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
@@ -1090,8 +1095,12 @@ class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDistance)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1109,12 +1118,10 @@ class ExtrinsicDistance(Metric):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.metrics import _extrinsic_metric_descriptor
 
-        return _extrinsic_metric_descriptor(self)
+        return deepcopy(_extrinsic_metric_descriptor(self))
 
 
 class FrameDistance(Metric):
@@ -1228,8 +1235,12 @@ class Measure(ctypes.POINTER(AnyMeasure)):  # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
+    def __deepcopy__(self, memo):
+        # OpenDP handles are immutable under their constructor's trust contract.
+        return self
+
     def cast(self, type_: Type[D]) -> D:
-        """Retrieve the descriptor as the prescribed type, or error."""
+        """Retrieve a copy of the descriptor as the prescribed type, or error."""
         if not (
             isinstance(self, ExtrinsicDivergence)
             and isinstance(descriptor := self.descriptor, type_)
@@ -1247,12 +1258,10 @@ class ExtrinsicDivergence(Measure):
 
     @property
     def descriptor(self) -> Any:
-        """
-        Descriptor of measure. Used to retrieve the descriptor associated with measures defined in Python
-        """
+        """Return a deep copy of the descriptor."""
         from opendp.measures import _extrinsic_measure_descriptor
 
-        return _extrinsic_measure_descriptor(self)
+        return deepcopy(_extrinsic_measure_descriptor(self))
 
 
 class ApproximateDivergence(Measure):
@@ -1456,7 +1465,7 @@ def assert_features(*features: str) -> None:
 M = TypeVar("M", Transformation, Measurement)
 
 
-def binary_search_chain(
+def binary_search_chain(  # noqa: UP047 (PEP 695 type parameters need Python 3.12)
     make_chain: Callable[[float], M],
     d_in: Any,
     d_out: Any,
@@ -1512,7 +1521,7 @@ def binary_search_chain(
     It should have the widest possible admissible clamping bounds (-b, b).
 
     >>> def make_sum(b):
-    ...     space = dp.vector_domain(dp.atom_domain((-b, b)), 10_000), dp.symmetric_distance()
+    ...     space = dp.vector_domain(dp.atom_domain((-b, b), nan=False), 10_000), dp.symmetric_distance()
     ...     return space >> dp.t.then_sum() >> dp.m.then_laplace(100.)
     ...
     >>> # `meas` is a Measurement with the widest possible clamping bounds.
@@ -1573,7 +1582,7 @@ def binary_search_param(
     >>> # we then write a function that make a computation chain with a given data size
     >>> def make_mean(data_size):
     ...    return (
-    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
+    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.), nan=False), data_size), dp.symmetric_distance()) >>
     ...        dp.t.then_mean() >>
     ...        dp.m.then_laplace(necessary_scale)
     ...    )
@@ -1701,7 +1710,7 @@ def binary_search(
     Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.
 
     >>> # build a histogram that emits float counts
-    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
+    >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.), nan=False), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
     ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)),
     ...     1e-8
@@ -1710,7 +1719,7 @@ def binary_search(
     >>> dp.binary_search(
     ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)),
     ...     bounds = (0., 1.))
-    0.5235561269546629
+    0.5235561269534565
 
     Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.
 

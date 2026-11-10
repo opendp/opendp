@@ -23,7 +23,14 @@ from opendp.extras.numpy import array2_domain
 from opendp.metrics import symmetric_distance
 from opendp.mod import Measure
 
-__all__ = ["LinearRegression"]
+# Keep low-level constructors importable without sklearn. Autodoc can supply
+# its mocked sklearn dependency here to document the estimator as well.
+if import_optional_dependency("sklearn", raise_error=False) is not None:
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
+
+__all__ = ["LinearRegression", "LogisticRegression"]
 
 
 class LinearRegression:

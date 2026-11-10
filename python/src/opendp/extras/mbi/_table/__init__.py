@@ -29,6 +29,8 @@ from opendp.extras.mbi._utilities import (
     row_major_order,
     SelectPrefixQuery,
     Algorithm,
+    _snapshot_algorithm,
+    _snapshot_bounds,
     Marginals,
     ONEWAY_UNKEYED,
 )
@@ -42,7 +44,6 @@ from opendp.mod import (
     OpenDPException,
     Queryable,
     binary_search,
-    binary_search_param,
 )
 from opendp.domains import _lazyframe_from_domain
 from opendp.transformations import make_stable_lazyframe
@@ -238,6 +239,8 @@ def make_contingency_table(
     import polars as pl
     import mbi
 
+    d_in = _snapshot_bounds(d_in)
+    algorithm = _snapshot_algorithm(algorithm)
     plan = _lazyframe_from_domain(input_domain)
     schema = plan.collect_schema()
 
@@ -270,6 +273,13 @@ def make_contingency_table(
         model = None
         marginals = Marginals()
         thresholds = {}
+
+    # The stable cut transformation casts bins to Enum with these public labels.
+    # Keep the private columns encoded; only cast public lookup keys to Enum.
+    cut_dtypes = {c: pl.Enum(get_categories(cutset)) for c, cutset in cuts_pl.items()}
+
+    def lookup_keys(c, keyset):
+        return keyset.cast(cut_dtypes[c]) if c in cut_dtypes else keyset
 
     if cuts_pl:
         plan = plan.with_columns(
@@ -324,7 +334,7 @@ def make_contingency_table(
             output_measure,
             d_in=d_in,
             d_out=d_oneway,
-            keys=keys_pl,
+            keys={c: lookup_keys(c, keyset) for c, keyset in keys_pl.items()},
             plan=plan,
             unknown_only=algorithm.oneway == ONEWAY_UNKEYED,
             has_prior_total=has_prior_total,
@@ -376,7 +386,7 @@ def make_contingency_table(
             plan.with_columns(
                 pl.col(c)
                 .replace_strict(
-                    stable_keys[c],
+                    lookup_keys(c, stable_keys[c]),
                     pl.Series(range(len(stable_keys[c])), dtype=pl.UInt32),
                     default=_get_null_index(stable_keys[c], len(stable_keys[c]) - 1),
                 )
@@ -585,8 +595,10 @@ def _make_oneway_marginals(
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
     if isinstance(output_measure, ApproximateDivergence):
-        compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
-        scale = binary_search(compare_s, T=float)
+        compare_s = lambda s: (
+            s > 0 and _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]
+        )  # type: ignore[index]
+        scale = binary_search(compare_s, bounds=(0.0, None), T=float)
 
         try:
             _make(scale, threshold=None)
@@ -596,7 +608,11 @@ def _make_oneway_marginals(
             threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]
 
     else:
-        scale = binary_search_param(_make, d_in, d_out, T=float)
+        scale = binary_search(
+            lambda s: s > 0 and _make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
         threshold = None
 
     return _make(scale, threshold), scale, threshold

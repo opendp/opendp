@@ -1,4 +1,6 @@
 use opendp_derive::bootstrap;
+#[cfg(feature = "contrib")]
+use polars::prelude::{Expr, PlSmallStr};
 use polars::{lazy::frame::LazyFrame, prelude::DslPlan};
 use std::collections::HashSet;
 
@@ -35,6 +37,57 @@ mod source;
 
 #[cfg(feature = "contrib")]
 mod truncate;
+
+// Reuse column-lineage checks for projections that retain or replace columns.
+#[cfg(feature = "contrib")]
+fn is_identity(expr: &Expr, name: &PlSmallStr) -> bool {
+    match expr {
+        Expr::Alias(inner, _) => is_identity(inner, name),
+        Expr::Column(column) => column == name,
+        _ => false,
+    }
+}
+
+#[cfg(feature = "contrib")]
+fn unaffected(by: &HashSet<Expr>, changed_columns: &HashSet<PlSmallStr>) -> bool {
+    if changed_columns.is_empty() {
+        return true;
+    }
+    // Selectors may depend on columns without exposing them through root_names().
+    if by
+        .iter()
+        .any(|expr| expr.clone().meta().has_multiple_outputs())
+    {
+        return false;
+    }
+    let root_names = by
+        .iter()
+        .flat_map(|expr| expr.clone().meta().root_names())
+        .collect::<HashSet<_>>();
+
+    root_names.is_disjoint(changed_columns)
+}
+
+#[cfg(feature = "contrib")]
+fn retain_margins(margins: &[Margin], changed_columns: &HashSet<PlSmallStr>) -> Vec<Margin> {
+    margins
+        .iter()
+        .filter(|m| unaffected(&m.by, changed_columns))
+        .cloned()
+        .collect()
+}
+
+#[cfg(feature = "contrib")]
+fn retain_bounds(bounds: &Bounds, changed_columns: &HashSet<PlSmallStr>) -> Bounds {
+    Bounds(
+        bounds
+            .0
+            .iter()
+            .filter(|b| unaffected(&b.by, changed_columns))
+            .cloned()
+            .collect(),
+    )
+}
 
 #[bootstrap(
     features("contrib"),

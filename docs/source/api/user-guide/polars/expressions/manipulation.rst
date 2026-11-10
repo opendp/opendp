@@ -63,7 +63,7 @@ dominate the sensitivity.
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -199,7 +199,9 @@ from grouping:
             ...
 
             >>> labels = pl.Series(
-            ...     "HWUSUAL", cut_labels(breaks), dtype=pl.Categorical
+            ...     "HWUSUAL",
+            ...     cut_labels(breaks),
+            ...     dtype=pl.Enum(cut_labels(breaks)),
             ... )
 
             >>> query = (
@@ -246,8 +248,8 @@ from grouping:
             └───────────┴─────────┘
 
 
-The output type is categorical, but with a data-independent encoding,
-meaning OpenDP allows grouping by these keys.
+The output type is an Enum with a data-independent encoding,
+so OpenDP allows grouping by these keys.
 
 Drop NaNs
 ---------
@@ -292,7 +294,7 @@ In the following example, all nans and nulls are dropped from the
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -334,7 +336,7 @@ simply a single scalar, but more complicated expressions are valid:
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -372,7 +374,7 @@ simply a single scalar, but more complicated expressions are valid:
             >>> (
             ...     context.query()
             ...     # prepare actual work hours as a valid fill column
-            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0.0))
+            ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0))
             ...     # prepare usual work hours with actual work hours as a fill
             ...     .with_columns(
             ...         pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL)
@@ -436,7 +438,7 @@ age:
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14405.179857 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14402.589928 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -497,7 +499,7 @@ by ``.dp.sum``.
             │ ---     ┆ ---       ┆ ---           ┆ ---          │
             │ str     ┆ str       ┆ str           ┆ f64          │
             ╞═════════╪═══════════╪═══════════════╪══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14117.076259 │
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 14114.538129 │
             └─────────┴───────────┴───────────────┴──────────────┘
 
 
@@ -607,10 +609,11 @@ supplied, then OpenDP considers the output to be non-null.
 To Physical
 -----------
 
-``.to_physical`` returns the underlying representation of categorical
-(``pl.Categorical``, ``pl.Enum``) or temporal (``pl.Date``, ``pl.Time``,
-``pl.Datetime``) data. For example, you can use the ``.to_physical``
-expression to retrieve the bin indices of the ``.cut`` expression.
+``.to_physical`` returns the underlying representation of
+enums (``pl.Enum``) or temporal (``pl.Date``, ``pl.Time``,
+``pl.Datetime``) data. For example, you can use ``.to_physical``
+to retrieve the bin indices of the ``.cut`` expression.
+Categorical encodings are data-dependent; cast to ``pl.Enum`` first.
 
 .. tab-set::
 
@@ -621,7 +624,7 @@ expression to retrieve the bin indices of the ``.cut`` expression.
 
             >>> breaks = [0, 20, 40, 60, 80, 98]
             >>> labels = pl.Series(
-            ...     "HWUSUAL", list(range(len(breaks) + 1)), dtype=pl.UInt32
+            ...     "HWUSUAL", list(range(len(breaks) + 1)), dtype=pl.UInt8
             ... )
 
             >>> query = (
@@ -640,7 +643,7 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             ┌─────────┬─────────┐
             │ HWUSUAL ┆ len     │
             │ ---     ┆ ---     │
-            │ u32     ┆ i64     │
+            │ u8      ┆ i64     │
             ╞═════════╪═════════╡
             │ 0       ┆ ... │
             │ 1       ┆ ... │
@@ -652,6 +655,5 @@ expression to retrieve the bin indices of the ``.cut`` expression.
             └─────────┴─────────┘
 
 
-In the case of categorical data types, OpenDP only allows this
-expression if the encoding is data-independent. More information can be
-found in :doc:`Data Types <../data-types>`.
+Categorical encodings do not have a fixed integer representation. More
+information can be found in :doc:`Data Types <../data-types>`.

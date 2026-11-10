@@ -1,6 +1,17 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, get_args, TYPE_CHECKING
+from copy import deepcopy
+from dataclasses import dataclass, replace
+from typing import (
+    Callable,
+    Literal,
+    Optional,
+    Any,
+    Iterator,
+    Sequence,
+    TypeVar,
+    get_args,
+    TYPE_CHECKING,
+)
 from functools import reduce
 from math import inf, nextafter, sqrt
 from opendp._internal import (
@@ -86,7 +97,7 @@ OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms."""
 
@@ -138,8 +149,19 @@ class Algorithm(ABC):
     ) -> Measurement: ...
 
 
+A = TypeVar("A", bound=Algorithm)
+
+
+def _snapshot_algorithm(algorithm: A) -> A:
+    """Detach and validate configuration before a measurement captures it."""
+    snapshot = deepcopy(algorithm)
+    snapshot.__post_init__()
+    return snapshot
+
+
 def typed_dict_domain(domains: dict[Any, Domain]) -> ExtrinsicDomain:
     """Domain containing a fixed-key dictionary of elements, each with its own domain."""
+    domains = dict(domains)
 
     def _member(x):
         if not isinstance(x, dict):
@@ -216,6 +238,11 @@ def prior(x: float) -> float:
     return np.nextafter(x, -np.inf)
 
 
+def _snapshot_bounds(bounds: list["Bound"]) -> list["Bound"]:
+    """Detach contribution bounds from caller-owned lists and Bound objects."""
+    return [replace(bound, by=tuple(bound.by)) for bound in bounds]
+
+
 def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
     """Retrieves the cardinalities of each column in a lazyframe domain"""
 
@@ -241,7 +268,7 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
 def make_stable_marginals(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    cliques: list[tuple[str, ...]],
+    cliques: Sequence[Sequence[str]],
 ) -> Transformation:
     """Return marginals with (L0, L1, Linf) contribution bounds per clique."""
     from opendp.extras.numpy import arrayd_domain
@@ -254,6 +281,7 @@ def make_stable_marginals(
         raise ValueError(message)
 
     cardinalities = get_cardinalities(input_domain)
+    cliques_snapshot = tuple(tuple(c) for c in cliques)
 
     def shape(by: tuple[str, ...]) -> tuple[int, ...]:
         return tuple(cardinalities[c] for c in by)
@@ -268,8 +296,8 @@ def make_stable_marginals(
         return y
 
     def function(data):
-        dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques])
-        return {c: pivot(m, c) for m, c in zip(dfs, cliques)}
+        dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques_snapshot])
+        return {c: pivot(m, c) for m, c in zip(dfs, cliques_snapshot)}
 
     def count_sensitivity(
         bounds: list[Bound], clique: tuple[str, ...]
@@ -284,13 +312,13 @@ def make_stable_marginals(
         return l0, min(total, l0 * linf), linf
 
     def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], tuple[int, int, int]]:
-        return {clique: count_sensitivity(d_in, clique) for clique in cliques}
+        return {clique: count_sensitivity(d_in, clique) for clique in cliques_snapshot}
 
     return _make_transformation(
         input_domain,
         input_metric,
         output_domain=typed_dict_domain(
-            {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques}
+            {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques_snapshot}
         ),
         output_metric=typed_dict_distance(l01inf_distance(absolute_distance(T="i32"))),
         function=function,

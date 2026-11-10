@@ -9,6 +9,10 @@ fn test_check_infallible() -> Fallible<()> {
     // failure to cast causes a data-dependent error
     assert!(check_infallible(&lit("a").strict_cast(DataType::Int32), Resize::Allow).is_err());
 
+    // Sample-and-aggregate cannot validate temporal input ranges.
+    assert!(check_infallible(&col("t").dt().year(), Resize::Allow).is_err());
+    assert!(check_infallible(&col("t").dt().hour(), Resize::Allow).is_err());
+
     Ok(())
 }
 
@@ -105,5 +109,63 @@ fn test_group_by_preserves_plain_margin_keys() -> Fallible<()> {
             ..margin
         }]
     );
+    Ok(())
+}
+
+#[test]
+fn test_check_infallible_pow_and_qcut() -> Fallible<()> {
+    // Integer pow may fail when a private exponent is negative.
+    let pow = Expr::Function {
+        input: vec![col("a"), col("b")],
+        function: FunctionExpr::Pow(PowFunction::Generic),
+    };
+    assert!(check_infallible(&pow.first(), Resize::Allow).is_err());
+
+    // The fixed-arity sqrt variant does not cast a private exponent.
+    let sqrt = Expr::Function {
+        input: vec![col("a")],
+        function: FunctionExpr::Pow(PowFunction::Sqrt),
+    };
+    assert!(check_infallible(&sqrt, Resize::Allow).is_ok());
+
+    for allow_duplicates in [false, true] {
+        let qcut = Expr::Function {
+            input: vec![col("v")],
+            function: FunctionExpr::QCut {
+                probs: vec![0.25, 0.5, 0.75],
+                labels: None,
+                left_closed: false,
+                allow_duplicates,
+                include_breaks: false,
+            },
+        };
+        assert!(check_infallible(&qcut.first(), Resize::Allow).is_err());
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_stable_group_by_categorical() -> Fallible<()> {
+    use crate::domains::{CategoricalDomain, LazyFrameDomain};
+    use crate::metrics::SymmetricDistance;
+    use crate::transformations::make_stable_lazyframe;
+
+    let categories = Categories::global();
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    let series = Series::new("category".into(), ["B", "A", "B"]).cast(&dtype)?;
+    let lf = DataFrame::new(vec![series.into_column()])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+
+    let t = make_stable_lazyframe(
+        domain,
+        FrameDistance(SymmetricDistance),
+        lf.clone().group_by(["category"]).agg([len()]),
+    )?;
+
+    assert_eq!(t.invoke(&lf)?.collect()?.height(), 2);
     Ok(())
 }

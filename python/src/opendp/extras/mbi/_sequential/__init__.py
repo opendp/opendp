@@ -1,15 +1,17 @@
 """Release multiple algorithms sequentially."""
 
 from dataclasses import dataclass
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Optional, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.combinators import make_adaptive_composition
 from opendp.extras.mbi._utilities import (
     Algorithm,
+    _snapshot_algorithm,
     get_associated_metric,
     get_cardinalities,
+    _snapshot_bounds,
     Marginals,
 )
 from opendp.metrics import frame_distance, symmetric_distance
@@ -25,16 +27,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class Sequential(Algorithm):
     """Release multiple algorithms sequentially.
 
     Use this in conjunction with Fixed to ensure specific marginals are estimated.
     """
 
-    algorithms: list[Algorithm]
+    algorithms: Sequence[Algorithm]
     """Sequence of algorithms."""
-    weights: Optional[list[float]] = None
+    weights: Optional[Sequence[float]] = None
     """Budget allocation amongst algorithms.
 
     Defaults to equal budget for each algorithm."""
@@ -57,6 +59,10 @@ class Sequential(Algorithm):
 
             if any(w <= 0 for w in self.weights):
                 raise ValueError(f"weights ({self.weights}) must be positive")
+
+            self.weights = tuple(self.weights)
+
+        self.algorithms = tuple(self.algorithms)
 
     def make_marginals(
         self,
@@ -94,7 +100,10 @@ class Sequential(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        weights = np.array(self.weights or [1] * len(self.algorithms))
+        d_in = _snapshot_bounds(d_in)
+        algorithm = _snapshot_algorithm(self)
+        algorithms = algorithm.algorithms
+        weights = np.array(algorithm.weights or [1] * len(algorithms))
 
         scale = binary_search_param(
             lambda scale: make_adaptive_composition(
@@ -111,7 +120,7 @@ class Sequential(Algorithm):
         ) -> tuple[Marginals, MarkovRandomField]:
             all_marginals = marginals.copy()
             current_model = model
-            for algo, d_mid in zip(self.algorithms, d_mids):
+            for algo, d_mid in zip(algorithms, d_mids):
                 m_algo = algo.make_marginals(
                     input_domain,
                     input_metric,

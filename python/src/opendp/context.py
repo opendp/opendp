@@ -12,7 +12,17 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
-from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping
+from numbers import Integral
+from typing import (
+    Any,
+    Callable,
+    NoReturn,
+    Optional,
+    Sequence,
+    Type,
+    Union,
+    MutableMapping,
+)
 import importlib
 from inspect import signature
 from functools import partial
@@ -49,6 +59,8 @@ from opendp.metrics import (
 from opendp.mod import (
     ApproximateDivergence,
     Domain,
+    ExtrinsicDomain,
+    LazyFrameDomain,
     Measurement,
     Metric,
     _PartialConstructor,
@@ -57,10 +69,11 @@ from opendp.mod import (
     Queryable,
     Transformation,
     Measure,
+    VectorDomain,
     binary_search,
     binary_search_param,
 )
-from opendp.typing import RuntimeType
+from opendp.typing import _ELEMENTARY_TYPES, RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import Bound, LazyFrameQuery, Margin
 from dataclasses import replace
@@ -159,9 +172,13 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
 
     # choose a metric type if not set
     if M is None:
-        if D.origin == "VectorDomain":  # type: ignore[union-attr]
+        if isinstance(D, ty.RuntimeType) and D.origin == "VectorDomain":
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty._NUMERIC_TYPES:  # type: ignore[union-attr]
+        elif (
+            isinstance(D, ty.RuntimeType)
+            and D.origin == "AtomDomain"
+            and ty.get_atom(D) in ty._NUMERIC_TYPES
+        ):
             M = ty.AbsoluteDistance
         else:
             raise TypeError(
@@ -221,11 +238,28 @@ def domain_of(T, infer: bool = False) -> Domain:
     from opendp.domains import vector_domain, atom_domain, option_domain, map_domain
 
     if infer:
+        from opendp.extras.sklearn._domains import SklearnFit, sklearn_fit_domain
+
+        if isinstance(T, SklearnFit):
+            return sklearn_fit_domain(
+                domain_of(T.X, infer=True),
+                y=None if T.y is None else domain_of(T.y, infer=True),
+            )
+
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
             return _lazyframe_domain_from_schema(T.collect_schema())
+
+        np = import_optional_dependency("numpy", raise_error=False)
+        if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
+            from opendp.extras.numpy import array2_domain
+
+            return array2_domain(
+                T=_ELEMENTARY_TYPES[T.dtype.type],
+                num_columns=T.shape[1],
+            )
 
     # normalize to a type descriptor
     if infer:
@@ -496,6 +530,10 @@ class Context(object):
         If the domain is not specified, it will be inferred from the data.
         This makes the assumption that the structure of the data is public information.
 
+        For fixed-size data, contribution bounds must be even because a replacement
+        requires both a removal and an insertion. For one replacement, use
+        ``unit_of(contributions=2)`` or ``unit_of(changes=1)``.
+
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
         When ``data`` is a Polars LazyFrame, queries are specified as a Polars compute plan.
@@ -622,17 +660,20 @@ class Context(object):
             if self.d_out is None:
                 raise ValueError("The privacy loss is unbounded.")
 
-            def _sub(a, b):
-                if (
-                    isinstance(a, tuple)
-                    and isinstance(b, tuple)
-                    and len(a) == len(b) == 2
-                ):
-                    return a[0] - b[0], a[1] - b[1]
-                else:
-                    return a - b
+            from math import inf, nextafter
 
-            return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
+            def conservative_sub(total, spent):
+                if spent >= total:
+                    return 0.0
+                if spent == 0 or total == inf:
+                    return total
+                # Downward rounding makes the remainder safe under inf_add.
+                return nextafter(total - spent, -inf)
+
+            spent = self.queryable.privacy_loss(self.d_in)
+            if isinstance(self.d_out, tuple):
+                return tuple(map(conservative_sub, self.d_out, spent))
+            return conservative_sub(self.d_out, spent)
 
         return None if self.d_mids is None else self.d_mids.copy()
 
@@ -693,11 +734,21 @@ class Query(object):
     d_in           = {self._d_in},
     d_out          = {self._d_out}{context})"""
 
+    @staticmethod
+    def _raise_data_access() -> NoReturn:
+        raise TypeError(
+            "Query is symbolic and does not contain accessible data; "
+            "compose an OpenDP operation or call release()"
+        )
+
+    def __array__(self, dtype=None, copy=None):
+        """Prevent accidental NumPy coercion of a symbolic query."""
+        self._raise_data_access()
+
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
-
         if name not in constructors:
             raise AttributeError(
                 f"Unrecognized constructor: '{name}'. Did you mean to '.release()' first?"
@@ -777,6 +828,54 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
+    def sklearn(self, estimator):
+        """Construct a measurement that releases a new fitted estimator clone.
+
+        Use the current chain's output domain/metric and stability, and this query's
+        privacy allowance. Each release returns an independent fitted estimator,
+        leaving the supplied estimator unchanged.
+        """
+        from sklearn.base import clone
+        from opendp.extras.sklearn._estimator import DPEstimator
+
+        if not isinstance(estimator, DPEstimator):
+            raise ValueError(
+                "sklearn(...) expects an estimator with OpenDP fitting capability"
+            )
+        if isinstance(self._chain, tuple):
+            input_domain, input_metric = self._chain
+            d_mid = self._d_in
+        elif isinstance(self._chain, Transformation):
+            input_domain, input_metric = self._chain.output_space
+            d_mid = self._chain.map(self._d_in)
+        elif isinstance(self._chain, PartialChain):
+            raise ValueError(
+                "sklearn(...) requires all arguments in the input query to be specified."
+            )
+        else:
+            raise ValueError(  # pragma: no cover
+                f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
+            )
+
+        prototype = clone(estimator)
+        measurement = prototype.make(
+            input_domain, input_metric, self._output_measure, d_mid, self._d_out
+        )
+
+        def ingest(release):
+            fitted = clone(prototype)
+            fitted._ingest_release(release)
+            return fitted
+
+        measurement = measurement >> ingest
+        return self.new_with(
+            chain=(
+                measurement
+                if isinstance(self._chain, tuple)
+                else self._chain >> measurement
+            ),
+        )
+
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
 
@@ -819,8 +918,10 @@ class Query(object):
             )
         else:
             chain = self._chain
-        if not allow_transformations and isinstance(chain, Transformation):
-            raise ValueError("Query is not yet a measurement or odometer.")
+        if isinstance(chain, Transformation):
+            if not allow_transformations:
+                raise ValueError("Query is not yet a measurement or odometer.")
+            return chain
         chain = _cast_measure(chain, self._output_measure, self._d_out)
         if (
             isinstance(chain, Measurement)
@@ -1053,6 +1154,33 @@ class PartialChain(object):
         return _inner
 
 
+def _check_sized_contributions(domain: Domain, input_metric: Metric, d_in) -> None:
+    if (
+        input_metric.type not in {"SymmetricDistance", "InsertDeleteDistance"}
+        or not isinstance(d_in, Integral)
+        or d_in % 2 == 0
+    ):
+        return
+
+    if isinstance(domain, VectorDomain):
+        sized = domain.size is not None
+    elif isinstance(domain, LazyFrameDomain):
+        sized = domain.get_margin([]).invariant == "lengths"
+    elif isinstance(domain, ExtrinsicDomain):
+        from opendp.extras.numpy import NPArray2Domain
+
+        descriptor = domain.descriptor
+        sized = isinstance(descriptor, NPArray2Domain) and descriptor.size is not None
+    else:
+        sized = False
+
+    if sized:
+        raise ValueError(
+            "Contribution bounds must be even when dataset size is known. "
+            "For one replacement, use unit_of(contributions=2) or unit_of(changes=1)."
+        )
+
+
 def _normalize_compositor(
     domain: Domain,
     privacy_unit: tuple[Metric, Union[float, Sequence[Bound]]],
@@ -1082,6 +1210,8 @@ def _normalize_compositor(
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
+
+    _check_sized_contributions(domain, input_metric, d_in)
 
     if split_evenly_over is not None and split_by_weights is not None:
         raise ValueError(

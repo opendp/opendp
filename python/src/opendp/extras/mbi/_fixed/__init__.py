@@ -1,7 +1,7 @@
 """Releases all queries in a fixed workload."""
 
-from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass, replace
+from typing import Any, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
@@ -11,6 +11,7 @@ from opendp.extras.mbi._utilities import (
     then_noise_marginals,
     make_stable_marginals,
     Algorithm,
+    _snapshot_algorithm,
     Count,
     Marginals,
     OnewayType,
@@ -21,18 +22,18 @@ from opendp.mod import (
     LazyFrameDomain,
     Measure,
     Measurement,
-    binary_search_chain,
+    binary_search,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class Fixed(Algorithm):
     """Releases all queries in a fixed workload."""
 
-    queries: list[Count]
+    queries: Sequence[Count]
     """Workload of queries."""
     oneway: OnewayType = ONEWAY_UNKEYED
     """Only fit one-way marginals for columns missing keys.
@@ -57,6 +58,8 @@ class Fixed(Algorithm):
 
         if not all(isinstance(q, Count) for q in self.queries):
             raise ValueError("queries must be of type Count")
+
+        self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
 
     def make_marginals(
         self,
@@ -89,15 +92,21 @@ class Fixed(Algorithm):
 
         # Reject unsupported measures before constructing the workload.
         get_associated_metric(output_measure)
-        cliques = [q.by for q in self.queries]
-        weights = [q.weight for q in self.queries]
+        algorithm = _snapshot_algorithm(self)
+        cliques = [q.by for q in algorithm.queries]
+        weights = [q.weight for q in algorithm.queries]
 
         def make(scale: float) -> Measurement:
             return make_stable_marginals(
                 input_domain, input_metric, cliques
             ) >> then_noise_marginals(output_measure, cliques, scale, weights)  # type: ignore[return-type]
 
-        m_marginals = binary_search_chain(make, d_in, d_out, T=float)
+        scale = binary_search(
+            lambda s: s > 0 and make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        m_marginals = make(scale)
 
         def function(
             new_releases: list,
@@ -111,7 +120,7 @@ class Fixed(Algorithm):
                 model_domain = model.domain
                 potentials = model.potentials
 
-            new_model = self.estimator(
+            new_model = algorithm.estimator(
                 model_domain,
                 all_marginals.flatten(),
                 potentials=potentials,

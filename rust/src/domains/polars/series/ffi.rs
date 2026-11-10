@@ -81,7 +81,7 @@ pub extern "C" fn opendp_domains__series_domain(
             [(
                 T,
                 [
-                    u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
+                    u8, u16, u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
                 ]
             )],
             (name, element_domain)
@@ -105,7 +105,7 @@ pub extern "C" fn opendp_domains__series_domain(
             [(
                 T,
                 [
-                    u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
+                    u8, u16, u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
                 ]
             )],
             (name, element_domain)

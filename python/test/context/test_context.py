@@ -1,4 +1,5 @@
 import re
+from math import inf, nextafter
 import pytest
 import logging
 import opendp.prelude as dp
@@ -239,6 +240,17 @@ def test_middle_param():
     assert isinstance(dp_sum.release(), float)
 
 
+def test_query_resolves_transformations_when_allowed():
+    space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    transform = dp.t.make_identity(*space)
+    query = dp.Query(transform, dp.max_divergence(), d_in=1, d_out=1.0)
+
+    with pytest.raises(ValueError, match="not yet a measurement"):
+        query.resolve()
+    assert query.resolve(allow_transformations=True) is transform
+    assert query.resolve(allow_transformations=True)(10) == 10
+
+
 def test_query():
     space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     query = dp.Query(space, dp.max_divergence(), d_in=1, d_out=1.0).laplace()
@@ -301,6 +313,19 @@ def test_query_threshold_feasible_budget(mechanism, measure, metric):
     )
     measurement = getattr(query, mechanism)(threshold=2, scale=1.0).resolve()
     assert measurement.check((1, 1, 1), (2.0, 0.5))
+
+
+def test_query_rejects_numpy_coercion():
+    np = pytest.importorskip("numpy")
+    query = dp.Query(
+        (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()),
+        dp.max_divergence(),
+        d_in=1,
+        d_out=1.0,
+    )
+
+    with pytest.raises(TypeError, match="Query is symbolic"):
+        np.asarray(query)
 
 
 def test_query_repr():
@@ -573,7 +598,7 @@ def test_filter_pure_dp():
     query = context.query(epsilon=0.5).count().laplace()
     assert isinstance(query.release(), int)
     assert context.current_privacy_loss() == 0.5
-    assert context.remaining_privacy_loss() == 0.5
+    assert context.remaining_privacy_loss() == nextafter(0.5, -inf)
 
     # query with fixed measurement
     query = context.query().count().laplace(scale=2.0)
@@ -607,7 +632,7 @@ def test_filter_approx_dp():
     query = context.query(epsilon=0.5, delta=0.0).count().laplace()
     assert isinstance(query.release(), int)
     assert context.current_privacy_loss() == (0.5, 0.0)
-    assert context.remaining_privacy_loss() == (0.5, 1e-8)
+    assert context.remaining_privacy_loss() == (nextafter(0.5, -inf), 1e-8)
 
 
 def test_odometer():
@@ -638,4 +663,52 @@ def test_split_by_weights_with_integer_loss():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1),
         split_by_weights=[1, 2],
+    )
+
+
+@pytest.mark.parametrize(
+    "privacy_loss, query_loss",
+    [
+        ({"epsilon": 0.1}, {"epsilon": 0.01}),
+        ({"epsilon": 0.1, "delta": 1e-8}, {"epsilon": 0.01, "delta": 0.0}),
+    ],
+)
+def test_filter_remaining_privacy_loss_is_conservative(privacy_loss, query_loss):
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(**privacy_loss),
+    )
+    context.query(**query_loss).count().laplace().release()
+    spent = context.current_privacy_loss()
+    allowance = context.remaining_privacy_loss()
+
+    from math import inf, nextafter
+
+    if isinstance(allowance, tuple):
+        assert allowance == (
+            nextafter(privacy_loss["epsilon"] - spent[0], -inf),
+            privacy_loss["delta"],  # zero delta expenditure should not reduce this
+        )
+    else:
+        assert allowance == nextafter(privacy_loss["epsilon"] - spent, -inf)
+
+    # The advertised remainder must pass the exact accounting relation.
+    check = dp.c.make_adaptive_composition(
+        context.accountant.input_domain,
+        context.accountant.input_metric,
+        context.accountant.output_measure,
+        context.d_in,
+        d_mids=[spent, allowance],
+    )
+    assert check.check(context.d_in, context.d_out)
+    assert isinstance(
+        context.query(
+            epsilon=allowance[0] if isinstance(allowance, tuple) else allowance,
+            **({"delta": allowance[1]} if isinstance(allowance, tuple) else {}),
+        )
+        .count()
+        .laplace()
+        .release(),
+        int,
     )

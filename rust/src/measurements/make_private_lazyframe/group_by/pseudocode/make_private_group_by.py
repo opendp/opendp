@@ -15,6 +15,7 @@ def make_private_group_by(
     t_prior = input.make_stable(input_domain, input_metric)  # |\label{line:tprior}|
     middle_domain, middle_metric = t_prior.output_space()
 
+    group_by_keys = []
     for expr in group_by:  # |\label{line:group-by-stability}|
         # grouping keys must be stable
         t_group_by = expr.make_stable(
@@ -25,25 +26,17 @@ def make_private_group_by(
             L0PInfDistance(middle_metric[0]),
         )
 
-        series_domain = t_group_by.output_domain.column
-        try:
-            domain = series_domain.element_domain(CategoricalDomain)
-        except Exception:
-            pass
+        if t_group_by.output_domain.column.dtype() == DataType.Categorical:
+            raise "Categorical grouping keys have data-dependent encodings. Cast to String or Enum first."
 
-        if domain is not None and domain.categories() is None:
-            raise "Categories are data-dependent, which may reveal sensitive record ordering."
+        group_by_keys.append(t_group_by.invoke(input).expr)
 
     group_by_id = HashSet.from_iter(group_by)  # |\label{line:groupcols}|
     margin = middle_domain.get_margin(group_by_id)  # |\label{line:margin}|
 
     # 2: prepare for release of `aggs` |\label{line:prep-release-aggs}|
     match key_sanitizer:
-        case KeySanitizer.Join(keys):
-            num_keys = LazyFrame.from_(keys).select([len()]).collect()
-            margin.max_num_partitions = (
-                num_keys.column("len").u32().last()
-            )  # |\label{line:keys-len}|
+        case KeySanitizer.Join(_):
             is_join = True
         case _:
             is_join = False
@@ -110,7 +103,7 @@ def make_private_group_by(
     def function(arg: DslPlan) -> DslPlan:  # |\label{line:function}|
         output = DslPlan.GroupBy(
             input=arg,
-            keys=group_by,
+            keys=group_by_keys,
             aggs=[p.expr for p in f_comp.eval(arg)],
             apply=None,
             maintain_order=False,
@@ -126,6 +119,16 @@ def make_private_group_by(
                 fill_null,
                 keys=labels,
             ):
+                # Deduplicate public keys before joining and imputing.
+                public_on = left_on if how == JoinType.Left else right_on
+                labels = DslPlan.Distinct(
+                    input=labels,
+                    options=DistinctOptionsDSL(
+                        subset=public_on,
+                        keep_strategy=UniqueKeepStrategy.Any,
+                        maintain_order=False,
+                    ),
+                )
                 match how:  # |\label{line:join-how}|
                     case JoinType.Left:
                         input_left, input_right = labels, output

@@ -38,7 +38,6 @@ from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Alg
 from opendp.measurements import make_private_lazyframe
 from opendp.mod import (
     binary_search,
-    binary_search_chain,
     ChangeOneIdDistance,
     Domain,
     FrameDistance,
@@ -886,7 +885,8 @@ class LazyFrameQuery:
         """
         Start a group-by operation.
 
-        OpenDP currently requires that grouping keys be simple column expressions.
+        OpenDP requires grouping keys to be stable row-by-row expressions.
+        Floating-point keys must be cast to a non-floating-point type.
         """
         ...
 
@@ -1079,7 +1079,10 @@ class LazyFrameQuery:
             # search for a scale parameter. Solve for epsilon first,
             # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
             scale = binary_search(
-                lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                lambda s: (
+                    s > 0 and _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]
+                ),  # type: ignore[index]
+                bounds=(0.0, None),
                 T=float,
             )
 
@@ -1100,7 +1103,13 @@ class LazyFrameQuery:
 
         # when no delta parameter is involved,
         # finding a suitable measurement just comes down to finding scale
-        return binary_search_chain(_make, d_in, d_out, T=float)
+        # A zero scale can make the privacy map fail instead of returning infinity.
+        scale = binary_search(
+            lambda s: s > 0 and _make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        return _make(scale)
 
     def release(self) -> OnceFrame:
         """Release the query. The query must be part of a context."""
