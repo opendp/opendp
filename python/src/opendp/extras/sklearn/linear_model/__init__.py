@@ -19,8 +19,7 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
 )
 
-# Keep framework constructors importable without sklearn. Sphinx also supplies
-# its mocked sklearn dependency here when documenting the estimators.
+# sklearn is optional.
 if import_optional_dependency("sklearn", raise_error=False) is not None:
     from opendp.extras.sklearn.linear_model._theil_sen import TheilSenRegressor
     from opendp.extras.sklearn.linear_model._logistic_regression import (

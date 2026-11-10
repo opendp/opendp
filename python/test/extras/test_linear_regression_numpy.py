@@ -53,8 +53,7 @@ def pairing_rng(monkeypatch):
 )
 def test_private_theil_sen_measurement_consumes_aligned_data(sized, d_in, measure):
     data, domain = _training_data(sized=sized)
-    # Include the true coefficients in the candidate grids. Check recovery, not an
-    # exact noisy draw; very large budgets make failures overwhelmingly unlikely.
+    # Grid includes the true coefficients; the privacy budget is large.
     measurement = _make(
         domain,
         d_in,
@@ -170,7 +169,7 @@ def test_pairwise_variable_size_stability_allows_replacing_a_pair(pairing_rng):
     pairing_rng.shuffle = lambda indices: indices.__setitem__(
         slice(None), indices[::-1]
     )
-    # Regression for #2950: one insertion can replace a matched slope.
+    # Regression for #2950.
     before = dp.sklearn.SklearnFit(np.array([[0.0], [1.0]]), [0.0, 1.0])
     after = dp.sklearn.SklearnFit(np.array([[0.0], [1.0], [3.0]]), [0.0, 1.0, 9.0])
     old_rows, new_rows = Counter(transform(before)), Counter(transform(after))
@@ -190,7 +189,7 @@ def test_residual_stability_and_retention_of_known_size(x_size, y_size):
     transform = framework.make_residuals(domain, dp.symmetric_distance(), 2.0, bounds)
     assert transform.output_domain.size == (x_size if x_size is not None else y_size)
     assert transform.map(1) == 1 and transform.map(2) == 2
-    bounds[:] = [-1000.0, 1000.0]  # construction snapshots public sanitization bounds
+    bounds[:] = [-1000.0, 1000.0]
     largest = np.finfo(float).max
     X = np.array([[-largest], [largest], [np.nan], [0.0], [1.0]])
     y = np.array([largest, -largest, np.inf, np.nan, 50.0])
@@ -256,7 +255,7 @@ def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
     slope, intercept = measurement(data)
     assert len(queries) == 2 and slopes == [slope]
     for query, allocation in zip(queries, allocations):
-        assert query.input_domain == domain  # both queries run on original private rows
+        assert query.input_domain == domain
         assert query.check(calibration_distance, allocation)
     assert np.isfinite([slope, intercept]).all()
     if sized:

@@ -1,4 +1,4 @@
-"""Private matched-pair slope and adaptive median-residual regression."""
+"""Private Theil-Sen regression."""
 
 from __future__ import annotations
 
@@ -64,12 +64,11 @@ def _input_size(input_domain, input_metric):
 
 
 def pairwise_slopes(data: SklearnFit):
-    """Return finite float64 slopes from one secure, uniform disjoint matching."""
+    """Finite slopes from a random disjoint matching."""
     np = _numpy()
     X, y = np.asarray(data.X, dtype=np.float64), np.asarray(data.y, dtype=np.float64)
     indices = np.arange(len(X))
     get_np_csprng().shuffle(indices)
-    # Shuffle before omitting the last row, so the omitted row is uniform too.
     first, second = np.array_split(indices[: len(X) // 2 * 2], 2)
     with np.errstate(all="ignore"):
         dx = X[second, 0] - X[first, 0]
@@ -79,14 +78,11 @@ def pairwise_slopes(data: SklearnFit):
 
 
 def make_pairwise_slopes(input_domain, input_metric):
-    """Make the randomized matched-pair slope transformation.
+    """Randomly matched slopes.
 
-    Even to odd: with probability 1/(n+1), omit the inserted row and keep the old
-    matching. Otherwise select an old row uniformly, pair its previous partner
-    with the inserted row, and omit the displaced row: at most one slope changes.
-    Odd to even: pair the inserted row with the previously omitted row, adding
-    one slope. Both couplings have uniform matching marginals. Deterministic
-    pair-level filtering of invalid slopes cannot increase symmetric distance.
+    Under even-to-odd insertion, either omit the new row or replace one
+    endpoint of a pair and omit that endpoint. Odd-to-even insertion adds
+    one pair. Both couplings change at most one slope. Filtering is nonexpansive.
     """
     import opendp.prelude as dp
 
@@ -97,13 +93,12 @@ def make_pairwise_slopes(input_domain, input_metric):
         dp.vector_domain(dp.atom_domain(T=float, nan=False)),
         dp.symmetric_distance(),
         function=pairwise_slopes,
-        # Fixed-size replacements change at most one matched slope per replacement.
         stability_map=(lambda d: 2 * d) if size is None else (lambda d: 2 * (d // 2)),
     )
 
 
 def make_residuals(input_domain, input_metric, slope, intercept_bounds):
-    """Make a row-local, size-preserving residual transformation for a fixed slope."""
+    """Size-preserving residuals for a fixed slope."""
     import opendp.prelude as dp
 
     np = _numpy()
@@ -116,7 +111,7 @@ def make_residuals(input_domain, input_metric, slope, intercept_bounds):
                 np.asarray(data.y, dtype=np.float64)
                 - slope * np.asarray(data.X, dtype=np.float64)[:, 0]
             )
-        # Retain every row. Finite residuals need not lie within the candidate interval.
+        # Replace only non-finite residuals.
         return np.nan_to_num(values, nan=lower, posinf=upper, neginf=lower)
 
     return dp.t.make_user_transformation(
@@ -134,7 +129,7 @@ def _candidate_grid(bounds):
     with np.errstate(all="ignore"):
         values = np.linspace(*bounds, _CANDIDATE_COUNT)
         if not np.isfinite(values).all():
-            # Avoid overflow in upper - lower for wide finite candidate intervals.
+            # Avoid overflow in upper - lower.
             weights = np.linspace(0.0, 1.0, _CANDIDATE_COUNT)
             values = (1.0 - weights) * bounds[0] + weights * bounds[1]
     values[0], values[-1] = bounds
@@ -151,12 +146,9 @@ def make_private_theil_sen(
     slope_bounds,
     intercept_bounds,
 ) -> Measurement:
-    """Release a private median matched-pair slope and an adaptive median residual.
+    """Private slope median followed by private residual median.
 
-    The two required public bounds are finite, strictly increasing candidate
-    intervals, not clipping constraints on private data. Supports numeric
-    SklearnFit inputs with one feature, symmetric distance, and epsilon-DP or
-    zCDP, with adaptive composition of the two private estimates.
+    Bounds specify output candidates, not input clipping.
     """
     import opendp.prelude as dp
 
@@ -186,7 +178,7 @@ def make_private_theil_sen(
             [budget, budget],
         )
 
-    # Search using OpenDP's upward-rounded composition map, rather than d_out / 2.
+    # Respect directed rounding when splitting the budget.
     budget = dp.binary_search_param(
         compose,
         d_in=d_in,
@@ -215,8 +207,7 @@ def make_private_theil_sen(
     residual_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size)
     residual_space = (residual_domain, input_metric)
     if size == 0:
-        # The native quantile constructor currently divides by zero for size=0.
-        # Forget only this public zero size; keep the residual transform size-preserving.
+        # Native quantile scoring divides by zero at known size 0.
         residual_space = dp.t.make_user_transformation(
             *residual_space,
             dp.vector_domain(dp.atom_domain(T=float, nan=False)),
