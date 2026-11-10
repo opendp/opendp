@@ -152,8 +152,6 @@ on github, or with the `gh` command line tool. Parameters:
         python channel_tool.py changelog --prepend
         ```
 
-    1. Update `robots.txt`: Add the new version to the `Disallow` list.
-
     1. Update changelog
 
         ```shell
