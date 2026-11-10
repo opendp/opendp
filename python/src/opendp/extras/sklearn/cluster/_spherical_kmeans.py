@@ -39,7 +39,8 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
     :param max_l1_contribution: Optional positive L1 cap on each unit-normalized contribution.
     :param init: "random" for a public feature partition, or public/already-DP nonnegative directions of shape (n_clusters, n_features). Do not use unaccounted private records.
     :param random_state: Seed for public initialization only, never DP noise.
-    :ivar cluster_centers_: Nonnegative int64 CSR center directions of shape (n_clusters, n_features).
+    :param T: Integer noise dtype, ``i64`` by default (``i32`` is also supported).
+    :ivar cluster_centers_: Nonnegative CSR center directions of shape (n_clusters, n_features).
     :ivar n_features_in_: Number of input features.
 
     :example:
@@ -48,7 +49,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
     >>> X = sp.csr_array([[1, 0, 0], [1, 1, 0], [0, 0, 1]], dtype=bool)
-    >>> model = dp.sklearn.cluster.SphericalKMeans(n_clusters=2)
+    >>> model = dp.sklearn.cluster.SphericalKMeans(n_clusters=2, T=dp.i32)
     >>> _ = model.fit(
     ...     X,
     ...     privacy_unit=dp.unit_of(contributions=1),
@@ -67,6 +68,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         max_l1_contribution: float | None = None,
         init="random",
         random_state: int | None = None,
+        T=dp.i64,
     ):
         self.n_clusters = n_clusters
         self.max_iter = max_iter
@@ -74,6 +76,7 @@ class SphericalKMeans(TransformerMixin, DPTransformer):
         self.max_l1_contribution = max_l1_contribution
         self.init = init
         self.random_state = random_state
+        self.T = T
 
     def make(self, input_domain, input_metric, output_measure, d_in, d_out):
         desc = input_domain.cast(SklearnFitDescriptor)

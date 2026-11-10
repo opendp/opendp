@@ -1,7 +1,6 @@
 """Normalization, safe integer sums, privacy accounting and estimator integration."""
 
 from fractions import Fraction
-from functools import partial
 import inspect
 import math
 
@@ -15,7 +14,6 @@ import opendp.prelude as dp
 from opendp.extras.scipy import csr_array2_domain
 from opendp.extras.sklearn.cluster import SphericalKMeans, make_private_spherical_kmeans
 from opendp.extras.sklearn.cluster import _make_private_spherical_kmeans as skm
-from opendp.extras.sklearn.cluster import _spherical_kmeans as estimator
 
 
 dp.enable_features("contrib")
@@ -49,16 +47,6 @@ def mechanism(kind="rho", **kwargs):
             **PARAMS,
             **kwargs,
         }
-    )
-
-
-@pytest.fixture
-def i32_estimator(monkeypatch):
-    # Exercise estimator plumbing with the debug build's supported native dtype.
-    monkeypatch.setattr(
-        estimator,
-        "make_private_spherical_kmeans",
-        partial(make_private_spherical_kmeans, T=dp.i32),
     )
 
 
@@ -225,7 +213,7 @@ def test_i32_native_noise_group_distance_and_adaptive_iterations(
         inspect.signature(make_private_spherical_kmeans).parameters["T"].default
         == dp.i64
     )
-    assert "T" not in SphericalKMeans().get_params()
+    assert SphericalKMeans().get_params()["T"] == dp.i64
 
 
 @pytest.mark.parametrize("kind", ["epsilon", "rho"])
@@ -236,10 +224,10 @@ def test_fixed_size_private_fit(kind):
 
 
 @pytest.mark.parametrize("route", ["standalone", "context"])
-def test_fitting_and_cloning(route, i32_estimator):
+def test_fitting_and_cloning(route):
     from sklearn.base import clone
 
-    model = SphericalKMeans(**PARAMS)
+    model = SphericalKMeans(**PARAMS, T=dp.i32)
     assert clone(model).get_params() == model.get_params()
     if route == "standalone":
         fitted = model.fit(
@@ -265,9 +253,9 @@ def test_fitting_and_cloning(route, i32_estimator):
     assert math.isfinite(fitted.score(data()))
 
 
-def test_configuration_release_and_postprocessor_isolation(i32_estimator):
+def test_configuration_release_and_postprocessor_isolation():
     public = centers()
-    model = SphericalKMeans(**PARAMS, init=public)
+    model = SphericalKMeans(**PARAMS, init=public, T=dp.i32)
     fit_domain = dp.sklearn.sklearn_fit_domain(
         csr_array2_domain(4, T=bool), dp.vector_domain(dp.atom_domain(T=int))
     )
