@@ -1,5 +1,6 @@
 use super::*;
 use crate::domains::AtomDomain;
+use crate::error::ErrorVariant;
 
 #[test]
 fn test() -> Fallible<()> {
@@ -31,5 +32,20 @@ fn test_ordered_resize_preserves_order() -> Fallible<()> {
         assert_eq!(trans.invoke(&vec![1, 2, 3])?, vec![1, 2, 3]);
         assert_eq!(trans.invoke(&vec![1, 2, 3, 4])?, vec![1, 2, 3]);
     }
+    Ok(())
+}
+
+#[test]
+fn test_excessive_size_is_fallible() -> Fallible<()> {
+    // Regression for #3006: an excessive target size with a small dataset
+    // must return a FailedFunction error rather than panic or abort.
+    let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        SymmetricDistance,
+        usize::MAX,
+        0,
+    )?;
+    let error = trans.invoke(&vec![1, 2]).unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::FailedFunction);
     Ok(())
 }

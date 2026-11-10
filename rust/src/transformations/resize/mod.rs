@@ -75,11 +75,24 @@ where
         Function::new_fallible(move |arg: &Vec<TA>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {
-                    let mut data = arg
-                        .iter()
-                        .chain(vec![&constant; size - arg.len()])
-                        .cloned()
-                        .collect::<Vec<TA>>();
+                    // number of records to impute. Checked to ensure the subtraction cannot underflow
+                    let padding = size.checked_sub(arg.len()).ok_or_else(|| {
+                        err!(
+                            FailedFunction,
+                            "input length must not exceed the target size"
+                        )
+                    })?;
+                    let mut data = Vec::new();
+                    // checked allocation: fails with an error instead of panicking
+                    // (capacity overflow) or aborting (failed allocation)
+                    data.try_reserve_exact(size).map_err(|_| {
+                        err!(
+                            FailedFunction,
+                            "failed to allocate memory to resize dataset to length {size}"
+                        )
+                    })?;
+                    data.extend(arg.iter().cloned());
+                    data.extend((0..padding).map(|_| constant.clone()));
                     // Randomize the order only when converting unordered input to ordered output.
                     if MO::ORDERED && !MI::ORDERED {
                         data.shuffle()?;
