@@ -41,6 +41,10 @@ def __getattr__(name):
         member = getattr(import_module(f"{__name__}._frozen"), name)
         globals()[name] = member
         return member
+    if name == "ColumnTransformer":
+        member = import_module(f"{__name__}.compose").ColumnTransformer
+        globals()[name] = member
+        return member
     module = import_module(f"{__name__}.{name}")
     return module
 
@@ -54,4 +58,6 @@ __all__ = [
     "sklearn_fit_domain",
     "decomposition",
     "linear_model",
+    "compose",
+    "ColumnTransformer",
 ]
