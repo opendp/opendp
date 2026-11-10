@@ -1428,3 +1428,7 @@ class Bound(object):
             return False
 
         return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]
+
+
+# Register the stable eager-frame null replacement with Query.
+from opendp.extras.polars._make_dataframe_fill_null import make_dataframe_fill_null  # noqa: E402,F401

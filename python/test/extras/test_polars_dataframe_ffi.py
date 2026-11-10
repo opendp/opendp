@@ -158,3 +158,59 @@ def test_query_collect_respects_input_metric(unit, expected):
     assert transformation.output_metric == expected()
     assert isinstance(transformation.output_domain, dp.DataFrameDomain)
     assert ctx.current_privacy_loss() == []
+
+
+def test_eager_fill_null_establishes_non_nullable_domain():
+    from opendp.extras.polars import make_dataframe_fill_null
+
+    frame = pl.DataFrame({
+        "left": pl.Series([None, 2.0], dtype=pl.Float64),
+        "right": pl.Series([1.0, None], dtype=pl.Float64),
+    })
+    domain = dp.domain_of(frame, infer=True)
+    assert all(domain.get_series_domain(n).nullable for n in domain.columns)
+    fill = make_dataframe_fill_null(domain, dp.symmetric_distance(), value=0)
+    result = fill(frame)
+    assert result.to_dict(as_series=False) == {
+        "left": [0.0, 2.0], "right": [1.0, 0.0],
+    }
+    assert fill.output_domain.member(result)
+    assert all(not fill.output_domain.get_series_domain(n).nullable
+               for n in domain.columns)
+    assert fill.map(2) == 2
+
+    ctx = dp.Context.compositor(
+        frame, dp.unit_of(contributions=1),
+        dp.loss_of(epsilon=1.0), domain=domain, split_evenly_over=1,
+    )
+    query = ctx.query().fill_null(value=0)
+    assert query.resolve(allow_transformations=True).map(1) == 1
+    assert ctx.current_privacy_loss() == []
+
+
+def test_eager_fill_null_preserves_other_columns_and_rejects_bad_values():
+    from opendp.extras.polars import make_dataframe_fill_null
+
+    frame = pl.DataFrame({
+        "numeric": pl.Series([None, 2], dtype=pl.Int32),
+        "text": pl.Series([None, "ok"], dtype=pl.String),
+    })
+    domain = dp.domain_of(frame, infer=True)
+    fill = make_dataframe_fill_null(
+        domain, dp.symmetric_distance(), value=0, columns="numeric",
+    )
+    output = fill(frame)
+    assert output["numeric"].to_list() == [0, 2]
+    assert output["text"].to_list() == [None, "ok"]
+    assert not fill.output_domain.get_series_domain("numeric").nullable
+    assert fill.output_domain.get_series_domain("text").nullable
+    assert fill.output_domain.member(output)
+
+    with pytest.raises(ValueError, match="Invalid fill value"):
+        make_dataframe_fill_null(
+            domain, dp.symmetric_distance(), value="wrong", columns="numeric",
+        )
+    with pytest.raises(ValueError, match="columns"):
+        make_dataframe_fill_null(
+            domain, dp.symmetric_distance(), value=0, columns="missing",
+        )

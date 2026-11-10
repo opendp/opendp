@@ -149,6 +149,11 @@ def register(
         constructors[name] = constructor, False
 
 
+# Polars imports above precede registration, so register only after definition.
+from opendp.extras.polars import make_dataframe_fill_null
+register(make_dataframe_fill_null, name="fill_null")
+
+
 def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
     """A shorthand for building a metric space.
 
