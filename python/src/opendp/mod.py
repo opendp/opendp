@@ -59,6 +59,7 @@ __all__ = [
     "VectorDomain",
     "SeriesDomain",
     "LazyFrameDomain",
+    "DataFrameDomain",
     "ExtrinsicDomain",
     "Metric",
     "SymmetricIdDistance",
@@ -992,6 +993,26 @@ class SeriesDomain(Domain):
         return _series_domain_get_nullable(self)
 
 
+class DataFrameDomain(Domain):
+    """Domain of eager Polars DataFrames.
+
+    Constructed with :py:func:`opendp.domains.dataframe_domain`.
+    """
+
+    _type_ = AnyDomain
+
+    @property
+    def columns(self) -> list[str]:
+        from opendp.domains import _frame_domain_get_columns
+
+        return _frame_domain_get_columns(self)
+
+    def get_series_domain(self, name: str) -> SeriesDomain:
+        from opendp.domains import _frame_domain_get_series_domain
+
+        return _frame_domain_get_series_domain(self, name)
+
+
 class LazyFrameDomain(Domain):
     """``LazyFrameDomain`` describes the domain of all polars LazyFrames.
 
@@ -1003,15 +1024,15 @@ class LazyFrameDomain(Domain):
     @property
     def columns(self) -> list[str]:
         """List of column names in the frame"""
-        from opendp.domains import _lazyframe_domain_get_columns
+        from opendp.domains import _frame_domain_get_columns
 
-        return _lazyframe_domain_get_columns(self)
+        return _frame_domain_get_columns(self)
 
     def get_series_domain(self, name: str) -> SeriesDomain:
         """Retrieve the series domain with the given name"""
-        from opendp.domains import _lazyframe_domain_get_series_domain
+        from opendp.domains import _frame_domain_get_series_domain
 
-        return _lazyframe_domain_get_series_domain(self, name)
+        return _frame_domain_get_series_domain(self, name)
 
     def get_margin(self, by: Sequence[Any]):
         """Get the margin descriptor of the frame when grouped by the given columns"""

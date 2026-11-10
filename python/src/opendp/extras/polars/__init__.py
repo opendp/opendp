@@ -16,6 +16,8 @@ The members of this module will then be accessible at ``dp.polars``.
 
 from __future__ import annotations
 
+from opendp.transformations import make_collect, make_lazy
+
 import os
 
 from dataclasses import asdict, dataclass, field, replace
@@ -798,6 +800,9 @@ class LazyFrameQuery:
         # so running the computation doesn't affect privacy.
         # This doesn't have to cover all possible APIs that may execute the query,
         #    but it does give a simple sanity check for the obvious cases.
+        if name == "collect":
+            # Use the query method instead of Polars' executing collect.
+            return object.__getattribute__(self, "collect")
         if name in _LAZY_EXECUTION_METHODS:
             raise ValueError("You must call `.release()` before executing a query.")
 
@@ -827,6 +832,46 @@ class LazyFrameQuery:
 
             return _wrap
         return attr
+
+    def collect(self):
+        """Build a stable eager DataFrame query without releasing private data."""
+        from opendp.mod import Transformation
+        from opendp.transformations import make_collect
+
+        query = object.__getattribute__(self, "_query")
+        plan = object.__getattribute__(self, "polars_plan")
+        prefix = query._chain
+
+        if isinstance(prefix, tuple):
+            domain, metric = prefix
+        elif isinstance(prefix, Transformation):
+            domain, metric = prefix.output_space
+        else:
+            raise ValueError("Expected a stable query prefix")
+
+        # Retain the input adjacency relation whenever possible. Bounded
+        # metrics become their corresponding unbounded frame metrics; Rust
+        # accounts for the change in the stability map.
+        if isinstance(metric, FrameDistance):
+            mo = "MI"
+        else:
+            inner = {
+                "SymmetricDistance": "SymmetricDistance",
+                "InsertDeleteDistance": "InsertDeleteDistance",
+                "SymmetricIdDistance": "SymmetricIdDistance",
+                "ChangeOneDistance": "SymmetricDistance",
+                "HammingDistance": "InsertDeleteDistance",
+                "ChangeOneIdDistance": "SymmetricIdDistance",
+            }.get(str(metric.type))
+            if inner is None:
+                raise ValueError(f"Unsupported metric for collect: {metric}")
+            mo = f"FrameDistance<{inner}>"
+
+        stable = make_stable_lazyframe(domain, metric, plan, MO=mo)
+        chain = stable >> make_collect(*stable.output_space)
+        return query.new_with(
+            chain=chain if isinstance(prefix, tuple) else prefix >> chain
+        )
 
     # These definitions are primarily for mypy:
     # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
@@ -980,7 +1025,9 @@ class LazyFrameQuery:
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
         """
-        input_metric = self._query._chain[1]
+        chain = self._query._chain
+        space = chain if isinstance(chain, tuple) else chain.output_space
+        input_metric = space[1]
 
         if isinstance(by, str):
             raise ValueError(
@@ -1020,7 +1067,9 @@ class LazyFrameQuery:
         :param by: when grouped by these grouping columns
         :param keep: which groups to keep for each identifier
         """
-        input_metric = self._query._chain[1]
+        chain = self._query._chain
+        space = chain if isinstance(chain, tuple) else chain.output_space
+        input_metric = space[1]
 
         if isinstance(by, str):
             raise ValueError(
@@ -1052,8 +1101,25 @@ class LazyFrameQuery:
         # access attributes of self without getting intercepted by Self.__getattribute__
         polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
-        input_domain, input_metric = query._chain
-        d_in, d_out = query._d_in, query._d_out
+        from opendp.mod import Transformation
+
+        prefix = query._chain
+        if isinstance(prefix, tuple):
+            input_domain, input_metric = prefix
+            d_in = query._d_in
+            prefix = None
+        elif isinstance(prefix, Transformation):
+            input_domain, input_metric = prefix.output_space
+            d_in = prefix.map(query._d_in)
+        else:
+            raise ValueError(
+                "Polars aggregation requires a metric space or stable "
+                "transformation prefix"
+            )
+        d_out = query._d_out
+
+        def _complete(measurement):
+            return measurement if prefix is None else prefix >> measurement
 
         def _make(scale, threshold=None):
             return make_private_lazyframe(
@@ -1070,7 +1136,7 @@ class LazyFrameQuery:
             m_zero = _make(0.0, threshold=None)
             if m_zero.check(d_in, d_out):
                 # if the zero scale measurement is already private, return it
-                return m_zero
+                return _complete(m_zero)
         except OpenDPException:
             pass
 
@@ -1088,7 +1154,7 @@ class LazyFrameQuery:
 
             # attempt to return without setting a threshold
             try:
-                return _make(scale, threshold=None)
+                return _complete(_make(scale, threshold=None))
             except OpenDPException:
                 pass
 
@@ -1099,7 +1165,7 @@ class LazyFrameQuery:
             )
 
             # return a measurement with the discovered scale and threshold
-            return _make(scale, threshold)
+            return _complete(_make(scale, threshold))
 
         # when no delta parameter is involved,
         # finding a suitable measurement just comes down to finding scale
@@ -1109,7 +1175,7 @@ class LazyFrameQuery:
             bounds=(0.0, None),
             T=float,
         )
-        return _make(scale)
+        return _complete(_make(scale))
 
     def release(self) -> OnceFrame:
         """Release the query. The query must be part of a context."""
@@ -1195,8 +1261,19 @@ class LazyFrameQuery:
         from .contingency_table import ContingencyTableQuery
 
         query: Query = object.__getattribute__(self, "_query")
-        input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
-        d_in, d_out = query._d_in, query._d_out
+        from opendp.mod import Transformation
+
+        prefix = query._chain
+        if isinstance(prefix, tuple):
+            input_domain, input_metric = prefix
+            d_in = query._d_in
+            prefix = None
+        elif isinstance(prefix, Transformation):
+            input_domain, input_metric = prefix.output_space
+            d_in = prefix.map(query._d_in)
+        else:
+            raise ValueError("Contingency table requires a stable query prefix")
+        d_out = query._d_out
 
         t_plan = make_stable_lazyframe(
             input_domain,
@@ -1217,8 +1294,12 @@ class LazyFrameQuery:
             algorithm=algorithm,
         )
 
+        chain = t_plan >> m_table
+        if prefix is not None:
+            chain = prefix >> chain
+
         return ContingencyTableQuery(
-            chain=t_plan >> m_table,
+            chain=chain,
             output_measure=query._output_measure,
             context=query._context,
             oneway_scale=oneway_scale,

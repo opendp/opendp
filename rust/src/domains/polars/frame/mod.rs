@@ -101,6 +101,7 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 }
 
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
+pub type DataFrameDomain = FrameDomain<DataFrame>;
 pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
 impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {

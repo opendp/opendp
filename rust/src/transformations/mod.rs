@@ -4,6 +4,11 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
 #[cfg(all(feature = "contrib", feature = "polars"))]
+mod frame_conversions;
+#[cfg(all(feature = "contrib", feature = "polars"))]
+pub use frame_conversions::*;
+
+#[cfg(all(feature = "contrib", feature = "polars"))]
 mod make_stable_lazyframe;
 #[cfg(all(feature = "contrib", feature = "polars"))]
 pub use make_stable_lazyframe::*;

@@ -61,6 +61,7 @@ from opendp.mod import (
     Domain,
     ExtrinsicDomain,
     LazyFrameDomain,
+    DataFrameDomain,
     Measurement,
     Metric,
     _PartialConstructor,
@@ -247,6 +248,13 @@ def domain_of(T, infer: bool = False) -> Domain:
             )
 
         pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None and isinstance(T, pl.DataFrame):
+            from opendp.domains import dataframe_domain
+            from opendp.extras.polars import _series_domain_from_field
+
+            return dataframe_domain(
+                [_series_domain_from_field(item) for item in T.schema.items()]
+            )
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
@@ -875,6 +883,33 @@ class Query(object):
                 else self._chain >> measurement
             ),
         )
+
+    def lazy(self):
+        """Continue a stable eager Polars DataFrame query as a LazyFrameQuery."""
+        from opendp.domains import _lazyframe_from_domain
+        from opendp.extras.polars import LazyFrameQuery, make_lazy
+
+        if isinstance(self._chain, tuple):
+            domain, metric = self._chain
+        elif isinstance(self._chain, Transformation):
+            domain, metric = self._chain.output_space
+        else:
+            raise ValueError("lazy() requires a metric space or stable transformation")
+
+        if isinstance(domain, LazyFrameDomain):
+            query = self
+        elif isinstance(domain, DataFrameDomain):
+            conversion = make_lazy(domain, metric)
+            chain = (
+                conversion if isinstance(self._chain, tuple)
+                else self._chain >> conversion
+            )
+            query = self.new_with(chain=chain)
+            domain = conversion.output_domain
+        else:
+            raise TypeError("lazy() requires an eager Polars DataFrameDomain")
+
+        return LazyFrameQuery(_lazyframe_from_domain(domain), query)
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.

@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{Frame, FrameDomain, LazyFrameDomain};
+use super::{DataFrameDomain, Frame, FrameDomain, LazyFrameDomain};
 use polars::prelude::*;
 
 #[bootstrap(
@@ -38,43 +38,66 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
     .into()
 }
 
+
 #[bootstrap(
-    name = "_lazyframe_domain_get_columns",
-    returns(c_type = "FfiResult<AnyObject *>")
+    name = "dataframe_domain",
+    arguments(series_domains(rust_type = "Vec<SeriesDomain>")),
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "DataFrameDomain")
 )]
-/// Retrieve the column names of the LazyFrameDomain.
+/// Construct an instance of `DataFrameDomain`.
 ///
 /// # Arguments
-/// * `lazyframe_domain` - Domain to retrieve the column names from
+/// * `series_domains` - Domain of each series in the dataframe.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___lazyframe_domain_get_columns(
-    lazyframe_domain: *const AnyDomain,
+pub extern "C" fn opendp_domains__dataframe_domain(
+    series_domains: *const AnyObject,
+) -> FfiResult<*mut AnyDomain> {
+    Ok(AnyDomain::new(try_!(DataFrameDomain::new(try_!(
+        unpack_series_domains(series_domains)
+    )))))
+    .into()
+}
+
+
+#[bootstrap(
+    name = "_frame_domain_get_columns",
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the column names from an eager or lazy Polars frame domain.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___frame_domain_get_columns(
+    frame_domain: *const AnyDomain,
 ) -> FfiResult<*mut AnyObject> {
-    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
-    let columns = (lazyframe_domain.series_domains.iter())
-        .map(|s| s.name.to_string())
-        .collect::<Vec<_>>();
-    Ok(AnyObject::new(columns)).into()
+    let domain = try_as_ref!(frame_domain);
+    let names = if let Ok(frame) = domain.downcast_ref::<DataFrameDomain>() {
+        &frame.series_domains
+    } else {
+        &try_!(domain.downcast_ref::<LazyFrameDomain>()).series_domains
+    };
+    Ok(AnyObject::new(
+        names.iter().map(|s| s.name.to_string()).collect::<Vec<_>>(),
+    ))
+    .into()
 }
 
 #[bootstrap(
-    name = "_lazyframe_domain_get_series_domain",
+    name = "_frame_domain_get_series_domain",
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
-/// Retrieve the series domain at index `column`.
-///
-/// # Arguments
-/// * `lazyframe_domain` - Domain to retrieve the SeriesDomain from
-/// * `name` - Name of the SeriesDomain to retrieve
+/// Retrieve a named series domain from an eager or lazy Polars frame domain.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___lazyframe_domain_get_series_domain(
-    lazyframe_domain: *const AnyDomain,
+pub extern "C" fn opendp_domains___frame_domain_get_series_domain(
+    frame_domain: *const AnyDomain,
     name: *const c_char,
 ) -> FfiResult<*mut AnyDomain> {
-    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let domain = try_as_ref!(frame_domain);
     let name = try_!(util::to_str(name));
-    let series_domain = try_!(lazyframe_domain.series_domain(name.into()));
-    Ok(AnyDomain::new(series_domain)).into()
+    let series = if let Ok(frame) = domain.downcast_ref::<DataFrameDomain>() {
+        frame.series_domain(name.into())
+    } else {
+        try_!(domain.downcast_ref::<LazyFrameDomain>()).series_domain(name.into())
+    };
+    Ok(AnyDomain::new(try_!(series))).into()
 }
 
 #[bootstrap(
@@ -136,7 +159,7 @@ pub(crate) fn unpack_series_domains(
 #[bootstrap(
     name = "with_margin",
     arguments(frame_domain(rust_type = b"null"), margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "Domain")
 )]
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__with_margin(
@@ -145,18 +168,10 @@ pub extern "C" fn opendp_domains__with_margin(
 ) -> FfiResult<*mut AnyDomain> {
     let domain = try_as_ref!(frame_domain);
     let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>()).clone();
-
-    let frame_domain = try_as_ref!(frame_domain);
-    let F_ = match frame_domain.type_.id {
+    let F_ = match domain.type_.id {
+        x if x == TypeId::of::<DataFrameDomain>() => Type::of::<DataFrame>(),
         x if x == TypeId::of::<LazyFrameDomain>() => Type::of::<LazyFrame>(),
-        _ => {
-            return err!(
-                FFI,
-                "No match for concrete type {}",
-                frame_domain.type_.descriptor
-            )
-            .into();
-        }
+        _ => return err!(FFI, "Expected DataFrameDomain or LazyFrameDomain").into(),
     };
 
     fn monomorphize<F: 'static + Frame>(domain: &AnyDomain, margin: Margin) -> Fallible<AnyDomain> {
