@@ -124,6 +124,10 @@ def update_version(version):
     with open("VERSION", "w") as f:
         print(version, file=f)
 
+    # robots.txt
+    with open("docs/robots.txt", "a") as f:
+        print(f"Disallow: /en/{version}/", file=f)
+
     # cargo versions
     # cargo doesn't like build metadata in dependency references, so we strip that for those.
     stripped_version = version.replace(build=None)
