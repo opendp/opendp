@@ -14,6 +14,8 @@ Submodule organization will follow the conventions of `scikit-learn <https://sci
 
 from typing import TYPE_CHECKING
 
+from opendp.extras.sklearn._to_polars import make_sklearn_fit_to_lazyframe
+
 from opendp.extras.sklearn._make_sklearn_fit import (
     make_sklearn_fit,
     make_dataframe_to_sklearn_fit,
@@ -50,6 +52,7 @@ __all__ = [
     "SklearnFit",
     "SklearnFitDescriptor",
     "make_sklearn_fit",
+    "make_sklearn_fit_to_lazyframe",
     "make_dataframe_to_sklearn_fit",
     "sklearn_fit_domain",
     "decomposition",

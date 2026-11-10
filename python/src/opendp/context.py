@@ -852,30 +852,46 @@ class Query(object):
 
         return sklearn_query(self, estimator, y=y)
 
-    def lazy(self):
-        """Continue a stable eager Polars DataFrame query as a LazyFrameQuery."""
+    def lazy(self, *, feature_names=None, target_name=None):
+        """Convert a stable eager dataset or SklearnFit to a Polars lazy query."""
         from opendp.domains import _lazyframe_from_domain
         from opendp.extras.polars import LazyFrameQuery, make_lazy
+        from opendp.extras.sklearn import make_sklearn_fit_to_lazyframe
 
         if isinstance(self._chain, tuple):
             domain, metric = self._chain
         elif isinstance(self._chain, Transformation):
             domain, metric = self._chain.output_space
         else:
-            raise ValueError("lazy() requires a metric space or stable transformation")
+            raise ValueError(
+                "lazy() requires a metric space or stable transformation "
+                "before the private measurement"
+            )
 
         if isinstance(domain, LazyFrameDomain):
+            if feature_names is not None or target_name is not None:
+                raise ValueError(
+                    "The existing LazyFrameDomain already determines column names"
+                )
             query = self
-        elif isinstance(domain, DataFrameDomain):
-            conversion = make_lazy(domain, metric)
-            chain = (
+        else:
+            if isinstance(domain, DataFrameDomain):
+                if feature_names is not None or target_name is not None:
+                    raise ValueError(
+                        "DataFrame column names are already determined by its domain"
+                    )
+                conversion = make_lazy(domain, metric)
+            else:
+                conversion = make_sklearn_fit_to_lazyframe(
+                    domain, metric,
+                    feature_names=feature_names, target_name=target_name,
+                )
+            prefix = (
                 conversion if isinstance(self._chain, tuple)
                 else self._chain >> conversion
             )
-            query = self.new_with(chain=chain)
+            query = self.new_with(chain=prefix)
             domain = conversion.output_domain
-        else:
-            raise TypeError("lazy() requires an eager Polars DataFrameDomain")
 
         return LazyFrameQuery(_lazyframe_from_domain(domain), query)
 
