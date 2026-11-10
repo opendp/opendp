@@ -137,20 +137,13 @@ on github, or with the `gh` command line tool. Parameters:
         git checkout -b version-changelog
         ```
 
-    1. Increment patch version in `main`.
+    1. Increment version in `main`.
 
         ```shell
-        python channel_tool.py bump_version --position patch # or minor or major
+        python channel_tool.py bump_version --position minor # or patch or major
         ```
 
-
-    1. Only if it's a patch release, update `404.html` to redirect to the latest minor version.
-
-    1. Increment changelog.
-
-        ```shell
-        python channel_tool.py changelog --prepend
-        ```
+    1. (If it's a patch release, update `404.html` to redirect to the latest minor version.)
 
     1. Update changelog
 
@@ -158,8 +151,6 @@ on github, or with the `gh` command line tool. Parameters:
         python changelog.py
         ```
         Additional manual edits will be useful to arrange individual commits thematically.
-
-    1. Add a header for the current version to the CHANGELOG.md.
 
     1. Commit your updates
 
