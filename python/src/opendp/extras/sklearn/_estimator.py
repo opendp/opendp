@@ -6,13 +6,21 @@ from typing import Any, TypeVar
 from opendp.context import _cast_measure, domain_of
 from sklearn.base import BaseEstimator
 
-from opendp.extras.sklearn._domains import SklearnFit
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
 from opendp.mod import Domain, Metric, Measure, Measurement, Transformation
 
 _EstimatorT = TypeVar("_EstimatorT", bound="DPEstimator")
 
 
+def needs_private_fit(step) -> bool:
+    """Whether this step needs any private fitting, including nested steps."""
+    return isinstance(step, DPEstimator) and step._has_private_fit()
+
+
 class DPEstimator(BaseEstimator, ABC):
+    def _has_private_fit(self):
+        return True
+
     @abstractmethod
     def make(
         self,
@@ -28,6 +36,18 @@ class DPEstimator(BaseEstimator, ABC):
         the measurement's function or privacy map.
         """
         ...
+
+    def as_transformer(self, method="transform"):
+        """Freeze a fitted estimator and select a stable inference method.
+
+        Only methods with trusted OpenDP implementations can be applied
+        inside a private query.
+        """
+        from opendp.extras.sklearn._frozen import FrozenTransformer
+        from sklearn.utils.validation import check_is_fitted
+
+        check_is_fitted(self)
+        return FrozenTransformer(self, method=method)
 
     @abstractmethod
     def _ingest_release(self, release: Any) -> None:
@@ -49,7 +69,6 @@ class DPEstimator(BaseEstimator, ABC):
 
         ``domain`` should be constructed with ``sklearn_fit_domain(...)``.
         Otherwise, dtypes and feature count are inferred from the data.
-
         Context's ``query.sklearn(model).release()`` instead returns a fitted clone.
         """
         data = SklearnFit(X, y=y)
@@ -58,7 +77,14 @@ class DPEstimator(BaseEstimator, ABC):
 
         input_metric, d_in = privacy_unit
         output_measure, d_out = privacy_loss
-        measurement = self.make(domain, input_metric, output_measure, d_in, d_out)
+
+        from opendp.mod import LazyFrameDomain
+
+        if isinstance(domain.cast(SklearnFitDescriptor).X, LazyFrameDomain):
+            raise TypeError("Explicitly collect lazy input before sklearn fitting")
+        measurement = self.make(
+            domain, input_metric, output_measure, d_in, d_out
+        )
         measurement = _cast_measure(measurement, output_measure, d_out)
         if not measurement.check(d_in, d_out):
             raise ValueError("Fitting measurement exceeds the privacy allowance")

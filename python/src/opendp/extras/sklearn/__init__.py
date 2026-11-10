@@ -14,6 +14,11 @@ Submodule organization will follow the conventions of `scikit-learn <https://sci
 
 from typing import TYPE_CHECKING
 
+from opendp.extras.sklearn._make_sklearn_fit import (
+    make_sklearn_fit,
+    make_dataframe_to_sklearn_fit,
+)
+
 from opendp.extras.sklearn._domains import (
     SklearnFit,
     SklearnFitDescriptor,
@@ -32,13 +37,20 @@ def __getattr__(name):
     from opendp._lib import import_optional_dependency
 
     import_optional_dependency("sklearn")
+    if name == "FrozenTransformer":
+        member = getattr(import_module(f"{__name__}._frozen"), name)
+        globals()[name] = member
+        return member
     module = import_module(f"{__name__}.{name}")
     return module
 
 
 __all__ = [
+    "FrozenTransformer",
     "SklearnFit",
     "SklearnFitDescriptor",
+    "make_sklearn_fit",
+    "make_dataframe_to_sklearn_fit",
     "sklearn_fit_domain",
     "decomposition",
     "linear_model",

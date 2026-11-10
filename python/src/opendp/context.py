@@ -260,6 +260,11 @@ def domain_of(T, infer: bool = False) -> Domain:
             return dataframe_domain(
                 [_series_domain_from_field(item) for item in T.schema.items()]
             )
+        if pl is not None and isinstance(T, pl.Series):
+            from opendp.extras.polars import _series_domain_from_field
+
+            return _series_domain_from_field((T.name, T.dtype))
+
         if pl is not None and isinstance(T, pl.LazyFrame):
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
@@ -841,53 +846,11 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
-    def sklearn(self, estimator):
-        """Construct a measurement that releases a new fitted estimator clone.
+    def sklearn(self, estimator, *, y=None):
+        """Fit a private sklearn estimator or apply a certified stable transform."""
+        from opendp.extras.sklearn._query import sklearn_query
 
-        Use the current chain's output domain/metric and stability, and this query's
-        privacy allowance. Each release returns an independent fitted estimator,
-        leaving the supplied estimator unchanged.
-        """
-        from sklearn.base import clone
-        from opendp.extras.sklearn._estimator import DPEstimator
-
-        if not isinstance(estimator, DPEstimator):
-            raise ValueError(
-                "sklearn(...) expects an estimator with OpenDP fitting capability"
-            )
-        if isinstance(self._chain, tuple):
-            input_domain, input_metric = self._chain
-            d_mid = self._d_in
-        elif isinstance(self._chain, Transformation):
-            input_domain, input_metric = self._chain.output_space
-            d_mid = self._chain.map(self._d_in)
-        elif isinstance(self._chain, PartialChain):
-            raise ValueError(
-                "sklearn(...) requires all arguments in the input query to be specified."
-            )
-        else:
-            raise ValueError(  # pragma: no cover
-                f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
-            )
-
-        prototype = clone(estimator)
-        measurement = prototype.make(
-            input_domain, input_metric, self._output_measure, d_mid, self._d_out
-        )
-
-        def ingest(release):
-            fitted = clone(prototype)
-            fitted._ingest_release(release)
-            return fitted
-
-        measurement = measurement >> ingest
-        return self.new_with(
-            chain=(
-                measurement
-                if isinstance(self._chain, tuple)
-                else self._chain >> measurement
-            ),
-        )
+        return sklearn_query(self, estimator, y=y)
 
     def lazy(self):
         """Continue a stable eager Polars DataFrame query as a LazyFrameQuery."""

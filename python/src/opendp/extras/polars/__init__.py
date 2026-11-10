@@ -873,6 +873,10 @@ class LazyFrameQuery:
             chain=chain if isinstance(prefix, tuple) else prefix >> chain
         )
 
+    def sklearn(self, estimator, *, y=None):
+        """Explicitly materialize the Polars plan before fitting sklearn."""
+        raise TypeError("Call .collect().sklearn(estimator, y=...)")
+
     # These definitions are primarily for mypy:
     # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
     # The docstrings are not seen by Sphinx, but aren't doing any harm either.
@@ -1430,5 +1434,5 @@ class Bound(object):
         return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]
 
 
-# Register the stable eager-frame null replacement with Query.
+# Register stable eager-frame null replacement with Query.
 from opendp.extras.polars._make_dataframe_fill_null import make_dataframe_fill_null  # noqa: E402,F401
