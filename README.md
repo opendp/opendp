@@ -43,7 +43,7 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 Install OpenDP for Python with `pip` (the [package installer for Python](https://pypi.org/project/pip/)):
 
-    $ pip install opendp
+    $ pip install 'opendp[all]'
 
 Install OpenDP for R from an R session:
 

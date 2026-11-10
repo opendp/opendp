@@ -187,7 +187,7 @@ jobs:
           - 'polars'
           - 'ibis'
           - 'mbi'
-          - 'ibis,mbi' # Install both. Unlike the others, these are not stacked.
+          - 'all'
 
     steps:
       - name: Checkout repository
@@ -247,7 +247,7 @@ jobs:
             polars)               pytest -v -k "$NOT_IBIS and $NOT_SYNTH";;
             ibis)                 pytest -v -k "$NOT_SYNTH";;
             mbi)                  pytest -v -k "$NOT_IBIS";;
-            ibis,mbi)             coverage run -m pytest -v;;
+            all)                  coverage run -m pytest -v;;
 
             *)                    echo "unexpected extra-install"; exit 1;;
           esac
@@ -259,14 +259,13 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "ibis,mbi" implies "polars" and "scikit-learn": see setup.cfg.
-        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
