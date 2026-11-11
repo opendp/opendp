@@ -1445,7 +1445,12 @@ mod tests {
             ("UnknownVariant", ErrorVariant::FFI),
         ] {
             let variant = CString::new(variant_name).unwrap();
-            let result = ffiresult_err(variant.as_ptr(), message.as_ptr(), backtrace.as_ptr(), null());
+            let result = ffiresult_err(
+                variant.as_ptr(),
+                message.as_ptr(),
+                backtrace.as_ptr(),
+                null(),
+            );
             let result = unsafe { Box::from_raw(result.cast_mut()) };
             let FfiResult::Err(error) = *result else {
                 panic!("expected a callback error");
