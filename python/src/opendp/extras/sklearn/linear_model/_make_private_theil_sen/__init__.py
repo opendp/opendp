@@ -5,18 +5,13 @@ from __future__ import annotations
 import math
 from numbers import Integral, Real
 
+import numpy as np
+
 from opendp._internal import _new_pure_function
-from opendp._lib import get_np_csprng, import_optional_dependency
+from opendp._lib import get_np_csprng
 from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
 from opendp.mod import AtomDomain, Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
-
-_CANDIDATE_COUNT = 100
-
-
-def _numpy():
-    return import_optional_dependency("numpy")
-
 
 def _validate_bounds(bounds, name):
     try:
@@ -65,7 +60,6 @@ def _input_size(input_domain, input_metric):
 
 def pairwise_slopes(data: SklearnFit):
     """Finite slopes from a random disjoint matching."""
-    np = _numpy()
     X, y = np.asarray(data.X, dtype=np.float64), np.asarray(data.y, dtype=np.float64)
     indices = np.arange(len(X))
     get_np_csprng().shuffle(indices)
@@ -101,7 +95,6 @@ def make_residuals(input_domain, input_metric, slope, intercept_bounds):
     """Size-preserving residuals for a fixed slope."""
     import opendp.prelude as dp
 
-    np = _numpy()
     size = _input_size(input_domain, input_metric)
     lower, upper = _validate_bounds(intercept_bounds, "intercept_bounds")
 
@@ -122,18 +115,6 @@ def make_residuals(input_domain, input_metric, slope, intercept_bounds):
         function=residuals,
         stability_map=lambda d: d,
     )
-
-
-def _candidate_grid(bounds):
-    np = _numpy()
-    with np.errstate(all="ignore"):
-        values = np.linspace(*bounds, _CANDIDATE_COUNT)
-        if not np.isfinite(values).all():
-            # Avoid overflow in upper - lower.
-            weights = np.linspace(0.0, 1.0, _CANDIDATE_COUNT)
-            values = (1.0 - weights) * bounds[0] + weights * bounds[1]
-    values[0], values[-1] = bounds
-    return np.unique(np.clip(values, *bounds))
 
 
 def make_private_theil_sen(
@@ -189,8 +170,8 @@ def make_private_theil_sen(
     if budget == 0:
         raise ValueError("d_out is too small to allocate two positive stage budgets")
     compositor = compose(budget)
-    slope_candidates = _candidate_grid(slope_bounds)
-    intercept_candidates = _candidate_grid(intercept_bounds)
+    slope_candidates = np.unique(np.linspace(*slope_bounds, 100))
+    intercept_candidates = np.unique(np.linspace(*intercept_bounds, 100))
     slopes = make_pairwise_slopes(input_domain, input_metric)
     slope_measurement = dp.binary_search_chain(
         lambda scale: (
