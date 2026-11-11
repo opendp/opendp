@@ -576,12 +576,31 @@ pub fn eval_plan_rows(
     decreases *plan,
 {
     match plan {
-        Plan::Input => Ok(rows.clone()),
-        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
+        Plan::Input => {
+            let copy = rows.clone();
+            proof { assert(rows_view(copy@) =~= rows_view(rows@)); }
+            Ok(copy)
+        },
+        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
             match eval_plan_rows(input, rows) {
-                Err(_) => Err(()),
-                Ok(previous) => eval_apply_prefix(plan, &previous, previous.len()),
-            },
+                Err(_) => {
+                    proof { assert(relation_spec(input, rows_view(rows@)).is_Err()); }
+                    Err(())
+                },
+                Ok(previous) => {
+                    proof {
+                        assert(relation_spec(input, rows_view(rows@))
+                            == Ok(rows_view(previous@)));
+                    }
+                    let out = eval_apply_prefix(plan, &previous, previous.len());
+                    proof {
+                        assert(relation_spec(plan, rows_view(rows@))
+                            == apply_spec(plan, rows_view(previous@)));
+                    }
+                    out
+                },
+            }
+        },
     }
 }
 
@@ -885,6 +904,9 @@ pub proof fn lemma_relation_insert(
         Plan::Project { input, .. } | Plan::Filter { input, .. } => {
             let child_schema = plan_schema(input, schema).unwrap();
             lemma_relation_insert(input, rows, schema, child_schema, index, row);
+            lemma_relation_type_sound(input, rows, schema, child_schema);
+            lemma_relation_type_sound(
+                input, rows.insert(index, row), schema, child_schema);
             let before_child = relation_spec(input, rows).unwrap();
             let after_child = relation_spec(input, rows.insert(index, row)).unwrap();
             if before_child =~= after_child {
