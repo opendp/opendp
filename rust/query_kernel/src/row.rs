@@ -15,83 +15,17 @@ pub struct Field {
     pub nullable: bool,
 }
 
-// Nulls are absent values, not a third physical dtype.
-pub enum Column {
-    Int64(Vec<Option<i64>>),
-    Boolean(Vec<Option<bool>>),
-}
-
+/// Typed rows are the sole physical and logical representation in the
+/// verified kernel. Arrow conversion is handled by an external adapter.
 pub struct Table {
     pub schema: Vec<Field>,
-    pub columns: Vec<Column>,
-    pub nrows: usize,
-}
-
-pub open spec fn column_len(column: &Column) -> nat {
-    match column {
-        Column::Int64(values) => values@.len(),
-        Column::Boolean(values) => values@.len(),
-    }
-}
-
-pub open spec fn column_dtype(column: &Column) -> DType {
-    match column {
-        Column::Int64(_) => DType::Int64,
-        Column::Boolean(_) => DType::Boolean,
-    }
-}
-
-pub open spec fn column_cell(column: &Column, index: int) -> Option<Value>
-    recommends 0 <= index < column_len(column),
-{
-    match column {
-        Column::Int64(values) => match values@[index] {
-            Some(value) => Some(Value::Int(value)),
-            None => None,
-        },
-        Column::Boolean(values) => match values@[index] {
-            Some(value) => Some(Value::Bool(value)),
-            None => None,
-        },
-    }
-}
-
-pub open spec fn row_at(table: &Table, index: int) -> Seq<Option<Value>>
-    recommends 0 <= index < table.nrows,
-{
-    Seq::new(table.columns@.len(), |j: int|
-        column_cell(&table.columns@[j], index))
-}
-
-pub open spec fn column_valid(column: &Column, field: Field, nrows: nat) -> bool {
-    column_dtype(column) == field.dtype
-        && column_len(column) == nrows
-        && (field.nullable || forall|i: int| 0 <= i < nrows
-            ==> column_cell(column, i).is_Some())
+    pub rows: Vec<Vec<Option<Value>>>,
 }
 
 pub open spec fn table_valid(table: &Table) -> bool {
-    table.schema@.len() == table.columns@.len()
-        && forall|j: int| 0 <= j < table.columns@.len()
-            ==> column_valid(&table.columns@[j], table.schema@[j], table.nrows as nat)
+    forall|i: int| 0 <= i < table.rows@.len() ==>
+        row_in_schema(table.rows@[i]@, table.schema@)
 }
-
-pub fn read_cell(column: &Column, index: usize) -> (value: Option<Value>)
-    requires index < column_len(column),
-    ensures value == column_cell(column, index as int),
-{
-    match column {
-        Column::Int64(values) => match values[index] {
-            Some(value) => Some(Value::Int(value)),
-            None => None,
-        },
-        Column::Boolean(values) => match values[index] {
-            Some(value) => Some(Value::Bool(value)),
-            None => None,
-        },
-    }
-}
-
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp { Lt, Gt, Eq, And }
@@ -218,11 +152,6 @@ pub open spec fn cell_matches_field(value: Option<Value>, field: Field) -> bool 
         Some(value) => value_dtype(value) == field.dtype,
         None => field.nullable,
     }
-}
-
-/// The row interpretation is ghost-only. Executable data is columnar.
-pub open spec fn table_rows(table: &Table) -> Seq<Seq<Option<Value>>> {
-    Seq::new(table.nrows as nat, |i: int| row_at(table, i))
 }
 
 /// A semantic cell view allows generic, order-independent stability arguments.
@@ -407,40 +336,17 @@ pub proof fn lemma_plan_type_sound(
     }
 }
 
-/// A valid columnar table establishes the same row domain used by the
-/// stability theorem; no separate schema assumptions are needed per row.
-pub proof fn lemma_table_row_valid(table: &Table, index: int)
-    requires table_valid(table), 0 <= index < table.nrows,
-    ensures row_in_schema(row_at(table, index), table.schema@),
-{
-    assert(row_at(table, index).len() == table.schema@.len());
-    assert forall|j: int| 0 <= j < row_at(table, index).len()
-        implies cell_matches_field(
-            row_at(table, index)[j], table.schema@[j]
-        ) by {
-        assert(column_valid(
-            &table.columns@[j], table.schema@[j], table.nrows as nat));
-        assert(row_at(table, index)[j] ==
-            column_cell(&table.columns@[j], index));
-        match column_cell(&table.columns@[j], index) {
-            Some(_) => {},
-            None => {
-                assert(table.schema@[j].nullable);
-            },
-        }
-    }
-}
-
+/// Well-typed plans are total on rows of a valid typed relation.
 pub proof fn lemma_schema_establishes_domain(plan: &Plan, table: &Table)
     requires table_valid(table), plan_schema(plan, table.schema@).is_Some(),
-    ensures input_domain(plan, table_rows(table)),
+    ensures input_domain(plan, rows_view(table.rows@)),
 {
     let out_schema = plan_schema(plan, table.schema@).unwrap();
-    assert forall|i: int| 0 <= i < table_rows(table).len()
-        implies row_spec(plan, table_rows(table)[i]).is_Ok() by {
-        lemma_table_row_valid(table, i);
-        assert(table_rows(table)[i] == row_at(table, i));
-        lemma_plan_type_sound(plan, table.schema@, row_at(table, i), out_schema);
+    assert forall|i: int| 0 <= i < rows_view(table.rows@).len()
+        implies row_spec(plan, rows_view(table.rows@)[i]).is_Ok() by {
+        assert(rows_view(table.rows@)[i] == table.rows@[i]@);
+        assert(row_in_schema(table.rows@[i]@, table.schema@));
+        lemma_plan_type_sound(plan, table.schema@, table.rows@[i]@, out_schema);
     }
 }
 
@@ -491,57 +397,7 @@ pub open spec fn row_spec(
 }
 
 
-/// The physical source remains columnar. Only an individual record is
-/// assembled transiently for a row-local interpreter.
-pub fn read_row_prefix(table: &Table, index: usize, count: usize)
-    -> (result: Vec<Option<Value>>)
-    requires
-        table_valid(table),
-        index < table.nrows,
-        count <= table.columns.len(),
-    ensures
-        result@ =~= row_at(table, index as int).take(count as int),
-    decreases count,
-{
-    if count == 0 {
-        Vec::new()
-    } else {
-        let mut prior = read_row_prefix(table, index, count - 1);
-        proof {
-            assert(column_valid(
-                &table.columns@[(count - 1) as int],
-                table.schema@[(count - 1) as int],
-                table.nrows as nat,
-            ));
-            assert(column_len(&table.columns@[(count - 1) as int]) == table.nrows);
-        }
-        let value = read_cell(&table.columns[count - 1], index);
-        prior.push(value);
-        proof {
-            assert forall|j: int| 0 <= j < count
-                implies prior@[j] == row_at(table, index as int).take(count as int)[j] by {
-                if j < count - 1 {
-                    assert(prior@[j] ==
-                        row_at(table, index as int).take((count - 1) as int)[j]);
-                } else {
-                    assert(j == count - 1);
-                    assert(row_at(table, index as int)[j] ==
-                        column_cell(&table.columns@[j], index as int));
-                }
-            }
-        }
-        prior
-    }
-}
-
-pub fn read_row(table: &Table, index: usize) -> (row: Vec<Option<Value>>)
-    requires table_valid(table), index < table.nrows,
-    ensures row@ =~= row_at(table, index as int),
-{
-    read_row_prefix(table, index, table.columns.len())
-}
-
-/// The same expression evaluator works after projecting onto a temporary row.
+/// Expressions read the same row type used by the relation.
 pub fn eval_expr_row(expr: &Expr, row: &Vec<Option<Value>>)
     -> (result: Result<Option<Value>, ()>)
     ensures result == expr_row_spec(expr, row@),
@@ -670,17 +526,16 @@ pub proof fn lemma_rows_view_push(
     }
 }
 
-/// Whole-dataset semantics evaluated from typed columnar input.
-/// The row output is a temporary oracle representation, not an Arrow format.
+/// Execute row-local plans into a bag of rows. This is not an Arrow engine.
 pub fn eval_dataset_prefix(
     plan: &Plan, input: &Table, count: usize,
 ) -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
-    requires table_valid(input), count <= input.nrows,
+    requires table_valid(input), count <= input.rows.len(),
     ensures
         match output {
-            Ok(rows) => dataset_prefix_spec(plan, table_rows(input), count as nat)
+            Ok(rows) => dataset_prefix_spec(plan, rows_view(input.rows@), count as nat)
                 == Ok(rows_view(rows@).to_multiset()),
-            Err(_) => dataset_prefix_spec(plan, table_rows(input), count as nat).is_Err(),
+            Err(_) => dataset_prefix_spec(plan, rows_view(input.rows@), count as nat).is_Err(),
         },
     decreases count,
 {
@@ -697,12 +552,12 @@ pub fn eval_dataset_prefix(
         match eval_dataset_prefix(plan, input, count - 1) {
             Err(_) => Err(()),
             Ok(mut previous) => {
-                let row = read_row(input, count - 1);
+                let row = &input.rows[count - 1];
                 proof {
-                    assert(table_rows(input)[(count - 1) as int] ==
-                        row_at(input, (count - 1) as int));
+                    assert(rows_view(input.rows@)[(count - 1) as int] ==
+                        input.rows@[(count - 1) as int]@);
                 }
-                match eval_row(plan, &row) {
+                match eval_row(plan, row) {
                     Err(_) => Err(()),
                     Ok(None) => Ok(previous),
                     Ok(Some(result)) => {
@@ -727,12 +582,12 @@ pub fn evaluate(plan: &Plan, input: &Table)
     requires table_valid(input),
     ensures
         match output {
-            Ok(rows) => dataset_spec(plan, table_rows(input))
+            Ok(rows) => dataset_spec(plan, rows_view(input.rows@))
                 == Ok(rows_view(rows@).to_multiset()),
-            Err(_) => dataset_spec(plan, table_rows(input)).is_Err(),
+            Err(_) => dataset_spec(plan, rows_view(input.rows@)).is_Err(),
         },
 {
-    eval_dataset_prefix(plan, input, input.nrows)
+    eval_dataset_prefix(plan, input, input.rows.len())
 }
 
 pub open spec fn input_domain(plan: &Plan, data: Seq<Seq<Option<Value>>>) -> bool {
@@ -778,9 +633,9 @@ pub open spec fn output_conforms(
                 expected_fields.len() == actual.schema@.len()
                     && (forall|i: int| 0 <= i < expected_fields.len() ==>
                         expected_fields[i].dtype == actual.schema@[i].dtype)
-                    && match dataset_spec(plan, table_rows(input)) {
+                    && match dataset_spec(plan, rows_view(input.rows@)) {
                         Ok(expected) =>
-                            expected =~= table_rows(actual).to_multiset(),
+                            expected =~= rows_view(actual.rows@).to_multiset(),
                         Err(_) => false,
                     },
             None => false,
@@ -901,65 +756,18 @@ pub proof fn lemma_dataset_insert_stable(
     }
 }
 
-/// One physical record insertion has a common index in every column.
-pub open spec fn column_one_insert(
-    before: &Column, after: &Column, index: int,
-) -> bool {
-    column_dtype(before) == column_dtype(after)
-        && column_len(after) == column_len(before) + 1
-        && forall|i: int| 0 <= i < column_len(after) ==>
-            (i < index ==> column_cell(after, i) == column_cell(before, i))
-            && (i > index ==> column_cell(after, i) == column_cell(before, i - 1))
+/// One row is inserted without changing the schema or other rows.
+pub open spec fn table_one_insert(before: &Table, after: &Table, index: int) -> bool {
+    let earlier = rows_view(before.rows@);
+    let later = rows_view(after.rows@);
+    before.schema@ =~= after.schema@
+        && 0 <= index <= earlier.len()
+        && later.len() == earlier.len() + 1
+        && later =~= earlier.insert(index, later[index])
 }
 
-pub open spec fn table_one_insert(
-    before: &Table, after: &Table, index: int,
-) -> bool {
-    0 <= index <= before.nrows
-        && after.nrows as nat == before.nrows as nat + 1
-        && before.schema@ =~= after.schema@
-        && before.columns@.len() == after.columns@.len()
-        && forall|j: int| 0 <= j < before.columns@.len() ==>
-            column_one_insert(
-                &before.columns@[j], &after.columns@[j], index)
-}
-
-/// Physical column insertion implies insertion in the logical row sequence.
-pub proof fn lemma_columnar_insert_rows(
-    before: &Table, after: &Table, index: int,
-)
-    requires
-        table_valid(before),
-        table_valid(after),
-        table_one_insert(before, after, index),
-    ensures table_rows(after) =~=
-        table_rows(before).insert(index, row_at(after, index)),
-{
-    assert(table_rows(after).len() == table_rows(before).len() + 1);
-    assert forall|i: int| 0 <= i < table_rows(after).len()
-        implies table_rows(after)[i] ==
-            table_rows(before).insert(index, row_at(after, index))[i] by {
-        if i == index {
-            assert(table_rows(after)[i] == row_at(after, index));
-        } else {
-            let old_index = if i < index { i } else { i - 1 };
-            assert(0 <= old_index < before.nrows);
-            assert forall|j: int| 0 <= j < after.columns@.len()
-                implies row_at(after, i)[j] == row_at(before, old_index)[j] by {
-                assert(column_one_insert(
-                    &before.columns@[j], &after.columns@[j], index));
-                assert(row_at(after, i)[j] ==
-                    column_cell(&after.columns@[j], i));
-                assert(row_at(before, old_index)[j] ==
-                    column_cell(&before.columns@[j], old_index));
-            }
-            assert(row_at(after, i) =~= row_at(before, old_index));
-        }
-    }
-}
-
-/// No row-domain preconditions: validity and static typing suffice.
-pub proof fn lemma_typed_columnar_insert_stable(
+/// Typed row insertion needs no extra row-domain hypotheses.
+pub proof fn lemma_typed_row_insert_stable(
     plan: &Plan, before: &Table, after: &Table, index: int,
 )
     requires
@@ -969,8 +777,8 @@ pub proof fn lemma_typed_columnar_insert_stable(
         plan_schema(plan, before.schema@).is_Some(),
     ensures
         match (
-            dataset_spec(plan, table_rows(before)),
-            dataset_spec(plan, table_rows(after)),
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
         ) {
             (Ok(before_bag), Ok(after_bag)) =>
                 bag_one_edit(before_bag, after_bag),
@@ -980,15 +788,14 @@ pub proof fn lemma_typed_columnar_insert_stable(
     lemma_schema_establishes_domain(plan, before);
     assert(plan_schema(plan, after.schema@).is_Some());
     lemma_schema_establishes_domain(plan, after);
-    lemma_columnar_insert_rows(before, after, index);
     lemma_dataset_insert_stable(
-        plan, table_rows(before), index, row_at(after, index));
+        plan, rows_view(before.rows@), index, rows_view(after.rows@)[index]);
     match (
-        dataset_spec(plan, table_rows(before)),
-        dataset_spec(plan, table_rows(after)),
+        dataset_spec(plan, rows_view(before.rows@)),
+        dataset_spec(plan, rows_view(after.rows@)),
     ) {
         (Ok(before_bag), Ok(after_bag)) => {
-            match row_spec(plan, row_at(after, index)) {
+            match row_spec(plan, rows_view(after.rows@)[index]) {
                 Ok(Some(added)) => {
                     assert(after_bag =~= before_bag.insert(added));
                     assert(bag_one_edit(before_bag, after_bag));
@@ -1095,11 +902,13 @@ mod tests {
                 Field { dtype: DType::Int64, nullable: true },
                 Field { dtype: DType::Boolean, nullable: true },
             ],
-            columns: vec![
-                Column::Int64(vec![Some(-2), Some(2), None, Some(4), Some(6)]),
-                Column::Boolean(vec![Some(true), Some(true), Some(true), None, Some(false)]),
+            rows: vec![
+                vec![Some(Value::Int(-2)), Some(Value::Bool(true))],
+                vec![Some(Value::Int(2)), Some(Value::Bool(true))],
+                vec![None, Some(Value::Bool(true))],
+                vec![Some(Value::Int(4)), None],
+                vec![Some(Value::Int(6)), Some(Value::Bool(false))],
             ],
-            nrows: 5,
         };
         let plan = Plan::Project {
             input: Box::new(Plan::Filter {
@@ -1135,15 +944,13 @@ mod tests {
     fn empty_tables_and_zero_column_rows() {
         let empty = Table {
             schema: vec![Field { dtype: DType::Int64, nullable: false }],
-            columns: vec![Column::Int64(vec![])],
-            nrows: 0,
+            rows: vec![],
         };
         assert!(evaluate(&Plan::Input, &empty) == Ok(vec![]));
 
         let no_columns = Table {
             schema: vec![],
-            columns: vec![],
-            nrows: 2,
+            rows: vec![vec![], vec![]],
         };
         assert!(evaluate(&Plan::Input, &no_columns) == Ok(vec![vec![], vec![]]));
     }
@@ -1155,42 +962,42 @@ mod tests {
                 Field { dtype: DType::Int64, nullable: true },
                 Field { dtype: DType::Boolean, nullable: true },
             ],
-            columns: vec![
-                Column::Int64(vec![Some(5), None, Some(1)]),
-                Column::Boolean(vec![None, Some(false), Some(true)]),
+            rows: vec![
+                vec![Some(Value::Int(5)), None],
+                vec![None, Some(Value::Bool(false))],
+                vec![Some(Value::Int(1)), Some(Value::Bool(true))],
             ],
-            nrows: 3,
         };
         let less_than = Expr::Binary {
             left: Box::new(Expr::Column(0)), op: BinaryOp::Lt,
             right: Box::new(Expr::Literal(Value::Int(3))),
         };
-        assert!(eval_expr_row(&less_than, &read_row(&t, 0)) == Ok(Some(Value::Bool(false))));
-        assert!(eval_expr_row(&less_than, &read_row(&t, 1)) == Ok(None));
-        assert!(eval_expr_row(&less_than, &read_row(&t, 2)) == Ok(Some(Value::Bool(true))));
+        assert!(eval_expr_row(&less_than, &t.rows[0]) == Ok(Some(Value::Bool(false))));
+        assert!(eval_expr_row(&less_than, &t.rows[1]) == Ok(None));
+        assert!(eval_expr_row(&less_than, &t.rows[2]) == Ok(Some(Value::Bool(true))));
 
         let and_false = Expr::Binary {
             left: Box::new(Expr::Column(1)), op: BinaryOp::And,
             right: Box::new(Expr::Literal(Value::Bool(false))),
         };
-        assert!(eval_expr_row(&and_false, &read_row(&t, 0)) == Ok(Some(Value::Bool(false))));
-        assert!(eval_expr_row(&and_false, &read_row(&t, 1)) == Ok(Some(Value::Bool(false))));
+        assert!(eval_expr_row(&and_false, &t.rows[0]) == Ok(Some(Value::Bool(false))));
+        assert!(eval_expr_row(&and_false, &t.rows[1]) == Ok(Some(Value::Bool(false))));
 
         let and_true = Expr::Binary {
             left: Box::new(Expr::Column(1)), op: BinaryOp::And,
             right: Box::new(Expr::Literal(Value::Bool(true))),
         };
-        assert!(eval_expr_row(&and_true, &read_row(&t, 0)) == Ok(None));
-        assert!(eval_expr_row(&and_true, &read_row(&t, 2)) == Ok(Some(Value::Bool(true))));
+        assert!(eval_expr_row(&and_true, &t.rows[0]) == Ok(None));
+        assert!(eval_expr_row(&and_true, &t.rows[2]) == Ok(Some(Value::Bool(true))));
 
         let clipped = Expr::Clip {
             expr: Box::new(Expr::Column(0)),
             lower: Some(Box::new(Expr::Literal(Value::Int(2)))),
             upper: Some(Box::new(Expr::Literal(Value::Int(4)))),
         };
-        assert!(eval_expr_row(&clipped, &read_row(&t, 0)) == Ok(Some(Value::Int(4))));
-        assert!(eval_expr_row(&clipped, &read_row(&t, 1)) == Ok(None));
-        assert!(eval_expr_row(&clipped, &read_row(&t, 2)) == Ok(Some(Value::Int(2))));
+        assert!(eval_expr_row(&clipped, &t.rows[0]) == Ok(Some(Value::Int(4))));
+        assert!(eval_expr_row(&clipped, &t.rows[1]) == Ok(None));
+        assert!(eval_expr_row(&clipped, &t.rows[2]) == Ok(Some(Value::Int(2))));
     }
 
     #[test]
@@ -1201,18 +1008,14 @@ mod tests {
                 Field { dtype: DType::Int64, nullable: true },
                 Field { dtype: DType::Int64, nullable: true },
             ],
-            columns: vec![
-                Column::Int64(vec![
-                    Some(0), Some(5), Some(8), None, Some(7), Some(5),
-                ]),
-                Column::Int64(vec![
-                    Some(2), None, Some(9), Some(0), Some(8), None,
-                ]),
-                Column::Int64(vec![
-                    Some(10), Some(3), Some(6), Some(3), Some(3), None,
-                ]),
+            rows: vec![
+                vec![Some(Value::Int(0)), Some(Value::Int(2)), Some(Value::Int(10))],
+                vec![Some(Value::Int(5)), None, Some(Value::Int(3))],
+                vec![Some(Value::Int(8)), Some(Value::Int(9)), Some(Value::Int(6))],
+                vec![None, Some(Value::Int(0)), Some(Value::Int(3))],
+                vec![Some(Value::Int(7)), Some(Value::Int(8)), Some(Value::Int(3))],
+                vec![Some(Value::Int(5)), None, None],
             ],
-            nrows: 6,
         };
         let expression = Expr::Clip {
             expr: Box::new(Expr::Column(0)),
@@ -1237,9 +1040,9 @@ mod tests {
             lower: None,
             upper: Some(Box::new(Expr::Column(2))),
         };
-        assert!(eval_expr_row(&upper_only, &read_row(&input, 1))
+        assert!(eval_expr_row(&upper_only, &input.rows[1])
             == Ok(Some(Value::Int(3))));
-        assert!(eval_expr_row(&upper_only, &read_row(&input, 5))
+        assert!(eval_expr_row(&upper_only, &input.rows[5])
             == Ok(Some(Value::Int(5))));
 
         let no_bounds = Expr::Clip {
@@ -1247,15 +1050,20 @@ mod tests {
             lower: None,
             upper: None,
         };
-        assert!(eval_expr_row(&no_bounds, &read_row(&input, 4))
+        assert!(eval_expr_row(&no_bounds, &input.rows[4])
             == Ok(Some(Value::Int(7))));
     }
 
     #[test]
-    fn nullable_column_cell() {
-        let col = Column::Int64(vec![Some(4), None, Some(-1)]);
-        assert!(read_cell(&col, 0) == Some(Value::Int(4)));
-        assert!(read_cell(&col, 1) == None);
-        assert!(read_cell(&col, 2) == Some(Value::Int(-1)));
+    fn duplicate_rows_are_preserved() {
+        let input = Table {
+            schema: vec![Field { dtype: DType::Int64, nullable: true }],
+            rows: vec![
+                vec![Some(Value::Int(4))],
+                vec![None],
+                vec![Some(Value::Int(4))],
+            ],
+        };
+        assert!(evaluate(&Plan::Input, &input) == Ok(input.rows));
     }
 }
