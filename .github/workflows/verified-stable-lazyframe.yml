@@ -1,0 +1,33 @@
+name: Verify stable LazyFrame prototype
+
+on:
+  push:
+    branches: [verified-stable-lazyframe]
+    paths:
+      - 'rust/Cargo.toml'
+      - 'rust/src/transformations/make_verified_stable_lazyframe/**'
+      - 'rust/src/transformations/mod.rs'
+      - 'rust/query_kernel/**'
+      - '.github/workflows/verified-stable-lazyframe.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: verified-stable-lazyframe
+  cancel-in-progress: true
+
+jobs:
+  constructor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+          cache-on-failure: true
+      - name: Test the constructor
+        working-directory: rust
+        run: cargo test --no-default-features --features contrib,polars,verified-query make_verified_stable_lazyframe --lib
