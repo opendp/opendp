@@ -23,8 +23,7 @@ pub struct Table {
 }
 
 pub open spec fn table_valid(table: &Table) -> bool {
-    forall|i: int| 0 <= i < table.rows@.len() ==>
-        row_in_schema(table.rows@[i]@, table.schema@)
+    rows_in_schema(rows_view(table.rows@), table.schema@)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -122,28 +121,29 @@ pub open spec fn project_schema_prefix(
     }
 }
 
+/// Type checking for a single relational operator.
+pub open spec fn local_schema(plan: &Plan, schema: Seq<Field>) -> Option<Seq<Field>> {
+    match plan {
+        Plan::Input => Some(schema),
+        Plan::Project { exprs, .. } =>
+            project_schema_prefix(exprs@, schema, exprs@.len()),
+        Plan::Filter { predicate, .. } => match expr_field(predicate, schema) {
+            Some(field) if field.dtype == DType::Boolean => Some(schema),
+            _ => None,
+        },
+    }
+}
+
 pub open spec fn plan_schema(plan: &Plan, input_schema: Seq<Field>) -> Option<Seq<Field>>
     decreases *plan,
 {
     match plan {
         Plan::Input => Some(input_schema),
-        Plan::Project { input, exprs } => {
+        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
             match plan_schema(input, input_schema) {
-                Some(fields) => project_schema_prefix(exprs@, fields, exprs@.len()),
+                Some(child_schema) => local_schema(plan, child_schema),
                 None => None,
-            }
-        },
-        Plan::Filter { input, predicate } => {
-            match plan_schema(input, input_schema) {
-                Some(fields) =>
-                    match expr_field(predicate, fields) {
-                        Some(field) =>
-                            if field.dtype == DType::Boolean { Some(fields) } else { None },
-                        None => None,
-                    },
-                None => None,
-            }
-        },
+            },
     }
 }
 
@@ -202,6 +202,12 @@ pub open spec fn row_in_schema(
     row.len() == schema.len()
         && forall|i: int| 0 <= i < row.len()
             ==> cell_matches_field(row[i], schema[i])
+}
+
+pub open spec fn rows_in_schema(
+    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+) -> bool {
+    forall|i: int| 0 <= i < rows.len() ==> row_in_schema(rows[i], schema)
 }
 
 /// Well-typed expressions cannot fail, and nullable outputs are represented
@@ -300,53 +306,28 @@ pub proof fn lemma_project_row_prefix_type_sound(
     }
 }
 
-pub proof fn lemma_plan_type_sound(
-    plan: &Plan, schema: Seq<Field>,
-    row: Seq<Option<Value>>, output_schema: Seq<Field>,
+/// Typing soundness for one operator, without evaluating its child plan.
+pub proof fn lemma_local_type_sound(
+    plan: &Plan, schema: Seq<Field>, row: Seq<Option<Value>>, output_schema: Seq<Field>,
 )
     requires
         row_in_schema(row, schema),
-        plan_schema(plan, schema) == Some(output_schema),
+        local_schema(plan, schema) == Some(output_schema),
     ensures
-        match row_spec(plan, row) {
+        match local_row_spec(plan, row) {
             Ok(Some(result)) => row_in_schema(result, output_schema),
             Ok(None) => true,
             Err(_) => false,
         },
-    decreases *plan,
 {
     match plan {
         Plan::Input => {},
-        Plan::Project { input, exprs } => {
-            let child_schema = plan_schema(input, schema).unwrap();
-            lemma_plan_type_sound(input, schema, row, child_schema);
-            if let Ok(Some(previous)) = row_spec(input, row) {
-                lemma_project_row_prefix_type_sound(
-                    exprs@, child_schema, previous, exprs@.len());
-            }
+        Plan::Project { exprs, .. } =>
+            lemma_project_row_prefix_type_sound(exprs@, schema, row, exprs@.len()),
+        Plan::Filter { predicate, .. } => {
+            let field = expr_field(predicate, schema).unwrap();
+            lemma_expr_field_sound(predicate, schema, row, field);
         },
-        Plan::Filter { input, predicate } => {
-            let child_schema = plan_schema(input, schema).unwrap();
-            lemma_plan_type_sound(input, schema, row, child_schema);
-            if let Ok(Some(previous)) = row_spec(input, row) {
-                let predicate_field = expr_field(predicate, child_schema).unwrap();
-                lemma_expr_field_sound(predicate, child_schema, previous, predicate_field);
-            }
-        },
-    }
-}
-
-/// Well-typed plans are total on rows of a valid typed relation.
-pub proof fn lemma_schema_establishes_domain(plan: &Plan, table: &Table)
-    requires table_valid(table), plan_schema(plan, table.schema@).is_Some(),
-    ensures input_domain(plan, rows_view(table.rows@)),
-{
-    let out_schema = plan_schema(plan, table.schema@).unwrap();
-    assert forall|i: int| 0 <= i < rows_view(table.rows@).len()
-        implies row_spec(plan, rows_view(table.rows@)[i]).is_Ok() by {
-        assert(rows_view(table.rows@)[i] == table.rows@[i]@);
-        assert(row_in_schema(table.rows@[i]@, table.schema@));
-        lemma_plan_type_sound(plan, table.schema@, table.rows@[i]@, out_schema);
     }
 }
 
@@ -366,36 +347,66 @@ pub open spec fn project_row_prefix(
     }
 }
 
-pub open spec fn row_spec(
+/// A row-local step does not evaluate the plan's child.
+pub open spec fn local_row_spec(
     plan: &Plan, row: Seq<Option<Value>>,
-) -> Result<Option<Seq<Option<Value>>>, ()>
-    decreases *plan,
-{
+) -> Result<Option<Seq<Option<Value>>>, ()> {
     match plan {
         Plan::Input => Ok(Some(row)),
-        Plan::Project { input, exprs } =>
-            match row_spec(input, row) {
-                Ok(Some(previous)) => match project_row_prefix(
-                    exprs@, previous, exprs@.len()) {
-                    Ok(result) => Ok(Some(result)),
-                    Err(_) => Err(()),
-                },
-                Ok(None) => Ok(None),
+        Plan::Project { exprs, .. } =>
+            match project_row_prefix(exprs@, row, exprs@.len()) {
+                Ok(out) => Ok(Some(out)),
                 Err(_) => Err(()),
             },
-        Plan::Filter { input, predicate } =>
-            match row_spec(input, row) {
-                Ok(Some(previous)) => match expr_row_spec(predicate, previous) {
-                    Ok(Some(Value::Bool(true))) => Ok(Some(previous)),
-                    Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
-                    _ => Err(()),
-                },
-                Ok(None) => Ok(None),
-                Err(_) => Err(()),
+        Plan::Filter { predicate, .. } =>
+            match expr_row_spec(predicate, row) {
+                Ok(Some(Value::Bool(true))) => Ok(Some(row)),
+                Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
+                _ => Err(()),
             },
     }
 }
 
+pub open spec fn apply_prefix_spec(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>, count: nat,
+) -> Result<Seq<Seq<Option<Value>>>, ()>
+    recommends count <= rows.len(),
+    decreases count,
+{
+    if count == 0 { Ok(Seq::empty()) }
+    else {
+        match apply_prefix_spec(plan, rows, (count - 1) as nat) {
+            Err(_) => Err(()),
+            Ok(prefix) => match local_row_spec(plan, rows[(count - 1) as int]) {
+                Err(_) => Err(()),
+                Ok(None) => Ok(prefix),
+                Ok(Some(row)) => Ok(prefix.push(row)),
+            },
+        }
+    }
+}
+
+pub open spec fn apply_spec(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+) -> Result<Seq<Seq<Option<Value>>>, ()> {
+    apply_prefix_spec(plan, rows, rows.len())
+}
+
+/// A plan node transforms the complete child relation.
+pub open spec fn relation_spec(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+) -> Result<Seq<Seq<Option<Value>>>, ()>
+    decreases *plan,
+{
+    match plan {
+        Plan::Input => Ok(rows),
+        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
+            match relation_spec(input, rows) {
+                Err(_) => Err(()),
+                Ok(previous) => apply_spec(plan, previous),
+            },
+    }
+}
 
 /// Expressions read the same row type used by the relation.
 pub fn eval_expr_row(expr: &Expr, row: &Vec<Option<Value>>)
@@ -467,43 +478,29 @@ pub fn eval_project_prefix(
     }
 }
 
-/// Row-local semantics retains exact null and error behavior, including
-/// a nullable filter predicate: only Some(true) keeps the row.
-pub fn eval_row(plan: &Plan, row: &Vec<Option<Value>>)
+/// Evaluate just one node's row-local operation.
+pub fn eval_local_row(plan: &Plan, row: &Vec<Option<Value>>)
     -> (result: Result<Option<Vec<Option<Value>>>, ()>)
     ensures
         match result {
-            Err(_) => row_spec(plan, row@).is_Err(),
-            Ok(None) => row_spec(plan, row@) == Ok(None),
-            Ok(Some(out)) => row_spec(plan, row@) == Ok(Some(out@)),
+            Err(_) => local_row_spec(plan, row@).is_Err(),
+            Ok(None) => local_row_spec(plan, row@) == Ok(None),
+            Ok(Some(out)) => local_row_spec(plan, row@) == Ok(Some(out@)),
         },
-    decreases *plan,
 {
     match plan {
         Plan::Input => Ok(Some(row.clone())),
-        Plan::Project { input, exprs } => {
-            match eval_row(input, row) {
+        Plan::Project { exprs, .. } =>
+            match eval_project_prefix(exprs, row, exprs.len()) {
+                Ok(output) => Ok(Some(output)),
                 Err(_) => Err(()),
-                Ok(None) => Ok(None),
-                Ok(Some(previous)) =>
-                    match eval_project_prefix(exprs, &previous, exprs.len()) {
-                        Ok(output) => Ok(Some(output)),
-                        Err(_) => Err(()),
-                    },
-            }
-        },
-        Plan::Filter { input, predicate } => {
-            match eval_row(input, row) {
-                Err(_) => Err(()),
-                Ok(None) => Ok(None),
-                Ok(Some(previous)) =>
-                    match eval_expr_row(predicate, &previous) {
-                        Ok(Some(Value::Bool(true))) => Ok(Some(previous)),
-                        Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
-                        _ => Err(()),
-                    },
-            }
-        },
+            },
+        Plan::Filter { predicate, .. } =>
+            match eval_expr_row(predicate, row) {
+                Ok(Some(Value::Bool(true))) => Ok(Some(row.clone())),
+                Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
+                _ => Err(()),
+            },
     }
 }
 
@@ -526,48 +523,38 @@ pub proof fn lemma_rows_view_push(
     }
 }
 
-/// Execute row-local plans into a bag of rows. This is not an Arrow engine.
-pub fn eval_dataset_prefix(
-    plan: &Plan, input: &Table, count: usize,
+/// Execute a row-local operator on an entire relation, not the whole plan.
+pub fn eval_apply_prefix(
+    plan: &Plan, rows: &Vec<Vec<Option<Value>>>, count: usize,
 ) -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
-    requires table_valid(input), count <= input.rows.len(),
+    requires count <= rows.len(),
     ensures
         match output {
-            Ok(rows) => dataset_prefix_spec(plan, rows_view(input.rows@), count as nat)
-                == Ok(rows_view(rows@).to_multiset()),
-            Err(_) => dataset_prefix_spec(plan, rows_view(input.rows@), count as nat).is_Err(),
+            Ok(result) => apply_prefix_spec(plan, rows_view(rows@), count as nat)
+                == Ok(rows_view(result@)),
+            Err(_) => apply_prefix_spec(plan, rows_view(rows@), count as nat).is_Err(),
         },
     decreases count,
 {
     if count == 0 {
         let empty: Vec<Vec<Option<Value>>> = Vec::new();
-        proof {
-            let empty_rows = rows_view(empty@);
-            empty_rows.to_multiset_ensures();
-            vstd::multiset::lemma_multiset_empty_len(empty_rows.to_multiset());
-            assert(empty_rows.to_multiset() =~= Multiset::<Seq<Option<Value>>>::empty());
-        }
+        proof { assert(rows_view(empty@) =~= Seq::<Seq<Option<Value>>>::empty()); }
         Ok(empty)
     } else {
-        match eval_dataset_prefix(plan, input, count - 1) {
+        match eval_apply_prefix(plan, rows, count - 1) {
             Err(_) => Err(()),
             Ok(mut previous) => {
-                let row = &input.rows[count - 1];
+                let row = &rows[count - 1];
                 proof {
-                    assert(rows_view(input.rows@)[(count - 1) as int] ==
-                        input.rows@[(count - 1) as int]@);
+                    assert(rows_view(rows@)[(count - 1) as int] ==
+                        rows@[(count - 1) as int]@);
                 }
-                match eval_row(plan, row) {
+                match eval_local_row(plan, row) {
                     Err(_) => Err(()),
                     Ok(None) => Ok(previous),
                     Ok(Some(result)) => {
                         let ghost old_rows = previous@;
-                        proof {
-                            lemma_rows_view_push(old_rows, result);
-                            rows_view(old_rows).to_multiset_ensures();
-                            assert(rows_view(old_rows.push(result)).to_multiset() =~=
-                                rows_view(old_rows).to_multiset().insert(result@));
-                        }
+                        proof { lemma_rows_view_push(old_rows, result); }
                         previous.push(result);
                         Ok(previous)
                     },
@@ -577,69 +564,54 @@ pub fn eval_dataset_prefix(
     }
 }
 
+/// Evaluate child plans once; then apply the current relation operator.
+pub fn eval_plan_rows(
+    plan: &Plan, rows: &Vec<Vec<Option<Value>>>,
+) -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
+    ensures
+        match output {
+            Ok(result) => relation_spec(plan, rows_view(rows@)) == Ok(rows_view(result@)),
+            Err(_) => relation_spec(plan, rows_view(rows@)).is_Err(),
+        },
+    decreases *plan,
+{
+    match plan {
+        Plan::Input => Ok(rows.clone()),
+        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
+            match eval_plan_rows(input, rows) {
+                Err(_) => Err(()),
+                Ok(previous) => eval_apply_prefix(plan, &previous, previous.len()),
+            },
+    }
+}
+
 pub fn evaluate(plan: &Plan, input: &Table)
     -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
     requires table_valid(input),
     ensures
         match output {
-            Ok(rows) => dataset_spec(plan, rows_view(input.rows@))
-                == Ok(rows_view(rows@).to_multiset()),
-            Err(_) => dataset_spec(plan, rows_view(input.rows@)).is_Err(),
+            Ok(result) => relation_spec(plan, rows_view(input.rows@)) == Ok(rows_view(result@)),
+            Err(_) => relation_spec(plan, rows_view(input.rows@)).is_Err(),
         },
 {
-    eval_dataset_prefix(plan, input, input.rows.len())
+    eval_plan_rows(plan, &input.rows)
 }
 
-pub open spec fn input_domain(plan: &Plan, data: Seq<Seq<Option<Value>>>) -> bool {
-    forall|i: int| 0 <= i < data.len() ==> row_spec(plan, data[i]).is_Ok()
-}
-
-/// Query semantics are bags. Ordering of realized rows is not observable.
-pub open spec fn dataset_prefix_spec(
-    plan: &Plan, data: Seq<Seq<Option<Value>>>, count: nat,
-) -> Result<Multiset<Seq<Option<Value>>>, ()>
-    recommends count <= data.len(),
-    decreases count,
-{
-    if count == 0 { Ok(Multiset::empty()) }
-    else {
-        match dataset_prefix_spec(plan, data, (count - 1) as nat) {
-            Err(_) => Err(()),
-            Ok(prefix) => match row_spec(plan, data[(count - 1) as int]) {
-                Err(_) => Err(()),
-                Ok(None) => Ok(prefix),
-                Ok(Some(row)) => Ok(prefix.insert(row)),
-            },
-        }
+pub open spec fn dataset_spec(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+) -> Result<Multiset<Seq<Option<Value>>>, ()> {
+    match relation_spec(plan, rows) {
+        Ok(result) => Ok(result.to_multiset()),
+        Err(_) => Err(()),
     }
 }
 
-pub open spec fn dataset_spec(plan: &Plan, data: Seq<Seq<Option<Value>>>)
-    -> Result<Multiset<Seq<Option<Value>>>, ()>
-{
-    dataset_prefix_spec(plan, data, data.len())
-}
-
-/// Conformance criterion for an Arrow-backed checker. Check physical
-/// dtypes and every nullable value, not equality of Arrow nullable flags:
-/// a backend may declare a column nullable even if no rows contain null.
-pub open spec fn output_conforms(
-    plan: &Plan, input: &Table, actual: &Table,
+pub open spec fn seq_one_insert(
+    before: Seq<Seq<Option<Value>>>, after: Seq<Seq<Option<Value>>>,
 ) -> bool {
-    table_valid(input)
-        && table_valid(actual)
-        && match plan_schema(plan, input.schema@) {
-            Some(expected_fields) =>
-                expected_fields.len() == actual.schema@.len()
-                    && (forall|i: int| 0 <= i < expected_fields.len() ==>
-                        expected_fields[i].dtype == actual.schema@[i].dtype)
-                    && match dataset_spec(plan, rows_view(input.rows@)) {
-                        Ok(expected) =>
-                            expected =~= rows_view(actual.rows@).to_multiset(),
-                        Err(_) => false,
-                    },
-            None => false,
-        }
+    before =~= after
+        || exists|i: int, row: Seq<Option<Value>>|
+            0 <= i <= before.len() && after =~= before.insert(i, row)
 }
 
 pub open spec fn bag_one_edit(
@@ -650,113 +622,346 @@ pub open spec fn bag_one_edit(
         || exists|row: Seq<Option<Value>>| left =~= right.insert(row)
 }
 
-pub proof fn lemma_prefix_ignores_last(
-    plan: &Plan, data: Seq<Seq<Option<Value>>>, count: nat,
+/// Preserve row schemas when extending a relation.
+pub proof fn lemma_rows_push_valid(
+    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>, row: Seq<Option<Value>>,
 )
-    requires count < data.len(),
+    requires rows_in_schema(rows, schema), row_in_schema(row, schema),
+    ensures rows_in_schema(rows.push(row), schema),
+{
+    assert forall|i: int| 0 <= i < rows.push(row).len()
+        implies row_in_schema(rows.push(row)[i], schema) by {
+        if i < rows.len() {
+            assert(row_in_schema(rows[i], schema));
+        } else {
+            assert(i == rows.len());
+        }
+    }
+}
+
+pub proof fn lemma_rows_insert_valid(
+    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+    index: int, row: Seq<Option<Value>>,
+)
+    requires
+        rows_in_schema(rows, schema),
+        row_in_schema(row, schema),
+        0 <= index <= rows.len(),
+    ensures rows_in_schema(rows.insert(index, row), schema),
+{
+    rows.insert_ensures(index, row);
+    assert forall|i: int| 0 <= i < rows.insert(index, row).len()
+        implies row_in_schema(rows.insert(index, row)[i], schema) by {
+        if i == index {
+            assert(rows.insert(index, row)[i] == row);
+        } else if i < index {
+            assert(rows.insert(index, row)[i] == rows[i]);
+        } else {
+            assert(rows.insert(index, row)[i] == rows[i - 1]);
+        }
+    }
+}
+
+pub proof fn lemma_rows_drop_last_valid(
+    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+)
+    requires rows_in_schema(rows, schema), rows.len() > 0,
     ensures
-        dataset_prefix_spec(plan, data, count)
-            == dataset_prefix_spec(plan, data.drop_last(), count),
+        rows_in_schema(rows.drop_last(), schema),
+        row_in_schema(rows.last(), schema),
+{
+    assert forall|i: int| 0 <= i < rows.drop_last().len()
+        implies row_in_schema(rows.drop_last()[i], schema) by {
+        assert(rows.drop_last()[i] == rows[i]);
+    }
+    assert(rows.last() == rows[rows.len() as int - 1]);
+}
+
+/// One operator preserves well-typed rows and cannot return a runtime error.
+pub proof fn lemma_apply_prefix_type_sound(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+    schema: Seq<Field>, output_schema: Seq<Field>, count: nat,
+)
+    requires
+        rows_in_schema(rows, schema),
+        local_schema(plan, schema) == Some(output_schema),
+        count <= rows.len(),
+    ensures
+        match apply_prefix_spec(plan, rows, count) {
+            Ok(result) => rows_in_schema(result, output_schema),
+            Err(_) => false,
+        },
     decreases count,
 {
     if count > 0 {
-        lemma_prefix_ignores_last(plan, data, (count - 1) as nat);
-        assert(data.drop_last()[(count - 1) as int] == data[(count - 1) as int]);
-    }
-}
-
-pub proof fn lemma_dataset_total(plan: &Plan, data: Seq<Seq<Option<Value>>>)
-    requires input_domain(plan, data),
-    ensures dataset_spec(plan, data).is_Ok(),
-    decreases data.len(),
-{
-    if data.len() > 0 {
-        let prefix = data.drop_last();
-        assert(input_domain(plan, prefix)) by {
-            assert forall|i: int| 0 <= i < prefix.len()
-                implies row_spec(plan, prefix[i]).is_Ok() by {
-                assert(prefix[i] == data[i]);
-            }
+        lemma_apply_prefix_type_sound(plan, rows, schema, output_schema, (count - 1) as nat);
+        let previous = apply_prefix_spec(plan, rows, (count - 1) as nat).unwrap();
+        assert(row_in_schema(rows[(count - 1) as int], schema));
+        lemma_local_type_sound(plan, schema, rows[(count - 1) as int], output_schema);
+        if let Ok(Some(result)) = local_row_spec(plan, rows[(count - 1) as int]) {
+            lemma_rows_push_valid(previous, output_schema, result);
         }
-        lemma_dataset_total(plan, prefix);
-        lemma_prefix_ignores_last(plan, data, prefix.len());
-        assert(dataset_prefix_spec(plan, data, prefix.len()) == dataset_spec(plan, prefix));
-        assert(row_spec(plan, data.last()).is_Ok());
     }
 }
 
-/// Row-local plans change the complete result bag by at most one output row.
-pub proof fn lemma_dataset_insert_stable(
-    plan: &Plan, data: Seq<Seq<Option<Value>>>, index: int, row: Seq<Option<Value>>,
+/// Static typing suffices to establish success of complete relational execution.
+pub proof fn lemma_relation_type_sound(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+    schema: Seq<Field>, output_schema: Seq<Field>,
 )
     requires
-        0 <= index <= data.len(),
-        input_domain(plan, data),
-        input_domain(plan, data.insert(index, row)),
+        rows_in_schema(rows, schema),
+        plan_schema(plan, schema) == Some(output_schema),
     ensures
-        match (
-            dataset_spec(plan, data),
-            dataset_spec(plan, data.insert(index, row)),
-        ) {
-            (Ok(before), Ok(after)) =>
-                after =~= match row_spec(plan, row) {
-                    Ok(Some(added)) => before.insert(added),
-                    _ => before,
-                },
-            _ => false,
+        match relation_spec(plan, rows) {
+            Ok(result) => rows_in_schema(result, output_schema),
+            Err(_) => false,
         },
-    decreases data.len(),
+    decreases *plan,
 {
-    broadcast use vstd::multiset::group_multiset_axioms;
-    lemma_dataset_total(plan, data);
-    lemma_dataset_total(plan, data.insert(index, row));
-    if index == data.len() {
-        let appended = data.push(row);
-        assert(data.insert(index, row) =~= appended);
-        assert(appended.drop_last() =~= data);
-        lemma_prefix_ignores_last(plan, appended, data.len());
-        assert(dataset_prefix_spec(plan, appended, data.len()) == dataset_spec(plan, data));
-        assert(row_spec(plan, row).is_Ok());
-    } else {
-        let last = data.last();
-        let prefix = data.drop_last();
-        let inserted = data.insert(index, row);
-        assert(index <= prefix.len());
-        assert(inserted.last() == last);
-        assert(inserted.drop_last() =~= prefix.insert(index, row));
-        assert(input_domain(plan, prefix)) by {
-            assert forall|i: int| 0 <= i < prefix.len()
-                implies row_spec(plan, prefix[i]).is_Ok() by {
-                assert(prefix[i] == data[i]);
-            }
-        }
-        assert(input_domain(plan, prefix.insert(index, row))) by {
-            assert forall|i: int| 0 <= i < prefix.insert(index, row).len()
-                implies row_spec(plan, prefix.insert(index, row)[i]).is_Ok() by {
-                assert(prefix.insert(index, row)[i] == inserted[i]);
-            }
-        }
-        lemma_dataset_insert_stable(plan, prefix, index, row);
-        lemma_prefix_ignores_last(plan, data, prefix.len());
-        lemma_prefix_ignores_last(plan, inserted, prefix.insert(index, row).len());
-        assert(dataset_prefix_spec(plan, data, prefix.len()) == dataset_spec(plan, prefix));
-        assert(dataset_prefix_spec(plan, inserted, prefix.insert(index, row).len())
-            == dataset_spec(plan, prefix.insert(index, row)));
-        let before = dataset_spec(plan, prefix).unwrap();
-        let after = dataset_spec(plan, prefix.insert(index, row)).unwrap();
-        assert(bag_one_edit(before, after));
-        match (row_spec(plan, row), row_spec(plan, last)) {
-            (Ok(Some(added)), Ok(Some(tail))) => {
-                assert(before.insert(added).insert(tail) =~=
-                    before.insert(tail).insert(added));
-                assert(after =~= before.insert(added));
-            },
-            _ => {},
+    match plan {
+        Plan::Input => {},
+        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
+            let child_schema = plan_schema(input, schema).unwrap();
+            lemma_relation_type_sound(input, rows, schema, child_schema);
+            let child_rows = relation_spec(input, rows).unwrap();
+            assert(local_schema(plan, child_schema) == Some(output_schema));
+            lemma_apply_prefix_type_sound(
+                plan, child_rows, child_schema, output_schema, child_rows.len());
+        },
+    }
+}
+
+/// A prefix of the input cannot be influenced by later rows.
+pub proof fn lemma_apply_prefix_ignores_last(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>, count: nat,
+)
+    requires count < rows.len(),
+    ensures
+        apply_prefix_spec(plan, rows, count)
+            == apply_prefix_spec(plan, rows.drop_last(), count),
+    decreases count,
+{
+    if count > 0 {
+        lemma_apply_prefix_ignores_last(plan, rows, (count - 1) as nat);
+        assert(rows.drop_last()[(count - 1) as int] == rows[(count - 1) as int]);
+    }
+}
+
+/// Inserting before the final element commutes with appending that element.
+pub proof fn lemma_seq_insert_push<T>(xs: Seq<T>, index: int, row: T, tail: T)
+    requires 0 <= index <= xs.len(),
+    ensures xs.insert(index, row).push(tail) =~= xs.push(tail).insert(index, row),
+{
+    xs.insert_ensures(index, row);
+    xs.push(tail).insert_ensures(index, row);
+    assert forall|i: int| 0 <= i < xs.insert(index, row).push(tail).len()
+        implies xs.insert(index, row).push(tail)[i]
+            == xs.push(tail).insert(index, row)[i] by {
+        if i < index {
+        } else if i == index {
+        } else if i <= xs.len() {
+        } else {
+            assert(i == xs.len() + 1);
         }
     }
 }
 
-/// One row is inserted without changing the schema or other rows.
+/// A single local operator preserves one-record insertion.
+pub proof fn lemma_apply_insert(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+    output_schema: Seq<Field>, index: int, row: Seq<Option<Value>>,
+)
+    requires
+        rows_in_schema(rows, schema),
+        row_in_schema(row, schema),
+        local_schema(plan, schema) == Some(output_schema),
+        0 <= index <= rows.len(),
+    ensures
+        match (
+            apply_spec(plan, rows),
+            apply_spec(plan, rows.insert(index, row)),
+            local_row_spec(plan, row),
+        ) {
+            (Ok(before), Ok(after), Ok(Some(added))) =>
+                exists|i: int| 0 <= i <= before.len() && after =~= before.insert(i, added),
+            (Ok(before), Ok(after), Ok(None)) => after =~= before,
+            _ => false,
+        },
+    decreases rows.len(),
+{
+    lemma_apply_prefix_type_sound(plan, rows, schema, output_schema, rows.len());
+    lemma_rows_insert_valid(rows, schema, index, row);
+    lemma_apply_prefix_type_sound(
+        plan, rows.insert(index, row), schema, output_schema,
+        rows.insert(index, row).len());
+    lemma_local_type_sound(plan, schema, row, output_schema);
+    if index == rows.len() {
+        let appended = rows.push(row);
+        assert(rows.insert(index, row) =~= appended);
+        assert(appended.drop_last() =~= rows);
+        lemma_apply_prefix_ignores_last(plan, appended, rows.len());
+        assert(apply_prefix_spec(plan, appended, rows.len()) == apply_spec(plan, rows));
+        match local_row_spec(plan, row) {
+            Ok(Some(added)) => {
+                let before = apply_spec(plan, rows).unwrap();
+                assert(before.push(added) =~= before.insert(before.len() as int, added));
+                assert(exists|i: int| 0 <= i <= before.len()
+                    && before.push(added) =~= before.insert(i, added));
+            },
+            Ok(None) => {},
+            Err(_) => { assert(false); },
+        }
+    } else {
+        let tail = rows.last();
+        let prefix = rows.drop_last();
+        let inserted = rows.insert(index, row);
+        assert(index <= prefix.len());
+        assert(inserted.last() == tail);
+        assert(inserted.drop_last() =~= prefix.insert(index, row));
+        lemma_rows_drop_last_valid(rows, schema);
+        lemma_rows_insert_valid(prefix, schema, index, row);
+        lemma_apply_insert(plan, prefix, schema, output_schema, index, row);
+        lemma_apply_prefix_ignores_last(plan, rows, prefix.len());
+        lemma_apply_prefix_ignores_last(plan, inserted, prefix.insert(index, row).len());
+        assert(apply_prefix_spec(plan, rows, prefix.len()) == apply_spec(plan, prefix));
+        assert(apply_prefix_spec(plan, inserted, prefix.insert(index, row).len())
+            == apply_spec(plan, prefix.insert(index, row)));
+        let before_prefix = apply_spec(plan, prefix).unwrap();
+        let after_prefix = apply_spec(plan, prefix.insert(index, row)).unwrap();
+        lemma_local_type_sound(plan, schema, tail, output_schema);
+        match (local_row_spec(plan, row), local_row_spec(plan, tail)) {
+            (Ok(Some(added)), Ok(Some(tail_result))) => {
+                let j = choose|j: int| 0 <= j <= before_prefix.len()
+                    && after_prefix =~= before_prefix.insert(j, added);
+                lemma_seq_insert_push(before_prefix, j, added, tail_result);
+                assert(exists|i: int| 0 <= i <= before_prefix.push(tail_result).len()
+                    && after_prefix.push(tail_result)
+                        =~= before_prefix.push(tail_result).insert(i, added));
+            },
+            (Ok(Some(added)), Ok(None)) => {
+                let j = choose|j: int| 0 <= j <= before_prefix.len()
+                    && after_prefix =~= before_prefix.insert(j, added);
+                assert(exists|i: int| 0 <= i <= before_prefix.len()
+                    && after_prefix =~= before_prefix.insert(i, added));
+            },
+            (Ok(None), Ok(Some(_))) | (Ok(None), Ok(None)) => {
+                assert(after_prefix =~= before_prefix);
+            },
+            _ => { assert(false); },
+        }
+    }
+}
+
+/// The relational composition of one-insertion-stable steps is stable.
+pub proof fn lemma_relation_insert(
+    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
+    schema: Seq<Field>, output_schema: Seq<Field>,
+    index: int, row: Seq<Option<Value>>,
+)
+    requires
+        rows_in_schema(rows, schema),
+        row_in_schema(row, schema),
+        plan_schema(plan, schema) == Some(output_schema),
+        0 <= index <= rows.len(),
+    ensures
+        match (
+            relation_spec(plan, rows),
+            relation_spec(plan, rows.insert(index, row)),
+        ) {
+            (Ok(before), Ok(after)) => seq_one_insert(before, after),
+            _ => false,
+        },
+    decreases *plan,
+{
+    lemma_rows_insert_valid(rows, schema, index, row);
+    lemma_relation_type_sound(plan, rows, schema, output_schema);
+    lemma_relation_type_sound(
+        plan, rows.insert(index, row), schema, output_schema);
+    match plan {
+        Plan::Input => {
+            assert(seq_one_insert(rows, rows.insert(index, row)));
+        },
+        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
+            let child_schema = plan_schema(input, schema).unwrap();
+            lemma_relation_insert(input, rows, schema, child_schema, index, row);
+            let before_child = relation_spec(input, rows).unwrap();
+            let after_child = relation_spec(input, rows.insert(index, row)).unwrap();
+            if before_child =~= after_child {
+                assert(relation_spec(plan, rows) == relation_spec(plan, rows.insert(index, row)));
+            } else {
+                let (j, inserted_row) = choose|j: int, inserted_row: Seq<Option<Value>>|
+                    0 <= j <= before_child.len()
+                        && after_child =~= before_child.insert(j, inserted_row);
+                assert(rows_in_schema(after_child, child_schema));
+                before_child.insert_ensures(j, inserted_row);
+                assert(row_in_schema(inserted_row, child_schema));
+                assert(rows_in_schema(before_child, child_schema));
+                assert(local_schema(plan, child_schema) == Some(output_schema));
+                lemma_apply_insert(
+                    plan, before_child, child_schema, output_schema, j, inserted_row);
+                match (
+                    apply_spec(plan, before_child),
+                    apply_spec(plan, after_child),
+                    local_row_spec(plan, inserted_row),
+                ) {
+                    (Ok(before), Ok(after), Ok(Some(added))) => {
+                        assert(seq_one_insert(before, after));
+                    },
+                    (Ok(before), Ok(after), Ok(None)) => {
+                        assert(before =~= after);
+                    },
+                    _ => { assert(false); },
+                }
+            }
+        },
+    }
+}
+
+/// Moving an inserted row within a sequence does not alter its multiplicity.
+pub proof fn lemma_seq_insert_bag<T>(xs: Seq<T>, index: int, value: T)
+    requires 0 <= index <= xs.len(),
+    ensures xs.insert(index, value).to_multiset() =~= xs.to_multiset().insert(value),
+    decreases xs.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if index == xs.len() {
+        assert(xs.insert(index, value) =~= xs.push(value));
+        xs.to_multiset_ensures();
+    } else {
+        let tail = xs.last();
+        let prefix = xs.drop_last();
+        assert(index <= prefix.len());
+        lemma_seq_insert_bag(prefix, index, value);
+        assert(xs.insert(index, value).last() == tail);
+        assert(xs.insert(index, value).drop_last() =~= prefix.insert(index, value));
+        assert(xs.insert(index, value) =~= prefix.insert(index, value).push(tail));
+        assert(xs =~= prefix.push(tail));
+        prefix.to_multiset_ensures();
+        prefix.insert(index, value).to_multiset_ensures();
+        assert(xs.insert(index, value).to_multiset() =~=
+            prefix.to_multiset().insert(value).insert(tail));
+        assert(xs.to_multiset().insert(value) =~=
+            prefix.to_multiset().insert(tail).insert(value));
+        assert(prefix.to_multiset().insert(value).insert(tail) =~=
+            prefix.to_multiset().insert(tail).insert(value));
+    }
+}
+
+pub proof fn lemma_seq_one_insert_bag(
+    before: Seq<Seq<Option<Value>>>, after: Seq<Seq<Option<Value>>>,
+)
+    requires seq_one_insert(before, after),
+    ensures bag_one_edit(before.to_multiset(), after.to_multiset()),
+{
+    if !(before =~= after) {
+        let (index, row) = choose|index: int, row: Seq<Option<Value>>|
+            0 <= index <= before.len() && after =~= before.insert(index, row);
+        lemma_seq_insert_bag(before, index, row);
+    }
+}
+
+/// Typed row insertion is enough for the symmetric-distance bound.
 pub open spec fn table_one_insert(before: &Table, after: &Table, index: int) -> bool {
     let earlier = rows_view(before.rows@);
     let later = rows_view(after.rows@);
@@ -766,7 +971,6 @@ pub open spec fn table_one_insert(before: &Table, after: &Table, index: int) -> 
         && later =~= earlier.insert(index, later[index])
 }
 
-/// Typed row insertion needs no extra row-domain hypotheses.
 pub proof fn lemma_typed_row_insert_stable(
     plan: &Plan, before: &Table, after: &Table, index: int,
 )
@@ -785,30 +989,25 @@ pub proof fn lemma_typed_row_insert_stable(
             _ => false,
         },
 {
-    lemma_schema_establishes_domain(plan, before);
-    assert(plan_schema(plan, after.schema@).is_Some());
-    lemma_schema_establishes_domain(plan, after);
-    lemma_dataset_insert_stable(
-        plan, rows_view(before.rows@), index, rows_view(after.rows@)[index]);
+    let previous = rows_view(before.rows@);
+    let next = rows_view(after.rows@);
+    let output_schema = plan_schema(plan, before.schema@).unwrap();
+    assert(plan_schema(plan, after.schema@) == Some(output_schema));
+    assert(next =~= previous.insert(index, next[index]));
+    assert(row_in_schema(next[index], before.schema@));
+    lemma_relation_insert(
+        plan, previous, before.schema@, output_schema, index, next[index]);
     match (
-        dataset_spec(plan, rows_view(before.rows@)),
-        dataset_spec(plan, rows_view(after.rows@)),
+        relation_spec(plan, previous),
+        relation_spec(plan, next),
     ) {
-        (Ok(before_bag), Ok(after_bag)) => {
-            match row_spec(plan, rows_view(after.rows@)[index]) {
-                Ok(Some(added)) => {
-                    assert(after_bag =~= before_bag.insert(added));
-                    assert(bag_one_edit(before_bag, after_bag));
-                },
-                _ => {
-                    assert(after_bag =~= before_bag);
-                    assert(bag_one_edit(before_bag, after_bag));
-                },
-            }
+        (Ok(before_rows), Ok(after_rows)) => {
+            lemma_seq_one_insert_bag(before_rows, after_rows);
         },
         _ => { assert(false); },
     }
 }
+
 
 } // verus!
 
