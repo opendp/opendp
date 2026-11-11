@@ -9,6 +9,7 @@ edition = "2024"
 rust-version = "1.88.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
 
 [workspace]
+exclude = ["query_kernel"]
 members = [".", "opendp_derive", "opendp_tooling"]
 default-members = [".", "opendp_derive", "opendp_tooling"]
 
