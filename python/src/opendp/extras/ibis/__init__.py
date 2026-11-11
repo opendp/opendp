@@ -130,32 +130,16 @@ def run_on_database(query, connection, table_name: str):
         # In the future, add a parameter to specify the plugin to split on?
     )
 
-    # Use ibis_table:
+    # Decode the parameters as data in Rust, without loading Python objects.
+    # Validate every plugin before executing the private aggregate query.
+    from json import loads
+    from opendp._data import decode_noise_plugin_parameters
 
-    private_result = connection.to_polars(ibis_table).to_dict(as_series=False)
-    # For now, assume result dataframe is only a single row,
-    # so pull out single values with [0],
-    # but I'm not sure that will always be true.
-    private_items = [v[0] for v in private_result.values()]
-
-    # Use param_dicts:
-
-    # TODO: Find an alternative to pickle.
-    # https://github.com/opendp/opendp/issues/2989
-    import pickle
-
-    unpickled_kwargs = []
+    measurements = []
     for param_dict in param_dicts:
-        unpickled_kwargs.append(pickle.loads(bytes(param_dict["kwargs"])))
-
-    if len(private_items) != len(unpickled_kwargs):
-        raise dp.OpenDPException(
-            "Some operations (like dp.mean) are not currently supported "
-            "because the plugin-parameters are not 1-1 with the private values."
-        )  # pragma: no cover
-
-    dp_results = []
-    for private_item, kwargs in zip(private_items, unpickled_kwargs):
+        if param_dict["symbol"] != "noise_plugin":
+            raise dp.OpenDPException("Only OpenDP noise plugins are supported.")
+        kwargs = loads(decode_noise_plugin_parameters(param_dict["kwargs"]))
         support = {
             "Integer": int,
             "Float": float,
@@ -169,8 +153,18 @@ def run_on_database(query, connection, table_name: str):
             "Laplace": dp.m.make_laplace,
             "Gaussian": dp.m.make_gaussian,
         }[kwargs["distribution"]]
-        measurement = make(*input_space, scale=kwargs["scale"])
+        measurements.append(make(*input_space, scale=kwargs["scale"]))
 
-        dp_results.append(measurement(private_item))
+    private_result = connection.to_polars(ibis_table).to_dict(as_series=False)
+    # For now, assume result dataframe is only a single row,
+    # so pull out single values with [0],
+    # but I'm not sure that will always be true.
+    private_items = [v[0] for v in private_result.values()]
 
-    return dp_results
+    if len(private_items) != len(measurements):
+        raise dp.OpenDPException(
+            "Some operations (like dp.mean) are not currently supported "
+            "because the plugin-parameters are not 1-1 with the private values."
+        )  # pragma: no cover
+
+    return [measurement(item) for item, measurement in zip(private_items, measurements)]
