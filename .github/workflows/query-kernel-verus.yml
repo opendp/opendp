@@ -2,7 +2,7 @@ name: Verify query kernel
 
 on:
   push:
-    branches: [verus-backend-semantics, verus-columnar-prototype]
+    branches: [verus-backend-semantics, verus-columnar-prototype, verified-stable-lazyframe]
     paths:
       - 'rust/query_kernel/**'
       - '.github/workflows/query-kernel-verus.yml'

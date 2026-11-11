@@ -62,46 +62,41 @@ pub open spec fn expr_field(expr: &Expr, schema: Seq<Field>) -> Option<Field>
             if *index < schema.len() { Some(schema[*index as int]) } else { None },
         Expr::Literal(value) => Some(Field { dtype: value_dtype(*value), nullable: false }),
         Expr::Null(dtype) => Some(Field { dtype: *dtype, nullable: true }),
-        Expr::Binary { left, op, right } => {
-            match (expr_field(left, schema), expr_field(right, schema)) {
-                (Some(l), Some(r)) => {
-                    let valid = match op {
-                        BinaryOp::Lt | BinaryOp::Gt =>
-                            l.dtype == DType::Int64 && r.dtype == DType::Int64,
-                        BinaryOp::Eq => l.dtype == r.dtype,
-                        BinaryOp::And =>
-                            l.dtype == DType::Boolean && r.dtype == DType::Boolean,
-                    };
-                    if valid {
-                        Some(Field { dtype: DType::Boolean,
-                            nullable: l.nullable || r.nullable })
-                    } else { None }
-                },
-                _ => None,
-            }
-        },
-        Expr::Clip { expr, lower, upper } => {
-            match expr_field(expr, schema) {
-                Some(field) if field.dtype == DType::Int64 => {
-                    let lower_ok = match lower {
-                        None => true,
-                        Some(bound) => match expr_field(bound, schema) {
-                            Some(bound_field) => bound_field.dtype == DType::Int64,
-                            None => false,
-                        },
-                    };
-                    let upper_ok = match upper {
-                        None => true,
-                        Some(bound) => match expr_field(bound, schema) {
-                            Some(bound_field) => bound_field.dtype == DType::Int64,
-                            None => false,
-                        },
-                    };
-                    if lower_ok && upper_ok { Some(field) } else { None }
-                },
-                _ => None,
-            }
-        },
+        Expr::Binary { left, op, right } =>
+            binary_field(*op, expr_field(left, schema), expr_field(right, schema)),
+        Expr::Clip { expr, lower, upper } =>
+            clip_field(
+                expr_field(expr, schema),
+                match lower { None => None, Some(e) => Some(expr_field(e, schema)) },
+                match upper { None => None, Some(e) => Some(expr_field(e, schema)) },
+            ),
+    }
+}
+
+/// Executable type checking, proved equivalent to the specification.
+pub fn check_expr(expr: &Expr, schema: &Vec<Field>) -> (result: Option<Field>)
+    ensures result == expr_field(expr, schema@),
+    decreases *expr,
+{
+    match expr {
+        Expr::Column(index) =>
+            if *index < schema.len() { Some(schema[*index]) } else { None },
+        Expr::Literal(value) => Some(Field {
+            dtype: match value {
+                Value::Int(_) => DType::Int64,
+                Value::Bool(_) => DType::Boolean,
+            },
+            nullable: false,
+        }),
+        Expr::Null(dtype) => Some(Field { dtype: *dtype, nullable: true }),
+        Expr::Binary { left, op, right } =>
+            binary_field(*op, check_expr(left, schema), check_expr(right, schema)),
+        Expr::Clip { expr, lower, upper } =>
+            clip_field(
+                check_expr(expr, schema),
+                match lower { None => None, Some(e) => Some(check_expr(e, schema)) },
+                match upper { None => None, Some(e) => Some(check_expr(e, schema)) },
+            ),
     }
 }
 
@@ -1032,6 +1027,55 @@ pub proof fn lemma_typed_row_insert_stable(
 
 
 } // verus!
+
+/// Common executable and specification rules for scalar expression typing.
+#[verus_verify(dual_spec, open)]
+#[verus_spec(returns binary_field(op, left, right))]
+pub fn binary_field(
+    op: BinaryOp, left: Option<Field>, right: Option<Field>,
+) -> Option<Field> {
+    match (left, right) {
+        (Some(l), Some(r)) => {
+            let valid = match (op, l.dtype, r.dtype) {
+                (BinaryOp::Lt | BinaryOp::Gt, DType::Int64, DType::Int64) => true,
+                (BinaryOp::Eq, DType::Int64, DType::Int64)
+                    | (BinaryOp::Eq, DType::Boolean, DType::Boolean) => true,
+                (BinaryOp::And, DType::Boolean, DType::Boolean) => true,
+                _ => false,
+            };
+            if valid {
+                Some(Field { dtype: DType::Boolean, nullable: l.nullable || r.nullable })
+            } else { None }
+        },
+        _ => None,
+    }
+}
+
+#[verus_verify(dual_spec, open)]
+#[verus_spec(returns clip_field(value, lower, upper))]
+pub fn clip_field(
+    value: Option<Field>, lower: Option<Option<Field>>, upper: Option<Option<Field>>,
+) -> Option<Field> {
+    match value {
+        Some(field) => {
+            match field.dtype {
+                DType::Boolean => None,
+                DType::Int64 => {
+                    let lower_ok = match lower {
+                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
+                        _ => false,
+                    };
+                    let upper_ok = match upper {
+                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
+                        _ => false,
+                    };
+                    if lower_ok && upper_ok { Some(field) } else { None }
+                },
+            }
+        },
+        _ => None,
+    }
+}
 
 /// Single source of truth for scalar semantics: dual_spec generates the
 /// open specification used by the row interpreter and typing proofs.
