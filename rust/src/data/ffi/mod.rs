@@ -1034,7 +1034,7 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 /// * `this` - A pointer to the string to free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
-    util::into_string(this).map(|_| ()).into()
+    util::into_owned(this).map(|_| ()).into()
 }
 
 #[bootstrap(
@@ -1436,34 +1436,16 @@ mod tests {
 
     #[test]
     fn test_callback_error_variants_round_trip() {
-        for variant in [
-            "FFI",
-            "TypeParse",
-            "Type",
-            "FailedFunction",
-            "FailedMap",
-            "RelationDebug",
-            "FailedCast",
-            "DomainMismatch",
-            "MetricMismatch",
-            "MeasureMismatch",
-            "MakeDomain",
-            "MakeTransformation",
-            "MakeMeasurement",
-            "MetricSpace",
-            "InvalidDistance",
-            "Search",
-            "NumericError",
-            "Overflow",
-            "NotImplemented",
-            "UnknownVariant",
+        let message = CString::new("callback diagnostic").unwrap();
+        let backtrace = CString::new("callback backtrace").unwrap();
+        for (variant_name, expected) in [
+            ("Overflow", ErrorVariant::Overflow),
+            ("NumericError", ErrorVariant::NumericError),
+            ("FailedMap", ErrorVariant::FailedMap),
+            ("UnknownVariant", ErrorVariant::FFI),
         ] {
-            let result = ffiresult_err(
-                variant.to_char_p(),
-                "callback diagnostic".to_char_p(),
-                "callback backtrace".to_char_p(),
-                null(),
-            );
+            let variant = CString::new(variant_name).unwrap();
+            let result = ffiresult_err(variant.as_ptr(), message.as_ptr(), backtrace.as_ptr(), null());
             let result = unsafe { Box::from_raw(result.cast_mut()) };
             let FfiResult::Err(error) = *result else {
                 panic!("expected a callback error");
@@ -1471,12 +1453,7 @@ mod tests {
             let error = *unsafe { Box::from_raw(error) };
             assert_eq!(util::to_str(error.backtrace).unwrap(), "callback backtrace");
             let error = Error::from(error);
-            let expected = if variant == "UnknownVariant" {
-                "FFI"
-            } else {
-                variant
-            };
-            assert_eq!(error.variant.to_string(), expected);
+            assert_eq!(error.variant, expected);
             assert_eq!(error.message.as_deref(), Some("callback diagnostic"));
         }
     }

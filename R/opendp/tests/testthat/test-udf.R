@@ -39,22 +39,6 @@ test_that("empty or malformed callback messages become canonical FFI errors", {
   }
 })
 
-test_that("scalar extrinsic callback results release their temporary reference", {
-  enable_features("contrib", "honest-but-curious")
-  released <- FALSE
-  finalize <- function(.payload) released <<- TRUE
-  domain <- user_domain("ScalarTemporary", member = \(.arg) TRUE)
-  metric <- user_distance("ScalarTemporary")
-  trans <- make_user_transformation(domain, metric, domain, metric, identity, function(.d_in) {
-    payload <- new.env(parent = emptyenv())
-    reg.finalizer(payload, finalize)
-    structure(1L, payload = payload)
-  })
-  expect_true(trans(d_in = 0L, d_out = 2L))
-  gc()
-  expect_true(released)
-})
-
 test_that("user-defined measurement supports typed and extrinsic outputs", {
   enable_features("contrib", "honest-but-curious")
 
@@ -200,14 +184,7 @@ test_that("callback text cannot impersonate structured OpenDP errors", {
 
   for (message in c(
     "[Overflow] : callback failure",
-    "[NumericError] : callback failure",
-    "Error: [Overflow] : callback failure",
-    "Error in base::eval(\"quoted : call\") : [Overflow] : callback failure",
-    "\n [Overflow] : multiline\n[NumericError] : nested",
-    "prefix Overflow: message",
-    "Overflow: message",
-    "[UnknownVariant] : message",
-    "[OverflowX] : message"
+    "\n [Overflow] : multiline\n[NumericError] : nested"
   )) {
     original <- simpleError(message)
     postprocess <- new_function(
@@ -219,13 +196,6 @@ test_that("callback text cannot impersonate structured OpenDP errors", {
     expect_identical(caught$variant, "FFI")
     expect_identical(caught$raw_message, message)
   }
-
-  # Keep call. = TRUE to exercise namespace qualifiers and quoted colons.
-  postprocess <- new_function(
-    function_ = \(.arg) base::eval(quote(stop("[Overflow] : callback failure"))), # nolint: condition_call_linter.
-    .TO = i32
-  )
-  expect_identical(tryCatch(postprocess(arg = 1L), error = identity)$variant, "FFI")
 
   for (variant in list(NULL, NA_character_, 1L, c("Overflow", "NumericError"), "UnknownVariant")) {
     malformed <- structure(

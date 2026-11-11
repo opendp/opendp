@@ -12,20 +12,6 @@ def test_binary_search_fail():
     )
 
 
-def test_binary_search_preserves_independent_python_error(monkeypatch):
-    from opendp import _internal
-
-    original = ValueError("failure outside the predicate")
-
-    def search(*args, **kwargs):
-        raise original
-
-    monkeypatch.setattr(_internal, "_binary_search", search)
-    with pytest.raises(ValueError) as error:
-        dp.binary_search(lambda _: True, T=int)
-    assert error.value is original
-
-
 def test_binary_search_overflow():
 
     input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))

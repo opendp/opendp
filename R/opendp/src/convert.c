@@ -70,15 +70,10 @@ static ExtrinsicObject sexp_to_extrinsicobject(SEXP value)
 
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 {
-    ExtrinsicObject object = sexp_to_extrinsicobject(value);
     ExtrinsicObject *output_obj = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
     if (!output_obj)
-    {
-        R_ReleaseObject(value);
-        free((void *)object._0);
         error("failed to allocate extrinsic object");
-    }
-    output_obj[0] = object;
+    output_obj[0] = sexp_to_extrinsicobject(value);
     return output_obj;
 }
 
@@ -662,7 +657,9 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
-        FfiSlice t = {.ptr = sexp_to_extrinsicobjectptr(value), .len = 1};
+        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+        object[0] = sexp_to_extrinsicobject(value);
+        FfiSlice t = {.ptr = object, .len = 1};
         result = t;
     }
 
@@ -790,9 +787,6 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     // An AnyObject is an opaque C struct that contains the data in a rust-specific representation
     // AnyObjects may be used interchangeably in the majority of library APIs
     FfiResult_____AnyObject result = opendp_data__slice_as_object(&slice, c_type_name);
-    // Rust clones this scalar descriptor; release the temporary on either tag.
-    if (str_equal(c_type_name, "ExtrinsicObject"))
-        opendp_data__extrinsic_object_free((ExtrinsicObject *)slice.ptr);
 
     UNPROTECT(2);
 
@@ -802,29 +796,12 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     return result.ok;
 }
 
-typedef struct ObjectConversion {
-    AnyObject *object; // Borrowed, never freed here.
-    char *type_name;
-    FfiSlice *slice;
-} ObjectConversion;
-
-static void free_conversion_metadata(void *data)
+SEXP anyobjectptr_to_sexp(AnyObject *obj)
 {
-    ObjectConversion *conversion = (ObjectConversion *)data;
-    if (conversion->slice)
-        opendp_data__slice_free(conversion->slice);
-    if (conversion->type_name)
-        opendp_data__str_free(conversion->type_name);
-}
-
-static SEXP anyobjectptr_to_sexp_body(void *data)
-{
-    ObjectConversion *conversion = (ObjectConversion *)data;
-    AnyObject *obj = conversion->object;
     FfiResult_____c_char type_name_result = opendp_data__object_type(obj);
     if (type_name_result.tag == Err_____c_char)
         extract_error(type_name_result.err);
-    char *c_type_name = conversion->type_name = type_name_result.ok;
+    char *c_type_name = type_name_result.ok;
 
     SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
@@ -853,18 +830,11 @@ static SEXP anyobjectptr_to_sexp_body(void *data)
     FfiResult_____FfiSlice slice_result = opendp_data__object_as_slice(obj);
     if (slice_result.tag == Err_____FfiSlice)
         extract_error(slice_result.err);
-    FfiSlice *slice = conversion->slice = slice_result.ok;
+    FfiSlice *slice = slice_result.ok;
 
     SEXP value = slice_to_sexp(slice, type_name);
     UNPROTECT(1);
     return value;
-}
-
-SEXP anyobjectptr_to_sexp(AnyObject *obj)
-{
-    ObjectConversion conversion = {.object = obj, .type_name = NULL, .slice = NULL};
-    return R_ExecWithCleanup(anyobjectptr_to_sexp_body, &conversion,
-                             free_conversion_metadata, &conversion);
 }
 
 // https://stackoverflow.com/questions/73520428/is-there-a-way-of-passing-an-r-function-object-closxp-to-c-level-code-and-re

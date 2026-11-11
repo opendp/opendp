@@ -30,6 +30,16 @@ enum {
     TAG_CALLBACK_CONTEXT = 2
 };
 
+static char *heap_strdup(const char *value)
+{
+    size_t len = strlen(value) + 1;
+    char *copy = (char *)malloc(len);
+    if (!copy)
+        error("failed to allocate string");
+    memcpy(copy, value, len);
+    return copy;
+}
+
 static bool ref_count_callback(const void *ptr, bool increment);
 
 static FfiResult_____AnyObject *wrap_success(AnyObject *obj)
@@ -141,26 +151,20 @@ static int count_formals(SEXP function)
 
 static CallbackContext *new_callback_context(SEXP function, const char *type_name, int accepts_internal)
 {
-    // Preserve before acquiring C resources: R_PreserveObject may jump.
-    R_PreserveObject(function);
     CallbackContext *ctx = (CallbackContext *)malloc(sizeof(CallbackContext));
-    if (ctx)
-    {
-        ctx->type_name = (char *)malloc(strlen(type_name) + 1);
-        if (ctx->type_name)
-        {
-            strcpy(ctx->type_name, type_name);
-            ctx->tag = TAG_CALLBACK_CONTEXT;
-            ctx->ref_count = 1;
-            ctx->accepts_internal = accepts_internal;
-            ctx->function = function;
-            return ctx;
-        }
-        free(ctx);
-    }
-    R_ReleaseObject(function);
-    error("failed to allocate callback context");
-    return NULL;
+    if (!ctx)
+        error("failed to allocate callback context");
+
+    ctx->tag = TAG_CALLBACK_CONTEXT;
+    ctx->ref_count = 1;
+    ctx->accepts_internal = accepts_internal;
+    ctx->function = function;
+    ctx->type_name = heap_strdup(type_name);
+
+    // The callback may outlive the current R call stack, so hold on to the
+    // closure until Rust releases the userdata.
+    R_PreserveObject(function);
+    return ctx;
 }
 
 static void free_callback_context(CallbackContext *ctx)
@@ -174,17 +178,16 @@ static void free_callback_context(CallbackContext *ctx)
 
 RetainedSexp *new_retained_sexp(SEXP value)
 {
-    // R_PreserveObject may jump; do not acquire C resources until it succeeds.
-    R_PreserveObject(value);
     RetainedSexp *retained = (RetainedSexp *)malloc(sizeof(RetainedSexp));
     if (!retained)
-    {
-        R_ReleaseObject(value);
         error("failed to allocate extrinsic object");
-    }
+
     retained->tag = TAG_RETAINED_SEXP;
     retained->ref_count = 1;
     retained->value = value;
+    // Extrinsic descriptors may be cloned and compared on the Rust side, so
+    // keep the underlying R object alive until the shared refcount reaches 0.
+    R_PreserveObject(value);
     return retained;
 }
 

@@ -17,7 +17,6 @@ from opendp.mod import (
     SeriesDomain,
     SymmetricIdDistance,
     UnknownTypeException,
-    OpenDPException,
     Transformation,
     Measurement,
     PrivacyProfile,

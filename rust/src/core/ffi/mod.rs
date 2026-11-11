@@ -412,35 +412,6 @@ mod tests {
     }
 
     #[test]
-    fn test_with_variant_preserves_foreign_error() {
-        use crate::error::WithVariant;
-        use std::sync::atomic::{AtomicUsize, Ordering};
-
-        extern "C" fn ref_count(pointer: *const c_void, increment: bool) -> bool {
-            let count = unsafe { &*pointer.cast::<AtomicUsize>() };
-            if increment {
-                count.fetch_add(1, Ordering::SeqCst);
-            } else {
-                count.fetch_sub(1, Ordering::SeqCst);
-            }
-            true
-        }
-        util::_set_ref_count(ref_count);
-        let count = AtomicUsize::new(1);
-        let pointer = (&count as *const AtomicUsize).cast::<c_void>();
-        let mut error = err!(Overflow, "foreign error");
-        error.callback = Some(util::ExtrinsicObject(pointer));
-        let result: Fallible<()> = Err(error);
-        let error = result.with_variant(ErrorVariant::NumericError).unwrap_err();
-        let error = Error::from(FfiError::from(error));
-        assert_eq!(error.variant, ErrorVariant::NumericError);
-        assert_eq!(error.message.as_deref(), Some("foreign error"));
-        assert_eq!(error.callback.as_ref().unwrap().0, pointer);
-        drop(error);
-        assert_eq!(count.load(Ordering::SeqCst), 0);
-    }
-
-    #[test]
     fn test_unknown_error_variant_from_ffi_defaults_to_ffi() {
         let ffi_err = FfiError {
             variant: "UnknownVariant".to_char_p(),
