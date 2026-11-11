@@ -905,21 +905,10 @@ fn postprocessing_is_placed_by_head_dependencies() -> Fallible<()> {
             ..
         }
     )));
-    let DslPlan::Join {
-        input_left,
-        input_right,
-        ..
-    } = input.as_ref()
-    else {
-        panic!()
-    };
     let mut divides = 0;
     let mut lookups = 0;
-    for local in [input_left, input_right] {
-        let DslPlan::Select { expr, .. } = local.as_ref() else {
-            panic!()
-        };
-        for node in expr.iter().flat_map(|e| e.into_iter()) {
+    walk(&input, &mut |local| {
+        for node in expressions(local).iter().flat_map(|e| e.into_iter()) {
             divides += usize::from(matches!(
                 node,
                 Expr::BinaryExpr {
@@ -930,7 +919,8 @@ fn postprocessing_is_placed_by_head_dependencies() -> Fallible<()> {
             lookups += usize::from(
                 match_trusted_plugin::<
                     crate::measurements::expr_index_candidates::IndexCandidatesPlugin,
-                >(node)?
+                >(node)
+                .unwrap()
                 .is_some(),
             );
             assert!(!matches!(
@@ -941,7 +931,7 @@ fn postprocessing_is_placed_by_head_dependencies() -> Fallible<()> {
                 }
             ));
         }
-    }
+    });
     assert_eq!((divides, lookups), (1, 1));
     Ok(())
 }
@@ -977,6 +967,43 @@ fn empty_quantile_inputs_preserve_output_cardinality() -> Fallible<()> {
             true,
         )?;
     }
+    Ok(())
+}
+
+#[test]
+fn missing_later_group_is_imputed_before_randomization() -> Fallible<()> {
+    let input = data()?;
+    let quantile = col("value")
+        .dp()
+        .quantile(0.5, Series::new("".into(), [3i32]), Some(0.))
+        .alias("quantile");
+    let query = input
+        .clone()
+        .group_by([col("key")])
+        .agg([count(), quantile]);
+    let dir = WorkDir::new();
+    let (heads, continuation) = split(resolve(&input, query, false, Some(1))?, &dir.0)?;
+    assert_eq!(heads.len(), 2, "threshold-bearing length must be in the first head");
+    let DslPlan::GroupBy { aggs, .. } = &heads[0] else {
+        panic!("the first head must hold the scalar aggregates");
+    };
+    assert!(aggs.iter().any(|expr| expr.into_iter().any(|node| matches!(node, Expr::Len))));
+    fs::create_dir_all(&dir.0).unwrap();
+    for (i, head) in heads.into_iter().enumerate() {
+        let lf = LazyFrame::from(head);
+        // Simulate a later snapshot in which group 0 has disappeared.
+        let mut frame = if i == 0 {
+            lf.collect()?
+        } else {
+            lf.filter(col("key").eq(lit(1))).collect()?
+        };
+        IpcWriter::new(fs::File::create(dir.0.join(format!("{i}.arrow"))).unwrap())
+            .finish(&mut frame)?;
+    }
+    let result = collect_sorted(continuation, Some("key"))?;
+    assert_eq!(result.height(), 1);
+    assert_eq!(result.column("key")?.i32()?.get(0), Some(0));
+    assert_eq!(result.column("quantile")?.i32()?.get(0), Some(3));
     Ok(())
 }
 

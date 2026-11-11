@@ -10,8 +10,8 @@ use std::{
 use polars::{
     error::{PolarsResult, polars_err},
     prelude::{
-        DataType, DslPlan, Expr, JoinArgs, JoinCoalesce, JoinType, LiteralValue, PlSmallStr,
-        Scalar, Series, col, len, when,
+        AnyValue, DataType, DslPlan, Expr, JoinArgs, JoinCoalesce, JoinType, LiteralValue, NamedFrom,
+        PlSmallStr, Scalar, Series, col, len, when,
     },
 };
 use polars_plan::{
@@ -287,6 +287,7 @@ impl Splitter<'_> {
             // Slot zero is the compatible scalar head. It is only materialized
             // if used; the other slots are native histogram continuations.
             locals: vec![plan.clone()],
+            fills: vec![vec![]],
             aggs: vec![],
             owners: HashMap::new(),
         };
@@ -296,6 +297,7 @@ impl Splitter<'_> {
             .collect::<PolarsResult<Vec<_>>>()?;
         let Extract {
             mut locals,
+            fills,
             aggs,
             owners,
             ..
@@ -331,28 +333,31 @@ impl Splitter<'_> {
         let mut completed = locals
             .into_iter()
             .zip(outputs)
-            .filter_map(|(input, outputs)| {
-                if outputs.is_empty() {
-                    return None;
-                }
-                Some(DslPlan::Select {
-                    input: Arc::new(input),
-                    expr: key_columns.iter().cloned().chain(outputs).collect(),
-                    options: Default::default(),
-                })
-            });
-        // These one-row/group plans are black boxes to combination. Mechanism
-        // internals and missing-group fills never enter the join logic.
-        let mut combined = completed.next().expect("a randomized boundary has a head");
-        for right in completed {
+            .zip(fills)
+            .filter(|((_, outputs), _)| !outputs.is_empty());
+        let ((first, first_outputs), _) = completed
+            .next()
+            .expect("a randomized boundary has a head");
+        let mut carried = first_outputs
+            .iter()
+            .map(|expr| Ok(col(expr.clone().meta().output_name()?)))
+            .collect::<PolarsResult<Vec<_>>>()?;
+        let mut combined = DslPlan::Select {
+            input: Arc::new(first),
+            expr: key_columns.iter().cloned().chain(first_outputs).collect(),
+            options: Default::default(),
+        };
+        for ((right, outputs), fills) in completed {
             let mut args = JoinArgs::new(if key_columns.is_empty() {
                 JoinType::Cross
             } else {
-                JoinType::Inner
+                JoinType::Left
             });
             args.nulls_equal = true;
             args.coalesce = JoinCoalesce::CoalesceColumns;
-            combined = DslPlan::Join {
+            // Join deterministic head results before randomizing the right head:
+            // a missing group must receive its empty-group input, not a null release.
+            let joined = DslPlan::Join {
                 input_left: Arc::new(combined),
                 input_right: Arc::new(right),
                 left_on: key_columns.clone(),
@@ -363,6 +368,30 @@ impl Splitter<'_> {
                     ..Default::default()
                 }),
             };
+            let input = if fills.is_empty() {
+                joined
+            } else {
+                DslPlan::HStack {
+                    input: Arc::new(joined),
+                    exprs: fills,
+                    options: Default::default(),
+                }
+            };
+            let next = outputs
+                .iter()
+                .map(|expr| Ok(col(expr.clone().meta().output_name()?)))
+                .collect::<PolarsResult<Vec<_>>>()?;
+            combined = DslPlan::Select {
+                input: Arc::new(input),
+                expr: key_columns
+                    .iter()
+                    .cloned()
+                    .chain(carried.iter().cloned())
+                    .chain(outputs)
+                    .collect(),
+                options: Default::default(),
+            };
+            carried.extend(next);
         }
         Ok(DslPlan::Select {
             input: Arc::new(combined),
@@ -376,6 +405,7 @@ struct Extract<'a, 'b> {
     splitter: &'a mut Splitter<'b>,
     keys: Vec<Expr>,
     locals: Vec<DslPlan>,
+    fills: Vec<Vec<Expr>>,
     aggs: Vec<Expr>,
     owners: HashMap<PlSmallStr, usize>,
 }
@@ -485,6 +515,15 @@ impl RewritingVisitor for Extract<'_, '_> {
                     vec![scores],
                 )
             };
+            // Match the native scorer's typed empty-group fill before noise.
+            let len = scorer.candidates.len();
+            let zeros = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+                DataType::Array(Box::new(DataType::UInt64), len),
+                AnyValue::Array(Series::new("".into(), &vec![0u64; len]), len),
+            )));
+            self.fills.push(vec![
+                col(name.clone()).fill_null(zeros).alias(name.clone())
+            ]);
             self.owners.insert(name.clone(), self.locals.len());
             self.locals.push(local);
         } else {
