@@ -26,7 +26,7 @@ enum Step {
 }
 
 fn broad_column(dtype: DataType, nullable: bool) -> Fallible<SeriesDomain> {
-    let mut domain = SeriesDomain::new_from_field(Field::new("_", dtype))?;
+    let mut domain = SeriesDomain::new_from_field(Field::new("_".into(), dtype))?;
     domain.nullable = nullable;
     Ok(domain)
 }
@@ -202,8 +202,8 @@ fn render_expr(expr: &verified::Expr, columns: &[SeriesDomain]) -> Fallible<Expr
         },
         verified::Expr::Literal(Value::Int(v)) => lit(*v),
         verified::Expr::Literal(Value::Bool(v)) => lit(*v),
-        verified::Expr::Null(DType::Int64) => lit(None::<i64>),
-        verified::Expr::Null(DType::Boolean) => lit(None::<bool>),
+        verified::Expr::Null(DType::Int64) => lit(NULL).cast(DataType::Int64),
+        verified::Expr::Null(DType::Boolean) => lit(NULL).cast(DataType::Boolean),
         verified::Expr::Binary { left, op, right } => {
             let lhs = render_expr(left, columns)?;
             let rhs = render_expr(right, columns)?;
