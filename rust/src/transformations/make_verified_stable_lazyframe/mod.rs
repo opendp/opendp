@@ -3,7 +3,8 @@
 
 use std::{collections::HashSet, sync::Arc};
 
-use opendp_query_kernel::row as verified;
+#[path = "../../../query_kernel/src/row.rs"]
+mod verified;
 use polars::prelude::*;
 use polars_plan::{dsl::{FunctionExpr, Operator}, prelude::ProjectionOptions, utils::expr_output_name};
 
