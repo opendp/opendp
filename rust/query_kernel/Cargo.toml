@@ -1,0 +1,17 @@
+[package]
+name = "opendp-query-kernel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Keep this first Verus milestone independent of OpenDP's existing Cargo workspace.
+[workspace]
+
+[dependencies]
+vstd = "=0.0.0-2026-11-01-0251"
+
+[package.metadata.verus]
+verify = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)'] }

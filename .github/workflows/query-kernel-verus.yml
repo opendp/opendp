@@ -1,0 +1,39 @@
+name: Verify query kernel
+
+on:
+  push:
+    branches: [verus-backend-semantics, verus-columnar-prototype]
+    paths:
+      - 'rust/query_kernel/**'
+      - '.github/workflows/query-kernel-verus.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: query-kernel-verus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+          components: rustc-dev,llvm-tools
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/query_kernel -> target
+          cache-on-failure: true
+      - name: Install pinned Verus
+        run: |
+          curl -fLsS --retry 3 -o verus.zip 'https://github.com/verus-lang/verus/releases/download/release%2F0.2026.11.02.8bf68ee/verus-0.2026.11.02.8bf68ee-x86-linux.zip'
+          unzip -q verus.zip
+          echo "$GITHUB_WORKSPACE/verus-x86-linux" >> "$GITHUB_PATH"
+      - name: Verify specs and proofs
+        working-directory: rust/query_kernel
+        run: cargo verus verify
+      - name: Run executable reference tests
+        working-directory: rust/query_kernel
+        run: cargo test
