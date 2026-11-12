@@ -194,6 +194,123 @@ pub proof fn lemma_filter_count_contraction(
     lemma_filter_exact_count(plan, right, schema, value);
 }
 
+/// A finite, possibly overcomplete enumeration of row values. A distinct
+/// enumeration of the joint support gives the usual per-group L1 distance.
+pub open spec fn group_distance(
+    left: Multiset<Seq<Option<VValue>>>,
+    right: Multiset<Seq<Option<VValue>>>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    group: Seq<Option<VValue>>,
+) -> nat
+    decreases values.len(),
+{
+    if values.len() == 0 { 0 }
+    else {
+        let row = values.last();
+        let a = left.count(row);
+        let b = right.count(row);
+        group_distance(left, right, values.drop_last(), group_by, group)
+            + if group_by(row) == group {
+                if a >= b { a - b } else { b - a }
+              } else { 0 }
+    }
+}
+
+/// Sum of indicators for changed groups. A distinct enumeration of all
+/// possible group keys gives the `num_groups` component of FrameDistance.
+pub open spec fn changed_groups(
+    left: Multiset<Seq<Option<VValue>>>,
+    right: Multiset<Seq<Option<VValue>>>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    groups: Seq<Seq<Option<VValue>>>,
+) -> nat
+    decreases groups.len(),
+{
+    if groups.len() == 0 { 0 }
+    else {
+        changed_groups(left, right, values, group_by, groups.drop_last())
+            + if group_distance(left, right, values, group_by, groups.last()) > 0 {
+                1nat
+              } else { 0nat }
+    }
+}
+
+/// Both insertions and deletions are accounted for by the absolute
+/// difference of row multiplicities within each group.
+pub proof fn lemma_group_distance_contraction(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    group: Seq<Option<VValue>>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(values, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) =>
+                group_distance(out_left.to_multiset(), out_right.to_multiset(),
+                    values, group_by, group)
+                <= group_distance(left.to_multiset(), right.to_multiset(),
+                    values, group_by, group),
+            _ => false,
+        },
+    decreases values.len(),
+{
+    if values.len() > 0 {
+        stability::lemma_rows_drop_last_valid(values, schema);
+        lemma_group_distance_contraction(plan, left, right, schema,
+            values.drop_last(), group_by, group);
+        lemma_filter_count_contraction(plan, left, right, schema, values.last());
+    } else {
+        verified::lemma_apply_prefix_type_sound(plan, left, schema, schema, left.len());
+        verified::lemma_apply_prefix_type_sound(plan, right, schema, schema, right.len());
+    }
+}
+
+/// A filter cannot create a changed group: the support of nonzero group
+/// distances is contained in the original support.
+pub proof fn lemma_changed_groups_contraction(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    groups: Seq<Seq<Option<VValue>>>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(values, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) =>
+                changed_groups(out_left.to_multiset(), out_right.to_multiset(),
+                    values, group_by, groups)
+                <= changed_groups(left.to_multiset(), right.to_multiset(),
+                    values, group_by, groups),
+            _ => false,
+        },
+    decreases groups.len(),
+{
+    if groups.len() > 0 {
+        lemma_changed_groups_contraction(plan, left, right, schema,
+            values, group_by, groups.drop_last());
+        lemma_group_distance_contraction(plan, left, right, schema,
+            values, group_by, groups.last());
+    } else {
+        verified::lemma_apply_prefix_type_sound(plan, left, schema, schema, left.len());
+        verified::lemma_apply_prefix_type_sound(plan, right, schema, schema, right.len());
+    }
+}
+
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)
