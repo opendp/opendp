@@ -15,7 +15,7 @@ verus! {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VDType { Int64, Boolean }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, StructuralEq)]
 pub enum VValue { Int(i64), Bool(bool) }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

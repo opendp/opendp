@@ -54,6 +54,8 @@ pub fn count_key(
         };
         let matches = current == *key;
         proof {
+            broadcast use vstd::std_specs::vec::lemma_vec_obeys_eq_spec;
+            assert(vstd::laws_eq::obeys_eq::<Option<VValue>>());
             assert(matches == (current@ == key@));
         }
         Ok(prior + if matches { 1 } else { 0 })
