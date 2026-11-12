@@ -292,38 +292,4 @@ pub proof fn lemma_all_local_insertions_stable(
     }
 }
 
-/// The local operator represented by any well-typed plan is stable. The
-/// constructor certificates ensure this for the actual plan they return.
-pub open spec fn stable_local_from_source(
-    plan: &VPlan, source_schema: Seq<VField>,
-) -> bool {
-    match plan {
-        VPlan::Input => stable_local_insertions(plan, source_schema),
-        VPlan::Project { input, .. } | VPlan::Filter { input, .. } =>
-            match (plan_schema(input, source_schema), plan_schema(plan, source_schema)) {
-                (Some(child), Some(_)) => stable_local_insertions(plan, child),
-                _ => false,
-            },
-    }
-}
-
-pub proof fn lemma_well_typed_plan_locally_stable(
-    plan: &VPlan, source_schema: Seq<VField>,
-)
-    requires plan_schema(plan, source_schema).is_Some(),
-    ensures stable_local_from_source(plan, source_schema),
-{
-    match plan {
-        VPlan::Input => {
-            lemma_all_local_insertions_stable(plan, source_schema, source_schema);
-        },
-        VPlan::Project { input, .. } | VPlan::Filter { input, .. } => {
-            let child_schema = plan_schema(input, source_schema).unwrap();
-            let output_schema = plan_schema(plan, source_schema).unwrap();
-            assert(local_schema(plan, child_schema) == Some(output_schema));
-            lemma_all_local_insertions_stable(plan, child_schema, output_schema);
-        },
-    }
-}
-
 } // verus!

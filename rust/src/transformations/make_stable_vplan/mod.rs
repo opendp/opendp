@@ -9,7 +9,7 @@ mod stability;
 mod certified;
 
 use crate::{
-    core::{Function, StabilityMap, Transformation},
+    core::{Domain, Function, StabilityMap, Transformation},
     domains::{
         verified_query_domain::kernel_schema,
         verified_plan::{
@@ -42,9 +42,16 @@ fn make_input(
 ) -> Fallible<VTransformation> {
     let source = kernel_schema(&domain.source.series_domains)?;
     let expected = kernel_schema(&domain.frame.series_domains)?;
+    let input_domain = domain.clone();
     Transformation::new(
         domain.clone(), metric.clone(), domain, metric,
         Function::new_fallible(move |input: &VPlan| {
+            // The source-relative contract includes bounds, names, and margins,
+            // none of which are described by the Verus type schema alone.
+            if !input_domain.member(input)? {
+                return fallible!(MakeTransformation,
+                    "caller plan does not satisfy the verified input domain");
+            }
             checked_result(
                 certified::make_input(input.clone(), &source),
                 &expected,
@@ -67,12 +74,13 @@ fn make_project(
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(project_domain(&domain.frame, &exprs)?);
     let source = kernel_schema(&domain.source.series_domains)?;
+    let child = kernel_schema(&domain.frame.series_domains)?;
     let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
             checked_result(
-                certified::make_project(input.clone(), exprs.clone(), &source),
+                certified::make_project(input.clone(), exprs.clone(), &child, &source),
                 &expected,
             )
         }),
@@ -87,12 +95,13 @@ fn make_filter(
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
     let source = kernel_schema(&domain.source.series_domains)?;
+    let child = kernel_schema(&domain.frame.series_domains)?;
     let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
             checked_result(
-                certified::make_filter(input.clone(), predicate.clone(), &source),
+                certified::make_filter(input.clone(), predicate.clone(), &child, &source),
                 &expected,
             )
         }),
@@ -291,6 +300,39 @@ mod tests {
         assert_eq!(rows, vec![vec![
             Some(VValue::Int(5)), Some(VValue::Bool(true)),
         ]]);
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_typed_caller_with_incompatible_value_domains() -> Fallible<()> {
+        let input = source()?;
+        let domain = VPlanDomain::new(input)?;
+        let transformation = make_stable_vplan(
+            domain.clone(),
+            VFrameMetric::new(SymmetricDistance),
+            VPlan::Filter {
+                input: Box::new(VPlan::Input),
+                predicate: VExpr::Column(1),
+            },
+        )?;
+        // Same names, dtypes and nullability as the source, but the clipped
+        // column has a broad domain rather than the source's bounded domain.
+        let caller = VPlan::Project {
+            input: Box::new(VPlan::Input),
+            exprs: vec![
+                VExpr::Alias {
+                    expr: Box::new(VExpr::Clip {
+                        expr: Box::new(VExpr::Column(0)),
+                        lower: Some(Box::new(VExpr::Literal(VValue::Int(-100)))),
+                        upper: None,
+                    }),
+                    name: "x".into(),
+                },
+                VExpr::Column(1),
+            ],
+        };
+        assert!(!domain.member(&caller)?);
+        assert!(transformation.invoke(&caller).is_err());
         Ok(())
     }
 
