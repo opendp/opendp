@@ -120,6 +120,31 @@ test_that("user-defined callbacks surface conversion failures cleanly", {
   )
 })
 
+test_that("callbacks can retain borrowed opaque queryables", {
+  enable_features("contrib", "honest-but-curious")
+  for (i in 1:5) {
+    meas <- make_randomized_response_bool(prob = 0.75)
+    adaptive <- make_adaptive_composition(
+      meas("input_domain"), meas("input_metric"), meas("output_measure"),
+      d_in = 1L, d_mids = c(2., 2.)
+    )
+    saved <- NULL
+    post <- new_function(function_ = function(q) {
+      saved <<- q
+      1L
+    }, .TO = i32)
+    chained <- make_chain_pm(post, adaptive)
+    expect_equal(chained(arg = TRUE), 1L)
+    rm(chained, post, adaptive)
+    gc()
+    expect_type(saved(query = meas), "logical")
+    expect_type(saved(query = meas), "logical")
+    expect_error(saved(query = meas))
+    rm(saved, meas)
+    gc()
+  }
+})
+
 test_that("new queryable supports user-defined transitions", {
   enable_features("contrib")
 

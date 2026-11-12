@@ -27,6 +27,7 @@ pub use owned::{
     opendp_data__slice_owner_view,
 };
 
+mod clone;
 #[cfg(feature = "polars")]
 mod polars;
 use bitvec::slice::BitSlice;
