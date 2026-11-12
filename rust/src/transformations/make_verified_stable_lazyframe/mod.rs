@@ -42,6 +42,7 @@ pub(crate) fn make_verified_stable_lazyframe(
         VPlanDomain::new(source)?, VFrameMetric::new(SymmetricDistance), plan,
     )?;
     let plan = certified.invoke(&verified::VPlan::Input)?;
+    let verified_map = certified.stability_map.clone();
     let verified_columns = certified.output_domain.frame.series_domains.iter()
         .map(|column| column.cast_carrier::<Series>()).collect::<Vec<_>>();
     if columns != verified_columns {
@@ -73,7 +74,7 @@ pub(crate) fn make_verified_stable_lazyframe(
                 per_group: global.per_group,
                 num_groups: global.num_groups,
             }]);
-            let output = certified.map(&verified_input)?
+            let output = verified_map.eval(&verified_input)?
                 .get_bound(&HashSet::new());
             Ok(Bounds(vec![Bound {
                 by: HashSet::new(),
@@ -256,6 +257,37 @@ mod tests {
                 col("flag").and(col("x").gt(lit(2i64))).alias("keep"),
             ])
             .filter(col("keep")), true)?;
+        Ok(())
+    }
+
+    #[test]
+    fn polars_matches_verified_on_nullable_slices() -> Fallible<()> {
+        let full = df!(
+            "x" => [Some(-5i64), Some(8), None, Some(3)],
+            "lower" => [Some(0i64), Some(10), Some(3), None],
+            "upper" => [Some(6i64), Some(2), None, Some(2)],
+            "flag" => [Some(true), None, Some(false), Some(true)],
+        )?;
+        for start in 0..=full.height() {
+            for length in 0..=full.height() - start {
+                let input = full.slice(start as i64, length);
+                let query = input.clone().lazy()
+                    .select([
+                        col("x").clip(col("lower"), col("upper")).alias("clipped"),
+                        col("flag").and(col("x").gt(lit(1i64))).alias("keep"),
+                    ])
+                    .filter(col("keep"));
+                check_polars_semantics(input.clone(), query, false)?;
+
+                let query = input.clone().lazy()
+                    .filter(col("flag").and(col("x").gt(lit(0i64))))
+                    .select([
+                        col("lower").clip(col("x"), col("upper")).alias("chosen"),
+                        col("flag"),
+                    ]);
+                check_polars_semantics(input, query, false)?;
+            }
+        }
         Ok(())
     }
 
