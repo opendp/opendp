@@ -486,16 +486,18 @@ impl CertifiedTableFilter {
             &self.plan, right, self.schema@, self.schema@);
         lemma_single_filter_relation(&self.plan, left);
         lemma_single_filter_relation(&self.plan, right);
-        lemma_filter_multiset_equivalent(&self.plan, left, self.schema@);
-        lemma_filter_multiset_equivalent(&self.plan, right, self.schema@);
+        // Both successful executions are instances of the same total
+        // row-local map-or-drop function. Contractivity is independent of
+        // whether the node filters, projects, or merges distinct rows.
+        stability::lemma_apply_as_lift(&self.plan, left, self.schema@, self.schema@);
+        stability::lemma_apply_as_lift(&self.plan, right, self.schema@, self.schema@);
+        let f = |row: Seq<Option<VValue>>|
+            verified::local_row_spec(&self.plan, row).unwrap();
+        stability::lemma_lift_contraction(left, right, f);
         let out_left = self.result_spec(left).unwrap();
         let out_right = self.result_spec(right).unwrap();
-        let keep = |row: Seq<Option<VValue>>|
-            verified::local_row_spec(&self.plan, row) == Ok(Some(row));
-        assert(out_left.to_multiset() =~= left.to_multiset().filter(keep));
-        assert(out_right.to_multiset() =~= right.to_multiset().filter(keep));
-        symmetric_distance::lemma_filter_contraction(
-            left.to_multiset(), right.to_multiset(), keep);
+        assert(out_left =~= stability::lifting::lift(left, f));
+        assert(out_right =~= stability::lifting::lift(right, f));
         assert(symmetric_distance::distance(
             out_left.to_multiset(), out_right.to_multiset())
             <= symmetric_distance::distance(
