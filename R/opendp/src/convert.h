@@ -26,6 +26,8 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name);
 SEXP anyobjectptr_to_sexp(AnyObject *obj);
 SEXP anyobjectptr_to_owned_sexp(AnyObject *obj);
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value);
+void release_extrinsic_object(const ExtrinsicObject *object);
+void release_extrinsic_input(void *input, SEXP rust_type);
 CallbackFn sexp_to_callbackfn(SEXP function, const char *type_name);
 TransitionFn sexp_to_transitionfn(SEXP function, const char *type_name);
 void callbackfn_release(CallbackFn *function);

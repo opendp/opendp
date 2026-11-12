@@ -186,6 +186,12 @@ static bool ref_count_callback(const void *ptr, bool increment)
     return false;
 }
 
+void release_extrinsic_object(const ExtrinsicObject *object)
+{
+    if (object)
+        ref_count_callback(object->_0, false);
+}
+
 typedef struct CompareContext {
     SEXP left;
     SEXP right;

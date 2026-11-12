@@ -147,6 +147,7 @@ pub fn generate_c_module(module_name: &str, module: &Vec<Function>) -> String {
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/Complex.h>
+#include <stdlib.h>
 
 #include "convert.h"
 #include "convert_elements.h"
@@ -271,6 +272,8 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
             match arg.c_type().as_str() {
                 "CallbackFn" => Some(format!("callbackfn_release(&c_{name});")),
                 "TransitionFn" => Some(format!("transitionfn_release(&c_{name});")),
+                "ExtrinsicObject *" => Some(format!("release_extrinsic_object(c_{name}); free(c_{name});")),
+                "void *" => Some(format!("release_extrinsic_input(c_{name}, {});", rust_type_expression(arg))),
                 "AnyObject *" => {
                     let rust_type = rust_type_expression(arg);
                     (rust_type != "R_NilValue").then(|| {
@@ -404,6 +407,14 @@ fn c_to_r(arg: Argument) -> String {
 {inner_type}* {inner_name} = {name}.ok;
 {inner}"#,
             inner = c_to_r(inner)
+        );
+    }
+
+    // Returned extrinsic values are Rust-owned; the R result must remain rooted
+    // until the wrapper's retained reference is released.
+    if arg.c_type().replace("const ", "") == "ExtrinsicObject *" {
+        return format!(
+            "{{ SEXP value = PROTECT(extrinsic_object_to_sexp({name})); opendp_data__extrinsic_object_free({name}); UNPROTECT(1); return value; }}"
         );
     }
 
