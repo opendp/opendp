@@ -333,7 +333,7 @@ pub open spec fn preserves_grouped_stability(
                         values, group_by, group))
                 &&& changed_groups(out_left.to_multiset(), out_right.to_multiset(),
                         values, group_by, groups)
-                    <= changed_groups(left.to_multiset(), right.to_multiset(),
+                    <= #[trigger] changed_groups(left.to_multiset(), right.to_multiset(),
                         values, group_by, groups)
             },
             _ => false,
@@ -365,7 +365,7 @@ pub proof fn lemma_all_grouped_stability(
                         values, group_by, group))
                 &&& changed_groups(out_left.to_multiset(), out_right.to_multiset(),
                         values, group_by, groups)
-                    <= changed_groups(left.to_multiset(), right.to_multiset(),
+                    <= #[trigger] changed_groups(left.to_multiset(), right.to_multiset(),
                         values, group_by, groups)
             },
             _ => false,
