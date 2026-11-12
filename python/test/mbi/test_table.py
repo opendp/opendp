@@ -271,7 +271,9 @@ def test_contingency_table_reuse_requires_hbc(monkeypatch):
     from opendp.extras.mbi._table import make_contingency_table
 
     with monkeypatch.context() as patch:
-        patch.setattr(mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"})
+        patch.setattr(
+            mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+        )
         with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
             make_contingency_table(
                 input_domain=None,  # type: ignore[arg-type]

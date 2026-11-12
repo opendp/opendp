@@ -136,7 +136,9 @@ def test_algorithm_hbc_gates(monkeypatch):
     ]
 
     with monkeypatch.context() as patch:
-        patch.setattr(mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"})
+        patch.setattr(
+            mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+        )
         for algorithm in trusted:
             _snapshot_algorithm(algorithm)
         for algorithm in untrusted:
