@@ -147,7 +147,7 @@ impl Frame for VTable {
 mod tests {
     use super::*;
     use crate::domains::{AtomDomain, OptionDomain};
-    use verified::VPlan;
+    use verified::{VPlan, VDType};
 
     /// Concrete execution is useful for testing; this is not the carrier
     /// of a symbolic OpenDP DSL transformation.
