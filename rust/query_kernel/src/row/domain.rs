@@ -208,6 +208,27 @@ pub proof fn lemma_row_typed(
     }
 }
 
+/// Membership of a sequence of rows under common column rules.
+pub open spec fn rows_member(
+    rows: Seq<Seq<Option<VValue>>>, rules: Seq<VColumnRule>,
+) -> bool {
+    forall|i: int| 0 <= i < rows.len() ==> row_member(rows[i], rules)
+}
+
+pub proof fn lemma_rows_member_typed(
+    rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>,
+    rules: Seq<VColumnRule>,
+)
+    requires schema_member(schema, rules), rows_member(rows, rules),
+    ensures rows_in_schema(rows, schema),
+{
+    assert forall|i: int| 0 <= i < rows.len()
+        implies row_in_schema(rows[i], schema) by {
+        lemma_row_typed(rows[i], schema, rules);
+    }
+}
+
 pub proof fn lemma_table_typed(table: &VTable, rules: Seq<VColumnRule>)
     requires table_member(table, rules),
     ensures table_valid(table),

@@ -2,6 +2,7 @@
 
 use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
 use super::verified::domain::{self, VColumnRule};
+use super::verified::transformation;
 use super::stability;
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
@@ -579,6 +580,29 @@ pub fn construct(
 }
 
 
+/// A finite support enumeration cannot repeat rows.
+pub open spec fn distinct_rows(values: Seq<Seq<Option<VValue>>>) -> bool {
+    forall|i: int, j: int|
+        0 <= i < j < values.len() ==> values[i] != values[j]
+}
+
+/// Global symmetric multiset closeness. The universal quantifier over
+/// distinct typed lists represents the sum over finite joint support.
+pub open spec fn symmetric_close(
+    left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>,
+    distance: u32,
+    schema: Seq<VField>,
+) -> bool {
+    forall|values: Seq<Seq<Option<VValue>>>|
+        distinct_rows(values) && verified::rows_in_schema(values, schema)
+        ==> group_distance(
+            left.to_multiset(), right.to_multiset(), values,
+            |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+            Seq::<Option<VValue>>::empty(),
+        ) <= distance as nat
+}
+
 /// The only complete plan admitted by this constructor is Filter(Input).
 pub open spec fn single_filter(plan: &VPlan) -> bool {
     match plan {
@@ -634,7 +658,8 @@ impl CertifiedTableFilter {
 
     pub fn new(predicate: VExpr, rules: &Vec<VColumnRule>) -> (result: Option<Self>)
         ensures match result {
-            Some(filter) => filter.valid() && filter.rules_spec() == rules@,
+            Some(filter) => filter.valid() && filter.valid_as_transformation()
+                && filter.rules_spec() == rules@,
             None => true,
         },
     {
@@ -672,7 +697,9 @@ impl CertifiedTableFilter {
                         lemma_filter_submultiset(&plan, rows, schema@);
                     }
                 }
-                Some(Self { plan, schema: fields, rules: rules.clone() })
+                let filter = Self { plan, schema: fields, rules: rules.clone() };
+                proof { filter.lemma_valid_as_transformation(); }
+                Some(filter)
         }
     }
 
@@ -781,6 +808,140 @@ impl CertifiedTableFilter {
             }
         }
         Ok(output)
+    }
+
+    /// The general Result-valued transformation contract. The semantic
+    /// carrier is a row sequence; invoke proves its executable realization.
+    pub closed spec fn valid_as_transformation(&self) -> bool {
+        transformation::valid_transformation::<
+            Seq<Seq<Option<VValue>>>, Seq<Seq<Option<VValue>>>,
+            u32, u32, (), (),
+        >(
+            |rows: Seq<Seq<Option<VValue>>>|
+                domain::rows_member(rows, self.rules_spec()),
+            |rows: Seq<Seq<Option<VValue>>>|
+                domain::rows_member(rows, self.rules_spec()),
+            |left: Seq<Seq<Option<VValue>>>,
+             right: Seq<Seq<Option<VValue>>>, d: u32|
+                symmetric_close(left, right, d, self.schema_spec()),
+            |left: Seq<Seq<Option<VValue>>>,
+             right: Seq<Seq<Option<VValue>>>, d: u32|
+                symmetric_close(left, right, d, self.schema_spec()),
+            |d: u32| false,
+            |rows: Seq<Seq<Option<VValue>>>| self.result_spec(rows),
+            |d: u32| Ok(d),
+        )
+    }
+
+    /// The certified filter is an instance of generic transformation validity.
+    pub proof fn lemma_valid_as_transformation(&self)
+        requires self.valid(),
+        ensures self.valid_as_transformation(),
+    {
+        assert forall|rows: Seq<Seq<Option<VValue>>>|
+            #[trigger] domain::rows_member(rows, self.rules_spec())
+            implies match self.result_spec(rows) {
+                Ok(output) => domain::rows_member(output, self.rules_spec()),
+                Err(_) => true,
+            } by {
+            self.lemma_preserves_rules(rows);
+        }
+        assert forall|left: Seq<Seq<Option<VValue>>>,
+                      right: Seq<Seq<Option<VValue>>>, d: u32|
+            #[trigger] domain::rows_member(left, self.rules_spec())
+            && #[trigger] domain::rows_member(right, self.rules_spec())
+            && #[trigger] symmetric_close(left, right, d, self.schema_spec())
+            implies transformation::result_close(
+                self.result_spec(left), self.result_spec(right), d,
+                |a: Seq<Seq<Option<VValue>>>,
+                 b: Seq<Seq<Option<VValue>>>, bound: u32|
+                    symmetric_close(a, b, bound, self.schema_spec()),
+                |_: u32| false,
+            ) by {
+            self.lemma_preserves_rules(left);
+            self.lemma_preserves_rules(right);
+            self.lemma_symmetric_contraction(left, right, d);
+        }
+    }
+
+    proof fn lemma_preserves_rules(
+        &self, rows: Seq<Seq<Option<VValue>>>,
+    )
+        requires self.valid(), domain::rows_member(rows, self.rules_spec()),
+        ensures match self.result_spec(rows) {
+            Ok(out) => domain::rows_member(out, self.rules_spec()),
+            Err(_) => false,
+        },
+    {
+        domain::lemma_rows_member_typed(
+            rows, self.schema@, self.rules@);
+        verified::lemma_relation_type_sound(
+            &self.plan, rows, self.schema@, self.schema@);
+        lemma_single_filter_relation(&self.plan, rows);
+        lemma_filter_submultiset(&self.plan, rows, self.schema@);
+        let out = self.result_spec(rows).unwrap();
+        rows.to_multiset_ensures();
+        out.to_multiset_ensures();
+        assert forall|row: Seq<Option<VValue>>|
+            rows.to_multiset().count(row) > 0
+                implies domain::row_member(row, self.rules@) by {
+            assert(rows.contains(row));
+            let i = choose|i: int| 0 <= i < rows.len() && rows[i] == row;
+            assert(domain::row_member(rows[i], self.rules@));
+        }
+        domain::lemma_rows_subset(
+            out.to_multiset(), rows.to_multiset(), self.rules@);
+        assert forall|i: int| 0 <= i < out.len()
+            implies domain::row_member(out[i], self.rules@) by {
+            assert(out.contains(out[i]));
+            assert(out.to_multiset().count(out[i]) > 0);
+        }
+    }
+
+    proof fn lemma_symmetric_contraction(
+        &self,
+        left: Seq<Seq<Option<VValue>>>,
+        right: Seq<Seq<Option<VValue>>>,
+        distance: u32,
+    )
+        requires
+            self.valid(),
+            domain::rows_member(left, self.rules_spec()),
+            domain::rows_member(right, self.rules_spec()),
+            symmetric_close(left, right, distance, self.schema_spec()),
+        ensures
+            match (self.result_spec(left), self.result_spec(right)) {
+                (Ok(a), Ok(b)) =>
+                    symmetric_close(a, b, distance, self.schema_spec()),
+                _ => false,
+            },
+    {
+        domain::lemma_rows_member_typed(
+            left, self.schema@, self.rules@);
+        domain::lemma_rows_member_typed(
+            right, self.schema@, self.rules@);
+        verified::lemma_relation_type_sound(
+            &self.plan, left, self.schema@, self.schema@);
+        verified::lemma_relation_type_sound(
+            &self.plan, right, self.schema@, self.schema@);
+        lemma_single_filter_relation(&self.plan, left);
+        lemma_single_filter_relation(&self.plan, right);
+        let out_left = self.result_spec(left).unwrap();
+        let out_right = self.result_spec(right).unwrap();
+        assert forall|values: Seq<Seq<Option<VValue>>>|
+            distinct_rows(values) && verified::rows_in_schema(
+                values, self.schema@)
+            implies group_distance(
+                out_left.to_multiset(), out_right.to_multiset(), values,
+                |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+                Seq::<Option<VValue>>::empty(),
+            ) <= distance as nat by {
+            lemma_group_distance_contraction(
+                &self.plan, left, right, self.schema@, values,
+                |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+                Seq::<Option<VValue>>::empty(),
+            );
+        }
     }
 
     /// The entrypoint installed in OpenDP's Function. It enforces exactly

@@ -8,6 +8,8 @@ pub mod margin;
 pub mod filter;
 #[path = "row/domain.rs"]
 pub mod domain;
+#[path = "transformation.rs"]
+pub mod transformation;
 #[path = "row/scalar.rs"]
 pub mod scalar;
 use scalar::{binary_field, clip_field, eval_binary, eval_clip};
