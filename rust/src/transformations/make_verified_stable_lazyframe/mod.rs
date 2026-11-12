@@ -207,6 +207,37 @@ mod tests {
     }
 
     #[test]
+    fn native_and_verified_projection_domains_agree() -> Fallible<()> {
+        let query = df!(
+            "x" => [Some(2i64), Some(7)],
+            "lower" => [0i64, 0],
+            "upper" => [5i64, 5],
+            "flag" => [Some(true), None],
+        )?.lazy()
+            .select([
+                col("x").alias("renamed"),
+                col("flag").and(col("x").gt(lit(3i64))).alias("derived"),
+            ])
+            .filter(col("derived"));
+        let mut input = domain()?;
+        input.series_domains[0] =
+            SeriesDomain::new("x", AtomDomain::<i64>::new_closed((0, 10))?);
+        let (plan, columns) =
+            frontend::normalize_plan(&query.logical_plan, &input.series_domains)?;
+        let v_source = crate::domains::verified_plan::VFrameDomain::new(
+            input.series_domains.iter().map(|column|
+                column.cast_carrier::<crate::domains::verified_frame::VColumn>()
+            ).collect(),
+        )?;
+        let v_output = crate::domains::verified_plan::analyze_plan(&plan, &v_source)?;
+        let inferred = v_output.series_domains.iter()
+            .map(|column| column.cast_carrier::<Series>())
+            .collect::<Vec<_>>();
+        assert_eq!(columns, inferred);
+        Ok(())
+    }
+
+    #[test]
     fn rejects_unmodeled_columns() -> Fallible<()> {
         let lf = df!(
             "text" => ["a", "b"],

@@ -4,8 +4,6 @@ use vstd::prelude::*;
 pub mod project;
 #[path = "row/filter.rs"]
 pub mod filter;
-#[path = "row/construct.rs"]
-pub mod construct;
 #[path = "row/scalar.rs"]
 pub mod scalar;
 use scalar::{binary_field, clip_field, eval_binary, eval_clip};

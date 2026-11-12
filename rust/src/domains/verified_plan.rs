@@ -3,17 +3,16 @@
 //! VPlan::Input is unbound. Its source-domain assumptions therefore belong
 //! in this domain, not in the backend-independent verified AST.
 
-use polars::prelude::{DataType, Field, PlSmallStr};
 
 use crate::{
     core::{Domain, MetricSpace},
     domains::{ColumnDomain, FrameDomain},
     error::*,
     metrics::{Bounds, FrameDistanceFor, SymmetricDistance},
-    verified_query::{self as verified, VExpr, VField, VPlan, VTable, VDType},
+    verified_query::{VExpr, VPlan, VTable},
 };
 
-use super::verified_frame::{kernel_schema, VColumn};
+use super::verified_frame::{check_filter_predicate, kernel_schema, project_columns};
 
 pub(crate) type VFrameDomain = FrameDomain<VTable>;
 pub(crate) type VFrameMetric = FrameDistanceFor<SymmetricDistance, VExpr>;
@@ -57,51 +56,12 @@ impl MetricSpace for (VPlanDomain, VFrameMetric) {
     }
 }
 
-fn broad_column(name: PlSmallStr, field: VField) -> Fallible<ColumnDomain<VColumn>> {
-    let dtype = match field.dtype {
-        VDType::Int64 => DataType::Int64,
-        VDType::Boolean => DataType::Boolean,
-    };
-    let mut column = ColumnDomain::<VColumn>::new_from_field(Field::new(name, dtype))?;
-    column.nullable = field.nullable;
-    Ok(column)
-}
-
-fn expression_column(
-    expr: &VExpr,
-    input: &VFrameDomain,
-    schema: &Vec<VField>,
-) -> Fallible<ColumnDomain<VColumn>> {
-    let field = verified::check_expr(expr, schema)
-        .ok_or_else(|| err!(MakeTransformation, "ill-typed verified projection expression"))?;
-
-    // An alias names the result; a bare column retains its source name.
-    let name = match expr {
-        VExpr::Alias { name, .. } => PlSmallStr::from(name.as_str()),
-        VExpr::Column(index) => input.series_domains.get(*index)
-            .ok_or_else(|| err!(MakeTransformation, "column outside verified schema"))?.name.clone(),
-        _ => return fallible!(MakeTransformation,
-            "verified projection expressions must be named"),
-    };
-
-    let mut column = match verified::construct::identity_column(expr) {
-        Some(index) => input.series_domains.get(index)
-            .ok_or_else(|| err!(MakeTransformation, "column outside verified schema"))?.clone(),
-        None => broad_column(name.clone(), field)?,
-    };
-    column.name = name;
-    Ok(column)
-}
-
 /// Output-domain rule for one projection node. It preserves exact column
 /// domains only for identity column expressions, and keeps only global margins.
 pub(crate) fn project_domain(
     input: &VFrameDomain, exprs: &[VExpr],
 ) -> Fallible<VFrameDomain> {
-    let schema = kernel_schema(&input.series_domains)?;
-    let columns = exprs.iter()
-        .map(|expr| expression_column(expr, input, &schema))
-        .collect::<Fallible<Vec<_>>>()?;
+    let columns = project_columns(&input.series_domains, exprs)?;
     let margins = input.margins.iter()
         .filter(|margin| margin.by.is_empty())
         .cloned()
@@ -114,12 +74,7 @@ pub(crate) fn project_domain(
 pub(crate) fn filter_domain(
     input: &VFrameDomain, predicate: &VExpr,
 ) -> Fallible<VFrameDomain> {
-    let schema = kernel_schema(&input.series_domains)?;
-    let field = verified::check_expr(predicate, &schema)
-        .ok_or_else(|| err!(MakeTransformation, "ill-typed verified filter predicate"))?;
-    if !matches!(field.dtype, VDType::Boolean) {
-        return fallible!(MakeTransformation, "verified filter predicate must be boolean");
-    }
+    check_filter_predicate(&input.series_domains, predicate)?;
     let mut output = input.clone();
     for margin in &mut output.margins {
         margin.invariant = None;
@@ -147,6 +102,7 @@ pub(crate) fn analyze_plan(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use polars::prelude::DataType;
     use std::collections::HashSet;
     use crate::domains::{AtomDomain, Margin, OptionDomain};
     use crate::verified_query::{VValue, VBinaryOp};

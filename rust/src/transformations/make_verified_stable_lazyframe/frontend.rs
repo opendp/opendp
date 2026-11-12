@@ -1,37 +1,9 @@
 //! Polars frontend: resolve supported Polars queries into the backend-neutral DSL.
 use super::verified;
-use crate::domains::verified_frame::kernel_schema;
+use crate::domains::verified_frame::{check_filter_predicate, kernel_schema, project_columns};
 use crate::{domains::{LazyFrameDomain, SeriesDomain}, error::*};
 use polars::prelude::*;
 use polars_plan::{dsl::{FunctionExpr, Operator}, utils::expr_output_name};
-
-fn broad_column(dtype: DataType, nullable: bool) -> Fallible<SeriesDomain> {
-    let mut domain = SeriesDomain::new_from_field(Field::new("_".into(), dtype))?;
-    domain.nullable = nullable;
-    Ok(domain)
-}
-
-fn inferred_field(expr: &verified::VExpr, columns: &[SeriesDomain])
-    -> Fallible<verified::VField>
-{
-    verified::check_expr(expr, &kernel_schema(columns)?)
-        .ok_or_else(|| err!(MakeTransformation, "ill-typed verified expression"))
-}
-
-fn output_column(
-    expr: &verified::VExpr, field: verified::VField, columns: &[SeriesDomain],
-) -> Fallible<SeriesDomain> {
-    match expr {
-        verified::VExpr::Alias { expr, .. } => return output_column(expr, field, columns),
-        verified::VExpr::Column(index) => return Ok(columns[*index].clone()),
-        _ => {},
-    }
-    let dtype = match field.dtype {
-        verified::VDType::Int64 => DataType::Int64,
-        verified::VDType::Boolean => DataType::Boolean,
-    };
-    broad_column(dtype, field.nullable)
-}
 
 fn normalize_expr(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<verified::VExpr> {
     use verified::VValue;
@@ -120,7 +92,6 @@ pub(super) fn normalize_plan(
                     "verified select requires scalar broadcasting");
             }
             let mut nodes = Vec::new();
-            let mut output_columns = Vec::new();
             let mut row_dependent = false;
             for item in expr {
                 let name = expr_output_name(item)?;
@@ -131,17 +102,14 @@ pub(super) fn normalize_plan(
                         expr: Box::new(inner), name: name.to_string(),
                     },
                 };
-                let field = inferred_field(&node, &columns)?;
-                let mut domain = output_column(&node, field, &columns)?;
                 row_dependent |= reads_column(&node);
-                domain.name = name;
                 nodes.push(node);
-                output_columns.push(domain);
             }
             if !row_dependent {
                 return fallible!(MakeTransformation,
                     "verified select requires a row-dependent expression");
             }
+            let output_columns = project_columns(&columns, &nodes)?;
             LazyFrameDomain::new(output_columns.clone())?;
             Ok((verified::VPlan::Project {
                 input: Box::new(child), exprs: nodes,
@@ -150,9 +118,7 @@ pub(super) fn normalize_plan(
         DslPlan::Filter { input, predicate } => {
             let (child, columns) = normalize_plan(input, input_columns)?;
             let node = normalize_expr(predicate, &columns)?;
-            if inferred_field(&node, &columns)?.dtype != verified::VDType::Boolean {
-                return fallible!(MakeTransformation, "filter predicate must be Boolean");
-            }
+            check_filter_predicate(&columns, &node)?;
             Ok((verified::VPlan::Filter {
                 input: Box::new(child), predicate: node,
             }, columns))
