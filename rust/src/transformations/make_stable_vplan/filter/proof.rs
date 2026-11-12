@@ -1,6 +1,6 @@
 //! Executable filter node and row-domain preservation certificate.
 
-use super::verified::{self, VExpr, VField, VPlan, VValue};
+use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
 use super::stability;
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
@@ -574,6 +574,224 @@ pub fn construct(
             }
             Some((plan, fields))
         },
+    }
+}
+
+
+/// The only complete plan admitted by this constructor is Filter(Input).
+pub open spec fn single_filter(plan: &VPlan) -> bool {
+    match plan {
+        VPlan::Filter { input, .. } => matches!(**input, VPlan::Input),
+        _ => false,
+    }
+}
+
+pub proof fn lemma_single_filter_relation(
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+)
+    requires single_filter(plan),
+    ensures verified::relation_spec(plan, rows) == verified::apply_spec(plan, rows),
+{
+    match plan {
+        VPlan::Filter { input, .. } => {
+            assert(matches!(**input, VPlan::Input));
+            assert(verified::relation_spec(input, rows) == Ok(rows));
+        },
+        _ => { assert(false); },
+    }
+}
+
+/// A proof-carrying executable table filter. Unlike a plan certificate,
+/// this owns the actual plan passed to the verified evaluator.
+pub struct CertifiedTableFilter {
+    pub plan: VPlan,
+    pub schema: Vec<VField>,
+}
+
+impl CertifiedTableFilter {
+    pub open spec fn valid(&self) -> bool {
+        &&& single_filter(&self.plan)
+        &&& verified::plan_schema(&self.plan, self.schema@) == Some(self.schema@)
+        &&& stability::stable_on_typed_edits(&self.plan, self.schema@)
+        &&& preserves_filter_multiset(&self.plan, self.schema@)
+    }
+
+    pub fn new(predicate: VExpr, schema: &Vec<VField>) -> (result: Option<Self>)
+        ensures match result {
+            Some(filter) => filter.valid() && filter.schema@ == schema@,
+            None => true,
+        },
+    {
+        let fields = match verified::filter::check_schema(&predicate, schema) {
+            Some(fields) => fields,
+            None => return None,
+        };
+        let plan = VPlan::Filter {
+            input: Box::new(VPlan::Input), predicate,
+        };
+        {
+                proof {
+                    match &plan {
+                        VPlan::Filter { input, predicate } => {
+                            assert(verified::filter::schema(predicate, schema@)
+                                == Some(fields@));
+                            assert(matches!(**input, VPlan::Input));
+                            assert(verified::plan_schema(input, schema@)
+                                == Some(schema@));
+                            assert(verified::local_schema(&plan, schema@)
+                                == Some(schema@));
+                        },
+                        _ => { assert(false); },
+                    }
+                    assert(fields@ == schema@);
+                    assert(verified::plan_schema(&plan, schema@) == Some(schema@));
+                    stability::lemma_all_typed_edits_stable(&plan, schema@);
+                    assert forall|rows: Seq<Seq<Option<VValue>>>|
+                        verified::rows_in_schema(rows, schema@)
+                        implies match verified::apply_spec(&plan, rows) {
+                            Ok(out) => out.to_multiset().subset_of(rows.to_multiset()),
+                            Err(_) => false,
+                        } by {
+                        lemma_filter_submultiset(&plan, rows, schema@);
+                    }
+                }
+                Some(Self { plan, schema: fields })
+        }
+    }
+
+    /// The implementation used by the OpenDP transformation below.
+    /// Every valid input in the certified schema returns a typed submultiset.
+    pub fn apply(&self, input: &VTable) -> (result: Result<VTable, ()>)
+        ensures
+            match result {
+                Ok(output) => {
+                    &&& verified::table_valid(&output)
+                    &&& verified::plan_schema(&self.plan, input.schema@)
+                        == Some(output.schema@)
+                    &&& verified::relation_spec(
+                        &self.plan, verified::rows_view(input.rows@))
+                        == Ok(verified::rows_view(output.rows@))
+                },
+                Err(_) => true,
+            },
+            self.valid()
+                && verified::table_valid(input)
+                && input.schema@ == self.schema@
+                ==> match result {
+                    Ok(output) => {
+                        &&& output.schema@ == input.schema@
+                        &&& verified::rows_view(output.rows@).to_multiset()
+                            .subset_of(verified::rows_view(input.rows@).to_multiset())
+                    },
+                    Err(_) => false,
+                },
+    {
+        if !verified::check_table(input) {
+            return Err(());
+        }
+        let fields = match verified::check_plan(&self.plan, &input.schema) {
+            Some(fields) => fields,
+            None => return Err(()),
+        };
+        let rows = match verified::evaluate(&self.plan, input) {
+            Ok(rows) => rows,
+            Err(_) => {
+                proof {
+                    if self.valid() && input.schema@ == self.schema@ {
+                        verified::lemma_relation_type_sound(
+                            &self.plan, verified::rows_view(input.rows@),
+                            input.schema@, self.schema@);
+                    }
+                }
+                return Err(());
+            },
+        };
+        proof {
+            verified::lemma_relation_type_sound(
+                &self.plan, verified::rows_view(input.rows@),
+                input.schema@, fields@);
+            if self.valid() && input.schema@ == self.schema@ {
+                assert(verified::plan_schema(&self.plan, input.schema@)
+                    == Some(self.schema@));
+                assert(fields@ == self.schema@);
+                assert(verified::relation_spec(
+                    &self.plan, verified::rows_view(input.rows@))
+                    == Ok(verified::rows_view(rows@)));
+                lemma_single_filter_relation(
+                    &self.plan, verified::rows_view(input.rows@));
+                assert(verified::apply_spec(
+                    &self.plan, verified::rows_view(input.rows@))
+                    == Ok(verified::rows_view(rows@)));
+                assert(verified::rows_view(rows@).to_multiset()
+                    .subset_of(verified::rows_view(input.rows@).to_multiset()));
+            }
+        }
+        Ok(VTable { schema: fields, rows })
+    }
+
+    /// Full margin-free frame contract: filtering preserves every row-wise
+    /// value restriction, and contracts the global multiset L1 distance.
+    /// This proves the identity stability map for arbitrary distances, not
+    /// just unit insertions and deletions.
+    pub proof fn lemma_domain_and_global_stability(
+        &self,
+        left: Seq<Seq<Option<VValue>>>,
+        right: Seq<Seq<Option<VValue>>>,
+        values: Seq<Seq<Option<VValue>>>,
+        allowed: Set<Seq<Option<VValue>>>,
+    )
+        requires
+            self.valid(),
+            verified::rows_in_schema(left, self.schema@),
+            verified::rows_in_schema(right, self.schema@),
+            verified::rows_in_schema(values, self.schema@),
+            allowed_rows(left.to_multiset(), allowed),
+            allowed_rows(right.to_multiset(), allowed),
+        ensures
+            match (
+                verified::relation_spec(&self.plan, left),
+                verified::relation_spec(&self.plan, right),
+            ) {
+                (Ok(out_left), Ok(out_right)) => {
+                    &&& verified::rows_in_schema(out_left, self.schema@)
+                    &&& verified::rows_in_schema(out_right, self.schema@)
+                    &&& allowed_rows(out_left.to_multiset(), allowed)
+                    &&& allowed_rows(out_right.to_multiset(), allowed)
+                    &&& group_distance(
+                        out_left.to_multiset(), out_right.to_multiset(), values,
+                        |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+                        Seq::<Option<VValue>>::empty(),
+                    ) <= group_distance(
+                        left.to_multiset(), right.to_multiset(), values,
+                        |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+                        Seq::<Option<VValue>>::empty(),
+                    )
+                },
+                _ => false,
+            },
+    {
+        lemma_single_filter_relation(&self.plan, left);
+        lemma_single_filter_relation(&self.plan, right);
+        verified::lemma_relation_type_sound(&self.plan, left, self.schema@, self.schema@);
+        verified::lemma_relation_type_sound(&self.plan, right, self.schema@, self.schema@);
+        let out_left = verified::relation_spec(&self.plan, left).unwrap();
+        let out_right = verified::relation_spec(&self.plan, right).unwrap();
+        assert(out_left.to_multiset().subset_of(left.to_multiset()));
+        assert(out_right.to_multiset().subset_of(right.to_multiset()));
+        lemma_allowed_rows_subset(out_left.to_multiset(), left.to_multiset(), allowed);
+        lemma_allowed_rows_subset(out_right.to_multiset(), right.to_multiset(), allowed);
+        assert(verified::local_schema(&self.plan, self.schema@) == Some(self.schema@));
+        lemma_group_distance_contraction(
+            &self.plan, left, right, self.schema@, values,
+            |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
+            Seq::<Option<VValue>>::empty(),
+        );
+    }
+
+    pub fn map_distance(distance: u32) -> (output: u32)
+        ensures output == distance,
+    {
+        distance
     }
 }
 

@@ -113,6 +113,43 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn certified_table_filter_builds_valid_transformation() -> Fallible<()> {
+        let domain = source()?;
+        let trans = filter::make_stable_vtable_filter(
+            domain.clone(), VFrameMetric::new(SymmetricDistance), VExpr::Column(1),
+        )?;
+        let original = table();
+        assert!(trans.input_domain.member(&original)?);
+        let filtered = trans.invoke(&original)?;
+        assert!(trans.output_domain.member(&filtered)?);
+        assert_eq!(filtered.rows, vec![original.rows[0].clone()]);
+        for d in [0, 1, 3] {
+            assert_eq!(trans.map(&Bounds::from(d))?
+                .get_bound(&HashSet::new()).per_group, Some(d));
+        }
+        let mut appended = original.clone();
+        appended.rows.push(original.rows[0].clone());
+        let more = trans.invoke(&appended)?;
+        assert!(trans.output_domain.member(&more)?);
+        assert_eq!(more.rows.len(), filtered.rows.len() + 1);
+        let mut deleted = original.clone();
+        deleted.rows.remove(0);
+        let less = trans.invoke(&deleted)?;
+        assert!(less.rows.is_empty());
+        assert!(trans.output_domain.member(&less)?);
+        assert!(filter::make_stable_vtable_filter(
+            domain.clone(), VFrameMetric::new(SymmetricDistance),
+            VExpr::Column(0),
+        ).is_err());
+        assert!(filter::make_stable_vtable_filter(
+            domain.with_margin(Margin::select().with_max_length(3))?,
+            VFrameMetric::new(SymmetricDistance), VExpr::Column(1),
+        ).is_err());
+        Ok(())
+    }
+
     #[test]
     fn recursive_project_filter_domain_and_execution() -> Fallible<()> {
         let input = source()?;

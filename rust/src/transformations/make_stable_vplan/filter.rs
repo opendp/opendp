@@ -6,6 +6,46 @@ use crate::{
     domains::{verified_frame::kernel_schema, verified_plan::filter_domain},
 };
 
+
+/// Construct an OpenDP Transformation whose executed filter, type preservation,
+/// and unit symmetric stability are verified in Verus. Currently restricted
+/// to margin-free frame domains; grouping-distance bounds are discarded.
+pub(super) fn make_stable_vtable_filter(
+    input_domain: crate::domains::verified_plan::VFrameDomain,
+    metric: VFrameMetric,
+    predicate: VExpr,
+) -> Fallible<Transformation<
+    crate::domains::verified_plan::VFrameDomain, VFrameMetric,
+    crate::domains::verified_plan::VFrameDomain, VFrameMetric,
+>> {
+    if !input_domain.margins.is_empty() {
+        return fallible!(MakeTransformation,
+            "verified table filter requires a margin-free domain");
+    }
+    let schema = kernel_schema(&input_domain.series_domains)?;
+    let certified = filter_proof::CertifiedTableFilter::new(predicate, &schema)
+        .ok_or_else(|| err!(MakeTransformation, "invalid verified filter predicate"))?;
+    let input_contract = input_domain.clone();
+    Transformation::new(
+        input_domain.clone(), metric.clone(), input_domain, metric,
+        Function::new_fallible(move |table: &verified::VTable| {
+            if !input_contract.member(table)? {
+                return fallible!(MakeTransformation,
+                    "input table outside verified filter domain");
+            }
+            certified.apply(table).map_err(|_| {
+                err!(MakeTransformation, "verified table filter execution failed")
+            })
+        }),
+        StabilityMap::new(|bounds: &VFrameBounds| {
+            let mut global = bounds.get_bound(&HashSet::new());
+            global.per_group = global.per_group
+                .map(filter_proof::CertifiedTableFilter::map_distance);
+            crate::metrics::Bounds(vec![global])
+        }),
+    )
+}
+
 pub(super) fn make_filter(
     input_domain: VPlanDomain,
     input_metric: VFrameMetric,
