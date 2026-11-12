@@ -5,6 +5,8 @@ on:
     branches: [verus-backend-semantics, verus-columnar-prototype, verified-stable-lazyframe]
     paths:
       - 'rust/query_kernel/**'
+      - 'rust/query_verification/**'
+      - 'rust/src/transformations/make_verified_stable_lazyframe/stability.rs'
       - '.github/workflows/query-kernel-verus.yml'
   workflow_dispatch:
 
@@ -33,6 +35,9 @@ jobs:
           echo "$GITHUB_WORKSPACE/verus-x86-linux" >> "$GITHUB_PATH"
       - name: Verify specs and proofs
         working-directory: rust/query_kernel
+        run: cargo verus verify
+      - name: Verify OpenDP dataset stability
+        working-directory: rust/query_verification
         run: cargo verus verify
       - name: Run executable reference tests
         working-directory: rust/query_kernel

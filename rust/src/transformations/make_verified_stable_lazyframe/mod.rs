@@ -15,21 +15,6 @@ use crate::{
     metrics::{Bounds, FrameDistance, SymmetricDistance},
 };
 
-/// Operator metadata deliberately excluded from the name-free verified AST.
-enum PlanMetadata {
-    Input,
-    Project {
-        input: Box<PlanMetadata>,
-        input_columns: Vec<SeriesDomain>,
-        names: Vec<PlSmallStr>,
-        options: ProjectionOptions,
-    },
-    Filter {
-        input: Box<PlanMetadata>,
-        input_columns: Vec<SeriesDomain>,
-    },
-}
-
 fn broad_column(dtype: DataType, nullable: bool) -> Fallible<SeriesDomain> {
     let mut domain = SeriesDomain::new_from_field(Field::new("_".into(), dtype))?;
     domain.nullable = nullable;
@@ -58,8 +43,10 @@ fn inferred_field(expr: &verified::Expr, columns: &[SeriesDomain])
 fn output_column(
     expr: &verified::Expr, field: verified::Field, columns: &[SeriesDomain],
 ) -> Fallible<SeriesDomain> {
-    if let verified::Expr::Column(index) = expr {
-        return Ok(columns[*index].clone());
+    match expr {
+        verified::Expr::Alias { expr, .. } => return output_column(expr, field, columns),
+        verified::Expr::Column(index) => return Ok(columns[*index].clone()),
+        _ => {},
     }
     let dtype = match field.dtype {
         verified::DType::Int64 => DataType::Int64,
@@ -71,7 +58,10 @@ fn output_column(
 fn normalize_expr(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<verified::Expr> {
     use verified::Value;
     match expr {
-        Expr::Alias(inner, _) => normalize_expr(inner, columns),
+        Expr::Alias(inner, name) => Ok(verified::Expr::Alias {
+            expr: Box::new(normalize_expr(inner, columns)?),
+            name: name.to_string(),
+        }),
         Expr::Column(name) => {
             let index = columns.iter().position(|c| c.name == *name)
                 .ok_or_else(|| err!(MakeTransformation, "unknown column: {}", name))?;
@@ -83,6 +73,10 @@ fn normalize_expr(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<verified::E
             )?;
             Ok(verified::Expr::Literal(match value {
                 AnyValue::Int64(v) => Value::Int(v),
+                // Small dynamic integer literals materialize as Int32 in Polars.
+                AnyValue::Int32(v)
+                    if matches!(literal.get_datatype(), DataType::Unknown(_)) =>
+                        Value::Int(v.into()),
                 AnyValue::Boolean(v) => Value::Bool(v),
                 _ => return fallible!(MakeTransformation,
                     "verified queries require Int64 or Boolean literals"),
@@ -120,6 +114,7 @@ fn normalize_expr(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<verified::E
 fn reads_column(expr: &verified::Expr) -> bool {
     match expr {
         verified::Expr::Column(_) => true,
+        verified::Expr::Alias { expr, .. } => reads_column(expr),
         verified::Expr::Literal(_) | verified::Expr::Null(_) => false,
         verified::Expr::Binary { left, right, .. } =>
             reads_column(left) || reads_column(right),
@@ -133,32 +128,36 @@ fn reads_column(expr: &verified::Expr) -> bool {
 /// Validate every relational node without reading source data.
 fn normalize_plan(
     plan: &DslPlan, input_columns: &[SeriesDomain],
-) -> Fallible<(verified::Plan, PlanMetadata, Vec<SeriesDomain>)> {
+) -> Fallible<(verified::Plan, Vec<SeriesDomain>)> {
     match plan {
         DslPlan::IR { dsl, .. } => normalize_plan(dsl, input_columns),
         DslPlan::DataFrameScan { .. } => {
             kernel_schema(input_columns)?;
-            Ok((verified::Plan::Input, PlanMetadata::Input, input_columns.to_vec()))
+            Ok((verified::Plan::Input, input_columns.to_vec()))
         },
         DslPlan::Select { input, expr, options } => {
-            let (child, child_meta, columns) = normalize_plan(input, input_columns)?;
+            let (child, columns) = normalize_plan(input, input_columns)?;
             if !options.should_broadcast {
                 return fallible!(MakeTransformation,
                     "verified select requires scalar broadcasting");
             }
             let mut nodes = Vec::new();
             let mut output_columns = Vec::new();
-            let mut names = Vec::new();
             let mut row_dependent = false;
             for item in expr {
-                let node = normalize_expr(item, &columns)?;
+                let name = expr_output_name(item)?;
+                let inner = normalize_expr(item, &columns)?;
+                let node = match inner {
+                    verified::Expr::Alias { .. } => inner,
+                    _ => verified::Expr::Alias {
+                        expr: Box::new(inner), name: name.to_string(),
+                    },
+                };
                 let field = inferred_field(&node, &columns)?;
                 let mut domain = output_column(&node, field, &columns)?;
                 row_dependent |= reads_column(&node);
-                let name = expr_output_name(item)?;
-                domain.name = name.clone();
+                domain.name = name;
                 nodes.push(node);
-                names.push(name);
                 output_columns.push(domain);
             }
             if !row_dependent {
@@ -166,44 +165,36 @@ fn normalize_plan(
                     "verified select requires a row-dependent expression");
             }
             LazyFrameDomain::new(output_columns.clone())?;
-            let metadata = PlanMetadata::Project {
-                input: Box::new(child_meta),
-                input_columns: columns,
-                names,
-                options: options.clone(),
-            };
             Ok((verified::Plan::Project {
                 input: Box::new(child), exprs: nodes,
-            }, metadata, output_columns))
+            }, output_columns))
         },
         DslPlan::Filter { input, predicate } => {
-            let (child, child_meta, columns) = normalize_plan(input, input_columns)?;
+            let (child, columns) = normalize_plan(input, input_columns)?;
             let node = normalize_expr(predicate, &columns)?;
             if inferred_field(&node, &columns)?.dtype != verified::DType::Boolean {
                 return fallible!(MakeTransformation, "filter predicate must be Boolean");
             }
-            let metadata = PlanMetadata::Filter {
-                input: Box::new(child_meta),
-                input_columns: columns.clone(),
-            };
             Ok((verified::Plan::Filter {
                 input: Box::new(child), predicate: node,
-            }, metadata, columns))
+            }, columns))
         },
         _ => fallible!(MakeTransformation, "unsupported verified relational operation"),
     }
 }
 
 /// Produce Polars expressions only from the normalized AST.
-fn render_expr(expr: &verified::Expr, columns: &[SeriesDomain]) -> Fallible<Expr> {
+fn render_expr(expr: &verified::Expr, columns: &[PlSmallStr]) -> Fallible<Expr> {
     use verified::{DType, Value};
     Ok(match expr {
         verified::Expr::Column(index) => {
             let column = columns.get(*index).ok_or_else(||
                 err!(MakeTransformation, "verified column index outside schema")
             )?;
-            col(column.name.as_str())
+            col(column.as_str())
         },
+        verified::Expr::Alias { expr, name } =>
+            render_expr(expr, columns)?.alias(name.as_str()),
         verified::Expr::Literal(Value::Int(v)) => lit(*v),
         verified::Expr::Literal(Value::Bool(v)) => lit(*v),
         verified::Expr::Null(DType::Int64) => lit(NULL).cast(DataType::Int64),
@@ -233,37 +224,39 @@ fn render_expr(expr: &verified::Expr, columns: &[SeriesDomain]) -> Fallible<Expr
     })
 }
 
-/// Substitute the caller's data source instead of capturing the original one.
+/// Reconstruct the supported query against the caller's data source.
 fn render_plan(
-    plan: &verified::Plan, metadata: &PlanMetadata, source: DslPlan,
-) -> Fallible<DslPlan> {
-    match (plan, metadata) {
-        (verified::Plan::Input, PlanMetadata::Input) => Ok(source),
-        (verified::Plan::Project { input, exprs },
-            PlanMetadata::Project { input: child_meta, input_columns, names, options }) => {
-            let child = render_plan(input, child_meta, source)?;
-            if names.len() != exprs.len() {
-                return fallible!(MakeTransformation, "verified projection width mismatch");
+    plan: &verified::Plan, source: DslPlan, source_columns: &[PlSmallStr],
+) -> Fallible<(DslPlan, Vec<PlSmallStr>)> {
+    match plan {
+        verified::Plan::Input => Ok((source, source_columns.to_vec())),
+        verified::Plan::Project { input, exprs } => {
+            let (child, input_columns) = render_plan(input, source, source_columns)?;
+            let mut expressions = Vec::with_capacity(exprs.len());
+            let mut names = Vec::with_capacity(exprs.len());
+            for node in exprs {
+                let verified::Expr::Alias { name, .. } = node else {
+                    return fallible!(MakeTransformation, "verified projection requires named expressions");
+                };
+                expressions.push(render_expr(node, &input_columns)?);
+                names.push(PlSmallStr::from(name.as_str()));
             }
-            let expr = exprs.iter().zip(names)
-                .map(|(expr, name)| render_expr(expr, input_columns)
-                    .map(|expr| expr.alias(name.as_str())))
-                .collect::<Fallible<Vec<_>>>()?;
-            Ok(DslPlan::Select {
+            Ok((DslPlan::Select {
                 input: Arc::new(child),
-                expr,
-                options: options.clone(),
-            })
+                expr: expressions,
+                options: ProjectionOptions {
+                    should_broadcast: true,
+                    ..ProjectionOptions::default()
+                },
+            }, names))
         },
-        (verified::Plan::Filter { input, predicate },
-            PlanMetadata::Filter { input: child_meta, input_columns }) => {
-            let child = render_plan(input, child_meta, source)?;
-            Ok(DslPlan::Filter {
+        verified::Plan::Filter { input, predicate } => {
+            let (child, columns) = render_plan(input, source, source_columns)?;
+            Ok((DslPlan::Filter {
                 input: Arc::new(child),
-                predicate: render_expr(predicate, input_columns)?,
-            })
+                predicate: render_expr(predicate, &columns)?,
+            }, columns))
         },
-        _ => fallible!(MakeTransformation, "verified plan metadata mismatch"),
     }
 }
 
@@ -276,8 +269,10 @@ pub(crate) fn make_verified_stable_lazyframe(
     LazyFrameDomain, FrameDistance<SymmetricDistance>,
     LazyFrameDomain, FrameDistance<SymmetricDistance>,
 >> {
-    let (plan, metadata, columns) =
+    let (plan, columns) =
         normalize_plan(&lazyframe.logical_plan, &input_domain.series_domains)?;
+    let source_columns = input_domain.series_domains.iter()
+        .map(|column| column.name.clone()).collect::<Vec<_>>();
     // Conservatively discard margins and grouped distance bounds.
     let output_domain = LazyFrameDomain::new(columns)?;
     Transformation::new(
@@ -286,7 +281,9 @@ pub(crate) fn make_verified_stable_lazyframe(
         output_domain,
         input_metric,
         Function::new_fallible(move |input: &LazyFrame| {
-            let output = render_plan(&plan, &metadata, input.logical_plan.clone())?;
+            let (output, _) = render_plan(
+                &plan, input.logical_plan.clone(), &source_columns,
+            )?;
             Ok(LazyFrame::from(output)
                 .with_optimizations(input.get_current_optimizations()))
         }),
@@ -346,6 +343,38 @@ mod tests {
             trans.map(&Bounds::from(2))?.get_bound(&HashSet::new()).per_group,
             Some(2),
         );
+        Ok(())
+    }
+
+    #[test]
+    fn aliases_survive_nested_projections() -> Fallible<()> {
+        let source = df!(
+            "x" => [Some(1i64), Some(2)],
+            "lower" => [0i64, 0],
+            "upper" => [5i64, 5],
+            "flag" => [Some(true), Some(false)],
+        )?.lazy();
+        let query = source.clone()
+            .select([col("x").alias("renamed")])
+            .select([col("renamed").alias("result")])
+            .filter(col("result").gt(lit(1i64)));
+        let trans = make_verified_stable_lazyframe(
+            domain()?, FrameDistance(SymmetricDistance), query,
+        )?;
+        let other = df!(
+            "x" => [Some(3i64), Some(1), None],
+            "lower" => [0i64, 0, 0],
+            "upper" => [5i64, 5, 5],
+            "flag" => [Some(true), Some(true), Some(false)],
+        )?.lazy();
+        let actual = trans.invoke(&other)?.collect()?;
+        let expected = other
+            .select([col("x").alias("renamed")])
+            .select([col("renamed").alias("result")])
+            .filter(col("result").gt(lit(1i64)))
+            .collect()?;
+        assert_eq!(actual, expected);
+        assert_eq!(trans.output_domain.series_domains[0].name.as_str(), "result");
         Ok(())
     }
 
