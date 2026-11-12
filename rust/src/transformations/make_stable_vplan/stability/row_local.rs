@@ -224,6 +224,10 @@ pub proof fn lemma_lift_contraction<X, Y>(
 {
     broadcast use vstd::multiset::group_multiset_axioms;
     if left.len() == 0 {
+        assert(left =~= Seq::<X>::empty());
+        assert(lifting::lift(left, f) =~= Seq::<Y>::empty());
+        left.to_multiset_ensures();
+        lifting::lift(left, f).to_multiset_ensures();
         assert(left.to_multiset() =~= Multiset::<X>::empty());
         assert(lifting::lift(left, f).to_multiset() =~= Multiset::<Y>::empty());
         lemma_lift_length(right, f);
@@ -244,16 +248,19 @@ pub proof fn lemma_lift_contraction<X, Y>(
             let index = choose|i: int| 0 <= i < right.len() && right[i] == value;
             let reduced = right.remove(index);
             right.remove_ensures(index);
-            assert(right =~= reduced.insert(index, value)) by {
-                reduced.insert_ensures(index, value);
-                assert forall|i: int| 0 <= i < right.len()
-                    implies right[i] == reduced.insert(index, value)[i] by {
-                    if i < index {
-                    } else if i == index {
-                    } else {
-                    }
+            assert(reduced.len() + 1 == right.len());
+            assert(0 <= index <= reduced.len());
+            reduced.insert_ensures(index, value);
+            let restored = reduced.insert(index, value);
+            assert(restored.len() == right.len());
+            assert forall|i: int| 0 <= i < right.len()
+                implies right[i] == restored[i] by {
+                if i < index {
+                } else if i == index {
+                } else {
                 }
             }
+            assert(right =~= restored);
             lemma_seq_insert_bag(reduced, index, value);
             assert(right.to_multiset() =~= reduced.to_multiset().insert(value));
             lemma_lift_contraction(prefix, reduced, f);
