@@ -192,6 +192,42 @@ mod tests {
     }
 
     #[test]
+    fn filter_respects_group_margins_with_duplicate_rows() -> Fallible<()> {
+        let source = source()?
+            .with_margin(Margin::select().with_max_length(3))?
+            .with_margin(Margin::by([VExpr::Column(0)])
+                .with_max_length(2).with_max_groups(2))?;
+        let data = VTable {
+            schema: table().schema,
+            rows: vec![
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(3)), Some(VValue::Bool(false))],
+            ],
+        };
+        assert!(source.member(&data)?);
+        let filter = make_stable_vplan(
+            VPlanDomain::new(source)?,
+            VFrameMetric::new(SymmetricDistance),
+            VPlan::Filter {
+                input: Box::new(VPlan::Input),
+                predicate: VExpr::Column(1),
+            },
+        )?;
+        let plan = filter.invoke(&VPlan::Input)?;
+        let output = VTable {
+            schema: verified::check_plan(&plan, &data.schema).unwrap(),
+            rows: verified::evaluate(&plan, &data).unwrap(),
+        };
+        assert_eq!(output.rows, data.rows[..2]);
+        assert!(filter.output_domain.frame.member(&output)?);
+        let mut extra = output;
+        extra.rows.push(data.rows[0].clone());
+        assert!(!filter.output_domain.frame.member(&extra)?);
+        Ok(())
+    }
+
+    #[test]
     fn filter_clears_invariants_and_projection_drops_grouped_margins() -> Fallible<()> {
         let input = source()?
             .with_margin(Margin::select().with_max_length(5).with_invariant_lengths())?
