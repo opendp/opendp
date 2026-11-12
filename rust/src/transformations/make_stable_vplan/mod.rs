@@ -365,7 +365,9 @@ mod tests {
 
     #[test]
     fn composes_on_a_nontrivial_caller_plan() -> Fallible<()> {
-        let domain = VPlanDomain::new(source()?)?;
+        let source = source()?
+            .with_margin(Margin::by([VExpr::Column(0)]).with_max_length(2))?;
+        let domain = VPlanDomain::new(source)?;
         let metric = VFrameMetric::new(SymmetricDistance);
         let transformation = make_stable_vplan(domain.clone(), metric, query())?;
         // This filter is a member of the input domain: it preserves the
@@ -377,6 +379,7 @@ mod tests {
         assert!(domain.member(&caller)?);
         let composed = transformation.invoke(&caller)?;
         assert!(transformation.output_domain.member(&composed)?);
+        assert_eq!(transformation.output_domain.frame.margins.len(), 1);
         let rows = verified::evaluate(&composed, &table()).unwrap();
         assert_eq!(rows, vec![vec![
             Some(VValue::Int(5)), Some(VValue::Bool(true)),

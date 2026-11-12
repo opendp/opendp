@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::{
-    core::{Function, StabilityMap, Transformation},
+    core::{Domain, Function, StabilityMap, Transformation},
     domains::{verified_frame::kernel_schema, verified_plan::filter_domain},
 };
 
@@ -16,15 +16,23 @@ pub(super) fn make_filter(
     let (domain, metric) = prior.output_space();
     let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
     let source = kernel_schema(&domain.source.series_domains)?;
-    let expected = kernel_schema(&output.frame.series_domains)?;
-    let grouping_schema = expected.clone();
+    let grouping_schema = kernel_schema(&output.frame.series_domains)?;
+    let output_contract = output.clone();
     let step = Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
-            checked_result(
-                filter_proof::construct(input.clone(), predicate.clone(), &source),
-                &expected,
-            )
+            let Some((plan, _)) =
+                filter_proof::construct(input.clone(), predicate.clone(), &source)
+            else {
+                return fallible!(MakeTransformation, "invalid verified filter plan");
+            };
+            // Enforce the complete source-relative output domain, rather than
+            // merely checking that the inferred schema matches.
+            if !output_contract.member(&plan)? {
+                return fallible!(MakeTransformation,
+                    "verified filter does not satisfy its output domain");
+            }
+            Ok(plan)
         }),
         // Each grouping key is evaluated row-locally by the verified kernel.
         // Reject untyped grouping expressions rather than applying the proof

@@ -385,6 +385,61 @@ pub proof fn lemma_filter_preserves_expr_group_bound(
     }
 }
 
+/// An abstract OpenDP frame domain is downward-closed when removing
+/// rows cannot violate its constraints. Column restrictions and max-length /
+/// max-groups margins have this property; filter clears other invariants.
+/// This theorem joins the two obligations of the filter transformation:
+/// output-domain membership and the grouped stability map.
+pub proof fn lemma_filter_transformation_contract(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    keys: Seq<VExpr>, values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
+    member: spec_fn(Multiset<Seq<Option<VValue>>>) -> bool,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(values, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+        verified::project::schema_prefix(keys, schema, keys.len()).is_Some(),
+        member(left.to_multiset()),
+        member(right.to_multiset()),
+        forall|smaller: Multiset<Seq<Option<VValue>>>,
+            larger: Multiset<Seq<Option<VValue>>>|
+            #[trigger] smaller.subset_of(larger) && member(larger)
+                ==> member(smaller),
+        within_group_bound(left.to_multiset(), right.to_multiset(), values,
+            |row: Seq<Option<VValue>>|
+                verified::project::row_prefix(keys, row, keys.len()).unwrap(),
+            groups, per_group, num_groups),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) =>
+                member(out_left.to_multiset())
+                && member(out_right.to_multiset())
+                && within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
+                    values,
+                    |row: Seq<Option<VValue>>|
+                        verified::project::row_prefix(keys, row, keys.len()).unwrap(),
+                    groups, per_group, num_groups),
+            _ => false,
+        },
+{
+    lemma_filter_submultiset(plan, left, schema);
+    lemma_filter_submultiset(plan, right, schema);
+    let out_left = verified::apply_spec(plan, left).unwrap();
+    let out_right = verified::apply_spec(plan, right).unwrap();
+    assert(out_left.to_multiset().subset_of(left.to_multiset()));
+    assert(out_right.to_multiset().subset_of(right.to_multiset()));
+    assert(member(out_left.to_multiset()));
+    assert(member(out_right.to_multiset()));
+    lemma_filter_preserves_expr_group_bound(
+        plan, left, right, schema, keys, values, groups, per_group, num_groups);
+}
+
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)
@@ -392,7 +447,8 @@ pub fn construct(
         stability::certified_result(result, source_schema@),
         match result {
             Some((plan, fields)) =>
-                preserves_filter_multiset(&plan, fields@)
+                matches!(plan, VPlan::Filter { .. })
+                && preserves_filter_multiset(&plan, fields@)
                 && preserves_filter_counts(&plan, fields@)
                 && verified::local_schema(&plan, fields@) == Some(fields@),
             None => true,
