@@ -1,6 +1,6 @@
 //! Executable margin checks, with an exact Verus model of group counts.
-//! The worst case is quadratic in row count, but group counts now share one pass;
-//! prototype table membership, not a substitute for Polars group-by.
+//! Grouping expressions are evaluated once per row. Key comparisons remain
+//! quadratic in the worst case; this is a verified reference implementation.
 
 use super::*;
 
@@ -54,104 +54,42 @@ pub fn same_key(a: &Vec<Option<VValue>>, b: &Vec<Option<VValue>>) -> (equal: boo
     else { same_key_prefix(a, b, a.len()) }
 }
 
-/// Count occurrences of one grouping key within a prefix of input rows.
-pub open spec fn count_key_spec(
-    rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>,
-    key: Seq<Option<VValue>>, n: nat,
-) -> Result<nat, ()>
-    recommends n <= rows.len(),
-    decreases n,
-{
-    if n == 0 {
-        Ok(0)
-    } else {
-        match (
-            count_key_spec(rows, by, key, (n - 1) as nat),
-            project::row_prefix(by, rows[(n - 1) as int]@, by.len()),
-        ) {
-            (Ok(prior), Ok(value)) =>
-                Ok(prior + if key_equal(value, key) { 1nat } else { 0nat }),
-            _ => Err(()),
-        }
-    }
-}
-
-pub fn count_key(
-    rows: &Vec<Vec<Option<VValue>>>, by: &Vec<VExpr>,
-    key: &Vec<Option<VValue>>, n: usize,
-) -> (result: Result<usize, ()>)
-    requires n <= rows.len(),
-    ensures
-        match result {
-            Ok(count) => count_key_spec(rows@, by@, key@, n as nat) == Ok(count as nat),
-            Err(_) => count_key_spec(rows@, by@, key@, n as nat).is_Err(),
-        },
-        result.is_Ok() ==> result.unwrap() <= n,
-    decreases n,
-{
-    if n == 0 {
-        Ok(0)
-    } else {
-        let prior = match count_key(rows, by, key, n - 1) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        let current = match project::eval_prefix(by, &rows[n - 1], by.len()) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        let matches = same_key(&current, key);
-        Ok(prior + if matches { 1 } else { 0 })
-    }
-}
-
-/// Compute both the number of groups and their maximum size in one
-/// traversal. For each row, only the preceding rows with the same key
-/// matter: a new group adds one, otherwise that group's size increases.
-pub open spec fn group_stats_spec(
+/// Evaluate grouping expressions exactly once per input row.
+pub open spec fn keys_spec(
     rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>, n: nat,
-) -> Result<(nat, nat), ()>
+) -> Result<Seq<Seq<Option<VValue>>>, ()>
     recommends n <= rows.len(),
     decreases n,
 {
-    if n == 0 { Ok((0, 0)) }
+    if n == 0 { Ok(Seq::empty()) }
     else {
         match (
-            group_stats_spec(rows, by, (n - 1) as nat),
+            keys_spec(rows, by, (n - 1) as nat),
             project::row_prefix(by, rows[(n - 1) as int]@, by.len()),
         ) {
-            (Ok((groups, largest)), Ok(key)) =>
-                match count_key_spec(rows, by, key, (n - 1) as nat) {
-                    Ok(earlier) => Ok((
-                        groups + if earlier == 0 { 1nat } else { 0nat },
-                        if earlier + 1 > largest { earlier + 1 } else { largest },
-                    )),
-                    Err(_) => Err(()),
-                },
+            (Ok(prefix), Ok(key)) => Ok(prefix.push(key)),
             _ => Err(()),
         }
     }
 }
 
-pub fn group_stats(
+pub fn eval_keys(
     rows: &Vec<Vec<Option<VValue>>>, by: &Vec<VExpr>, n: usize,
-) -> (result: Result<(usize, usize), ()>)
+) -> (result: Result<Vec<Vec<Option<VValue>>>, ()>)
     requires n <= rows.len(),
     ensures
         match result {
-            Ok(stats) =>
-                group_stats_spec(rows@, by@, n as nat)
-                    == Ok((stats.0 as nat, stats.1 as nat)),
-            Err(_) => group_stats_spec(rows@, by@, n as nat).is_Err(),
+            Ok(keys) => keys_spec(rows@, by@, n as nat)
+                == Ok(rows_view(keys@)),
+            Err(_) => keys_spec(rows@, by@, n as nat).is_Err(),
         },
-        result.is_Ok() ==>
-            result.unwrap().0 <= n && result.unwrap().1 <= n,
+        result.is_Ok() ==> result.unwrap().len() == n,
     decreases n,
 {
     if n == 0 {
-        Ok((0, 0))
+        Ok(Vec::new())
     } else {
-        let (groups, largest) = match group_stats(rows, by, n - 1) {
+        let mut prior = match eval_keys(rows, by, n - 1) {
             Ok(value) => value,
             Err(_) => return Err(()),
         };
@@ -159,14 +97,79 @@ pub fn group_stats(
             Ok(value) => value,
             Err(_) => return Err(()),
         };
-        let earlier = match count_key(rows, by, &key, n - 1) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        Ok((
+        proof { lemma_rows_view_push(prior@, key.clone()); }
+        prior.push(key);
+        Ok(prior)
+    }
+}
+
+/// Count a grouping key in a prefix of already evaluated keys.
+pub open spec fn count_key_spec(
+    keys: Seq<Seq<Option<VValue>>>, key: Seq<Option<VValue>>, n: nat,
+) -> nat
+    recommends n <= keys.len(),
+    decreases n,
+{
+    if n == 0 { 0 }
+    else {
+        count_key_spec(keys, key, (n - 1) as nat)
+            + if key_equal(keys[(n - 1) as int], key) { 1nat } else { 0nat }
+    }
+}
+
+pub fn count_key(
+    keys: &Vec<Vec<Option<VValue>>>, key: &Vec<Option<VValue>>, n: usize,
+) -> (count: usize)
+    requires n <= keys.len(),
+    ensures
+        count as nat == count_key_spec(rows_view(keys@), key@, n as nat),
+        count <= n,
+    decreases n,
+{
+    if n == 0 { 0 }
+    else {
+        let prior = count_key(keys, key, n - 1);
+        let matches = same_key(&keys[n - 1], key);
+        prior + if matches { 1 } else { 0 }
+    }
+}
+
+/// One scan gives both cardinality margins. Counting uses cached keys.
+pub open spec fn group_stats_spec(
+    keys: Seq<Seq<Option<VValue>>>, n: nat,
+) -> (nat, nat)
+    recommends n <= keys.len(),
+    decreases n,
+{
+    if n == 0 { (0, 0) }
+    else {
+        let (groups, largest) = group_stats_spec(keys, (n - 1) as nat);
+        let earlier = count_key_spec(keys, keys[(n - 1) as int], (n - 1) as nat);
+        (
+            groups + if earlier == 0 { 1nat } else { 0nat },
+            if earlier + 1 > largest { earlier + 1 } else { largest },
+        )
+    }
+}
+
+pub fn group_stats(
+    keys: &Vec<Vec<Option<VValue>>>, n: usize,
+) -> (stats: (usize, usize))
+    requires n <= keys.len(),
+    ensures
+        (stats.0 as nat, stats.1 as nat)
+            == group_stats_spec(rows_view(keys@), n as nat),
+        stats.0 <= n && stats.1 <= n,
+    decreases n,
+{
+    if n == 0 { (0, 0) }
+    else {
+        let (groups, largest) = group_stats(keys, n - 1);
+        let earlier = count_key(keys, &keys[n - 1], n - 1);
+        (
             groups + if earlier == 0 { 1 } else { 0 },
             if earlier + 1 > largest { earlier + 1 } else { largest },
-        ))
+        )
     }
 }
 
@@ -185,17 +188,18 @@ pub open spec fn margin_member_spec(
         // The domain separately verifies that every grouping expression is typed.
         Ok(true)
     } else {
-        match group_stats_spec(rows, by, rows.len()) {
-            Ok((groups, largest)) => Ok(
-                (match max_groups {
+        match keys_spec(rows, by, rows.len()) {
+            Ok(keys) => {
+                let (groups, largest) = group_stats_spec(keys, keys.len());
+                Ok((match max_groups {
                     Some(limit) => groups <= limit as nat,
                     None => true,
                 }) && (match max_length {
                     Some(limit) => largest <= limit as nat,
                     None => true,
-                })
-            ),
-            _ => Err(()),
+                }))
+            },
+            Err(_) => Err(()),
         }
     }
 }
@@ -216,10 +220,11 @@ pub fn check_margin(
     } else if max_length.is_none() && max_groups.is_none() {
         Ok(true)
     } else {
-        let (groups, largest) = match group_stats(rows, by, rows.len()) {
+        let keys = match eval_keys(rows, by, rows.len()) {
             Ok(value) => value,
             Err(_) => return Err(()),
         };
+        let (groups, largest) = group_stats(&keys, keys.len());
         Ok((match max_groups {
             Some(limit) => groups <= limit as usize,
             None => true,

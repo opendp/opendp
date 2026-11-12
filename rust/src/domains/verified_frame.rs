@@ -293,6 +293,15 @@ mod tests {
             vec![VExpr::Column(0)],
             vec![VExpr::Column(1)],
             vec![VExpr::Column(0), VExpr::Column(1)],
+            vec![VExpr::Alias {
+                expr: Box::new(VExpr::Column(0)), name: "alias".into(),
+            }],
+            vec![VExpr::Binary {
+                left: Box::new(VExpr::Column(0)),
+                op: verified::VBinaryOp::Eq,
+                right: Box::new(VExpr::Literal(VValue::Int(1))),
+            }],
+            vec![VExpr::Null(VDType::Boolean)],
         ];
         let limits = [None, Some(0u32), Some(1), Some(2), Some(3)];
 
