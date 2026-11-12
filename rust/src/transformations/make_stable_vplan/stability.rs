@@ -267,8 +267,16 @@ pub proof fn lemma_bag_one_edit_symmetric(
     requires bag_one_edit(before, after),
     ensures bag_one_edit(after, before),
 {
-    assert((before =~= after) <==> (after =~= before));
-    assert(bag_one_edit(before, after) == bag_one_edit(after, before));
+    let same = before =~= after;
+    let reverse_same = after =~= before;
+    let insert = exists|row: Seq<Option<VValue>>| after =~= before.insert(row);
+    let delete = exists|row: Seq<Option<VValue>>| before =~= after.insert(row);
+
+    assert(same == reverse_same);
+    reveal(bag_one_edit);
+    assert(bag_one_edit(before, after) == (same || insert || delete));
+    assert(bag_one_edit(after, before) == (reverse_same || delete || insert));
+    assert(bag_one_edit(after, before));
 }
 
 /// Insertion stability also proves deletion stability by swapping the tables.
