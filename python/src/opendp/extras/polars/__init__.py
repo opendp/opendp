@@ -1193,11 +1193,9 @@ class LazyFrameQuery:
         :param algorithm: configuration for internal estimation algorithm
 
         # Why honest-but-curious?
-        A reused table must depend only on DP releases and public data,
-        and its callbacks must be side-effect-free.
-        Custom algorithms must return valid Measurements with correct privacy maps;
-        custom estimators must postprocess only DP releases and public data.
-        Custom callbacks must be side-effect-free.
+        Custom algorithms must return valid Measurements.
+        Reused tables must derive only from DP releases and public information.
+        Custom callbacks must not access external private data or have observable side effects.
         """
         from .contingency_table import ContingencyTableQuery
 

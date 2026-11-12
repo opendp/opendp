@@ -105,9 +105,8 @@ class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms.
 
     # Why honest-but-curious?
-    Custom algorithms must return valid Measurements with correct privacy maps.
-    Custom estimators must postprocess only DP releases and public data.
-    Custom callbacks must be side-effect-free.
+    Custom algorithms must return valid Measurements.
+    Custom callbacks must not access external private data or have observable side effects.
     """
 
     estimator: Callable = mirror_descent

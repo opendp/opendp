@@ -240,8 +240,8 @@ def make_contingency_table(
     :param algorithm: configuration for internal estimation algorithm
 
     # Why honest-but-curious?
-    A reused table must depend only on DP releases and public data.
-    Its callbacks must be side-effect-free.
+    Reused tables must derive only from DP releases and public information.
+    Their callbacks must not access external private data or have observable side effects.
     """
     if table is not None:
         assert_features("honest-but-curious")
