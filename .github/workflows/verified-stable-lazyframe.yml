@@ -21,6 +21,8 @@ on:
       - 'rust/src/lib.rs'
       - 'rust/src/metrics/polars/**'
       - '.github/workflows/verified-stable-lazyframe.yml'
+  pull_request:
+    branches: [verified-stable-lazyframe]
   workflow_dispatch:
 
 concurrency:
