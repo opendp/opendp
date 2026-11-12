@@ -247,19 +247,42 @@ mod tests {
     }
 
     #[test]
+    fn filter_map_rejects_untyped_grouping_keys() -> Fallible<()> {
+        let t = make_stable_vplan(
+            VPlanDomain::new(source()?)?,
+            VFrameMetric::new(SymmetricDistance),
+            VPlan::Filter { input: Box::new(VPlan::Input), predicate: VExpr::Column(1) },
+        )?;
+        // Aliases, nullable keys, and empty groupings are all valid.
+        let valid = Bounds(vec![
+            Bound::by([VExpr::Alias {
+                expr: Box::new(VExpr::Column(0)), name: "renamed".into(),
+            }]).with_per_group(2),
+            Bound::by([VExpr::Column(1)]).with_num_groups(2),
+            Bound::by(Vec::<VExpr>::new()).with_per_group(3),
+        ]);
+        assert_eq!(t.map(&valid)?, valid);
+        let invalid = Bounds(vec![
+            Bound::by([VExpr::Column(99)]).with_per_group(1),
+        ]);
+        assert!(t.map(&invalid).is_err());
+        Ok(())
+    }
+
+    #[test]
     fn filter_preserves_concrete_grouped_distances() -> Fallible<()> {
         use std::collections::HashMap;
 
         fn components(left: &VTable, right: &VTable, by: &HashSet<VExpr>) -> (u32, u32) {
             // Fix one ordering for both datasets; group keys are sets in Bounds.
-            let keys = by.iter().collect::<Vec<_>>();
+            let keys = by.iter().cloned().collect::<Vec<_>>();
             let mut groups: HashMap<Vec<Option<VValue>>, HashMap<Vec<Option<VValue>>, i64>> =
                 HashMap::new();
             for (table, sign) in [(left, 1_i64), (right, -1)] {
                 for row in &table.rows {
-                    let key = keys.iter()
-                        .map(|expr| verified::eval_expr_row(expr, row).unwrap())
-                        .collect::<Vec<_>>();
+                    let key = verified::project::eval_prefix(
+                        &keys, row, keys.len(),
+                    ).unwrap();
                     *groups.entry(key).or_default().entry(row.clone()).or_default() += sign;
                 }
             }

@@ -375,6 +375,52 @@ pub proof fn lemma_filter_preserves_group_bound(
     }
 }
 
+/// Specialize the grouped-distance certificate to an executable sequence
+/// of well-typed VExpr keys. The kernel's verified project::eval_prefix
+/// implements exactly project::row_prefix, which supplies this grouping.
+pub proof fn lemma_filter_preserves_expr_group_bound(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    keys: Seq<VExpr>, values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(values, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+        verified::project::schema_prefix(keys, schema, keys.len()).is_Some(),
+        within_group_bound(left.to_multiset(), right.to_multiset(), values,
+            |row: Seq<Option<VValue>>|
+                verified::project::row_prefix(keys, row, keys.len()).unwrap(),
+            groups, per_group, num_groups),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) =>
+                within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
+                    values,
+                    |row: Seq<Option<VValue>>|
+                        verified::project::row_prefix(keys, row, keys.len()).unwrap(),
+                    groups, per_group, num_groups),
+            _ => false,
+        },
+{
+    // Every typed row has a total grouping key. The same kernel function
+    // evaluates keys on both sides of the symmetric distance.
+    assert forall|row: Seq<Option<VValue>>| verified::row_in_schema(row, schema)
+        implies verified::project::row_prefix(keys, row, keys.len()).is_Ok() by {
+        verified::project::lemma_row_prefix_type_sound(
+            keys, schema, row, keys.len());
+    }
+    let by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>> =
+        |row: Seq<Option<VValue>>|
+            verified::project::row_prefix(keys, row, keys.len()).unwrap();
+    lemma_filter_preserves_group_bound(
+        plan, left, right, schema, values, by, groups, per_group, num_groups);
+}
+
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)

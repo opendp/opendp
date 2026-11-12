@@ -17,6 +17,7 @@ pub(super) fn make_filter(
     let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
     let source = kernel_schema(&domain.source.series_domains)?;
     let expected = kernel_schema(&output.frame.series_domains)?;
+    let grouping_schema = expected.clone();
     let step = Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
@@ -25,8 +26,20 @@ pub(super) fn make_filter(
                 &expected,
             )
         }),
-        // Filtering preserves every row and grouping key it retains.
-        StabilityMap::new(Clone::clone),
+        // Each grouping key is evaluated row-locally by the verified kernel.
+        // Reject untyped grouping expressions rather than applying the proof
+        // outside its typing precondition.
+        StabilityMap::new_fallible(move |bounds: &VFrameBounds| {
+            for bound in &bounds.0 {
+                let keys = bound.by.iter().cloned().collect::<Vec<_>>();
+                if verified::project::check_schema_prefix(
+                    &keys, &grouping_schema, keys.len(),
+                ).is_none() {
+                    return fallible!(FailedMap, "ill-typed verified grouping key");
+                }
+            }
+            Ok(bounds.clone())
+        }),
     )?;
     prior >> step
 }

@@ -153,12 +153,14 @@ fn margin_member(margin: &Margin<VExpr>, table: &VTable) -> Fallible<bool> {
             && margin.max_length.is_none_or(|max| table.rows.len() <= max as usize));
     }
 
+    // Use one ordering of the HashSet keys for every row in this grouping.
+    // project::eval_prefix is Verus-verified against project::row_prefix.
+    let exprs = margin.by.iter().cloned().collect::<Vec<_>>();
     let mut groups: HashMap<Vec<Option<VValue>>, usize> = HashMap::new();
     for row in &table.rows {
-        let keys = margin.by.iter().map(|expr| verified::eval_expr_row(expr, row))
-            .collect::<Result<Vec<_>, _>>()
+        let key = verified::project::eval_prefix(&exprs, row, exprs.len())
             .map_err(|_| err!(MakeDomain, "invalid verified grouping expression"))?;
-        *groups.entry(keys).or_default() += 1;
+        *groups.entry(key).or_default() += 1;
     }
     Ok(margin.max_groups.is_none_or(|max| groups.len() <= max as usize)
         && margin.max_length.is_none_or(|max| groups.values().all(|size| *size <= max as usize)))
