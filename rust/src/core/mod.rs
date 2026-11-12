@@ -342,6 +342,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Debug for Measurement<DI, MI, MO, 
     }
 }
 
+// Generic Verus metric-space semantics are defined in core/verus/metric_space.rs.
 pub trait MetricSpace {
     /// # Proof Definition
     /// Returns Ok(()) if self forms a valid metric space.
@@ -349,6 +350,7 @@ pub trait MetricSpace {
 }
 
 /// A data transformation with certain stability characteristics.
+/// Formal Result-valued validity is specified in core/verus/transformation.rs.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains

@@ -2,7 +2,6 @@
 //! Bounds here are inclusive. The Rust adapter rejects other bound shapes.
 
 use super::*;
-use super::{metric_space, symmetric_distance};
 use vstd::multiset::Multiset;
 
 verus! {
@@ -244,129 +243,6 @@ pub proof fn lemma_table_rows_domain(
     }
 }
 
-/// Metric-space interpretation of the domain of typed row sequences.
-/// Permuting rows does not change symmetric distance.
-pub open spec fn symmetric_rows_space(rules: Seq<VColumnRule>) -> bool {
-    metric_space::valid_metric_space::<Seq<Seq<Option<VValue>>>, u32>(
-        |rows: Seq<Seq<Option<VValue>>>| rows_member(rows, rules),
-        |a: Seq<Seq<Option<VValue>>>, b: Seq<Seq<Option<VValue>>>|
-            a.to_multiset() =~= b.to_multiset(),
-        |a: Seq<Seq<Option<VValue>>>, b: Seq<Seq<Option<VValue>>>|
-            symmetric_distance::distance(a.to_multiset(), b.to_multiset()),
-        |a: Seq<Seq<Option<VValue>>>, b: Seq<Seq<Option<VValue>>>, d: u32|
-            symmetric_distance::close(a.to_multiset(), b.to_multiset(), d),
-        |exact: nat, d: u32| exact <= d as nat,
-    )
-}
-
-/// Same metric space, this time on the actual OpenDP VTable carrier.
-/// Domain membership additionally checks the schema against the rules.
-pub open spec fn symmetric_table_space(rules: Seq<VColumnRule>) -> bool {
-    metric_space::valid_metric_space::<VTable, u32>(
-        |table: VTable| table_member(&table, rules),
-        |a: VTable, b: VTable|
-            (a.schema@ =~= b.schema@)
-                && (rows_view(a.rows@).to_multiset()
-                    =~= rows_view(b.rows@).to_multiset()),
-        |a: VTable, b: VTable|
-            symmetric_distance::distance(
-                rows_view(a.rows@).to_multiset(),
-                rows_view(b.rows@).to_multiset()),
-        |a: VTable, b: VTable, d: u32|
-            symmetric_distance::close(
-                rows_view(a.rows@).to_multiset(),
-                rows_view(b.rows@).to_multiset(), d),
-        |exact: nat, d: u32| exact <= d as nat,
-    )
-}
-
-pub proof fn lemma_symmetric_rows_space(rules: Seq<VColumnRule>)
-    ensures symmetric_rows_space(rules),
-{
-    assert forall|a: Seq<Seq<Option<VValue>>>|
-        #[trigger] rows_member(a, rules)
-        implies symmetric_distance::distance(
-            a.to_multiset(), a.to_multiset()) == 0 by {
-        symmetric_distance::lemma_reflexive(a.to_multiset());
-    }
-    assert forall|a: Seq<Seq<Option<VValue>>>,
-                  b: Seq<Seq<Option<VValue>>>|
-        #[trigger] rows_member(a, rules)
-            && #[trigger] rows_member(b, rules)
-        implies
-            symmetric_distance::distance(a.to_multiset(), b.to_multiset())
-                == symmetric_distance::distance(b.to_multiset(), a.to_multiset())
-            && (symmetric_distance::distance(a.to_multiset(), b.to_multiset())
-                == 0 <==> a.to_multiset() =~= b.to_multiset()) by {
-        symmetric_distance::lemma_symmetric(a.to_multiset(), b.to_multiset());
-        symmetric_distance::lemma_separating(a.to_multiset(), b.to_multiset());
-    }
-    assert forall|a: Seq<Seq<Option<VValue>>>,
-                  b: Seq<Seq<Option<VValue>>>,
-                  c: Seq<Seq<Option<VValue>>>|
-        #[trigger] rows_member(a, rules)
-            && #[trigger] rows_member(b, rules)
-            && #[trigger] rows_member(c, rules)
-        implies symmetric_distance::distance(a.to_multiset(), c.to_multiset())
-            <= symmetric_distance::distance(a.to_multiset(), b.to_multiset())
-                + symmetric_distance::distance(b.to_multiset(), c.to_multiset()) by {
-        symmetric_distance::lemma_triangle(
-            a.to_multiset(), b.to_multiset(), c.to_multiset());
-    }
-}
-
-pub proof fn lemma_symmetric_table_space(rules: Seq<VColumnRule>)
-    ensures symmetric_table_space(rules),
-{
-    assert forall|a: VTable| #[trigger] table_member(&a, rules)
-        implies symmetric_distance::distance(
-            rows_view(a.rows@).to_multiset(),
-            rows_view(a.rows@).to_multiset()) == 0 by {
-        symmetric_distance::lemma_reflexive(
-            rows_view(a.rows@).to_multiset());
-    }
-    assert forall|a: VTable, b: VTable|
-        #[trigger] table_member(&a, rules)
-            && #[trigger] table_member(&b, rules)
-        implies {
-            &&& symmetric_distance::distance(
-                rows_view(a.rows@).to_multiset(),
-                rows_view(b.rows@).to_multiset())
-                == symmetric_distance::distance(
-                    rows_view(b.rows@).to_multiset(),
-                    rows_view(a.rows@).to_multiset())
-            &&& (symmetric_distance::distance(
-                rows_view(a.rows@).to_multiset(),
-                rows_view(b.rows@).to_multiset())
-                == 0 <==> (a.schema@ =~= b.schema@
-                    && rows_view(a.rows@).to_multiset()
-                        =~= rows_view(b.rows@).to_multiset()))
-        } by {
-        lemma_unique_schema(a.schema@, b.schema@, rules);
-        symmetric_distance::lemma_symmetric(
-            rows_view(a.rows@).to_multiset(),
-            rows_view(b.rows@).to_multiset());
-        symmetric_distance::lemma_separating(
-            rows_view(a.rows@).to_multiset(),
-            rows_view(b.rows@).to_multiset());
-    }
-    assert forall|a: VTable, b: VTable, c: VTable|
-        #[trigger] table_member(&a, rules)
-            && #[trigger] table_member(&b, rules)
-            && #[trigger] table_member(&c, rules)
-        implies symmetric_distance::distance(
-            rows_view(a.rows@).to_multiset(), rows_view(c.rows@).to_multiset())
-            <= symmetric_distance::distance(
-                rows_view(a.rows@).to_multiset(), rows_view(b.rows@).to_multiset())
-                + symmetric_distance::distance(
-                rows_view(b.rows@).to_multiset(), rows_view(c.rows@).to_multiset()) by {
-        symmetric_distance::lemma_triangle(
-            rows_view(a.rows@).to_multiset(),
-            rows_view(b.rows@).to_multiset(),
-            rows_view(c.rows@).to_multiset());
-    }
-}
-
 pub proof fn lemma_rows_member_typed(
     rows: Seq<Seq<Option<VValue>>>,
     schema: Seq<VField>,
@@ -441,5 +317,111 @@ pub proof fn lemma_table_submultiset(
         assert(row_member(input.rows@[index]@, rules));
     }
 }
+
+/// Row-wise column restrictions can be represented by an allowed set of
+/// complete rows. Removing rows preserves every such restriction.
+pub open spec fn allowed_rows(
+    rows: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+) -> bool {
+    forall|row: Seq<Option<VValue>>|
+        rows.count(row) > 0 ==> allowed.contains(row)
+}
+
+pub proof fn lemma_allowed_rows_subset(
+    smaller: Multiset<Seq<Option<VValue>>>,
+    larger: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+)
+    requires
+        smaller.subset_of(larger),
+        allowed_rows(larger, allowed),
+    ensures allowed_rows(smaller, allowed),
+{
+    assert forall|row: Seq<Option<VValue>>|
+        smaller.count(row) > 0 implies allowed.contains(row) by {
+        assert(smaller.count(row) <= larger.count(row));
+    }
+}
+
+/// A fixed, distinct enumeration of row values and their grouping keys.
+pub open spec fn group_universe(
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    &&& forall|i: int, j: int|
+        0 <= i < j < values.len() ==> values[i] != values[j]
+    &&& forall|i: int| 0 <= i < values.len() ==> exists|j: int|
+        0 <= j < groups.len()
+        && groups[j] == project::row_prefix(
+            keys, #[trigger] values[i], keys.len()).unwrap()
+    &&& forall|i: int, j: int|
+        0 <= i < j < groups.len() ==> groups[i] != groups[j]
+}
+
+/// The table-dependent part of completeness: every present row is enumerated.
+pub open spec fn rows_covered(
+    rows: Multiset<Seq<Option<VValue>>>,
+    values: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    forall|row: Seq<Option<VValue>>|
+        rows.count(row) > 0 ==> exists|i: int|
+            0 <= i < values.len() && values[i] == row
+}
+
+pub open spec fn complete_group_support(
+    rows: Multiset<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    group_universe(keys, values, groups) && rows_covered(rows, values)
+}
+
+pub proof fn lemma_complete_group_support_subset(
+    smaller: Multiset<Seq<Option<VValue>>>,
+    larger: Multiset<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+)
+    requires smaller.subset_of(larger),
+        complete_group_support(larger, keys, values, groups),
+    ensures complete_group_support(smaller, keys, values, groups),
+{
+    assert forall|row: Seq<Option<VValue>>|
+        smaller.count(row) > 0 implies exists|i: int|
+            0 <= i < values.len() && values[i] == row by {
+        assert(smaller.count(row) <= larger.count(row));
+    }
+    assert(rows_covered(smaller, values));
+    assert(group_universe(keys, values, groups));
+}
+
+/// The portion of concrete FrameDomain<VTable>::member that can constrain
+/// a filtered table: row-wise column domains and upper-bound margins.
+/// For an empty set of keys, the margin has one group even on empty data.
+/// The finite row/key enumerations must cover the support to interpret
+/// the numerical bounds as actual group counts.
+pub open spec fn bounded_frame_member(
+    rows: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
+) -> bool {
+    &&& allowed_rows(rows, allowed)
+    &&& complete_group_support(rows, keys, values, groups)
+    &&& (keys.len() != 0 || num_groups != Some(0u32))
+    &&& super::frame_distance::within_group_bound(rows,
+        Seq::<Seq<Option<VValue>>>::empty().to_multiset(),
+        values,
+        |row: Seq<Option<VValue>>|
+            project::row_prefix(keys, row, keys.len()).unwrap(),
+        groups, per_group, num_groups)
+}
+
 
 } // verus!

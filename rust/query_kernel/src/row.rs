@@ -6,14 +6,18 @@ pub mod project;
 pub mod margin;
 #[path = "row/filter.rs"]
 pub mod filter;
-#[path = "row/domain.rs"]
+#[path = "../../src/domains/verified_frame/verus.rs"]
 pub mod domain;
-#[path = "transformation.rs"]
+#[path = "../../src/core/verus/transformation.rs"]
 pub mod transformation;
-#[path = "metric_space.rs"]
+#[path = "../../src/core/verus/metric_space.rs"]
 pub mod metric_space;
+#[path = "../../src/domains/polars/frame/verus.rs"]
+pub mod frame_metric_space;
 #[path = "../../src/metrics/symmetric_distance/verus.rs"]
 pub mod symmetric_distance;
+#[path = "../../src/metrics/polars/frame_distance/verus.rs"]
+pub mod frame_distance;
 #[path = "row/scalar.rs"]
 pub mod scalar;
 use scalar::{binary_field, clip_field, eval_binary, eval_clip};

@@ -1,5 +1,6 @@
 //! Membership of concrete verified tables in OpenDP frame domains.
 //! Unbound VPlans are syntax; checking a plan on bound input is a test utility.
+//! Executable verified membership and its lemmas live in verified_frame/verus.rs.
 
 use polars::prelude::{DataType, Field, PlSmallStr};
 

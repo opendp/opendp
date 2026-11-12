@@ -2,6 +2,7 @@
 
 use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
 use super::verified::domain::{self, VColumnRule};
+use super::verified::frame_distance;
 use super::verified::transformation;
 use super::stability;
 use super::verified::symmetric_distance;
@@ -236,49 +237,6 @@ pub proof fn lemma_filter_count_contraction(
     lemma_filter_exact_count(plan, right, schema, value);
 }
 
-/// A finite, possibly overcomplete enumeration of row values. A distinct
-/// enumeration of the joint support gives the usual per-group L1 distance.
-pub open spec fn group_distance(
-    left: Multiset<Seq<Option<VValue>>>,
-    right: Multiset<Seq<Option<VValue>>>,
-    values: Seq<Seq<Option<VValue>>>,
-    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
-    group: Seq<Option<VValue>>,
-) -> nat
-    decreases values.len(),
-{
-    if values.len() == 0 { 0 }
-    else {
-        let row = values.last();
-        let a = left.count(row);
-        let b = right.count(row);
-        group_distance(left, right, values.drop_last(), group_by, group)
-            + if group_by(row) == group {
-                (if a >= b { a - b } else { b - a }) as nat
-              } else { 0nat }
-    }
-}
-
-/// Sum of indicators for changed groups. A distinct enumeration of all
-/// possible group keys gives the `num_groups` component of FrameDistance.
-pub open spec fn changed_groups(
-    left: Multiset<Seq<Option<VValue>>>,
-    right: Multiset<Seq<Option<VValue>>>,
-    values: Seq<Seq<Option<VValue>>>,
-    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
-    groups: Seq<Seq<Option<VValue>>>,
-) -> nat
-    decreases groups.len(),
-{
-    if groups.len() == 0 { 0 }
-    else {
-        changed_groups(left, right, values, group_by, groups.drop_last())
-            + if group_distance(left, right, values, group_by, groups.last()) > 0 {
-                1nat
-              } else { 0nat }
-    }
-}
-
 /// Both insertions and deletions are accounted for by the absolute
 /// difference of row multiplicities within each group.
 pub proof fn lemma_group_distance_contraction(
@@ -297,9 +255,9 @@ pub proof fn lemma_group_distance_contraction(
     ensures
         match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
             (Ok(out_left), Ok(out_right)) =>
-                group_distance(out_left.to_multiset(), out_right.to_multiset(),
+                frame_distance::group_distance(out_left.to_multiset(), out_right.to_multiset(),
                     values, group_by, group)
-                <= group_distance(left.to_multiset(), right.to_multiset(),
+                <= frame_distance::group_distance(left.to_multiset(), right.to_multiset(),
                     values, group_by, group),
             _ => false,
         },
@@ -334,9 +292,9 @@ pub proof fn lemma_changed_groups_contraction(
     ensures
         match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
             (Ok(out_left), Ok(out_right)) =>
-                changed_groups(out_left.to_multiset(), out_right.to_multiset(),
+                frame_distance::changed_groups(out_left.to_multiset(), out_right.to_multiset(),
                     values, group_by, groups)
-                <= changed_groups(left.to_multiset(), right.to_multiset(),
+                <= frame_distance::changed_groups(left.to_multiset(), right.to_multiset(),
                     values, group_by, groups),
             _ => false,
         },
@@ -353,29 +311,6 @@ pub proof fn lemma_changed_groups_contraction(
     }
 }
 
-
-/// Logical interpretation of one `Bound<VExpr>` once its grouping expressions
-/// are interpreted as a deterministic row-local function. `values` must
-/// enumerate the distinct joint row support and `groups` the distinct group
-/// keys for this to equal the concrete FrameDistance components.
-pub open spec fn within_group_bound(
-    left: Multiset<Seq<Option<VValue>>>,
-    right: Multiset<Seq<Option<VValue>>>,
-    values: Seq<Seq<Option<VValue>>>,
-    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
-    groups: Seq<Seq<Option<VValue>>>,
-    per_group: Option<u32>, num_groups: Option<u32>,
-) -> bool {
-    &&& match per_group {
-        Some(limit) => forall|key: Seq<Option<VValue>>|
-            group_distance(left, right, values, group_by, key) <= limit as nat,
-        None => true,
-    }
-    &&& match num_groups {
-        Some(limit) => changed_groups(left, right, values, group_by, groups) <= limit as nat,
-        None => true,
-    }
-}
 
 /// Specialize the grouped-distance certificate to an executable sequence
 /// of well-typed VExpr keys. The kernel's verified project::eval_prefix
@@ -394,14 +329,14 @@ pub proof fn lemma_filter_preserves_expr_group_bound(
         verified::rows_in_schema(values, schema),
         verified::local_schema(plan, schema) == Some(schema),
         verified::project::schema_prefix(keys, schema, keys.len()).is_Some(),
-        within_group_bound(left.to_multiset(), right.to_multiset(), values,
+        frame_distance::within_group_bound(left.to_multiset(), right.to_multiset(), values,
             |row: Seq<Option<VValue>>|
                 verified::project::row_prefix(keys, row, keys.len()).unwrap(),
             groups, per_group, num_groups),
     ensures
         match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
             (Ok(out_left), Ok(out_right)) =>
-                within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
+                frame_distance::within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
                     values,
                     |row: Seq<Option<VValue>>|
                         verified::project::row_prefix(keys, row, keys.len()).unwrap(),
@@ -423,7 +358,7 @@ pub proof fn lemma_filter_preserves_expr_group_bound(
         plan, left, right, schema, values, by, groups);
     if let Some(limit) = per_group {
         assert forall|key: Seq<Option<VValue>>|
-            group_distance(
+            frame_distance::group_distance(
                 verified::apply_spec(plan, left).unwrap().to_multiset(),
                 verified::apply_spec(plan, right).unwrap().to_multiset(),
                 values, by, key) <= limit as nat by {
@@ -431,111 +366,6 @@ pub proof fn lemma_filter_preserves_expr_group_bound(
                 plan, left, right, schema, values, by, key);
         }
     }
-}
-
-/// Row-wise column restrictions can be represented by an allowed set of
-/// complete rows. Removing rows preserves every such restriction.
-pub open spec fn allowed_rows(
-    rows: Multiset<Seq<Option<VValue>>>,
-    allowed: Set<Seq<Option<VValue>>>,
-) -> bool {
-    forall|row: Seq<Option<VValue>>|
-        rows.count(row) > 0 ==> allowed.contains(row)
-}
-
-pub proof fn lemma_allowed_rows_subset(
-    smaller: Multiset<Seq<Option<VValue>>>,
-    larger: Multiset<Seq<Option<VValue>>>,
-    allowed: Set<Seq<Option<VValue>>>,
-)
-    requires
-        smaller.subset_of(larger),
-        allowed_rows(larger, allowed),
-    ensures allowed_rows(smaller, allowed),
-{
-    assert forall|row: Seq<Option<VValue>>|
-        smaller.count(row) > 0 implies allowed.contains(row) by {
-        assert(smaller.count(row) <= larger.count(row));
-    }
-}
-
-/// A fixed, distinct enumeration of row values and their grouping keys.
-pub open spec fn group_universe(
-    keys: Seq<VExpr>,
-    values: Seq<Seq<Option<VValue>>>,
-    groups: Seq<Seq<Option<VValue>>>,
-) -> bool {
-    &&& forall|i: int, j: int|
-        0 <= i < j < values.len() ==> values[i] != values[j]
-    &&& forall|i: int| 0 <= i < values.len() ==> exists|j: int|
-        0 <= j < groups.len()
-        && groups[j] == verified::project::row_prefix(
-            keys, #[trigger] values[i], keys.len()).unwrap()
-    &&& forall|i: int, j: int|
-        0 <= i < j < groups.len() ==> groups[i] != groups[j]
-}
-
-/// The table-dependent part of completeness: every present row is enumerated.
-pub open spec fn rows_covered(
-    rows: Multiset<Seq<Option<VValue>>>,
-    values: Seq<Seq<Option<VValue>>>,
-) -> bool {
-    forall|row: Seq<Option<VValue>>|
-        rows.count(row) > 0 ==> exists|i: int|
-            0 <= i < values.len() && values[i] == row
-}
-
-pub open spec fn complete_group_support(
-    rows: Multiset<Seq<Option<VValue>>>,
-    keys: Seq<VExpr>,
-    values: Seq<Seq<Option<VValue>>>,
-    groups: Seq<Seq<Option<VValue>>>,
-) -> bool {
-    group_universe(keys, values, groups) && rows_covered(rows, values)
-}
-
-pub proof fn lemma_complete_group_support_subset(
-    smaller: Multiset<Seq<Option<VValue>>>,
-    larger: Multiset<Seq<Option<VValue>>>,
-    keys: Seq<VExpr>,
-    values: Seq<Seq<Option<VValue>>>,
-    groups: Seq<Seq<Option<VValue>>>,
-)
-    requires smaller.subset_of(larger),
-        complete_group_support(larger, keys, values, groups),
-    ensures complete_group_support(smaller, keys, values, groups),
-{
-    assert forall|row: Seq<Option<VValue>>|
-        smaller.count(row) > 0 implies exists|i: int|
-            0 <= i < values.len() && values[i] == row by {
-        assert(smaller.count(row) <= larger.count(row));
-    }
-    assert(rows_covered(smaller, values));
-    assert(group_universe(keys, values, groups));
-}
-
-/// The portion of concrete FrameDomain<VTable>::member that can constrain
-/// a filtered table: row-wise column domains and upper-bound margins.
-/// For an empty set of keys, the margin has one group even on empty data.
-/// The finite row/key enumerations must cover the support to interpret
-/// the numerical bounds as actual group counts.
-pub open spec fn bounded_frame_member(
-    rows: Multiset<Seq<Option<VValue>>>,
-    allowed: Set<Seq<Option<VValue>>>,
-    keys: Seq<VExpr>,
-    values: Seq<Seq<Option<VValue>>>,
-    groups: Seq<Seq<Option<VValue>>>,
-    per_group: Option<u32>, num_groups: Option<u32>,
-) -> bool {
-    &&& allowed_rows(rows, allowed)
-    &&& complete_group_support(rows, keys, values, groups)
-    &&& (keys.len() != 0 || num_groups != Some(0u32))
-    &&& within_group_bound(rows,
-        Seq::<Seq<Option<VValue>>>::empty().to_multiset(),
-        values,
-        |row: Seq<Option<VValue>>|
-            verified::project::row_prefix(keys, row, keys.len()).unwrap(),
-        groups, per_group, num_groups)
 }
 
 /// Filtering preserves the concrete *kinds* of constraints retained by
@@ -555,20 +385,20 @@ pub proof fn lemma_filter_transformation_contract(
         verified::rows_in_schema(values, schema),
         verified::local_schema(plan, schema) == Some(schema),
         verified::project::schema_prefix(keys, schema, keys.len()).is_Some(),
-        bounded_frame_member(rows.to_multiset(), allowed,
+        domain::bounded_frame_member(rows.to_multiset(), allowed,
             keys, values, groups, per_group, num_groups),
     ensures
         match verified::apply_spec(plan, rows) {
-            Ok(out) => bounded_frame_member(out.to_multiset(), allowed,
+            Ok(out) => domain::bounded_frame_member(out.to_multiset(), allowed,
                 keys, values, groups, per_group, num_groups),
             Err(_) => false,
         },
 {
     lemma_filter_submultiset(plan, rows, schema);
     let output = verified::apply_spec(plan, rows).unwrap();
-    lemma_allowed_rows_subset(
+    domain::lemma_allowed_rows_subset(
         output.to_multiset(), rows.to_multiset(), allowed);
-    lemma_complete_group_support_subset(
+    domain::lemma_complete_group_support_subset(
         output.to_multiset(), rows.to_multiset(), keys, values, groups);
     assert(verified::rows_in_schema(Seq::<Seq<Option<VValue>>>::empty(), schema));
     lemma_filter_preserves_expr_group_bound(
@@ -836,8 +666,8 @@ impl CertifiedTableFilter {
     /// The general Result-valued transformation contract. The semantic
     /// carrier is a row sequence; invoke proves its executable realization.
     pub closed spec fn valid_as_transformation(&self) -> bool {
-        &&& domain::symmetric_rows_space(self.rules_spec())
-        &&& domain::symmetric_table_space(self.rules_spec())
+        &&& verified::frame_metric_space::symmetric_rows_space(self.rules_spec())
+        &&& verified::frame_metric_space::symmetric_table_space(self.rules_spec())
         &&& transformation::valid_transformation::<
             Seq<Seq<Option<VValue>>>, Seq<Seq<Option<VValue>>>,
             u32, u32, (), (),
@@ -863,8 +693,8 @@ impl CertifiedTableFilter {
         requires self.valid(),
         ensures self.valid_as_transformation(),
     {
-        domain::lemma_symmetric_rows_space(self.rules@);
-        domain::lemma_symmetric_table_space(self.rules@);
+        verified::frame_metric_space::lemma_symmetric_rows_space(self.rules@);
+        verified::frame_metric_space::lemma_symmetric_table_space(self.rules@);
         assert forall|rows: Seq<Seq<Option<VValue>>>|
             #[trigger] domain::rows_member(rows, self.rules_spec())
             implies match self.result_spec(rows) {
@@ -1009,8 +839,8 @@ impl CertifiedTableFilter {
             verified::rows_in_schema(left, self.schema_spec()),
             verified::rows_in_schema(right, self.schema_spec()),
             verified::rows_in_schema(values, self.schema_spec()),
-            allowed_rows(left.to_multiset(), allowed),
-            allowed_rows(right.to_multiset(), allowed),
+            domain::allowed_rows(left.to_multiset(), allowed),
+            domain::allowed_rows(right.to_multiset(), allowed),
         ensures
             match (
                 self.result_spec(left),
@@ -1019,13 +849,13 @@ impl CertifiedTableFilter {
                 (Ok(out_left), Ok(out_right)) => {
                     &&& verified::rows_in_schema(out_left, self.schema_spec())
                     &&& verified::rows_in_schema(out_right, self.schema_spec())
-                    &&& allowed_rows(out_left.to_multiset(), allowed)
-                    &&& allowed_rows(out_right.to_multiset(), allowed)
-                    &&& group_distance(
+                    &&& domain::allowed_rows(out_left.to_multiset(), allowed)
+                    &&& domain::allowed_rows(out_right.to_multiset(), allowed)
+                    &&& frame_distance::group_distance(
                         out_left.to_multiset(), out_right.to_multiset(), values,
                         |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
                         Seq::<Option<VValue>>::empty(),
-                    ) <= group_distance(
+                    ) <= frame_distance::group_distance(
                         left.to_multiset(), right.to_multiset(), values,
                         |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
                         Seq::<Option<VValue>>::empty(),
@@ -1042,8 +872,8 @@ impl CertifiedTableFilter {
         let out_right = verified::relation_spec(&self.plan, right).unwrap();
         assert(out_left.to_multiset().subset_of(left.to_multiset()));
         assert(out_right.to_multiset().subset_of(right.to_multiset()));
-        lemma_allowed_rows_subset(out_left.to_multiset(), left.to_multiset(), allowed);
-        lemma_allowed_rows_subset(out_right.to_multiset(), right.to_multiset(), allowed);
+        domain::lemma_allowed_rows_subset(out_left.to_multiset(), left.to_multiset(), allowed);
+        domain::lemma_allowed_rows_subset(out_right.to_multiset(), right.to_multiset(), allowed);
         assert(verified::local_schema(&self.plan, self.schema@) == Some(self.schema@));
         lemma_group_distance_contraction(
             &self.plan, left, right, self.schema@, values,

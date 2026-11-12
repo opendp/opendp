@@ -124,6 +124,8 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
 pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
+// The VTable/SymmetricDistance instance of this compatibility contract is
+// verified in frame/verus.rs. The generic Frame implementation remains trusted.
 impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
         if let Some(identifier) = self.1.identifier() {

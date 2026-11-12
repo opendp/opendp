@@ -7,6 +7,11 @@ on:
       - 'rust/query_kernel/**'
       - 'rust/query_verification/**'
       - 'rust/src/transformations/make_stable_vplan/**'
+      - 'rust/src/core/verus/**'
+      - 'rust/src/domains/verified_frame/**'
+      - 'rust/src/domains/polars/frame/verus.rs'
+      - 'rust/src/metrics/symmetric_distance/verus.rs'
+      - 'rust/src/metrics/polars/frame_distance/verus.rs'
       - '.github/workflows/query-kernel-verus.yml'
   workflow_dispatch:
 

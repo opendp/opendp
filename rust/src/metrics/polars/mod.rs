@@ -62,6 +62,7 @@ impl Metric for ChangeOneIdDistance {
     type Distance = IntDistance;
 }
 
+// The verified grouped-distance interpretation is in polars/frame_distance/verus.rs.
 /// Frame-distance betweeen datasets.
 ///
 /// # Proof Definition
