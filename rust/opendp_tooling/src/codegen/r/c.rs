@@ -271,6 +271,12 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
             match arg.c_type().as_str() {
                 "CallbackFn" => Some(format!("callbackfn_release(&c_{name});")),
                 "TransitionFn" => Some(format!("transitionfn_release(&c_{name});")),
+                "AnyObject *" => {
+                    let rust_type = rust_type_expression(arg);
+                    (rust_type != "R_NilValue").then(|| {
+                        format!("if (!Rf_isNull({rust_type}) && c_{name}) opendp_data__object_free(c_{name});")
+                    })
+                }
                 _ => None,
             }
         })
@@ -307,6 +313,17 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
 /// Generate code to convert an SEXP to OpenDP Library C FFI representation.
 ///
 /// Reads the type information in `arg` to know which hand-written C function to call to perform the data conversion.
+fn rust_type_expression(arg: &Argument) -> String {
+    arg.rust_type
+        .clone()
+        .map(|rt| match rt {
+            TypeRecipe::Name(v) => v,
+            TypeRecipe::None => "R_NilValue".to_string(),
+            _ => format!("T_{}", arg.name()),
+        })
+        .unwrap_or_else(|| "unknown rust type".to_string())
+}
+
 fn r_to_c(arg: &Argument) -> String {
     let c_type = arg.c_type();
     let name = arg.name();
@@ -318,13 +335,7 @@ fn r_to_c(arg: &Argument) -> String {
         };
     }
 
-    let rust_type = (arg.rust_type.clone())
-        .map(|rt| match rt {
-            TypeRecipe::Name(v) => v,
-            TypeRecipe::None => "R_NilValue".to_string(),
-            _ => format!("T_{name}"),
-        })
-        .unwrap_or_else(|| "unknown rust type".to_string());
+    let rust_type = rust_type_expression(arg);
 
     // conversions for primitive types are handled directly by R internals functions
     // https://github.com/hadley/r-internals/blob/master/vectors.md
@@ -404,7 +415,7 @@ fn c_to_r(arg: Argument) -> String {
             format!("voidptr_to_sexp({name}, {rust_type})")
         }
         // call out to hand-written code from `convert.c` and `convert_elements.c`
-        ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
+        ty if ty == "AnyObject *" => format!("anyobjectptr_to_owned_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
         ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, log)"),
@@ -414,18 +425,26 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
         ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
-        ty if ty == "char *" => format!("ScalarString(mkChar({name}))"),
+        ty if ty == "char *" => format!(
+            "{{ SEXP value = PROTECT(ScalarString(mkChar({name}))); opendp_data__str_free({name}); UNPROTECT(1); return value; }}"
+        ),
         ty if ty == "double" => format!("ScalarReal(*(double *){name})"),
         ty if ty == "int32_t" => format!("ScalarInteger(*(int *){name})"),
         ty if ty == "size_t" => format!("ScalarInteger(*(size_t *){name})"),
         ty if ty == "uint32_t" => format!("ScalarInteger((int){name})"),
         ty if ty == "bool" => format!("ScalarLogical({name})"),
-        ty if ty == "bool *" => format!("ScalarLogical(*(bool *){name})"),
+        ty if ty == "bool *" => format!(
+            "{{ SEXP value = ScalarLogical(*(bool *){name}); opendp_data__bool_free({name}); return value; }}"
+        ),
 
         _ => format!("\"UNKNOWN RET TYPE: {}\"", arg.c_type()),
     };
 
-    format!("return({converter});")
+    if converter.starts_with('{') {
+        converter
+    } else {
+        format!("return({converter});")
+    }
 }
 
 /// Converts a Rust type like A<B> to align with the corresponding C type cbindgen generates

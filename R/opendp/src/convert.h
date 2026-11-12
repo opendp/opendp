@@ -24,6 +24,7 @@ SEXP parse_runtime_type(const char *type_name);
 
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name);
 SEXP anyobjectptr_to_sexp(AnyObject *obj);
+SEXP anyobjectptr_to_owned_sexp(AnyObject *obj);
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value);
 CallbackFn sexp_to_callbackfn(SEXP function, const char *type_name);
 TransitionFn sexp_to_transitionfn(SEXP function, const char *type_name);

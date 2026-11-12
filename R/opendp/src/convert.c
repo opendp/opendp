@@ -425,15 +425,14 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     {
         if (TYPEOF(value) != VECSXP)
             error("expected a list when constructing Vec<ExtrinsicObject>");
-        ExtrinsicObject *objects = (ExtrinsicObject *)malloc(LENGTH(value) * sizeof(ExtrinsicObject));
+        ExtrinsicObject *objects = (ExtrinsicObject *)R_alloc(LENGTH(value), sizeof(ExtrinsicObject));
         for (int i = 0; i < LENGTH(value); i++)
             objects[i] = sexp_to_extrinsicobject(VECTOR_ELT(value, i));
         result.ptr = objects;
     }
     else if (str_equal(c_origin, "AnyMeasurementPtr"))
     {
-        // TODO: does this ever get freed?
-        AnyMeasurement **p = malloc(LENGTH(value) * sizeof(AnyMeasurement *));
+        AnyMeasurement **p = (AnyMeasurement **)R_alloc(LENGTH(value), sizeof(AnyMeasurement *));
         for (int i = 0; i < LENGTH(value); i++)
             p[i] = sexp_to_anymeasurementptr(VECTOR_ELT(value, i));
         result.ptr = p;
@@ -466,6 +465,7 @@ SEXP slice_to_scalar(FfiSlice *raw, SEXP type_name)
         FfiSlice *slice = result_slice.ok;
         for (int i = 0; i < raw->len; i++)
             SET_VECTOR_ELT(result, i, anyobjectptr_to_sexp(((AnyObject **)slice->ptr)[i]));
+        opendp_data__slice_free(slice);
         UNPROTECT(1);
     }
     else
@@ -516,7 +516,7 @@ FfiSlice tuple_to_slice(SEXP value, SEXP type_name)
     PROTECT(value);
     PROTECT(type_name);
     size_t len = LENGTH(value);
-    void **array = (void **)malloc(len * sizeof(void *));
+    void **array = (void **)R_alloc(len, sizeof(void *));
 
     // extract substring
     SEXP args = get_args(type_name);
@@ -577,7 +577,7 @@ FfiSlice hashmap_to_slice(SEXP value, SEXP type_name)
     if (errorOccurred)
         error("Error getting val type");
 
-    void *ptr = malloc(2 * sizeof(void *));
+    void *ptr = R_alloc(2, sizeof(void *));
     ((void **)ptr)[0] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 0), key_rt);
     ((void **)ptr)[1] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 1), val_rt);
 
@@ -618,7 +618,7 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
-        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+        ExtrinsicObject *object = (ExtrinsicObject *)R_alloc(1, sizeof(ExtrinsicObject));
         object[0] = sexp_to_extrinsicobject(value);
         FfiSlice t = {.ptr = object, .len = 1};
         result = t;
@@ -749,6 +749,14 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     // AnyObjects may be used interchangeably in the majority of library APIs
     FfiResult_____AnyObject result = opendp_data__slice_as_object(&slice, c_type_name);
 
+    // The FFI copies these temporary objects into the HashMap.
+    if (str_equal(sexp_to_charptr(get_origin(type_name)), "HashMap"))
+    {
+        AnyObject **items = (AnyObject **)slice.ptr;
+        opendp_data__object_free(items[0]);
+        opendp_data__object_free(items[1]);
+    }
+
     UNPROTECT(2);
 
     if (result.tag == Err_____AnyObject)
@@ -757,45 +765,101 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     return result.ok;
 }
 
-SEXP anyobjectptr_to_sexp(AnyObject *obj)
+typedef struct ObjectConversion {
+    AnyObject *object;
+    char *type_name;
+    FfiSlice *slice;
+    int owned;
+} ObjectConversion;
+
+static void free_conversion_metadata(void *data)
 {
+    ObjectConversion *conversion = (ObjectConversion *)data;
+    if (conversion->slice)
+    {
+        FfiSlice *slice = conversion->slice;
+        conversion->slice = NULL;
+        opendp_data__slice_free(slice);
+    }
+    if (conversion->type_name)
+    {
+        char *type_name = conversion->type_name;
+        conversion->type_name = NULL;
+        opendp_data__str_free(type_name);
+    }
+    if (conversion->owned && conversion->object)
+    {
+        AnyObject *object = conversion->object;
+        conversion->object = NULL;
+        opendp_data__object_free(object);
+    }
+}
+
+static SEXP anyobjectptr_to_sexp_body(void *data)
+{
+    ObjectConversion *conversion = (ObjectConversion *)data;
+    AnyObject *obj = conversion->object;
     FfiResult_____c_char type_name_result = opendp_data__object_type(obj);
     if (type_name_result.tag == Err_____c_char)
         extract_error(type_name_result.err);
-    char *c_type_name = type_name_result.ok;
+    char *c_type_name = conversion->type_name = type_name_result.ok;
 
     SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (str_equal(c_origin, "PrivacyProfile"))
     {
-        SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
-        UNPROTECT(1);
+        if (conversion->owned)
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP profile = PROTECT(privacyprofileptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return profile;
     }
 
     if (str_equal(c_origin, "AnyOdometerQueryable"))
     {
-        SEXP queryable = anyodometerqueryableptr_to_sexp(obj, R_NilValue);
-        UNPROTECT(1);
+        if (conversion->owned)
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP queryable = PROTECT(anyodometerqueryableptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return queryable;
     }
 
     if (str_equal(c_origin, "AnyQueryable"))
     {
-        SEXP queryable = anyqueryableptr_to_sexp(obj, R_NilValue);
-        UNPROTECT(1);
+        if (conversion->owned)
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP queryable = PROTECT(anyqueryableptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return queryable;
     }
 
     FfiResult_____FfiSlice slice_result = opendp_data__object_as_slice(obj);
     if (slice_result.tag == Err_____FfiSlice)
         extract_error(slice_result.err);
-    FfiSlice *slice = slice_result.ok;
+    FfiSlice *slice = conversion->slice = slice_result.ok;
 
-    SEXP value = slice_to_sexp(slice, type_name);
-    UNPROTECT(1);
+    SEXP value = PROTECT(slice_to_sexp(slice, type_name));
+    free_conversion_metadata(data);
+    UNPROTECT(2);
     return value;
+}
+
+SEXP anyobjectptr_to_sexp(AnyObject *obj)
+{
+    ObjectConversion conversion = {.object = obj, .type_name = NULL, .slice = NULL, .owned = 0};
+    return R_ExecWithCleanup(anyobjectptr_to_sexp_body, &conversion,
+                             free_conversion_metadata, &conversion);
+}
+
+SEXP anyobjectptr_to_owned_sexp(AnyObject *obj)
+{
+    ObjectConversion conversion = {.object = obj, .type_name = NULL, .slice = NULL, .owned = 1};
+    return R_ExecWithCleanup(anyobjectptr_to_sexp_body, &conversion,
+                             free_conversion_metadata, &conversion);
 }
 
 // https://stackoverflow.com/questions/73520428/is-there-a-way-of-passing-an-r-function-object-closxp-to-c-level-code-and-re
