@@ -2,6 +2,7 @@
 //! when an input row is inserted. No operator variants are matched here.
 
 use super::*;
+use super::super::verified::symmetric_distance as metric;
 
 verus! {
 
@@ -213,15 +214,14 @@ pub proof fn lemma_lift_contraction<X, Y>(
     left: Seq<X>, right: Seq<X>, f: spec_fn(X) -> Option<Y>,
 )
     ensures
-        super::verified::symmetric_distance::distance(
+        metric::distance(
             lifting::lift(left, f).to_multiset(),
             lifting::lift(right, f).to_multiset(),
-        ) <= super::verified::symmetric_distance::distance(
+        ) <= metric::distance(
             left.to_multiset(), right.to_multiset(),
         ),
     decreases left.len() + right.len(),
 {
-    use super::verified::symmetric_distance as metric;
     broadcast use vstd::multiset::group_multiset_axioms;
     if left.len() == 0 {
         assert(left.to_multiset() =~= Multiset::<X>::empty());
