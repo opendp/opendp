@@ -5,6 +5,7 @@ releases with Gem+ as the estimator inside OpenDP's AIM and MST.
 """
 
 from collections import Counter
+from itertools import pairwise
 
 import pytest
 
@@ -72,6 +73,10 @@ def test_steps_must_be_multiple_of_50(domain):
     with pytest.raises(ValueError, match="multiple of 50"):
         gem_plus(domain, _measurements(domain), **{**FAST, "steps": 120})
 
+def test_marginals_consistent_and_scaled(model):
+    ab = model.project(("age", "income")).values
+    assert np.isclose(ab.sum(), TOTAL)
+    assert np.allclose(ab.sum(axis=1), model.project("age").values)
 
 def test_rejects_marginal_loss_fn(domain):
     loss = from_linear_measurements(_measurements(domain), domain)
@@ -173,7 +178,7 @@ def test_aim_with_gem_plus_does_not_reselect():
     )
     # each round adds its selected marginal; no two rounds select the same one
     added = []
-    for before, after in zip(measured, measured[1:]):
+    for before, after in pairwise(measured):
         added += list((Counter(after) - Counter(before)).elements())
     assert len(added) == len(set(added))
 
@@ -181,3 +186,34 @@ def test_aim_with_gem_plus_does_not_reselect():
 def test_mst_end_to_end_with_gem_plus():
     calls, _ = _release_with_gem_plus(lambda dp, est: dp.mbi.MST(estimator=est))
     assert len(calls) == 2  # the table's first fit, then one fit on the tree
+
+
+def test_closure_averages_estimates_of_the_same_clique(domain):
+    from opendp.extras.mbi._gem import _marginal_closure
+
+    rng = np.random.default_rng(0)
+
+    def measure(clique, stddev):
+        values = jnp.asarray(rng.random(domain.size(clique)) * 10)
+        return LinearMeasurement(values, clique, stddev=stddev)
+
+    # (age, income) measured directly in the opposite column order,
+    # and derived from (age, income, region)
+    direct = measure(("income", "age"), 1.0)
+    parent = measure(("age", "income", "region"), 2.0)
+    total = LinearMeasurement(jnp.array([500.0]), (), stddev=1.0)
+    closed = _marginal_closure(domain, [direct, parent, total])
+
+    assert total in closed  # returned unchanged
+    # every clique appears once
+    assert len({frozenset(m.clique) for m in closed}) == len(closed)
+
+    (found,) = [m for m in closed if set(m.clique) == {"age", "income"}]
+    assert found.clique == ("age", "income")
+
+    from_direct = jnp.reshape(direct.noisy_measurement, (2, 3)).T.flatten()
+    from_parent = jnp.reshape(parent.noisy_measurement, (3, 2, 4)).sum(axis=2).flatten()
+    w_direct, w_parent = 1 / 1.0, 1 / (2.0 * 2)  # parent sums 4 region cells
+    expected = (w_direct * from_direct + w_parent * from_parent) / (w_direct + w_parent)
+    assert jnp.allclose(found.noisy_measurement, expected)
+

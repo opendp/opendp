@@ -130,7 +130,7 @@ class AIM(Algorithm):
     """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
-    gem_filter: bool = False
+    gem_filter: bool = False #paper sets this to True but we default to fault as it may cause early termination
     """Filter for queries. Only applies to GEM+"""
 
     def __post_init__(self):
@@ -200,25 +200,20 @@ class AIM(Algorithm):
             # mutable state
             current_model = model
             current_marginals = marginals.copy()
+            current_algorithm = algorithm
             d_step = d_out / T
             d_spent = 0.0
 
             selected: set[tuple[str, ...]] = set()
-
+            enable_filtering = current_algorithm.gem_filter
             while d_step:
-                algorithm_aim_round = algorithm
-                if isinstance(current_model, MarkovRandomField):
-                    algorithm_aim_round = algorithm
-                elif self.gem_filter is False:
-                    algorithm_aim_round = algorithm
-                else:
-                    algorithm_aim_round = replace(
-                        algorithm,
-                        queries=[
-                            q
-                            for q in cast(list[Count], algorithm.queries)
-                            if q.by not in selected
-                        ],
+                if isinstance(current_model, GemPlusModel) and enable_filtering: 
+                    queries_not_selected = [q
+                                           for q in cast(list[Count], algorithm.queries)
+                                           if q.by not in selected]
+                    current_algorithm = replace(
+                        current_algorithm,
+                        queries=queries_not_selected,
                     )
 
                 m_step = _make_aim_marginal(
@@ -229,7 +224,7 @@ class AIM(Algorithm):
                     marginals=current_marginals,
                     model=current_model,
                     max_size=algorithm.max_size * (d_spent + d_step) / d_out,
-                    algorithm=algorithm_aim_round,
+                    algorithm=current_algorithm,
                 )
                 if not m_step:
                     break

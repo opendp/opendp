@@ -163,40 +163,54 @@ if importlib.util.find_spec("mbi") is not None:
         """Gem+ line 7: add the noisy sub-marginals implied by each measurement.
 
         Sub-marginals are computed by summing over the dropped attributes, so this is
-        post-processing with no privacy cost. Directly measured cliques are never
-        re-derived, and otherwise the first measurement implying a clique is used.
-        A derived cell sums k noisy cells, so its stddev is stddev * sqrt(k).
+        post-processing with no privacy cost. A derived cell sums k noisy cells, so its
+        stddev is stddev * sqrt(k). All estimates of a clique, measured or derived,
+        are combined into one by a weighted average with weight 1/stddev (MGCB25).
         """
-        covered = {frozenset(m.clique) for m in measurements}
-        derived = []
+        estimates: dict[frozenset, list] = {}
+        non_marginal_queries = []  # size or partial queries
+
+        def add(clique, table, stddev):
+            # put the cells in domain order, so estimates of a clique line up
+            order = tuple(a for a in domain.attributes if a in clique)
+            axes = [clique.index(a) for a in order]
+            values = jnp.transpose(table, axes).flatten()
+            estimates.setdefault(frozenset(clique), []).append((values, stddev))
 
         for m in measurements:
             clique = tuple(m.clique)
-            if len(clique) < 2 or not isinstance(m.query, DatavectorQuery):
+            if not clique or not isinstance(m.query, DatavectorQuery):
+                non_marginal_queries.append(m)
                 continue
 
             # mbi stores a marginal's cells in clique order
             sizes = tuple(domain[a] for a in clique)
             table = jnp.reshape(jnp.asarray(m.noisy_measurement), sizes)
+            add(clique, table, m.stddev)
 
             for r in range(len(clique) - 1, 0, -1):
                 for keep in combinations(range(len(clique)), r):
-                    subset = tuple(clique[i] for i in keep)
-                    if frozenset(subset) in covered:
-                        continue
-                    covered.add(frozenset(subset))
-
                     dropped = tuple(i for i in range(len(clique)) if i not in keep)
-                    values = table.sum(axis=dropped).flatten()
                     cells_summed = prod(sizes[i] for i in dropped)
-
-                    derived.append(
-                        LinearMeasurement(
-                            values, subset, stddev=m.stddev * sqrt(cells_summed)
-                        )
+                    add(
+                        tuple(clique[i] for i in keep),
+                        table.sum(axis=dropped),
+                        m.stddev * sqrt(cells_summed),
                     )
 
-        return list(measurements) + derived
+        averaged_marginal_queries = []
+
+        for key, group in estimates.items():
+            clique = tuple(a for a in domain.attributes if a in key)
+            weights = [1 / stddev for _, stddev in group]
+            values = sum(w * v for w, (v, _) in zip(weights, group)) / sum(weights)
+            # stddev of a 1/stddev-weighted average of n estimates
+            stddev = sqrt(len(group)) / sum(weights)
+            averaged_marginal_queries.append(
+                LinearMeasurement(values, clique, stddev=stddev)
+            )
+
+        return non_marginal_queries + averaged_marginal_queries
 
     def _l1_loss(marginals, measurements):
         """Gem+ line 8: mean over measurements of the unweighted L1 error.
@@ -322,7 +336,7 @@ if importlib.util.find_spec("mbi") is not None:
                 "gem_plus needs the measurements themselves (for the marginal closure), not a MarginalLossFn"
             )
 
-        measurements = list(loss_fn)
+        measurements = list(loss_fn)  # loss_fn recieves a list of measurements
         total = minimum_variance_unbiased_total(measurements)  # originals only
         measurements = _marginal_closure(domain, measurements)  # Gem+ line 7
 
@@ -343,7 +357,7 @@ if importlib.util.find_spec("mbi") is not None:
             optimizer=optimizer,
             dim=dim,
             batch=batch,
-            hidden=tuple(hidden) if hidden else None,
+            hidden=tuple(hidden) if hidden is not None else None,
             seed=seed,
         )
         return estimator.estimate(
