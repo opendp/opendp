@@ -47,7 +47,7 @@ pub extern "C" fn opendp_data__onceframe_collect(
 ///
 /// 1. The LazyFrame (compute plan) is only ever executed once.
 /// 2. The analyst does not observe ordering of rows in the output.
-///    
+///
 /// To ensure that row ordering is not observed:
 ///
 /// 1. Do not extend the compute plan with order-sensitive computations.

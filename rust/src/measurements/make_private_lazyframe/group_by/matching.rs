@@ -31,6 +31,15 @@ pub(crate) struct MatchGroupBy {
     pub key_sanitizer: Option<KeySanitizer>,
 }
 
+/// Match a group-by plan and any surrounding key sanitizer.
+///
+/// # Proof Definition
+/// If the plan contains a supported group-by, return its input, grouping
+/// expressions, aggregations, and optional key sanitizer.
+/// An explicit key join coalesces keys and joins on all materialized
+/// group-by columns. The public frame may have extra columns, but none may
+/// shadow private output columns. Deduplication and imputation are added
+/// when constructing the measurement's output plan.
 pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>> {
     let key_sanitizer = match plan {
         DslPlan::Filter { input, predicate } => {
@@ -48,7 +57,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
             if !predicates.is_empty() {
                 return fallible!(
                     MakeMeasurement,
-                    "predicates are not supported in key-privatization joins"
+                    "predicates are not supported in DP key joins"
                 );
             }
             let how = options.as_ref().args.how.clone();
@@ -64,10 +73,29 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 _ => {
                     return fallible!(
                         MakeMeasurement,
-                        "only left or right joins can be used to privatize key-sets"
+                        "only left or right joins can be used to release key-sets"
                     );
                 }
             };
+
+            if !options.args.should_coalesce() {
+                return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
+            }
+            if options.args.slice.is_some() {
+                return fallible!(
+                    MakeMeasurement,
+                    "DP key joins cannot be sliced because slicing introduces order dependence"
+                );
+            }
+            // Non-column join expressions can disable coalescing in newer
+            // Polars versions, exposing private-side join key columns.
+            if !keys_on
+                .iter()
+                .chain(input_on.iter())
+                .all(|expr| matches!(expr, Expr::Column(_)))
+            {
+                return fallible!(MakeMeasurement, "join on must consist of column exprs");
+            }
 
             let keys_on_columns = match_grouping_columns(keys_on.clone())
                 .map_err(|_| err!(MakeMeasurement, "join on must consist of column exprs"))?;
@@ -81,11 +109,49 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 );
             }
 
+            if let DslPlan::GroupBy { keys, .. } = &plan {
+                // Compare the names of the materialized grouping keys, rather
+                // than their input expressions (which may be computed).
+                let group_by_columns = keys
+                    .iter()
+                    .map(|key| match key {
+                        Expr::Selector(Selector::ByName { names, .. }) => Ok(names.to_vec()),
+                        Expr::Selector(_) => {
+                            fallible!(MakeMeasurement, "unsupported grouping selector")
+                        }
+                        key => Ok(vec![expr_output_name(key)?]),
+                    })
+                    .collect::<Fallible<Vec<_>>>()?
+                    .into_iter()
+                    .flatten()
+                    .collect::<BTreeSet<_>>();
+                if input_on_columns != group_by_columns {
+                    return fallible!(MakeMeasurement, "join keys must match group-by keys");
+                }
+            }
+
             let label_schema = keys.compute_schema()?;
-            if keys_on_columns != label_schema.iter_names().cloned().collect::<BTreeSet<_>>() {
+            let label_columns = label_schema.iter_names().cloned().collect::<BTreeSet<_>>();
+            if !keys_on_columns.is_subset(&label_columns) {
                 return fallible!(
                     MakeMeasurement,
-                    "label dataframe columns must match join keys"
+                    "join keys are missing from public dataframe"
+                );
+            }
+
+            // All private grouping keys are coalesced into the public side.
+            // Inspect aggregate names without resolving unfinished DP plugins.
+            let private_aggregate_columns = match &plan {
+                DslPlan::GroupBy { aggs, .. } => aggs
+                    .iter()
+                    .map(expr_output_name)
+                    .collect::<Result<BTreeSet<_>, _>>()?,
+                _ => BTreeSet::new(),
+            };
+            if !label_columns.is_disjoint(&private_aggregate_columns) {
+                return fallible!(
+                    MakeMeasurement,
+                    "public columns must not conflict with private output columns"
                 );
             }
 
@@ -207,7 +273,7 @@ pub(super) fn find_len_expr(
         })
 }
 
-fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
+pub(super) fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)> {
     let output_name = expr_output_name(expr).ok()?;
 
     // check if the expression matches the expected name
@@ -221,7 +287,13 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)>
 
     let (inputs, args) = match_trusted_plugin::<NoisePlugin>(&expr).ok().flatten()?;
 
-    if let Expr::Len = &inputs[0] {
+    // If it is a cast, unwrap to get the len expr.
+    let input = match &inputs[0] {
+        Expr::Cast { expr, .. } => expr.as_ref(),
+        x => x,
+    };
+
+    if let Expr::Len = input {
         Some((output_name.to_string(), args))
     } else {
         None

@@ -38,13 +38,13 @@ mod test;
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be released.
+/// * `input_metric` - Metric of the data type to be released.
 /// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Generics
-/// * `DI` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
+/// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
 /// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
 pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
@@ -130,8 +130,17 @@ where
         let privacy_map =
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;
 
-        let p = 1f64.neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
-        if !(0.0..=1.0).contains(&p) {
+        // At zero scale, the limiting success probability is 1.
+        let p = if scale == 0.0 {
+            1.0
+        } else {
+            // A positive subnormal scale can overflow the native reciprocal.
+            // Saturating -1/scale upward keeps exp's argument finite and its
+            // probability bound conservative; it does not assert exp=0.
+            let neg_inverse = (-scale.recip()).max(f64::MIN);
+            1f64.neg_inf_sub(&neg_inverse.inf_exp()?)?
+        };
+        if !(p > 0.0 && p <= 1.0) {
             return fallible!(
                 MakeMeasurement,
                 "p ({p}) must be in (0, 1]. This is likely because the noise scale is so large that conservative arithmetic causes the probability of termination to go negative"

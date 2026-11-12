@@ -1,5 +1,6 @@
 use super::*;
 
+use crate::error::ErrorVariant;
 use crate::{error::Fallible, traits::Float};
 
 pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
@@ -99,6 +100,25 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
     let epsilon = a_max.inf_mul(&rho)?.inf_add(&numer.inf_div(&denom)?)?;
 
     Ok(epsilon.max(Q::zero()))
+}
+
+#[test]
+fn test_cdp_delta_rounding_regression() -> Fallible<()> {
+    // previously rounded 1 ulp lower
+    assert_eq!(cdp_delta(0.05, 0.25)?, 8.177275310369558e-2);
+    // optimal alpha exceeds 2^53, to verify (α - 1) rounds
+    assert_eq!(cdp_delta(5e-30, 1e-13)?, 2.6196763297300477e-234);
+    Ok(())
+}
+
+#[test]
+fn test_numeric_errors_propagate() {
+    for (rho, eps) in [(f64::NAN, 0.1), (0.1, f64::NAN)] {
+        assert_eq!(
+            cdp_delta(rho, eps).unwrap_err().variant,
+            ErrorVariant::NumericError
+        );
+    }
 }
 
 #[test]

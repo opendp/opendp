@@ -12,7 +12,9 @@ def make_float_to_bigint(
         raise "input_domain may not contain NaN elements"
 
     size = input_domain.size
-    rounding_distance = get_rounding_distance(k, size, T) # |\label{line:rounding-distance}|
+    rounding_distance = get_rounding_distance(
+        k, size, T
+    )  # |\label{line:rounding-distance}|
 
     def elementwise_function(x_i):  # |\label{line:elementwise-function}|
         x_i = RBig.try_from(x_i).unwrap_or(RBig.ZERO)  # |\label{line:try-from}|
@@ -20,10 +22,12 @@ def make_float_to_bigint(
 
     def stability_map(d_in):
         try:
-            d_in = RBig.try_from(d_in)
+            d_in_r = RBig.try_from(d_in)
         except Exception:
             raise f"d_in ({d_in}) must be finite"
-        return x_mul_2k(d_in + rounding_distance, -k)  # |\label{line:x-mul-2k}|
+        if d_in_r.is_negative():
+            raise f"d_in ({d_in}) must be non-negative"
+        return x_mul_2k(d_in_r + rounding_distance, -k)  # |\label{line:x-mul-2k}|
 
     return Transformation.new(
         input_domain,

@@ -75,6 +75,9 @@ pub enum ErrorVariant {
     #[error("TypeParse")]
     TypeParse,
 
+    #[error("Type")]
+    Type,
+
     #[error("FailedFunction")]
     FailedFunction,
 
@@ -111,6 +114,17 @@ pub enum ErrorVariant {
     #[error("InvalidDistance")]
     InvalidDistance,
 
+    #[error("Search")]
+    Search,
+
+    /// A numerical operation failed for a reason other than finite-result
+    /// overflow: invalid domain, NaN, indeterminate expression, or backend failure.
+    /// See the diagnostic message for the specific cause.
+    #[error("NumericError")]
+    NumericError,
+
+    /// A finite mathematical result cannot be represented at the requested
+    /// output boundary. Genuine mathematical infinity is not overflow.
     #[error("Overflow")]
     Overflow,
 

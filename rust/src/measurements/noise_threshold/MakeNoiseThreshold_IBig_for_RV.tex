@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold} 
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}
 for \texttt{RV} over hashmaps of big integers in \asOfCommit{mod.rs}{f5bb719}.
 
 This is the core implementation of all variations of the thresholded gaussian or laplace mechanism.
@@ -46,25 +46,26 @@ None
 
 \begin{proof}[Proof of data-independent errors]
     The precondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} requires that \texttt{self} is a valid distribution.
-    This is satisfied by the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>} on line \ref{line:privacy-map}.
+    This is satisfied by the postcondition of \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}\texttt{<MI, MO>} on line \ref{line:privacy-map}.
     The postcondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} guarantees that the function only ever returns an error independently of the data.
 \end{proof}
 
-For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}, 
-which has an associated function \texttt{noise\_privacy\_map} called on line~\ref{line:privacy-map}.
-\begin{lemma}[Postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}]
+For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}\texttt{<MI, MO>},
+which has an associated function \texttt{noise\_threshold\_privacy\_map} called on line~\ref{line:privacy-map}.
+\begin{lemma}[Postcondition of \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}]
     \label{lemma:new-privacy-map}
     Given a distribution \texttt{self},
     returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
     Otherwise the output is \texttt{Ok(privacy\_map)}
     where \texttt{privacy\_map} observes the following:
 
-    Define \texttt{function(x)} as a function that updates each pair $(k_i, v_i + Z_i)$,
+    Define \texttt{function(x)} as a function that discards all pairs with $v_i = 0$,
+    then updates each remaining pair $(k_i, v_i + Z_i)$,
     where $Z_i$ are iid samples from \texttt{self},
-    and discards pairs where $v_i + Z_i$ is further from zero than \texttt{threshold}.
+    and retains pairs only when $v_i + Z_i$ is strictly beyond \texttt{threshold} in its signed direction.
     The ordering of returned pairs is independent from the input ordering.
 
-    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    For every pair of elements $x, x'$ in \texttt{MapDomain<AtomDomain<TK>, AtomDomain<IBig>{}>},
     and for every pair (\texttt{d\_in}, \texttt{d\_out}),
     where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
     if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
@@ -75,12 +76,15 @@ which has an associated function \texttt{noise\_privacy\_map} called on line~\re
 \begin{proof}[Proof of privacy guarantee]
     Assuming line~\ref{line:privacy-map} does not fail,
     then the returned privacy map is subject to Theorem~\ref{lemma:new-privacy-map}.
-    The privacy guarantee applies when the pseudocode matches the algorithm specification, 
+    The privacy guarantee applies when the pseudocode matches the algorithm specification,
     where $Z_i$ are iid samples from \texttt{self}.
     In this case \texttt{self} describes the noise distribution.
 
     We argue that \texttt{function} is consistent with the function described in Lemma~\ref{lemma:new-privacy-map}.
-    Line~\ref{line:sample} calls \texttt{self.sample(x\_i)} on each element in the input vector.
+    Line~\ref{line:skip-zero} omits explicit zero-valued entries before sampling.
+    Under \texttt{L0PInfDistance}, missing keys are interpreted as zero, so
+    omitting zero-valued entries preserves all pairwise input distances.
+    Line~\ref{line:sample} calls \texttt{self.sample(v)} only on the remaining values.
     The precondition that \texttt{self} represents a valid distribution is satisfied by the postcondition of Lemma~\ref{lemma:new-privacy-map};
     the distribution is valid when the construction of the privacy map does not raise an exception.
     Since the preconditions for \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} are satisfied,

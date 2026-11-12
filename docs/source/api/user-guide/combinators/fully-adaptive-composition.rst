@@ -33,9 +33,9 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
             :language: r
             :start-after: fully-adaptive-composition
             :end-before: /fully-adaptive-composition
-            
 
-When the adaptive composition odometer (``odom_fully_adaptive_comp``) is invoked, 
+
+When the adaptive composition odometer (``odom_fully_adaptive_comp``) is invoked,
 it returns an *odometer queryable*.
 
 .. tab-set::
@@ -49,7 +49,7 @@ it returns an *odometer queryable*.
             >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(
             ...     int_dataset
             ... )
-    
+
     .. tab-item:: R
         :sync: r
 
@@ -108,7 +108,7 @@ sum and count:
             dp sum: ...
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             dp count: ...
-    
+
     .. tab-item:: R
         :sync: r
 

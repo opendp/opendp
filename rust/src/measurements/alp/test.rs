@@ -184,6 +184,12 @@ fn test_construct_and_post_process() -> Fallible<()> {
 }
 
 #[test]
+fn test_scale_and_round_exponent_regression() -> Fallible<()> {
+    assert_eq!(scale_and_round(1u64, 1.0, 7.0)?, 7);
+    Ok(())
+}
+
+#[test]
 fn test_post_process_measurement() -> Fallible<()> {
     let mut x = HashMap::new();
     x.insert(0, 7);

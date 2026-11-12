@@ -53,7 +53,7 @@ use opendp_derive::bootstrap;
 /// # Arguments
 /// * `raw` - A pointer to the slice with data.
 /// * `T` - The type of the data in the slice.
-/// 
+///
 /// # Returns
 /// An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
 #[unsafe(no_mangle)]
@@ -118,8 +118,13 @@ pub extern "C" fn opendp_data__slice_as_object(
         // TODO: Need to do some extra wrapping to own the slice here.
         unimplemented!()
     }
-    #[allow(clippy::unnecessary_wraps)]
     fn raw_to_vec<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len == 0 {
+            return Ok(AnyObject::new(Vec::<T>::new()));
+        }
+        if raw.ptr.is_null() {
+            return fallible!(FFI, "Attempted to follow a null pointer to create a vector");
+        }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const T, raw.len) };
         let vec = slice.to_vec();
         Ok(AnyObject::new(vec))
@@ -517,6 +522,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn option_tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        if let Some(tuple) = obj.downcast_ref::<Option<(T0, T1)>>()? {
+            Ok(FfiSlice::new(
+                util::into_raw([
+                    &tuple.0 as *const T0 as *const c_void,
+                    &tuple.1 as *const T1 as *const c_void,
+                ]) as *mut c_void,
+                2,
+            ))
+        } else {
+            Ok(FfiSlice::new(null::<c_void>() as *mut c_void, 0))
+        }
+    }
     fn option_to_raw(obj: &AnyObject, args: &Vec<TypeId>) -> Fallible<FfiSlice> {
         let [T] = try_!(parse_type_args(args, "Option"));
 
@@ -539,6 +557,21 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             } else {
                 FfiSlice::new(null::<c_void>() as *mut c_void, 0)
             }
+        } else if let TypeContents::TUPLE(ref element_ids) = T.contents {
+            let types = try_!(
+                element_ids
+                    .iter()
+                    .map(Type::of_id)
+                    .collect::<Fallible<Vec<_>>>()
+            );
+            if element_ids.len() != 2 {
+                return fallible!(
+                    FFI,
+                    "Only Option-wrapped tuples of length 2 are supported, found length {}",
+                    element_ids.len()
+                );
+            }
+            dispatch!(option_tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))?
         } else {
             return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
         })
@@ -1432,6 +1465,19 @@ mod tests {
         let res = opendp_data__slice_as_object(raw, "Vec<i32>".to_char_p());
         let res: Vec<i32> = Fallible::from(res)?.downcast()?;
         assert_eq!(res, vec![1, 2, 3]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_slice_as_object_null_vec() -> Fallible<()> {
+        let raw = FfiSlice::new(std::ptr::null_mut(), 0);
+        let res = opendp_data__slice_as_object(&raw, "Vec<i32>".to_char_p());
+        let res: Vec<i32> = Fallible::from(res)?.downcast()?;
+        assert!(res.is_empty());
+
+        let raw = FfiSlice::new(std::ptr::null_mut(), 1);
+        let res = opendp_data__slice_as_object(&raw, "Vec<i32>".to_char_p());
+        assert!(Fallible::from(res).is_err());
         Ok(())
     }
 

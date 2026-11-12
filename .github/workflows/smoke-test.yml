@@ -1,6 +1,6 @@
 name: Smoke Test
 
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
@@ -12,7 +12,7 @@ on:
   pull_request:
 
 jobs:
-  rust-build:
+  ci-rust-build:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -33,11 +33,14 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+
+      ### Quick Rust checks:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+          cache-workspaces: rust
           components: rustfmt
 
       - name: Check Rust version
@@ -47,44 +50,89 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
+      ### Quick Python checks:
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal dependencies
+        run: pip install ruff pre-commit
+
+      - name: Run pre-commit checks
+        run: |
+          cd ../python
+          pre-commit run --all-files
+
+      ### Quick checks good? Then slow checks:
+
+      # Add rust caching following example:
+      #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Enables caching of compilation results via:
+      #   https://github.com/marketplace/actions/sccache-action
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.15.0"  # Ensure sccache binary supports cache v2 API
+
       - name: Build
+        env:
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_GHA_ENABLED: "true"
         run: cargo build --verbose --all-features
-      
+
+      - name: Check sccache stats
+        shell: bash
+        run: sccache --show-stats
+
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
+        # Allow for pyo3 to run against multiple python versions
+        env:
+          PYO3_BUILD_EXTENSION_MODULE: "1"
         run: cargo build --verbose --features untrusted,polars-ffi
-      
+
       - name: Upload (dynamic w/ polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dynamic_lib
           path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
         run: cargo build --verbose --features untrusted,ffi
-      
+
       - name: Upload (static w/o Polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: static_lib
           path: rust/target/debug/libopendp.a
-  
+
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
 
       - name: Upload R bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
 
-  rust-test:
-    needs: rust-build
+  ci-rust-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -92,7 +140,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      
+
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -105,11 +153,12 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+          cache-workspaces: rust
 
       - name: Test (default)
         run: cargo test --verbose
@@ -120,8 +169,8 @@ jobs:
       - name: Run docs example
         run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
 
-  python-test:
-    needs: rust-build
+  ci-python-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -129,18 +178,20 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.10'
+          - '3.11'
           - '3.13'
         extra-install:
           - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
           - 'numpy'
           - 'scikit-learn'
           - 'polars'
+          - 'ibis'
           - 'mbi'
+          - 'ibis,mbi' # Install both. Unlike the others, these are not stacked.
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -164,14 +215,17 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files
+
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -183,14 +237,19 @@ jobs:
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
+          NOT_SYNTH="not contingency and not synthetic"
+          NOT_IBIS="not ibis"
+          NOT_POLARS="not lazyframe and not polars and not pca and not rst"
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            polars)               pytest -v -k "not contingency and not synthetic";;
-            mbi)  coverage run -m pytest -v;;
+            PLACEHOLDER)          pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            numpy)                pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            scikit-learn)         pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
+            polars)               pytest -v -k "$NOT_IBIS and $NOT_SYNTH";;
+            ibis)                 pytest -v -k "$NOT_SYNTH";;
+            mbi)                  pytest -v -k "$NOT_IBIS";;
+            ibis,mbi)             coverage run -m pytest -v;;
 
-            *)    print "unexpected extra-install"; exit 1;;
+            *)                    echo "unexpected extra-install"; exit 1;;
           esac
 
       - name: Test replace-binary-path
@@ -200,38 +259,38 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
+        # "ibis,mbi" implies "polars" and "scikit-learn": see setup.cfg.
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        if: matrix.extra-install == 'ibis,mbi' && matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: /tmp/coverage.txt
 
-  confirm-coverage:
-    needs: python-test
+  ci-confirm-coverage:
+    needs: ci-python-test
     runs-on: ubuntu-22.04
     steps:
       - name: Download coverage
         # No additional action needed: We just need to confirm that at least one test produced a coverage report.
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-report
 
-  docs-links:
-    needs: rust-build
+  ci-docs-links:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Look for URLs that should be relative
         # R docs are copied into place after build, so they do not use relative URLs.
@@ -239,7 +298,7 @@ jobs:
         run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -258,18 +317,18 @@ jobs:
       - name: Check links
         run: linkchecker -f linkchecker.cfg build/html/index.html
 
-  python-notebooks:
-    needs: rust-build
+  ci-python-notebooks:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -277,7 +336,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Get pip cache dir
         id: pip-cache
@@ -293,11 +352,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install flake8 pytest nbmake pytest-xdist
+          python -m pip install pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
 
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
@@ -310,8 +369,8 @@ jobs:
           shopt -s globstar
           pytest --nbmake source/**/*.ipynb -n=auto
 
-  r-test:
-    needs: rust-build
+  ci-r-test:
+    needs: ci-rust-build
     runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs
@@ -319,18 +378,18 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download libs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
-          # R uses a static library build that doesn't include Polars 
+          # R uses a static library build that doesn't include Polars
           # (Polars currently links against Python)
           name: static_lib
           path: libs/
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/

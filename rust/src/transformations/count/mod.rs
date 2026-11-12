@@ -14,14 +14,15 @@ use crate::metrics::{AbsoluteDistance, L1Distance, L01InfDistance, LpDistance, S
 use crate::traits::{Hashable, InfCast, Integer, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that computes a count of the number of records in data.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be released.
+/// * `input_metric` - Metric of the data type to be released.
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
@@ -57,6 +58,7 @@ where
 }
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that computes a count of the number of unique, distinct records in data.
 ///
 /// # Citations
@@ -113,6 +115,7 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
     generics(MO(default = "L1Distance<int>"), TIA(suppress), TOA(default = "int")),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that computes the number of times each category appears in the data.
 /// This assumes that the category set is known.
 ///
@@ -197,6 +200,7 @@ where
 }
 
 #[bootstrap(features("contrib"), generics(TK(suppress), TV(default = "int")))]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
 ///

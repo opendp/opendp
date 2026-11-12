@@ -12,7 +12,9 @@ def truncate_id_bound(
     # times the number of rows contributed under each id (known from truncation),
     num_ids, num_rows = id_bound.per_group, truncation.per_group
     if num_ids is not None and num_rows is not None:
-        row_bound = row_bound.with_per_group(num_ids.inf_mul(num_rows)) # |\label{line:per-group}|
+        row_bound = row_bound.with_per_group(
+            num_ids.inf_mul(num_rows)
+        )  # |\label{line:per-group}|
 
     # Worst case number of groups contributed is the
     # total number of ids contributed (total_ids)
@@ -25,6 +27,6 @@ def truncate_id_bound(
     # Use the smaller of the two if both are known.
     num_groups = option_min(num_groups_via_truncation, id_bound.num_groups)
     if num_groups is not None:
-        row_bound = row_bound.with_num_groups(num_groups) # |\label{line:num-groups}|
+        row_bound = row_bound.with_num_groups(num_groups)  # |\label{line:num-groups}|
 
     return row_bound

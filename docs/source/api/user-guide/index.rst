@@ -1,8 +1,10 @@
-API User Guide
-==============
+.. _user-guide:
+
+User Guide
+==========
 
 This user guide gives a top-down picture of OpenDP;
-it complements the bottom-up view provided by the `Python API Reference <../python/index.html>`_.
+it complements the bottom-up view provided by the :doc:`Python API Reference <../python/index>`.
 
 
 .. _feature-listing:
@@ -39,7 +41,7 @@ Features can be enabled via the following syntax:
       .. code-block:: toml
 
          opendp = { features = ["contrib"] }
-      
+
 
 Features that are available from Python and R:
 
@@ -50,15 +52,19 @@ Features that are available from Python and R:
    * - Name
      - Description
    * - ``contrib``
-     - Enable to include constructors that have not passed the vetting process.
+     - Enable to include constructors that have not completed the vetting process.
    * - ``honest-but-curious``
      - Enable to include constructors whose differential privacy (or stability) properties
        rely on the constructor arguments being correct.
        That is, if a user/adversary is 'honest' in specifying the constructor arguments,
        then even if they later become 'curious' and try to learn something from the measurement outputs,
        they will not be able to violate the differential privacy promises of the measurement.
+   * - ``idealized-numerics``
+     - Enable to assume an idealized numeric model
+       that ignores finite-precision limitations such as non-closure and overflow,
+       resulting in an underestimation of the actual privacy loss.
    * - ``floating-point``
-     - Enable to include transformations and measurements with floating-point vulnerabilities.
+     - Deprecated alias for ``idealized-numerics``.
    * - ``rust-stack-trace``
      - Enable to allow stack traces to include stack frames from Rust.
 
@@ -70,7 +76,8 @@ See also the :ref:`comprehensive listing of features for Rust<rust-feature-listi
    :maxdepth: 1
 
    limitations
-   programming-framework/index
+   api-comparison/index
+   framework-api/index
    transformations/index
    measurements/index
    combinators/index

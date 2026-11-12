@@ -1,20 +1,17 @@
+:orphan:
+
 .. _cla:
 
 Contributor License Agreement
 =============================
 
-Thank you for your interest in working on OpenDP!
-The OpenDP Project requires contributors to complete a Contributor License Agreement before we can accept your submissions.
+.. We shouldn't need to link to this page: instead, contributors should be pointed directly to the CLA workflow.
+
+The OpenDP Project requires contributors to complete a Contributor License Agreement before we can accept submissions.
 This ensures that we have the proper permission to incorporate your work.
 
-Depending on your situation — whether you are contributing as an individual, or in your work for a company — you should
-select one of the options below.
-This will take you to a page with instructions for completing the agreement.
-
-Please read the agreement carefully, as it specifies your rights and responsibilities.
-If you have any questions about this agreement, please contact us at contact@opendp.org.
-
-|
+In order to sign the CLA, you must be an OpenDP Contributor.
+Please [request an invitation](https://github.com/opendp/clabot-config/issues/new?template=become-contributor.md) to become an OpenDP Contributor and then you'll be able sign the CLA.
 
 ----
 
