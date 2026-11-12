@@ -195,13 +195,13 @@ class MST(Algorithm):
 
             # GENERATE (fit a MarkovRandomField or a GemPlusModel)
             if isinstance(model, MarkovRandomField):
-                new_model = self.estimator(
+                new_model = algorithm.estimator(
                     model.domain,
                     all_marginals.flatten(),
                     potentials=model.potentials,
                 )
             else:
-                new_model = self.estimator(
+                new_model = algorithm.estimator(
                     model.domain, all_marginals.flatten(), warm_start=model
                 )
             return all_marginals, new_model

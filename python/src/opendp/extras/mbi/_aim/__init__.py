@@ -130,7 +130,7 @@ class AIM(Algorithm):
     """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
-    gem_filter: bool = False #paper sets this to True but we default to fault as it may cause early termination
+    gem_filter: bool = False  # paper sets this to True but we default to false as it may cause early termination
     """Filter for queries. Only applies to GEM+"""
 
     def __post_init__(self):
@@ -151,6 +151,9 @@ class AIM(Algorithm):
 
         if self.max_size <= 0.0:
             raise ValueError(f"max_size ({self.max_size}) must be positive")
+
+        if not isinstance(self.gem_filter, bool):
+            raise ValueError(f"gem_filter ({self.gem_filter}) must be a bool")
 
     def make_marginals(
         self,
@@ -207,10 +210,12 @@ class AIM(Algorithm):
             selected: set[tuple[str, ...]] = set()
             enable_filtering = current_algorithm.gem_filter
             while d_step:
-                if isinstance(current_model, GemPlusModel) and enable_filtering: 
-                    queries_not_selected = [q
-                                           for q in cast(list[Count], algorithm.queries)
-                                           if q.by not in selected]
+                if isinstance(current_model, GemPlusModel) and enable_filtering:
+                    queries_not_selected = [
+                        q
+                        for q in cast(list[Count], algorithm.queries)
+                        if q.by not in selected
+                    ]
                     current_algorithm = replace(
                         current_algorithm,
                         queries=queries_not_selected,

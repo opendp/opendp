@@ -148,6 +148,9 @@ if importlib.util.find_spec("mbi") is not None:
         def project(self, attrs: str | Sequence[str]) -> Factor:
             """Marginal over ``attrs``, scaled to ``total`` rows: the average over the
             B components of each component's product distribution."""
+            if not attrs:
+                # mbi's MixtureOfProducts can't project onto no columns; that marginal is the total
+                return Factor(Domain((), ()), jnp.array(self.total))
             return self._mixture.project(attrs)
 
         def supports(self, attrs: str | Sequence[str]) -> bool:
