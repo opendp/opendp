@@ -504,7 +504,11 @@ class Context(object):
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
         """
         import io
+        from opendp._data import validate_polars_plan
 
+        # Polars can eagerly unpickle Python callbacks embedded in the plan.
+        # Validate serialized bytes before letting Polars instantiate any node.
+        validate_polars_plan(serialized_plan)
         pl = import_optional_dependency("polars")
 
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
