@@ -1,5 +1,6 @@
 //! Polars frontend: resolve supported Polars queries into the backend-neutral DSL.
 use super::verified;
+use crate::domains::verified_frame::kernel_schema;
 use crate::{domains::{LazyFrameDomain, SeriesDomain}, error::*};
 use polars::prelude::*;
 use polars_plan::{dsl::{FunctionExpr, Operator}, utils::expr_output_name};
@@ -8,18 +9,6 @@ fn broad_column(dtype: DataType, nullable: bool) -> Fallible<SeriesDomain> {
     let mut domain = SeriesDomain::new_from_field(Field::new("_".into(), dtype))?;
     domain.nullable = nullable;
     Ok(domain)
-}
-
-pub(super) fn kernel_schema<C>(columns: &[crate::domains::ColumnDomain<C>]) -> Fallible<Vec<verified::VField>> {
-    columns.iter().map(|column| {
-        let dtype = match column.dtype() {
-            DataType::Int64 => verified::VDType::Int64,
-            DataType::Boolean => verified::VDType::Boolean,
-            dtype => return fallible!(MakeTransformation,
-                "unsupported verified column dtype: {:?}", dtype),
-        };
-        Ok(verified::VField { dtype, nullable: column.nullable })
-    }).collect()
 }
 
 fn inferred_field(expr: &verified::VExpr, columns: &[SeriesDomain])

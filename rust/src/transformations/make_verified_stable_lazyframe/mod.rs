@@ -3,11 +3,9 @@
 
 use std::collections::HashSet;
 
-#[path = "../../../query_kernel/src/row.rs"]
-mod verified;
+use crate::verified_query as verified;
 mod frontend;
 mod backend;
-mod vframe;
 use frontend::normalize_plan;
 use backend::render_plan;
 use polars::prelude::*;
@@ -167,7 +165,7 @@ mod tests {
             &plan, source.clone().lazy().logical_plan.clone(), &input_names,
         )?;
         let reference = verified::VTable {
-            schema: frontend::kernel_schema(&input_domain.series_domains)?,
+            schema: crate::domains::verified_frame::kernel_schema(&input_domain.series_domains)?,
             rows: to_cells(&source)?,
         };
         let expected = verified::evaluate(&plan, &reference)

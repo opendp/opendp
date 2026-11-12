@@ -27,9 +27,13 @@ pub trait Frame: Clone + Send + Sync + Sized {
     type Column: Clone + Send + Sync;
     type Expr: Clone + Eq + Hash + Debug;
 
-    /// A backend conversion may not exist for this carrier.
-    fn lazyframe(self) -> Fallible<LazyFrame>;
-    fn dataframe(self) -> Fallible<DataFrame>;
+    /// Only Polars-backed carriers need to override these conversions.
+    fn lazyframe(self) -> Fallible<LazyFrame> {
+        fallible!(FailedFunction, "no Polars LazyFrame conversion for this carrier")
+    }
+    fn dataframe(self) -> Fallible<DataFrame> {
+        fallible!(FailedFunction, "no Polars DataFrame conversion for this carrier")
+    }
 
     /// Columns referenced by a grouping expression.
     fn root_names(expr: &Self::Expr, columns: &[ColumnDomain<Self::Column>]) -> Fallible<Vec<PlSmallStr>>;
@@ -211,46 +215,6 @@ impl<F: Frame> FrameDomain<F> {
         })
     }
 
-    /// Create a new FrameDomain that follows a schema.
-    ///
-    /// # Proof Definition
-    /// Either returns a FrameDomain spanning all dataframes with a schema `schema`, or an error.
-    pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
-        let series_domains = (schema.iter_fields())
-            .map(ColumnDomain::<F::Column>::new_from_field)
-            .collect::<Fallible<_>>()?;
-        FrameDomain::new(series_domains)
-    }
-
-    /// # Proof Definition
-    /// Return the schema shared by all members of the domain.
-    pub fn schema(&self) -> Schema {
-        Schema::from_iter(
-            self.series_domains
-                .iter()
-                .map(|s| Field::new(s.name.clone(), s.dtype())),
-        )
-    }
-
-    /// # Proof Definition
-    /// Return the schema shared by all members of the domain,
-    /// when `plan` is applied to members of the domain.
-    pub(crate) fn simulate_schema(
-        &self,
-        plan: impl Fn(LazyFrame) -> LazyFrame,
-    ) -> Fallible<Schema> {
-        let output = plan(DataFrame::empty_with_schema(&self.schema()).lazy())
-            .collect()
-            .map_err(|e| {
-                err!(
-                    MakeTransformation,
-                    "Failed to determine output dtypes: {}",
-                    e
-                )
-            })?;
-        Ok((&**output.schema()).clone())
-    }
-
     /// # Proof Definition
     /// Return a FrameDomain equivalent to `self`,
     /// but whose carrier type (the type of a frame) is `FO`.
@@ -340,6 +304,50 @@ impl<F: Frame> FrameDomain<F> {
                     name
                 )
             })
+    }
+}
+
+// These methods execute Polars plans or expose Polars schemas, and are not
+// part of the common domain abstraction.
+impl<F: Frame<Column = Series, Expr = Expr>> FrameDomain<F> {
+    /// Create a new FrameDomain that follows a schema.
+    ///
+    /// # Proof Definition
+    /// Either returns a FrameDomain spanning all dataframes with a schema `schema`, or an error.
+    pub fn new_from_schema(schema: Schema) -> Fallible<Self> {
+        let series_domains = (schema.iter_fields())
+            .map(ColumnDomain::<F::Column>::new_from_field)
+            .collect::<Fallible<_>>()?;
+        FrameDomain::new(series_domains)
+    }
+
+    /// # Proof Definition
+    /// Return the schema shared by all members of the domain.
+    pub fn schema(&self) -> Schema {
+        Schema::from_iter(
+            self.series_domains
+                .iter()
+                .map(|s| Field::new(s.name.clone(), s.dtype())),
+        )
+    }
+
+    /// # Proof Definition
+    /// Return the schema shared by all members of the domain,
+    /// when `plan` is applied to members of the domain.
+    pub(crate) fn simulate_schema(
+        &self,
+        plan: impl Fn(LazyFrame) -> LazyFrame,
+    ) -> Fallible<Schema> {
+        let output = plan(DataFrame::empty_with_schema(&self.schema()).lazy())
+            .collect()
+            .map_err(|e| {
+                err!(
+                    MakeTransformation,
+                    "Failed to determine output dtypes: {}",
+                    e
+                )
+            })?;
+        Ok((&**output.schema()).clone())
     }
 }
 

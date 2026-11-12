@@ -1,27 +1,36 @@
-//! Concrete, backend-independent frame membership over the verified row evaluator.
-//! An unbound VPlan is syntax, not a dataset; VBoundPlan supplies its input.
+//! Membership of concrete verified tables in OpenDP frame domains.
+//! Unbound VPlans are syntax; checking a plan on bound input is a test utility.
 
 use std::collections::HashMap;
 
-use polars::prelude::{DataFrame, DataType, LazyFrame, PlSmallStr};
+use polars::prelude::{DataType, PlSmallStr};
 
-use super::{frontend, verified};
+use crate::verified_query as verified;
 use crate::{
     core::Domain,
     domains::{ColumnDomain, Frame, FrameDomain, Margin},
     error::*,
 };
 
-use verified::{VExpr, VField, VPlan, VTable, VValue, VDType};
+use verified::{VExpr, VField, VTable, VValue, VDType};
+
+/// Translate logical OpenDP column constraints into the verified kernel's
+/// types. Shared by native membership and Polars normalization.
+pub(crate) fn kernel_schema<C>(columns: &[crate::domains::ColumnDomain<C>]) -> Fallible<Vec<verified::VField>> {
+    columns.iter().map(|column| {
+        let dtype = match column.dtype() {
+            DataType::Int64 => verified::VDType::Int64,
+            DataType::Boolean => verified::VDType::Boolean,
+            dtype => return fallible!(MakeTransformation,
+                "unsupported verified column dtype: {:?}", dtype),
+        };
+        Ok(verified::VField { dtype, nullable: column.nullable })
+    }).collect()
+}
+
 
 #[derive(Clone)]
 pub struct VColumn(pub Vec<Option<VValue>>);
-
-#[derive(Clone)]
-pub(crate) struct VBoundPlan {
-    pub input: VTable,
-    pub plan: VPlan,
-}
 
 impl Domain for ColumnDomain<VColumn> {
     type Carrier = VColumn;
@@ -55,7 +64,7 @@ impl Domain for ColumnDomain<VColumn> {
 }
 
 fn roots(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmallStr>> {
-    if verified::check_expr(expr, &frontend::kernel_schema(columns)?).is_none() {
+    if verified::check_expr(expr, &kernel_schema(columns)?).is_none() {
         return fallible!(MakeDomain, "ill-typed verified grouping expression");
     }
 
@@ -90,18 +99,6 @@ fn roots(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmal
     Ok(names)
 }
 
-fn table_valid(table: &VTable) -> bool {
-    table.rows.iter().all(|row| {
-        row.len() == table.schema.len() && row.iter().zip(&table.schema).all(|(cell, field)| {
-            match cell {
-                Some(VValue::Int(_)) => field.dtype == VDType::Int64,
-                Some(VValue::Bool(_)) => field.dtype == VDType::Boolean,
-                None => field.nullable,
-            }
-        })
-    })
-}
-
 fn margin_member(margin: &Margin<VExpr>, table: &VTable) -> Fallible<bool> {
     if margin.by.is_empty() {
         return Ok(margin.max_groups != Some(0)
@@ -120,10 +117,10 @@ fn margin_member(margin: &Margin<VExpr>, table: &VTable) -> Fallible<bool> {
 }
 
 fn table_member(table: &VTable, domain: &FrameDomain<VTable>) -> Fallible<bool> {
-    if !table_valid(table) || table.schema.len() != domain.series_domains.len() {
+    if !verified::check_table(table) || table.schema.len() != domain.series_domains.len() {
         return Ok(false);
     }
-    let expected_schema = frontend::kernel_schema(&domain.series_domains)?;
+    let expected_schema = kernel_schema(&domain.series_domains)?;
     if !table.schema.iter().zip(&expected_schema)
         .all(|(actual, expected)| actual.dtype == expected.dtype) {
         return Ok(false);
@@ -151,12 +148,6 @@ impl Frame for VTable {
     type Column = VColumn;
     type Expr = VExpr;
 
-    fn lazyframe(self) -> Fallible<LazyFrame> {
-        fallible!(FailedFunction, "verified tables cannot be converted to Polars implicitly")
-    }
-    fn dataframe(self) -> Fallible<DataFrame> {
-        fallible!(FailedFunction, "verified tables cannot be converted to Polars implicitly")
-    }
     fn root_names(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmallStr>> {
         roots(expr, columns)
     }
@@ -165,37 +156,28 @@ impl Frame for VTable {
     }
 }
 
-impl Frame for VBoundPlan {
-    type Column = VColumn;
-    type Expr = VExpr;
-
-    fn lazyframe(self) -> Fallible<LazyFrame> {
-        fallible!(FailedFunction, "verified plans cannot be converted to Polars implicitly")
-    }
-    fn dataframe(self) -> Fallible<DataFrame> {
-        fallible!(FailedFunction, "verified plans cannot be converted to Polars implicitly")
-    }
-    fn root_names(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmallStr>> {
-        roots(expr, columns)
-    }
-    fn frame_member(&self, domain: &FrameDomain<Self>) -> Fallible<bool> {
-        if !table_valid(&self.input) {
-            return Ok(false);
-        }
-        let Some(schema) = verified::check_plan(&self.plan, &self.input.schema) else {
-            return Ok(false);
-        };
-        let Ok(rows) = verified::evaluate(&self.plan, &self.input) else {
-            return Ok(false);
-        };
-        domain.cast_carrier::<VTable>().member(&VTable { schema, rows })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domains::{AtomDomain, OptionDomain};
+    use verified::VPlan;
+
+    /// Concrete execution is useful for testing; this is not the carrier
+    /// of a symbolic OpenDP DSL transformation.
+    fn bound_plan_member(
+        domain: &FrameDomain<VTable>, input: &VTable, plan: &VPlan,
+    ) -> Fallible<bool> {
+        if !verified::check_table(input) {
+            return Ok(false);
+        }
+        let Some(schema) = verified::check_plan(plan, &input.schema) else {
+            return Ok(false);
+        };
+        let Ok(rows) = verified::evaluate(plan, input) else {
+            return Ok(false);
+        };
+        domain.member(&VTable { schema, rows })
+    }
 
     fn table() -> VTable {
         VTable {
@@ -267,7 +249,7 @@ mod tests {
 
     #[test]
     fn bound_plan_membership_uses_verified_evaluation() -> Fallible<()> {
-        let domain = domain()?.cast_carrier::<VBoundPlan>();
+        let domain = domain()?;
         let plan = VPlan::Project {
             input: Box::new(VPlan::Filter {
                 input: Box::new(VPlan::Input),
@@ -282,16 +264,13 @@ mod tests {
                 VExpr::Column(1),
             ],
         };
-        let query = VBoundPlan { input: table(), plan };
-        assert!(domain.member(&query)?);
-        let empty = VBoundPlan {
-            input: VTable { schema: table().schema, rows: vec![] },
-            plan: VPlan::Filter {
-                input: Box::new(VPlan::Input),
-                predicate: VExpr::Column(0),
-            },
+        assert!(bound_plan_member(&domain, &table(), &plan)?);
+        let empty = VTable { schema: table().schema, rows: vec![] };
+        let ill_typed = VPlan::Filter {
+            input: Box::new(VPlan::Input),
+            predicate: VExpr::Column(0),
         };
-        assert!(!domain.member(&empty)?); // ill-typed even on empty input
+        assert!(!bound_plan_member(&domain, &empty, &ill_typed)?); // ill-typed even on empty input
         assert!(domain.with_margin(Margin::by([VExpr::Column(99)])).is_err());
         Ok(())
     }

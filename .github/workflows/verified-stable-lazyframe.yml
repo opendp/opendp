@@ -9,6 +9,9 @@ on:
       - 'rust/src/transformations/mod.rs'
       - 'rust/query_kernel/**'
       - 'rust/src/domains/polars/**'
+      - 'rust/src/domains/verified_frame.rs'
+      - 'rust/src/domains/mod.rs'
+      - 'rust/src/lib.rs'
       - 'rust/src/metrics/polars/**'
       - '.github/workflows/verified-stable-lazyframe.yml'
   workflow_dispatch:
@@ -36,3 +39,4 @@ jobs:
           cargo test --no-default-features --features contrib,polars,verified-query make_verified_stable_lazyframe --lib
           cargo test --no-default-features --features contrib,polars,verified-query generic_ --lib
           cargo test --no-default-features --features contrib,polars,verified-query domains::polars::frame::test --lib
+          cargo test --no-default-features --features contrib,polars,verified-query domains::verified_frame::tests --lib

@@ -227,6 +227,93 @@ pub open spec fn rows_in_schema(
     forall|i: int| 0 <= i < rows.len() ==> row_in_schema(rows[i], schema)
 }
 
+/// Executable cell membership, proved equivalent to the typed-cell specification.
+pub fn check_cell(cell: Option<VValue>, field: VField) -> (valid: bool)
+    ensures valid == cell_matches_field(cell, field),
+{
+    match cell {
+        None => field.nullable,
+        Some(VValue::Int(_)) => match field.dtype {
+            VDType::Int64 => true,
+            VDType::Boolean => false,
+        },
+        Some(VValue::Bool(_)) => match field.dtype {
+            VDType::Boolean => true,
+            VDType::Int64 => false,
+        },
+    }
+}
+
+/// Validate one row against its declared schema.
+pub fn check_row(row: &Vec<Option<VValue>>, schema: &Vec<VField>) -> (valid: bool)
+    ensures valid == row_in_schema(row@, schema@),
+{
+    if row.len() != schema.len() {
+        return false;
+    }
+    let mut i: usize = 0;
+    while i < row.len()
+        invariant
+            i <= row.len(),
+            row.len() == schema.len(),
+            forall|j: int| 0 <= j < i ==> cell_matches_field(row@[j], schema@[j]),
+        decreases row.len() - i,
+    {
+        let good = check_cell(row[i], schema[i]);
+        if !good {
+            proof {
+                assert(!cell_matches_field(row@[i as int], schema@[i as int]));
+                assert(!row_in_schema(row@, schema@));
+            }
+            return false;
+        }
+        proof {
+            assert forall|j: int| 0 <= j < i + 1
+                implies cell_matches_field(row@[j], schema@[j]) by {
+                if j == i {
+                    assert(cell_matches_field(row@[j], schema@[j]));
+                }
+            }
+        }
+        i += 1;
+    }
+    true
+}
+
+/// Validate a concrete table using the exact predicate used by the Verus proofs.
+pub fn check_table(table: &VTable) -> (valid: bool)
+    ensures valid == table_valid(table),
+{
+    let mut i: usize = 0;
+    while i < table.rows.len()
+        invariant
+            i <= table.rows.len(),
+            forall|j: int| 0 <= j < i ==>
+                row_in_schema(rows_view(table.rows@)[j], table.schema@),
+        decreases table.rows.len() - i,
+    {
+        let good = check_row(&table.rows[i], &table.schema);
+        if !good {
+            proof {
+                assert(rows_view(table.rows@)[i as int] == table.rows@[i as int]@);
+                assert(!row_in_schema(rows_view(table.rows@)[i as int], table.schema@));
+                assert(!table_valid(table));
+            }
+            return false;
+        }
+        proof {
+            assert forall|j: int| 0 <= j < i + 1
+                implies row_in_schema(rows_view(table.rows@)[j], table.schema@) by {
+                if j == i {
+                    assert(rows_view(table.rows@)[j] == table.rows@[j]@);
+                }
+            }
+        }
+        i += 1;
+    }
+    true
+}
+
 /// Well-typed expressions cannot fail, and nullable outputs are represented
 /// explicitly by None instead of conflating null with an evaluation error.
 pub proof fn lemma_expr_field_sound(

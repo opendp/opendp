@@ -184,6 +184,9 @@ pub mod measurements;
 pub mod measures;
 pub mod metrics;
 pub mod traits;
+#[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
+#[path = "../query_kernel/src/row.rs"]
+pub(crate) mod verified_query;
 pub mod transformations;
 pub mod utilities;
 
