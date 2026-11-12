@@ -16,7 +16,7 @@ from opendp.typing import _NUMERIC_TYPES
 _CANDIDATE_COUNT = 100
 
 
-def _validate_bounds(bounds, name):
+def _validate_bounds(bounds, name) -> tuple[float, float]:
     try:
         if len(bounds) != 2:
             raise ValueError
