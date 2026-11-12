@@ -146,9 +146,7 @@ pub proof fn lemma_filter_submultiset(
         }
     } else {
         assert(rows =~= Seq::empty());
-        assert(verified::apply_spec(plan, rows) == Ok(Seq::empty()));
-        assert(Seq::<Seq<Option<VValue>>>::empty().to_multiset()
-            =~= Multiset::<Seq<Option<VValue>>>::empty());
+        assert(verified::apply_spec(plan, rows) == Ok(rows));
     }
 }
 
