@@ -12,9 +12,14 @@ use polars::prelude::*;
 
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::{LazyFrameDomain, SeriesDomain},
+    domains::{
+        verified_frame::VColumn,
+        verified_plan::{VFrameDomain, VFrameMetric, VPlanDomain},
+        LazyFrameDomain, SeriesDomain,
+    },
     error::*,
     metrics::{Bounds, FrameDistance, SymmetricDistance},
+    transformations::make_stable_vplan::make_stable_vplan,
 };
 
 /// Experimental private constructor. Unsupported plans fail closed.
@@ -28,10 +33,25 @@ pub(crate) fn make_verified_stable_lazyframe(
 >> {
     let (plan, columns) =
         normalize_plan(&lazyframe.logical_plan, &input_domain.series_domains)?;
+    // Construct through the verified OpenDP transformation, not directly
+    // from the normalized AST. Margins are discarded conservatively because
+    // their Polars grouping expressions are not part of the verified DSL.
+    let source = VFrameDomain::new(input_domain.series_domains.iter()
+        .map(|column| column.cast_carrier::<VColumn>()).collect())?;
+    let certified = make_stable_vplan(
+        VPlanDomain::new(source)?, VFrameMetric::new(SymmetricDistance), plan,
+    )?;
+    let plan = certified.invoke(&verified::VPlan::Input)?;
+    let verified_columns = certified.output_domain.frame.series_domains.iter()
+        .map(|column| column.cast_carrier::<Series>()).collect::<Vec<_>>();
+    if columns != verified_columns {
+        return fallible!(MakeTransformation,
+            "Polars normalization and verified plan domains disagree");
+    }
+    let output_domain = LazyFrameDomain::new(verified_columns)?;
     let source_columns = input_domain.series_domains.iter()
         .map(|column| column.name.clone()).collect::<Vec<_>>();
-    // Conservatively discard margins and grouped distance bounds.
-    let output_domain = LazyFrameDomain::new(columns)?;
+    // Conservatively discard grouped distance bounds.
     Transformation::new(
         input_domain,
         input_metric.clone(),
@@ -159,10 +179,8 @@ mod tests {
         assert!(input_domain.member(&source.clone().lazy())?);
         let (plan, expected_columns) =
             frontend::normalize_plan(&query.logical_plan, &input_domain.series_domains)?;
-        let input_names = input_domain.series_domains.iter()
-            .map(|column| column.name.clone()).collect::<Vec<_>>();
-        let (lowered, _) = backend::render_plan(
-            &plan, source.clone().lazy().logical_plan.clone(), &input_names,
+        let transformation = make_verified_stable_lazyframe(
+            input_domain.clone(), FrameDistance(SymmetricDistance), query.clone(),
         )?;
         let reference = verified::VTable {
             schema: crate::domains::verified_frame::kernel_schema(&input_domain.series_domains)?,
@@ -170,11 +188,12 @@ mod tests {
         };
         let expected = verified::evaluate(&plan, &reference)
             .expect("well-typed reference evaluation");
-        let actual = LazyFrame::from(lowered).collect()?;
+        let actual = transformation.invoke(&source.clone().lazy())?.collect()?;
         if compare_original {
             assert_eq!(actual, query.collect()?);
         }
         assert!(to_cells(&actual)? == expected, "backend disagrees with reference evaluator");
+        assert_eq!(transformation.output_domain.series_domains, expected_columns);
         assert_eq!(actual.width(), expected_columns.len());
         for (column, expected) in actual.get_columns().iter().zip(&expected_columns) {
             assert_eq!(column.name().as_str(), expected.name.as_str());
@@ -234,6 +253,32 @@ mod tests {
             .map(|column| column.cast_carrier::<Series>())
             .collect::<Vec<_>>();
         assert_eq!(columns, inferred);
+        Ok(())
+    }
+
+    #[test]
+    fn verified_constructor_preserves_forwarded_bounds() -> Fallible<()> {
+        let input_domain = LazyFrameDomain::new(vec![
+            SeriesDomain::new("x", AtomDomain::<i64>::new_closed((0, 10))?),
+            SeriesDomain::new("flag", OptionDomain::new(AtomDomain::<bool>::default())),
+        ])?;
+        let source = df!(
+            "x" => [1i64, 8, 3],
+            "flag" => [Some(true), Some(false), None],
+        )?.lazy();
+        let query = source.clone().filter(col("flag"))
+            .select([col("x").alias("bounded")]);
+        let trans = make_verified_stable_lazyframe(
+            input_domain, FrameDistance(SymmetricDistance), query,
+        )?;
+        assert_eq!(
+            trans.output_domain.series_domains[0]
+                .atom_domain::<i64>()?.get_closed_bounds()?, (0, 10),
+        );
+        assert_eq!(
+            trans.invoke(&source)?.collect()?,
+            df!("bounded" => [1i64])?,
+        );
         Ok(())
     }
 
