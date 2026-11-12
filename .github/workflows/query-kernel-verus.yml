@@ -13,6 +13,8 @@ on:
       - 'rust/src/metrics/symmetric_distance/verus.rs'
       - 'rust/src/metrics/polars/frame_distance/verus.rs'
       - '.github/workflows/query-kernel-verus.yml'
+  pull_request:
+    branches: [verified-stable-lazyframe]
   workflow_dispatch:
 
 concurrency:
