@@ -67,7 +67,7 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
 /// return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
 pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
-    // ceil(ceil(log_2(upper)) / 8)
+    // ceil((floor(log_2(upper)) + 1) / 8)
     let byte_len = upper.bit_len().div_ceil(8);
 
     // sample % upper is unbiased for any sample < threshold, because
