@@ -213,7 +213,7 @@ class AIM(Algorithm):
                 if isinstance(current_model, GemPlusModel) and enable_filtering:
                     queries_not_selected = [
                         q
-                        for q in cast(list[Count], algorithm.queries)
+                        for q in queries
                         if q.by not in selected
                     ]
                     current_algorithm = replace(
