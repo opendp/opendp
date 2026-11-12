@@ -11,6 +11,7 @@ on:
       - 'rust/src/transformations/mod.rs'
       - 'rust/query_kernel/**'
       - 'rust/src/domains/polars/**'
+      - 'rust/src/domains/verified_query_domain.rs'
       - 'rust/src/domains/verified_frame.rs'
       - 'rust/src/domains/mod.rs'
       - 'rust/src/lib.rs'
