@@ -59,26 +59,48 @@ pub proof fn lemma_apply_prefix_ignores_last(
     }
 }
 
-/// Inserting before the final element commutes with appending that element.
-pub proof fn lemma_seq_insert_push<T>(xs: Seq<T>, index: int, row: T, tail: T)
-    requires 0 <= index <= xs.len(),
-    ensures xs.insert(index, row).push(tail) =~= xs.push(tail).insert(index, row),
+/// A single local operator preserves one-record insertion.
+/// The verified row evaluator agrees with the generic row-local lifting
+/// of its deterministic per-row semantics whenever the input is typed.
+pub proof fn lemma_apply_as_lift(
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>, output_schema: Seq<VField>,
+)
+    requires
+        rows_in_schema(rows, schema),
+        local_schema(plan, schema) == Some(output_schema),
+    ensures
+        apply_spec(plan, rows) == Ok(
+            super::lifting::lift(
+                rows,
+                |r: Seq<Option<VValue>>| local_row_spec(plan, r).unwrap(),
+            )),
+    decreases rows.len(),
 {
-    xs.insert_ensures(index, row);
-    xs.push(tail).insert_ensures(index, row);
-    assert forall|i: int| 0 <= i < xs.insert(index, row).push(tail).len()
-        implies xs.insert(index, row).push(tail)[i]
-            == xs.push(tail).insert(index, row)[i] by {
-        if i < index {
-        } else if i == index {
-        } else if i <= xs.len() {
-        } else {
-            assert(i == xs.len() + 1);
+    lemma_apply_prefix_type_sound(plan, rows, schema, output_schema, rows.len());
+    if rows.len() > 0 {
+        let prefix = rows.drop_last();
+        let tail = rows.last();
+        lemma_rows_drop_last_valid(rows, schema);
+        lemma_apply_as_lift(plan, prefix, schema, output_schema);
+        lemma_apply_prefix_ignores_last(plan, rows, prefix.len());
+        lemma_local_type_sound(plan, schema, tail, output_schema);
+        assert(rows =~= prefix.push(tail));
+        assert(apply_prefix_spec(plan, rows, prefix.len())
+            == apply_spec(plan, prefix));
+        match local_row_spec(plan, tail) {
+            Ok(Some(_)) => { },
+            Ok(None) => { },
+            Err(_) => { assert(false); },
         }
+    } else {
+        assert(rows =~= Seq::empty());
     }
 }
 
-/// A single local operator preserves one-record insertion.
+/// Every well-typed local node is a deterministic row-local lifting. A
+/// single insertion can therefore add at most one output row, irrespective
+/// of whether that node is a filter, projection, or another local operator.
 pub proof fn lemma_apply_insert(
     plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
     output_schema: Seq<VField>, index: int, row: Seq<Option<VValue>>,
@@ -99,68 +121,28 @@ pub proof fn lemma_apply_insert(
             (Ok(before), Ok(after), Ok(None)) => after =~= before,
             _ => false,
         },
-    decreases rows.len(),
 {
-    lemma_apply_prefix_type_sound(plan, rows, schema, output_schema, rows.len());
     lemma_rows_insert_valid(rows, schema, index, row);
-    lemma_apply_prefix_type_sound(
-        plan, rows.insert(index, row), schema, output_schema,
-        rows.insert(index, row).len());
+    lemma_apply_as_lift(plan, rows, schema, output_schema);
+    lemma_apply_as_lift(plan, rows.insert(index, row), schema, output_schema);
     lemma_local_type_sound(plan, schema, row, output_schema);
-    if index == rows.len() {
-        let appended = rows.push(row);
-        assert(rows.insert(index, row) =~= appended);
-        assert(appended.drop_last() =~= rows);
-        lemma_apply_prefix_ignores_last(plan, appended, rows.len());
-        assert(apply_prefix_spec(plan, appended, rows.len()) == apply_spec(plan, rows));
-        match local_row_spec(plan, row) {
-            Ok(Some(added)) => {
-                let before = apply_spec(plan, rows).unwrap();
-                assert(before.push(added) =~= before.insert(before.len() as int, added));
-                assert(exists|i: int| 0 <= i <= before.len()
-                    && before.push(added) =~= before.insert(i, added));
-            },
-            Ok(None) => {},
-            Err(_) => { assert(false); },
-        }
-    } else {
-        let tail = rows.last();
-        let prefix = rows.drop_last();
-        let inserted = rows.insert(index, row);
-        assert(index <= prefix.len());
-        assert(inserted.last() == tail);
-        assert(inserted.drop_last() =~= prefix.insert(index, row));
-        lemma_rows_drop_last_valid(rows, schema);
-        lemma_rows_insert_valid(prefix, schema, index, row);
-        lemma_apply_insert(plan, prefix, schema, output_schema, index, row);
-        lemma_apply_prefix_ignores_last(plan, rows, prefix.len());
-        lemma_apply_prefix_ignores_last(plan, inserted, prefix.insert(index, row).len());
-        assert(apply_prefix_spec(plan, rows, prefix.len()) == apply_spec(plan, prefix));
-        assert(apply_prefix_spec(plan, inserted, prefix.insert(index, row).len())
-            == apply_spec(plan, prefix.insert(index, row)));
-        let before_prefix = apply_spec(plan, prefix).unwrap();
-        let after_prefix = apply_spec(plan, prefix.insert(index, row)).unwrap();
-        lemma_local_type_sound(plan, schema, tail, output_schema);
-        match (local_row_spec(plan, row), local_row_spec(plan, tail)) {
-            (Ok(Some(added)), Ok(Some(tail_result))) => {
-                let j = choose|j: int| 0 <= j <= before_prefix.len()
-                    && after_prefix =~= before_prefix.insert(j, added);
-                lemma_seq_insert_push(before_prefix, j, added, tail_result);
-                assert(exists|i: int| 0 <= i <= before_prefix.push(tail_result).len()
-                    && after_prefix.push(tail_result)
-                        =~= before_prefix.push(tail_result).insert(i, added));
-            },
-            (Ok(Some(added)), Ok(None)) => {
-                let j = choose|j: int| 0 <= j <= before_prefix.len()
-                    && after_prefix =~= before_prefix.insert(j, added);
-                assert(exists|i: int| 0 <= i <= before_prefix.len()
-                    && after_prefix =~= before_prefix.insert(i, added));
-            },
-            (Ok(None), Ok(Some(_))) | (Ok(None), Ok(None)) => {
-                assert(after_prefix =~= before_prefix);
-            },
-            _ => { assert(false); },
-        }
+    let f = |r: Seq<Option<VValue>>| local_row_spec(plan, r).unwrap();
+    super::lifting::lemma_lift_insert(rows, index, row, f);
+    let before = super::lifting::lift(rows, f);
+    let after = super::lifting::lift(rows.insert(index, row), f);
+    assert(apply_spec(plan, rows) == Ok(before));
+    assert(apply_spec(plan, rows.insert(index, row)) == Ok(after));
+    match local_row_spec(plan, row) {
+        Ok(Some(added)) => {
+            let i = choose|i: int|
+                0 <= i <= before.len() && after =~= before.insert(i, added);
+            assert(exists|j: int| 0 <= j <= before.len()
+                && after =~= before.insert(j, added));
+        },
+        Ok(None) => {
+            assert(after =~= before);
+        },
+        Err(_) => { assert(false); },
     }
 }
 

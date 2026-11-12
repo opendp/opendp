@@ -5,6 +5,9 @@ use super::verified::*;
 use vstd::multiset::Multiset;
 use vstd::prelude::*;
 
+#[path = "../../core/verus/row_local.rs"]
+pub(crate) mod lifting;
+
 #[path = "stability/row_local.rs"]
 mod row_local;
 pub use row_local::*;
@@ -211,54 +214,6 @@ pub proof fn lemma_typed_row_insert_stable(
             lemma_seq_one_insert_bag(before_rows, after_rows);
         },
         _ => { assert(false); },
-    }
-}
-
-/// A compiled, well-typed plan is 1-Lipschitz for insert/delete
-/// adjacency on the typed source tables.
-///
-/// This is quantified over *all* valid table pairs, so a constructor can
-/// return this result as a postcondition rather than verifying one example.
-pub open spec fn stable_on_typed_insertions(
-    plan: &VPlan, schema: Seq<VField>,
-) -> bool {
-    forall|before: &VTable, after: &VTable, index: int|
-        table_valid(before)
-        && table_valid(after)
-        && before.schema@ == schema
-        && table_one_insert(before, after, index)
-        ==> match (
-            dataset_spec(plan, rows_view(before.rows@)),
-            dataset_spec(plan, rows_view(after.rows@)),
-        ) {
-            (Ok(before_bag), Ok(after_bag)) =>
-                bag_one_edit(before_bag, after_bag),
-            _ => false,
-        }
-}
-
-/// This proof is consumed by the executable, verified make_* entry points.
-pub proof fn lemma_all_typed_insertions_stable(
-    plan: &VPlan, schema: Seq<VField>,
-)
-    requires plan_schema(plan, schema).is_Some(),
-    ensures stable_on_typed_insertions(plan, schema),
-{
-    assert forall|before: &VTable, after: &VTable, index: int|
-        table_valid(before)
-        && table_valid(after)
-        && before.schema@ == schema
-        && table_one_insert(before, after, index)
-        implies match (
-            dataset_spec(plan, rows_view(before.rows@)),
-            dataset_spec(plan, rows_view(after.rows@)),
-        ) {
-            (Ok(before_bag), Ok(after_bag)) =>
-                bag_one_edit(before_bag, after_bag),
-            _ => false,
-        } by {
-        assert(plan_schema(plan, before.schema@).is_Some());
-        lemma_typed_row_insert_stable(plan, before, after, index);
     }
 }
 
