@@ -14,7 +14,8 @@ use pyo3_polars::derive::polars_expr;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-use crate::polars::OpenDPPlugin;
+use crate::error::Fallible;
+use crate::polars::{match_plugin, OpenDPPlugin};
 use crate::traits::samplers::GeneratorOpenDP;
 
 /// A permutation changes neither the field name, dtype, nor length.
@@ -95,46 +96,32 @@ fn permute(inputs: &[Series]) -> PolarsResult<Series> {
 /// Recognize only the full, length-preserving OpenDP permutation expression.
 ///
 /// Both Python's FFI plugin and Rust's native anonymous UDF are trusted.
-pub(crate) fn match_permute(expr: &Expr) -> Option<&Expr> {
-    let input = match expr {
+pub(crate) fn match_permute(expr: &Expr) -> Fallible<Option<&Expr>> {
+    let Some(input) = match_plugin::<PermutePlugin>(expr)? else {
+        return Ok(None);
+    };
+
+    // The generic matcher establishes plugin identity. These additional
+    // checks certify the exact length-preserving permutation contract.
+    let is_trusted = match expr {
         #[cfg(feature = "ffi")]
         Expr::Function {
-            input,
-            function:
-                FunctionExpr::FfiPlugin {
-                    lib,
-                    symbol,
-                    kwargs,
-                    flags,
-                },
-        } if lib.contains("opendp")
-            && symbol.as_str() == "permute_plugin"
-            && kwargs.is_empty()
-            && flags == &FunctionOptions::length_preserving() =>
-        {
-            input
-        }
-        Expr::AnonymousFunction {
-            input,
-            function,
-            options,
+            function: FunctionExpr::FfiPlugin { kwargs, flags, .. },
             ..
-        } if options == &FunctionOptions::length_preserving()
-            && function
-                .clone()
-                .materialize()
-                .ok()?
-                .as_any()
-                .is::<PermutePlugin>() =>
-        {
-            input
+        } => kwargs.is_empty() && flags == &PermutePlugin::function_options(),
+        Expr::AnonymousFunction { options, .. } => {
+            options == &PermutePlugin::function_options()
         }
-        _ => return None,
+        _ => false,
     };
+    if !is_trusted {
+        return Ok(None);
+    }
+
     let [data] = input.as_slice() else {
-        return None;
+        return Ok(None);
     };
-    Some(data)
+    Ok(Some(data))
 }
 
 #[cfg(test)]
