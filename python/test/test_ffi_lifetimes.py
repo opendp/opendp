@@ -83,6 +83,25 @@ def test_owned_scratch_roundtrip_and_reuse(value, type_name):
     gc.collect()
 
 
+def test_profile_tuple_survives_scratch_and_source_release():
+    dp.enable_features("contrib", "honest-but-curious")
+    measurement = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool),
+        dp.absolute_distance(T=float),
+        dp.approximate(dp.zero_concentrated_divergence()),
+        lambda x: x,
+        lambda d: (d * 0.05, d * 1e-7),
+    )
+    converted = dp.c.make_zCDP_to_approxDP(measurement)
+    for _ in range(10):
+        profile, delta = converted.map(1.0)
+        assert delta == 1e-7
+        assert 0 <= profile.delta(1.0) <= 1
+    del converted, measurement
+    gc.collect()
+    assert 0 <= profile.delta(1.0) <= 1
+
+
 def test_owned_scratch_released_on_conversion_error(monkeypatch):
     obj = _convert.py_to_c(["a", "b"], AnyObjectPtr, "Vec<String>")
     release = _convert.lib.opendp_data__slice_owner_free

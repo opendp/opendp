@@ -350,7 +350,9 @@ def _supports_owned_slice(type_name: Union[RuntimeType, str]) -> bool:
     if type_name.origin == "HashMap":
         return True
     if type_name.origin == "Tuple":
-        return all(t in primitives for t in type_name.args)
+        return type_name.args == ["PrivacyProfile", "f64"] or all(
+            t in primitives for t in type_name.args
+        )
     if type_name.origin == "Option":
         inner = type_name.args[0]
         return inner == "AnyObject" or (
@@ -784,8 +786,11 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     if inner_type_names == ["PrivacyProfile", "f64"]:
-        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
+        if raw._object_pointers:
+            curve = ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))
+            return c_to_py(curve), delta.contents.value
+        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         return PrivacyProfile(curve), delta.contents.value
 
     if inner_type_names == ["f64", "AnyObject"]:

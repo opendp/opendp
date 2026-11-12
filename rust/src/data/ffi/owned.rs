@@ -84,7 +84,14 @@ impl FfiSliceOwner {
                 let types = ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>()?;
                 match types.len() {
                     2 => {
-                        if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
+                        if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                            let (profile, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+                            let profile = owner.keep(AnyObject::new(profile.clone()));
+                            owner.pointers(vec![
+                                profile.cast::<c_void>(),
+                                (delta as *const f64).cast(),
+                            ]);
+                        } else if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
                             // Legacy erased output payload: the candidate is an AnyObject,
                             // despite the public type descriptor saying ExtrinsicObject.
                             tuple2::<f64, AnyObject>(obj, &mut owner)?;
@@ -479,6 +486,20 @@ mod tests {
             assert_eq!(value_view.view().len, map.len());
             // Reverse declaration order frees nested scratch before the map owner.
         }
+        Ok(())
+    }
+
+    #[test]
+    fn profile_tuple_owns_child_and_borrows_delta() -> Fallible<()> {
+        let obj = AnyObject::new((PrivacyProfile::new(|_| Ok(0.25)), 1e-7_f64));
+        let owner = TestOwner::new(&obj)?;
+        let pointers = owner.pointers::<c_void>();
+        let child = unsafe { &*pointers[0].cast::<AnyObject>() };
+        assert_eq!(child.downcast_ref::<PrivacyProfile>()?.delta(0.)?, 0.25);
+        let (profile, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+        assert_eq!(pointers[1], (delta as *const f64).cast());
+        drop(owner);
+        assert_eq!(profile.delta(0.)?, 0.25);
         Ok(())
     }
 
