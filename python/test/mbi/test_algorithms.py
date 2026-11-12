@@ -168,10 +168,12 @@ def test_count_normalizes_user_values():
         AIM(queries=[CustomCount(("A",))]),
         Fixed(queries=[CustomCount(("A",))]),
     ):
-        assert type(algorithm.queries[0]) is Count
+        queries = algorithm.queries
+        assert not isinstance(queries, int)
+        assert type(queries[0]) is Count
 
     with pytest.raises(ValueError, match="by must contain column names"):
-        Count([1])  # type: ignore[list-item]
+        Count([1])  # type: ignore[arg-type]
     for weight in [float("nan"), math.inf, 0.0, -1.0]:
         with pytest.raises(ValueError, match="finite and positive"):
             Count(("A",), weight=weight)
