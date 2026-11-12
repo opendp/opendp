@@ -269,13 +269,12 @@ pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fall
 
 /// Used by truncation to verify that sort keys follow row permutations.
 pub(crate) fn is_rowwise(expr: &Expr) -> bool {
-    inspect_expr(expr, Resize::Ban, None)
-        .is_ok_and(|behavior| {
-            matches!(
-                behavior,
-                PermutationBehavior::Equivariant | PermutationBehavior::Invariant
-            )
-        })
+    inspect_expr(expr, Resize::Ban, None).is_ok_and(|behavior| {
+        matches!(
+            behavior,
+            PermutationBehavior::Equivariant | PermutationBehavior::Invariant
+        )
+    })
 }
 
 pub(super) fn canonical_sort_dtype(dtype: &DataType) -> bool {
@@ -343,14 +342,23 @@ fn inspect_expr(
 
     Ok(match expr {
         #[cfg(patch_polars)]
-        Expr::Rolling { function, index_column, .. } => {
+        Expr::Rolling {
+            function,
+            index_column,
+            ..
+        } => {
             inspect_expr(function, resize, schema)?;
             inspect_expr(index_column, resize, schema)?;
             Unproven
         }
         Expr::Element | Expr::Column(_) => Equivariant,
         #[cfg(patch_polars)]
-        Expr::Over { function, partition_by, order_by, .. } => {
+        Expr::Over {
+            function,
+            partition_by,
+            order_by,
+            ..
+        } => {
             inspect_expr(function, resize, schema)?;
             for by in partition_by {
                 inspect_expr(by, Resize::Ban, schema)?;
@@ -361,7 +369,12 @@ fn inspect_expr(
             Unproven
         }
         #[cfg(not(patch_polars))]
-        Expr::Window { function, partition_by, order_by, options } => {
+        Expr::Window {
+            function,
+            partition_by,
+            order_by,
+            options,
+        } => {
             if *options != WindowType::Over(WindowMapping::GroupsToRows) {
                 return fallible!(
                     MakeTransformation,
@@ -377,7 +390,9 @@ fn inspect_expr(
             }
             Unproven
         }
-        Expr::Eval { expr, evaluation, .. } => {
+        Expr::Eval {
+            expr, evaluation, ..
+        } => {
             inspect_expr(expr, resize, schema)?;
             inspect_expr(evaluation, Resize::Allow, schema)?;
             Unproven
@@ -410,7 +425,10 @@ fn inspect_expr(
             Unproven
         }
         Expr::Gather { .. } => {
-            return fallible!(MakeTransformation, "Gather may cause data-dependent errors due to OOB indexing.");
+            return fallible!(
+                MakeTransformation,
+                "Gather may cause data-dependent errors due to OOB indexing."
+            );
         }
         Expr::SortBy { expr, by, .. } => {
             inspect_expr(expr, Resize::Ban, schema)?;
@@ -424,12 +442,21 @@ fn inspect_expr(
                 AggExpr::Sum(input) => (input.as_ref(), "sum"),
                 AggExpr::Count { input, .. } => (input.as_ref(), "count"),
                 AggExpr::NUnique(input) => (input.as_ref(), "n_unique"),
-                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => (input.as_ref(), "min_max"),
-                AggExpr::Mean(input) | AggExpr::Median(input)
-                | AggExpr::First(input) | AggExpr::Last(input)
-                | AggExpr::Implode(input) | AggExpr::Std(input, _)
+                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => {
+                    (input.as_ref(), "min_max")
+                }
+                AggExpr::Mean(input)
+                | AggExpr::Median(input)
+                | AggExpr::First(input)
+                | AggExpr::Last(input)
+                | AggExpr::Implode(input)
+                | AggExpr::Std(input, _)
                 | AggExpr::Var(input, _) => (input.as_ref(), "ordered"),
-                AggExpr::Quantile { expr: input, quantile, .. } => {
+                AggExpr::Quantile {
+                    expr: input,
+                    quantile,
+                    ..
+                } => {
                     check_quantile(quantile)?;
                     (input.as_ref(), "ordered")
                 }
@@ -444,7 +471,10 @@ fn inspect_expr(
                     );
                 }
                 AggExpr::Item { .. } => {
-                    return fallible!(MakeTransformation, "item raises an error if length is not one.");
+                    return fallible!(
+                        MakeTransformation,
+                        "item raises an error if length is not one."
+                    );
                 }
             };
             let input_behavior = inspect_expr(input, Resize::Allow, schema)?;
@@ -463,7 +493,15 @@ fn inspect_expr(
                         use DataType::*;
                         matches!(
                             input.clone().to_field(schema)?.dtype,
-                            Boolean | UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64
+                            Boolean
+                                | UInt8
+                                | UInt16
+                                | UInt32
+                                | UInt64
+                                | Int8
+                                | Int16
+                                | Int32
+                                | Int64
                         )
                     } else {
                         false
@@ -491,14 +529,14 @@ fn inspect_expr(
             }
             invariant
         }
-        Expr::Ternary { predicate, truthy, falsy } => {
-            inspect_expr(predicate, Resize::Ban, schema)?
-                .combine(inspect_expr(truthy, Resize::Ban, schema)?)
-                .combine(inspect_expr(falsy, Resize::Ban, schema)?)
-        }
-        Expr::Function { input, function } => {
-            inspect_function(function, input, resize, schema)?
-        }
+        Expr::Ternary {
+            predicate,
+            truthy,
+            falsy,
+        } => inspect_expr(predicate, Resize::Ban, schema)?
+            .combine(inspect_expr(truthy, Resize::Ban, schema)?)
+            .combine(inspect_expr(falsy, Resize::Ban, schema)?),
+        Expr::Function { input, function } => inspect_function(function, input, resize, schema)?,
         Expr::Explode { input, .. } => {
             if matches!(resize, Resize::Ban) {
                 return fallible!(
@@ -515,11 +553,13 @@ fn inspect_expr(
                     "Filter may cause data-dependent errors due to different lengths."
                 );
             }
-            inspect_expr(input, resize, schema)?
-                .combine(inspect_expr(by, resize, schema)?)
+            inspect_expr(input, resize, schema)?.combine(inspect_expr(by, resize, schema)?)
         }
         Expr::Slice { .. } => {
-            return fallible!(MakeTransformation, "Slice may cause data-dependent errors due to null offset.");
+            return fallible!(
+                MakeTransformation,
+                "Slice may cause data-dependent errors due to null offset."
+            );
         }
         Expr::Len | Expr::DataTypeFunction(_) => Invariant,
         Expr::RenameAlias { expr, .. } => inspect_expr(expr, resize, schema)?,
@@ -530,7 +570,10 @@ fn inspect_expr(
             );
         }
         Expr::SubPlan(_, _) => {
-            return fallible!(MakeTransformation, "SubPlans are not currently supported. {INVITE}");
+            return fallible!(
+                MakeTransformation,
+                "SubPlans are not currently supported. {INVITE}"
+            );
         }
     })
 }
@@ -1063,9 +1106,11 @@ fn inspect_function(
                     "append resizes the data (concatenates chunks/rows)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
 
         // Mode can return multiple values (ties) => resizes based on data.
@@ -1076,9 +1121,11 @@ fn inspect_function(
                     "mode resizes the data (can return multiple values)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
 
         // Scalar aggregates (broadcastable)
@@ -1107,9 +1154,11 @@ fn inspect_function(
                     "unique_counts resizes the data (one row per unique value)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
 
         FunctionExpr::Diff(_) => check_inputs!(),
@@ -1127,9 +1176,11 @@ fn inspect_function(
                     "rle resizes the data (one row per run)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
         // rle_id is per-row run labels => same length.
         FunctionExpr::RLEID => check_inputs!(),
@@ -1164,9 +1215,11 @@ fn inspect_function(
                     "gather_every resizes the data (subsamples rows)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
         // Extends series by constants => resizes.
         FunctionExpr::ExtendConstant => {
@@ -1176,9 +1229,11 @@ fn inspect_function(
                     "extend_constant resizes the data (adds rows)."
                 );
             }
-            inputs
-                .iter()
-                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
+            inputs.iter().try_for_each(|e| {
+                inspect_expr(e, Resize::Allow, schema).map(|b| {
+                    behavior = behavior.combine(b);
+                })
+            })?;
         }
 
         // Row encoding is length-preserving (encodes multiple cols into one binary col).
@@ -1222,15 +1277,28 @@ fn inspect_function(
     Ok(match function {
         _ if matches!(
             function.to_string().as_str(),
-            "pct_change" | "ewm_mean" | "ewm_std" | "ewm_var" | "ewm_mean_by"
-                | "search_sorted" | "top_k" | "top_k_by" | "hist" | "index_of"
-                | "entropy" | "corr" | "spearman_rank_corr"
-        ) => Unproven,
+            "pct_change"
+                | "ewm_mean"
+                | "ewm_std"
+                | "ewm_var"
+                | "ewm_mean_by"
+                | "search_sorted"
+                | "top_k"
+                | "top_k_by"
+                | "hist"
+                | "index_of"
+                | "entropy"
+                | "corr"
+                | "spearman_rank_corr"
+        ) =>
+        {
+            Unproven
+        }
         FunctionExpr::NullCount
         | FunctionExpr::Boolean(BooleanFunction::Any { .. } | BooleanFunction::All { .. })
         | FunctionExpr::ApproxNUnique => behavior.reducer(),
         FunctionExpr::Boolean(
-            BooleanFunction::IsFirstDistinct | BooleanFunction::IsLastDistinct
+            BooleanFunction::IsFirstDistinct | BooleanFunction::IsLastDistinct,
         )
         | FunctionExpr::Range(_)
         | FunctionExpr::Shift

@@ -193,11 +193,11 @@ fn test_permutation_invariance_validation() -> Fallible<()> {
     ] {
         check_permutation_invariance(&expr, &schema)?;
     }
-    for expr in [
-        col("i").shift(lit(1)).sum(),
-        col("i").reverse().min(),
-    ] {
-        assert!(check_permutation_invariance(&expr, &schema).is_err(), "{expr:?}");
+    for expr in [col("i").shift(lit(1)).sum(), col("i").reverse().min()] {
+        assert!(
+            check_permutation_invariance(&expr, &schema).is_err(),
+            "{expr:?}"
+        );
     }
     for expr in [
         col("i").sort(Default::default()).first(),
