@@ -20,16 +20,29 @@ fn test_match_permute() {
     assert_eq!(match_permute(&expr).unwrap(), Some(&col("x")));
 
     // Wrong arity and execution flags cannot establish uniform permutation.
-    assert!(match_permute(&plugin(vec![], FunctionOptions::length_preserving())).unwrap().is_none());
+    assert!(
+        match_permute(&plugin(vec![], FunctionOptions::length_preserving()))
+            .unwrap()
+            .is_none()
+    );
     assert!(
         match_permute(&plugin(
             vec![col("x"), lit(1)],
             FunctionOptions::length_preserving()
-        )).unwrap()
+        ))
+        .unwrap()
         .is_none()
     );
-    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::elementwise())).unwrap().is_none());
-    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::groupwise())).unwrap().is_none());
+    assert!(
+        match_permute(&plugin(vec![col("x")], FunctionOptions::elementwise()))
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        match_permute(&plugin(vec![col("x")], FunctionOptions::groupwise()))
+            .unwrap()
+            .is_none()
+    );
 
     let mut expr = expr;
     if let Expr::Function {

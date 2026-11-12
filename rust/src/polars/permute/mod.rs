@@ -15,7 +15,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Fallible;
-use crate::polars::{match_plugin, OpenDPPlugin};
+use crate::polars::{OpenDPPlugin, match_plugin};
 use crate::traits::samplers::GeneratorOpenDP;
 
 /// A permutation changes neither the field name, dtype, nor length.
@@ -109,9 +109,7 @@ pub(crate) fn match_permute(expr: &Expr) -> Fallible<Option<&Expr>> {
             function: FunctionExpr::FfiPlugin { kwargs, flags, .. },
             ..
         } => kwargs.is_empty() && flags == &PermutePlugin::function_options(),
-        Expr::AnonymousFunction { options, .. } => {
-            options == &PermutePlugin::function_options()
-        }
+        Expr::AnonymousFunction { options, .. } => options == &PermutePlugin::function_options(),
         _ => false,
     };
     if !is_trusted {
