@@ -269,18 +269,20 @@ pub proof fn lemma_bag_one_edit_symmetric(
 {
     if before =~= after {
         assert(after =~= before);
+        assert(bag_one_edit(after, before));
     } else if exists|row: Seq<Option<VValue>>| after =~= before.insert(row) {
         let row = choose|row: Seq<Option<VValue>>| after =~= before.insert(row);
         assert(exists|r: Seq<Option<VValue>>| after =~= before.insert(r)) by {
             assert(after =~= before.insert(row));
         }
+        assert(bag_one_edit(after, before));
     } else {
         let row = choose|row: Seq<Option<VValue>>| before =~= after.insert(row);
         assert(exists|r: Seq<Option<VValue>>| before =~= after.insert(r)) by {
             assert(before =~= after.insert(row));
         }
+        assert(bag_one_edit(after, before));
     }
-    assert(bag_one_edit(after, before));
 }
 
 /// Insertion stability also proves deletion stability by swapping the tables.
