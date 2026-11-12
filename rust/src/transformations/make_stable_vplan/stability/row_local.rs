@@ -1,33 +1,9 @@
-//! A generic one-row-local operator changes at most one output row
-//! when an input row is inserted. No operator variants are matched here.
+//! Shared lifting lemmas for typed row-local operators and arbitrary symmetric distance.
 
 use super::*;
 use super::super::verified::symmetric_distance as metric;
 
 verus! {
-
-pub proof fn lemma_rows_insert_valid(
-    rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
-    index: int, row: Seq<Option<VValue>>,
-)
-    requires
-        rows_in_schema(rows, schema),
-        row_in_schema(row, schema),
-        0 <= index <= rows.len(),
-    ensures rows_in_schema(rows.insert(index, row), schema),
-{
-    rows.insert_ensures(index, row);
-    assert forall|i: int| 0 <= i < rows.insert(index, row).len()
-        implies row_in_schema(rows.insert(index, row)[i], schema) by {
-        if i == index {
-            assert(rows.insert(index, row)[i] == row);
-        } else if i < index {
-            assert(rows.insert(index, row)[i] == rows[i]);
-        } else {
-            assert(rows.insert(index, row)[i] == rows[i - 1]);
-        }
-    }
-}
 
 pub proof fn lemma_rows_drop_last_valid(
     rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
@@ -72,7 +48,7 @@ pub proof fn lemma_apply_as_lift(
         local_schema(plan, schema) == Some(output_schema),
     ensures
         apply_spec(plan, rows) == Ok(
-            super::lifting::lift(
+            lifting::lift(
                 rows,
                 |r: Seq<Option<VValue>>| local_row_spec(plan, r).unwrap(),
             )),
@@ -98,55 +74,6 @@ pub proof fn lemma_apply_as_lift(
         assert(rows =~= Seq::empty());
     }
 }
-
-/// Every well-typed local node is a deterministic row-local lifting. A
-/// single insertion can therefore add at most one output row, irrespective
-/// of whether that node is a filter, projection, or another local operator.
-pub proof fn lemma_apply_insert(
-    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
-    output_schema: Seq<VField>, index: int, row: Seq<Option<VValue>>,
-)
-    requires
-        rows_in_schema(rows, schema),
-        row_in_schema(row, schema),
-        local_schema(plan, schema) == Some(output_schema),
-        0 <= index <= rows.len(),
-    ensures
-        match (
-            apply_spec(plan, rows),
-            apply_spec(plan, rows.insert(index, row)),
-            local_row_spec(plan, row),
-        ) {
-            (Ok(before), Ok(after), Ok(Some(added))) =>
-                exists|i: int| 0 <= i <= before.len() && after =~= before.insert(i, added),
-            (Ok(before), Ok(after), Ok(None)) => after =~= before,
-            _ => false,
-        },
-{
-    lemma_rows_insert_valid(rows, schema, index, row);
-    lemma_apply_as_lift(plan, rows, schema, output_schema);
-    lemma_apply_as_lift(plan, rows.insert(index, row), schema, output_schema);
-    lemma_local_type_sound(plan, schema, row, output_schema);
-    let f = |r: Seq<Option<VValue>>| local_row_spec(plan, r).unwrap();
-    super::lifting::lemma_lift_insert(rows, index, row, f);
-    let before = super::lifting::lift(rows, f);
-    let after = super::lifting::lift(rows.insert(index, row), f);
-    assert(apply_spec(plan, rows) == Ok(before));
-    assert(apply_spec(plan, rows.insert(index, row)) == Ok(after));
-    match local_row_spec(plan, row) {
-        Ok(Some(added)) => {
-            let i = choose|i: int|
-                0 <= i <= before.len() && after =~= before.insert(i, added);
-            assert(exists|j: int| 0 <= j <= before.len()
-                && after =~= before.insert(j, added));
-        },
-        Ok(None) => {
-            assert(after =~= before);
-        },
-        Err(_) => { assert(false); },
-    }
-}
-
 
 /// A deterministic map-or-drop operator never produces more output rows
 /// than there are input rows, counting duplicates.
@@ -179,6 +106,36 @@ pub proof fn lemma_lift_length<X, Y>(
     } else {
         rows.to_multiset_ensures();
         lifting::lift(rows, f).to_multiset_ensures();
+    }
+}
+
+/// Inserting a row anywhere in a sequence inserts one copy in its multiset.
+pub proof fn lemma_seq_insert_bag<T>(xs: Seq<T>, index: int, value: T)
+    requires 0 <= index <= xs.len(),
+    ensures xs.insert(index, value).to_multiset() =~= xs.to_multiset().insert(value),
+    decreases xs.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if index == xs.len() {
+        assert(xs.insert(index, value) =~= xs.push(value));
+        xs.to_multiset_ensures();
+    } else {
+        let tail = xs.last();
+        let prefix = xs.drop_last();
+        assert(index <= prefix.len());
+        lemma_seq_insert_bag(prefix, index, value);
+        assert(xs.insert(index, value).last() == tail);
+        assert(xs.insert(index, value).drop_last() =~= prefix.insert(index, value));
+        assert(xs.insert(index, value) =~= prefix.insert(index, value).push(tail));
+        assert(xs =~= prefix.push(tail));
+        prefix.to_multiset_ensures();
+        prefix.insert(index, value).to_multiset_ensures();
+        assert(xs.insert(index, value).to_multiset() =~=
+            prefix.to_multiset().insert(value).insert(tail));
+        assert(xs.to_multiset().insert(value) =~=
+            prefix.to_multiset().insert(tail).insert(value));
+        assert(prefix.to_multiset().insert(value).insert(tail) =~=
+            prefix.to_multiset().insert(tail).insert(value));
     }
 }
 
