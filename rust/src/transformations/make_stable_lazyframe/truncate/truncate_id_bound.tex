@@ -4,12 +4,12 @@
 \title{\texttt{fn truncate\_id\_bound}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound}
 in \asOfCommit{mod.rs}{f5bb719}.
 \texttt{truncate\_id\_bound} returns an uppper bound on dataset distances in terms of the symmetric distance metric.
 
@@ -39,7 +39,7 @@ None
         ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 &\le \texttt{id\_bound.num\_groups}, \\
         d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) &\le \texttt{total\_ids},
     \end{align*}
-    and \texttt{function} truncates a dataset such that, 
+    and \texttt{function} truncates a dataset such that,
     \begin{align*}
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 &\le \texttt{truncation.num\_groups},
@@ -62,7 +62,7 @@ None
         &\le \texttt{id\_bound.per\_group} \cdot \texttt{truncation.per\_group}\\
         &= \texttt{row\_bound.per\_group} \hspace{2cm} \text{by line } \ref{line:per-group}
     \end{align*}
-    
+
     We now prove the number of groups bound.
     There are two ways to bound the number of contributed groups.
     We first reason by the total number of identifiers.

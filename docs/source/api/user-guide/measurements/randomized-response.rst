@@ -6,7 +6,7 @@ the local-DP, or per-user, model. The randomized response algorithm is
 typically meant to be run on the edge, at the user's device, before data
 is submitted to a central server. Local DP is a stronger privacy model
 than the central model, because the central data aggregator is only ever
-privileged to privatized data.
+privileged to differentially private releases, not the raw data.
 
 OpenDP currently only provides mechanisms that may be run on the edge
 device: You must handle network communication and aggregation.
@@ -88,7 +88,7 @@ following six elements:
             >>> print("epsilon:", rr_bool_meas.map(d_in=1))
             epsilon: 1.0986...
 
-The privatized responses from many individuals may be aggregated to form
+The differentially private responses from many individuals may be aggregated to form
 a population-level inference. In the case of the boolean randomized
 response, you may want to estimate the proportion of individuals who
 actually responded with ``True``.
@@ -355,10 +355,10 @@ Since the dataset size is known, simply post-process the mean estimates:
 Bit Vector Randomized Response
 ------------------------------
 
-Another way to generalize boolean randomized response 
+Another way to generalize boolean randomized response
 is by considering bit vectors with limited weight.
-In this setting, neighboring datasets may be completely different bitvectors, 
-but all bitvectors may only have a limited number of true bits (the weight).
+In this setting, neighboring datasets may be completely different bitvectors,
+but all bitvectors must have the same length and may only have a limited number of true bits (the weight).
 
 .. tab-set::
 
@@ -372,7 +372,7 @@ but all bitvectors may only have a limited number of true bits (the weight).
 
             >>> # construct the measurement
             >>> m_rr = dp.m.make_randomized_response_bitvec(
-            ...     dp.bitvector_domain(max_weight=3),
+            ...     dp.bitvector_domain(max_weight=3, size=24),
             ...     dp.discrete_distance(),
             ...     f=0.8,
             ... )
@@ -396,7 +396,7 @@ but all bitvectors may only have a limited number of true bits (the weight).
             >>> print("epsilon:", m_rr.map(1))
             epsilon: 2.4327906486489863
 
-We now convert a vector of randomized response bitvec releases 
+We now convert a vector of randomized response bitvec releases
 to an unbiased frequency estimate via ``debias_randomized_response_bitvec``:
 
 .. tab-set::

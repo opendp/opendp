@@ -23,7 +23,7 @@ fi
 
 # To address the change of the toolchain on R 4.2
 BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$(CARGO_LINKER)" \&\&'
-BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export LIBRARY_PATH="$${LIBRARY_PATH};$(CURDIR)/rust/target/release/libgcc_mock" \&\&'
+BEFORE_CARGO_BUILD="${BEFORE_CARGO_BUILD}"' export LIBRARY_PATH="$${LIBRARY_PATH};/tmp/opendp-target-x86_64-pc-windows-gnu/release/libgcc_mock" \&\&'
 
 
 # If it's on CRAN, a package is not allowed to write in any other place than the

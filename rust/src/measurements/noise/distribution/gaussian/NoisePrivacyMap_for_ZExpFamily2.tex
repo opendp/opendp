@@ -60,15 +60,15 @@ None
     Recall Theorem~14 from \cite{CKS20}.
 
     \begin{theorem}[Multivariate Discrete Gaussian Satisfies Concentrated Differential Privacy]
-        Let $\sigma_1, \ldots, \sigma_d > 0$ and $\varepsilon > 0$. 
-        Let $q: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ satisfy $\sum_{j \in [d]} (q_j(x) - q_j(x'))^2 / \sigma^2_j \leq \varepsilon^2$ 
+        Let $\sigma_1, \ldots, \sigma_d > 0$ and $\varepsilon > 0$.
+        Let $q: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ satisfy $\sum_{j \in [d]} (q_j(x) - q_j(x'))^2 / \sigma^2_j \leq \varepsilon^2$
         for all $x, x' \in \mathcal{X}^n$ differing on a single entry.
         Define a randomized algorithm $M: \mathcal{X}^n \rightarrow \mathbb{Z}^d$ by $M(x) = q(x) + Y$ where $Y_j \leftarrow \mathcal{N}_\mathbb{Z}(0, \sigma^2_j)$
         independently for all $j \in [d]$.
         Then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
     \end{theorem}
 
-    Assuming that $\sigma_1, \ldots, \sigma_d = \sigma$, and re-defining $q(x)$ as $x$ and $q(x')$ as $x'$, 
+    Assuming that $\sigma_1, \ldots, \sigma_d = \sigma$, and re-defining $q(x)$ as $x$ and $q(x')$ as $x'$,
     then if $||x - x'||_2 / \sigma \leq \varepsilon$ then $M$ satisfies $\frac{1}{2}\varepsilon^2$-concentrated differential privacy.
 
     Therefore, for all $\alpha > 1$, $D_\alpha(M(x), M(x')) \leq \alpha \cdot (\texttt{d\_in} / \sigma)^2 / 2$.

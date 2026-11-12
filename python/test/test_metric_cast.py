@@ -1,3 +1,5 @@
+import pytest
+
 import opendp.prelude as dp
 
 
@@ -10,6 +12,7 @@ def test_ordering():
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
 
+
 def test_sized_ordering():
     data = [1, 2, 3]
     domain = dp.vector_domain(dp.atom_domain(T=dp.i32), 3)
@@ -18,6 +21,7 @@ def test_sized_ordering():
 
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
+
 
 def test_sized_bounded_ordering():
     data = [1, 2, 3]
@@ -28,6 +32,7 @@ def test_sized_bounded_ordering():
     ident_trans = ord_trans >> dp.t.then_unordered()
     assert len(ident_trans(data)) == 3
 
+
 def test_bounded():
     data = [1, 2, 3]
 
@@ -37,3 +42,9 @@ def test_bounded():
 
     ident_trans = bdd_trans >> dp.t.then_metric_unbounded()
     assert len(ident_trans(data)) == 3
+
+
+def test_bounded_rejects_ordered_metric():
+    domain = dp.vector_domain(dp.atom_domain(T=dp.i32), 3)
+    with pytest.raises(dp.OpenDPException, match="first call make_unordered"):
+        dp.t.make_metric_bounded(domain, dp.insert_delete_distance())

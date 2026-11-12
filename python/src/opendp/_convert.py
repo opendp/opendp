@@ -1,4 +1,4 @@
-from typing import Sequence, Union, cast, MutableMapping
+from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
@@ -7,6 +7,7 @@ from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
     ExtrinsicDistance,
+    ExtrinsicDivergence,
     ExtrinsicDomain,
     LazyFrameDomain,
     Measure,
@@ -28,21 +29,34 @@ from opendp.mod import (
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor
 
 ATOM_MAP = {
-    'f32': ctypes.c_float,
-    'f64': ctypes.c_double,
-    'u8': ctypes.c_uint8,
-    'u16': ctypes.c_uint16,
-    'u32': ctypes.c_uint32,
-    'u64': ctypes.c_uint64,
-    'i8': ctypes.c_int8,
-    'i16': ctypes.c_int16,
-    'i32': ctypes.c_int32,
-    'i64': ctypes.c_int64,
-    'usize': ctypes.c_size_t,
-    'bool': ctypes.c_bool,
-    'AnyMeasurementPtr': Measurement,
-    'AnyTransformationPtr': Transformation,
+    "f32": ctypes.c_float,
+    "f64": ctypes.c_double,
+    "u8": ctypes.c_uint8,
+    "u16": ctypes.c_uint16,
+    "u32": ctypes.c_uint32,
+    "u64": ctypes.c_uint64,
+    "i8": ctypes.c_int8,
+    "i16": ctypes.c_int16,
+    "i32": ctypes.c_int32,
+    "i64": ctypes.c_int64,
+    "usize": ctypes.c_size_t,
+    "bool": ctypes.c_bool,
+    "AnyMeasurementPtr": Measurement,
+    "AnyTransformationPtr": Transformation,
 }
+
+_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {
+    "AnyMeasurementPtr",
+    "AnyTransformationPtr",
+}
+
+
+def _numpy_dtype_for_rust_type(type_name: str) -> Any:
+    np = import_optional_dependency("numpy")
+    if type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
+        raise ValueError(f"unrecognized numpy dtype: {type_name}")
+    return np.dtype(ATOM_MAP[type_name])
+
 
 def c_int_limits(type_name):
     c_int_type = ATOM_MAP[type_name]
@@ -51,29 +65,47 @@ def c_int_limits(type_name):
     signed_limit = 2 ** (bit_size - 1)
     return (-signed_limit, signed_limit - 1) if signed else (0, 2 * signed_limit - 1)
 
+
 INT_SIZES = {
-    ty: c_int_limits(ty) for ty in (
-        'u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize',
+    ty: c_int_limits(ty)
+    for ty in (
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "usize",
     )
 }
-_ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
+
+
+_INFERRED_TYPE_ERROR_URL = "https://docs.opendp.org/en/stable/getting-started/trouble-shooting.html#inferred-type-is-xxx-expected-yyy"
 
 
 def _check_and_cast_scalar(expected, value):
-    '''
+    """
     1. Converts integer value to float if expected value is float
     2. Checks that value is roughly a member of the same data type as expected
     3. Checks that integers are representable at the given data type
-    '''
+    """
     # relax checks in the case of an int
-    if isinstance(value, int) and expected in ["f32", "f64"] and not isinstance(value, bool):
+    if (
+        isinstance(value, int)
+        and expected in ["f32", "f64"]
+        and not isinstance(value, bool)
+    ):
         return float(value)
 
     inferred = str(RuntimeType.infer(value))
 
     if expected not in ATOM_EQUIVALENCE_CLASSES.get(inferred, [inferred]):
-        raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
-    
+        raise TypeError(
+            f"inferred type is {inferred}, expected {expected}. See {_INFERRED_TYPE_ERROR_URL}"
+        )
+
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
 
@@ -107,8 +139,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         return _wrap_py_transition(value, type_name)
 
     if c_type == ExtrinsicObjectPtr:
-        # since the memory is allocated by python, 
-        #    don't actually return an ExtrinsicObjectPtr, 
+        # since the memory is allocated by python,
+        #    don't actually return an ExtrinsicObjectPtr,
         #    which would call rust to free the Python-allocated ExtrinsicObject
         return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value)))
 
@@ -139,9 +171,10 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if c_type == AnyObjectPtr:
         if isinstance(value, ctypes.POINTER(AnyObject)):
             return value
-        
+
         from opendp._data import slice_as_object
-        return slice_as_object(value, type_name) # type: ignore[arg-type]
+
+        return slice_as_object(value, type_name)  # type: ignore[arg-type]
 
     if c_type == FfiSlicePtr:
         if type_name is None:
@@ -160,7 +193,6 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if hasattr(value, "_type_"):
             raise ValueError(f"Cannot convert {value} to {c_type}")  # pragma: no cover
         value = c_type(value)
-
     return value
 
 
@@ -178,7 +210,7 @@ def c_to_py(value: Any) -> Any:
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
-        
+
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)
 
@@ -202,6 +234,7 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
+
         assert value.value is not None
         value_contents = value.value.decode()
         str_free(value)
@@ -209,6 +242,7 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, BoolPtr):
         from opendp._data import bool_free
+
         value_contents = value.contents.value
         bool_free(value)
         return value_contents
@@ -218,6 +252,7 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, Domain):
         from opendp.domains import domain_type
+
         rt_type = RuntimeType.parse(domain_type(value))
 
         if isinstance(rt_type, RuntimeType):
@@ -261,6 +296,8 @@ def c_to_py(value: Any) -> Any:
         if isinstance(rt_type, RuntimeType):
             if rt_type.origin == "Approximate":
                 value.__class__ = ApproximateDivergence
+        elif rt_type == ExtrinsicDivergence.__name__:
+            value.__class__ = ExtrinsicDivergence
         # if you fall through these cases, then it is just treated as a generic Measure
 
     if isinstance(value, ctypes.c_void_p):
@@ -288,6 +325,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_bitvector(raw)
 
         if type_name == "ExtrinsicObject":
+            # TODO: Add test_convert.py unit test
             return _slice_to_extrinsic(raw)
 
         if type_name == "String":
@@ -306,31 +344,38 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_expr(raw)
 
         if type_name == "ExprPlan":
+            # TODO: Add test_convert.py unit test
             return _slice_to_exprplan(raw)
 
         if type_name == "Bound":
             return _slice_to_group_bound(raw)
-        
+
         if type_name == "Margin":
             return _slice_to_margin(raw)
-        
+
         if type_name == "Bounds":
             return _slice_to_vector(raw, RuntimeType("Vec", ["Bound"]))
 
         if type_name == "AnyObject":
+            # TODO: Add test_convert.py unit test
             return _slice_to_anyobject(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
 
+        if type_name.origin == "NDArray":
+            return _slice_to_numpy(raw, type_name)
+
         if type_name.origin == "Function":
+            # TODO add test_convert.py unit test
             return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
 
         if type_name.origin == "Tuple":
+            # TODO add test_convert.py unit test
             return _slice_to_tuple(raw, type_name)
 
         if type_name.origin == "Option":
@@ -356,9 +401,11 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _bitvector_to_slice(value)
 
         if type_name == "ExtrinsicObject":
+            # TODO add test_convert.py unit test
             return _extrinsic_to_slice(value)
 
         if type_name == "AnyMeasurement":
+            # TODO add test_convert.py unit test
             return _wrap_in_slice(value, 1)
 
         if type_name == "String":
@@ -368,20 +415,21 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _series_to_slice(value)
 
         if type_name in {"LazyFrame", "DslPlan"}:
+            # TODO add test_convert.py unit test for DslPlan
             return _lazyframe_to_slice(value)
 
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
-        
+
         if type_name == "Margin":
             return _margin_to_slice(value)
-            
+
         if type_name == "Expr":
             return _expr_to_slice(value)
 
         if type_name == "Bound":
             return _bound_to_slice(value)
-        
+
         if type_name == "Bounds":
             return _vector_to_slice(value, RuntimeType("Vec", ["Bound"]))
 
@@ -389,20 +437,23 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name.origin == "Vec":
             return _vector_to_slice(value, type_name)
 
+        if type_name.origin == "NDArray":
+            return _numpy_to_slice(value, type_name)
+
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
 
         if type_name.origin == "Function":
+            # TODO add test_convert.py unit test
             return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
-
     raise UnknownTypeException(type_name)  # pragma: no cover
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
+    np = import_optional_dependency("numpy", raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.item()
     val = _check_and_cast_scalar(type_name, val)
@@ -411,36 +462,45 @@ def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
 
 
 def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value # type: ignore[attr-defined]
+    return ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])
+    ).contents.value  # type: ignore[attr-defined]
+
 
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
     return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val))), 1)
 
+
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
 
+
 def _string_to_slice(val: str) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
+    np = import_optional_dependency("numpy", raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.item()
     return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    value = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value
-    assert value is not None 
+    value = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)
+    ).contents.value
+    assert value is not None
     return value.decode()
 
 
 def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
+    np = import_optional_dependency("numpy", raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.tobytes()
-    
-    if not isinstance(val, (bytes, bytearray)):
-        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")  # pragma: no cover
 
-    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
+    if not isinstance(val, (bytes, bytearray)):
+        raise TypeError(
+            "Expected type is BitVector but input data is not bytes or bytearray."
+        )  # pragma: no cover
+
+    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val)  # type: ignore[operator]
     return _wrap_in_slice(array, len(val) * 8)
 
 
@@ -448,27 +508,43 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
     # raw.contents.len is the number of valid bits.
     # Division by -8 is ceiling rather than floor: the number of bytes in the buffer
     n_bytes = -(raw.contents.len // -8)
-    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes] # type: ignore
+    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes]  # type: ignore
     return bytes(buffer)
 
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
-    if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+    if type_name.origin != "Vec" or len(type_name.args) != 1:
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
-    # TODO: can we use underlying numpy buffers directly?
+
+    np = import_optional_dependency("numpy", raise_error=False)
+    if (
+        np is not None
+        and isinstance(val, np.ndarray)
+        and isinstance(inner_type_name, str)
+        and inner_type_name in _NUMPY_COMPATIBLE_ATOM_TYPES
+    ):
+        type_name = RuntimeType("NDArray", [inner_type_name])
+        return _numpy_to_slice(val, type_name)
+
     if not isinstance(val, list):
         try:
             val = list(val)
         except TypeError:
-            raise TypeError(f"Expected type is {type_name} but input data is not a list.")
+            raise TypeError(
+                f"Expected type is {type_name} but input data is not a list."
+            )
 
-    inner_type_name = type_name.args[0]
-
-    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound", "BitVector"}:
-        c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
-        array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {
+        "Expr",
+        "Bound",
+        "BitVector",
+    }:
+        c_repr = [
+            py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val
+        ]
+        array = (AnyObjectPtr * len(val))(*c_repr)  # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
@@ -482,37 +558,44 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     if inner_type_name == "SeriesDomain":
         # define the ctype of an array of domains
-        domain_array_type = (Domain * len(val)) # type: ignore[operator]
+        domain_array_type = Domain * len(val)  # type: ignore[operator]
         # create an instance of a ctype array of domains
-        array = domain_array_type(*val) # type: ignore[operator]
+        array = domain_array_type(*val)  # type: ignore[operator]
         return _wrap_in_slice(array, len(val))
-    
+
     # remaining inner types should be atomic
     val = [_check_and_cast_scalar(inner_type_name, v) for v in val]
 
     if inner_type_name == "String":
+
         def str_to_slice(val):
             return ctypes.c_char_p(val.encode())
+
         array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
-        raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")  # pragma: no cover
+        raise TypeError(
+            f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}."
+        )  # pragma: no cover
 
     array = (ATOM_MAP[inner_type_name] * len(val))(*val)  # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
 
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
-    if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+    if type_name.origin != "Vec" or len(type_name.args) != 1:
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
 
-    if inner_type_name in {'AnyObject', 'Expr', 'Bound'}:
+    if inner_type_name in {"AnyObject", "Expr", "Bound"}:
         from opendp._data import ffislice_of_anyobjectptrs
+
         raw = ffislice_of_anyobjectptrs(raw)
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[
+            0 : raw.contents.len
+        ]
         res = list(map(c_to_py, array))
         # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
         # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
@@ -520,41 +603,109 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
             elem.__class__ = ctypes.POINTER(AnyObject)
         return res
 
-    if inner_type_name == 'ExtrinsicObject':
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[0:raw.contents.len]
+    if inner_type_name == "ExtrinsicObject":
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[
+            0 : raw.contents.len
+        ]
         return list(map(lambda v: v.ptr, array))
 
-    if inner_type_name == 'String':
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
+    if inner_type_name == "String":
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[
+            0 : raw.contents.len
+        ]
         return list(map(lambda v: v.decode(), array))
 
-    assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
-    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(
+            f"inner type must be atomic, found {inner_type_name}"
+        )  # pragma: no cover
+
+    return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[
+        0 : raw.contents.len
+    ]
 
 
-def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
+def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
+    np = import_optional_dependency("numpy")
+    if type_name.origin != "NDArray" or len(type_name.args) != 1:
+        raise ValueError(
+            f"type_name must be NDArray<T> with one type argument, found {type_name}"
+        )  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(
+            f"inner type must be atomic, found {inner_type_name}"
+        )  # pragma: no cover
+
+    np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
+    if not isinstance(val, np.ndarray):
+        raise TypeError(f"Expected type is {type_name}.")
+
+    if val.ndim != 1:
+        raise TypeError("Only 1d arrays are currently supported. Flatten first.")
+    if val.dtype != np.dtype(np_dtype):
+        raise TypeError(f"Expected dtype {np.dtype(np_dtype)}, got {val.dtype}.")
+
+    contiguous = np.ascontiguousarray(val)
+    array = np.ctypeslib.as_ctypes(contiguous)
+    ffi_slice = _wrap_in_slice(array, len(contiguous))
+    ffi_slice.depends_on(contiguous, array)
+    return ffi_slice
+
+
+def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
+    np = import_optional_dependency("numpy")
+    if type_name.origin != "NDArray" or len(type_name.args) != 1:
+        raise ValueError(
+            f"type_name must be NDArray<T> with one type argument, found {type_name}"
+        )  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(
+            f"inner type must be atomic, found {inner_type_name}"
+        )  # pragma: no cover
+
+    _numpy_dtype_for_rust_type(
+        inner_type_name
+    )  # validate numpy compatibility before casting
+
+    array_ptr: Any = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name])
+    )
+    return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
+
+
+def _tuple_to_slice(
+    val: tuple[Any, ...], type_name: Union[RuntimeType, str]
+) -> FfiSlicePtr:
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
         raise TypeError("Cannot coerce a non-tuple type to a tuple")  # pragma: no cover
 
     if len(inner_type_names) != len(val):
-        raise TypeError("type_name members must have same length as tuple")  # pragma: no cover
+        raise TypeError(
+            "type_name members must have same length as tuple"
+        )  # pragma: no cover
 
-    if inner_type_names == ['f64', 'ExtrinsicObject']:
+    if inner_type_names == ["f64", "ExtrinsicObject"]:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
         ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1])))
 
         cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
         array = (ctypes.c_void_p * 2)(
-            ctypes.cast(score_ptr, ctypes.c_void_p), 
-            ctypes.cast(cand_ptr, ctypes.c_void_p), 
+            ctypes.cast(score_ptr, ctypes.c_void_p),
+            ctypes.cast(cand_ptr, ctypes.c_void_p),
         )
         return _wrap_in_slice(ctypes.pointer(array), 2)
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
-            raise TypeError(f"Tuple members must be one of {set(ATOM_MAP.keys())}. Got {t}")  # pragma: no cover
+            raise TypeError(
+                f"Tuple members must be one of {set(ATOM_MAP.keys())}. Got {t}"
+            )  # pragma: no cover
 
     # check that actual type can be represented by the inner_type_name
     val = tuple(
@@ -564,8 +715,9 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     # ctypes.byref has edge-cases that cause use-after-free errors. ctypes.pointer fixes these edge-cases
     ptr_data = (
-        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p) # type: ignore[index]
-        for v, name in zip(val, inner_type_names))
+        ctypes.cast(ctypes.pointer(ATOM_MAP[name](v)), ctypes.c_void_p)  # type: ignore[index]
+        for v, name in zip(val, inner_type_names)
+    )
 
     array = (ctypes.c_void_p * len(val))(*ptr_data)
     return _wrap_in_slice(ctypes.pointer(array), len(val))
@@ -574,23 +726,25 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]:
     inner_type_names = type_name.args
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
-    if inner_type_names == ['PrivacyProfile', 'f64']:
+    if inner_type_names == ["PrivacyProfile", "f64"]:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         return PrivacyProfile(curve), delta.contents.value
-    
-    if inner_type_names == ['f64', 'AnyObject']:
+
+    if inner_type_names == ["f64", "AnyObject"]:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
         candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
         candidate = c_to_py(c_to_py(candidate_obj))
-        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        candidate_obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
         return score.contents.value, candidate
 
     # tuple of instances of Python types
-    return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
-                 for void_p, name in zip(ptr_data, inner_type_names))
+    return tuple(
+        ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value  # type: ignore[index,attr-defined]
+        for void_p, name in zip(ptr_data, inner_type_names)
+    )
 
 
 def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
@@ -602,17 +756,24 @@ def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
 def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
     if not isinstance(val, MutableMapping):
-        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")  # pragma: no cover
+        raise TypeError(
+            f"Expected type is {type_name} but input data is not a dict."
+        )  # pragma: no cover
 
     val = {
-        _check_and_cast_scalar(key_type, k):
-            _check_and_cast_scalar(val_type, v) if val_type != "ExtrinsicObject" else v
+        _check_and_cast_scalar(key_type, k): _check_and_cast_scalar(val_type, v)
+        if val_type != "ExtrinsicObject"
+        else v
         for k, v in val.items()
     }
-    
-    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
-    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
-    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator]
+
+    keys: AnyObjectPtr = py_to_c(
+        list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr
+    )
+    vals: AnyObjectPtr = py_to_c(
+        list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr
+    )
+    ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2)  # type: ignore[operator]
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
     # ffislice needs keys and vals to have a lifetime at least as long as itself,
@@ -631,6 +792,7 @@ def _slice_to_function(raw: FfiSlicePtr) -> Function:
 def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
     if not isinstance(raw, Function):
         from opendp.core import new_function
+
         raw = new_function(raw, TO=type_name.args[1])
     return _wrap_in_slice(raw, 1)
 
@@ -644,13 +806,13 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
     # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
     # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
     # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
-    keys.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
-    vals.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+    keys.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
+    vals.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
     return result
 
 
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.LazyFrame):
         raise ValueError("expected Polars LazyFrame")
 
@@ -661,15 +823,15 @@ def _lazyframe_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_lazyframe(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     lf = pl.LazyFrame()
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
-    lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    lf.__setstate__(bytes(slice_array[0 : raw.contents.len]))
     return lf
 
 
 def _expr_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if isinstance(val, str):
         val = pl.col(val)
 
@@ -683,25 +845,30 @@ def _expr_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_expr(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     expr = pl.all()
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
-    expr.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    expr.__setstate__(bytes(slice_array[0 : raw.contents.len]))
     return expr
 
 
 def _slice_to_exprplan(raw: FfiSlicePtr):
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     plan = _slice_to_lazyframe(ctypes.cast(ptr_data[0], FfiSlicePtr))
     expr = _slice_to_expr(ctypes.cast(ptr_data[1], FfiSlicePtr))
-    fill = _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr)) if raw.contents.len == 3 else None
+    fill = (
+        _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr))
+        if raw.contents.len == 3
+        else None
+    )
 
     from collections import namedtuple
 
     ExprPlan = namedtuple("ExprPlan", ["plan", "expr", "fill"])
     return ExprPlan(plan, expr, fill)
+
 
 def _to_optional_u32_void_ptr(v):
     if v is None:
@@ -719,31 +886,35 @@ def _slice_to_margin(raw: FfiSlicePtr):
     from opendp.extras.polars import Margin
 
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
         by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
         max_length=_from_optional_u32_void_ptr(ptr_data[1]),
         max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
-        invariant=invariant.value.decode() if invariant.value else None, # type: ignore[arg-type]
+        invariant=invariant.value.decode() if invariant.value else None,  # type: ignore[arg-type]
     )
+
 
 def _check_polars_by(by):
     if isinstance(by, str):
-        raise ValueError(f"by ({by}) must be a sequence type; Did you mean [\"{by}\"]?")
-    
+        raise ValueError(f'by ({by}) must be a sequence type; Did you mean ["{by}"]?')
+
     if not isinstance(by, Sequence):
         raise ValueError(f"by ({by}) must be a sequence type")
 
 
 def _margin_to_slice(val) -> FfiSlicePtr:
     from opendp.extras.polars import Margin
+
     if not isinstance(val, Margin):
-        raise ValueError(f"expected Polars Margin, got {val}") # pragma: no cover
-    
+        raise ValueError(f"expected Polars Margin, got {val}")  # pragma: no cover
+
     _check_polars_by(val.by)
-    by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
+    by = ctypes.cast(
+        py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p
+    )
 
     max_length = _to_optional_u32_void_ptr(val.max_length)
     max_groups = _to_optional_u32_void_ptr(val.max_groups)
@@ -756,11 +927,12 @@ def _margin_to_slice(val) -> FfiSlicePtr:
     array = (ctypes.c_void_p * 4)(by, max_length, max_groups, invariant)
     return _wrap_in_slice(ctypes.pointer(array), 4)
 
+
 def _slice_to_group_bound(raw: FfiSlicePtr):
     from opendp.extras.polars import Bound
 
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     return Bound(
         by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
@@ -771,10 +943,13 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
 
 def _bound_to_slice(val) -> FfiSlicePtr:
     from opendp.extras.polars import Bound
+
     assert isinstance(val, Bound)
 
     _check_polars_by(val.by)
-    by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
+    by = ctypes.cast(
+        py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p
+    )
 
     num_groups = _to_optional_u32_void_ptr(val.num_groups)
     per_group = _to_optional_u32_void_ptr(val.per_group)
@@ -783,9 +958,8 @@ def _bound_to_slice(val) -> FfiSlicePtr:
     return _wrap_in_slice(ctypes.pointer(array), 3)
 
 
-
 def _dataframe_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.DataFrame):
         raise ValueError("expected Polars DataFrame")  # pragma: no cover
 
@@ -795,17 +969,21 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
     raw.depends_on(slices)
     return raw
 
+
 def _slice_to_dataframe(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
-    series = [_slice_to_series(FfiSlicePtr(ffislice)) for ffislice in slice_array[0:raw.contents.len]]
+    series = [
+        _slice_to_series(FfiSlicePtr(ffislice))
+        for ffislice in slice_array[0 : raw.contents.len]
+    ]
     return pl.DataFrame(series)
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
     from opendp._data import new_arrow_array, arrow_array_free
 
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
@@ -831,8 +1009,8 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_series(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
-    pyarrow = import_optional_dependency('pyarrow')
+    pl = import_optional_dependency("polars")
+    pyarrow = import_optional_dependency("pyarrow")
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr, name_ptr = slice_array[0:3]
 
@@ -855,8 +1033,8 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
     ret = c_to_py(obj)
     # don't free obj, because it is owned by Rust
     # c_to_py cares that the type is AnyObject, so this needs to happen after c_to_py
-    obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
-    
+    obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
+
     return ret
 
 
@@ -864,98 +1042,116 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-def _wrap_py_func(func, TO):
+def _invoke_py_callback(c_arg, userdata):
     from opendp._convert import c_to_py, py_to_c
 
-    def wrapper_func(c_arg):
-        try:
-            # 1. convert AnyObject to Python type
-            py_arg = c_to_py(c_arg)
-            # don't free c_arg, because it is owned by Rust
-            c_arg.__class__ = ctypes.POINTER(AnyObject)
+    func, TO = userdata
 
-            # 2. invoke the user-supplied function
-            py_out = func(py_arg)
+    try:
+        # 1. convert AnyObject to Python type
+        py_arg = c_to_py(c_arg)
+        # don't free c_arg, because it is owned by Rust
+        c_arg.__class__ = ctypes.POINTER(AnyObject)
 
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
+        # 2. invoke the user-supplied function
+        py_out = func(py_arg)
 
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
 
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    c_wrapper_func = CallbackFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
+    except Exception:
+        import traceback
 
-    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p(
+                "Continued stack trace from Exception in user-defined function".encode()
+            ),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
+
+
+_CALLBACK_DISPATCH = CallbackFnValue(_invoke_py_callback)
+
+
+def _wrap_py_func(func, TO):
+    # `userdata` is the opaque host-owned payload carried alongside the shared
+    # callback trampoline. Here it stores the Python callable and the declared
+    # output type so the dispatcher can recover the closure environment later.
+    userdata = ExtrinsicObject(ctypes.py_object((func, TO)))
+    return ctypes.pointer(CallbackFn(_CALLBACK_DISPATCH, userdata))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                                   (answer         , query       , is_internal  )
-TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
+#                                   (answer         , query       , is_internal  , userdata        )
+TransitionFnValue = ctypes.CFUNCTYPE(
+    ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool, ctypes.py_object
+)
+
 
 class TransitionFn(ctypes.Structure):
-    _fields_ = [
-        ("callback", TransitionFnValue),
-        ("lifeline", ExtrinsicObject)
-    ]
+    _fields_ = [("callback", TransitionFnValue), ("userdata", ExtrinsicObject)]
 
-class TransitionFnPtr(ctypes.POINTER(TransitionFn)): # type: ignore[misc]
+
+class TransitionFnPtr(ctypes.POINTER(TransitionFn)):  # type: ignore[misc]
     _type_ = TransitionFn
 
 
-def _wrap_py_transition(py_transition, A):
+def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
     from opendp._convert import c_to_py, py_to_c
 
+    py_transition, A = userdata
+
+    try:
+        # 1. convert to Python type
+        py_query = c_to_py(c_query)
+        py_is_internal = c_is_internal
+        # don't free c_arg, because it is owned by Rust
+        c_query.__class__ = ctypes.POINTER(AnyObject)
+
+        # 2. invoke the user-supplied function
+        py_out = py_transition(py_query, py_is_internal)
+
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
+
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+
+    except Exception:
+        import traceback
+
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p(
+                "Continued stack trace from Exception in user-defined function".encode()
+            ),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
+
+
+_TRANSITION_DISPATCH = TransitionFnValue(_invoke_py_transition)
+
+
+def _wrap_py_transition(py_transition, A):
     # the indicator that a query is internal is oftentimes not needed
     if len(signature(py_transition).parameters) == 1:
         py_transition_old = py_transition
         py_transition = lambda q, _=None: py_transition_old(q)
 
-    def wrapper_func(c_query, c_is_internal: ctypes.c_bool):
-        try:
-            # 1. convert to Python type
-            py_query = c_to_py(c_query)
-            py_is_internal = c_is_internal
-            # don't free c_arg, because it is owned by Rust
-            c_query.__class__ = ctypes.POINTER(AnyObject)
-
-            # 2. invoke the user-supplied function
-            py_out = py_transition(py_query, py_is_internal)
-
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
-
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
-
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
-
-    c_wrapper_func = TransitionFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
-
-    return ctypes.pointer(TransitionFn(c_wrapper_func, lifeline))
+    userdata = ExtrinsicObject(ctypes.py_object((py_transition, A)))
+    return ctypes.pointer(TransitionFn(_TRANSITION_DISPATCH, userdata))

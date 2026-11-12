@@ -4,12 +4,12 @@
 \title{\texttt{fn match\_per\_group\_predicate}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -18,7 +18,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 Types matching pseudocode.
 
 \subsubsection*{Caller-verified}
-None 
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -49,7 +49,7 @@ None
     If the only rows kept are those whose enumeration is less than \texttt{threshold},
     then each user identifier will have at most \texttt{threshold} rows when their records are grouped by \texttt{by}.
     Reorderings of the enumeration, like reversal, shuffling and sorting can be used to choose which records from each individual are kept.
-    
+
     Therefore the bound on user contributions constructed on line \ref{line:bound} is valid.
 \end{proof}
 \end{document}

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{base::Signed, integer::IBig, rational::RBig};
 use opendp_derive::proven;
 
 use crate::{
@@ -69,7 +69,7 @@ where
             return fallible!(FailedFunction, "threshold ({threshold}) must be finite");
         };
 
-        let r_threshold = x_mul_2k(r_threshold, -k).round();
+        let r_threshold = x_mul_2k(r_threshold, -k).floor();
 
         let t_int = make_float_to_bigint_threshold::<TK, TV, P, QI>(input_space, threshold, k)?;
         let m_noise = distribution.make_noise_threshold(t_int.output_space(), r_threshold)?;
@@ -138,12 +138,18 @@ where
             // Lp sensitivity
             let r_lp = RBig::try_from(lp.clone())
                 .map_err(|_| err!(FailedMap, "l{P} ({lp:?}) must be finite"))?;
+            if r_lp.is_negative() {
+                return fallible!(FailedMap, "l{P} ({lp:?}) must be non-negative");
+            }
             let r_lp_round = get_rounding_distance::<TV, P>(k, Some(*l0 as usize))?;
             let r_lp = x_mul_2k(r_lp + r_lp_round.clone(), -k);
 
             // L\infty sensitivity
             let r_li = RBig::try_from(li.clone())
                 .map_err(|_| err!(FailedMap, "li ({li:?}) must be finite"))?;
+            if r_li.is_negative() {
+                return fallible!(FailedMap, "li ({li:?}) must be non-negative");
+            }
 
             // this check is not necessary for stability,
             // but it gives a more understandable error message

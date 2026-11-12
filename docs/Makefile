@@ -5,15 +5,13 @@
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
 
-# TODO: restore "-W": Treat warnings as errors.
-# https://github.com/opendp/opendp/issues/2509
-# https://github.com/opendp/opendp/issues/2508
-SPHINXOPTS    = --keep-going
+SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
 BUILDDIR      = build
 VERSION       = $(shell cat ../VERSION)
+SMV_TAG_WHITELIST ?= $(shell python3 tools/select_smv_versions.py)
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -34,7 +32,9 @@ html:
 	@set -e
 	# If sphinx-apidoc options change, also update conf.py!
 	$(SPHINXAPIDOC) -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
-	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=sidebar-nav-bs.html source $(BUILDDIR)/html
+	# Use -W (elevate warnings to errors) only on the single-version build.
+	# We don't want lower standards everywhere just to satisfy multi-version.
+	OPENDP_SPHINX_LOCAL=1 $(SPHINXBUILD) -W --keep-going $(SPHINXOPTS) -D version=$(VERSION) source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
@@ -46,7 +46,7 @@ doctest-rust:
 
 versions:
 	# "/en" is the default, but someday we might have translations
-	$(SPHINXMULTI) $(SPHINXOPTS) source $(BUILDDIR)/html/en
+	OPENDP_SMV_TAG_WHITELIST='$(SMV_TAG_WHITELIST)' $(SPHINXMULTI) $(SPHINXOPTS) source $(BUILDDIR)/html/en
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 	cp redirect.html $(BUILDDIR)/html/index.html

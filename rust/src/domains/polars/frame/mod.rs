@@ -363,8 +363,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
         // check that margins are satisfied
         for margin in self.margins.iter() {
-            let by = margin.by.iter().cloned().collect::<Vec<_>>();
-            if !margin.member(val.clone().lazyframe().group_by(by))? {
+            if !margin.member(val.clone().lazyframe())? {
                 return Ok(false);
             }
         }
@@ -446,7 +445,7 @@ impl Margin {
 
     /// # Proof Definition
     /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
-    pub(crate) fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
+    pub(crate) fn member(&self, value: LazyFrame) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
             ($tgt:expr, $ty:ident) => {
@@ -455,7 +454,20 @@ impl Margin {
             };
         }
 
-        let max_part_length = value.clone().agg([len()]).select(&[max("len")]);
+        // No grouping keys corresponds to select, with one group even on an empty frame.
+        if self.by.is_empty() {
+            if self.max_groups == Some(0) {
+                return Ok(false);
+            }
+            let length = item!(value.select([len()]), u32);
+            return Ok(length <= self.max_length.unwrap_or(u32::MAX));
+        }
+
+        let value = value.group_by(self.by.iter().cloned().collect::<Vec<_>>());
+        let max_part_length = value
+            .clone()
+            .agg([len()])
+            .select(&[max("len").fill_null(lit(0u32))]);
 
         if item!(max_part_length, u32) > self.max_length.unwrap_or(u32::MAX) {
             return Ok(false);

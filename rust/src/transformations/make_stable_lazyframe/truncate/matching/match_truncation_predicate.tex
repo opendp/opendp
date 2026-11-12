@@ -4,12 +4,12 @@
 \title{\texttt{fn match\_truncation\_predicate}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -18,7 +18,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 Types matching pseudocode.
 
 \subsubsection*{Caller-verified}
-None 
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -42,7 +42,7 @@ None
         \item \texttt{BinaryExpr} where the operator is a comparison. The logic for this case is more involved.
     \end{enumerate}
 
-    In the comparison case, the algorithm first matches through the comparison operator 
+    In the comparison case, the algorithm first matches through the comparison operator
     to identify what should be the ``over'' and ``threshold'' expressions.
     Since window expressions are not valid row-by-row functions,
     they are unambiguously truncation expressions.
@@ -50,7 +50,7 @@ None
     then any further failures to match the truncation predicates can now be raised as errors.
 
     \texttt{threshold\_value} on line \ref{line:threshold_value} is resolved to the literal u32 upper bound on contributions.
-    
+
     By the postconditions of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate},
     and \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate},
     \texttt{num\_groups} and \texttt{per\_group} are optional bounds on the number of groups and row contributions per-group, respectively.

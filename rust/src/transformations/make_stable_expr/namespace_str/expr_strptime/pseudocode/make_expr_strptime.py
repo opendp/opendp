@@ -30,7 +30,7 @@ def make_expr_strptime(
         ambig_value = literal_value_of(ambiguous)
     except Exception:
         ambig_value = None
-    ambiguous = lit(ambig_value if ambig_value in {"earliest" "latest"} else "null")
+    ambiguous = lit(ambig_value if ambig_value in {"earliestlatest"} else "null")
 
     output_domain = middle_domain.clone()
     series_domain = output_domain.column
@@ -38,8 +38,12 @@ def make_expr_strptime(
     # check input and output types
     if series_domain.dtype() != DataType.String:  # `\label{string-check}`
         raise ValueError("str.strptime input dtype must be String")
-    
-    if to_type not in {DataType.Time, DataType.Datetime, DataType.Date}:  # `\label{to-type-check}`
+
+    if to_type not in {
+        DataType.Time,
+        DataType.Datetime,
+        DataType.Date,
+    }:  # `\label{to-type-check}`
         raise ValueError("str.strptime output dtype must be Time, Datetime or Date")
 
     # in Rust, this assigns to the series domain in output_domain

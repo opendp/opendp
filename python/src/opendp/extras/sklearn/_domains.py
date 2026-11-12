@@ -1,0 +1,62 @@
+"""Row-aligned private inputs for scikit-learn estimators."""
+
+from dataclasses import dataclass
+from typing import Any
+
+from opendp._internal import _extrinsic_domain
+from opendp.mod import Domain
+
+
+@dataclass(eq=False, repr=False)
+class SklearnFit:
+    """Features and optional targets with aligned rows."""
+
+    X: Any
+    y: Any | None = None
+
+
+@dataclass(frozen=True)
+class SklearnFitDescriptor:
+    """Domains for the populated fields of a SklearnFit dataset."""
+
+    X: Domain
+    y: Domain | None = None
+
+
+def sklearn_fit_domain(X, y=None) -> Domain:
+    """Construct a domain for SklearnFit with aligned feature and target rows.
+
+    :param X: feature domain
+    :param y: optional target domain
+    """
+    descriptor = SklearnFitDescriptor(X, y)
+
+    def member(value):
+        if not isinstance(value, SklearnFit):
+            return False
+
+        if not X.member(value.X):
+            return False
+
+        if (y is None) != (value.y is None):
+            return False
+
+        if y is not None:
+            if not y.member(value.y):
+                return False
+            if _n_rows(value.X) != _n_rows(value.y):
+                return False
+
+        return True
+
+    return _extrinsic_domain(
+        f"SklearnFitDomain(X={X!r}, y={y!r})",
+        member,
+        descriptor,
+    )
+
+
+def _n_rows(value) -> int:
+    """Return the number of records along the first axis."""
+    shape = getattr(value, "shape", None)
+    return int(shape[0]) if shape else len(value)

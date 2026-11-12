@@ -7,7 +7,7 @@
 
     >>> # Create the randomized response mechanism
     >>> m_rr = dp.m.make_randomized_response_bitvec(
-    ...     dp.bitvector_domain(max_weight=4), dp.discrete_distance(), f=0.95
+    ...     dp.bitvector_domain(max_weight=4, size=24), dp.discrete_distance(), f=0.95
     ... )
 
     >>> # compute privacy loss

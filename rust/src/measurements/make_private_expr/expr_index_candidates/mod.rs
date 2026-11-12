@@ -26,7 +26,7 @@ use super::PrivateExpr;
 #[cfg(test)]
 mod test;
 
-/// Make a post-processor that selects from a candidate set.
+/// Make a postprocessor that selects from a candidate set.
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
