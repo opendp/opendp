@@ -75,3 +75,17 @@ test_that("bitvec data loader", {
   expect_equal(m_ident(arg = charToRaw("")), charToRaw(""))
   expect_equal(m_ident(arg = charToRaw("abc")), charToRaw("abc"))
 })
+
+test_that("repeated R conversions retain correct ownership", {
+  scalar <- scalar_space_of(i32) |> then_identity()
+  vector <- vector_space_of(String) |> then_identity()
+  map <- map_space_of(String, bool) |> then_identity()
+
+  for (i in seq_len(20)) {
+    expect_identical(scalar(arg = as.integer(i)), as.integer(i))
+    expect_identical(vector(arg = c("a", "b")), c("a", "b"))
+
+    input <- new_hashtab(c("a", "b"), c(TRUE, FALSE))
+    expect_true(hashtab_eq(map(arg = input), input))
+  }
+})
