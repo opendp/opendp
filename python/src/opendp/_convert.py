@@ -235,9 +235,29 @@ def c_to_py(value: Any) -> Any:
 
             return Queryable(value, query_type)
 
+        runtime_type = RuntimeType.parse(obj_type)
+        if _supports_owned_slice(runtime_type):
+            create = lib.opendp_data__object_as_slice_owned
+            create.argtypes = [ctypes.POINTER(AnyObject)]
+            create.restype = FfiResult
+            view = lib.opendp_data__slice_owner_view
+            view.argtypes = [ctypes.c_void_p]
+            view.restype = FfiResult
+            release = lib.opendp_data__slice_owner_free
+            release.argtypes = [ctypes.c_void_p]
+            release.restype = FfiResult
+            owner = unwrap(create(value), ctypes.c_void_p)
+            try:
+                ffi_slice = unwrap(view(owner), FfiSlicePtr)
+                ffi_slice._object_pointers = True
+                return _slice_to_py(ffi_slice, runtime_type)
+            finally:
+                unwrap(release(owner), ctypes.c_void_p)
+
+        # Polars and function outputs retain their existing representation.
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            return _slice_to_py(ffi_slice, runtime_type)
         finally:
             slice_free(ffi_slice)
 
@@ -314,6 +334,29 @@ def c_to_py(value: Any) -> Any:
         return
 
     return value
+
+
+def _supports_owned_slice(type_name: Union[RuntimeType, str]) -> bool:
+    """Select only the representations supported by the scratch-owner API."""
+    primitives = set(ATOM_MAP) - {"AnyMeasurementPtr", "AnyTransformationPtr"}
+    if isinstance(type_name, str):
+        return type_name in primitives | {"String", "BitVector", "ExtrinsicObject"}
+    if type_name.origin == "Vec":
+        return type_name.args[0] in primitives | {
+            "String",
+            "ExtrinsicObject",
+            "AnyObject",
+        }
+    if type_name.origin == "HashMap":
+        return True
+    if type_name.origin == "Tuple":
+        return all(t in primitives for t in type_name.args)
+    if type_name.origin == "Option":
+        inner = type_name.args[0]
+        return inner == "AnyObject" or (
+            isinstance(inner, RuntimeType) and _supports_owned_slice(inner)
+        )
+    return False
 
 
 def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
@@ -601,11 +644,18 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     if inner_type_name in {"AnyObject", "Expr", "Bound"}:
         from opendp._data import ffislice_of_anyobjectptrs
 
-        raw = ffislice_of_anyobjectptrs(raw)
+        if raw._object_pointers:
+            # The owner keeps this array and its borrowed elements alive.
+            array = ctypes.cast(
+                raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+            )[0 : raw.contents.len]
+            return list(map(c_to_py, array))
+
+        pointers = ffislice_of_anyobjectptrs(raw)
         # Elements belong to the source object, even if conversion raises.
         array = ctypes.cast(
-            raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
-        )[0 : raw.contents.len]
+            pointers.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+        )[0 : pointers.contents.len]
         return list(map(c_to_py, array))
 
     if inner_type_name == "ExtrinsicObject":
