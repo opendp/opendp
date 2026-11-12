@@ -1,6 +1,7 @@
 //! Executable filter node and row-domain preservation certificate.
 
 use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
+use super::verified::domain::{self, VColumnRule};
 use super::stability;
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
@@ -606,23 +607,26 @@ pub proof fn lemma_single_filter_relation(
 pub struct CertifiedTableFilter {
     pub plan: VPlan,
     pub schema: Vec<VField>,
+    pub rules: Vec<VColumnRule>,
 }
 
 impl CertifiedTableFilter {
     pub open spec fn valid(&self) -> bool {
+        &&& domain::schema_member(self.schema@, self.rules@)
         &&& single_filter(&self.plan)
         &&& verified::plan_schema(&self.plan, self.schema@) == Some(self.schema@)
         &&& stability::stable_on_typed_edits(&self.plan, self.schema@)
         &&& preserves_filter_multiset(&self.plan, self.schema@)
     }
 
-    pub fn new(predicate: VExpr, schema: &Vec<VField>) -> (result: Option<Self>)
+    pub fn new(predicate: VExpr, rules: &Vec<VColumnRule>) -> (result: Option<Self>)
         ensures match result {
-            Some(filter) => filter.valid() && filter.schema@ == schema@,
+            Some(filter) => filter.valid() && filter.rules@ == rules@,
             None => true,
         },
     {
-        let fields = match verified::filter::check_schema(&predicate, schema) {
+        let schema = domain::rule_schema(rules);
+        let fields = match verified::filter::check_schema(&predicate, &schema) {
             Some(fields) => fields,
             None => return None,
         };
@@ -655,7 +659,7 @@ impl CertifiedTableFilter {
                         lemma_filter_submultiset(&plan, rows, schema@);
                     }
                 }
-                Some(Self { plan, schema: fields })
+                Some(Self { plan, schema: fields, rules: rules.clone() })
         }
     }
 
@@ -685,19 +689,51 @@ impl CertifiedTableFilter {
                     },
                     Err(_) => false,
                 },
+            self.valid() && domain::table_member(input, self.rules@)
+                ==> match result {
+                    Ok(output) => domain::table_member(&output, self.rules@),
+                    Err(_) => false,
+                },
     {
         if !verified::check_table(input) {
+            proof {
+                if self.valid() && domain::table_member(input, self.rules@) {
+                    domain::lemma_table_typed(input, self.rules@);
+                    assert(verified::table_valid(input));
+                }
+            }
             return Err(());
+        }
+        proof {
+            if self.valid() && domain::table_member(input, self.rules@) {
+                domain::lemma_unique_schema(
+                    input.schema@, self.schema@, self.rules@);
+            }
         }
         let fields = match verified::check_plan(&self.plan, &input.schema) {
             Some(fields) => fields,
-            None => return Err(()),
+            None => {
+                proof {
+                    if self.valid() && domain::table_member(input, self.rules@) {
+                        assert(input.schema@ == self.schema@);
+                        assert(verified::plan_schema(&self.plan, input.schema@)
+                            == Some(self.schema@));
+                    }
+                }
+                return Err(());
+            },
         };
         let rows = match verified::evaluate(&self.plan, input) {
             Ok(rows) => rows,
             Err(_) => {
                 proof {
                     if self.valid() && input.schema@ == self.schema@ {
+                        verified::lemma_relation_type_sound(
+                            &self.plan, verified::rows_view(input.rows@),
+                            input.schema@, self.schema@);
+                    }
+                    if self.valid() && domain::table_member(input, self.rules@) {
+                        assert(input.schema@ == self.schema@);
                         verified::lemma_relation_type_sound(
                             &self.plan, verified::rows_view(input.rows@),
                             input.schema@, self.schema@);
@@ -726,7 +762,14 @@ impl CertifiedTableFilter {
                     .subset_of(verified::rows_view(input.rows@).to_multiset()));
             }
         }
-        Ok(VTable { schema: fields, rows })
+        let output = VTable { schema: fields, rows };
+        proof {
+            if self.valid() && domain::table_member(input, self.rules@) {
+                assert(output.schema@ == input.schema@);
+                domain::lemma_table_submultiset(input, &output, self.rules@);
+            }
+        }
+        Ok(output)
     }
 
     /// Full margin-free frame contract: filtering preserves every row-wise

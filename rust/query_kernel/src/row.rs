@@ -6,19 +6,21 @@ pub mod project;
 pub mod margin;
 #[path = "row/filter.rs"]
 pub mod filter;
+#[path = "row/domain.rs"]
+pub mod domain;
 #[path = "row/scalar.rs"]
 pub mod scalar;
 use scalar::{binary_field, clip_field, eval_binary, eval_clip};
 
 verus! {
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, StructuralEq, Hash)]
 pub enum VDType { Int64, Boolean }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VValue { Int(i64), Bool(bool) }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, StructuralEq, Hash)]
 pub struct VField {
     pub dtype: VDType,
     pub nullable: bool,

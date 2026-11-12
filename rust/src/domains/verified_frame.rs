@@ -26,6 +26,42 @@ pub(crate) fn kernel_schema<C>(columns: &[ColumnDomain<C>]) -> Fallible<Vec<VFie
     }).collect()
 }
 
+/// Interpret a restricted frame's atom domains as executable Verus rules.
+///
+/// Only inclusive integer/boolean bounds are supported by this first
+/// end-to-end certificate. Reject unsupported bounds at construction rather
+/// than treating a wider verified domain as equivalent to a narrower one.
+pub(crate) fn verified_rules(
+    columns: &[ColumnDomain<VColumn>],
+) -> Fallible<Vec<verified::domain::VColumnRule>> {
+    use verified::domain::{VCellRange, VColumnRule};
+    columns.iter().map(|column| {
+        let range = match column.dtype() {
+            DataType::Int64 => {
+                let atom = column.atom_domain::<i64>()?;
+                let range = atom.bounds.as_ref()
+                    .map(|bounds| bounds.get_closed()).transpose()?;
+                VCellRange::Int {
+                    lower: range.map(|(lower, _)| lower),
+                    upper: range.map(|(_, upper)| upper),
+                }
+            },
+            DataType::Boolean => {
+                let atom = column.atom_domain::<bool>()?;
+                let range = atom.bounds.as_ref()
+                    .map(|bounds| bounds.get_closed()).transpose()?;
+                VCellRange::Bool {
+                    min: range.map(|(lower, _)| lower),
+                    max: range.map(|(_, upper)| upper),
+                }
+            },
+            dtype => return fallible!(MakeTransformation,
+                "unsupported verified column dtype: {:?}", dtype),
+        };
+        Ok(VColumnRule { range, nullable: column.nullable })
+    }).collect()
+}
+
 /// Infer the same verified projection columns for any frame carrier.
 /// Only a column reference (possibly wrapped in aliases) retains its
 /// original value-domain constraints; derived expressions get broad domains.
@@ -155,6 +191,14 @@ fn margin_member(margin: &Margin<VExpr>, table: &VTable) -> Fallible<bool> {
 }
 
 fn table_member(table: &VTable, domain: &FrameDomain<VTable>) -> Fallible<bool> {
+    // For the supported margin-free contract, the domain's actual member
+    // function is the Verus-verified predicate. Other domains retain the
+    // existing checker until their membership semantics are formalized.
+    if domain.margins.is_empty() {
+        if let Ok(rules) = verified_rules(&domain.series_domains) {
+            return Ok(verified::domain::check_table(table, &rules));
+        }
+    }
     if !verified::check_table(table) || table.schema.len() != domain.series_domains.len() {
         return Ok(false);
     }

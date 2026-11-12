@@ -3,7 +3,7 @@
 use super::*;
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
-    domains::{verified_frame::kernel_schema, verified_plan::filter_domain},
+    domains::{verified_frame::{kernel_schema, verified_rules}, verified_plan::filter_domain},
 };
 
 
@@ -12,18 +12,18 @@ use crate::{
 /// to margin-free frame domains; grouping-distance bounds are discarded.
 pub(super) fn make_stable_vtable_filter(
     input_domain: crate::domains::verified_plan::VFrameDomain,
-    metric: VFrameMetric,
+    metric: crate::metrics::SymmetricDistance,
     predicate: VExpr,
 ) -> Fallible<Transformation<
-    crate::domains::verified_plan::VFrameDomain, VFrameMetric,
-    crate::domains::verified_plan::VFrameDomain, VFrameMetric,
+    crate::domains::verified_plan::VFrameDomain, crate::metrics::SymmetricDistance,
+    crate::domains::verified_plan::VFrameDomain, crate::metrics::SymmetricDistance,
 >> {
     if !input_domain.margins.is_empty() {
         return fallible!(MakeTransformation,
             "verified table filter requires a margin-free domain");
     }
-    let schema = kernel_schema(&input_domain.series_domains)?;
-    let certified = filter_proof::CertifiedTableFilter::new(predicate, &schema)
+    let rules = verified_rules(&input_domain.series_domains)?;
+    let certified = filter_proof::CertifiedTableFilter::new(predicate, &rules)
         .ok_or_else(|| err!(MakeTransformation, "invalid verified filter predicate"))?;
     let input_contract = input_domain.clone();
     Transformation::new(
@@ -37,12 +37,7 @@ pub(super) fn make_stable_vtable_filter(
                 err!(MakeTransformation, "verified table filter execution failed")
             })
         }),
-        StabilityMap::new(|bounds: &VFrameBounds| {
-            let mut global = bounds.get_bound(&HashSet::new());
-            global.per_group = global.per_group
-                .map(filter_proof::CertifiedTableFilter::map_distance);
-            crate::metrics::Bounds(vec![global])
-        }),
+        StabilityMap::new(filter_proof::CertifiedTableFilter::map_distance),
     )
 }
 
