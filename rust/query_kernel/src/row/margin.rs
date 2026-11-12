@@ -1,6 +1,6 @@
 //! Executable margin checks, with an exact Verus model of group counts.
-//! The implementation is quadratic in row count; acceptable for verified
-//! prototype table membership, but not a substitute for Polars group-by.
+//! The worst case is quadratic in row count, but group counts now share one pass;
+//! prototype table membership, not a substitute for Polars group-by.
 
 use super::*;
 
@@ -54,20 +54,6 @@ pub fn same_key(a: &Vec<Option<VValue>>, b: &Vec<Option<VValue>>) -> (equal: boo
     else { same_key_prefix(a, b, a.len()) }
 }
 
-/// This pointwise predicate is equivalent to mathematical Seq equality.
-pub proof fn lemma_key_equal_iff_eq(
-    a: Seq<Option<VValue>>, b: Seq<Option<VValue>>,
-)
-    ensures key_equal(a, b) <==> a == b,
-{
-    if key_equal(a, b) {
-        assert(a =~= b) by {
-            assert forall|i: int| 0 <= i < a.len()
-                implies a[i] == b[i] by {}
-        }
-    }
-}
-
 /// Count occurrences of one grouping key within a prefix of input rows.
 pub open spec fn count_key_spec(
     rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>,
@@ -119,22 +105,27 @@ pub fn count_key(
     }
 }
 
-/// Number of distinct nonempty groups represented by the first n rows.
-pub open spec fn distinct_groups_spec(
+/// Compute both the number of groups and their maximum size in one
+/// traversal. For each row, only the preceding rows with the same key
+/// matter: a new group adds one, otherwise that group's size increases.
+pub open spec fn group_stats_spec(
     rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>, n: nat,
-) -> Result<nat, ()>
+) -> Result<(nat, nat), ()>
     recommends n <= rows.len(),
     decreases n,
 {
-    if n == 0 { Ok(0) }
+    if n == 0 { Ok((0, 0)) }
     else {
         match (
-            distinct_groups_spec(rows, by, (n - 1) as nat),
+            group_stats_spec(rows, by, (n - 1) as nat),
             project::row_prefix(by, rows[(n - 1) as int]@, by.len()),
         ) {
-            (Ok(groups), Ok(key)) =>
+            (Ok((groups, largest)), Ok(key)) =>
                 match count_key_spec(rows, by, key, (n - 1) as nat) {
-                    Ok(count) => Ok(groups + if count == 0 { 1nat } else { 0nat }),
+                    Ok(earlier) => Ok((
+                        groups + if earlier == 0 { 1nat } else { 0nat },
+                        if earlier + 1 > largest { earlier + 1 } else { largest },
+                    )),
                     Err(_) => Err(()),
                 },
             _ => Err(()),
@@ -142,22 +133,25 @@ pub open spec fn distinct_groups_spec(
     }
 }
 
-pub fn distinct_groups(
+pub fn group_stats(
     rows: &Vec<Vec<Option<VValue>>>, by: &Vec<VExpr>, n: usize,
-) -> (result: Result<usize, ()>)
+) -> (result: Result<(usize, usize), ()>)
     requires n <= rows.len(),
     ensures
         match result {
-            Ok(count) => distinct_groups_spec(rows@, by@, n as nat) == Ok(count as nat),
-            Err(_) => distinct_groups_spec(rows@, by@, n as nat).is_Err(),
+            Ok(stats) =>
+                group_stats_spec(rows@, by@, n as nat)
+                    == Ok((stats.0 as nat, stats.1 as nat)),
+            Err(_) => group_stats_spec(rows@, by@, n as nat).is_Err(),
         },
-        result.is_Ok() ==> result.unwrap() <= n,
+        result.is_Ok() ==>
+            result.unwrap().0 <= n && result.unwrap().1 <= n,
     decreases n,
 {
     if n == 0 {
-        Ok(0)
+        Ok((0, 0))
     } else {
-        let prior = match distinct_groups(rows, by, n - 1) {
+        let (groups, largest) = match group_stats(rows, by, n - 1) {
             Ok(value) => value,
             Err(_) => return Err(()),
         };
@@ -169,60 +163,10 @@ pub fn distinct_groups(
             Ok(value) => value,
             Err(_) => return Err(()),
         };
-        Ok(prior + if earlier == 0 { 1 } else { 0 })
-    }
-}
-
-/// Largest number of occurrences of any grouping key.
-pub open spec fn largest_group_spec(
-    rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>, n: nat,
-) -> Result<nat, ()>
-    recommends n <= rows.len(),
-    decreases n,
-{
-    if n == 0 { Ok(0) }
-    else {
-        match (
-            largest_group_spec(rows, by, (n - 1) as nat),
-            project::row_prefix(by, rows[(n - 1) as int]@, by.len()),
-        ) {
-            (Ok(prior), Ok(key)) =>
-                match count_key_spec(rows, by, key, rows.len()) {
-                    Ok(count) => Ok(if count > prior { count } else { prior }),
-                    Err(_) => Err(()),
-                },
-            _ => Err(()),
-        }
-    }
-}
-
-pub fn largest_group(
-    rows: &Vec<Vec<Option<VValue>>>, by: &Vec<VExpr>, n: usize,
-) -> (result: Result<usize, ()>)
-    requires n <= rows.len(),
-    ensures
-        match result {
-            Ok(count) => largest_group_spec(rows@, by@, n as nat) == Ok(count as nat),
-            Err(_) => largest_group_spec(rows@, by@, n as nat).is_Err(),
-        },
-        result.is_Ok() ==> result.unwrap() <= rows.len(),
-    decreases n,
-{
-    if n == 0 { Ok(0) }
-    else {
-        let prior = match largest_group(rows, by, n - 1) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        let key = match project::eval_prefix(by, &rows[n - 1], by.len()) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        let count = match count_key(rows, by, &key, rows.len()) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        Ok(if count > prior { count } else { prior })
+        Ok((
+            groups + if earlier == 0 { 1 } else { 0 },
+            if earlier + 1 > largest { earlier + 1 } else { largest },
+        ))
     }
 }
 
@@ -237,12 +181,12 @@ pub open spec fn margin_member_spec(
                 Some(limit) => rows.len() <= limit as nat,
                 None => true,
             })
+    } else if max_length.is_none() && max_groups.is_none() {
+        // The domain separately verifies that every grouping expression is typed.
+        Ok(true)
     } else {
-        match (
-            distinct_groups_spec(rows, by, rows.len()),
-            largest_group_spec(rows, by, rows.len()),
-        ) {
-            (Ok(groups), Ok(largest)) => Ok(
+        match group_stats_spec(rows, by, rows.len()) {
+            Ok((groups, largest)) => Ok(
                 (match max_groups {
                     Some(limit) => groups <= limit as nat,
                     None => true,
@@ -269,12 +213,10 @@ pub fn check_margin(
                 Some(limit) => rows.len() <= limit as usize,
                 None => true,
             })
+    } else if max_length.is_none() && max_groups.is_none() {
+        Ok(true)
     } else {
-        let groups = match distinct_groups(rows, by, rows.len()) {
-            Ok(value) => value,
-            Err(_) => return Err(()),
-        };
-        let largest = match largest_group(rows, by, rows.len()) {
+        let (groups, largest) = match group_stats(rows, by, rows.len()) {
             Ok(value) => value,
             Err(_) => return Err(()),
         };
