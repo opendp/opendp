@@ -212,8 +212,8 @@ pub open spec fn group_distance(
         let b = right.count(row);
         group_distance(left, right, values.drop_last(), group_by, group)
             + if group_by(row) == group {
-                if a >= b { a - b } else { b - a }
-              } else { 0 }
+                (if a >= b { a - b } else { b - a }) as nat
+              } else { 0nat }
     }
 }
 
