@@ -411,17 +411,12 @@ pub proof fn lemma_allowed_rows_subset(
     }
 }
 
-/// Finite, duplicate-free row and group universes that enumerate all
-/// nonzero support. Extra zero-count rows/groups are harmless.
-pub open spec fn complete_group_support(
-    rows: Multiset<Seq<Option<VValue>>>,
+/// A fixed, distinct enumeration of row values and their grouping keys.
+pub open spec fn group_universe(
     keys: Seq<VExpr>,
     values: Seq<Seq<Option<VValue>>>,
     groups: Seq<Seq<Option<VValue>>>,
 ) -> bool {
-    &&& forall|row: Seq<Option<VValue>>|
-        rows.count(row) > 0 ==> exists|i: int|
-            0 <= i < values.len() && values[i] == row
     &&& forall|i: int, j: int|
         0 <= i < j < values.len() ==> values[i] != values[j]
     &&& forall|i: int| 0 <= i < values.len() ==> exists|j: int|
@@ -430,6 +425,25 @@ pub open spec fn complete_group_support(
             keys, #[trigger] values[i], keys.len()).unwrap()
     &&& forall|i: int, j: int|
         0 <= i < j < groups.len() ==> groups[i] != groups[j]
+}
+
+/// The table-dependent part of completeness: every present row is enumerated.
+pub open spec fn rows_covered(
+    rows: Multiset<Seq<Option<VValue>>>,
+    values: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    forall|row: Seq<Option<VValue>>|
+        rows.count(row) > 0 ==> exists|i: int|
+            0 <= i < values.len() && values[i] == row
+}
+
+pub open spec fn complete_group_support(
+    rows: Multiset<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    group_universe(keys, values, groups) && rows_covered(rows, values)
 }
 
 pub proof fn lemma_complete_group_support_subset(
@@ -448,6 +462,8 @@ pub proof fn lemma_complete_group_support_subset(
             0 <= i < values.len() && values[i] == row by {
         assert(smaller.count(row) <= larger.count(row));
     }
+    assert(rows_covered(smaller, values));
+    assert(group_universe(keys, values, groups));
 }
 
 /// The portion of concrete FrameDomain<VTable>::member that can constrain
