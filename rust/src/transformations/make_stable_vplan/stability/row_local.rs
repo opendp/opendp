@@ -2,6 +2,7 @@
 
 use super::*;
 use super::super::verified::symmetric_distance as metric;
+use vstd::multiset::Multiset;
 
 verus! {
 
@@ -36,7 +37,6 @@ pub proof fn lemma_apply_prefix_ignores_last(
     }
 }
 
-/// A single local operator preserves one-record insertion.
 /// The verified row evaluator agrees with the generic row-local lifting
 /// of its deterministic per-row semantics whenever the input is typed.
 pub proof fn lemma_apply_as_lift(
