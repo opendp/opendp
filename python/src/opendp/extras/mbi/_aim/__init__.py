@@ -21,7 +21,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     Count,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     Marginals,
     _snapshot_bounds,
 )
@@ -175,7 +175,7 @@ class AIM(Algorithm):
             raise ValueError("model must be a MarkovRandomField")
 
         d_in = _snapshot_bounds(d_in)
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         queries = _expand_queries(algorithm.queries, input_domain.columns)
         algorithm = replace(algorithm, queries=queries)
 

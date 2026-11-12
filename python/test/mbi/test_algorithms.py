@@ -98,7 +98,7 @@ def test_algorithm_err_elements(algorithm):
 
 def test_algorithm_hbc_gates(monkeypatch):
     import opendp.mod as mod
-    from opendp.extras.mbi._utilities import _snapshot_algorithm
+    from opendp.extras.mbi._utilities import _check_and_snapshot_algorithm
 
     class CustomAlgorithm(Algorithm):
         def make_marginals(self, *args, **kwargs):
@@ -140,13 +140,13 @@ def test_algorithm_hbc_gates(monkeypatch):
             mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
         )
         for algorithm in trusted:
-            _snapshot_algorithm(algorithm)
+            _check_and_snapshot_algorithm(algorithm)
         for algorithm in untrusted:
             with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
-                _snapshot_algorithm(algorithm)
+                _check_and_snapshot_algorithm(algorithm)
 
     for algorithm in untrusted:
-        _snapshot_algorithm(algorithm)
+        _check_and_snapshot_algorithm(algorithm)
 
 
 def test_count_normalizes_user_values():
@@ -201,7 +201,7 @@ def test_algorithm_configuration_snapshots_lists():
 
 
 def test_algorithm_configuration_can_change_before_capture():
-    from opendp.extras.mbi._utilities import _snapshot_algorithm
+    from opendp.extras.mbi._utilities import _check_and_snapshot_algorithm
 
     count = Count(("A",), weight=1.0)
     first = Fixed(queries=[count])
@@ -209,7 +209,7 @@ def test_algorithm_configuration_can_change_before_capture():
         algorithms=[first, AIM(queries=[Count(("A",))])],
         weights=[1.0, 2.0],
     )
-    captured = _snapshot_algorithm(nested)
+    captured = _check_and_snapshot_algorithm(nested)
 
     count.weight = 3.0
     first.queries[0].weight = 4.0

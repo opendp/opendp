@@ -11,7 +11,7 @@ from opendp.extras.mbi._utilities import (
     then_noise_marginals,
     make_stable_marginals,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     Count,
     Marginals,
     OnewayType,
@@ -92,7 +92,7 @@ class Fixed(Algorithm):
 
         # Reject unsupported measures before constructing the workload.
         get_associated_metric(output_measure)
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         cliques = [q.by for q in algorithm.queries]
         weights = [q.weight for q in algorithm.queries]
 

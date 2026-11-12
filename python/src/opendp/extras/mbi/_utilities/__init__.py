@@ -179,7 +179,7 @@ def _check_algorithm_features(algorithm: Algorithm) -> None:
             _check_algorithm_features(child)
 
 
-def _snapshot_algorithm(algorithm: A) -> A:
+def _check_and_snapshot_algorithm(algorithm: A) -> A:
     """Detach and validate configuration before a measurement captures it."""
     _check_algorithm_features(algorithm)
     snapshot = deepcopy(algorithm)
