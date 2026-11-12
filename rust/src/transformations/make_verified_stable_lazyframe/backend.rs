@@ -6,32 +6,32 @@ use polars_plan::prelude::ProjectionOptions;
 use std::sync::Arc;
 
 /// Produce Polars expressions only from the normalized AST.
-fn render_expr(expr: &verified::Expr, columns: &[PlSmallStr]) -> Fallible<Expr> {
-    use verified::{DType, Value};
+fn render_expr(expr: &verified::VExpr, columns: &[PlSmallStr]) -> Fallible<Expr> {
+    use verified::{VDType, VValue};
     Ok(match expr {
-        verified::Expr::Column(index) => {
+        verified::VExpr::Column(index) => {
             let column = columns.get(*index).ok_or_else(||
                 err!(MakeTransformation, "verified column index outside schema")
             )?;
             col(column.as_str())
         },
-        verified::Expr::Alias { expr, name } =>
+        verified::VExpr::Alias { expr, name } =>
             render_expr(expr, columns)?.alias(name.as_str()),
-        verified::Expr::Literal(Value::Int(v)) => lit(*v),
-        verified::Expr::Literal(Value::Bool(v)) => lit(*v),
-        verified::Expr::Null(DType::Int64) => lit(NULL).cast(DataType::Int64),
-        verified::Expr::Null(DType::Boolean) => lit(NULL).cast(DataType::Boolean),
-        verified::Expr::Binary { left, op, right } => {
+        verified::VExpr::Literal(VValue::Int(v)) => lit(*v),
+        verified::VExpr::Literal(VValue::Bool(v)) => lit(*v),
+        verified::VExpr::Null(VDType::Int64) => lit(NULL).cast(DataType::Int64),
+        verified::VExpr::Null(VDType::Boolean) => lit(NULL).cast(DataType::Boolean),
+        verified::VExpr::Binary { left, op, right } => {
             let lhs = render_expr(left, columns)?;
             let rhs = render_expr(right, columns)?;
             match op {
-                verified::BinaryOp::Lt => lhs.lt(rhs),
-                verified::BinaryOp::Gt => lhs.gt(rhs),
-                verified::BinaryOp::Eq => lhs.eq(rhs),
-                verified::BinaryOp::And => lhs.and(rhs),
+                verified::VBinaryOp::Lt => lhs.lt(rhs),
+                verified::VBinaryOp::Gt => lhs.gt(rhs),
+                verified::VBinaryOp::Eq => lhs.eq(rhs),
+                verified::VBinaryOp::And => lhs.and(rhs),
             }
         },
-        verified::Expr::Clip { expr, lower, upper } => {
+        verified::VExpr::Clip { expr, lower, upper } => {
             let value = render_expr(expr, columns)?;
             let low = lower.as_ref().map(|expr| render_expr(expr, columns)).transpose()?;
             let high = upper.as_ref().map(|expr| render_expr(expr, columns)).transpose()?;
@@ -54,16 +54,16 @@ fn render_expr(expr: &verified::Expr, columns: &[PlSmallStr]) -> Fallible<Expr> 
 
 /// Reconstruct the supported query against the caller's data source.
 pub(super) fn render_plan(
-    plan: &verified::Plan, source: DslPlan, source_columns: &[PlSmallStr],
+    plan: &verified::VPlan, source: DslPlan, source_columns: &[PlSmallStr],
 ) -> Fallible<(DslPlan, Vec<PlSmallStr>)> {
     match plan {
-        verified::Plan::Input => Ok((source, source_columns.to_vec())),
-        verified::Plan::Project { input, exprs } => {
+        verified::VPlan::Input => Ok((source, source_columns.to_vec())),
+        verified::VPlan::Project { input, exprs } => {
             let (child, input_columns) = render_plan(input, source, source_columns)?;
             let mut expressions = Vec::with_capacity(exprs.len());
             let mut names = Vec::with_capacity(exprs.len());
             for node in exprs {
-                let verified::Expr::Alias { name, .. } = node else {
+                let verified::VExpr::Alias { name, .. } = node else {
                     return fallible!(MakeTransformation, "verified projection requires named expressions");
                 };
                 expressions.push(render_expr(node, &input_columns)?);
@@ -78,7 +78,7 @@ pub(super) fn render_plan(
                 },
             }, names))
         },
-        verified::Plan::Filter { input, predicate } => {
+        verified::VPlan::Filter { input, predicate } => {
             let (child, columns) = render_plan(input, source, source_columns)?;
             Ok((DslPlan::Filter {
                 input: Arc::new(child),

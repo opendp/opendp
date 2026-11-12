@@ -8,6 +8,8 @@ on:
       - 'rust/src/transformations/make_verified_stable_lazyframe/**'
       - 'rust/src/transformations/mod.rs'
       - 'rust/query_kernel/**'
+      - 'rust/src/domains/polars/**'
+      - 'rust/src/metrics/polars/**'
       - '.github/workflows/verified-stable-lazyframe.yml'
   workflow_dispatch:
 
@@ -30,4 +32,7 @@ jobs:
           cache-on-failure: true
       - name: Test the constructor
         working-directory: rust
-        run: cargo test --no-default-features --features contrib,polars,verified-query make_verified_stable_lazyframe --lib
+        run: |
+          cargo test --no-default-features --features contrib,polars,verified-query make_verified_stable_lazyframe --lib
+          cargo test --no-default-features --features contrib,polars,verified-query generic_ --lib
+          cargo test --no-default-features --features contrib,polars,verified-query domains::polars::frame::test --lib

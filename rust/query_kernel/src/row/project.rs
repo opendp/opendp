@@ -3,8 +3,8 @@ use super::*;
 verus! {
 
 pub open spec fn schema_prefix(
-    exprs: Seq<Expr>, schema: Seq<Field>, count: nat,
-) -> Option<Seq<Field>>
+    exprs: Seq<VExpr>, schema: Seq<VField>, count: nat,
+) -> Option<Seq<VField>>
     recommends count <= exprs.len(),
     decreases count,
 {
@@ -19,8 +19,8 @@ pub open spec fn schema_prefix(
 }
 
 pub open spec fn row_prefix(
-    exprs: Seq<Expr>, row: Seq<Option<Value>>, count: nat,
-) -> Result<Seq<Option<Value>>, ()>
+    exprs: Seq<VExpr>, row: Seq<Option<VValue>>, count: nat,
+) -> Result<Seq<Option<VValue>>, ()>
     recommends count <= exprs.len(),
     decreases count,
 {
@@ -35,8 +35,8 @@ pub open spec fn row_prefix(
 }
 
 pub proof fn lemma_row_prefix_type_sound(
-    exprs: Seq<Expr>, schema: Seq<Field>,
-    row: Seq<Option<Value>>, count: nat,
+    exprs: Seq<VExpr>, schema: Seq<VField>,
+    row: Seq<Option<VValue>>, count: nat,
 )
     requires
         row_in_schema(row, schema),
@@ -82,8 +82,8 @@ pub proof fn lemma_row_prefix_type_sound(
 }
 
 pub fn eval_prefix(
-    exprs: &Vec<Expr>, row: &Vec<Option<Value>>, count: usize,
-) -> (result: Result<Vec<Option<Value>>, ()>)
+    exprs: &Vec<VExpr>, row: &Vec<Option<VValue>>, count: usize,
+) -> (result: Result<Vec<Option<VValue>>, ()>)
     requires count <= exprs.len(),
     ensures
         match result {

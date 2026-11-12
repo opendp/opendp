@@ -2,26 +2,26 @@ use super::*;
 verus! {
 
 /// Type-check a filter against its input schema.
-pub open spec fn schema(predicate: &Expr, input: Seq<Field>) -> Option<Seq<Field>> {
+pub open spec fn schema(predicate: &VExpr, input: Seq<VField>) -> Option<Seq<VField>> {
     match expr_field(predicate, input) {
-        Some(field) if field.dtype == DType::Boolean => Some(input),
+        Some(field) if field.dtype == VDType::Boolean => Some(input),
         _ => None,
     }
 }
 
 /// A filter returns its input row or drops it.
 pub open spec fn row_spec(
-    predicate: &Expr, row: Seq<Option<Value>>,
-) -> Result<Option<Seq<Option<Value>>>, ()> {
+    predicate: &VExpr, row: Seq<Option<VValue>>,
+) -> Result<Option<Seq<Option<VValue>>>, ()> {
     match expr_row_spec(predicate, row) {
-        Ok(Some(Value::Bool(true))) => Ok(Some(row)),
-        Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
+        Ok(Some(VValue::Bool(true))) => Ok(Some(row)),
+        Ok(Some(VValue::Bool(false))) | Ok(None) => Ok(None),
         _ => Err(()),
     }
 }
 
 pub proof fn lemma_type_sound(
-    predicate: &Expr, input: Seq<Field>, row: Seq<Option<Value>>,
+    predicate: &VExpr, input: Seq<VField>, row: Seq<Option<VValue>>,
 )
     requires
         row_in_schema(row, input),
@@ -37,8 +37,8 @@ pub proof fn lemma_type_sound(
     lemma_expr_field_sound(predicate, input, row, field);
 }
 
-pub fn eval_row(predicate: &Expr, row: &Vec<Option<Value>>)
-    -> (result: Result<Option<Vec<Option<Value>>>, ()>)
+pub fn eval_row(predicate: &VExpr, row: &Vec<Option<VValue>>)
+    -> (result: Result<Option<Vec<Option<VValue>>>, ()>)
     ensures
         match result {
             Err(_) => row_spec(predicate, row@).is_Err(),
@@ -47,8 +47,8 @@ pub fn eval_row(predicate: &Expr, row: &Vec<Option<Value>>)
         },
 {
     match eval_expr_row(predicate, row) {
-        Ok(Some(Value::Bool(true))) => Ok(Some(row.clone())),
-        Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
+        Ok(Some(VValue::Bool(true))) => Ok(Some(row.clone())),
+        Ok(Some(VValue::Bool(false))) | Ok(None) => Ok(None),
         _ => Err(()),
     }
 }

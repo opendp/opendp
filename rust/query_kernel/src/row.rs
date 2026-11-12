@@ -11,69 +11,69 @@ use scalar::{binary_field, clip_field, eval_binary, eval_clip};
 verus! {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum DType { Int64, Boolean }
+pub enum VDType { Int64, Boolean }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Value { Int(i64), Bool(bool) }
+pub enum VValue { Int(i64), Bool(bool) }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Field {
-    pub dtype: DType,
+pub struct VField {
+    pub dtype: VDType,
     pub nullable: bool,
 }
 
 /// Typed rows are the sole physical and logical representation in the
 /// verified kernel. Arrow conversion is handled by an external adapter.
-pub struct Table {
-    pub schema: Vec<Field>,
-    pub rows: Vec<Vec<Option<Value>>>,
+pub struct VTable {
+    pub schema: Vec<VField>,
+    pub rows: Vec<Vec<Option<VValue>>>,
 }
 
-pub open spec fn table_valid(table: &Table) -> bool {
+pub open spec fn table_valid(table: &VTable) -> bool {
     rows_in_schema(rows_view(table.rows@), table.schema@)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum BinaryOp { Lt, Gt, Eq, And }
+pub enum VBinaryOp { Lt, Gt, Eq, And }
 
-pub enum Expr {
+pub enum VExpr {
     Column(usize),
-    Alias { expr: Box<Expr>, name: String },
-    Literal(Value),
-    Null(DType),
-    Binary { left: Box<Expr>, op: BinaryOp, right: Box<Expr> },
+    Alias { expr: Box<VExpr>, name: String },
+    Literal(VValue),
+    Null(VDType),
+    Binary { left: Box<VExpr>, op: VBinaryOp, right: Box<VExpr> },
     Clip {
-        expr: Box<Expr>,
-        lower: Option<Box<Expr>>,
-        upper: Option<Box<Expr>>,
+        expr: Box<VExpr>,
+        lower: Option<Box<VExpr>>,
+        upper: Option<Box<VExpr>>,
     },
 }
 
-pub enum Plan {
+pub enum VPlan {
     Input,
-    Project { input: Box<Plan>, exprs: Vec<Expr> },
-    Filter { input: Box<Plan>, predicate: Expr },
+    Project { input: Box<VPlan>, exprs: Vec<VExpr> },
+    Filter { input: Box<VPlan>, predicate: VExpr },
 }
 
-pub open spec fn value_dtype(value: Value) -> DType {
+pub open spec fn value_dtype(value: VValue) -> VDType {
     match value {
-        Value::Int(_) => DType::Int64,
-        Value::Bool(_) => DType::Boolean,
+        VValue::Int(_) => VDType::Int64,
+        VValue::Bool(_) => VDType::Boolean,
     }
 }
 
-pub open spec fn expr_field(expr: &Expr, schema: Seq<Field>) -> Option<Field>
+pub open spec fn expr_field(expr: &VExpr, schema: Seq<VField>) -> Option<VField>
     decreases *expr,
 {
     match expr {
-        Expr::Column(index) =>
+        VExpr::Column(index) =>
             if *index < schema.len() { Some(schema[*index as int]) } else { None },
-        Expr::Alias { expr, .. } => expr_field(expr, schema),
-        Expr::Literal(value) => Some(Field { dtype: value_dtype(*value), nullable: false }),
-        Expr::Null(dtype) => Some(Field { dtype: *dtype, nullable: true }),
-        Expr::Binary { left, op, right } =>
+        VExpr::Alias { expr, .. } => expr_field(expr, schema),
+        VExpr::Literal(value) => Some(VField { dtype: value_dtype(*value), nullable: false }),
+        VExpr::Null(dtype) => Some(VField { dtype: *dtype, nullable: true }),
+        VExpr::Binary { left, op, right } =>
             binary_field(*op, expr_field(left, schema), expr_field(right, schema)),
-        Expr::Clip { expr, lower, upper } =>
+        VExpr::Clip { expr, lower, upper } =>
             clip_field(
                 expr_field(expr, schema),
                 match lower { None => None, Some(e) => Some(expr_field(e, schema)) },
@@ -83,25 +83,25 @@ pub open spec fn expr_field(expr: &Expr, schema: Seq<Field>) -> Option<Field>
 }
 
 /// Executable type checking, proved equivalent to the specification.
-pub fn check_expr(expr: &Expr, schema: &Vec<Field>) -> (result: Option<Field>)
+pub fn check_expr(expr: &VExpr, schema: &Vec<VField>) -> (result: Option<VField>)
     ensures result == expr_field(expr, schema@),
     decreases *expr,
 {
     match expr {
-        Expr::Column(index) =>
+        VExpr::Column(index) =>
             if *index < schema.len() { Some(schema[*index]) } else { None },
-        Expr::Alias { expr, .. } => check_expr(expr, schema),
-        Expr::Literal(value) => Some(Field {
+        VExpr::Alias { expr, .. } => check_expr(expr, schema),
+        VExpr::Literal(value) => Some(VField {
             dtype: match value {
-                Value::Int(_) => DType::Int64,
-                Value::Bool(_) => DType::Boolean,
+                VValue::Int(_) => VDType::Int64,
+                VValue::Bool(_) => VDType::Boolean,
             },
             nullable: false,
         }),
-        Expr::Null(dtype) => Some(Field { dtype: *dtype, nullable: true }),
-        Expr::Binary { left, op, right } =>
+        VExpr::Null(dtype) => Some(VField { dtype: *dtype, nullable: true }),
+        VExpr::Binary { left, op, right } =>
             binary_field(*op, check_expr(left, schema), check_expr(right, schema)),
-        Expr::Clip { expr, lower, upper } =>
+        VExpr::Clip { expr, lower, upper } =>
             clip_field(
                 check_expr(expr, schema),
                 match lower { None => None, Some(e) => Some(check_expr(e, schema)) },
@@ -111,21 +111,21 @@ pub fn check_expr(expr: &Expr, schema: &Vec<Field>) -> (result: Option<Field>)
 }
 
 /// Type checking for a single relational operator.
-pub open spec fn local_schema(plan: &Plan, schema: Seq<Field>) -> Option<Seq<Field>> {
+pub open spec fn local_schema(plan: &VPlan, schema: Seq<VField>) -> Option<Seq<VField>> {
     match plan {
-        Plan::Input => Some(schema),
-        Plan::Project { exprs, .. } =>
+        VPlan::Input => Some(schema),
+        VPlan::Project { exprs, .. } =>
             project::schema_prefix(exprs@, schema, exprs@.len()),
-        Plan::Filter { predicate, .. } => filter::schema(predicate, schema),
+        VPlan::Filter { predicate, .. } => filter::schema(predicate, schema),
     }
 }
 
-pub open spec fn plan_schema(plan: &Plan, input_schema: Seq<Field>) -> Option<Seq<Field>>
+pub open spec fn plan_schema(plan: &VPlan, input_schema: Seq<VField>) -> Option<Seq<VField>>
     decreases *plan,
 {
     match plan {
-        Plan::Input => Some(input_schema),
-        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
+        VPlan::Input => Some(input_schema),
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } =>
             match plan_schema(input, input_schema) {
                 Some(child_schema) => local_schema(plan, child_schema),
                 None => None,
@@ -133,7 +133,7 @@ pub open spec fn plan_schema(plan: &Plan, input_schema: Seq<Field>) -> Option<Se
     }
 }
 
-pub open spec fn cell_matches_field(value: Option<Value>, field: Field) -> bool {
+pub open spec fn cell_matches_field(value: Option<VValue>, field: VField) -> bool {
     match value {
         Some(value) => value_dtype(value) == field.dtype,
         None => field.nullable,
@@ -142,22 +142,22 @@ pub open spec fn cell_matches_field(value: Option<Value>, field: Field) -> bool 
 
 /// A semantic cell view allows generic, order-independent stability arguments.
 pub open spec fn expr_row_spec(
-    expr: &Expr, row: Seq<Option<Value>>,
-) -> Result<Option<Value>, ()>
+    expr: &VExpr, row: Seq<Option<VValue>>,
+) -> Result<Option<VValue>, ()>
     decreases *expr,
 {
     match expr {
-        Expr::Column(index) =>
+        VExpr::Column(index) =>
             if *index < row.len() { Ok(row[*index as int]) } else { Err(()) },
-        Expr::Alias { expr, .. } => expr_row_spec(expr, row),
-        Expr::Literal(value) => Ok(Some(*value)),
-        Expr::Null(_) => Ok(None),
-        Expr::Binary { left, op, right } =>
+        VExpr::Alias { expr, .. } => expr_row_spec(expr, row),
+        VExpr::Literal(value) => Ok(Some(*value)),
+        VExpr::Null(_) => Ok(None),
+        VExpr::Binary { left, op, right } =>
             match (expr_row_spec(left, row), expr_row_spec(right, row)) {
                 (Ok(lhs), Ok(rhs)) => eval_binary(*op, lhs, rhs),
                 _ => Err(()),
             },
-        Expr::Clip { expr, lower, upper } => {
+        VExpr::Clip { expr, lower, upper } => {
             let value = expr_row_spec(expr, row);
             let low = match lower {
                 None => Ok(None),
@@ -184,7 +184,7 @@ pub open spec fn expr_row_spec(
 
 /// Domain membership includes the declared dtype and nullability of every cell.
 pub open spec fn row_in_schema(
-    row: Seq<Option<Value>>, schema: Seq<Field>,
+    row: Seq<Option<VValue>>, schema: Seq<VField>,
 ) -> bool {
     row.len() == schema.len()
         && forall|i: int| 0 <= i < row.len()
@@ -192,7 +192,7 @@ pub open spec fn row_in_schema(
 }
 
 pub open spec fn rows_in_schema(
-    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+    rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
 ) -> bool {
     forall|i: int| 0 <= i < rows.len() ==> row_in_schema(rows[i], schema)
 }
@@ -200,7 +200,7 @@ pub open spec fn rows_in_schema(
 /// Well-typed expressions cannot fail, and nullable outputs are represented
 /// explicitly by None instead of conflating null with an evaluation error.
 pub proof fn lemma_expr_field_sound(
-    expr: &Expr, schema: Seq<Field>, row: Seq<Option<Value>>, field: Field,
+    expr: &VExpr, schema: Seq<VField>, row: Seq<Option<VValue>>, field: VField,
 )
     requires
         row_in_schema(row, schema),
@@ -213,13 +213,13 @@ pub proof fn lemma_expr_field_sound(
     decreases *expr,
 {
     match expr {
-        Expr::Column(index) => {
+        VExpr::Column(index) => {
             assert(*index < schema.len());
             assert(cell_matches_field(row[*index as int], schema[*index as int]));
         },
-        Expr::Alias { expr, .. } => lemma_expr_field_sound(expr, schema, row, field),
-        Expr::Literal(_) | Expr::Null(_) => {},
-        Expr::Binary { left, op: _, right } => {
+        VExpr::Alias { expr, .. } => lemma_expr_field_sound(expr, schema, row, field),
+        VExpr::Literal(_) | VExpr::Null(_) => {},
+        VExpr::Binary { left, op: _, right } => {
             let left_field = expr_field(left, schema).unwrap();
             let right_field = expr_field(right, schema).unwrap();
             lemma_expr_field_sound(left, schema, row, left_field);
@@ -232,7 +232,7 @@ pub proof fn lemma_expr_field_sound(
                 _ => { assert(false); },
             }
         },
-        Expr::Clip { expr: child, lower, upper } => {
+        VExpr::Clip { expr: child, lower, upper } => {
             let child_field = expr_field(child, schema).unwrap();
             lemma_expr_field_sound(child, schema, row, child_field);
             if let Some(bound) = lower {
@@ -249,7 +249,7 @@ pub proof fn lemma_expr_field_sound(
 
 /// Typing soundness for one operator, without evaluating its child plan.
 pub proof fn lemma_local_type_sound(
-    plan: &Plan, schema: Seq<Field>, row: Seq<Option<Value>>, output_schema: Seq<Field>,
+    plan: &VPlan, schema: Seq<VField>, row: Seq<Option<VValue>>, output_schema: Seq<VField>,
 )
     requires
         row_in_schema(row, schema),
@@ -262,32 +262,32 @@ pub proof fn lemma_local_type_sound(
         },
 {
     match plan {
-        Plan::Input => {},
-        Plan::Project { exprs, .. } =>
+        VPlan::Input => {},
+        VPlan::Project { exprs, .. } =>
             project::lemma_row_prefix_type_sound(exprs@, schema, row, exprs@.len()),
-        Plan::Filter { predicate, .. } =>
+        VPlan::Filter { predicate, .. } =>
             filter::lemma_type_sound(predicate, schema, row),
     }
 }
 
 /// A row-local step does not evaluate the plan's child.
 pub open spec fn local_row_spec(
-    plan: &Plan, row: Seq<Option<Value>>,
-) -> Result<Option<Seq<Option<Value>>>, ()> {
+    plan: &VPlan, row: Seq<Option<VValue>>,
+) -> Result<Option<Seq<Option<VValue>>>, ()> {
     match plan {
-        Plan::Input => Ok(Some(row)),
-        Plan::Project { exprs, .. } =>
+        VPlan::Input => Ok(Some(row)),
+        VPlan::Project { exprs, .. } =>
             match project::row_prefix(exprs@, row, exprs@.len()) {
                 Ok(out) => Ok(Some(out)),
                 Err(_) => Err(()),
             },
-        Plan::Filter { predicate, .. } => filter::row_spec(predicate, row),
+        VPlan::Filter { predicate, .. } => filter::row_spec(predicate, row),
     }
 }
 
 pub open spec fn apply_prefix_spec(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>, count: nat,
-) -> Result<Seq<Seq<Option<Value>>>, ()>
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, count: nat,
+) -> Result<Seq<Seq<Option<VValue>>>, ()>
     recommends count <= rows.len(),
     decreases count,
 {
@@ -305,20 +305,20 @@ pub open spec fn apply_prefix_spec(
 }
 
 pub open spec fn apply_spec(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-) -> Result<Seq<Seq<Option<Value>>>, ()> {
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+) -> Result<Seq<Seq<Option<VValue>>>, ()> {
     apply_prefix_spec(plan, rows, rows.len())
 }
 
 /// A plan node transforms the complete child relation.
 pub open spec fn relation_spec(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-) -> Result<Seq<Seq<Option<Value>>>, ()>
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+) -> Result<Seq<Seq<Option<VValue>>>, ()>
     decreases *plan,
 {
     match plan {
-        Plan::Input => Ok(rows),
-        Plan::Project { input, .. } | Plan::Filter { input, .. } =>
+        VPlan::Input => Ok(rows),
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } =>
             match relation_spec(input, rows) {
                 Err(_) => Err(()),
                 Ok(previous) => apply_spec(plan, previous),
@@ -327,23 +327,23 @@ pub open spec fn relation_spec(
 }
 
 /// Expressions read the same row type used by the relation.
-pub fn eval_expr_row(expr: &Expr, row: &Vec<Option<Value>>)
-    -> (result: Result<Option<Value>, ()>)
+pub fn eval_expr_row(expr: &VExpr, row: &Vec<Option<VValue>>)
+    -> (result: Result<Option<VValue>, ()>)
     ensures result == expr_row_spec(expr, row@),
     decreases *expr,
 {
     match expr {
-        Expr::Column(index) =>
+        VExpr::Column(index) =>
             if *index < row.len() { Ok(row[*index]) } else { Err(()) },
-        Expr::Alias { expr, .. } => eval_expr_row(expr, row),
-        Expr::Literal(value) => Ok(Some(*value)),
-        Expr::Null(_) => Ok(None),
-        Expr::Binary { left, op, right } =>
+        VExpr::Alias { expr, .. } => eval_expr_row(expr, row),
+        VExpr::Literal(value) => Ok(Some(*value)),
+        VExpr::Null(_) => Ok(None),
+        VExpr::Binary { left, op, right } =>
             match (eval_expr_row(left, row), eval_expr_row(right, row)) {
                 (Ok(lhs), Ok(rhs)) => eval_binary(*op, lhs, rhs),
                 _ => Err(()),
             },
-        Expr::Clip { expr, lower, upper } => {
+        VExpr::Clip { expr, lower, upper } => {
             let value = eval_expr_row(expr, row);
             let low = match lower {
                 None => Ok(None),
@@ -368,8 +368,8 @@ pub fn eval_expr_row(expr: &Expr, row: &Vec<Option<Value>>)
 }
 
 /// Evaluate just one node's row-local operation.
-pub fn eval_local_row(plan: &Plan, row: &Vec<Option<Value>>)
-    -> (result: Result<Option<Vec<Option<Value>>>, ()>)
+pub fn eval_local_row(plan: &VPlan, row: &Vec<Option<VValue>>)
+    -> (result: Result<Option<Vec<Option<VValue>>>, ()>)
     ensures
         match result {
             Err(_) => local_row_spec(plan, row@).is_Err(),
@@ -378,22 +378,22 @@ pub fn eval_local_row(plan: &Plan, row: &Vec<Option<Value>>)
         },
 {
     match plan {
-        Plan::Input => Ok(Some(row.clone())),
-        Plan::Project { exprs, .. } =>
+        VPlan::Input => Ok(Some(row.clone())),
+        VPlan::Project { exprs, .. } =>
             match project::eval_prefix(exprs, row, exprs.len()) {
                 Ok(output) => Ok(Some(output)),
                 Err(_) => Err(()),
             },
-        Plan::Filter { predicate, .. } => filter::eval_row(predicate, row),
+        VPlan::Filter { predicate, .. } => filter::eval_row(predicate, row),
     }
 }
 
-pub open spec fn rows_view(rows: Seq<Vec<Option<Value>>>) -> Seq<Seq<Option<Value>>> {
+pub open spec fn rows_view(rows: Seq<Vec<Option<VValue>>>) -> Seq<Seq<Option<VValue>>> {
     Seq::new(rows.len(), |i: int| rows[i]@)
 }
 
 pub proof fn lemma_rows_view_push(
-    rows: Seq<Vec<Option<Value>>>, row: Vec<Option<Value>>,
+    rows: Seq<Vec<Option<VValue>>>, row: Vec<Option<VValue>>,
 )
     ensures rows_view(rows.push(row)) =~= rows_view(rows).push(row@),
 {
@@ -409,8 +409,8 @@ pub proof fn lemma_rows_view_push(
 
 /// Execute a row-local operator on an entire relation, not the whole plan.
 pub fn eval_apply_prefix(
-    plan: &Plan, rows: &Vec<Vec<Option<Value>>>, count: usize,
-) -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
+    plan: &VPlan, rows: &Vec<Vec<Option<VValue>>>, count: usize,
+) -> (output: Result<Vec<Vec<Option<VValue>>>, ()>)
     requires count <= rows.len(),
     ensures
         match output {
@@ -421,8 +421,8 @@ pub fn eval_apply_prefix(
     decreases count,
 {
     if count == 0 {
-        let empty: Vec<Vec<Option<Value>>> = Vec::new();
-        proof { assert(rows_view(empty@) =~= Seq::<Seq<Option<Value>>>::empty()); }
+        let empty: Vec<Vec<Option<VValue>>> = Vec::new();
+        proof { assert(rows_view(empty@) =~= Seq::<Seq<Option<VValue>>>::empty()); }
         Ok(empty)
     } else {
         match eval_apply_prefix(plan, rows, count - 1) {
@@ -450,8 +450,8 @@ pub fn eval_apply_prefix(
 
 /// Evaluate child plans once; then apply the current relation operator.
 pub fn eval_plan_rows(
-    plan: &Plan, rows: &Vec<Vec<Option<Value>>>,
-) -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
+    plan: &VPlan, rows: &Vec<Vec<Option<VValue>>>,
+) -> (output: Result<Vec<Vec<Option<VValue>>>, ()>)
     ensures
         match output {
             Ok(result) => relation_spec(plan, rows_view(rows@)) == Ok(rows_view(result@)),
@@ -460,12 +460,12 @@ pub fn eval_plan_rows(
     decreases *plan,
 {
     match plan {
-        Plan::Input => {
+        VPlan::Input => {
             let copy = rows.clone();
             proof { assert(rows_view(copy@) =~= rows_view(rows@)); }
             Ok(copy)
         },
-        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } => {
             match eval_plan_rows(input, rows) {
                 Err(_) => {
                     proof { assert(relation_spec(input, rows_view(rows@)).is_Err()); }
@@ -488,8 +488,8 @@ pub fn eval_plan_rows(
     }
 }
 
-pub fn evaluate(plan: &Plan, input: &Table)
-    -> (output: Result<Vec<Vec<Option<Value>>>, ()>)
+pub fn evaluate(plan: &VPlan, input: &VTable)
+    -> (output: Result<Vec<Vec<Option<VValue>>>, ()>)
     requires table_valid(input),
     ensures
         match output {
@@ -502,7 +502,7 @@ pub fn evaluate(plan: &Plan, input: &Table)
 
 /// Preserve row schemas when extending a relation.
 pub proof fn lemma_rows_push_valid(
-    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>, row: Seq<Option<Value>>,
+    rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>, row: Seq<Option<VValue>>,
 )
     requires rows_in_schema(rows, schema), row_in_schema(row, schema),
     ensures rows_in_schema(rows.push(row), schema),
@@ -519,8 +519,8 @@ pub proof fn lemma_rows_push_valid(
 
 /// One operator preserves well-typed rows and cannot return a runtime error.
 pub proof fn lemma_apply_prefix_type_sound(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-    schema: Seq<Field>, output_schema: Seq<Field>, count: nat,
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>, output_schema: Seq<VField>, count: nat,
 )
     requires
         rows_in_schema(rows, schema),
@@ -546,8 +546,8 @@ pub proof fn lemma_apply_prefix_type_sound(
 
 /// Static typing suffices to establish success of complete relational execution.
 pub proof fn lemma_relation_type_sound(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-    schema: Seq<Field>, output_schema: Seq<Field>,
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>, output_schema: Seq<VField>,
 )
     requires
         rows_in_schema(rows, schema),
@@ -560,8 +560,8 @@ pub proof fn lemma_relation_type_sound(
     decreases *plan,
 {
     match plan {
-        Plan::Input => {},
-        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
+        VPlan::Input => {},
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } => {
             let child_schema = plan_schema(input, schema).unwrap();
             lemma_relation_type_sound(input, rows, schema, child_schema);
             let child_rows = relation_spec(input, rows).unwrap();
@@ -579,187 +579,187 @@ mod tests {
     use super::*;
     #[test]
     fn nested_projection_and_nullable_filter() {
-        let input = Table {
+        let input = VTable {
             schema: vec![
-                Field { dtype: DType::Int64, nullable: true },
-                Field { dtype: DType::Boolean, nullable: true },
+                VField { dtype: VDType::Int64, nullable: true },
+                VField { dtype: VDType::Boolean, nullable: true },
             ],
             rows: vec![
-                vec![Some(Value::Int(-2)), Some(Value::Bool(true))],
-                vec![Some(Value::Int(2)), Some(Value::Bool(true))],
-                vec![None, Some(Value::Bool(true))],
-                vec![Some(Value::Int(4)), None],
-                vec![Some(Value::Int(6)), Some(Value::Bool(false))],
+                vec![Some(VValue::Int(-2)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(2)), Some(VValue::Bool(true))],
+                vec![None, Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(4)), None],
+                vec![Some(VValue::Int(6)), Some(VValue::Bool(false))],
             ],
         };
-        let plan = Plan::Project {
-            input: Box::new(Plan::Filter {
-                input: Box::new(Plan::Project {
-                    input: Box::new(Plan::Input),
+        let plan = VPlan::Project {
+            input: Box::new(VPlan::Filter {
+                input: Box::new(VPlan::Project {
+                    input: Box::new(VPlan::Input),
                     exprs: vec![
-                        Expr::Clip {
-                            expr: Box::new(Expr::Column(0)),
-                            lower: Some(Box::new(Expr::Literal(Value::Int(0)))),
-                            upper: Some(Box::new(Expr::Literal(Value::Int(5)))),
+                        VExpr::Clip {
+                            expr: Box::new(VExpr::Column(0)),
+                            lower: Some(Box::new(VExpr::Literal(VValue::Int(0)))),
+                            upper: Some(Box::new(VExpr::Literal(VValue::Int(5)))),
                         },
-                        Expr::Column(1),
+                        VExpr::Column(1),
                     ],
                 }),
-                predicate: Expr::Binary {
-                    left: Box::new(Expr::Column(1)),
-                    op: BinaryOp::And,
-                    right: Box::new(Expr::Binary {
-                        left: Box::new(Expr::Column(0)),
-                        op: BinaryOp::Gt,
-                        right: Box::new(Expr::Literal(Value::Int(1))),
+                predicate: VExpr::Binary {
+                    left: Box::new(VExpr::Column(1)),
+                    op: VBinaryOp::And,
+                    right: Box::new(VExpr::Binary {
+                        left: Box::new(VExpr::Column(0)),
+                        op: VBinaryOp::Gt,
+                        right: Box::new(VExpr::Literal(VValue::Int(1))),
                     }),
                 },
             }),
-            exprs: vec![Expr::Column(0), Expr::Null(DType::Boolean)],
+            exprs: vec![VExpr::Column(0), VExpr::Null(VDType::Boolean)],
         };
         assert!(evaluate(&plan, &input) == Ok(vec![
-            vec![Some(Value::Int(2)), None],
+            vec![Some(VValue::Int(2)), None],
         ]));
     }
 
     #[test]
     fn empty_tables_and_zero_column_rows() {
-        let empty = Table {
-            schema: vec![Field { dtype: DType::Int64, nullable: false }],
+        let empty = VTable {
+            schema: vec![VField { dtype: VDType::Int64, nullable: false }],
             rows: vec![],
         };
-        assert!(evaluate(&Plan::Input, &empty) == Ok(vec![]));
+        assert!(evaluate(&VPlan::Input, &empty) == Ok(vec![]));
 
-        let no_columns = Table {
+        let no_columns = VTable {
             schema: vec![],
             rows: vec![vec![], vec![]],
         };
-        assert!(evaluate(&Plan::Input, &no_columns) == Ok(vec![vec![], vec![]]));
+        assert!(evaluate(&VPlan::Input, &no_columns) == Ok(vec![vec![], vec![]]));
     }
 
     #[test]
     fn null_propagation_and_three_valued_boolean_logic() {
-        let t = Table {
+        let t = VTable {
             schema: vec![
-                Field { dtype: DType::Int64, nullable: true },
-                Field { dtype: DType::Boolean, nullable: true },
+                VField { dtype: VDType::Int64, nullable: true },
+                VField { dtype: VDType::Boolean, nullable: true },
             ],
             rows: vec![
-                vec![Some(Value::Int(5)), None],
-                vec![None, Some(Value::Bool(false))],
-                vec![Some(Value::Int(1)), Some(Value::Bool(true))],
+                vec![Some(VValue::Int(5)), None],
+                vec![None, Some(VValue::Bool(false))],
+                vec![Some(VValue::Int(1)), Some(VValue::Bool(true))],
             ],
         };
-        let less_than = Expr::Binary {
-            left: Box::new(Expr::Column(0)), op: BinaryOp::Lt,
-            right: Box::new(Expr::Literal(Value::Int(3))),
+        let less_than = VExpr::Binary {
+            left: Box::new(VExpr::Column(0)), op: VBinaryOp::Lt,
+            right: Box::new(VExpr::Literal(VValue::Int(3))),
         };
-        assert!(eval_expr_row(&less_than, &t.rows[0]) == Ok(Some(Value::Bool(false))));
+        assert!(eval_expr_row(&less_than, &t.rows[0]) == Ok(Some(VValue::Bool(false))));
         assert!(eval_expr_row(&less_than, &t.rows[1]) == Ok(None));
-        assert!(eval_expr_row(&less_than, &t.rows[2]) == Ok(Some(Value::Bool(true))));
+        assert!(eval_expr_row(&less_than, &t.rows[2]) == Ok(Some(VValue::Bool(true))));
 
-        let and_false = Expr::Binary {
-            left: Box::new(Expr::Column(1)), op: BinaryOp::And,
-            right: Box::new(Expr::Literal(Value::Bool(false))),
+        let and_false = VExpr::Binary {
+            left: Box::new(VExpr::Column(1)), op: VBinaryOp::And,
+            right: Box::new(VExpr::Literal(VValue::Bool(false))),
         };
-        assert!(eval_expr_row(&and_false, &t.rows[0]) == Ok(Some(Value::Bool(false))));
-        assert!(eval_expr_row(&and_false, &t.rows[1]) == Ok(Some(Value::Bool(false))));
+        assert!(eval_expr_row(&and_false, &t.rows[0]) == Ok(Some(VValue::Bool(false))));
+        assert!(eval_expr_row(&and_false, &t.rows[1]) == Ok(Some(VValue::Bool(false))));
 
-        let and_true = Expr::Binary {
-            left: Box::new(Expr::Column(1)), op: BinaryOp::And,
-            right: Box::new(Expr::Literal(Value::Bool(true))),
+        let and_true = VExpr::Binary {
+            left: Box::new(VExpr::Column(1)), op: VBinaryOp::And,
+            right: Box::new(VExpr::Literal(VValue::Bool(true))),
         };
         assert!(eval_expr_row(&and_true, &t.rows[0]) == Ok(None));
-        assert!(eval_expr_row(&and_true, &t.rows[2]) == Ok(Some(Value::Bool(true))));
+        assert!(eval_expr_row(&and_true, &t.rows[2]) == Ok(Some(VValue::Bool(true))));
 
-        let clipped = Expr::Clip {
-            expr: Box::new(Expr::Column(0)),
-            lower: Some(Box::new(Expr::Literal(Value::Int(2)))),
-            upper: Some(Box::new(Expr::Literal(Value::Int(4)))),
+        let clipped = VExpr::Clip {
+            expr: Box::new(VExpr::Column(0)),
+            lower: Some(Box::new(VExpr::Literal(VValue::Int(2)))),
+            upper: Some(Box::new(VExpr::Literal(VValue::Int(4)))),
         };
-        assert!(eval_expr_row(&clipped, &t.rows[0]) == Ok(Some(Value::Int(4))));
+        assert!(eval_expr_row(&clipped, &t.rows[0]) == Ok(Some(VValue::Int(4))));
         assert!(eval_expr_row(&clipped, &t.rows[1]) == Ok(None));
-        assert!(eval_expr_row(&clipped, &t.rows[2]) == Ok(Some(Value::Int(2))));
+        assert!(eval_expr_row(&clipped, &t.rows[2]) == Ok(Some(VValue::Int(2))));
     }
 
     #[test]
     fn clip_expression_bounds_and_null_bounds() {
-        let input = Table {
+        let input = VTable {
             schema: vec![
-                Field { dtype: DType::Int64, nullable: true },
-                Field { dtype: DType::Int64, nullable: true },
-                Field { dtype: DType::Int64, nullable: true },
+                VField { dtype: VDType::Int64, nullable: true },
+                VField { dtype: VDType::Int64, nullable: true },
+                VField { dtype: VDType::Int64, nullable: true },
             ],
             rows: vec![
-                vec![Some(Value::Int(0)), Some(Value::Int(2)), Some(Value::Int(10))],
-                vec![Some(Value::Int(5)), None, Some(Value::Int(3))],
-                vec![Some(Value::Int(8)), Some(Value::Int(9)), Some(Value::Int(6))],
-                vec![None, Some(Value::Int(0)), Some(Value::Int(3))],
-                vec![Some(Value::Int(7)), Some(Value::Int(8)), Some(Value::Int(3))],
-                vec![Some(Value::Int(5)), None, None],
+                vec![Some(VValue::Int(0)), Some(VValue::Int(2)), Some(VValue::Int(10))],
+                vec![Some(VValue::Int(5)), None, Some(VValue::Int(3))],
+                vec![Some(VValue::Int(8)), Some(VValue::Int(9)), Some(VValue::Int(6))],
+                vec![None, Some(VValue::Int(0)), Some(VValue::Int(3))],
+                vec![Some(VValue::Int(7)), Some(VValue::Int(8)), Some(VValue::Int(3))],
+                vec![Some(VValue::Int(5)), None, None],
             ],
         };
-        let expression = Expr::Clip {
-            expr: Box::new(Expr::Column(0)),
-            lower: Some(Box::new(Expr::Column(1))),
-            upper: Some(Box::new(Expr::Column(2))),
+        let expression = VExpr::Clip {
+            expr: Box::new(VExpr::Column(0)),
+            lower: Some(Box::new(VExpr::Column(1))),
+            upper: Some(Box::new(VExpr::Column(2))),
         };
-        let plan = Plan::Project {
-            input: Box::new(Plan::Input),
+        let plan = VPlan::Project {
+            input: Box::new(VPlan::Input),
             exprs: vec![expression],
         };
         assert!(evaluate(&plan, &input) == Ok(vec![
-            vec![Some(Value::Int(2))],
-            vec![Some(Value::Int(3))],
-            vec![Some(Value::Int(9))],
+            vec![Some(VValue::Int(2))],
+            vec![Some(VValue::Int(3))],
+            vec![Some(VValue::Int(9))],
             vec![None],
-            vec![Some(Value::Int(8))],
-            vec![Some(Value::Int(5))],
+            vec![Some(VValue::Int(8))],
+            vec![Some(VValue::Int(5))],
         ]));
 
-        let upper_only = Expr::Clip {
-            expr: Box::new(Expr::Column(0)),
+        let upper_only = VExpr::Clip {
+            expr: Box::new(VExpr::Column(0)),
             lower: None,
-            upper: Some(Box::new(Expr::Column(2))),
+            upper: Some(Box::new(VExpr::Column(2))),
         };
         assert!(eval_expr_row(&upper_only, &input.rows[1])
-            == Ok(Some(Value::Int(3))));
+            == Ok(Some(VValue::Int(3))));
         assert!(eval_expr_row(&upper_only, &input.rows[5])
-            == Ok(Some(Value::Int(5))));
+            == Ok(Some(VValue::Int(5))));
 
-        let no_bounds = Expr::Clip {
-            expr: Box::new(Expr::Column(0)),
+        let no_bounds = VExpr::Clip {
+            expr: Box::new(VExpr::Column(0)),
             lower: None,
             upper: None,
         };
         assert!(eval_expr_row(&no_bounds, &input.rows[4])
-            == Ok(Some(Value::Int(7))));
+            == Ok(Some(VValue::Int(7))));
     }
 
     #[test]
     fn alias_preserves_expression_value_and_type() {
-        let input = Table {
-            schema: vec![Field { dtype: DType::Int64, nullable: false }],
-            rows: vec![vec![Some(Value::Int(7))]],
+        let input = VTable {
+            schema: vec![VField { dtype: VDType::Int64, nullable: false }],
+            rows: vec![vec![Some(VValue::Int(7))]],
         };
-        let expr = Expr::Alias {
-            expr: Box::new(Expr::Column(0)),
+        let expr = VExpr::Alias {
+            expr: Box::new(VExpr::Column(0)),
             name: "renamed".to_string(),
         };
         assert!(check_expr(&expr, &input.schema) == Some(input.schema[0]));
-        assert!(eval_expr_row(&expr, &input.rows[0]) == Ok(Some(Value::Int(7))));
+        assert!(eval_expr_row(&expr, &input.rows[0]) == Ok(Some(VValue::Int(7))));
     }
 
     #[test]
     fn duplicate_rows_are_preserved() {
-        let input = Table {
-            schema: vec![Field { dtype: DType::Int64, nullable: true }],
+        let input = VTable {
+            schema: vec![VField { dtype: VDType::Int64, nullable: true }],
             rows: vec![
-                vec![Some(Value::Int(4))],
+                vec![Some(VValue::Int(4))],
                 vec![None],
-                vec![Some(Value::Int(4))],
+                vec![Some(VValue::Int(4))],
             ],
         };
-        assert!(evaluate(&Plan::Input, &input) == Ok(input.rows));
+        assert!(evaluate(&VPlan::Input, &input) == Ok(input.rows));
     }
 }

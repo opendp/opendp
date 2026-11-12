@@ -23,13 +23,13 @@ fn test_margin() -> Fallible<()> {
     ])?
     .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
 
-    let lf_exceed_partition_size = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
+    let lf_exceed_partition_size = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazy();
     assert!(!lf_domain.member(&lf_exceed_partition_size)?);
 
-    let lf_exceed_num_partitions = df!("A" => [1, 2, 3], "B" => ["1", "1", "1"])?.lazyframe();
+    let lf_exceed_num_partitions = df!("A" => [1, 2, 3], "B" => ["1", "1", "1"])?.lazy();
     assert!(!lf_domain.member(&lf_exceed_num_partitions)?);
 
-    let lf = df!("A" => [1, 2], "B" => ["1", "1"])?.lazyframe();
+    let lf = df!("A" => [1, 2], "B" => ["1", "1"])?.lazy();
     assert!(lf_domain.member(&lf)?);
 
     Ok(())
@@ -70,7 +70,7 @@ fn test_margin_select() -> Fallible<()> {
     Ok(())
 }
 
-fn assert_row_descriptors<F: Frame>(domain: &FrameDomain<F>, by: &[&str], max_length: Option<u32>) {
+fn assert_row_descriptors<F: Frame<Expr = Expr>>(domain: &FrameDomain<F>, by: &[&str], max_length: Option<u32>) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
     assert_eq!(margin.max_length, max_length);
 }
@@ -88,7 +88,7 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
     Ok(())
 }
 
-fn assert_group_descriptors<F: Frame>(
+fn assert_group_descriptors<F: Frame<Expr = Expr>>(
     domain: &FrameDomain<F>,
     by: &[&str],
     max_groups: Option<u32>,
@@ -199,5 +199,49 @@ fn test_find_min_covering_nonoptimal() -> Fallible<()> {
         .reduce(|l, r| &l | &r)
         .unwrap();
     assert_eq!(intersection, must_cover);
+    Ok(())
+}
+
+#[test]
+fn generic_margin_expression_keys() {
+    let margin = Margin::<u8>::by([1u8]).with_max_length(3).with_max_groups(4);
+    assert!(margin.by.contains(&1));
+    assert_eq!(margin.l_0(10), 4);
+    assert_eq!(margin.l_inf(10), 3);
+}
+
+#[derive(Clone)]
+struct SymbolicFixture;
+
+impl Frame for SymbolicFixture {
+    type Column = ();
+    type Expr = u8;
+
+    fn lazyframe(self) -> Fallible<LazyFrame> {
+        fallible!(FailedFunction, "no Polars conversion")
+    }
+    fn dataframe(self) -> Fallible<DataFrame> {
+        fallible!(FailedFunction, "no Polars conversion")
+    }
+    fn root_names(expr: &u8, columns: &[ColumnDomain<()>]) -> Fallible<Vec<PlSmallStr>> {
+        columns.get(*expr as usize)
+            .map(|column| vec![column.name.clone()])
+            .ok_or_else(|| err!(MakeDomain, "column index outside schema"))
+    }
+    fn frame_member(&self, _domain: &FrameDomain<Self>) -> Fallible<bool> {
+        fallible!(FailedFunction, "no bound input for symbolic plan")
+    }
+}
+
+#[test]
+fn symbolic_frame_shares_margin_inference() -> Fallible<()> {
+    let domain = FrameDomain::<SymbolicFixture>::new(vec![
+        ColumnDomain::<()>::new("x", AtomDomain::<i64>::default()),
+    ])?;
+    assert!(domain.clone().with_margin(Margin::<u8>::by([1u8])).is_err());
+    let domain = domain.with_margin(Margin::<u8>::by([0u8]).with_max_length(3))?;
+    assert_eq!(domain.get_margin(&HashSet::from([0u8])).max_length, Some(3));
+    assert_eq!(domain.get_margin(&HashSet::new()).max_length, None);
+    assert!(domain.member(&SymbolicFixture).is_err());
     Ok(())
 }

@@ -12,8 +12,8 @@ use row_local::*;
 verus! {
 
 pub open spec fn dataset_spec(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-) -> Result<Multiset<Seq<Option<Value>>>, ()> {
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+) -> Result<Multiset<Seq<Option<VValue>>>, ()> {
     match relation_spec(plan, rows) {
         Ok(result) => Ok(result.to_multiset()),
         Err(_) => Err(()),
@@ -21,26 +21,26 @@ pub open spec fn dataset_spec(
 }
 
 pub open spec fn seq_one_insert(
-    before: Seq<Seq<Option<Value>>>, after: Seq<Seq<Option<Value>>>,
+    before: Seq<Seq<Option<VValue>>>, after: Seq<Seq<Option<VValue>>>,
 ) -> bool {
     before =~= after
-        || exists|i: int, row: Seq<Option<Value>>|
+        || exists|i: int, row: Seq<Option<VValue>>|
             0 <= i <= before.len() && after =~= before.insert(i, row)
 }
 
 pub open spec fn bag_one_edit(
-    left: Multiset<Seq<Option<Value>>>, right: Multiset<Seq<Option<Value>>>,
+    left: Multiset<Seq<Option<VValue>>>, right: Multiset<Seq<Option<VValue>>>,
 ) -> bool {
     left =~= right
-        || exists|row: Seq<Option<Value>>| right =~= left.insert(row)
-        || exists|row: Seq<Option<Value>>| left =~= right.insert(row)
+        || exists|row: Seq<Option<VValue>>| right =~= left.insert(row)
+        || exists|row: Seq<Option<VValue>>| left =~= right.insert(row)
 }
 
 /// The relational composition of one-insertion-stable steps is stable.
 pub proof fn lemma_relation_insert(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>,
-    schema: Seq<Field>, output_schema: Seq<Field>,
-    index: int, row: Seq<Option<Value>>,
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>, output_schema: Seq<VField>,
+    index: int, row: Seq<Option<VValue>>,
 )
     requires
         rows_in_schema(rows, schema),
@@ -62,10 +62,10 @@ pub proof fn lemma_relation_insert(
     lemma_relation_type_sound(
         plan, rows.insert(index, row), schema, output_schema);
     match plan {
-        Plan::Input => {
+        VPlan::Input => {
             assert(seq_one_insert(rows, rows.insert(index, row)));
         },
-        Plan::Project { input, .. } | Plan::Filter { input, .. } => {
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } => {
             let child_schema = plan_schema(input, schema).unwrap();
             lemma_relation_insert(input, rows, schema, child_schema, index, row);
             lemma_relation_type_sound(input, rows, schema, child_schema);
@@ -76,7 +76,7 @@ pub proof fn lemma_relation_insert(
             if before_child =~= after_child {
                 assert(relation_spec(plan, rows) == relation_spec(plan, rows.insert(index, row)));
             } else {
-                let (j, inserted_row) = choose|j: int, inserted_row: Seq<Option<Value>>|
+                let (j, inserted_row) = choose|j: int, inserted_row: Seq<Option<VValue>>|
                     0 <= j <= before_child.len()
                         && after_child =~= before_child.insert(j, inserted_row);
                 assert(rows_in_schema(after_child, child_schema));
@@ -135,20 +135,20 @@ pub proof fn lemma_seq_insert_bag<T>(xs: Seq<T>, index: int, value: T)
 }
 
 pub proof fn lemma_seq_one_insert_bag(
-    before: Seq<Seq<Option<Value>>>, after: Seq<Seq<Option<Value>>>,
+    before: Seq<Seq<Option<VValue>>>, after: Seq<Seq<Option<VValue>>>,
 )
     requires seq_one_insert(before, after),
     ensures bag_one_edit(before.to_multiset(), after.to_multiset()),
 {
     if !(before =~= after) {
-        let (index, row) = choose|index: int, row: Seq<Option<Value>>|
+        let (index, row) = choose|index: int, row: Seq<Option<VValue>>|
             0 <= index <= before.len() && after =~= before.insert(index, row);
         lemma_seq_insert_bag(before, index, row);
     }
 }
 
 /// Typed row insertion is enough for the symmetric-distance bound.
-pub open spec fn table_one_insert(before: &Table, after: &Table, index: int) -> bool {
+pub open spec fn table_one_insert(before: &VTable, after: &VTable, index: int) -> bool {
     let earlier = rows_view(before.rows@);
     let later = rows_view(after.rows@);
     before.schema@ =~= after.schema@
@@ -158,7 +158,7 @@ pub open spec fn table_one_insert(before: &Table, after: &Table, index: int) -> 
 }
 
 pub proof fn lemma_typed_row_insert_stable(
-    plan: &Plan, before: &Table, after: &Table, index: int,
+    plan: &VPlan, before: &VTable, after: &VTable, index: int,
 )
     requires
         table_valid(before),

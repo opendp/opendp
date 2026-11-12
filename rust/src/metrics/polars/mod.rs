@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashSet};
+use std::{cmp::Ordering, collections::HashSet, fmt::Debug, hash::Hash};
 
 use polars::prelude::Expr;
 
@@ -114,18 +114,18 @@ impl<M: UnboundedMetric> Metric for FrameDistance<M> {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Bounds(pub Vec<Bound>);
+pub struct Bounds<E: Eq + Hash = Expr>(pub Vec<Bound<E>>);
 
-impl From<u32> for Bounds {
+impl<E: Eq + Hash + Clone> From<u32> for Bounds<E> {
     fn from(v: u32) -> Self {
-        Self(vec![Bound::by::<[Expr; 0], Expr>([]).with_per_group(v)])
+        Self(vec![Bound::<E>::default().with_per_group(v)])
     }
 }
 
-impl Bounds {
+impl<E: Eq + Hash + Clone> Bounds<E> {
     /// # Proof Definition
     /// Return a `Bound` with given `by` implied by `self`.
-    pub fn get_bound(&self, by: &HashSet<Expr>) -> Bound {
+    pub fn get_bound(&self, by: &HashSet<E>) -> Bound<E> {
         let mut bound = (self.0.iter())
             .find(|b| &b.by == by)
             .cloned()
@@ -136,7 +136,7 @@ impl Bounds {
 
         let subset_bounds = (self.0.iter())
             .filter(|m| m.by.is_subset(by))
-            .collect::<Vec<&Bound>>();
+            .collect::<Vec<&Bound<E>>>();
 
         // max per-group contributions is the fewest per-group contributions
         // of any grouping as coarse or coarser than the current grouping
@@ -162,7 +162,7 @@ impl Bounds {
         bound
     }
 
-    pub fn with_bound(mut self, bound: Bound) -> Self {
+    pub fn with_bound(mut self, bound: Bound<E>) -> Self {
         if let Some(b) = self.0.iter_mut().find(|m| m.by == bound.by) {
             b.num_groups = option_min(b.num_groups, bound.num_groups);
             b.per_group = option_min(b.per_group, bound.per_group);
@@ -173,10 +173,10 @@ impl Bounds {
     }
 }
 
-#[derive(Clone, PartialEq, Default, Debug)]
-pub struct Bound {
+#[derive(Clone, PartialEq, Debug)]
+pub struct Bound<E: Eq + Hash = Expr> {
     /// The columns to group by.
-    pub by: HashSet<Expr>,
+    pub by: HashSet<E>,
 
     /// The greatest number of contributions that can be made by one unit to any one group.
     pub per_group: Option<u32>,
@@ -185,8 +185,14 @@ pub struct Bound {
     pub num_groups: Option<u32>,
 }
 
-impl Bound {
-    pub fn by<E: AsRef<[IE]>, IE: Into<Expr> + Clone>(by: E) -> Self {
+impl<E: Eq + Hash> Default for Bound<E> {
+    fn default() -> Self {
+        Self { by: HashSet::new(), per_group: None, num_groups: None }
+    }
+}
+
+impl<E: Eq + Hash> Bound<E> {
+    pub fn by<K: AsRef<[IE]>, IE: Into<E> + Clone>(by: K) -> Self {
         Self {
             by: by.as_ref().iter().cloned().map(Into::into).collect(),
             per_group: None,
@@ -204,7 +210,7 @@ impl Bound {
     }
 }
 
-impl ProductOrd for Bounds {
+impl<E: Eq + Hash + Clone + Debug> ProductOrd for Bounds<E> {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
         if self != other {
             return fallible!(
@@ -213,5 +219,18 @@ impl ProductOrd for Bounds {
             );
         }
         Ok(Ordering::Equal)
+    }
+}
+
+#[cfg(test)]
+mod generic_grouping_tests {
+    use super::*;
+
+    #[test]
+    fn bounds_with_non_polars_expression_keys() {
+        let bounds = Bounds::<u8>::from(5)
+            .with_bound(Bound::by([1u8]).with_per_group(2));
+        assert_eq!(bounds.get_bound(&HashSet::new()).per_group, Some(5));
+        assert_eq!(bounds.get_bound(&HashSet::from([1u8])).per_group, Some(2));
     }
 }

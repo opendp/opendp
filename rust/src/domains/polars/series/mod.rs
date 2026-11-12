@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::core::MetricSpace;
@@ -34,16 +35,20 @@ mod test;
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone)]
-pub struct SeriesDomain {
+pub struct ColumnDomain<C = Series> {
     /// The name of series in the domain.
     pub name: PlSmallStr,
     /// Domain of each element in the series.
     pub element_domain: Arc<dyn DynSeriesElementDomain>,
     /// Indicates if elements can be null.
     pub nullable: bool,
+    _marker: PhantomData<fn() -> C>,
 }
 
-impl PartialEq for SeriesDomain {
+/// Preserve the public Polars domain name.
+pub type SeriesDomain = ColumnDomain<Series>;
+
+impl<C> PartialEq for ColumnDomain<C> {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
             && self.element_domain.eq(&other.element_domain)
@@ -51,7 +56,7 @@ impl PartialEq for SeriesDomain {
     }
 }
 
-impl Domain for SeriesDomain {
+impl Domain for ColumnDomain<Series> {
     type Carrier = Series;
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         if &self.name != &value.name() {
@@ -96,7 +101,7 @@ impl Domain for SeriesDomain {
     }
 }
 
-impl SeriesDomain {
+impl<C> ColumnDomain<C> {
     /// # Proof Definition
     /// Returns a series domain spanning all series whose name is `name`
     /// and elements of the series are members of `element_domain`.
@@ -104,10 +109,21 @@ impl SeriesDomain {
         name: S,
         element_domain: DA,
     ) -> Self {
-        SeriesDomain {
+        Self {
             name: name.into(),
             element_domain: Arc::new(element_domain.inner_domain().clone()),
             nullable: DA::NULLABLE,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Reuse the same logical column constraints with another column carrier.
+    pub fn cast_carrier<CO>(&self) -> ColumnDomain<CO> {
+        ColumnDomain {
+            name: self.name.clone(),
+            element_domain: self.element_domain.clone(),
+            nullable: self.nullable,
+            _marker: PhantomData,
         }
     }
 
@@ -173,10 +189,11 @@ impl SeriesDomain {
     /// Returns a series domain spanning all series
     /// whose name and data type of elements are specified by `field`.
     pub fn new_from_field(field: Field) -> Fallible<Self> {
-        Ok(SeriesDomain {
+        Ok(Self {
             name: field.name,
             element_domain: Self::new_element_domain(field.dtype)?,
             nullable: true,
+            _marker: PhantomData,
         })
     }
 
@@ -254,13 +271,13 @@ impl SeriesDomain {
     }
 }
 
-impl Debug for SeriesDomain {
+impl<C> Debug for ColumnDomain<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "SeriesDomain(\"{}\", {})", self.name, self.dtype())
     }
 }
 
-impl<D: UnboundedMetric> MetricSpace for (SeriesDomain, D) {
+impl<D: UnboundedMetric> MetricSpace for (ColumnDomain<Series>, D) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }

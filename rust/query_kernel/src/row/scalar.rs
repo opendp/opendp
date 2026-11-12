@@ -5,19 +5,19 @@ use super::*;
 #[verus_verify(dual_spec, open)]
 #[verus_spec(returns binary_field(op, left, right))]
 pub fn binary_field(
-    op: BinaryOp, left: Option<Field>, right: Option<Field>,
-) -> Option<Field> {
+    op: VBinaryOp, left: Option<VField>, right: Option<VField>,
+) -> Option<VField> {
     match (left, right) {
         (Some(l), Some(r)) => {
             let valid = match (op, l.dtype, r.dtype) {
-                (BinaryOp::Lt | BinaryOp::Gt, DType::Int64, DType::Int64) => true,
-                (BinaryOp::Eq, DType::Int64, DType::Int64)
-                    | (BinaryOp::Eq, DType::Boolean, DType::Boolean) => true,
-                (BinaryOp::And, DType::Boolean, DType::Boolean) => true,
+                (VBinaryOp::Lt | VBinaryOp::Gt, VDType::Int64, VDType::Int64) => true,
+                (VBinaryOp::Eq, VDType::Int64, VDType::Int64)
+                    | (VBinaryOp::Eq, VDType::Boolean, VDType::Boolean) => true,
+                (VBinaryOp::And, VDType::Boolean, VDType::Boolean) => true,
                 _ => false,
             };
             if valid {
-                Some(Field { dtype: DType::Boolean, nullable: l.nullable || r.nullable })
+                Some(VField { dtype: VDType::Boolean, nullable: l.nullable || r.nullable })
             } else { None }
         },
         _ => None,
@@ -27,19 +27,19 @@ pub fn binary_field(
 #[verus_verify(dual_spec, open)]
 #[verus_spec(returns clip_field(value, lower, upper))]
 pub fn clip_field(
-    value: Option<Field>, lower: Option<Option<Field>>, upper: Option<Option<Field>>,
-) -> Option<Field> {
+    value: Option<VField>, lower: Option<Option<VField>>, upper: Option<Option<VField>>,
+) -> Option<VField> {
     match value {
         Some(field) => {
             match field.dtype {
-                DType::Boolean => None,
-                DType::Int64 => {
+                VDType::Boolean => None,
+                VDType::Int64 => {
                     let lower_ok = match lower {
-                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
+                        None | Some(Some(VField { dtype: VDType::Int64, .. })) => true,
                         _ => false,
                     };
                     let upper_ok = match upper {
-                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
+                        None | Some(Some(VField { dtype: VDType::Int64, .. })) => true,
                         _ => false,
                     };
                     if lower_ok && upper_ok { Some(field) } else { None }
@@ -55,36 +55,36 @@ pub fn clip_field(
 #[verus_verify(dual_spec, open)]
 #[verus_spec(returns eval_binary(op, lhs, rhs))]
 pub fn eval_binary(
-    op: BinaryOp, lhs: Option<Value>, rhs: Option<Value>,
-) -> Result<Option<Value>, ()> {
+    op: VBinaryOp, lhs: Option<VValue>, rhs: Option<VValue>,
+) -> Result<Option<VValue>, ()> {
     match op {
-        BinaryOp::Lt => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a < b))),
+        VBinaryOp::Lt => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a < b))),
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },
-        BinaryOp::Gt => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a > b))),
+        VBinaryOp::Gt => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a > b))),
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },
-        BinaryOp::Eq => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a == b))),
-            (Some(Value::Bool(a)), Some(Value::Bool(b))) =>
-                Ok(Some(Value::Bool(a == b))),
+        VBinaryOp::Eq => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a == b))),
+            (Some(VValue::Bool(a)), Some(VValue::Bool(b))) =>
+                Ok(Some(VValue::Bool(a == b))),
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },
-        BinaryOp::And => match (lhs, rhs) {
-            (Some(Value::Bool(a)), Some(Value::Bool(b))) =>
-                Ok(Some(Value::Bool(a && b))),
-            (Some(Value::Bool(false)), None) | (None, Some(Value::Bool(false))) =>
-                Ok(Some(Value::Bool(false))),
-            (Some(Value::Bool(true)), None)
-                | (None, Some(Value::Bool(true)))
+        VBinaryOp::And => match (lhs, rhs) {
+            (Some(VValue::Bool(a)), Some(VValue::Bool(b))) =>
+                Ok(Some(VValue::Bool(a && b))),
+            (Some(VValue::Bool(false)), None) | (None, Some(VValue::Bool(false))) =>
+                Ok(Some(VValue::Bool(false))),
+            (Some(VValue::Bool(true)), None)
+                | (None, Some(VValue::Bool(true)))
                 | (None, None) => Ok(None),
             _ => Err(()),
         },
@@ -96,21 +96,21 @@ pub fn eval_binary(
 #[verus_verify(dual_spec, open)]
 #[verus_spec(returns eval_clip(value, lower, upper))]
 pub fn eval_clip(
-    value: Option<Value>,
-    lower: Option<Option<Value>>,
-    upper: Option<Option<Value>>,
-) -> Result<Option<Value>, ()> {
+    value: Option<VValue>,
+    lower: Option<Option<VValue>>,
+    upper: Option<Option<VValue>>,
+) -> Result<Option<VValue>, ()> {
     match (value, lower, upper) {
         (None, _, _) => Ok(None),
-        (Some(Value::Int(_)), Some(Some(Value::Bool(_))), _)
-            | (Some(Value::Int(_)), _, Some(Some(Value::Bool(_)))) => Err(()),
-        (Some(Value::Int(v)), lower, upper) => {
+        (Some(VValue::Int(_)), Some(Some(VValue::Bool(_))), _)
+            | (Some(VValue::Int(_)), _, Some(Some(VValue::Bool(_)))) => Err(()),
+        (Some(VValue::Int(v)), lower, upper) => {
             let low = match lower {
-                Some(Some(Value::Int(n))) => Some(n),
+                Some(Some(VValue::Int(n))) => Some(n),
                 _ => None,
             };
             let high = match upper {
-                Some(Some(Value::Int(n))) => Some(n),
+                Some(Some(VValue::Int(n))) => Some(n),
                 _ => None,
             };
             // Use the original input for both comparisons. Polars tests
@@ -122,7 +122,7 @@ pub fn eval_clip(
                     _ => v,
                 },
             };
-            Ok(Some(Value::Int(clipped)))
+            Ok(Some(VValue::Int(clipped)))
         },
         _ => Err(()),
     }

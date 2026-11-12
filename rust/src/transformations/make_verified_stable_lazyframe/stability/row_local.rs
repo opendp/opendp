@@ -6,8 +6,8 @@ use super::*;
 verus! {
 
 pub proof fn lemma_rows_insert_valid(
-    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
-    index: int, row: Seq<Option<Value>>,
+    rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    index: int, row: Seq<Option<VValue>>,
 )
     requires
         rows_in_schema(rows, schema),
@@ -29,7 +29,7 @@ pub proof fn lemma_rows_insert_valid(
 }
 
 pub proof fn lemma_rows_drop_last_valid(
-    rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
+    rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
 )
     requires rows_in_schema(rows, schema), rows.len() > 0,
     ensures
@@ -45,7 +45,7 @@ pub proof fn lemma_rows_drop_last_valid(
 
 /// A prefix of the input cannot be influenced by later rows.
 pub proof fn lemma_apply_prefix_ignores_last(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>, count: nat,
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, count: nat,
 )
     requires count < rows.len(),
     ensures
@@ -80,8 +80,8 @@ pub proof fn lemma_seq_insert_push<T>(xs: Seq<T>, index: int, row: T, tail: T)
 
 /// A single local operator preserves one-record insertion.
 pub proof fn lemma_apply_insert(
-    plan: &Plan, rows: Seq<Seq<Option<Value>>>, schema: Seq<Field>,
-    output_schema: Seq<Field>, index: int, row: Seq<Option<Value>>,
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    output_schema: Seq<VField>, index: int, row: Seq<Option<VValue>>,
 )
     requires
         rows_in_schema(rows, schema),

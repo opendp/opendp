@@ -80,7 +80,7 @@ impl WildExprDomain {
         }
     }
 
-    fn to_frame_domain<F: Frame>(self) -> Fallible<FrameDomain<F>> {
+    fn to_frame_domain<F: Frame<Column = Series, Expr = Expr>>(self) -> Fallible<FrameDomain<F>> {
         FrameDomain::new_with_margins(
             self.columns,
             match self.context {

@@ -137,14 +137,14 @@ mod tests {
         Ok(())
     }
 
-    fn to_cells(frame: &DataFrame) -> Fallible<Vec<Vec<Option<verified::Value>>>> {
+    fn to_cells(frame: &DataFrame) -> Fallible<Vec<Vec<Option<verified::VValue>>>> {
         (0..frame.height())
             .map(|i| {
                 frame.get_row(i)?.0.into_iter().map(|value| {
                     Ok(match value {
                         AnyValue::Null => None,
-                        AnyValue::Int64(v) => Some(verified::Value::Int(v)),
-                        AnyValue::Boolean(v) => Some(verified::Value::Bool(v)),
+                        AnyValue::Int64(v) => Some(verified::VValue::Int(v)),
+                        AnyValue::Boolean(v) => Some(verified::VValue::Bool(v)),
                         value => return fallible!(MakeTransformation,
                             "unsupported reference-cell type: {:?}", value),
                     })
@@ -165,7 +165,7 @@ mod tests {
         let (lowered, _) = backend::render_plan(
             &plan, source.clone().lazy().logical_plan.clone(), &input_names,
         )?;
-        let reference = verified::Table {
+        let reference = verified::VTable {
             schema: frontend::kernel_schema(&input_domain.series_domains)?,
             rows: to_cells(&source)?,
         };
