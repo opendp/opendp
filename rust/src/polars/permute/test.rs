@@ -17,19 +17,19 @@ fn plugin(input: Vec<Expr>, flags: FunctionOptions) -> Expr {
 #[test]
 fn test_match_permute() {
     let expr = plugin(vec![col("x")], FunctionOptions::length_preserving());
-    assert_eq!(match_permute(&expr), Some(&col("x")));
+    assert_eq!(match_permute(&expr).unwrap(), Some(&col("x")));
 
     // Wrong arity and execution flags cannot establish uniform permutation.
-    assert!(match_permute(&plugin(vec![], FunctionOptions::length_preserving())).is_none());
+    assert!(match_permute(&plugin(vec![], FunctionOptions::length_preserving())).unwrap().is_none());
     assert!(
         match_permute(&plugin(
             vec![col("x"), lit(1)],
             FunctionOptions::length_preserving()
-        ))
+        )).unwrap()
         .is_none()
     );
-    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::elementwise())).is_none());
-    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::groupwise())).is_none());
+    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::elementwise())).unwrap().is_none());
+    assert!(match_permute(&plugin(vec![col("x")], FunctionOptions::groupwise())).unwrap().is_none());
 
     let mut expr = expr;
     if let Expr::Function {
@@ -39,7 +39,7 @@ fn test_match_permute() {
     {
         *symbol = "other_plugin".into();
     }
-    assert!(match_permute(&expr).is_none());
+    assert!(match_permute(&expr).unwrap().is_none());
 }
 
 #[test]
@@ -68,7 +68,7 @@ fn test_permute_length_and_dtype() -> PolarsResult<()> {
 fn test_match_native_permute() -> PolarsResult<()> {
     use crate::polars::PrivacyNamespace;
     let expr = col("x").dp().permute();
-    assert_eq!(match_permute(&expr), Some(&col("x")));
+    assert_eq!(match_permute(&expr).unwrap(), Some(&col("x")));
 
     let input = df!("x" => [0i32, 1, 2, 3, 4, 5, 6, 7, 8, 9])?.lazy();
     let output = input.select([expr]).collect()?;
