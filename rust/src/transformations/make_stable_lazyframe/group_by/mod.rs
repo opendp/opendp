@@ -4,6 +4,7 @@ use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::polars::permute::match_permute;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -11,6 +12,7 @@ use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
+use polars_plan::plans::{DynLiteralValue, LiteralValue};
 use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
@@ -29,6 +31,12 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     input_metric: FrameDistance<M>,
     plan: DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
+    if M::ORDERED {
+        return fallible!(
+            MakeTransformation,
+            "Sample-and-aggregate requires an unordered input metric."
+        );
+    }
     #[cfg(patch_polars)]
     let DslPlan::GroupBy {
         input,
@@ -72,13 +80,6 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    if maintain_order {
-        return fallible!(
-            MakeTransformation,
-            "maintain_order is wasted compute because row ordering is protected information"
-        );
-    }
-
     if options.as_ref() != &GroupbyOptions::default() {
         return fallible!(
             MakeTransformation,
@@ -105,13 +106,18 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             let t_key: Transformation<_, _, _, L01InfDistance<M>> = key
                 .clone()
                 .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))?;
+            if !canonical_sort_dtype(&t_key.output_domain.column.dtype()) {
+                return fallible!(MakeTransformation,
+                    "Floating-point grouping keys may emit permutation-dependent representatives (signed zeros or NaN payloads).");
+            }
             Ok(t_key.invoke(&input)?.expr)
         })
         .collect::<Fallible<Vec<_>>>()?;
 
-    // check that aggregations are infallible. Aggregations are allowed to resize data
+    // Validate fallibility and permutation invariance in the same traversal.
+    let schema = middle_domain.schema();
     aggs.iter()
-        .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+        .try_for_each(|e| check_permutation_invariance(e, &schema))?;
 
     if middle_metric.0.identifier().is_some() {
         return fallible!(
@@ -153,7 +159,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
                 predicates: vec![],
                 aggs: aggs.clone(),
                 apply: None,
-                maintain_order: false,
+                maintain_order,
                 options: options.clone(),
             };
             #[cfg(not(patch_polars))]
@@ -162,7 +168,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
                 keys: stable_keys.clone(),
                 aggs: aggs.clone(),
                 apply: None,
-                maintain_order: false,
+                maintain_order,
                 options: options.clone(),
             };
             output
@@ -205,75 +211,190 @@ pub(crate) enum Resize {
 
 const INVITE: &'static str = "Please open an issue if this would be useful to you.";
 
-/// # Proof Definition
-/// Returns an error if the expression may raise data-dependent errors,
-/// or if `resize` is Ban and the expression resizes the data.
+/// How an expression behaves when the input rows are permuted.
 ///
-/// A resize is an expression that changes the number of rows in the data.
-/// Scalar-valued expressions are not considered a resize,
-/// because they can be broadcasted.
+/// An invariant expression produces the same value; an equivariant expression
+/// reorders its result with the input; a randomized expression has a
+/// permutation-invariant distribution. Unproven expressions are rejected when
+/// used as complete aggregates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PermutationBehavior {
+    Invariant,
+    Equivariant,
+    Randomized,
+    Unproven,
+}
+
+impl PermutationBehavior {
+    /// Combine row-aligned arguments, preserving scalar broadcast.
+    fn combine(self, rhs: Self) -> Self {
+        use PermutationBehavior::*;
+        match (self, rhs) {
+            (Unproven, _) | (_, Unproven) => Unproven,
+            (Invariant, other) | (other, Invariant) => other,
+            (Equivariant, Equivariant) => Equivariant,
+            // Combining a shuffled column with an unshuffled column can
+            // produce an order-dependent joint distribution.
+            (Randomized, _) | (_, Randomized) => Unproven,
+        }
+    }
+
+    fn reducer(self) -> Self {
+        match self {
+            Self::Invariant | Self::Equivariant | Self::Randomized => Self::Invariant,
+            Self::Unproven => Self::Unproven,
+        }
+    }
+
+    fn order_sensitive_reducer(self) -> Self {
+        match self {
+            Self::Invariant | Self::Randomized => Self::Invariant,
+            Self::Equivariant | Self::Unproven => Self::Unproven,
+        }
+    }
+}
+
+/// Validate an aggregation and prove that its result is invariant in
+/// distribution under permutations of the input rows.
+pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fallible<()> {
+    if inspect_expr(expr, Resize::Allow, Some(schema))? == PermutationBehavior::Invariant {
+        Ok(())
+    } else {
+        fallible!(
+            MakeTransformation,
+            "Aggregation expression has no established permutation-invariance proof."
+        )
+    }
+}
+
+/// Used by truncation to verify that sort keys follow row permutations.
+pub(crate) fn is_rowwise(expr: &Expr) -> bool {
+    inspect_expr(expr, Resize::Ban, None)
+        .is_ok_and(|behavior| {
+            matches!(
+                behavior,
+                PermutationBehavior::Equivariant | PermutationBehavior::Invariant
+            )
+        })
+}
+
+pub(super) fn canonical_sort_dtype(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Float32 | DataType::Float64 => false,
+        DataType::List(inner) | DataType::Array(inner, _) => canonical_sort_dtype(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .all(|field| canonical_sort_dtype(field.dtype())),
+        _ => true,
+    }
+}
+
+/// Quantile parameters are evaluated against the entire frame by Polars,
+/// rather than just the group. Require a public scalar to preserve group locality.
+fn check_quantile(expr: &Expr) -> Fallible<()> {
+    let value = match expr {
+        Expr::Literal(LiteralValue::Scalar(value)) if value.dtype().is_numeric() => {
+            value.value().try_extract::<f64>().ok()
+        }
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Int(value))) => Some(*value as f64),
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Float(value))) => Some(*value),
+        _ => None,
+    };
+    if value.is_some_and(|value| value.is_finite() && (0.0..=1.0).contains(&value)) {
+        Ok(())
+    } else {
+        fallible!(
+            MakeTransformation,
+            "quantile requires a public numeric scalar literal in [0, 1]."
+        )
+    }
+}
+
+/// # Proof Definition
+/// Reject expressions that may raise data-dependent errors, access physical
+/// row indices, or use data-dependent cross-group quantile parameters.
+/// Also reject resizing when `resize` is Ban. Scalar-valued expressions can
+/// broadcast, so they are not considered a resize.
 pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
+    inspect_expr(expr, resize, None).map(|_| ())
+}
+
+/// Validate fallibility and resizing while also tracking permutation behavior.
+/// If schema is None, only the former checks are enforced.
+fn inspect_expr(
+    expr: &Expr,
+    resize: Resize,
+    schema: Option<&Schema>,
+) -> Fallible<PermutationBehavior> {
+    use PermutationBehavior::*;
+
+    if let Some(data) = match_permute(expr)? {
+        if matches!(resize, Resize::Ban) {
+            return fallible!(
+                MakeTransformation,
+                "permute cannot be combined with another row-aligned expression."
+            );
+        }
+        return Ok(match inspect_expr(data, Resize::Allow, schema)? {
+            Equivariant | Invariant => Randomized,
+            _ => Unproven,
+        });
+    }
+
     Ok(match expr {
         #[cfg(patch_polars)]
-        Expr::Rolling {
-            function,
-            index_column,
-            ..
-        } => {
-            check_infallible(&*function, resize)?;
-            check_infallible(&*index_column, resize)?;
+        Expr::Rolling { function, index_column, .. } => {
+            inspect_expr(function, resize, schema)?;
+            inspect_expr(index_column, resize, schema)?;
+            Unproven
         }
-        Expr::Element => (),
+        Expr::Element | Expr::Column(_) => Equivariant,
         #[cfg(patch_polars)]
-        Expr::Over {
-            function,
-            partition_by,
-            order_by,
-            ..
-        } => {
-            check_infallible(&*function, resize)?;
-            partition_by
-                .iter()
-                .try_for_each(|by| check_infallible(&*by, Resize::Ban))?;
-            if let Some((order, _)) = order_by {
-                check_infallible(order, Resize::Ban)?;
+        Expr::Over { function, partition_by, order_by, .. } => {
+            inspect_expr(function, resize, schema)?;
+            for by in partition_by {
+                inspect_expr(by, Resize::Ban, schema)?;
             }
+            if let Some((order, _)) = order_by {
+                inspect_expr(order, Resize::Ban, schema)?;
+            }
+            Unproven
         }
         #[cfg(not(patch_polars))]
-        Expr::Window {
-            function,
-            partition_by,
-            order_by,
-            options,
-        } => {
+        Expr::Window { function, partition_by, order_by, options } => {
             if *options != WindowType::Over(WindowMapping::GroupsToRows) {
                 return fallible!(
                     MakeTransformation,
                     "Only groups-to-rows window expressions are currently supported. {INVITE}"
                 );
             }
-            check_infallible(&*function, resize)?;
-            partition_by
-                .iter()
-                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
-            if let Some((order, _)) = order_by {
-                check_infallible(order, Resize::Ban)?;
+            inspect_expr(function, resize, schema)?;
+            for by in partition_by {
+                inspect_expr(by, Resize::Ban, schema)?;
             }
+            if let Some((order, _)) = order_by {
+                inspect_expr(order, Resize::Ban, schema)?;
+            }
+            Unproven
         }
-        Expr::Eval {
-            expr, evaluation, ..
-        } => {
-            check_infallible(expr, resize)?;
-            check_infallible(evaluation, Resize::Allow)?;
+        Expr::Eval { expr, evaluation, .. } => {
+            inspect_expr(expr, resize, schema)?;
+            inspect_expr(evaluation, Resize::Allow, schema)?;
+            Unproven
         }
-        Expr::Alias(e, _) => check_infallible(e.as_ref(), resize)?,
-        Expr::Column(_) => (),
-        Expr::Selector(_) => (),
-        Expr::Literal(_) => (),
-        Expr::BinaryExpr { left, right, .. } => {
-            check_infallible(&left, Resize::Ban)?;
-            check_infallible(&right, Resize::Ban)?;
+        Expr::Alias(inner, _) | Expr::KeepName(inner) => inspect_expr(inner, resize, schema)?,
+        Expr::Selector(_) | Expr::Field(_) => Unproven,
+        Expr::Literal(value) => {
+            if !value.is_scalar() {
+                return fallible!(
+                    MakeTransformation,
+                    "Only scalar literals are supported; positional Series/range literals may change unrelated groups or cause length errors."
+                );
+            }
+            Invariant
         }
+        Expr::BinaryExpr { left, right, .. } => inspect_expr(left, Resize::Ban, schema)?
+            .combine(inspect_expr(right, Resize::Ban, schema)?),
         Expr::Cast { options, expr, .. } => {
             if matches!(options, CastOptions::Strict) {
                 return fallible!(
@@ -281,62 +402,111 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
                     "Strict casting may cause data-dependent errors. Set strict to false."
                 );
             }
-            check_infallible(expr, resize)?;
+            inspect_expr(expr, resize, schema)?
         }
-        Expr::Sort { expr, .. } => check_infallible(expr.as_ref(), resize)?,
-        Expr::Gather { .. } => fallible!(
-            MakeTransformation,
-            "Gather may cause data-dependent errors due to OOB indexing."
-        )?,
+        Expr::Sort { expr, .. } => {
+            inspect_expr(expr, resize, schema)?;
+            // Sorted-state metadata can cause Polars to skip the ordering.
+            Unproven
+        }
+        Expr::Gather { .. } => {
+            return fallible!(MakeTransformation, "Gather may cause data-dependent errors due to OOB indexing.");
+        }
         Expr::SortBy { expr, by, .. } => {
-            check_infallible(expr, Resize::Ban)?;
-            by.iter()
-                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
-        }
-        Expr::Agg(agg_expr) => match agg_expr {
-            AggExpr::Sum(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Mean(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Median(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::NUnique(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::First(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Last(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Implode(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Count { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Quantile { expr: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Max { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Min { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Std(e, _) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Var(e, _) => check_infallible(e, Resize::Allow)?,
-            AggExpr::AggGroups(e) => check_infallible(e, Resize::Allow)?,
-            #[cfg(patch_polars)]
-            AggExpr::FirstNonNull(e) | AggExpr::LastNonNull(e) => {
-                check_infallible(e, Resize::Allow)?
+            inspect_expr(expr, Resize::Ban, schema)?;
+            for key in by {
+                inspect_expr(key, Resize::Ban, schema)?;
             }
-            AggExpr::Item { .. } => {
+            Unproven
+        }
+        Expr::Agg(agg) => {
+            let (input, kind) = match agg {
+                AggExpr::Sum(input) => (input.as_ref(), "sum"),
+                AggExpr::Count { input, .. } => (input.as_ref(), "count"),
+                AggExpr::NUnique(input) => (input.as_ref(), "n_unique"),
+                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => (input.as_ref(), "min_max"),
+                AggExpr::Mean(input) | AggExpr::Median(input)
+                | AggExpr::First(input) | AggExpr::Last(input)
+                | AggExpr::Implode(input) | AggExpr::Std(input, _)
+                | AggExpr::Var(input, _) => (input.as_ref(), "ordered"),
+                AggExpr::Quantile { expr: input, quantile, .. } => {
+                    check_quantile(quantile)?;
+                    (input.as_ref(), "ordered")
+                }
+                #[cfg(patch_polars)]
+                AggExpr::FirstNonNull(input) | AggExpr::LastNonNull(input) => {
+                    (input.as_ref(), "ordered")
+                }
+                AggExpr::AggGroups(_) => {
+                    return fallible!(
+                        MakeTransformation,
+                        "agg_groups exposes physical row indices, which can change in unrelated groups."
+                    );
+                }
+                AggExpr::Item { .. } => {
+                    return fallible!(MakeTransformation, "item raises an error if length is not one.");
+                }
+            };
+            let input_behavior = inspect_expr(input, Resize::Allow, schema)?;
+            let is_canonical = || -> Fallible<bool> {
+                Ok(schema.is_some_and(|schema| {
+                    input
+                        .clone()
+                        .to_field(schema)
+                        .is_ok_and(|field| canonical_sort_dtype(&field.dtype))
+                }))
+            };
+            let invariant = match kind {
+                "count" | "n_unique" => input_behavior.reducer(),
+                "sum" => {
+                    let is_integer = if let Some(schema) = schema {
+                        use DataType::*;
+                        matches!(
+                            input.clone().to_field(schema)?.dtype,
+                            Boolean | UInt8 | UInt16 | UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64
+                        )
+                    } else {
+                        false
+                    };
+                    if is_integer {
+                        input_behavior.reducer()
+                    } else {
+                        input_behavior.order_sensitive_reducer()
+                    }
+                }
+                "min_max" => {
+                    if is_canonical()? {
+                        input_behavior.reducer()
+                    } else {
+                        input_behavior.order_sensitive_reducer()
+                    }
+                }
+                _ => input_behavior.order_sensitive_reducer(),
+            };
+            if schema.is_some() && invariant != Invariant {
                 return fallible!(
                     MakeTransformation,
-                    "item raises an error if length is not one."
+                    "Order-sensitive aggregation requires a trusted random permutation of its input, or a permutation-equivariant input for an invariant reducer."
                 );
             }
-        },
-        Expr::Ternary {
-            predicate,
-            truthy,
-            falsy,
-        } => {
-            check_infallible(predicate, Resize::Ban)?;
-            check_infallible(truthy, Resize::Ban)?;
-            check_infallible(falsy, Resize::Ban)?;
+            invariant
         }
-        Expr::Function { input, function } => check_infallible_function(function, input, resize)?,
-        Expr::Explode { input: e, .. } => {
+        Expr::Ternary { predicate, truthy, falsy } => {
+            inspect_expr(predicate, Resize::Ban, schema)?
+                .combine(inspect_expr(truthy, Resize::Ban, schema)?)
+                .combine(inspect_expr(falsy, Resize::Ban, schema)?)
+        }
+        Expr::Function { input, function } => {
+            inspect_function(function, input, resize, schema)?
+        }
+        Expr::Explode { input, .. } => {
             if matches!(resize, Resize::Ban) {
                 return fallible!(
                     MakeTransformation,
                     "explode may cause data-dependent errors due to different lengths."
                 );
             }
-            check_infallible(e, resize)?;
+            inspect_expr(input, resize, schema)?
         }
         Expr::Filter { input, by } => {
             if matches!(resize, Resize::Ban) {
@@ -345,19 +515,14 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
                     "Filter may cause data-dependent errors due to different lengths."
                 );
             }
-            check_infallible(input.as_ref(), resize)?;
-            check_infallible(by.as_ref(), resize)?;
+            inspect_expr(input, resize, schema)?
+                .combine(inspect_expr(by, resize, schema)?)
         }
         Expr::Slice { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "Slice may cause data-dependent errors due to null offset."
-            );
+            return fallible!(MakeTransformation, "Slice may cause data-dependent errors due to null offset.");
         }
-        Expr::KeepName(e) => check_infallible(e.as_ref(), resize)?,
-        Expr::Len => (),
-        Expr::RenameAlias { expr, .. } => check_infallible(expr.as_ref(), resize)?,
-        Expr::Field(_) => (),
+        Expr::Len | Expr::DataTypeFunction(_) => Invariant,
+        Expr::RenameAlias { expr, .. } => inspect_expr(expr, resize, schema)?,
         Expr::AnonymousFunction { .. } => {
             return fallible!(
                 MakeTransformation,
@@ -365,12 +530,8 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             );
         }
         Expr::SubPlan(_, _) => {
-            return fallible!(
-                MakeTransformation,
-                "SubPlans are not currently supported. {INVITE}"
-            );
+            return fallible!(MakeTransformation, "SubPlans are not currently supported. {INVITE}");
         }
-        Expr::DataTypeFunction(_) => (),
     })
 }
 
@@ -382,11 +543,15 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
 /// Scalar-valued expressions are not considered a resize,
 /// because they can be broadcasted.
 #[allow(unreachable_patterns)]
-fn check_infallible_function(
+fn inspect_function(
     function: &FunctionExpr,
     inputs: &Vec<Expr>,
     resize: Resize,
-) -> Fallible<()> {
+    schema: Option<&Schema>,
+) -> Fallible<PermutationBehavior> {
+    use PermutationBehavior::*;
+    let mut behavior = Invariant;
+
     macro_rules! check_inputs {
         () => {
             check_inputs!(resize)
@@ -408,12 +573,12 @@ fn check_infallible_function(
             check_inputs!(Resize::Ban)
         };
         ($resize:expr) => {
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, $resize))?
+            for input in inputs {
+                behavior = behavior.combine(inspect_expr(input, $resize, schema)?);
+            }
         };
     }
-    Ok(match function {
+    match function {
         FunctionExpr::Boolean(bool_expr) => match bool_expr {
             BooleanFunction::Any { .. } => check_inputs!(aggregate),
             BooleanFunction::All { .. } => check_inputs!(aggregate),
@@ -430,8 +595,8 @@ fn check_infallible_function(
             BooleanFunction::IsIn { .. } => {
                 let [input, set] = <&[Expr; 2]>::try_from(inputs.as_slice())
                     .map_err(|_| err!(MakeTransformation, "IsIn must have two arguments"))?;
-                check_infallible(input, resize)?;
-                check_infallible(set, Resize::Allow)?;
+                behavior = behavior.combine(inspect_expr(input, resize, schema)?);
+                behavior = behavior.combine(inspect_expr(set, Resize::Allow, schema)?);
             }
             BooleanFunction::AllHorizontal => check_inputs!(aligned_rows),
             BooleanFunction::AnyHorizontal => check_inputs!(aligned_rows),
@@ -461,8 +626,8 @@ fn check_infallible_function(
         FunctionExpr::FillNullWithStrategy(_) => check_inputs!(),
         FunctionExpr::ShiftAndFill => check_inputs!(),
         FunctionExpr::Shift => check_inputs!(),
-        FunctionExpr::DropNans => check_inputs!(),
-        FunctionExpr::DropNulls => check_inputs!(),
+        FunctionExpr::DropNans => check_inputs!(resize = "drop_nans"),
+        FunctionExpr::DropNulls => check_inputs!(resize = "drop_nulls"),
         FunctionExpr::Reshape(_) => {
             return fallible!(
                 MakeTransformation,
@@ -881,7 +1046,7 @@ fn check_infallible_function(
             // Condition must be row-aligned; don't allow inner resizes.
             let [cond] = <&[Expr; 1]>::try_from(inputs.as_slice())
                 .map_err(|_| err!(MakeTransformation, "arg_where must have one argument"))?;
-            check_infallible(cond, Resize::Ban)?;
+            behavior = behavior.combine(inspect_expr(cond, Resize::Ban, schema)?);
         }
 
         // Fixed-length rolling windows are value-safe (bad args are param-dependent, not data-dependent).
@@ -900,7 +1065,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
 
         // Mode can return multiple values (ties) => resizes based on data.
@@ -913,7 +1078,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
 
         // Scalar aggregates (broadcastable)
@@ -944,7 +1109,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
 
         FunctionExpr::Diff(_) => check_inputs!(),
@@ -964,7 +1129,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
         // rle_id is per-row run labels => same length.
         FunctionExpr::RLEID => check_inputs!(),
@@ -1001,7 +1166,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
         // Extends series by constants => resizes.
         FunctionExpr::ExtendConstant => {
@@ -1013,7 +1178,7 @@ fn check_infallible_function(
             }
             inputs
                 .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+                .try_for_each(|e| inspect_expr(e, Resize::Allow, schema).map(|b| { behavior = behavior.combine(b); }))?;
         }
 
         // Row encoding is length-preserving (encodes multiple cols into one binary col).
@@ -1050,5 +1215,57 @@ fn check_infallible_function(
                 );
             }
         },
+    };
+
+    // The dispatch above has already checked errors, arity and input
+    // alignment. Only exceptional permutation behaviors need annotation.
+    Ok(match function {
+        _ if matches!(
+            function.to_string().as_str(),
+            "pct_change" | "ewm_mean" | "ewm_std" | "ewm_var" | "ewm_mean_by"
+                | "search_sorted" | "top_k" | "top_k_by" | "hist" | "index_of"
+                | "entropy" | "corr" | "spearman_rank_corr"
+        ) => Unproven,
+        FunctionExpr::NullCount
+        | FunctionExpr::Boolean(BooleanFunction::Any { .. } | BooleanFunction::All { .. })
+        | FunctionExpr::ApproxNUnique => behavior.reducer(),
+        FunctionExpr::Boolean(
+            BooleanFunction::IsFirstDistinct | BooleanFunction::IsLastDistinct
+        )
+        | FunctionExpr::Range(_)
+        | FunctionExpr::Shift
+        | FunctionExpr::ShiftAndFill
+        | FunctionExpr::FillNullWithStrategy(_)
+        | FunctionExpr::ArgUnique
+        | FunctionExpr::Rank { .. }
+        | FunctionExpr::Reverse
+        | FunctionExpr::ValueCounts { .. }
+        | FunctionExpr::Unique(_)
+        | FunctionExpr::ConcatExpr(_)
+        | FunctionExpr::SetSortedFlag(_)
+        | FunctionExpr::ArgWhere
+        | FunctionExpr::RollingExpr { .. }
+        | FunctionExpr::RollingExprBy { .. }
+        | FunctionExpr::Mode
+        | FunctionExpr::ArgMin
+        | FunctionExpr::ArgMax
+        | FunctionExpr::ArgSort { .. }
+        | FunctionExpr::CumCount { .. }
+        | FunctionExpr::CumSum { .. }
+        | FunctionExpr::CumProd { .. }
+        | FunctionExpr::CumMin { .. }
+        | FunctionExpr::CumMax { .. }
+        | FunctionExpr::UniqueCounts
+        | FunctionExpr::Diff(_)
+        | FunctionExpr::Interpolate(_)
+        | FunctionExpr::InterpolateBy
+        | FunctionExpr::PeakMin
+        | FunctionExpr::PeakMax
+        | FunctionExpr::RLE
+        | FunctionExpr::RLEID
+        | FunctionExpr::CumReduceHorizontal { .. }
+        | FunctionExpr::CumFoldHorizontal { .. }
+        | FunctionExpr::GatherEvery { .. } => Unproven,
+        _ => behavior,
     })
 }

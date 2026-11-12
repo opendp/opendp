@@ -2,6 +2,9 @@
 def make_stable_group_by(
     input_domain: DslPlanDomain, input_metric: FrameDistance[M], plan: DslPlan
 ) -> Transformation[DslPlanDomain, DslPlanDomain, FrameDistance[M], FrameDistance[M]]:
+    if M.ORDERED:
+        raise "Sample-and-aggregate requires an unordered input metric"
+
     match plan:
         case DslPlan.GroupBy(input, keys, aggs, apply, maintain_order, options):
             pass
@@ -10,9 +13,6 @@ def make_stable_group_by(
 
     if apply is not None:
         raise "apply is not currently supported"
-
-    if maintain_order:
-        raise "maintain_order is wasted compute because row ordering is protected information"
 
     if options != GroupbyOptions.default():
         raise "options is not currently supported"
@@ -28,8 +28,9 @@ def make_stable_group_by(
     for key in keys:  # |\label{line:stable-keys}|
         key.make_stable(expr_domain, L0PInfDistance(middle_metric[0]))
 
-    for agg in aggs:  # |\label{line:infallible-aggs}|
-        check_infallible(agg, Resize.Allow)
+    schema = middle_domain.schema()
+    for agg in aggs:  # |\label{line:infallible-aggs}\label{line:permutation-invariance}|
+        check_permutation_invariance(agg, schema)
 
     if middle_metric[0].identifier().is_some():  # |\label{line:identifier}|
         raise "identifier is not currently supported"
@@ -80,7 +81,7 @@ def make_stable_group_by(
             keys=keys,
             aggs=aggs,
             apply=None,
-            maintain_order=False,
+            maintain_order=maintain_order,
             options=options,
         ),
         middle_metric,

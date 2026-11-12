@@ -34,7 +34,8 @@ None
 \begin{proof}[Appropriate Output Domain]
     By line \ref{line:stable-keys} the grouping keys are stable row-by-row transformations of the data.
     By line \ref{line:infallible-aggs} the aggregates are infallible.
-    Therefore the function does not raise data-dependent errors.
+    The check also excludes positional inputs and data-dependent quantile
+    parameters, ensuring that aggregates depend only on their respective groups.
 
     By the postcondition of \texttt{DslPlan.simulate\_schema},
     \texttt{series\_domains} follows the expected schema of members in the output domain.
@@ -61,7 +62,16 @@ This can be extended in the future, but is sufficient for select queries.
 \begin{proof}[Stability guarantee]
     We first simplify the problem on line \ref{line:identifier} by only considering datasets that differ by rows, not by identifiers.
 
+    Since ordered input metrics are rejected, row permutations have zero
+    distance. The output metric is unchanged, so group ordering is immaterial.
     The only output distance bound derived is for the empty grouping set, namely the entire output table.
+
+    By line \ref{line:permutation-invariance}, accepted aggregations are invariant
+    in distribution under input-row permutations. Their rowwise inputs commute
+    with permutations, and order-sensitive reducers require a trusted uniform
+    permutation, producing the same distribution regardless of input order.
+    Grouping keys have canonical representatives, so unchanged groups can be
+    coupled to have identical aggregate outputs.
 
     We first retrieve optional upper bounds on the number of rows and groups an individual may contribute on lines \ref{line:total-contributions} and \ref{line:total-groups}.
     Both of these bounds directly correspond to the number of rows an individual may influence in the resulting dataset.
