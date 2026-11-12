@@ -7,7 +7,7 @@ use vstd::prelude::*;
 
 #[path = "stability/row_local.rs"]
 mod row_local;
-use row_local::*;
+pub use row_local::*;
 
 verus! {
 
