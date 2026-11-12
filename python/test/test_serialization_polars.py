@@ -114,3 +114,56 @@ def test_serializable_polars(dp_obj):
 def test_not_currently_serializable(dp_obj):
     with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
         dp.serialize(dp_obj)
+
+
+def _identity_batches(frame):
+    return frame
+
+
+def _identity_element(value):
+    return value
+
+
+def test_serialized_plan_preflight_allows_opendp_query():
+    from opendp._data import validate_polars_plan
+
+    serialized = query.polars_plan.serialize()
+    assert validate_polars_plan(serialized) is True
+    restored = context.deserialize_polars_plan(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+
+@pytest.mark.parametrize("kind", ["plan_callback", "expression_callback"])
+def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
+    from opendp._data import validate_polars_plan
+
+    source = pl.LazyFrame({"value": [1]})
+    if kind == "plan_callback":
+        malicious = source.map_batches(
+            _identity_batches, schema={"value": pl.Int64}
+        )
+    else:
+        malicious = source.select(
+            pl.col("value").map_elements(
+                _identity_element, return_dtype=pl.Int64
+            )
+        )
+    serialized = malicious.serialize()
+    with pytest.raises(dp.OpenDPException):
+        validate_polars_plan(serialized)
+
+    # The security preflight must fail before Python calls the Polars loader.
+    def forbidden_deserialize(*args, **kwargs):
+        pytest.fail("Polars deserialized an untrusted Python callback")
+
+    monkeypatch.setattr(pl.LazyFrame, "deserialize", forbidden_deserialize)
+    with pytest.raises(dp.OpenDPException):
+        context.deserialize_polars_plan(serialized)
+
+
+def test_serialized_plan_preflight_rejects_malformed_bytes():
+    from opendp._data import validate_polars_plan
+
+    for data in [b"", b"not a Polars plan", b"DSL_VERSION"]:
+        with pytest.raises(dp.OpenDPException):
+            validate_polars_plan(data)
