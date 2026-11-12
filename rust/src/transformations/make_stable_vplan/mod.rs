@@ -15,7 +15,6 @@ mod filter_proof;
 mod project_proof;
 
 use std::collections::HashSet;
-use crate::metrics::verified_symmetric_distance as symmetric_distance;
 use crate::{
     core::Transformation,
     domains::verified_plan::{VFrameBounds, VFrameMetric, VPlanDomain},

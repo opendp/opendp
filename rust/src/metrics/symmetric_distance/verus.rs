@@ -39,6 +39,81 @@ pub proof fn lemma_subset_length<T>(
     assert(small.add(remainder).len() == small.len() + remainder.len());
 }
 
+/// Symmetric multiset distance is a metric on multisets (and a
+/// pseudometric on ordered vectors, because row order is ignored).
+pub proof fn lemma_reflexive<T>(a: Multiset<T>)
+    ensures distance(a, a) == 0,
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T| a.sub(a).count(v) == 0 by { }
+    assert(a.sub(a) =~= Multiset::<T>::empty());
+    assert(a.sub(a).len() == 0);
+}
+
+pub proof fn lemma_symmetric<T>(a: Multiset<T>, b: Multiset<T>)
+    ensures distance(a, b) == distance(b, a),
+{
+}
+
+pub proof fn lemma_separating<T>(a: Multiset<T>, b: Multiset<T>)
+    ensures (distance(a, b) == 0) <==> (a =~= b),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if a =~= b {
+        lemma_reflexive(a);
+    } else if distance(a, b) == 0 {
+        assert(a.sub(b).len() == 0);
+        assert(b.sub(a).len() == 0);
+        assert(a.sub(b) =~= Multiset::<T>::empty());
+        assert(b.sub(a) =~= Multiset::<T>::empty());
+        assert forall|v: T| a.count(v) == b.count(v) by {
+            assert(a.sub(b).count(v) == 0);
+            assert(b.sub(a).count(v) == 0);
+        }
+        assert(a =~= b);
+    }
+}
+
+pub proof fn lemma_triangle<T>(
+    a: Multiset<T>, b: Multiset<T>, c: Multiset<T>,
+)
+    ensures distance(a, c) <= distance(a, b) + distance(b, c),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T|
+        a.sub(c).count(v) <= a.sub(b).add(b.sub(c)).count(v) by {
+        let x = a.count(v);
+        let y = b.count(v);
+        let z = c.count(v);
+        if x > z {
+            if x >= y {
+                if y >= z { } else { }
+            } else {
+                assert(y > z);
+            }
+        }
+    }
+    assert forall|v: T|
+        c.sub(a).count(v) <= c.sub(b).add(b.sub(a)).count(v) by {
+        let x = c.count(v);
+        let y = b.count(v);
+        let z = a.count(v);
+        if x > z {
+            if x >= y {
+                if y >= z { } else { }
+            } else {
+                assert(y > z);
+            }
+        }
+    }
+    lemma_subset_length(a.sub(c), a.sub(b).add(b.sub(c)));
+    lemma_subset_length(c.sub(a), c.sub(b).add(b.sub(a)));
+    assert(a.sub(b).add(b.sub(c)).len()
+        == a.sub(b).len() + b.sub(c).len());
+    assert(c.sub(b).add(b.sub(a)).len()
+        == c.sub(b).len() + b.sub(a).len());
+}
+
 /// Filtering is contractive under the exact symmetric multiset distance.
 ///
 /// This lemma is independent of the element type and filtering predicate.

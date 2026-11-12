@@ -4,7 +4,7 @@ use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
 use super::verified::domain::{self, VColumnRule};
 use super::verified::transformation;
 use super::stability;
-use super::symmetric_distance;
+use super::verified::symmetric_distance;
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
 
@@ -836,7 +836,9 @@ impl CertifiedTableFilter {
     /// The general Result-valued transformation contract. The semantic
     /// carrier is a row sequence; invoke proves its executable realization.
     pub closed spec fn valid_as_transformation(&self) -> bool {
-        transformation::valid_transformation::<
+        &&& domain::symmetric_rows_space(self.rules_spec())
+        &&& domain::symmetric_table_space(self.rules_spec())
+        &&& transformation::valid_transformation::<
             Seq<Seq<Option<VValue>>>, Seq<Seq<Option<VValue>>>,
             u32, u32, (), (),
         >(
@@ -861,6 +863,8 @@ impl CertifiedTableFilter {
         requires self.valid(),
         ensures self.valid_as_transformation(),
     {
+        domain::lemma_symmetric_rows_space(self.rules@);
+        domain::lemma_symmetric_table_space(self.rules@);
         assert forall|rows: Seq<Seq<Option<VValue>>>|
             #[trigger] domain::rows_member(rows, self.rules_spec())
             implies match self.result_spec(rows) {
@@ -982,6 +986,9 @@ impl CertifiedTableFilter {
     {
         if !domain::check_table(input, &self.rules) {
             return Err(());
+        }
+        proof {
+            domain::lemma_table_rows_domain(input, self.rules@);
         }
         self.apply(input)
     }

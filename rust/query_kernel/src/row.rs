@@ -10,6 +10,10 @@ pub mod filter;
 pub mod domain;
 #[path = "transformation.rs"]
 pub mod transformation;
+#[path = "metric_space.rs"]
+pub mod metric_space;
+#[path = "../../src/metrics/symmetric_distance/verus.rs"]
+pub mod symmetric_distance;
 #[path = "row/scalar.rs"]
 pub mod scalar;
 use scalar::{binary_field, clip_field, eval_binary, eval_clip};
