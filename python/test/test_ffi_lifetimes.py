@@ -102,6 +102,29 @@ def test_profile_tuple_survives_scratch_and_source_release():
     assert 0 <= profile.delta(1.0) <= 1
 
 
+@pytest.mark.parametrize("gaussian", [False, True])
+def test_noise_dispatch_type_strings_on_success_and_error(gaussian):
+    dp.enable_features("contrib", "honest-but-curious")
+    measure = dp.zero_concentrated_divergence() if gaussian else dp.max_divergence()
+    distance = dp.absolute_distance(T=float)
+    threshold_metric = (
+        dp.l02inf_distance(distance) if gaussian else dp.l01inf_distance(distance)
+    )
+    domain = dp.atom_domain(T=float, nan=False)
+    map_domain = dp.map_domain(dp.atom_domain(T=str), domain)
+    for _ in range(10):
+        assert dp.m.make_noise(domain, distance, measure, 1.0).map(1.0) > 0
+        dp.m.make_noise_threshold(
+            map_domain, threshold_metric, dp.approximate(measure), 1.0, 10.0
+        )
+        with pytest.raises(dp.OpenDPException):
+            dp.m.make_noise(domain, distance, measure, -1.0)
+        with pytest.raises(dp.OpenDPException):
+            dp.m.make_noise_threshold(
+                map_domain, threshold_metric, dp.approximate(measure), -1.0, 10.0
+            )
+
+
 def test_owned_scratch_released_on_conversion_error(monkeypatch):
     obj = _convert.py_to_c(["a", "b"], AnyObjectPtr, "Vec<String>")
     release = _convert.lib.opendp_data__slice_owner_free

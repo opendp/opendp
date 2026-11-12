@@ -4,7 +4,7 @@ use crate::{
     core::FfiResult,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric},
-        util::{Type, into_c_char_p},
+        util::Type,
     },
     measurements::noise_threshold::distribution::{
         gaussian::ffi::opendp_measurements__make_gaussian_threshold,
@@ -23,6 +23,8 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
     k: *const i32,
 ) -> FfiResult<*mut AnyMeasurement> {
     let MO = &try_as_ref!(output_measure).type_;
+    // The delegated constructor borrows this string on success and error paths.
+    // No owned allocation needs to cross this internal FFI call.
     if *MO == Type::of::<Approximate<ZeroConcentratedDivergence>>() {
         opendp_measurements__make_gaussian_threshold(
             input_domain,
@@ -30,7 +32,7 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
             scale,
             threshold,
             k,
-            try_!(into_c_char_p(MO.descriptor.clone())),
+            c"Approximate<ZeroConcentratedDivergence>".as_ptr(),
         )
     } else if *MO == Type::of::<Approximate<MaxDivergence>>() {
         opendp_measurements__make_laplace_threshold(
@@ -39,7 +41,7 @@ pub extern "C" fn opendp_measurements__make_noise_threshold(
             scale,
             threshold,
             k,
-            try_!(into_c_char_p(MO.descriptor.clone())),
+            c"Approximate<MaxDivergence>".as_ptr(),
         )
     } else {
         err!(
