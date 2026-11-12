@@ -11,7 +11,7 @@ mod certified;
 use crate::{
     core::{Domain, Function, StabilityMap, Transformation},
     domains::{
-        verified_query_domain::kernel_schema,
+        verified_frame::kernel_schema,
         verified_plan::{
             filter_domain, project_domain, VFrameBounds, VFrameMetric, VPlanDomain,
         },
@@ -74,13 +74,12 @@ fn make_project(
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(project_domain(&domain.frame, &exprs)?);
     let source = kernel_schema(&domain.source.series_domains)?;
-    let child = kernel_schema(&domain.frame.series_domains)?;
     let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
             checked_result(
-                certified::make_project(input.clone(), exprs.clone(), &child, &source),
+                certified::make_project(input.clone(), exprs.clone(), &source),
                 &expected,
             )
         }),
@@ -95,13 +94,12 @@ fn make_filter(
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
     let source = kernel_schema(&domain.source.series_domains)?;
-    let child = kernel_schema(&domain.frame.series_domains)?;
     let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
             checked_result(
-                certified::make_filter(input.clone(), predicate.clone(), &child, &source),
+                certified::make_filter(input.clone(), predicate.clone(), &source),
                 &expected,
             )
         }),

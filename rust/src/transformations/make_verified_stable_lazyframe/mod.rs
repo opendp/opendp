@@ -165,7 +165,7 @@ mod tests {
             &plan, source.clone().lazy().logical_plan.clone(), &input_names,
         )?;
         let reference = verified::VTable {
-            schema: crate::domains::verified_query_domain::kernel_schema(&input_domain.series_domains)?,
+            schema: crate::domains::verified_frame::kernel_schema(&input_domain.series_domains)?,
             rows: to_cells(&source)?,
         };
         let expected = verified::evaluate(&plan, &reference)

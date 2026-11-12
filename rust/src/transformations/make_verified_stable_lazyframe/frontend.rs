@@ -1,6 +1,6 @@
 //! Polars frontend: resolve supported Polars queries into the backend-neutral DSL.
 use super::verified;
-use crate::domains::verified_query_domain::{check_filter_predicate, kernel_schema, project_columns};
+use crate::domains::verified_frame::{check_filter_predicate, kernel_schema, project_columns};
 use crate::{domains::{LazyFrameDomain, SeriesDomain}, error::*};
 use polars::prelude::*;
 use polars_plan::{dsl::{FunctionExpr, Operator}, utils::expr_output_name};
