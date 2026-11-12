@@ -348,6 +348,7 @@ pub proof fn lemma_all_grouped_stability(
         verified::local_schema(plan, schema) == Some(schema),
     ensures preserves_grouped_stability(plan, schema),
 {
+    assert(preserves_grouped_stability(plan, schema)) by {
     assert forall|left: Seq<Seq<Option<VValue>>>,
         right: Seq<Seq<Option<VValue>>>,
         values: Seq<Seq<Option<VValue>>>,
@@ -382,6 +383,7 @@ pub proof fn lemma_all_grouped_stability(
             lemma_group_distance_contraction(plan, left, right, schema,
                 values, group_by, group);
         }
+    }
     }
 }
 
