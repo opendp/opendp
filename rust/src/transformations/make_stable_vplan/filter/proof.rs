@@ -411,6 +411,45 @@ pub proof fn lemma_allowed_rows_subset(
     }
 }
 
+/// Finite, duplicate-free row and group universes that enumerate all
+/// nonzero support. Extra zero-count rows/groups are harmless.
+pub open spec fn complete_group_support(
+    rows: Multiset<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+) -> bool {
+    &&& forall|row: Seq<Option<VValue>>|
+        rows.count(row) > 0 ==> exists|i: int|
+            0 <= i < values.len() && values[i] == row
+    &&& forall|i: int, j: int|
+        0 <= i < j < values.len() ==> values[i] != values[j]
+    &&& forall|i: int| 0 <= i < values.len() ==> exists|j: int|
+        0 <= j < groups.len()
+        && groups[j] == verified::project::row_prefix(
+            keys, values[i], keys.len()).unwrap()
+    &&& forall|i: int, j: int|
+        0 <= i < j < groups.len() ==> groups[i] != groups[j]
+}
+
+pub proof fn lemma_complete_group_support_subset(
+    smaller: Multiset<Seq<Option<VValue>>>,
+    larger: Multiset<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+)
+    requires smaller.subset_of(larger),
+        complete_group_support(larger, keys, values, groups),
+    ensures complete_group_support(smaller, keys, values, groups),
+{
+    assert forall|row: Seq<Option<VValue>>|
+        smaller.count(row) > 0 implies exists|i: int|
+            0 <= i < values.len() && values[i] == row by {
+        assert(smaller.count(row) <= larger.count(row));
+    }
+}
+
 /// The portion of concrete FrameDomain<VTable>::member that can constrain
 /// a filtered table: row-wise column domains and upper-bound margins.
 /// For an empty set of keys, the margin has one group even on empty data.
@@ -425,6 +464,7 @@ pub open spec fn bounded_frame_member(
     per_group: Option<u32>, num_groups: Option<u32>,
 ) -> bool {
     &&& allowed_rows(rows, allowed)
+    &&& complete_group_support(rows, keys, values, groups)
     &&& (keys.len() != 0 || num_groups != Some(0u32))
     &&& within_group_bound(rows,
         Seq::<Seq<Option<VValue>>>::empty().to_multiset(),
@@ -464,6 +504,8 @@ pub proof fn lemma_filter_transformation_contract(
     let output = verified::apply_spec(plan, rows).unwrap();
     lemma_allowed_rows_subset(
         output.to_multiset(), rows.to_multiset(), allowed);
+    lemma_complete_group_support_subset(
+        output.to_multiset(), rows.to_multiset(), keys, values, groups);
     assert(verified::rows_in_schema(Seq::<Seq<Option<VValue>>>::empty(), schema));
     lemma_filter_preserves_expr_group_bound(
         plan, rows, Seq::empty(), schema, keys, values,

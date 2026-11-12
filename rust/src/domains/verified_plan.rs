@@ -178,6 +178,39 @@ mod tests {
     }
 
     #[test]
+    fn filter_domain_is_downward_closed_for_actual_tables() -> Fallible<()> {
+        let source = source()?
+            .with_margin(Margin::select().with_max_length(4)
+                .with_max_groups(1).with_invariant_lengths())?
+            .with_margin(Margin::by([VExpr::Column(0)])
+                .with_max_length(2).with_max_groups(3).with_invariant_keys())?
+            .with_margin(Margin::by([VExpr::Column(1)]).with_max_groups(3))?;
+        let table = VTable {
+            schema: kernel_schema(&source.series_domains)?,
+            rows: vec![
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(3)), Some(VValue::Bool(false))],
+                vec![Some(VValue::Int(2)), None],
+            ],
+        };
+        assert!(source.member(&table)?);
+        let filtered = filter_domain(&source, &VExpr::Column(1))?;
+        assert!(filtered.margins.iter().all(|m| m.invariant.is_none()));
+        for mask in 0..(1usize << table.rows.len()) {
+            let subset = VTable {
+                schema: table.schema.clone(),
+                rows: table.rows.iter().enumerate()
+                    .filter(|(i, _)| mask & (1usize << i) != 0)
+                    .map(|(_, row)| row.clone())
+                    .collect(),
+            };
+            assert!(filtered.member(&subset)?, "subset {mask} should be admitted");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn expression_keys_and_metric_space() -> Fallible<()> {
         let domain = VPlanDomain::new(source()?)?;
         let metric = VFrameMetric::new(SymmetricDistance);
