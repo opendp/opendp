@@ -1,5 +1,13 @@
 use vstd::prelude::*;
 
+#[path = "row/project.rs"]
+pub mod project;
+#[path = "row/filter.rs"]
+pub mod filter;
+#[path = "row/scalar.rs"]
+pub mod scalar;
+use scalar::{binary_field, clip_field, eval_binary, eval_clip};
+
 verus! {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -102,32 +110,13 @@ pub fn check_expr(expr: &Expr, schema: &Vec<Field>) -> (result: Option<Field>)
     }
 }
 
-pub open spec fn project_schema_prefix(
-    exprs: Seq<Expr>, schema: Seq<Field>, count: nat,
-) -> Option<Seq<Field>>
-    recommends count <= exprs.len(),
-    decreases count,
-{
-    if count == 0 { Some(Seq::empty()) }
-    else {
-        match (project_schema_prefix(exprs, schema, (count - 1) as nat),
-               expr_field(&exprs[(count - 1) as int], schema)) {
-            (Some(prefix), Some(field)) => Some(prefix.push(field)),
-            _ => None,
-        }
-    }
-}
-
 /// Type checking for a single relational operator.
 pub open spec fn local_schema(plan: &Plan, schema: Seq<Field>) -> Option<Seq<Field>> {
     match plan {
         Plan::Input => Some(schema),
         Plan::Project { exprs, .. } =>
-            project_schema_prefix(exprs@, schema, exprs@.len()),
-        Plan::Filter { predicate, .. } => match expr_field(predicate, schema) {
-            Some(field) if field.dtype == DType::Boolean => Some(schema),
-            _ => None,
-        },
+            project::schema_prefix(exprs@, schema, exprs@.len()),
+        Plan::Filter { predicate, .. } => filter::schema(predicate, schema),
     }
 }
 
@@ -258,53 +247,6 @@ pub proof fn lemma_expr_field_sound(
     }
 }
 
-pub proof fn lemma_project_row_prefix_type_sound(
-    exprs: Seq<Expr>, schema: Seq<Field>,
-    row: Seq<Option<Value>>, count: nat,
-)
-    requires
-        row_in_schema(row, schema),
-        count <= exprs.len(),
-        project_schema_prefix(exprs, schema, count).is_Some(),
-    ensures
-        match (
-            project_schema_prefix(exprs, schema, count),
-            project_row_prefix(exprs, row, count),
-        ) {
-            (Some(fields), Ok(output)) => row_in_schema(output, fields),
-            _ => false,
-        },
-    decreases count,
-{
-    if count > 0 {
-        lemma_project_row_prefix_type_sound(
-            exprs, schema, row, (count - 1) as nat);
-        let field = expr_field(&exprs[(count - 1) as int], schema).unwrap();
-        lemma_expr_field_sound(
-            &exprs[(count - 1) as int], schema, row, field,
-        );
-        let prior_schema =
-            project_schema_prefix(exprs, schema, (count - 1) as nat).unwrap();
-        let prior =
-            project_row_prefix(exprs, row, (count - 1) as nat).unwrap();
-        let value = expr_row_spec(&exprs[(count - 1) as int], row).unwrap();
-        assert(row_in_schema(prior, prior_schema));
-        assert(cell_matches_field(value, field));
-        assert(row_in_schema(prior.push(value), prior_schema.push(field))) by {
-            assert forall|i: int| 0 <= i < prior.push(value).len()
-                implies cell_matches_field(
-                    prior.push(value)[i], prior_schema.push(field)[i]
-                ) by {
-                if i < prior.len() {
-                    assert(cell_matches_field(prior[i], prior_schema[i]));
-                } else {
-                    assert(i == prior.len());
-                }
-            }
-        }
-    }
-}
-
 /// Typing soundness for one operator, without evaluating its child plan.
 pub proof fn lemma_local_type_sound(
     plan: &Plan, schema: Seq<Field>, row: Seq<Option<Value>>, output_schema: Seq<Field>,
@@ -322,27 +264,9 @@ pub proof fn lemma_local_type_sound(
     match plan {
         Plan::Input => {},
         Plan::Project { exprs, .. } =>
-            lemma_project_row_prefix_type_sound(exprs@, schema, row, exprs@.len()),
-        Plan::Filter { predicate, .. } => {
-            let field = expr_field(predicate, schema).unwrap();
-            lemma_expr_field_sound(predicate, schema, row, field);
-        },
-    }
-}
-
-pub open spec fn project_row_prefix(
-    exprs: Seq<Expr>, row: Seq<Option<Value>>, count: nat,
-) -> Result<Seq<Option<Value>>, ()>
-    recommends count <= exprs.len(),
-    decreases count,
-{
-    if count == 0 { Ok(Seq::empty()) }
-    else {
-        match (project_row_prefix(exprs, row, (count - 1) as nat),
-               expr_row_spec(&exprs[(count - 1) as int], row)) {
-            (Ok(prefix), Ok(cell)) => Ok(prefix.push(cell)),
-            _ => Err(()),
-        }
+            project::lemma_row_prefix_type_sound(exprs@, schema, row, exprs@.len()),
+        Plan::Filter { predicate, .. } =>
+            filter::lemma_type_sound(predicate, schema, row),
     }
 }
 
@@ -353,16 +277,11 @@ pub open spec fn local_row_spec(
     match plan {
         Plan::Input => Ok(Some(row)),
         Plan::Project { exprs, .. } =>
-            match project_row_prefix(exprs@, row, exprs@.len()) {
+            match project::row_prefix(exprs@, row, exprs@.len()) {
                 Ok(out) => Ok(Some(out)),
                 Err(_) => Err(()),
             },
-        Plan::Filter { predicate, .. } =>
-            match expr_row_spec(predicate, row) {
-                Ok(Some(Value::Bool(true))) => Ok(Some(row)),
-                Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
-                _ => Err(()),
-            },
+        Plan::Filter { predicate, .. } => filter::row_spec(predicate, row),
     }
 }
 
@@ -448,36 +367,6 @@ pub fn eval_expr_row(expr: &Expr, row: &Vec<Option<Value>>)
     }
 }
 
-pub fn eval_project_prefix(
-    exprs: &Vec<Expr>, row: &Vec<Option<Value>>, count: usize,
-) -> (result: Result<Vec<Option<Value>>, ()>)
-    requires count <= exprs.len(),
-    ensures
-        match result {
-            Ok(values) =>
-                project_row_prefix(exprs@, row@, count as nat) == Ok(values@),
-            Err(_) => project_row_prefix(exprs@, row@, count as nat).is_Err(),
-        },
-    decreases count,
-{
-    if count == 0 {
-        Ok(Vec::new())
-    } else {
-        match eval_project_prefix(exprs, row, count - 1) {
-            Err(_) => Err(()),
-            Ok(mut prefix) => {
-                match eval_expr_row(&exprs[count - 1], row) {
-                    Err(_) => Err(()),
-                    Ok(value) => {
-                        prefix.push(value);
-                        Ok(prefix)
-                    },
-                }
-            },
-        }
-    }
-}
-
 /// Evaluate just one node's row-local operation.
 pub fn eval_local_row(plan: &Plan, row: &Vec<Option<Value>>)
     -> (result: Result<Option<Vec<Option<Value>>>, ()>)
@@ -491,16 +380,11 @@ pub fn eval_local_row(plan: &Plan, row: &Vec<Option<Value>>)
     match plan {
         Plan::Input => Ok(Some(row.clone())),
         Plan::Project { exprs, .. } =>
-            match eval_project_prefix(exprs, row, exprs.len()) {
+            match project::eval_prefix(exprs, row, exprs.len()) {
                 Ok(output) => Ok(Some(output)),
                 Err(_) => Err(()),
             },
-        Plan::Filter { predicate, .. } =>
-            match eval_expr_row(predicate, row) {
-                Ok(Some(Value::Bool(true))) => Ok(Some(row.clone())),
-                Ok(Some(Value::Bool(false))) | Ok(None) => Ok(None),
-                _ => Err(()),
-            },
+        Plan::Filter { predicate, .. } => filter::eval_row(predicate, row),
     }
 }
 
@@ -689,135 +573,6 @@ pub proof fn lemma_relation_type_sound(
 }
 
 } // verus!
-
-/// Common executable and specification rules for scalar expression typing.
-#[verus_verify(dual_spec, open)]
-#[verus_spec(returns binary_field(op, left, right))]
-pub fn binary_field(
-    op: BinaryOp, left: Option<Field>, right: Option<Field>,
-) -> Option<Field> {
-    match (left, right) {
-        (Some(l), Some(r)) => {
-            let valid = match (op, l.dtype, r.dtype) {
-                (BinaryOp::Lt | BinaryOp::Gt, DType::Int64, DType::Int64) => true,
-                (BinaryOp::Eq, DType::Int64, DType::Int64)
-                    | (BinaryOp::Eq, DType::Boolean, DType::Boolean) => true,
-                (BinaryOp::And, DType::Boolean, DType::Boolean) => true,
-                _ => false,
-            };
-            if valid {
-                Some(Field { dtype: DType::Boolean, nullable: l.nullable || r.nullable })
-            } else { None }
-        },
-        _ => None,
-    }
-}
-
-#[verus_verify(dual_spec, open)]
-#[verus_spec(returns clip_field(value, lower, upper))]
-pub fn clip_field(
-    value: Option<Field>, lower: Option<Option<Field>>, upper: Option<Option<Field>>,
-) -> Option<Field> {
-    match value {
-        Some(field) => {
-            match field.dtype {
-                DType::Boolean => None,
-                DType::Int64 => {
-                    let lower_ok = match lower {
-                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
-                        _ => false,
-                    };
-                    let upper_ok = match upper {
-                        None | Some(Some(Field { dtype: DType::Int64, .. })) => true,
-                        _ => false,
-                    };
-                    if lower_ok && upper_ok { Some(field) } else { None }
-                },
-            }
-        },
-        _ => None,
-    }
-}
-
-/// Single source of truth for scalar semantics: dual_spec generates the
-/// open specification used by the row interpreter and typing proofs.
-#[verus_verify(dual_spec, open)]
-#[verus_spec(returns eval_binary(op, lhs, rhs))]
-pub fn eval_binary(
-    op: BinaryOp, lhs: Option<Value>, rhs: Option<Value>,
-) -> Result<Option<Value>, ()> {
-    match op {
-        BinaryOp::Lt => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a < b))),
-            (None, _) | (_, None) => Ok(None),
-            _ => Err(()),
-        },
-        BinaryOp::Gt => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a > b))),
-            (None, _) | (_, None) => Ok(None),
-            _ => Err(()),
-        },
-        BinaryOp::Eq => match (lhs, rhs) {
-            (Some(Value::Int(a)), Some(Value::Int(b))) =>
-                Ok(Some(Value::Bool(a == b))),
-            (Some(Value::Bool(a)), Some(Value::Bool(b))) =>
-                Ok(Some(Value::Bool(a == b))),
-            (None, _) | (_, None) => Ok(None),
-            _ => Err(()),
-        },
-        BinaryOp::And => match (lhs, rhs) {
-            (Some(Value::Bool(a)), Some(Value::Bool(b))) =>
-                Ok(Some(Value::Bool(a && b))),
-            (Some(Value::Bool(false)), None) | (None, Some(Value::Bool(false))) =>
-                Ok(Some(Value::Bool(false))),
-            (Some(Value::Bool(true)), None)
-                | (None, Some(Value::Bool(true)))
-                | (None, None) => Ok(None),
-            _ => Err(()),
-        },
-    }
-}
-
-/// The outer Option indicates a missing bound. The inner Option is the
-/// evaluated bound, which can be null. Null bounds are ignored in Polars.
-#[verus_verify(dual_spec, open)]
-#[verus_spec(returns eval_clip(value, lower, upper))]
-pub fn eval_clip(
-    value: Option<Value>,
-    lower: Option<Option<Value>>,
-    upper: Option<Option<Value>>,
-) -> Result<Option<Value>, ()> {
-    match (value, lower, upper) {
-        (None, _, _) => Ok(None),
-        (Some(Value::Int(_)), Some(Some(Value::Bool(_))), _)
-            | (Some(Value::Int(_)), _, Some(Some(Value::Bool(_)))) => Err(()),
-        (Some(Value::Int(v)), lower, upper) => {
-            let low = match lower {
-                Some(Some(Value::Int(n))) => Some(n),
-                _ => None,
-            };
-            let high = match upper {
-                Some(Some(Value::Int(n))) => Some(n),
-                _ => None,
-            };
-            // Use the original input for both comparisons. Polars tests
-            // establish that the lower bound takes precedence if both apply.
-            let clipped = match low {
-                Some(n) if v < n => n,
-                _ => match high {
-                    Some(n) if v > n => n,
-                    _ => v,
-                },
-            };
-            Ok(Some(Value::Int(clipped)))
-        },
-        _ => Err(()),
-    }
-}
-
-
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,114 @@
+use super::*;
+
+verus! {
+
+pub open spec fn schema_prefix(
+    exprs: Seq<Expr>, schema: Seq<Field>, count: nat,
+) -> Option<Seq<Field>>
+    recommends count <= exprs.len(),
+    decreases count,
+{
+    if count == 0 { Some(Seq::empty()) }
+    else {
+        match (schema_prefix(exprs, schema, (count - 1) as nat),
+               expr_field(&exprs[(count - 1) as int], schema)) {
+            (Some(prefix), Some(field)) => Some(prefix.push(field)),
+            _ => None,
+        }
+    }
+}
+
+pub open spec fn row_prefix(
+    exprs: Seq<Expr>, row: Seq<Option<Value>>, count: nat,
+) -> Result<Seq<Option<Value>>, ()>
+    recommends count <= exprs.len(),
+    decreases count,
+{
+    if count == 0 { Ok(Seq::empty()) }
+    else {
+        match (row_prefix(exprs, row, (count - 1) as nat),
+               expr_row_spec(&exprs[(count - 1) as int], row)) {
+            (Ok(prefix), Ok(cell)) => Ok(prefix.push(cell)),
+            _ => Err(()),
+        }
+    }
+}
+
+pub proof fn lemma_row_prefix_type_sound(
+    exprs: Seq<Expr>, schema: Seq<Field>,
+    row: Seq<Option<Value>>, count: nat,
+)
+    requires
+        row_in_schema(row, schema),
+        count <= exprs.len(),
+        schema_prefix(exprs, schema, count).is_Some(),
+    ensures
+        match (
+            schema_prefix(exprs, schema, count),
+            row_prefix(exprs, row, count),
+        ) {
+            (Some(fields), Ok(output)) => row_in_schema(output, fields),
+            _ => false,
+        },
+    decreases count,
+{
+    if count > 0 {
+        lemma_row_prefix_type_sound(
+            exprs, schema, row, (count - 1) as nat);
+        let field = expr_field(&exprs[(count - 1) as int], schema).unwrap();
+        lemma_expr_field_sound(
+            &exprs[(count - 1) as int], schema, row, field,
+        );
+        let prior_schema =
+            schema_prefix(exprs, schema, (count - 1) as nat).unwrap();
+        let prior =
+            row_prefix(exprs, row, (count - 1) as nat).unwrap();
+        let value = expr_row_spec(&exprs[(count - 1) as int], row).unwrap();
+        assert(row_in_schema(prior, prior_schema));
+        assert(cell_matches_field(value, field));
+        assert(row_in_schema(prior.push(value), prior_schema.push(field))) by {
+            assert forall|i: int| 0 <= i < prior.push(value).len()
+                implies cell_matches_field(
+                    prior.push(value)[i], prior_schema.push(field)[i]
+                ) by {
+                if i < prior.len() {
+                    assert(cell_matches_field(prior[i], prior_schema[i]));
+                } else {
+                    assert(i == prior.len());
+                }
+            }
+        }
+    }
+}
+
+pub fn eval_prefix(
+    exprs: &Vec<Expr>, row: &Vec<Option<Value>>, count: usize,
+) -> (result: Result<Vec<Option<Value>>, ()>)
+    requires count <= exprs.len(),
+    ensures
+        match result {
+            Ok(values) =>
+                row_prefix(exprs@, row@, count as nat) == Ok(values@),
+            Err(_) => row_prefix(exprs@, row@, count as nat).is_Err(),
+        },
+    decreases count,
+{
+    if count == 0 {
+        Ok(Vec::new())
+    } else {
+        match eval_prefix(exprs, row, count - 1) {
+            Err(_) => Err(()),
+            Ok(mut prefix) => {
+                match eval_expr_row(&exprs[count - 1], row) {
+                    Err(_) => Err(()),
+                    Ok(value) => {
+                        prefix.push(value);
+                        Ok(prefix)
+                    },
+                }
+            },
+        }
+    }
+}
+
+} // verus!
