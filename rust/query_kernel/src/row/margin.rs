@@ -97,7 +97,8 @@ pub fn eval_keys(
             Ok(value) => value,
             Err(_) => return Err(()),
         };
-        proof { lemma_rows_view_push(prior@, key.clone()); }
+        let ghost old_keys = prior@;
+        proof { lemma_rows_view_push(old_keys, key); }
         prior.push(key);
         Ok(prior)
     }
