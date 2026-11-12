@@ -228,25 +228,6 @@ mod tests {
     }
 
     #[test]
-    fn filter_preserves_grouped_distance_bounds() -> Fallible<()> {
-        let t = make_stable_vplan(
-            VPlanDomain::new(source()?)?,
-            VFrameMetric::new(SymmetricDistance),
-            VPlan::Filter {
-                input: Box::new(VPlan::Input),
-                predicate: VExpr::Column(1),
-            },
-        )?;
-        let input: Bounds<VExpr> = Bounds::from(5)
-            .with_bound(Bound::by([VExpr::Column(0)]).with_per_group(2).with_num_groups(3));
-        assert_eq!(t.map(&input)?, input);
-        let grouped = HashSet::from([VExpr::Column(0)]);
-        assert_eq!(t.map(&input)?.get_bound(&grouped).per_group, Some(2));
-        assert_eq!(t.map(&input)?.get_bound(&grouped).num_groups, Some(3));
-        Ok(())
-    }
-
-    #[test]
     fn filter_map_rejects_untyped_grouping_keys() -> Fallible<()> {
         let t = make_stable_vplan(
             VPlanDomain::new(source()?)?,
@@ -259,6 +240,7 @@ mod tests {
                 expr: Box::new(VExpr::Column(0)), name: "renamed".into(),
             }]).with_per_group(2),
             Bound::by([VExpr::Column(1)]).with_num_groups(2),
+            Bound::by([VExpr::Column(0)]).with_per_group(2).with_num_groups(3),
             Bound::by(Vec::<VExpr>::new()).with_per_group(3),
         ]);
         assert_eq!(t.map(&valid)?, valid);
