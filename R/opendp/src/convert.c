@@ -11,6 +11,7 @@
 #include "opendp.h"
 #include "convert.h"
 #include "convert_elements.h"
+#include <stdlib.h>
 
 const char *ATOM_TYPES[] = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64", "usize", "bool", "String", NULL};
 
@@ -289,6 +290,25 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
 
     UNPROTECT(2);
     return output;
+}
+
+void release_extrinsic_input(void *input, SEXP rust_type)
+{
+    if (!input || Rf_isNull(rust_type))
+        return;
+
+    const char *origin = sexp_to_charptr(get_origin(rust_type));
+    if (str_equal(origin, "Option"))
+    {
+        release_extrinsic_input(input, VECTOR_ELT(get_args(rust_type), 0));
+        return;
+    }
+
+    if (str_equal(origin, "ExtrinsicObject"))
+    {
+        release_extrinsic_object((ExtrinsicObject *)input);
+        free(input); // sexp_to_voidptr allocates this wrapper with malloc.
+    }
 }
 
 SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
@@ -755,6 +775,34 @@ SEXP parse_runtime_type(const char *type_name)
     return parsed;
 }
 
+// Rust copies extrinsic descriptors into its AnyObject. Balance the
+// temporary R-side references, regardless of success or failure.
+static void release_extrinsic_slice(FfiSlice *slice, SEXP type_name)
+{
+    const char *origin = sexp_to_charptr(get_origin(type_name));
+    if (str_equal(origin, "ExtrinsicObject"))
+    {
+        release_extrinsic_object((ExtrinsicObject *)slice->ptr);
+    }
+    else if (str_equal(origin, "Vec"))
+    {
+        SEXP element_type = VECTOR_ELT(get_args(type_name), 0);
+        if (str_equal(sexp_to_charptr(get_origin(element_type)), "ExtrinsicObject"))
+        {
+            ExtrinsicObject *objects = (ExtrinsicObject *)slice->ptr;
+            for (size_t i = 0; i < slice->len; i++)
+                release_extrinsic_object(&objects[i]);
+        }
+    }
+    else if (str_equal(origin, "Tuple"))
+    {
+        SEXP args = get_args(type_name);
+        void **items = (void **)slice->ptr;
+        for (size_t i = 0; i < slice->len; i++)
+            release_extrinsic_input(items[i], VECTOR_ELT(args, i));
+    }
+}
+
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
 {
     // Convert arguments to c types.
@@ -787,6 +835,7 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     // An AnyObject is an opaque C struct that contains the data in a rust-specific representation
     // AnyObjects may be used interchangeably in the majority of library APIs
     FfiResult_____AnyObject result = opendp_data__slice_as_object(&slice, c_type_name);
+    release_extrinsic_slice(&slice, type_name);
 
     UNPROTECT(2);
 
