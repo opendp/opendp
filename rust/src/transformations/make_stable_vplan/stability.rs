@@ -41,12 +41,19 @@ pub open spec fn seq_one_insert(
             0 <= i <= before.len() && after =~= before.insert(i, row)
 }
 
+pub open spec fn bag_one_insert(
+    before: Multiset<Seq<Option<VValue>>>,
+    after: Multiset<Seq<Option<VValue>>>,
+) -> bool {
+    exists|row: Seq<Option<VValue>>| after =~= before.insert(row)
+}
+
 pub open spec fn bag_one_edit(
     left: Multiset<Seq<Option<VValue>>>, right: Multiset<Seq<Option<VValue>>>,
 ) -> bool {
     left =~= right
-        || exists|row: Seq<Option<VValue>>| right =~= left.insert(row)
-        || exists|row: Seq<Option<VValue>>| left =~= right.insert(row)
+        || bag_one_insert(left, right)
+        || bag_one_insert(right, left)
 }
 
 /// The relational composition of one-insertion-stable steps is stable.
@@ -267,16 +274,9 @@ pub proof fn lemma_bag_one_edit_symmetric(
     requires bag_one_edit(before, after),
     ensures bag_one_edit(after, before),
 {
-    let same = before =~= after;
-    let reverse_same = after =~= before;
-    let insert = exists|row: Seq<Option<VValue>>| after =~= before.insert(row);
-    let delete = exists|row: Seq<Option<VValue>>| before =~= after.insert(row);
-
-    assert(same == reverse_same);
-    reveal(bag_one_edit);
-    assert(bag_one_edit(before, after) == (same || insert || delete));
-    assert(bag_one_edit(after, before) == (reverse_same || delete || insert));
-    assert(bag_one_edit(after, before));
+    hide(bag_one_insert);
+    assert((before =~= after) <==> (after =~= before));
+    assert(bag_one_edit(before, after) == bag_one_edit(after, before));
 }
 
 /// Insertion stability also proves deletion stability by swapping the tables.
