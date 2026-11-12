@@ -1032,8 +1032,9 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
         // try_!(util::into_owned(parts[0] as *mut ArrowArray));
         // the Drop impl calls schema.release
         try_!(util::into_owned(parts[1] as *mut ArrowSchema));
-        // takes ownership of the memory behind the pointer, which then gets dropped
-        try_!(util::into_owned(parts[2] as *mut c_char));
+        // new_arrow_array allocated this with CString::into_raw, not Box<c_char>.
+        // Reconstruct the complete string allocation with its matching layout.
+        try_!(util::into_string(parts[2] as *mut c_char));
 
         // free the array holding the null pointers itself
         util::into_owned(this as *mut [*mut c_void; 3])
@@ -1474,6 +1475,24 @@ mod tests {
             if !objects.is_empty() {
                 assert_eq!(*objects[0].downcast_ref::<i32>()?, 42);
             }
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_arrow_name_cleanup() -> Fallible<()> {
+        for name in [
+            "".to_owned(),
+            "column λ".to_owned(),
+            "long name".repeat(100),
+        ] {
+            let name = CString::new(name).unwrap();
+            let raw: FfiSlice = Fallible::from(opendp_data__new_arrow_array(name.as_ptr()))?;
+            let parts = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
+            // Match the loader contract: it consumes the ArrowArray box first.
+            drop(util::into_owned(parts[0] as *mut ArrowArray)?);
+            let _: () = Fallible::from(opendp_data__arrow_array_free(raw.ptr.cast_mut()))?;
         }
         Ok(())
     }
