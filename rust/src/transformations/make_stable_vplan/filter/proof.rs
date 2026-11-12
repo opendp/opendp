@@ -476,32 +476,12 @@ impl CertifiedTableFilter {
                 _ => false,
             },
     {
-        domain::lemma_rows_member_typed(
-            left, self.schema@, self.rules@);
-        domain::lemma_rows_member_typed(
-            right, self.schema@, self.rules@);
-        verified::lemma_relation_type_sound(
-            &self.plan, left, self.schema@, self.schema@);
-        verified::lemma_relation_type_sound(
-            &self.plan, right, self.schema@, self.schema@);
-        lemma_single_filter_relation(&self.plan, left);
-        lemma_single_filter_relation(&self.plan, right);
-        // Both successful executions are instances of the same total
-        // row-local map-or-drop function. Contractivity is independent of
-        // whether the node filters, projects, or merges distinct rows.
-        stability::lemma_apply_as_lift(&self.plan, left, self.schema@, self.schema@);
-        stability::lemma_apply_as_lift(&self.plan, right, self.schema@, self.schema@);
-        let f = |row: Seq<Option<VValue>>|
-            verified::local_row_spec(&self.plan, row).unwrap();
-        stability::lemma_lift_contraction(left, right, f);
-        let out_left = self.result_spec(left).unwrap();
-        let out_right = self.result_spec(right).unwrap();
-        assert(out_left =~= stability::lifting::lift(left, f));
-        assert(out_right =~= stability::lifting::lift(right, f));
-        assert(symmetric_distance::distance(
-            out_left.to_multiset(), out_right.to_multiset())
-            <= symmetric_distance::distance(
-                left.to_multiset(), right.to_multiset()));
+        domain::lemma_rows_member_typed(left, self.schema@, self.rules@);
+        domain::lemma_rows_member_typed(right, self.schema@, self.rules@);
+        assert(verified::plan_schema(&self.plan, self.schema@) == Some(self.schema@));
+        stability::lemma_relation_contraction(
+            &self.plan, left, right, self.schema@, self.schema@);
+
     }
 
     /// The entrypoint installed in OpenDP's Function. It enforces exactly
