@@ -385,59 +385,89 @@ pub proof fn lemma_filter_preserves_expr_group_bound(
     }
 }
 
-/// An abstract OpenDP frame domain is downward-closed when removing
-/// rows cannot violate its constraints. Column restrictions and max-length /
-/// max-groups margins have this property; filter clears other invariants.
-/// This theorem joins the two obligations of the filter transformation:
-/// output-domain membership and the grouped stability map.
-pub proof fn lemma_filter_transformation_contract(
-    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
-    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
-    keys: Seq<VExpr>, values: Seq<Seq<Option<VValue>>>,
+/// Row-wise column restrictions can be represented by an allowed set of
+/// complete rows. Removing rows preserves every such restriction.
+pub open spec fn allowed_rows(
+    rows: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+) -> bool {
+    forall|row: Seq<Option<VValue>>|
+        rows.count(row) > 0 ==> allowed.contains(row)
+}
+
+pub proof fn lemma_allowed_rows_subset(
+    smaller: Multiset<Seq<Option<VValue>>>,
+    larger: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+)
+    requires
+        smaller.subset_of(larger),
+        allowed_rows(larger, allowed),
+    ensures allowed_rows(smaller, allowed),
+{
+    assert forall|row: Seq<Option<VValue>>|
+        smaller.count(row) > 0 implies allowed.contains(row) by {
+        assert(smaller.count(row) <= larger.count(row));
+    }
+}
+
+/// The portion of concrete FrameDomain<VTable>::member that can constrain
+/// a filtered table: row-wise column domains and upper-bound margins.
+/// For an empty set of keys, the margin has one group even on empty data.
+/// The finite row/key enumerations must cover the support to interpret
+/// the numerical bounds as actual group counts.
+pub open spec fn bounded_frame_member(
+    rows: Multiset<Seq<Option<VValue>>>,
+    allowed: Set<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
     groups: Seq<Seq<Option<VValue>>>,
     per_group: Option<u32>, num_groups: Option<u32>,
-    member: spec_fn(Multiset<Seq<Option<VValue>>>) -> bool,
+) -> bool {
+    &&& allowed_rows(rows, allowed)
+    &&& (keys.len() != 0 || num_groups != Some(0u32))
+    &&& within_group_bound(rows,
+        Seq::<Seq<Option<VValue>>>::empty().to_multiset(),
+        values,
+        |row: Seq<Option<VValue>>|
+            verified::project::row_prefix(keys, row, keys.len()).unwrap(),
+        groups, per_group, num_groups)
+}
+
+/// Filtering preserves the concrete *kinds* of constraints retained by
+/// filter_domain: column-level row restrictions, max_length, max_groups.
+/// The source-relative Rust FrameDomain encoding is checked separately.
+pub proof fn lemma_filter_transformation_contract(
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    allowed: Set<Seq<Option<VValue>>>,
+    keys: Seq<VExpr>,
+    values: Seq<Seq<Option<VValue>>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
 )
     requires
         matches!(plan, VPlan::Filter { .. }),
-        verified::rows_in_schema(left, schema),
-        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(rows, schema),
         verified::rows_in_schema(values, schema),
         verified::local_schema(plan, schema) == Some(schema),
         verified::project::schema_prefix(keys, schema, keys.len()).is_Some(),
-        member(left.to_multiset()),
-        member(right.to_multiset()),
-        forall|smaller: Multiset<Seq<Option<VValue>>>,
-            larger: Multiset<Seq<Option<VValue>>>|
-            #[trigger] smaller.subset_of(larger) && member(larger)
-                ==> member(smaller),
-        within_group_bound(left.to_multiset(), right.to_multiset(), values,
-            |row: Seq<Option<VValue>>|
-                verified::project::row_prefix(keys, row, keys.len()).unwrap(),
-            groups, per_group, num_groups),
+        bounded_frame_member(rows.to_multiset(), allowed,
+            keys, values, groups, per_group, num_groups),
     ensures
-        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
-            (Ok(out_left), Ok(out_right)) =>
-                member(out_left.to_multiset())
-                && member(out_right.to_multiset())
-                && within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
-                    values,
-                    |row: Seq<Option<VValue>>|
-                        verified::project::row_prefix(keys, row, keys.len()).unwrap(),
-                    groups, per_group, num_groups),
-            _ => false,
+        match verified::apply_spec(plan, rows) {
+            Ok(out) => bounded_frame_member(out.to_multiset(), allowed,
+                keys, values, groups, per_group, num_groups),
+            Err(_) => false,
         },
 {
-    lemma_filter_submultiset(plan, left, schema);
-    lemma_filter_submultiset(plan, right, schema);
-    let out_left = verified::apply_spec(plan, left).unwrap();
-    let out_right = verified::apply_spec(plan, right).unwrap();
-    assert(out_left.to_multiset().subset_of(left.to_multiset()));
-    assert(out_right.to_multiset().subset_of(right.to_multiset()));
-    assert(member(out_left.to_multiset()));
-    assert(member(out_right.to_multiset()));
+    lemma_filter_submultiset(plan, rows, schema);
+    let output = verified::apply_spec(plan, rows).unwrap();
+    lemma_allowed_rows_subset(
+        output.to_multiset(), rows.to_multiset(), allowed);
+    assert(verified::rows_in_schema(Seq::<Seq<Option<VValue>>>::empty(), schema));
     lemma_filter_preserves_expr_group_bound(
-        plan, left, right, schema, keys, values, groups, per_group, num_groups);
+        plan, rows, Seq::empty(), schema, keys, values,
+        groups, per_group, num_groups);
 }
 
 pub fn construct(
