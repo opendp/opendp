@@ -469,6 +469,7 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
+    opendp_forget_resource(input); // Ownership now belongs to the external pointer.
 
     int errorOccurred;
     SEXP new_privacy_profile = get_private_func("new_privacy_profile_internal");
@@ -508,6 +509,7 @@ SEXP anyqueryableptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
+    opendp_forget_resource(input); // Ownership now belongs to the external pointer.
 
     int errorOccurred;
     SEXP new_queryable = get_private_func("new_queryable_internal");
@@ -548,6 +550,7 @@ SEXP anyodometerqueryableptr_to_sexp(AnyObject *input, SEXP info)
 {
     SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
+    opendp_forget_resource(input); // Ownership now belongs to the external pointer.
 
     int errorOccurred;
     SEXP new_queryable = get_private_func("new_odometer_queryable_internal");
