@@ -2,6 +2,9 @@
 #[path = "../../query_kernel/src/row.rs"]
 pub mod verified;
 
+#[path = "../../src/metrics/symmetric_distance/verus.rs"]
+pub mod symmetric_distance;
+
 #[path = "../../src/transformations/make_stable_vplan/stability.rs"]
 pub mod stability;
 

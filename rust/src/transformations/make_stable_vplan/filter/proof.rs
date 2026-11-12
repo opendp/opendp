@@ -4,6 +4,7 @@ use super::verified::{self, VExpr, VField, VPlan, VTable, VValue};
 use super::verified::domain::{self, VColumnRule};
 use super::verified::transformation;
 use super::stability;
+use super::symmetric_distance;
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
 
@@ -157,6 +158,51 @@ pub proof fn lemma_filter_exact_count(
         assert(verified::apply_spec(plan, rows).unwrap().to_multiset()
             .subset_of(rows.to_multiset()));
     }
+}
+
+/// On typed inputs the executable filter implements multiset restriction
+/// by its row-local predicate, including duplicate rows.
+pub proof fn lemma_filter_multiset_equivalent(
+    plan: &VPlan,
+    rows: Seq<Seq<Option<VValue>>>,
+    schema: Seq<VField>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(rows, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+    ensures
+        match verified::apply_spec(plan, rows) {
+            Ok(out) => out.to_multiset() =~= rows.to_multiset().filter(
+                |row: Seq<Option<VValue>>|
+                    verified::local_row_spec(plan, row) == Ok(Some(row))
+            ),
+            Err(_) => false,
+        },
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    lemma_filter_submultiset(plan, rows, schema);
+    let output = verified::apply_spec(plan, rows).unwrap();
+    let keep = |row: Seq<Option<VValue>>|
+        verified::local_row_spec(plan, row) == Ok(Some(row));
+    rows.to_multiset_ensures();
+    output.to_multiset_ensures();
+    assert forall|row: Seq<Option<VValue>>|
+        output.to_multiset().count(row) ==
+            rows.to_multiset().filter(keep).count(row) by {
+        if verified::row_in_schema(row, schema) {
+            lemma_filter_exact_count(plan, rows, schema, row);
+        } else {
+            if rows.to_multiset().count(row) > 0 {
+                assert(rows.contains(row));
+                let i = choose|i: int| 0 <= i < rows.len() && rows[i] == row;
+                assert(verified::row_in_schema(rows[i], schema));
+                assert(false);
+            }
+            assert(output.to_multiset().count(row) <= rows.to_multiset().count(row));
+        }
+    }
+    assert(output.to_multiset() =~= rows.to_multiset().filter(keep));
 }
 
 /// Pointwise contraction of the multiplicity difference for two datasets.
@@ -580,29 +626,6 @@ pub fn construct(
 }
 
 
-/// A finite support enumeration cannot repeat rows.
-pub open spec fn distinct_rows(values: Seq<Seq<Option<VValue>>>) -> bool {
-    forall|i: int, j: int|
-        0 <= i < j < values.len() ==> values[i] != values[j]
-}
-
-/// Global symmetric multiset closeness. The universal quantifier over
-/// distinct typed lists represents the sum over finite joint support.
-pub open spec fn symmetric_close(
-    left: Seq<Seq<Option<VValue>>>,
-    right: Seq<Seq<Option<VValue>>>,
-    distance: u32,
-    schema: Seq<VField>,
-) -> bool {
-    forall|values: Seq<Seq<Option<VValue>>>|
-        distinct_rows(values) && verified::rows_in_schema(values, schema)
-        ==> group_distance(
-            left.to_multiset(), right.to_multiset(), values,
-            |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
-            Seq::<Option<VValue>>::empty(),
-        ) <= distance as nat
-}
-
 /// The only complete plan admitted by this constructor is Filter(Input).
 pub open spec fn single_filter(plan: &VPlan) -> bool {
     match plan {
@@ -823,10 +846,10 @@ impl CertifiedTableFilter {
                 domain::rows_member(rows, self.rules_spec()),
             |left: Seq<Seq<Option<VValue>>>,
              right: Seq<Seq<Option<VValue>>>, d: u32|
-                symmetric_close(left, right, d, self.schema_spec()),
+                symmetric_distance::close(left.to_multiset(), right.to_multiset(), d),
             |left: Seq<Seq<Option<VValue>>>,
              right: Seq<Seq<Option<VValue>>>, d: u32|
-                symmetric_close(left, right, d, self.schema_spec()),
+                symmetric_distance::close(left.to_multiset(), right.to_multiset(), d),
             |d: u32| false,
             |rows: Seq<Seq<Option<VValue>>>| self.result_spec(rows),
             |d: u32| Ok(d),
@@ -850,12 +873,12 @@ impl CertifiedTableFilter {
                       right: Seq<Seq<Option<VValue>>>, d: u32|
             #[trigger] domain::rows_member(left, self.rules_spec())
             && #[trigger] domain::rows_member(right, self.rules_spec())
-            && #[trigger] symmetric_close(left, right, d, self.schema_spec())
+            && #[trigger] symmetric_distance::close(left.to_multiset(), right.to_multiset(), d)
             implies transformation::result_close(
                 self.result_spec(left), self.result_spec(right), d,
                 |a: Seq<Seq<Option<VValue>>>,
                  b: Seq<Seq<Option<VValue>>>, bound: u32|
-                    symmetric_close(a, b, bound, self.schema_spec()),
+                    symmetric_distance::close(a.to_multiset(), b.to_multiset(), bound),
                 |_: u32| false,
             ) by {
             self.lemma_preserves_rules(left);
@@ -908,11 +931,11 @@ impl CertifiedTableFilter {
             self.valid(),
             domain::rows_member(left, self.rules_spec()),
             domain::rows_member(right, self.rules_spec()),
-            symmetric_close(left, right, distance, self.schema_spec()),
+            symmetric_distance::close(left.to_multiset(), right.to_multiset(), distance),
         ensures
             match (self.result_spec(left), self.result_spec(right)) {
                 (Ok(a), Ok(b)) =>
-                    symmetric_close(a, b, distance, self.schema_spec()),
+                    symmetric_distance::close(a.to_multiset(), b.to_multiset(), distance),
                 _ => false,
             },
     {
@@ -926,22 +949,20 @@ impl CertifiedTableFilter {
             &self.plan, right, self.schema@, self.schema@);
         lemma_single_filter_relation(&self.plan, left);
         lemma_single_filter_relation(&self.plan, right);
+        lemma_filter_multiset_equivalent(&self.plan, left, self.schema@);
+        lemma_filter_multiset_equivalent(&self.plan, right, self.schema@);
         let out_left = self.result_spec(left).unwrap();
         let out_right = self.result_spec(right).unwrap();
-        assert forall|values: Seq<Seq<Option<VValue>>>|
-            distinct_rows(values) && verified::rows_in_schema(
-                values, self.schema@)
-            implies group_distance(
-                out_left.to_multiset(), out_right.to_multiset(), values,
-                |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
-                Seq::<Option<VValue>>::empty(),
-            ) <= distance as nat by {
-            lemma_group_distance_contraction(
-                &self.plan, left, right, self.schema@, values,
-                |row: Seq<Option<VValue>>| Seq::<Option<VValue>>::empty(),
-                Seq::<Option<VValue>>::empty(),
-            );
-        }
+        let keep = |row: Seq<Option<VValue>>|
+            verified::local_row_spec(&self.plan, row) == Ok(Some(row));
+        assert(out_left.to_multiset() =~= left.to_multiset().filter(keep));
+        assert(out_right.to_multiset() =~= right.to_multiset().filter(keep));
+        symmetric_distance::lemma_filter_contraction(
+            left.to_multiset(), right.to_multiset(), keep);
+        assert(symmetric_distance::distance(
+            out_left.to_multiset(), out_right.to_multiset())
+            <= symmetric_distance::distance(
+                left.to_multiset(), right.to_multiset()));
     }
 
     /// The entrypoint installed in OpenDP's Function. It enforces exactly

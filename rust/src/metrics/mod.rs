@@ -34,6 +34,12 @@ use std::fmt::{Debug, Formatter};
 /// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
 pub type IntDistance = u32;
 
+// Keep the formal definition with the metric, rather than with any one
+// transformation that happens to use it.
+#[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
+#[path = "symmetric_distance/verus.rs"]
+pub(crate) mod verified_symmetric_distance;
+
 /// The smallest number of additions or removals to make two datasets equivalent.
 ///
 /// This metric is not sensitive to data ordering.
