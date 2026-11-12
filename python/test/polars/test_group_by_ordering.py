@@ -62,13 +62,19 @@ def test_rowwise_functions_remain_supported(value):
     [
         lambda: pl.col("i").shift(1).sum(),
         lambda: pl.col("i").reverse().min(),
-        lambda: (pl.col("i").dp.permute() + pl.col("i")).sum(),
     ],
 )
 def test_order_dependent_inputs_remain_rejected(value):
     domain, data = _input()
     with pytest.raises(dp.OpenDPException, match="Order-sensitive aggregation"):
         _stable(domain, dp.symmetric_distance(), data.group_by("key").agg(value()))
+
+
+def test_permute_cannot_be_combined_with_row_aligned_expression():
+    domain, data = _input()
+    value = (pl.col("i").dp.permute() + pl.col("i")).sum()
+    with pytest.raises(dp.OpenDPException, match="permute cannot be combined"):
+        _stable(domain, dp.symmetric_distance(), data.group_by("key").agg(value))
 
 
 def test_group_by_rejects_positional_literals():
