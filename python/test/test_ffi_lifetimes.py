@@ -184,6 +184,39 @@ def test_owned_scratch_released_on_conversion_error(monkeypatch):
     assert _convert.c_to_py(obj) == ["a", "b"]
 
 
+@pytest.mark.parametrize("fail", [False, True])
+def test_legacy_pointer_array_is_released_without_consuming_elements(monkeypatch, fail):
+    obj = _convert.py_to_c(42, AnyObjectPtr, "i32")
+    # One AnyObject is also a valid contiguous one-element AnyObject array.
+    raw = _convert._wrap_in_slice(obj, 1)
+    release = _convert.lib.opendp_data__ffislice_of_anyobjectptrs_free
+    releases = []
+
+    def track_release(view):
+        releases.append(view.contents.len)
+        return release(view)
+
+    def failed_conversion(*_):
+        raise ValueError("nested conversion failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            _convert.lib, "opendp_data__ffislice_of_anyobjectptrs_free", track_release
+        )
+        if fail:
+            patch.setattr(_convert, "_slice_to_py", failed_conversion)
+            with pytest.raises(ValueError, match="nested conversion failed"):
+                _convert._slice_to_vector(raw, dp.Vec["AnyObject"])
+        else:
+            assert _convert._slice_to_vector(raw, dp.Vec["AnyObject"]) == [42]
+    assert releases == [1]
+    assert _convert.c_to_py(obj) == 42
+    assert (
+        _convert._slice_to_vector(_convert._wrap_in_slice(obj, 0), dp.Vec["AnyObject"])
+        == []
+    )
+
+
 def test_nested_conversion_error_does_not_free_source(monkeypatch):
     obj = _convert.py_to_c(42, AnyObjectPtr, "i32")
     raw = _convert._wrap_in_slice(obj, 1)

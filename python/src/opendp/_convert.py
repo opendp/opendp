@@ -653,12 +653,18 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
             )[0 : raw.contents.len]
             return list(map(c_to_py, array))
 
+        release = lib.opendp_data__ffislice_of_anyobjectptrs_free
+        release.argtypes = [FfiSlicePtr]
+        release.restype = FfiResult
         pointers = ffislice_of_anyobjectptrs(raw)
-        # Elements belong to the source object, even if conversion raises.
-        array = ctypes.cast(
-            pointers.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
-        )[0 : pointers.contents.len]
-        return list(map(c_to_py, array))
+        try:
+            # Elements belong to the source object, even if conversion raises.
+            array = ctypes.cast(
+                pointers.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+            )[0 : pointers.contents.len]
+            return list(map(c_to_py, array))
+        finally:
+            unwrap(release(pointers), ctypes.c_void_p)
 
     if inner_type_name == "ExtrinsicObject":
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[
