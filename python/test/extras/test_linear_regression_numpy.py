@@ -263,9 +263,9 @@ def test_adaptive_composition_checks_budgets_and_conditions_on_private_slope(
 
 
 @pytest.mark.parametrize("sized", [False, True])
-@pytest.mark.parametrize("kind", ["empty", "one", "vertical", "nonfinite"])
+@pytest.mark.parametrize("kind", ["one", "vertical", "nonfinite"])
 def test_degenerate_private_fit_still_releases_two_candidates(sized, kind):
-    size = 0 if kind == "empty" else 1 if kind == "one" else 4
+    size = 1 if kind == "one" else 4
     data, domain = _training_data(size, sized)
     if kind == "vertical":
         data.X[:] = 0.0
@@ -316,12 +316,30 @@ def test_public_bounds_validation(name, bounds):
         )
 
 
-@pytest.mark.parametrize("size", [0, 20])
 @pytest.mark.parametrize("d_in", [1, 3])
-def test_fixed_size_rejects_odd_distances(size, d_in):
-    _, domain = _training_data(size)
+def test_fixed_size_rejects_odd_distances(d_in):
+    _, domain = _training_data()
     with pytest.raises(ValueError, match="d_in must be even for fixed-size domains"):
         _make(domain, d_in=d_in)
+
+
+def test_zero_size_rejected():
+    _, domain = _training_data(0)
+    with pytest.raises(ValueError, match="input size must be positive"):
+        _make(domain)
+
+
+def test_unsized_empty_fit():
+    data, domain = _training_data(0, sized=False)
+    fitted = _estimator().fit(
+        data.X,
+        data.y,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+    assert -5.0 <= fitted.coef_[0] <= 5.0
+    assert -10.0 <= fitted.intercept_ <= 10.0
 
 
 def test_constructor_and_unsupported_domain_validation():

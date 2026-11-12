@@ -13,6 +13,9 @@ from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
 from opendp.mod import AtomDomain, Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
+_CANDIDATE_COUNT = 100
+
+
 def _validate_bounds(bounds, name):
     try:
         if len(bounds) != 2:
@@ -136,6 +139,8 @@ def make_private_theil_sen(
     slope_bounds = _validate_bounds(slope_bounds, "slope_bounds")
     intercept_bounds = _validate_bounds(intercept_bounds, "intercept_bounds")
     size = _input_size(input_domain, input_metric)
+    if size == 0:
+        raise ValueError("input size must be positive")
     if isinstance(d_in, bool) or not isinstance(d_in, Integral) or d_in <= 0:
         raise ValueError("d_in must be a positive integer")
     if size is not None and d_in % 2:
@@ -170,8 +175,8 @@ def make_private_theil_sen(
     if budget == 0:
         raise ValueError("d_out is too small to allocate two positive stage budgets")
     compositor = compose(budget)
-    slope_candidates = np.unique(np.linspace(*slope_bounds, 100))
-    intercept_candidates = np.unique(np.linspace(*intercept_bounds, 100))
+    slope_candidates = np.unique(np.linspace(*slope_bounds, _CANDIDATE_COUNT))
+    intercept_candidates = np.unique(np.linspace(*intercept_bounds, _CANDIDATE_COUNT))
     slopes = make_pairwise_slopes(input_domain, input_metric)
     slope_measurement = dp.binary_search_chain(
         lambda scale: (
@@ -186,19 +191,9 @@ def make_private_theil_sen(
     )
 
     residual_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size)
-    residual_space = (residual_domain, input_metric)
-    if size == 0:
-        # Native quantile scoring divides by zero at known size 0.
-        residual_space = dp.t.make_user_transformation(
-            *residual_space,
-            dp.vector_domain(dp.atom_domain(T=float, nan=False)),
-            input_metric,
-            function=lambda values: values,
-            stability_map=lambda d: d,
-        )
     residual_median = dp.binary_search_chain(
         lambda scale: (
-            residual_space
+            (residual_domain, input_metric)
             >> dp.m.then_private_quantile(
                 output_measure,
                 intercept_candidates,
