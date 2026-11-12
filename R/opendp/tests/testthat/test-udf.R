@@ -165,6 +165,45 @@ test_that("extrinsic descriptors and callback results release their R references
   expect_equal(released, 20L)
 })
 
+test_that("callback userdata is released when later argument conversion raises", {
+  # The native fixture calls the same converters as generated wrappers, then
+  # raises before a Rust call. Source headers are absent in installed-only tests.
+  src <- test_path("..", "..", "src")
+  skip_if_not(file.exists(file.path(src, "opendp.h")), "requires generated source headers")
+  build <- tempfile("callback-scope-")
+  dir.create(build)
+  on.exit(unlink(build, recursive = TRUE), add = TRUE)
+  file.copy(test_path("..", "native", "callback-scope.c"), build)
+  file.copy(file.path(src, c("convert.h", "ownership.h", "opendp.h")), build)
+  dll <- file.path(build, paste0("callback-scope", .Platform$dynlib.ext))
+  output <- system2(file.path(R.home("bin"), "R"),
+    c("CMD", "SHLIB", shQuote(file.path(build, "callback-scope.c")), "-o", shQuote(dll)),
+    stdout = TRUE, stderr = TRUE
+  )
+  expect_true(is.null(attr(output, "status")), info = paste(output, collapse = "\n"))
+  fixture <- dyn.load(dll)
+  on.exit(dyn.unload(dll), add = TRUE, after = FALSE)
+  invoke <- getNativeSymbolInfo("test_callback_scope", fixture)$address
+  scope <- getNativeSymbolInfo("opendp_with_scope", "opendp")$address
+  released <- 0L
+  on_finalize <- function(e) released <<- released + 1L
+  for (transition in c(FALSE, TRUE)) {
+    converter <- getNativeSymbolInfo(
+      if (transition) "sexp_to_transitionfn" else "sexp_to_callbackfn", "opendp"
+    )$address
+    for (i in 1:10) local({
+      value <- new.env(parent = emptyenv())
+      reg.finalizer(value, on_finalize)
+      callback <- function(arg) value
+      environment(callback) <- list2env(list(value = value), parent = baseenv())
+      expect_error(.Call(invoke, callback, transition, scope, converter), "later argument conversion failed")
+    })
+  }
+  gc()
+  gc()
+  expect_equal(released, 20L)
+})
+
 test_that("new queryable supports user-defined transitions", {
   enable_features("contrib")
 

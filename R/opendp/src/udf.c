@@ -95,6 +95,13 @@ static int count_formals(SEXP function)
     return count;
 }
 
+static bool ref_count_callback(const void *ptr, bool increment);
+
+static void callback_context_release(void *ctx)
+{
+    ref_count_callback(ctx, false);
+}
+
 static CallbackContext *new_callback_context(SEXP function, const char *type_name, int accepts_internal)
 {
     CallbackContext *ctx = (CallbackContext *)malloc(sizeof(CallbackContext));
@@ -110,6 +117,9 @@ static CallbackContext *new_callback_context(SEXP function, const char *type_nam
     // The callback may outlive the current R call stack, so hold on to the
     // closure until Rust releases the userdata.
     R_PreserveObject(function);
+    // Register the initial host reference immediately, before later argument
+    // conversions or Rust calls can raise. Rust retains its own clones.
+    opendp_register_resource(ctx, callback_context_release);
     return ctx;
 }
 
@@ -424,20 +434,6 @@ TransitionFn sexp_to_transitionfn(SEXP function, const char *type_name)
         .userdata = {(const void *)ctx}
     };
     return wrapped;
-}
-
-void callbackfn_release(CallbackFn *function)
-{
-    if (!function)
-        return;
-    ref_count_callback(function->userdata._0, false);
-}
-
-void transitionfn_release(TransitionFn *transition)
-{
-    if (!transition)
-        return;
-    ref_count_callback(transition->userdata._0, false);
 }
 
 void init_udf_support(void)

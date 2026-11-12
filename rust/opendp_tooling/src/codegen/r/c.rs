@@ -284,28 +284,8 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         .collect::<Vec<_>>()
         .join(", ");
 
-    let cleanup = func
-        .args
-        .iter()
-        .filter_map(|arg| {
-            let name = arg.name();
-            match arg.c_type().as_str() {
-                "CallbackFn" => Some(format!("callbackfn_release(&c_{name});")),
-                "TransitionFn" => Some(format!("transitionfn_release(&c_{name});")),
-                _ => None,
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
     // mirrors the PROTECT calls in `generate_data_converter`. One addition for `log`
     let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len() + 1);
-    let cleanup = if cleanup.is_empty() {
-        String::new()
-    } else {
-        format!("{cleanup}\n\n")
-    };
-
     let mut ret = func.ret.clone();
     // always save the output to a variable called `_result`
     ret.name = Some("_result".to_string());
@@ -316,12 +296,11 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         r#"// Call library function.
 {ret_type} {ret_name} = opendp_{module_name}__{func_name}({args});
 
-{cleanup}{unprotect}
+{unprotect}
 {convert_response}"#,
         ret_type = mangle(ret.c_type().as_str()),
         ret_name = ret.name(),
         func_name = func.name,
-        cleanup = cleanup,
     )
 }
 
