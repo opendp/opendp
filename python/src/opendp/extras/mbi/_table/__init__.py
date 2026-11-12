@@ -239,10 +239,9 @@ def make_contingency_table(
     :param table: ContingencyTable from prior release
     :param algorithm: configuration for internal estimation algorithm
 
-    Why honest-but-curious?
-    -----------------------
-    A reused table can contain mutable models and callable query operators.
-    Reuse only OpenDP-produced tables without modifying these internals.
+    # Why honest-but-curious?
+    A reused table must depend only on DP releases and public data.
+    Its callbacks must be side-effect-free.
     """
     if table is not None:
         assert_features("honest-but-curious")

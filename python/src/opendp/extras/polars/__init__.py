@@ -1192,12 +1192,12 @@ class LazyFrameQuery:
         :param table: ContingencyTable from prior release
         :param algorithm: configuration for internal estimation algorithm
 
-        Why honest-but-curious?
-        -----------------------
-        A reused table can contain mutable models and callable query operators.
-        Reuse only OpenDP-produced tables without modifying these internals.
-        Custom algorithms must account for all private-data queries.
-        Custom estimators must use only DP releases and public inputs.
+        # Why honest-but-curious?
+        A reused table must depend only on DP releases and public data,
+        and its callbacks must be side-effect-free.
+        Custom algorithms must return valid Measurements with correct privacy maps;
+        custom estimators must postprocess only DP releases and public data.
+        Custom callbacks must be side-effect-free.
         """
         from .contingency_table import ContingencyTableQuery
 

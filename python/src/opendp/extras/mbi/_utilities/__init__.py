@@ -104,11 +104,10 @@ ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms.
 
-    Why honest-but-curious?
-    -----------------------
-    Custom algorithms must account for every private-data query.
-    Custom estimators must depend only on DP releases and public inputs.
-    Neither may use external private state, side channels, or data-dependent exceptions.
+    # Why honest-but-curious?
+    Custom algorithms must return valid Measurements with correct privacy maps.
+    Custom estimators must postprocess only DP releases and public data.
+    Custom callbacks must be side-effect-free.
     """
 
     estimator: Callable = mirror_descent
