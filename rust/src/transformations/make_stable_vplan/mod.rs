@@ -247,21 +247,72 @@ mod tests {
     }
 
     #[test]
-    fn filter_preserves_partial_grouped_bounds() -> Fallible<()> {
-        let t = make_stable_vplan(
+    fn filter_preserves_concrete_grouped_distances() -> Fallible<()> {
+        use std::collections::HashMap;
+
+        fn components(left: &VTable, right: &VTable, by: &HashSet<VExpr>) -> (u32, u32) {
+            // Fix one ordering for both datasets; group keys are sets in Bounds.
+            let keys = by.iter().collect::<Vec<_>>();
+            let mut groups: HashMap<Vec<Option<VValue>>, HashMap<Vec<Option<VValue>>, i64>> =
+                HashMap::new();
+            for (table, sign) in [(left, 1_i64), (right, -1)] {
+                for row in &table.rows {
+                    let key = keys.iter()
+                        .map(|expr| verified::eval_expr_row(expr, row).unwrap())
+                        .collect::<Vec<_>>();
+                    *groups.entry(key).or_default().entry(row.clone()).or_default() += sign;
+                }
+            }
+            let distances = groups.values()
+                .map(|rows| rows.values().map(|n| n.unsigned_abs() as u32).sum::<u32>())
+                .collect::<Vec<_>>();
+            (distances.iter().copied().max().unwrap_or(0),
+                distances.iter().filter(|d| **d > 0).count() as u32)
+        }
+
+        let left = VTable {
+            schema: table().schema,
+            rows: vec![
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(3)), Some(VValue::Bool(false))],
+            ],
+        };
+        let right = VTable {
+            schema: left.schema.clone(),
+            rows: vec![
+                vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(4)), Some(VValue::Bool(false))],
+                vec![Some(VValue::Int(4)), Some(VValue::Bool(false))],
+            ],
+        };
+        let transformation = make_stable_vplan(
             VPlanDomain::new(source()?)?,
             VFrameMetric::new(SymmetricDistance),
-            VPlan::Filter {
-                input: Box::new(VPlan::Input),
-                predicate: VExpr::Column(1),
-            },
+            VPlan::Filter { input: Box::new(VPlan::Input), predicate: VExpr::Column(1) },
         )?;
-        let input: Bounds<VExpr> = Bounds(vec![
-            Bound::by([VExpr::Column(0)]).with_per_group(2),
-            Bound::by([VExpr::Column(1)]).with_num_groups(1),
+        let plan = transformation.invoke(&VPlan::Input)?;
+        let filter_table = |input: &VTable| VTable {
+            schema: input.schema.clone(),
+            rows: verified::evaluate(&plan, input).unwrap(),
+        };
+        let (out_left, out_right) = (filter_table(&left), filter_table(&right));
+        let bounds: Bounds<VExpr> = Bounds(vec![
+            Bound::by(Vec::<VExpr>::new()).with_per_group(4).with_num_groups(1),
+            Bound::by([VExpr::Column(0)]).with_per_group(2).with_num_groups(3),
+            Bound::by([VExpr::Column(1)]).with_per_group(3).with_num_groups(2),
         ]);
-        assert_eq!(t.map(&input)?, input);
-        assert_eq!(t.map(&input)?.0.len(), 2);
+        let output_bounds = transformation.map(&bounds)?;
+        assert_eq!(output_bounds, bounds);
+        for bound in &output_bounds.0 {
+            let (before_max, before_groups) = components(&left, &right, &bound.by);
+            let (after_max, after_groups) = components(&out_left, &out_right, &bound.by);
+            assert!(after_max <= before_max && after_groups <= before_groups);
+            assert!(before_max <= bound.per_group.unwrap());
+            assert!(before_groups <= bound.num_groups.unwrap());
+            assert!(after_max <= bound.per_group.unwrap());
+            assert!(after_groups <= bound.num_groups.unwrap());
+        }
         Ok(())
     }
 
