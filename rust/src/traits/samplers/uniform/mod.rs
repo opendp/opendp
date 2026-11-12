@@ -46,7 +46,7 @@ pub fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<
 pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: usize>(
     upper: T,
 ) -> Fallible<T> {
-    // reject the first `2^N % upper` samples. the remaining `2^N - (2^N % upper)`
+    // reject the first `2^(8N) % upper` samples. the remaining `2^(8N) - (2^(8N) % upper)`
     // values evenly partition into congruence classes modulo `upper`.
     let reject_below = (T::MAX_FINITE % upper + T::one()) % upper;
 
@@ -54,9 +54,9 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
         // algorithm is only valid when sample is non-negative, which is why T: Unsigned
         let sample = sample_from_uniform_bytes::<T, N>()?;
         if sample >= reject_below {
-            // sample % upper is unbiased after rejecting the first `2^N % upper` samples, because
-            // the remaining `2^N - (2^N % upper)` values evenly fold into [0, upper),
-            // `(2^N - (2^N % upper)) / upper` times
+            // sample % upper is unbiased after rejecting the first `2^(8N) % upper` samples, because
+            // the remaining `2^(8N) - (2^(8N) % upper)` values evenly fold into [0, upper),
+            // `(2^(8N) - (2^(8N) % upper)) / upper` times
             break sample % upper;
         }
     })
