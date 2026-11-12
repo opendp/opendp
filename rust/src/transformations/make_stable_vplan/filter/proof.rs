@@ -605,13 +605,26 @@ pub proof fn lemma_single_filter_relation(
 /// A proof-carrying executable table filter. Unlike a plan certificate,
 /// this owns the actual plan passed to the verified evaluator.
 pub struct CertifiedTableFilter {
-    pub plan: VPlan,
-    pub schema: Vec<VField>,
-    pub rules: Vec<VColumnRule>,
+    plan: VPlan,
+    schema: Vec<VField>,
+    rules: Vec<VColumnRule>,
 }
 
 impl CertifiedTableFilter {
-    pub open spec fn valid(&self) -> bool {
+    // Public contracts use closed projections, so callers cannot forge a
+    // valid certificate by modifying its plan, domain rules or schema.
+    pub closed spec fn rules_spec(&self) -> Seq<VColumnRule> { self.rules@ }
+    pub closed spec fn schema_spec(&self) -> Seq<VField> { self.schema@ }
+    pub closed spec fn output_schema(&self, input: Seq<VField>) -> Option<Seq<VField>> {
+        verified::plan_schema(&self.plan, input)
+    }
+    pub closed spec fn result_spec(&self, rows: Seq<Seq<Option<VValue>>>)
+        -> Result<Seq<Seq<Option<VValue>>>, ()>
+    {
+        verified::relation_spec(&self.plan, rows)
+    }
+
+    pub closed spec fn valid(&self) -> bool {
         &&& domain::schema_member(self.schema@, self.rules@)
         &&& single_filter(&self.plan)
         &&& verified::plan_schema(&self.plan, self.schema@) == Some(self.schema@)
@@ -621,7 +634,7 @@ impl CertifiedTableFilter {
 
     pub fn new(predicate: VExpr, rules: &Vec<VColumnRule>) -> (result: Option<Self>)
         ensures match result {
-            Some(filter) => filter.valid() && filter.rules@ == rules@,
+            Some(filter) => filter.valid() && filter.rules_spec() == rules@,
             None => true,
         },
     {
@@ -670,17 +683,15 @@ impl CertifiedTableFilter {
             match result {
                 Ok(output) => {
                     &&& verified::table_valid(&output)
-                    &&& verified::plan_schema(&self.plan, input.schema@)
-                        == Some(output.schema@)
-                    &&& verified::relation_spec(
-                        &self.plan, verified::rows_view(input.rows@))
+                    &&& self.output_schema(input.schema@) == Some(output.schema@)
+                    &&& self.result_spec(verified::rows_view(input.rows@))
                         == Ok(verified::rows_view(output.rows@))
                 },
                 Err(_) => true,
             },
             self.valid()
                 && verified::table_valid(input)
-                && input.schema@ == self.schema@
+                && input.schema@ == self.schema_spec()
                 ==> match result {
                     Ok(output) => {
                         &&& output.schema@ == input.schema@
@@ -689,9 +700,9 @@ impl CertifiedTableFilter {
                     },
                     Err(_) => false,
                 },
-            self.valid() && domain::table_member(input, self.rules@)
+            self.valid() && domain::table_member(input, self.rules_spec())
                 ==> match result {
-                    Ok(output) => domain::table_member(&output, self.rules@),
+                    Ok(output) => domain::table_member(&output, self.rules_spec()),
                     Err(_) => false,
                 },
     {
@@ -772,6 +783,27 @@ impl CertifiedTableFilter {
         Ok(output)
     }
 
+    /// The entrypoint installed in OpenDP's Function. It enforces exactly
+    /// the certified input domain; valid inputs always succeed and return a
+    /// member of that same domain.
+    pub fn invoke(&self, input: &VTable) -> (result: Result<VTable, ()>)
+        ensures
+            self.valid() ==> match result {
+                Ok(output) => {
+                    &&& domain::table_member(input, self.rules_spec())
+                    &&& domain::table_member(&output, self.rules_spec())
+                    &&& self.result_spec(verified::rows_view(input.rows@))
+                        == Ok(verified::rows_view(output.rows@))
+                },
+                Err(_) => !domain::table_member(input, self.rules_spec()),
+            },
+    {
+        if !domain::check_table(input, &self.rules) {
+            return Err(());
+        }
+        self.apply(input)
+    }
+
     /// Full margin-free frame contract: filtering preserves every row-wise
     /// value restriction, and contracts the global multiset L1 distance.
     /// This proves the identity stability map for arbitrary distances, not
@@ -785,19 +817,19 @@ impl CertifiedTableFilter {
     )
         requires
             self.valid(),
-            verified::rows_in_schema(left, self.schema@),
-            verified::rows_in_schema(right, self.schema@),
-            verified::rows_in_schema(values, self.schema@),
+            verified::rows_in_schema(left, self.schema_spec()),
+            verified::rows_in_schema(right, self.schema_spec()),
+            verified::rows_in_schema(values, self.schema_spec()),
             allowed_rows(left.to_multiset(), allowed),
             allowed_rows(right.to_multiset(), allowed),
         ensures
             match (
-                verified::relation_spec(&self.plan, left),
-                verified::relation_spec(&self.plan, right),
+                self.result_spec(left),
+                self.result_spec(right),
             ) {
                 (Ok(out_left), Ok(out_right)) => {
-                    &&& verified::rows_in_schema(out_left, self.schema@)
-                    &&& verified::rows_in_schema(out_right, self.schema@)
+                    &&& verified::rows_in_schema(out_left, self.schema_spec())
+                    &&& verified::rows_in_schema(out_right, self.schema_spec())
                     &&& allowed_rows(out_left.to_multiset(), allowed)
                     &&& allowed_rows(out_right.to_multiset(), allowed)
                     &&& group_distance(

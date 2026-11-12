@@ -25,19 +25,14 @@ pub(super) fn make_stable_vtable_filter(
     let rules = verified_rules(&input_domain.series_domains)?;
     let certified = filter_proof::CertifiedTableFilter::new(predicate, &rules)
         .ok_or_else(|| err!(MakeTransformation, "invalid verified filter predicate"))?;
-    let input_contract = input_domain.clone();
     Transformation::new(
         input_domain.clone(), metric.clone(), input_domain, metric,
         Function::new_fallible(move |table: &verified::VTable| {
-            if !input_contract.member(table)? {
-                return fallible!(MakeTransformation,
-                    "input table outside verified filter domain");
-            }
-            certified.apply(table).map_err(|_| {
-                err!(MakeTransformation, "verified table filter execution failed")
+            certified.invoke(table).map_err(|_| {
+                err!(MakeTransformation, "input outside certified filter domain")
             })
         }),
-        StabilityMap::new(filter_proof::CertifiedTableFilter::map_distance),
+        StabilityMap::new(|d: &u32| filter_proof::CertifiedTableFilter::map_distance(*d)),
     )
 }
 
