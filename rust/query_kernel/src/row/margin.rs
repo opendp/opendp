@@ -6,6 +6,68 @@ use super::*;
 
 verus! {
 
+/// Structural comparison of the kernel's optional integer/Boolean cells.
+pub fn same_cell(a: Option<VValue>, b: Option<VValue>) -> (equal: bool)
+    ensures equal == (a == b),
+{
+    match (a, b) {
+        (None, None) => true,
+        (Some(VValue::Int(x)), Some(VValue::Int(y))) => x == y,
+        (Some(VValue::Bool(x)), Some(VValue::Bool(y))) => x == y,
+        _ => false,
+    }
+}
+
+pub open spec fn key_equal(
+    a: Seq<Option<VValue>>, b: Seq<Option<VValue>>,
+) -> bool {
+    a.len() == b.len()
+        && forall|i: int| 0 <= i < a.len() ==> a[i] == b[i]
+}
+
+/// Compare one prefix without relying on a generic Rust PartialEq contract.
+pub fn same_key_prefix(
+    a: &Vec<Option<VValue>>, b: &Vec<Option<VValue>>, n: usize,
+) -> (equal: bool)
+    requires n <= a.len() && n <= b.len(),
+    ensures equal == (forall|i: int| 0 <= i < n ==> a@[i] == b@[i]),
+    decreases n,
+{
+    if n == 0 {
+        true
+    } else {
+        let prior = same_key_prefix(a, b, n - 1);
+        let last = same_cell(a[n - 1], b[n - 1]);
+        proof {
+            assert((forall|i: int| 0 <= i < n ==> a@[i] == b@[i])
+                == ((forall|i: int| 0 <= i < n - 1 ==> a@[i] == b@[i])
+                    && a@[(n - 1) as int] == b@[(n - 1) as int]));
+        }
+        prior && last
+    }
+}
+
+pub fn same_key(a: &Vec<Option<VValue>>, b: &Vec<Option<VValue>>) -> (equal: bool)
+    ensures equal == key_equal(a@, b@),
+{
+    if a.len() != b.len() { false }
+    else { same_key_prefix(a, b, a.len()) }
+}
+
+/// This pointwise predicate is equivalent to mathematical Seq equality.
+pub proof fn lemma_key_equal_iff_eq(
+    a: Seq<Option<VValue>>, b: Seq<Option<VValue>>,
+)
+    ensures key_equal(a, b) <==> a == b,
+{
+    if key_equal(a, b) {
+        assert(a =~= b) by {
+            assert forall|i: int| 0 <= i < a.len()
+                implies a[i] == b[i] by {}
+        }
+    }
+}
+
 /// Count occurrences of one grouping key within a prefix of input rows.
 pub open spec fn count_key_spec(
     rows: Seq<Vec<Option<VValue>>>, by: Seq<VExpr>,
@@ -22,7 +84,7 @@ pub open spec fn count_key_spec(
             project::row_prefix(by, rows[(n - 1) as int]@, by.len()),
         ) {
             (Ok(prior), Ok(value)) =>
-                Ok(prior + if value == key { 1nat } else { 0nat }),
+                Ok(prior + if key_equal(value, key) { 1nat } else { 0nat }),
             _ => Err(()),
         }
     }
@@ -52,12 +114,7 @@ pub fn count_key(
             Ok(value) => value,
             Err(_) => return Err(()),
         };
-        let matches = current == *key;
-        proof {
-            broadcast use vstd::std_specs::vec::lemma_vec_obeys_eq_spec;
-            assert(vstd::laws_eq::obeys_eq::<Option<VValue>>());
-            assert(matches == (current@ == key@));
-        }
+        let matches = same_key(&current, key);
         Ok(prior + if matches { 1 } else { 0 })
     }
 }
