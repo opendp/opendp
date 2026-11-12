@@ -6,9 +6,9 @@
 use std::sync::Arc;
 
 use polars::prelude::*;
-use polars_plan::prelude::FunctionOptions;
 #[cfg(feature = "ffi")]
 use polars_plan::dsl::FunctionExpr;
+use polars_plan::prelude::FunctionOptions;
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 use rand::Rng;
@@ -110,7 +110,10 @@ pub(crate) fn match_permute(expr: &Expr) -> Option<&Expr> {
         } if lib.contains("opendp")
             && symbol.as_str() == "permute_plugin"
             && kwargs.is_empty()
-            && flags == &FunctionOptions::length_preserving() => input,
+            && flags == &FunctionOptions::length_preserving() =>
+        {
+            input
+        }
         Expr::AnonymousFunction {
             input,
             function,
@@ -122,7 +125,10 @@ pub(crate) fn match_permute(expr: &Expr) -> Option<&Expr> {
                 .materialize()
                 .ok()?
                 .as_any()
-                .is::<PermutePlugin>() => input,
+                .is::<PermutePlugin>() =>
+        {
+            input
+        }
         _ => return None,
     };
     let [data] = input.as_slice() else {
