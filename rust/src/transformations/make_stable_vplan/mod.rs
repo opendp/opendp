@@ -247,6 +247,25 @@ mod tests {
     }
 
     #[test]
+    fn filter_preserves_partial_grouped_bounds() -> Fallible<()> {
+        let t = make_stable_vplan(
+            VPlanDomain::new(source()?)?,
+            VFrameMetric::new(SymmetricDistance),
+            VPlan::Filter {
+                input: Box::new(VPlan::Input),
+                predicate: VExpr::Column(1),
+            },
+        )?;
+        let input: Bounds<VExpr> = Bounds(vec![
+            Bound::by([VExpr::Column(0)]).with_per_group(2),
+            Bound::by([VExpr::Column(1)]).with_num_groups(1),
+        ]);
+        assert_eq!(t.map(&input)?, input);
+        assert_eq!(t.map(&input)?.0.len(), 2);
+        Ok(())
+    }
+
+    #[test]
     fn filter_clears_invariants_and_projection_drops_grouped_margins() -> Fallible<()> {
         let input = source()?
             .with_margin(Margin::select().with_max_length(5).with_invariant_lengths())?

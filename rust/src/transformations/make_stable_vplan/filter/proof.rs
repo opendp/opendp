@@ -311,6 +311,70 @@ pub proof fn lemma_changed_groups_contraction(
     }
 }
 
+
+/// Logical interpretation of one `Bound<VExpr>` once its grouping expressions
+/// are interpreted as a deterministic row-local function. `values` must
+/// enumerate the distinct joint row support and `groups` the distinct group
+/// keys for this to equal the concrete FrameDistance components.
+pub open spec fn within_group_bound(
+    left: Multiset<Seq<Option<VValue>>>,
+    right: Multiset<Seq<Option<VValue>>>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
+) -> bool {
+    &&& match per_group {
+        Some(limit) => forall|key: Seq<Option<VValue>>|
+            group_distance(left, right, values, group_by, key) <= limit as nat,
+        None => true,
+    }
+    &&& match num_groups {
+        Some(limit) => changed_groups(left, right, values, group_by, groups) <= limit as nat,
+        None => true,
+    }
+}
+
+/// The identity map on an individual Bound preserves both optional limits.
+/// The same argument applies pointwise to every element of Bounds<VExpr>.
+pub proof fn lemma_filter_preserves_group_bound(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    values: Seq<Seq<Option<VValue>>>,
+    group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>,
+    groups: Seq<Seq<Option<VValue>>>,
+    per_group: Option<u32>, num_groups: Option<u32>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::rows_in_schema(values, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+        within_group_bound(left.to_multiset(), right.to_multiset(),
+            values, group_by, groups, per_group, num_groups),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) =>
+                within_group_bound(out_left.to_multiset(), out_right.to_multiset(),
+                    values, group_by, groups, per_group, num_groups),
+            _ => false,
+        },
+{
+    lemma_changed_groups_contraction(plan, left, right, schema,
+        values, group_by, groups);
+    if let Some(limit) = per_group {
+        assert forall|key: Seq<Option<VValue>>|
+            group_distance(
+                verified::apply_spec(plan, left).unwrap().to_multiset(),
+                verified::apply_spec(plan, right).unwrap().to_multiset(),
+                values, group_by, key) <= limit as nat by {
+            lemma_group_distance_contraction(plan, left, right, schema,
+                values, group_by, key);
+        }
+    }
+}
+
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)
