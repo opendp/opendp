@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import numpy as np
 from sklearn.base import RegressorMixin
 from sklearn.utils.validation import check_is_fitted
 
-from opendp._lib import import_optional_dependency
 from opendp.extras.sklearn._estimator import DPEstimator
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen,
@@ -42,14 +42,12 @@ class TheilSenRegressor(RegressorMixin, DPEstimator):  # type: ignore
         )
 
     def _ingest_release(self, release):
-        np = import_optional_dependency("numpy")
         slope, intercept = release
         self.coef_ = np.asarray([slope])
         self.intercept_ = float(intercept)
         self.n_features_in_ = 1
 
     def _prepare_X(self, X):
-        np = import_optional_dependency("numpy")
         X = np.asarray(X)
         if X.ndim == 1:
             X = X.reshape(-1, 1)
