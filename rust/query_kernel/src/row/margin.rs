@@ -87,7 +87,11 @@ pub fn eval_keys(
     decreases n,
 {
     if n == 0 {
-        Ok(Vec::new())
+        let keys = Vec::new();
+        proof {
+            assert(rows_view(keys@) == Seq::empty());
+        }
+        Ok(keys)
     } else {
         let mut prior = match eval_keys(rows, by, n - 1) {
             Ok(value) => value,
@@ -98,8 +102,16 @@ pub fn eval_keys(
             Err(_) => return Err(()),
         };
         let ghost old_keys = prior@;
-        proof { lemma_rows_view_push(old_keys, key); }
+        let ghost old_key = key@;
+        proof {
+            lemma_rows_view_push(old_keys, key);
+            assert(keys_spec(rows@, by@, n as nat)
+                == Ok(rows_view(old_keys).push(old_key)));
+        }
         prior.push(key);
+        proof {
+            assert(rows_view(prior@) == rows_view(old_keys).push(old_key));
+        }
         Ok(prior)
     }
 }
