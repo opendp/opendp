@@ -1314,7 +1314,7 @@ fn inspect_function(
         | FunctionExpr::ArgWhere
         | FunctionExpr::RollingExpr { .. }
         | FunctionExpr::RollingExprBy { .. }
-        | FunctionExpr::Mode
+        | FunctionExpr::Mode { .. }
         | FunctionExpr::ArgMin
         | FunctionExpr::ArgMax
         | FunctionExpr::ArgSort { .. }
