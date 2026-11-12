@@ -140,6 +140,29 @@ mod tests {
     }
 
     #[test]
+    fn comparisons_match_polars_with_nulls() -> Fallible<()> {
+        let input = df!(
+            "x" => [Some(-1i64), Some(2), None, Some(5)],
+            "lower" => [Some(0i64), Some(2), Some(1), None],
+            "upper" => [Some(10i64), Some(4), None, Some(9)],
+            "flag" => [Some(true), Some(false), None, Some(true)],
+        )?;
+        let query = input.clone().lazy().select([
+            col("x").lt_eq(col("lower")).alias("le"),
+            col("x").gt_eq(lit(2i64)).alias("ge"),
+            col("flag").neq(lit(true)).alias("ne"),
+        ]);
+        check_polars_semantics(input.clone(), query, true)?;
+        let query = input.clone().lazy()
+            .filter(col("x").gt_eq(col("lower")))
+            .select([
+                col("x").neq(col("upper")).alias("different"),
+                col("lower").lt_eq(col("upper")).alias("ordered"),
+            ]);
+        check_polars_semantics(input, query, true)
+    }
+
+    #[test]
     fn native_map_uses_verified_global_bound() -> Fallible<()> {
         use crate::metrics::Bound;
 

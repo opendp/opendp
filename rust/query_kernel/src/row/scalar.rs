@@ -10,9 +10,10 @@ pub fn binary_field(
     match (left, right) {
         (Some(l), Some(r)) => {
             let valid = match (op, l.dtype, r.dtype) {
-                (VBinaryOp::Lt | VBinaryOp::Gt, VDType::Int64, VDType::Int64) => true,
-                (VBinaryOp::Eq, VDType::Int64, VDType::Int64)
-                    | (VBinaryOp::Eq, VDType::Boolean, VDType::Boolean) => true,
+                (VBinaryOp::Lt | VBinaryOp::LtEq | VBinaryOp::Gt | VBinaryOp::GtEq,
+                    VDType::Int64, VDType::Int64) => true,
+                (VBinaryOp::Eq | VBinaryOp::NotEq, VDType::Int64, VDType::Int64)
+                    | (VBinaryOp::Eq | VBinaryOp::NotEq, VDType::Boolean, VDType::Boolean) => true,
                 (VBinaryOp::And, VDType::Boolean, VDType::Boolean) => true,
                 _ => false,
             };
@@ -64,9 +65,21 @@ pub fn eval_binary(
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },
+        VBinaryOp::LtEq => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a <= b))),
+            (None, _) | (_, None) => Ok(None),
+            _ => Err(()),
+        },
         VBinaryOp::Gt => match (lhs, rhs) {
             (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
                 Ok(Some(VValue::Bool(a > b))),
+            (None, _) | (_, None) => Ok(None),
+            _ => Err(()),
+        },
+        VBinaryOp::GtEq => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a >= b))),
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },
@@ -75,6 +88,14 @@ pub fn eval_binary(
                 Ok(Some(VValue::Bool(a == b))),
             (Some(VValue::Bool(a)), Some(VValue::Bool(b))) =>
                 Ok(Some(VValue::Bool(a == b))),
+            (None, _) | (_, None) => Ok(None),
+            _ => Err(()),
+        },
+        VBinaryOp::NotEq => match (lhs, rhs) {
+            (Some(VValue::Int(a)), Some(VValue::Int(b))) =>
+                Ok(Some(VValue::Bool(a != b))),
+            (Some(VValue::Bool(a)), Some(VValue::Bool(b))) =>
+                Ok(Some(VValue::Bool(a != b))),
             (None, _) | (_, None) => Ok(None),
             _ => Err(()),
         },

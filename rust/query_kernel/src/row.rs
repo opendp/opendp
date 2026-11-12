@@ -37,7 +37,7 @@ pub open spec fn table_valid(table: &VTable) -> bool {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum VBinaryOp { Lt, Gt, Eq, And }
+pub enum VBinaryOp { Lt, LtEq, Gt, GtEq, Eq, NotEq, And }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum VExpr {

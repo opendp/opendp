@@ -35,8 +35,11 @@ fn normalize_expr(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<verified::V
         Expr::BinaryExpr { left, op, right } => {
             let op = match op {
                 Operator::Lt => verified::VBinaryOp::Lt,
+                Operator::LtEq => verified::VBinaryOp::LtEq,
                 Operator::Gt => verified::VBinaryOp::Gt,
+                Operator::GtEq => verified::VBinaryOp::GtEq,
                 Operator::Eq => verified::VBinaryOp::Eq,
+                Operator::NotEq => verified::VBinaryOp::NotEq,
                 Operator::And | Operator::LogicalAnd => verified::VBinaryOp::And,
                 _ => return fallible!(MakeTransformation,
                     "unsupported verified binary operation: {:?}", op),

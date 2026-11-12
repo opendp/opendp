@@ -26,8 +26,11 @@ fn render_expr(expr: &verified::VExpr, columns: &[PlSmallStr]) -> Fallible<Expr>
             let rhs = render_expr(right, columns)?;
             match op {
                 verified::VBinaryOp::Lt => lhs.lt(rhs),
+                verified::VBinaryOp::LtEq => lhs.lt_eq(rhs),
                 verified::VBinaryOp::Gt => lhs.gt(rhs),
+                verified::VBinaryOp::GtEq => lhs.gt_eq(rhs),
                 verified::VBinaryOp::Eq => lhs.eq(rhs),
+                verified::VBinaryOp::NotEq => lhs.neq(rhs),
                 verified::VBinaryOp::And => lhs.and(rhs),
             }
         },
