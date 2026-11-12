@@ -18,7 +18,7 @@ use crate::{
         LazyFrameDomain, SeriesDomain,
     },
     error::*,
-    metrics::{Bounds, FrameDistance, SymmetricDistance},
+    metrics::{Bound, Bounds, FrameDistance, SymmetricDistance},
     transformations::make_stable_vplan::make_stable_vplan,
 };
 
@@ -51,7 +51,9 @@ pub(crate) fn make_verified_stable_lazyframe(
     let output_domain = LazyFrameDomain::new(verified_columns)?;
     let source_columns = input_domain.series_domains.iter()
         .map(|column| column.name.clone()).collect::<Vec<_>>();
-    // Conservatively discard grouped distance bounds.
+    // Only global distances cross the Polars/VExpr boundary. Delegate
+    // their propagation to the verified transformation rather than
+    // maintaining a second stability map in this adapter.
     Transformation::new(
         input_domain,
         input_metric.clone(),
@@ -64,8 +66,20 @@ pub(crate) fn make_verified_stable_lazyframe(
             Ok(LazyFrame::from(output)
                 .with_optimizations(input.get_current_optimizations()))
         }),
-        StabilityMap::new(|bounds: &Bounds| {
-            Bounds(vec![bounds.get_bound(&HashSet::new())])
+        StabilityMap::new_fallible(move |bounds: &Bounds| {
+            let global = bounds.get_bound(&HashSet::new());
+            let verified_input = Bounds::<verified::VExpr>(vec![Bound {
+                by: HashSet::new(),
+                per_group: global.per_group,
+                num_groups: global.num_groups,
+            }]);
+            let output = certified.map(&verified_input)?
+                .get_bound(&HashSet::new());
+            Ok(Bounds(vec![Bound {
+                by: HashSet::new(),
+                per_group: output.per_group,
+                num_groups: output.num_groups,
+            }]))
         }),
     )
 }
@@ -121,6 +135,26 @@ mod tests {
             trans.map(&Bounds::from(2))?.get_bound(&HashSet::new()).per_group,
             Some(2),
         );
+        Ok(())
+    }
+
+    #[test]
+    fn native_map_uses_verified_global_bound() -> Fallible<()> {
+        use crate::metrics::Bound;
+
+        let query = df!("x" => [1i64], "lower" => [0i64],
+            "upper" => [2i64], "flag" => [true])?.lazy()
+            .filter(col("flag"))
+            .select([col("x").alias("value")]);
+        let trans = make_verified_stable_lazyframe(
+            domain()?, FrameDistance(SymmetricDistance), query,
+        )?;
+        let bounds = Bounds::from(5)
+            .with_bound(Bound::by([col("x")]).with_per_group(2));
+        let mapped = trans.map(&bounds)?;
+        assert_eq!(mapped.0.len(), 1);
+        assert!(mapped.0[0].by.is_empty());
+        assert_eq!(mapped.get_bound(&HashSet::new()).per_group, Some(5));
         Ok(())
     }
 
