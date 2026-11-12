@@ -279,6 +279,52 @@ mod tests {
     }
 
     #[test]
+    fn verified_margin_counts_match_reference_grouping() {
+        use std::collections::HashMap;
+
+        let values = [
+            vec![Some(VValue::Int(1)), Some(VValue::Bool(true))],
+            vec![Some(VValue::Int(1)), Some(VValue::Bool(true))],
+            vec![Some(VValue::Int(2)), Some(VValue::Bool(false))],
+            vec![None, None],
+        ];
+        let groupings = [
+            vec![],
+            vec![VExpr::Column(0)],
+            vec![VExpr::Column(1)],
+            vec![VExpr::Column(0), VExpr::Column(1)],
+        ];
+        let limits = [None, Some(0u32), Some(1), Some(2), Some(3)];
+
+        for mask in 0..(1usize << values.len()) {
+            let rows = values.iter().enumerate()
+                .filter(|(index, _)| (mask & (1 << index)) != 0)
+                .map(|(_, row)| row.clone())
+                .collect::<Vec<_>>();
+            for by in &groupings {
+                let mut grouped = HashMap::<Vec<Option<VValue>>, usize>::new();
+                for row in &rows {
+                    let key = verified::project::eval_prefix(by, row, by.len()).unwrap();
+                    *grouped.entry(key).or_default() += 1;
+                }
+                for length in limits {
+                    for groups in limits {
+                        let expected = if by.is_empty() {
+                            groups != Some(0) && length.is_none_or(|max| rows.len() <= max as usize)
+                        } else {
+                            groups.is_none_or(|max| grouped.len() <= max as usize)
+                                && length.is_none_or(|max| grouped.values()
+                                    .all(|count| *count <= max as usize))
+                        };
+                        let actual = verified::margin::check_margin(&rows, by, length, groups).unwrap();
+                        assert_eq!(actual, expected, "mask={mask}, by={by:?}, length={length:?}, groups={groups:?}");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn verified_grouping_checks_keys_and_empty_groups() -> Fallible<()> {
         let domain = FrameDomain::<VTable>::new(vec![
             ColumnDomain::new("x", OptionDomain::new(AtomDomain::<i64>::default())),
