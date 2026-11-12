@@ -205,10 +205,10 @@ pub proof fn lemma_insert_bound<T>(
     broadcast use vstd::multiset::group_multiset_axioms;
     assert forall|v: T|
         left.insert(value).sub(left).count(v)
-            == Multiset::<T>::singleton(value).count(v) by { }
+            == Multiset::<T>::empty().insert(value).count(v) by { }
     assert forall|v: T|
         left.sub(left.insert(value)).count(v) == 0 by { }
-    assert(left.insert(value).sub(left) =~= Multiset::<T>::singleton(value));
+    assert(left.insert(value).sub(left) =~= Multiset::<T>::empty().insert(value));
     assert(left.sub(left.insert(value)) =~= Multiset::<T>::empty());
     assert(distance(left.insert(value), left) == 1);
     lemma_triangle(left.insert(value), left, right);
