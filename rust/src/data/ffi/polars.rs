@@ -6,13 +6,14 @@ use polars::lazy::frame::LazyFrame;
 use crate::{
     core::{FfiResult, FfiSlice},
     ffi::any::{AnyObject, AnyQueryable, Downcast},
+    ffi::util::{self, c_bool},
     polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
 };
 
 #[bootstrap(
     name = "validate_polars_plan",
     arguments(serialized_plan(rust_type = "Vec<u8>", hint = "Sequence[int]")),
-    returns(c_type = "FfiResult<bool>")
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Reject unsafe serialized Polars plans before invoking Polars' deserializer.
 ///
@@ -21,7 +22,7 @@ use crate::{
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__validate_polars_plan(
     serialized_plan: *const FfiSlice,
-) -> FfiResult<bool> {
+) -> FfiResult<*mut c_bool> {
     let serialized_plan = try_as_ref!(serialized_plan);
     if serialized_plan.ptr.is_null() || serialized_plan.len > isize::MAX as usize {
         return err!(FFI, "Invalid serialized Polars plan buffer").into();
@@ -35,7 +36,7 @@ pub extern "C" fn opendp_data__validate_polars_plan(
         )
     };
     try_!(preflight::validate_serialized_dslplan(bytes));
-    FfiResult::Ok(true)
+    FfiResult::Ok(util::into_raw(util::from_bool(true)))
 }
 
 #[bootstrap(
