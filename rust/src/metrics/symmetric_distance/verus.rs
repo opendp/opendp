@@ -153,4 +153,80 @@ pub proof fn lemma_filter_contraction<T>(
     lemma_subset_length(kept_right_only, right_only);
 }
 
+
+/** Adding the same row on both sides leaves symmetric distance unchanged. */
+pub proof fn lemma_insert_common<T>(
+    left: Multiset<T>, right: Multiset<T>, value: T,
+)
+    ensures distance(left.insert(value), right.insert(value)) == distance(left, right),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T|
+        left.insert(value).sub(right.insert(value)).count(v)
+            == left.sub(right).count(v) by { }
+    assert forall|v: T|
+        right.insert(value).sub(left.insert(value)).count(v)
+            == right.sub(left).count(v) by { }
+    assert(left.insert(value).sub(right.insert(value)) =~= left.sub(right));
+    assert(right.insert(value).sub(left.insert(value)) =~= right.sub(left));
+}
+
+/// If the other dataset has no copy of a row, inserting one increases
+/// the symmetric distance by exactly one.
+pub proof fn lemma_insert_fresh<T>(
+    left: Multiset<T>, right: Multiset<T>, value: T,
+)
+    requires right.count(value) == 0,
+    ensures distance(left.insert(value), right) == distance(left, right) + 1,
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T|
+        left.insert(value).sub(right).count(v)
+            == left.sub(right).insert(value).count(v) by {
+        if v == value { assert(right.count(v) == 0); }
+    }
+    assert forall|v: T|
+        right.sub(left.insert(value)).count(v)
+            == right.sub(left).count(v) by {
+        if v == value { assert(right.count(v) == 0); }
+    }
+    assert(left.insert(value).sub(right) =~= left.sub(right).insert(value));
+    assert(right.sub(left.insert(value)) =~= right.sub(left));
+    assert(left.sub(right).insert(value).len() == left.sub(right).len() + 1);
+}
+
+/// Adding one row to only one dataset changes its symmetric distance
+/// from the other dataset by at most one.
+pub proof fn lemma_insert_bound<T>(
+    left: Multiset<T>, right: Multiset<T>, value: T,
+)
+    ensures distance(left.insert(value), right) <= distance(left, right) + 1,
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T|
+        left.insert(value).sub(left).count(v)
+            == Multiset::<T>::singleton(value).count(v) by { }
+    assert forall|v: T|
+        left.sub(left.insert(value)).count(v) == 0 by { }
+    assert(left.insert(value).sub(left) =~= Multiset::<T>::singleton(value));
+    assert(left.sub(left.insert(value)) =~= Multiset::<T>::empty());
+    assert(distance(left.insert(value), left) == 1);
+    lemma_triangle(left.insert(value), left, right);
+}
+
+/// The distance from the empty dataset is its total multiplicity.
+pub proof fn lemma_empty_distance<T>(rows: Multiset<T>)
+    ensures
+        distance(Multiset::<T>::empty(), rows) == rows.len(),
+        distance(rows, Multiset::<T>::empty()) == rows.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    assert forall|v: T|
+        rows.sub(Multiset::<T>::empty()).count(v) == rows.count(v) by { }
+    assert forall|v: T|
+        Multiset::<T>::empty().sub(rows).count(v) == 0 by { }
+    assert(rows.sub(Multiset::<T>::empty()) =~= rows);
+    assert(Multiset::<T>::empty().sub(rows) =~= Multiset::<T>::empty());
+}
+
 } // verus!
