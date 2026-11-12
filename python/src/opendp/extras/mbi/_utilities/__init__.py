@@ -13,7 +13,7 @@ from typing import (
     TYPE_CHECKING,
 )
 from functools import reduce
-from math import inf, nextafter, sqrt
+from math import inf, isfinite, nextafter, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -69,8 +69,8 @@ class Count:
 
     def __post_init__(self):
         self.by = tuple(self.by)
-        if self.weight < 0:
-            raise ValueError(f"weight ({self.weight}) must be non-negative")
+        if not isfinite(self.weight) or self.weight <= 0:
+            raise ValueError(f"weight ({self.weight}) must be finite and positive")
 
 
 def mirror_descent(
