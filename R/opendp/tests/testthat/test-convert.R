@@ -23,6 +23,18 @@ test_that("Rust error text survives releasing its FFI allocation", {
   gc()
 })
 
+test_that("owned string and boolean results are copied before release", {
+  domain <- atom_domain(.T = i32)
+  ident <- make_identity(domain, discrete_distance())
+  for (i in 1:20) {
+    expect_match(toString(domain), "AtomDomain")
+    expect_true(ident(d_in = 1L, d_out = 1L))
+    expect_false(ident(d_in = 1L, d_out = 0L))
+    expect_equal(ident(arg = 42L), 42L)
+  }
+  gc()
+})
+
 test_that("tuple gc", {
   input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), symmetric_distance())
 

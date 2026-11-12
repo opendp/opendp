@@ -1034,7 +1034,9 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 /// * `this` - A pointer to the string to free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
-    util::into_owned(this).map(|_| ()).into()
+    // Strings cross FFI via CString::into_raw, not Box<c_char>::into_raw.
+    // Reconstruct the CString so its full allocation is released.
+    util::into_string(this).map(|_| ()).into()
 }
 
 #[bootstrap(
@@ -1426,6 +1428,17 @@ mod tests {
     use crate::ffi::util::ToCharP;
 
     use super::*;
+
+    #[test]
+    fn test_str_free() -> Fallible<()> {
+        for value in ["", "a", "a longer UTF-8 string: λ"] {
+            let raw = util::into_c_char_p(value.to_owned())?;
+            let _: () = Fallible::from(opendp_data__str_free(raw))?;
+        }
+        let result: Fallible<()> = opendp_data__str_free(std::ptr::null_mut()).into();
+        assert!(result.is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_slice_as_object_number() -> Fallible<()> {
