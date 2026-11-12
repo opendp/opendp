@@ -32,6 +32,20 @@ test_that("scratch slice owners release repeated string and map conversions", {
   gc()
 })
 
+test_that("empty vectors supply a valid Rust slice pointer", {
+  for (case in list(
+    list(type = String, value = character()),
+    list(type = i32, value = integer()),
+    list(type = f64, value = double()),
+    list(type = bool, value = logical())
+  )) {
+    ident <- vector_space_of(case$type) |> then_identity()
+    for (i in 1:10) {
+      expect_identical(ident(arg = case$value), case$value)
+    }
+  }
+})
+
 test_that("scalar data loaders", {
   expect_equal((scalar_space_of(f64) |> then_identity())(arg = 1), 1)
   expect_equal((scalar_space_of(i32) |> then_identity())(arg = 1L), 1L)
