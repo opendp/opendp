@@ -1,12 +1,16 @@
 import pytest
 import opendp.prelude as dp
+from opendp.mod import OpenDPException, _call_rust_search
 
 
 def test_binary_search_fail():
     with pytest.raises(ZeroDivisionError) as e:
         dp.binary_search(lambda _: bool(1 / 0), T=float)
-    if hasattr(e.value, "add_note"):
-        assert e.value.__notes__[0] == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0." # type: ignore[attr-defined]
+    assert (
+        e.value.__notes__[0]
+        == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
+    )
+
 
 def test_binary_search_overflow():
 
@@ -16,33 +20,37 @@ def test_binary_search_overflow():
     d_in = 1
     d_out = 1.01
     bounded_sum = (
-        dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, 1.0)) >>
-        dp.t.then_sum()
+        dp.t.make_clamp(input_domain, input_metric, bounds=(0.0, 1.0))
+        >> dp.t.then_sum()
     )
     dp.binary_search_param(
-        lambda s: bounded_sum >> dp.m.then_laplace(scale=s),
-        d_in=d_in,
-        d_out=d_out
+        lambda s: bounded_sum >> dp.m.then_laplace(scale=s), d_in=d_in, d_out=d_out
     )
 
+
 def test_stuck():
-    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance()
+    input_space = (
+        dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+        dp.symmetric_distance(),
+    )
 
     epsilon = 1.3
     sens = 500_000.0 * 500_000.0
-    bounded_sum = (
-        input_space >>
-        dp.t.then_clamp(bounds=(0.0, sens)) >>
-        dp.t.then_sum()
-    )
+    bounded_sum = input_space >> dp.t.then_clamp(bounds=(0.0, sens)) >> dp.t.then_sum()
     real_v = sens / epsilon
     discovered_scale = dp.binary_search_param(
         lambda s: bounded_sum >> dp.m.then_laplace(scale=s),
         d_in=1,
         bounds=(0.0, real_v * 2.0),
-        d_out=epsilon)
-    assert discovered_scale == 192307694098.69745
-    
+        d_out=epsilon,
+    )
+    # Independently account for both endpoint errors of a depth-20 pairwise sum.
+    n, h, u = 2**20, 20, 2.0**-53
+    relaxation = 2 * n * sens * (h * u) / (1 - h * u)
+    expected_scale = (sens + relaxation) / epsilon
+    assert discovered_scale == pytest.approx(expected_scale, rel=1e-14)
+
+
 def test_binary_search():
     assert dp.binary_search(lambda x: x <= -5, T=int) == -5
     assert dp.binary_search(lambda x: x <= 5, T=int) == 5
@@ -50,49 +58,113 @@ def test_binary_search():
     assert dp.binary_search(lambda x: x >= 5, T=int) == 5
 
 
+@pytest.mark.parametrize("bounds", [(0, None), (None, 10)])
+def test_binary_search_one_sided(bounds):
+    assert dp.binary_search(lambda x: x <= 5, bounds=bounds) == 5
+
+
+@pytest.mark.parametrize("bounds", [(0,), (0, 10, 20)])
+def test_binary_search_rejects_malformed_bounds(bounds):
+    with pytest.raises(ValueError, match="bounds must contain exactly two elements"):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+@pytest.mark.parametrize(
+    ("bounds", "message"),
+    [
+        ((10, None), "decision boundary is below the lower bound"),
+        ((None, 0), "decision boundary is above the upper bound"),
+    ],
+)
+def test_binary_search_one_sided_errors(bounds, message):
+    with pytest.raises(ValueError, match=message):
+        dp.binary_search(lambda x: x <= 5, bounds=bounds)
+
+
+def test_mixed_type_bounds():
+    with pytest.raises(TypeError, match="bounds must share the same type"):
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.0))
+
+
 def test_binary_search_inferred_int():
     def predicate(v):
         if not isinstance(v, int):
             raise TypeError("Expected int")
         return v <= 5
-    
+
     assert dp.binary_search(predicate) == 5
+
 
 def test_binary_search_inferred_int_fail():
     def predicate(v):
         if not isinstance(v, int):
             raise TypeError("Expected int")
         raise ValueError("I always fail for some other reason")
-    
+
     # int is inferred, but the ValueError should pop up
     with pytest.raises(ValueError):
         dp.binary_search(predicate)
 
+
 def test_binary_search_failed_infer():
     def predicate(_):
         raise TypeError("always raised for some other reason")
-    
+
     # type inference should fail, and we get the error from type inference
     with pytest.raises(TypeError):
         dp.binary_search(predicate)
 
-    
+
+def test_binary_search_forwards_rust_type_errors():
+    def search(_):
+        raise OpenDPException("Type", "expected int")
+
+    with pytest.raises(TypeError, match="expected int"):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_binary_search_forwards_rust_search_errors():
+    def search(_):
+        raise OpenDPException("Search", "predicate is constant")
+
+    with pytest.raises(ValueError, match="predicate is constant"):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_binary_search_forwards_untranslated_rust_errors():
+    def search(_):
+        raise OpenDPException("FailedFunction", "callback failed")
+
+    with pytest.raises(OpenDPException, match='FailedFunction\\("callback failed"\\)'):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_exponential_bounds_search():
+    assert dp.exponential_bounds_search(lambda x: x > 0, int) == (0, 1)
+    assert dp.exponential_bounds_search(lambda x: x > 0, float) == (0.0, 0.5)
+
+
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
-            dp.symmetric_distance())
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
+            dp.symmetric_distance(),
+        )
+
     assert dp.binary_search_param(chainer, 2, 100) == pytest.approx(50)
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-20., 20.)), size=n), 
-            dp.symmetric_distance())
-    assert dp.binary_search_param(mean_chainer_n, 2, 1.) == 41
+            dp.vector_domain(dp.atom_domain(bounds=(-20.0, 20.0), nan=False), size=n),
+            dp.symmetric_distance(),
+        )
+
+    assert dp.binary_search_param(mean_chainer_n, 2, 1.0) == 41
 
     def mean_chainer_b(b):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
-            dp.symmetric_distance())
-    assert 499.999 < dp.binary_search_param(mean_chainer_b, 2, 1.) < 500.
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
+            dp.symmetric_distance(),
+        )
 
+    assert 499.999 < dp.binary_search_param(mean_chainer_b, 2, 1.0) < 500.0

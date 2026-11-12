@@ -15,3 +15,21 @@ fn test() -> Fallible<()> {
     assert!(!trans.check(&1, &1)?);
     Ok(())
 }
+
+#[test]
+fn test_ordered_resize_preserves_order() -> Fallible<()> {
+    let trans = make_resize::<_, InsertDeleteDistance, InsertDeleteDistance>(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        InsertDeleteDistance,
+        3,
+        0,
+    )?;
+
+    // Regression: resizing an already-sized ordered vector must not shuffle.
+    for _ in 0..16 {
+        assert_eq!(trans.invoke(&vec![1, 2])?, vec![1, 2, 0]);
+        assert_eq!(trans.invoke(&vec![1, 2, 3])?, vec![1, 2, 3]);
+        assert_eq!(trans.invoke(&vec![1, 2, 3, 4])?, vec![1, 2, 3]);
+    }
+    Ok(())
+}

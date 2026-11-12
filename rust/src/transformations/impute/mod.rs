@@ -17,6 +17,10 @@ use rand::distributions::{Distribution, Uniform, uniform::SampleUniform};
     generics(M(suppress), TA(suppress)),
     derived_types(TA = "$get_atom(get_type(input_domain))")
 )]
+#[deprecated(
+    since = "0.17.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
+)]
 /// Make a Transformation that replaces NaN values in `Vec<TA>` with uniformly distributed floats within `bounds`.
 ///
 /// # Arguments
@@ -47,6 +51,12 @@ where
     if lower >= upper {
         return fallible!(MakeTransformation, "lower must be smaller than upper");
     }
+    if !(upper - lower).is_finite() {
+        return fallible!(
+            MakeTransformation,
+            "the width of the bounds (upper - lower) must be finite"
+        );
+    }
 
     make_row_by_row(
         input_domain,
@@ -55,7 +65,8 @@ where
         move |v| {
             if v.is_null() {
                 let mut rng = GeneratorOpenDP::new();
-                let sample = Uniform::from(lower..upper).sample(&mut rng);
+                // Include the upper bound to avoid rand's slow adjustment for narrow intervals.
+                let sample = Uniform::new_inclusive(lower, upper).sample(&mut rng);
                 rng.error.map(|_| sample).unwrap_or(lower)
             } else {
                 *v
@@ -117,6 +128,7 @@ impl<T: CheckAtom + HasNull> ImputeConstantDomain for AtomDomain<T> {
     )),
     generics(DIA(suppress), M(suppress))
 )]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that replaces null/None data with `constant`.
 ///
 /// If chaining after a `make_cast`, the input type is `Option<Vec<TA>>`.
@@ -196,6 +208,7 @@ impl<T: CheckAtom + HasNull + Clone> DropNullDomain for AtomDomain<T> {
 }
 
 #[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a Transformation that drops null values.
 ///
 ///

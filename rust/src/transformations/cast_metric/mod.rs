@@ -3,11 +3,11 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{Domain, Function, MetricSpace, StabilityMap, Transformation},
     error::Fallible,
-    metrics::IntDistance,
+    metrics::{ChangeOneDistance, IntDistance, SymmetricDistance},
     traits::{IsSizedDomain, samplers::Shuffle},
 };
 
-use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric};
+use self::traits::{BoundedMetric, OrderedMetric, UnorderedMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -133,44 +133,36 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(domain(c_type = "AnyDomain *")),
-    generics(D(suppress), MI(suppress))
+    generics(D(suppress))
 )]
-/// Make a Transformation that converts the unbounded dataset metric `MI`
-/// to the respective bounded dataset metric with a no-op.
+/// Make a Transformation that converts `SymmetricDistance` to
+/// `ChangeOneDistance` with a no-op.
 ///
 /// The constructor enforces that the input domain has known size,
 /// because it must have known size to be valid under a bounded dataset metric.
 ///
-/// | `MI`                 | `MI::BoundedMetric` |
-/// | -------------------- | ------------------- |
-/// | SymmetricDistance    | ChangeOneDistance   |
-/// | InsertDeleteDistance | HammingDistance     |
-///
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// * `size` - Number of records in input data.
 ///
 /// # Generics
 /// * `D` - Domain
-/// * `MI` - Input Metric
-pub fn make_metric_bounded<D, MI>(
+pub fn make_metric_bounded<D>(
     input_domain: D,
-    input_metric: MI,
-) -> Fallible<Transformation<D, MI, D, MI::BoundedMetric>>
+    input_metric: SymmetricDistance,
+) -> Fallible<Transformation<D, SymmetricDistance, D, ChangeOneDistance>>
 where
     D: IsSizedDomain,
     D::Carrier: Clone,
-    MI: UnboundedMetric<Distance = IntDistance>,
-    (D, MI): MetricSpace,
-    (D, MI::BoundedMetric): MetricSpace,
+    (D, SymmetricDistance): MetricSpace,
+    (D, ChangeOneDistance): MetricSpace,
 {
     input_domain.get_size()?;
     Transformation::new(
         input_domain.clone(),
         input_metric.clone(),
         input_domain,
-        input_metric.to_bounded(),
+        ChangeOneDistance,
         Function::new(|arg: &D::Carrier| arg.clone()),
         StabilityMap::new(|d_in| d_in / 2),
     )

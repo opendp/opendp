@@ -1,18 +1,24 @@
-# To add dev dependencies, make changes here and then
-# regenerate requirements-dev.txt by running
+# To add dev dependencies, make changes here and then run uv to update
+# requirements-dev.txt with Python 3.11 + compatibility:
 #
-#   pip-compile requirements-dev.in
+#   uv pip compile requirements-dev.in --universal --python-version 3.11 -o requirements-dev.txt
 #
-# and then commit this file and requirements-dev.txt.
+# This produces a single requirements-dev.txt with support for 3.11 +.
+# Numpy versions differ between python 3.11 and 3.12 and later after the numpy 2.5.0 release.
+#
+# Only regenerating needs uv; CI and contributors install with plain pip
+# ("pip install -r requirements-dev.txt"), which evaluates the markers.
+# #
 
-flake8
+pre-commit
+ruff
 pytest
 wheel
 coverage
 mypy
-pip-tools==7.3.0
 types-Deprecated
 blacken-docs
 
 # Just needed for examples in documentation:
 pandas
+ibis-framework[sqlite]

@@ -42,10 +42,7 @@ We'll use this new ``privacy_unit`` to create a context as we have previously:
             >>> dp.enable_features("contrib")
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=privacy_unit,
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
             ...     split_evenly_over=4,
@@ -92,7 +89,7 @@ contributions to ten.
 
 The ``.truncate_per_group(10)`` is equivalent to ``.filter(pl.int_range(pl.len()).over("PIDENT") < 10)``
 and returns the same scale parameters,
-but `truncate_per_group` is easier to read and write.
+but ``truncate_per_group`` is easier to read and write.
 
 Previous examples with this dataset assumed the worst-case of 36
 contributed records per individual (one contribution per quarter for
@@ -132,7 +129,7 @@ number of records per quarter.
             ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") < 10)
             ...     .group_by(quarterly)
             ...     .agg(
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )

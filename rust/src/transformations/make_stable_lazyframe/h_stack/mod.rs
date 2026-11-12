@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::FrameDistance;
+use crate::metrics::{Bounds, FrameDistance};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
-use super::StableDslPlan;
+use super::{StableDslPlan, is_identity, retain_bounds, retain_margins};
 
 #[cfg(test)]
 mod test;
@@ -51,7 +51,8 @@ where
         context: Context::RowByRow,
     };
     let t_exprs = exprs
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -89,14 +90,15 @@ where
                 });
         });
 
-    // only keep margins for series that have not changed
-    let new_series_names = new_series
-        .map(|series_domain| col(series_domain.name.clone()))
-        .collect();
-    let margins = (middle_domain.margins.iter())
-        .filter(|m| m.by.is_disjoint(&new_series_names))
-        .cloned()
-        .collect();
+    let changed_columns = exprs
+        .iter()
+        .zip(t_exprs.iter())
+        .filter(|(expr, t)| !is_identity(expr, &t.output_domain.column.name))
+        .map(|(_, t)| t.output_domain.column.name.clone())
+        .collect::<HashSet<_>>();
+
+    // Column changes invalidate grouping information in both domains and distances.
+    let margins = retain_margins(&middle_domain.margins, &changed_columns);
 
     // instead of using the public APIs that check invariants, directly populate the struct entries
     let output_domain = DslPlanDomain::new_with_margins(series_domains, margins)?;
@@ -116,7 +118,7 @@ where
                 options,
             })
         }),
-        StabilityMap::new(Clone::clone),
+        StabilityMap::new(move |bounds: &Bounds| retain_bounds(bounds, &changed_columns)),
     )?;
 
     t_prior >> t_with_columns

@@ -40,6 +40,13 @@ impl AnyObject {
         }
     }
 
+    pub fn new_type<T: 'static>(value: T, type_: Type) -> Self {
+        AnyObject {
+            type_,
+            value: Box::new(value),
+        }
+    }
+
     pub fn new_raw<T: 'static>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }
@@ -511,17 +518,20 @@ impl Debug for AnyMetric {
 #[repr(C)]
 #[derive(Clone)]
 pub struct CallbackFn {
-    pub(crate) callback: extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>,
-    pub(crate) lifeline: ExtrinsicObject,
+    pub(crate) callback:
+        extern "C" fn(*const AnyObject, *const std::ffi::c_void) -> *mut FfiResult<*mut AnyObject>,
+    pub(crate) userdata: ExtrinsicObject,
 }
 
 // wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
 pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
     move |arg: &AnyObject| -> Fallible<AnyObject> {
-        // extends the lifetime of func.callback to the lifetime of this closure
-        let _ = &func.lifeline;
+        // Keep `userdata` borrowed for the duration of the FFI call.
+        // The callback only receives the raw pointer, so this makes the
+        // lifetime dependency explicit.
+        let _ = &func.userdata;
 
-        into_owned((func.callback)(arg as *const AnyObject))?.into()
+        into_owned((func.callback)(arg as *const AnyObject, func.userdata.0))?.into()
     }
 }
 
@@ -726,7 +736,7 @@ pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
 #[cfg(test)]
 mod tests {
 
-    use crate::domains::AtomDomain;
+    use crate::domains::{AtomDomain, VectorDomain};
     use crate::error::*;
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
@@ -802,11 +812,11 @@ mod tests {
         use crate::metrics::AbsoluteDistance;
         use crate::{measurements, transformations};
 
-        #[allow(deprecated)]
-        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
-            .into_any();
-        #[allow(deprecated)]
-        let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t1 = transformations::make_identity(
+            VectorDomain::new(AtomDomain::<String>::default()),
+            SymmetricDistance,
+        )?
+        .into_any();
         let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
         let t4 = transformations::then_impute_constant::<AtomDomain<f64>, SymmetricDistance>(0.0)
             .into_any();
@@ -819,8 +829,8 @@ mod tests {
             None,
         )?
         .into_any();
-        let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> t6 >> m1)?;
-        let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
+        let chain = (t1 >> t3 >> t4 >> t5 >> t6 >> m1)?;
+        let arg = AnyObject::new(vec!["1.0".to_owned(), "2.0".to_owned(), "3.0".to_owned()]);
         let res = chain.invoke(&arg)?;
         let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);

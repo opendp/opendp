@@ -38,13 +38,13 @@ None
 \begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, expr, M)}}{\texttt{make\_expr\_strptime}}
 \end{theorem}
-Starting from line \ref{match-strategy}, 
+Starting from line \ref{match-strategy},
 \texttt{expr} is matched as if it were a strptime expression, or otherwise rejects the expression.
 
-All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified, 
+All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified,
 therefore by the postcondition \texttt{t\_prior} is a valid transformation.
 
-To prove that the output is a valid transformation, 
+To prove that the output is a valid transformation,
 we must first prove that the transformation on line \ref{strp-trans} is a valid transformation.
 
 \begin{proof}
@@ -52,7 +52,7 @@ we must first prove that the transformation on line \ref{strp-trans} is a valid 
     Line \ref{string-check} ensures that the input data is always a string type and
     line \ref{to-type-check} ensures that the output data is always a temporal type,
     which are necessary preconditions for the strptime function in Polars.
-    However, even if these checks were ignored when they would fail, 
+    However, even if these checks were ignored when they would fail,
     then all possible choices of input dataset would fail,
     resulting in data-independent errors.
 
@@ -69,13 +69,13 @@ we must first prove that the transformation on line \ref{strp-trans} is a valid 
     Line \ref{out-series} constructs a series domain whose elements are of type \texttt{to\_type} or null.
     Each string in the input data may either parse into \texttt{to\_type} or fail and by \ref{non-strict} and \ref{ambiguous} evaluate to null.
 
-    Therefore the output domain is the same as the input domain, 
+    Therefore the output domain is the same as the input domain,
     but where the active column domain's data type is nullable values of type \texttt{to\_type}.
 \end{proof}
 
 \begin{proof}
     \textbf{Stability Guarantee}
-    strptime can be considered a 1-stable row-by-row transformation, 
+    strptime can be considered a 1-stable row-by-row transformation,
     as the date parsing is applied independently to each and every row.
     See \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row} for a proof of the stability of row-by-row functions.
 \end{proof}

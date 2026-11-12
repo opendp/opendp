@@ -15,43 +15,78 @@ The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
-from dataclasses import asdict, dataclass, field, replace
+
 import os
-from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
+
+from dataclasses import asdict, dataclass, field, replace
+from deprecated import deprecated
+from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
+from warnings import warn
+
 from opendp._lib import lib_path, import_optional_dependency
-from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
-from opendp.mod import (
-    ChangeOneIdDistance,
-    Domain,
-    Measurement,
-    FrameDistance,
-    Metric,
-    OpenDPException,
-    SymmetricIdDistance,
-    binary_search,
-    binary_search_chain,
-)
 from opendp.domains import (
-    series_domain,
-    lazyframe_domain,
-    option_domain,
+    array_domain,
     atom_domain,
     categorical_domain,
     datetime_domain,
     enum_domain,
-    array_domain,
+    lazyframe_domain,
+    option_domain,
+    series_domain,
 )
+from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
 from opendp.measurements import make_private_lazyframe
-from deprecated import deprecated
+from opendp.mod import (
+    binary_search,
+    ChangeOneIdDistance,
+    Domain,
+    FrameDistance,
+    Measurement,
+    Metric,
+    OpenDPException,
+    SymmetricIdDistance,
+)
 from opendp.transformations import make_stable_lazyframe
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.context import Query
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
+# Exposed as global for testing.
+_KEY_SIZE_THRESHOLD_MB = 2**10
+
+
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
+
+
+def _resolve_signed(signed: bool | None) -> bool:
+    if signed is None:
+        warn(
+            "The default value is now signed=True, and counts may be negative. "
+            "In future releases this warning will be dropped.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        return True
+    if not isinstance(signed, bool):
+        raise TypeError("signed must be a bool or None")
+    return signed
+
+
+def _size_warning(keys):
+    mb_factor = 1024**2  # bytes per MB
+
+    est_size: float = len(keys.serialize()) / mb_factor
+
+    if est_size > _KEY_SIZE_THRESHOLD_MB:
+        warn(
+            f"Large key-set (~{est_size:.2f}MB > {_KEY_SIZE_THRESHOLD_MB}MB) "
+            "loaded into memory. Consider writing it to disk for the plan to "
+            "read it in via scan_parquet.",
+            stacklevel=3,
+        )
+
 
 class DPExpr(object):
     """
@@ -62,7 +97,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.
+    and are documented in the :ref:`User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -98,13 +133,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(dp.len())
+        >>> query = context.query().select(dp.len(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
         │ len │
         │ --- │
-        │ u32 │
+        │ i64 │
         ╞═════╡
         │ ... │
         └─────┘
@@ -118,7 +153,10 @@ class DPExpr(object):
             is_elementwise=True,
         )
 
-    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.")
+    @deprecated(
+        version="0.14.1",
+        reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.",
+    )
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
@@ -128,7 +166,10 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.")
+    @deprecated(
+        version="0.14.1",
+        reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.",
+    )
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
@@ -138,12 +179,20 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    def len(self, scale: float | None = None):
+    def len(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+        so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
+
         :param scale: parameter for the noise distribution.
+        :param signed: if True, the output type is Int64 and negative noisy results are preserved.
 
         :example:
 
@@ -156,39 +205,48 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.len())
+        >>> query = context.query().select(pl.col("visits").dp.len(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
 
         Output is noise added to three.
 
-        It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,
+        It can differ from frame length (``.select(dp.len(signed=True))``) if the expression uses transformations that change the number of rows,
         like filtering.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
+        signed = _resolve_signed(signed)
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
-            args=(self.expr, scale),
+            args=(self.expr, scale, signed),
             returns_scalar=True,
         )
 
-    def count(self, scale: float | None = None):
+    def count(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, not including null values.
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+        so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
+
         :param scale: parameter for the noise distribution.
+        :param signed: if True, the output type is Int64 and negative noisy results are preserved.
 
         :example:
 
@@ -201,36 +259,44 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.count())
+        >>> query = context.query().select(pl.col("visits").dp.count(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
 
-        Output is noise added to three.
+        Output is noise added to two.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_count",
-            args=(self.expr, scale),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def null_count(self, scale: float | None = None):
+    def null_count(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of null elements in `self`.
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+        so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
+
         :param scale: parameter for the noise distribution.
+        :param signed: if True, the output type is Int64 and negative noisy results are preserved.
 
         :example:
 
@@ -243,13 +309,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.null_count())
+        >>> query = context.query().select(pl.col("visits").dp.null_count(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -258,25 +324,33 @@ class DPExpr(object):
 
         Note that if you want to count the number of null *and* non-null records,
         consider combining the queries by constructing a boolean nullity column to group on,
-        grouping by this column, and then using ``dp.len()``.
+        grouping by this column, and then using ``dp.len(signed=True)``.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_null_count",
-            args=(self.expr, scale),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
-    def n_unique(self, scale: float | None = None):
+    def n_unique(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of unique elements in `self`.
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+        When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+        so negative noisy outputs are preserved.
+
+        Omitting signed (or passing None) currently uses False and emits a warning.
+        The default will change to True in a future release; pass True or False
+        explicitly to opt in or retain unsigned output without a warning.
+
         :param scale: parameter for the noise distribution.
+        :param signed: if True, the output type is Int64 and negative noisy results are preserved.
 
         :example:
 
@@ -289,13 +363,13 @@ class DPExpr(object):
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
         ... )
-        >>> query = context.query().select(pl.col("visits").dp.n_unique())
+        >>> query = context.query().select(pl.col("visits").dp.n_unique(signed=True))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
         │ visits │
         │ ---    │
-        │ u32    │
+        │ i64    │
         ╞════════╡
         │ ...    │
         └────────┘
@@ -307,7 +381,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_n_unique",
-            args=(self.expr, scale),
+            args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
         )
 
@@ -400,8 +474,10 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         if isinstance(scale, tuple):  # pragma: no cover
-            raise ValueError("OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
-                             "Individually estimate sum and len to tune budget distribution.")
+            raise ValueError(
+                "OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
+                "Individually estimate sum and len to tune budget distribution."
+            )
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -410,7 +486,6 @@ class DPExpr(object):
             returns_scalar=True,
             changes_length=True,
         )
-
 
     def quantile(
         self, alpha: float, candidates: list[float], scale: float | None = None
@@ -449,7 +524,7 @@ class DPExpr(object):
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import lit, Series # type: ignore[import-not-found]
+        from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
@@ -510,12 +585,20 @@ if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
 
-def dp_len(scale: float | None = None):
+def dp_len(scale: float | None = None, signed: bool | None = None):
     """Compute a differentially private estimate of the number of rows.
 
     If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
+    When signed=True, the exact UInt32 count is cast to Int64 before noise is added,
+    so negative noisy outputs are preserved.
+
+    Omitting signed (or passing None) currently uses False and emits a warning.
+    The default will change to True in a future release; pass True or False
+    explicitly to opt in or retain unsigned output without a warning.
+
     :param scale: parameter for the noise distribution.
+    :param signed: if True, the output type is Int64 and negative noisy results are preserved.
 
     :example:
 
@@ -528,13 +611,13 @@ def dp_len(scale: float | None = None):
     ...     privacy_loss=dp.loss_of(epsilon=1.),
     ...     split_evenly_over=1,
     ... )
-    >>> query = context.query().select(dp.len())
+    >>> query = context.query().select(dp.len(signed=True))
     >>> query.release().collect()
     shape: (1, 1)
     ┌─────┐
     │ len │
     │ --- │
-    │ u32 │
+    │ i64 │
     ╞═════╡
     │ ... │
     └─────┘
@@ -544,7 +627,7 @@ def dp_len(scale: float | None = None):
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
-        args=(scale,),
+        args=(scale, _resolve_signed(signed)),
         returns_scalar=True,
     )
 
@@ -673,9 +756,32 @@ class SortBy:
 
 class LazyFrameQuery:
     """
-    A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
-    It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
-    but makes a few additions and changes as documented below."""
+    A ``LazyFrameQuery`` is returned by :py:func:`~opendp.context.Context.query`.
+    It wraps a
+    `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
+    and supports the same methods, unless they have been overridden.
+
+    :example:
+
+        .. code:: pycon
+
+            >>> import polars as pl
+            >>> data = pl.LazyFrame([pl.Series("active", [0, 1] * 50, dtype=pl.Int32)])
+
+            >>> context = dp.Context.compositor(
+            ...     data=data,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
+            ... )
+
+            >>> lf_query = context.query()
+            >>> dict(lf_query.collect_schema())
+            {'active': Int32}
+
+    Added and modified methods are listed below.
+    """
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
@@ -779,7 +885,8 @@ class LazyFrameQuery:
         """
         Start a group-by operation.
 
-        OpenDP currently requires that grouping keys be simple column expressions.
+        OpenDP requires grouping keys to be stable row-by-row expressions.
+        Floating-point keys must be cast to a non-floating-point type.
         """
         ...
 
@@ -846,6 +953,7 @@ class LazyFrameQuery:
         #   This gives an easier shorthand to write a left join.
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
+        _size_warning(keys)
 
         if pl is not None:
             if isinstance(keys, pl.dataframe.frame.DataFrame):
@@ -971,7 +1079,10 @@ class LazyFrameQuery:
             # search for a scale parameter. Solve for epsilon first,
             # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
             scale = binary_search(
-                lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                lambda s: (
+                    s > 0 and _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]
+                ),  # type: ignore[index]
+                bounds=(0.0, None),
                 T=float,
             )
 
@@ -992,7 +1103,13 @@ class LazyFrameQuery:
 
         # when no delta parameter is involved,
         # finding a suitable measurement just comes down to finding scale
-        return binary_search_chain(_make, d_in, d_out, T=float)
+        # A zero scale can make the privacy map fail instead of returning infinity.
+        scale = binary_search(
+            lambda s: s > 0 and _make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        return _make(scale)
 
     def release(self) -> OnceFrame:
         """Release the query. The query must be part of a context."""
@@ -1027,7 +1144,7 @@ class LazyFrameQuery:
             ... )
 
             >>> query = context.query().select(
-            ...     dp.len(),
+            ...     dp.len(signed=True),
             ...     pl.col("convicted").dp.sum((0, 1))
             ... )
 
@@ -1060,7 +1177,6 @@ class LazyFrameQuery:
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
-        
     def contingency_table(
         self,
         *,
@@ -1106,7 +1222,7 @@ class LazyFrameQuery:
             output_measure=query._output_measure,
             context=query._context,
             oneway_scale=oneway_scale,
-            oneway_threshold=oneway_threshold
+            oneway_threshold=oneway_threshold,
         )
 
 
@@ -1114,7 +1230,8 @@ class LazyGroupByQuery:
     """
     A ``LazyGroupByQuery`` is returned by :py:func:`~opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
-    but only supports APIs documented below."""
+    but only supports APIs documented below.
+    """
 
     def __init__(self, lgb_plan, query):
         self._lgb_plan = lgb_plan
@@ -1156,7 +1273,7 @@ class Margin:
     Some operations (for instance, for float sums) will error if `max_length` is not provided.
     This is used to resolve issues raised in the paper
     `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
-    
+
     If you don't know how many records are in the data, you can specify a very loose upper bound,
     for example, the size of the total population you are sampling from.
     """
@@ -1166,7 +1283,7 @@ class Margin:
 
     invariant: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered invariant.
-    
+
     * ``"keys"`` designates that keys are not protected
     * ``"lengths"`` designates that both keys and group lengths are not protected
 
@@ -1174,72 +1291,6 @@ class Margin:
     `Formal Privacy Guarantees with Invariant Statistics <https://arxiv.org/abs/2410.17468>`_,
     when invariants are set, the effective privacy guarantees of the library are weaker than advertised.
     """
-
-    @property
-    @deprecated(version="0.13.0", reason="Use max_length instead.")
-    def max_partition_length(self):
-        return self.max_length  # pragma: no cover
-
-    @max_partition_length.setter
-    @deprecated(reason="Use max_length instead.")
-    def max_partition_length(self, value):
-        self.max_length = value  # pragma: no cover
-
-    @property
-    @deprecated(
-        version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
-    )
-    def max_num_partitions(self):
-        return self.max_groups  # pragma: no cover
-
-    @max_num_partitions.setter
-    @deprecated(
-        version="0.13.0",
-        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
-    )
-    def max_num_partitions(self, value):
-        self.max_groups = value  # pragma: no cover
-
-    @property
-    @deprecated(
-        version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
-    )
-    def public_info(self):
-        return self.invariant  # pragma: no cover
-
-    @public_info.setter
-    @deprecated(
-        version="0.13.0",
-        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
-    )
-    def public_info(self, value):
-        self.invariant = value  # pragma: no cover
-
-    @property
-    def max_partition_contributions(self):
-        raise NotImplementedError(
-            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
-        )  # pragma: no cover
-
-    @max_partition_contributions.setter
-    def max_partition_contributions(self, value):
-        raise NotImplementedError(
-            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
-        )  # pragma: no cover
-
-    @property
-    def max_influenced_partitions(self):
-        raise NotImplementedError(
-            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
-        )  # pragma: no cover
-
-    @max_influenced_partitions.setter
-    def max_influenced_partitions(self, value):
-        raise NotImplementedError(
-            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
-        )  # pragma: no cover
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Margin):
@@ -1272,7 +1323,7 @@ class Bound(object):
 
     per_group: int | None = None
     """The greatest number of records an individual may contribute to any one group.
-    
+
     This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
     """
 

@@ -19,9 +19,18 @@ from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
 from opendp._lib import import_optional_dependency
+from opendp.extras.numpy import array2_domain
+from opendp.metrics import symmetric_distance
 from opendp.mod import Measure
 
-__all__ = ["LinearRegression"]
+# Keep low-level constructors importable without sklearn. Autodoc can supply
+# its mocked sklearn dependency here to document the estimator as well.
+if import_optional_dependency("sklearn", raise_error=False) is not None:
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
+
+__all__ = ["LinearRegression", "LogisticRegression"]
 
 
 class LinearRegression:
@@ -54,8 +63,10 @@ class LinearRegression:
         if len(x_bounds) != 1:
             msg = f"For now, the x_bounds array must consist of a single tuple, not {x_bounds}"
             raise Exception(msg)
-        
+
         self.measurement = _make_private_theil_sen(
+            input_domain=array2_domain(num_columns=2, T=float),
+            input_metric=symmetric_distance(),
             output_measure=output_measure,
             x_bounds=x_bounds[0],
             y_bounds=y_bounds,
@@ -85,7 +96,7 @@ class LinearRegression:
         ... except ModuleNotFoundError:
         ...     import pytest
         ...     pytest.skip('Requires extra install')
-        >>> dp.enable_features("floating-point")
+        >>> dp.enable_features("idealized-numerics")
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression(
         ...     dp.max_divergence(),
         ...     x_bounds=[(0, 10)],

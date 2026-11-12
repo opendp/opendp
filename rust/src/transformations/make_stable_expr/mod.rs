@@ -1,4 +1,6 @@
 use opendp_derive::bootstrap;
+#[cfg(feature = "contrib")]
+use polars::prelude::{DataType, Field, Schema};
 use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
@@ -15,6 +17,9 @@ use super::traits::UnboundedMetric;
 mod ffi;
 
 #[cfg(feature = "contrib")]
+mod cast;
+
+#[cfg(feature = "contrib")]
 mod expr_alias;
 
 #[cfg(feature = "contrib")]
@@ -25,6 +30,9 @@ mod expr_boolean_function;
 
 #[cfg(feature = "contrib")]
 mod expr_cast;
+
+#[cfg(feature = "contrib")]
+mod expr_cast_aggregation;
 
 #[cfg(feature = "contrib")]
 mod expr_clip;
@@ -102,6 +110,18 @@ where
     (ExprDomain, MO): MetricSpace,
 {
     expr.make_stable(input_domain, input_metric)
+}
+
+// Ask Polars to resolve the dtype, including its dynamic-literal coercion rules.
+#[cfg(feature = "contrib")]
+fn infer_output_dtype(expr: &Expr, domain: &WildExprDomain) -> Fallible<DataType> {
+    let schema = Schema::from_iter(
+        domain
+            .columns
+            .iter()
+            .map(|column| Field::new(column.name.clone(), column.dtype())),
+    );
+    Ok(expr.to_field(&schema)?.dtype)
 }
 
 pub trait StableExpr<MI: Metric, MO: Metric> {
@@ -259,12 +279,21 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
+            #[cfg(feature = "contrib")]
+            Cast { .. } => expr_cast_aggregation::make_cast_aggregation::<MI, P>(
+                input_domain,
+                input_metric,
+                self,
             ),
+
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
@@ -293,12 +322,14 @@ where
             );
         }
         match self {
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }

@@ -1,64 +1,105 @@
-use std::os::raw::c_uint;
-
 use opendp_derive::bootstrap;
 
-use crate::combinators::AmplifiableMeasure;
-use crate::core::FfiResult;
+use crate::combinators::AmplifyWithoutReplacement;
+use crate::core::{FfiResult, Function, PrivacyMap};
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasure, AnyMetric, AnyObject, CallbackFn, Downcast, wrap_func,
+};
 use crate::measures::{Approximate, MaxDivergence};
+use crate::metrics::ChangeOneDistance;
 
-impl AmplifiableMeasure for AnyMeasure {
-    fn amplify(
-        &self,
-        budget: &AnyObject,
-        population_size: usize,
-        sample_size: usize,
-    ) -> Fallible<AnyObject> {
-        fn monomorphize<M: 'static + AmplifiableMeasure>(
-            measure: &AnyMeasure,
-            budget: &AnyObject,
-            population_size: usize,
-            sample_size: usize,
-        ) -> Fallible<AnyObject> {
-            let measure = measure.downcast_ref::<M>()?;
-            let budget = budget.downcast_ref::<M::Distance>()?;
-            measure
-                .amplify(budget, population_size, sample_size)
-                .map(AnyObject::new)
-        }
-        dispatch!(
-            monomorphize,
-            [(self.type_, [MaxDivergence, Approximate<MaxDivergence>])],
-            (self, budget, population_size, sample_size)
-        )
-    }
-}
-
-#[bootstrap(features("contrib", "honest-but-curious"))]
-/// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
-/// This measurement does not perform any sampling.
-/// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
+#[bootstrap(
+    features("contrib", "honest-but-curious"),
+    arguments(
+        input_metric(hint = "Metric"),
+        output_measure(hint = "Measure"),
+        privacy_map(rust_type = "$measure_distance_type(output_measure)"),
+    ),
+    returns(c_type = "FfiResult<AnyFunction *>")
+)]
+/// Compute the privacy map of a complete sample-level analysis after uniform
+/// sampling without replacement. This is an accounting utility, not a combinator.
 ///
-/// The DIA, DO, MI and MO between the input measurement and amplified output measurement all match.
+/// Both the input (sample) metric and the population metric are ChangeOneDistance.
+/// The returned function applies a conservative group-privacy bound
+/// at all larger population distances.
 ///
 /// # Arguments
-/// * `measurement` - the computation to amplify
-/// * `population_size` - the size of the population from which the input dataset is a simple sample
+/// * `input_metric` - ChangeOneDistance on the fixed-size sample.
+/// * `output_measure` - MaxDivergence or Approximate<MaxDivergence>.
+/// * `privacy_map` - Privacy map for the complete analysis of the sample.
+/// * `population_size` - Number of records in the fixed-size population.
+/// * `sample_size` - Number of records sampled without replacement.
 ///
 /// # Why honest-but-curious?
-/// The privacy guarantees are only valid if the input dataset is a simple sample from a population with `population_size` records.
-fn make_population_amplification(
-    measurement: &AnyMeasurement,
+/// The privacy guarantees are only valid if the input dataset is a simple
+/// random sample without replacement from a population with `population_size`
+/// records, drawn independently of the data. Sample membership must not be
+/// disclosed, and the supplied privacy map must account for all releases
+/// involving the sample.
+fn amplify_without_replacement(
+    input_metric: &AnyMetric,
+    output_measure: &AnyMeasure,
+    privacy_map: &CallbackFn,
     population_size: usize,
-) -> Fallible<AnyMeasurement> {
-    super::make_population_amplification(measurement, population_size)
+    sample_size: usize,
+) -> Fallible<AnyFunction> {
+    input_metric.downcast_ref::<ChangeOneDistance>()?;
+
+    fn monomorphize<MO: 'static + AmplifyWithoutReplacement>(
+        output_measure: &AnyMeasure,
+        privacy_map: &CallbackFn,
+        population_size: usize,
+        sample_size: usize,
+    ) -> Fallible<AnyFunction>
+    where
+        MO::Distance: 'static,
+    {
+        let callback = wrap_func(privacy_map.clone());
+        let map = PrivacyMap::new_fallible(move |d_in: &u32| {
+            callback(&AnyObject::new(*d_in))?.downcast::<MO::Distance>()
+        });
+        let amplified = super::amplify_without_replacement(
+            ChangeOneDistance,
+            output_measure.downcast_ref::<MO>()?.clone(),
+            map,
+            population_size,
+            sample_size,
+        )?;
+        Ok(Function::new_fallible(move |d_in: &AnyObject| {
+            let d_in = if let Ok(d_in) = d_in.downcast_ref::<u32>() {
+                *d_in
+            } else {
+                let d_in = *d_in.downcast_ref::<i32>()?;
+                u32::try_from(d_in)
+                    .map_err(|_| err!(InvalidDistance, "population distance must be nonnegative"))?
+            };
+            amplified.eval(&d_in).map(AnyObject::new)
+        }))
+    }
+
+    dispatch!(
+        monomorphize,
+        [(output_measure.type_, [MaxDivergence, Approximate<MaxDivergence>])],
+        (output_measure, privacy_map, population_size, sample_size)
+    )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_combinators__make_population_amplification(
-    measurement: *const AnyMeasurement,
-    population_size: c_uint,
-) -> FfiResult<*mut AnyMeasurement> {
-    make_population_amplification(try_as_ref!(measurement), population_size as usize).into()
+pub extern "C" fn opendp_combinators__amplify_without_replacement(
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    privacy_map: *const CallbackFn,
+    population_size: usize,
+    sample_size: usize,
+) -> FfiResult<*mut AnyFunction> {
+    amplify_without_replacement(
+        try_as_ref!(input_metric),
+        try_as_ref!(output_measure),
+        try_as_ref!(privacy_map),
+        population_size,
+        sample_size,
+    )
+    .into()
 }

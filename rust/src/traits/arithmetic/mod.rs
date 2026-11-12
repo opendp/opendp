@@ -5,7 +5,6 @@ use crate::{
     traits::{ExactIntCast, InfCast},
 };
 use dashu::{
-    base::{EstimatedLog2, SquareRoot},
     float::{
         FBig,
         round::mode::{Down, Up},
@@ -13,6 +12,9 @@ use dashu::{
     integer::IBig,
 };
 use std::panic;
+
+#[cfg(test)]
+mod test;
 
 // for context on why this is used, see conversation on https://github.com/cmpute/dashu/issues/29
 fn catch_unwind_silent<R>(f: impl FnOnce() -> R + panic::UnwindSafe) -> std::thread::Result<R> {
@@ -313,6 +315,53 @@ pub trait InfLn1P: Sized {
 
 // BEGIN IMPLEMENTATIONS
 
+// Legacy arithmetic requires finite operands, unlike directed scalars.
+fn require_finite(value: f64) -> Fallible<()> {
+    if value.is_nan() {
+        return fallible!(NumericError, "NaN operand");
+    }
+    if value.is_infinite() {
+        return fallible!(NumericError, "operand must be finite");
+    }
+    Ok(())
+}
+
+fn check_binary_operands(lhs: f64, rhs: f64, operation: &str) -> Fallible<()> {
+    require_finite(lhs)?;
+    require_finite(rhs)?;
+    if operation == "div" && rhs == 0.0 {
+        return fallible!(NumericError, "division by zero");
+    }
+    Ok(())
+}
+
+fn check_float_result(value: f64) -> Fallible<()> {
+    if value.is_nan() {
+        return fallible!(NumericError, "operation produced NaN");
+    }
+    if value.is_infinite() {
+        return fallible!(Overflow, "finite result is not representable");
+    }
+    Ok(())
+}
+
+fn check_unary_operand(value: f64, operation: &str) -> Fallible<()> {
+    require_finite(value)?;
+    let (below_domain, singular) = match operation {
+        "sqrt" => (value < 0.0, false),
+        "ln" | "log2" => (value < 0.0, value == 0.0),
+        "ln_1p" => (value < -1.0, value == -1.0),
+        _ => (false, false),
+    };
+    if below_domain {
+        return fallible!(NumericError, "operand is below the domain of {}", operation);
+    }
+    if singular {
+        return fallible!(NumericError, "{} at its singularity", operation);
+    }
+    Ok(())
+}
+
 // TRAIT AlertingAbs
 macro_rules! impl_alerting_abs_signed_int {
     ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
@@ -334,6 +383,9 @@ impl_alerting_abs_unsigned_int!(u8, u16, u32, u64, u128, usize);
 macro_rules! impl_alerting_abs_float {
     ($($ty:ty),+) => ($(impl AlertingAbs for $ty {
         fn alerting_abs(&self) -> Fallible<Self> {
+            if self.is_nan() {
+                return fallible!(NumericError, "NaN operand");
+            }
             Ok(self.abs())
         }
     })+)
@@ -367,6 +419,9 @@ macro_rules! impl_alerting_int {
         $(impl AlertingDiv for $t {
             #[inline]
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
+                if *v == 0 {
+                    return fallible!(NumericError, "division by zero");
+                }
                 <$t>::checked_div(*self, *v).ok_or_else(|| err!(
                     Overflow,
                     "{} / {} overflows. Consider tightening your parameters.",
@@ -421,71 +476,54 @@ macro_rules! impl_alerting_float {
         })+
         $(impl AlertingMul for $t {
             fn alerting_mul(&self, v: &Self) -> Fallible<Self> {
+                check_binary_operands(*self as f64, *v as f64, "mul")?;
                 let y = self * v;
-                y.is_finite().then(|| y).ok_or_else(|| err!(
-                    Overflow,
-                    "{} * {} is not finite. Consider tightening your parameters.",
-                    self, v))
+                check_float_result(y as f64)?;
+                Ok(y)
             }
         })+
         $(impl AlertingDiv for $t {
             fn alerting_div(&self, v: &Self) -> Fallible<Self> {
+                check_binary_operands(*self as f64, *v as f64, "div")?;
                 let y = self / v;
-                y.is_finite().then(|| y).ok_or_else(|| err!(
-                    Overflow,
-                    "{} / {} is not finite. Consider tightening your parameters.",
-                    self, v))
+                check_float_result(y as f64)?;
+                Ok(y)
             }
         })+
         $(impl AlertingAdd for $t {
             fn alerting_add(&self, v: &Self) -> Fallible<Self> {
+                check_binary_operands(*self as f64, *v as f64, "add")?;
                 let y = self + v;
-                y.is_finite().then(|| y).ok_or_else(|| err!(
-                    Overflow,
-                    "{} + {} is not finite. Consider tightening your parameters.",
-                    self, v))
+                check_float_result(y as f64)?;
+                Ok(y)
             }
         })+
         $(impl AlertingSub for $t {
             fn alerting_sub(&self, v: &Self) -> Fallible<Self> {
+                check_binary_operands(*self as f64, *v as f64, "sub")?;
                 let y = self - v;
-                y.is_finite().then(|| y).ok_or_else(|| err!(
-                    Overflow,
-                    "{} - {} is not finite. Consider tightening your parameters.",
-                    self, v))
+                check_float_result(y as f64)?;
+                Ok(y)
             }
         })+
         $(impl AlertingPow for $t {
             fn alerting_pow(&self, v: &Self) -> Fallible<Self> {
+                require_finite(*self as f64)?;
+                require_finite(*v as f64)?;
+                if *self < 0.0 && v.fract() != 0.0 {
+                    return fallible!(NumericError, "fractional power of a negative base");
+                }
+                if *self == 0.0 && *v < 0.0 {
+                    return fallible!(NumericError, "zero raised to a negative power");
+                }
                 let y = self.powf(*v);
-                y.is_finite().then(|| y).ok_or_else(|| err!(
-                    Overflow,
-                    "{} - {} is not finite. Consider tightening your parameters.",
-                    self, v))
+                check_float_result(y as f64)?;
+                Ok(y)
             }
         })+
     }
 }
 impl_alerting_float!(f32, f64);
-
-trait Log2 {
-    fn log2(self) -> Self;
-}
-
-impl Log2 for FBig<Down> {
-    fn log2(self) -> Self {
-        Self::try_from(self.log2_bounds().0).unwrap()
-        // If you implement via log rules, the bound is looser than dashu's EstimatedLog2.
-        //    However, dashu's EstimatedLog2 matches MPFR.
-        //    using log_b(x) = ln(x) / ln(b):
-        // self.ln() / FBig::<Up>::from(2).ln().with_rounding::<Down>()
-    }
-}
-impl Log2 for FBig<Up> {
-    fn log2(self) -> Self {
-        Self::try_from(self.log2_bounds().1).unwrap()
-    }
-}
 
 // TRAIT InfSqrt, InfLn, InfExp (univariate)
 macro_rules! impl_float_inf_uni {
@@ -493,34 +531,24 @@ macro_rules! impl_float_inf_uni {
         $(
         impl $name for $ty {
             fn $method_inf(self) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_inf), "() is not finite. Consider tightening your parameters."),
-                    self);
-                if !self.$op().is_finite() {
-                    return Err(not_finite());
-                }
+                check_unary_operand(self as f64, stringify!($op))?;
                 let lhs = FBig::<Up>::inf_cast(self)?.with_precision(<$ty>::MANTISSA_DIGITS as usize).value();
                 let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
             fn $method_neg_inf(self) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_neg_inf), "() is not finite. Consider tightening your parameters."),
-                    self);
-                if !self.$op().is_finite() {
-                    return Err(not_finite());
-                }
+                check_unary_operand(self as f64, stringify!($op))?;
                 let lhs = FBig::<Down>::inf_cast(self)?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op()) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::neg_inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
         })+
     }
@@ -528,105 +556,9 @@ macro_rules! impl_float_inf_uni {
 impl_float_inf_uni!(f64, f32; InfLn, inf_ln, neg_inf_ln, ln);
 impl_float_inf_uni!(f64, f32; InfLog2, inf_log2, neg_inf_log2, log2);
 impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
-impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
-
-// these implementations are expanded to catch errors in underflow.
-// when the input is very negative, resulting in an underflow, the output is min subnormal
-impl InfExp for f64 {
-    fn inf_exp(self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                "({}).inf_exp() is not finite. Consider tightening your parameters.",
-                self
-            )
-        };
-        if !self.exp().is_finite() {
-            return Err(not_finite());
-        }
-        let lhs = FBig::<Up>::inf_cast(self)?
-            .with_precision(<f64>::MANTISSA_DIGITS as usize)
-            .value();
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(f64::from_bits(1));
-            }
-            return Err(not_finite());
-        };
-        let output = Self::inf_cast(output)?;
-        output.is_finite().then(|| output).ok_or_else(not_finite)
-    }
-
-    fn neg_inf_exp(self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
-                self
-            )
-        };
-        if !self.exp().is_finite() {
-            return Err(not_finite());
-        }
-        let lhs = FBig::<Down>::inf_cast(self)?;
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(0.0);
-            }
-            return Err(not_finite());
-        };
-        let output = Self::neg_inf_cast(output)?;
-        output.is_finite().then(|| output).ok_or_else(not_finite)
-    }
-}
-
-impl InfExp for f32 {
-    fn inf_exp(self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                "({}).inf_exp() is not finite. Consider tightening your parameters.",
-                self
-            )
-        };
-        if !self.exp().is_finite() {
-            return Err(not_finite());
-        }
-        let lhs = FBig::<Up>::inf_cast(self)?
-            .with_precision(<f32>::MANTISSA_DIGITS as usize)
-            .value();
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(f32::from_bits(1));
-            }
-            return Err(not_finite());
-        };
-        let output = Self::inf_cast(output)?;
-        output.is_finite().then(|| output).ok_or_else(not_finite)
-    }
-    fn neg_inf_exp(self) -> Fallible<Self> {
-        let not_finite = || {
-            err!(
-                Overflow,
-                "({}).neg_inf_exp() is not finite. Consider tightening your parameters.",
-                self
-            )
-        };
-        if !self.exp().is_finite() {
-            return Err(not_finite());
-        }
-        let lhs = FBig::<Down>::inf_cast(self)?;
-        let Ok(output) = catch_unwind_silent(|| lhs.exp()) else {
-            if self.is_sign_negative() {
-                return Ok(0.0);
-            }
-            return Err(not_finite());
-        };
-        let output = Self::neg_inf_cast(output)?;
-        output.is_finite().then(|| output).ok_or_else(not_finite)
-    }
-}
+impl_float_inf_uni!(f64, f32; InfExp, inf_exp, neg_inf_exp, exp);
+impl_float_inf_uni!(f64, f32; InfExpM1, inf_exp_m1, neg_inf_exp_m1, exp_m1);
 
 // TRAIT InfAdd, InfSub, InfMul, InfDiv (bivariate)
 macro_rules! impl_int_inf {
@@ -645,15 +577,11 @@ macro_rules! impl_int_inf {
         $(impl_int_inf!{$ty, InfMul, inf_mul, neg_inf_mul, alerting_mul})+
         $(impl InfDiv for $ty {
             fn inf_div(&self, other: &Self) -> Fallible<Self> {
-                if other == &0 {
-                    return fallible!(Overflow, "attempt to divide by zero");
-                }
+                self.alerting_div(other)?;
                 Ok(num::Integer::div_ceil(self, other))
             }
             fn neg_inf_div(&self, other: &Self) -> Fallible<Self> {
-                if other == &0 {
-                    return fallible!(Overflow, "attempt to divide by zero");
-                }
+                self.alerting_div(other)?;
                 Ok(num::Integer::div_floor(self, other))
             }
         })+
@@ -667,36 +595,26 @@ macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: &Self) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other);
-                if !self.$op(other).is_finite() {
-                    return Err(not_finite());
-                }
+                check_binary_operands(*self as f64, *other as f64, stringify!($op))?;
                 let lhs = FBig::<Up>::try_from(*self)?;
                 let rhs = FBig::<Up>::try_from(*other)?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
             fn $method_neg_inf(&self, other: &Self) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other);
-                if !self.$op(other).is_finite() {
-                    return Err(not_finite());
-                }
+                check_binary_operands(*self as f64, *other as f64, stringify!($op))?;
                 let lhs = FBig::<Down>::try_from(*self)?;
                 let rhs = FBig::<Down>::try_from(*other)?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(rhs)) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::neg_inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
         })+
     }
@@ -710,34 +628,30 @@ macro_rules! impl_float_inf_bi_ibig {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {
         $(impl $name for $ty {
             fn $method_inf(&self, other: IBig) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other);
-                if !self.is_finite() {
-                    return Err(not_finite());
+                require_finite(*self as f64)?;
+                if *self == 0.0 && other < IBig::ZERO {
+                    return fallible!(NumericError, "zero raised to a negative power");
                 }
                 let lhs = FBig::<Up>::try_from(*self)?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
             fn $method_neg_inf(&self, other: IBig) -> Fallible<Self> {
-                let not_finite = || err!(
-                    Overflow,
-                    concat!("({}).", stringify!($method_neg_inf), "({}) is not finite. Consider tightening your parameters."),
-                    self, other);
-                if !self.is_finite() {
-                    return Err(not_finite());
+                require_finite(*self as f64)?;
+                if *self == 0.0 && other < IBig::ZERO {
+                    return fallible!(NumericError, "zero raised to a negative power");
                 }
                 let lhs = FBig::<Down>::try_from(*self)?;
                 let Ok(output) = catch_unwind_silent(|| lhs.$op(other.clone())) else {
-                    return Err(not_finite())
+                    return fallible!(NumericError, "arithmetic backend panicked")
                 };
                 let output = Self::neg_inf_cast(output)?;
-                output.is_finite().then(|| output).ok_or_else(not_finite)
+                check_float_result(output as f64)?;
+                Ok(output)
             }
         })+
     }

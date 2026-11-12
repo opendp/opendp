@@ -3,10 +3,10 @@ First, create a measurement with the Polars API:
 >>> import opendp.prelude as dp
 >>> import polars as pl
 >>> dp.enable_features("contrib")
-... 
+...
 >>> lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 >>> lf_domain = dp.lazyframe_domain([
-...     dp.series_domain("A", dp.atom_domain(T="i32")), 
+...     dp.series_domain("A", dp.atom_domain(T="i32")),
 ...     dp.series_domain("B", dp.atom_domain(T=str))
 ... ])
 >>> lf_domain = dp.with_margin(lf_domain, dp.polars.Margin(by=[], max_length=1000))
@@ -14,7 +14,7 @@ First, create a measurement with the Polars API:
 ...     lf_domain,
 ...     dp.symmetric_distance(),
 ...     dp.max_divergence(),
-...     lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+...     lf.select([dp.len(signed=True), pl.col("A").dp.sum((0, 1))]),
 ...     global_scale=1.0
 ... )
 

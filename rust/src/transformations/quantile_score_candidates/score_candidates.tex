@@ -4,14 +4,14 @@
 \title{\texttt{fn score\_candidates}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates} 
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates}
 in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{score\_candidates} returns a score for each candidate passed in, 
+\texttt{score\_candidates} returns a score for each candidate passed in,
 where the score is the distance between the candidate and the ideal alpha-quantile.
 
 \section{Hoare Triple}
@@ -79,7 +79,7 @@ where the score is the distance between the candidate and the ideal alpha-quanti
     The scores can now be computed in one linear pass over the histograms on line \ref{zip-hist}.
     The number of elements less than the candidate \texttt{lt} is the cumulative sum of \texttt{hist\_lo},
     and the number of elements less than or equal to the candidate \texttt{le} is the cumulative sum of \texttt{hist\_ro}.
-    
+
     The number of elements greater than the candidate \texttt{gt} is then simply \texttt{n - le} on line \ref{gt}.
 
     To ensure that the score computation does not overflow, the counts are bounded by \texttt{size\_limit} on line \ref{lt-gt-lim}.

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, cmp::Ordering, fmt::Debug, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
 
@@ -10,6 +10,7 @@ use crate::{
     },
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
+    traits::ProductOrd,
 };
 
 #[cfg(test)]
@@ -20,10 +21,17 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
-    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        d_in(rust_type = "Option<QI>", c_type = "AnyObject *", default = b"null")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
+    derived_types(QI = "$get_distance_type(input_metric)")
 )]
 /// Construct an odometer that can spawn a compositor queryable.
+///
+/// Every invocation that passes supporting-element validation is accounted for,
+/// including invocations whose postprocessing returns an error.
 ///
 /// # Citations
 /// * [WRRW23 Fully Adaptive Composition in Differential Privacy](https://arxiv.org/abs/2203.05481)
@@ -39,6 +47,7 @@ mod ffi;
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
 /// * `output_measure` - how privacy is measured
+/// * `d_in` - optional maximum distance between adjacent input datasets
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -48,9 +57,11 @@ pub fn make_fully_adaptive_composition<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option<MI::Distance>,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
+    MI::Distance: Clone + ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
@@ -65,6 +76,7 @@ where
                 input_domain.clone(),
                 input_metric.clone(),
                 output_measure.clone(),
+                d_in.clone(),
                 arg.clone(),
             )
         }),
@@ -83,9 +95,11 @@ fn new_fully_adaptive_composition_queryable<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
+    d_in: Option<MI::Distance>,
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
 where
+    MI::Distance: ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
@@ -125,7 +139,7 @@ where
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
@@ -133,22 +147,31 @@ where
                         ))
                     });
 
-                    // evaluate the query and wrap the answer
-                    let answer = meas.invoke_wrap(&data, seq_wrapper)?;
+                    // Account before accessing the data. A failed invocation may
+                    // already have produced a private release during postprocessing.
+                    privacy_maps.push(meas.privacy_map.clone());
+
+                    // Retain the result until sequentiality is enforced, even on error.
+                    let answer = meas.invoke_wrap(&data, seq_wrapper);
 
                     // start enforcing sequentiality
                     *enforce_sequentiality.borrow_mut() = true;
 
-                    // we've now increased our privacy spend. This is our only state modification
-                    privacy_maps.push(meas.privacy_map.clone());
-
                     // done!
-                    Answer::External(OdometerAnswer::Invoke(answer))
+                    Answer::External(OdometerAnswer::Invoke(answer?))
                 }
                 // evaluate external map query
-                Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                Query::External(OdometerQuery::PrivacyLoss(d_in_q)) => {
+                    if let Some(d_in) = &d_in {
+                        if d_in_q.total_cmp(d_in)? != Ordering::Equal {
+                            return fallible!(
+                                FailedFunction,
+                                "d_in must match the d_in passed into the constructor"
+                            );
+                        }
+                    }
                     let d_mids = (privacy_maps.iter())
-                        .map(|m| m.eval(d_in))
+                        .map(|m| m.eval(d_in_q))
                         .collect::<Fallible<_>>()?;
 
                     let d_out = output_measure.compose(d_mids)?;

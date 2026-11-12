@@ -7,7 +7,7 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::StableExpr;
+use super::{StableExpr, cast::is_null_preserving_cast};
 
 #[cfg(test)]
 mod test;
@@ -65,10 +65,17 @@ where
         })?
         .clone();
 
-    // it is possible to tighten this:
-    // in cases where casting will never fail, the nullable and/or nan bits can be left false
-    // in the meantime, users will need to impute
+    let from_dtype = data_column.dtype();
+    // Integer casts expose the data-dependent physical encoding of categorical values.
+    if matches!(from_dtype, DataType::Categorical(_, _)) && to_type_dtype.is_integer() {
+        return fallible!(
+            MakeTransformation,
+            "Casting Categorical to an integer exposes data-dependent encodings. Cast to Enum first."
+        );
+    }
     data_column.set_dtype(to_type_dtype.clone())?;
+    // Non-strict casts may introduce nulls, even from non-null inputs.
+    data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
 
     t_prior
         >> Transformation::new(

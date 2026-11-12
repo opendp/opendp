@@ -4,13 +4,13 @@
 \title{\texttt{fn make\_stable\_truncate}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate} 
-in \asOfCommit{mod.rs}{f5bb719}.
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate}
+in \asOfCommit{mod.rs}{a105afe}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -50,8 +50,10 @@ None
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 &\le \texttt{truncation.num\_groups},
     \end{align*}
-    where $g$ denotes the group when partitioned by \texttt{truncation\_bound.by}.
-    
+    where $g$ labels a group defined by the original input expressions in \texttt{truncation\_bound.by}.
+    If a final groupby is present, these labels are stored in its materialized output columns.
+    They must not be obtained by re-evaluating the original expressions after the aggregation.
+
     The preconditions of \ref{line:truncate-id-bound} are satisfied on line \ref{line:id-bound-by}
     (\texttt{id\_bound.by} is equal to \texttt{truncation.by}),
     so by the postcondition of \texttt{truncate\_id\_bound},
@@ -60,6 +62,17 @@ None
         ||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 &\le \texttt{row\_bound.num\_groups},
     \end{align*}
     where $\texttt{row\_bound}$ denotes the return value.
+
+    Input bound lookup on line \ref{line:id-bound-by} uses the original expressions,
+    so that \texttt{truncate\_id\_bound} receives matching input grouping keys.
+    Line \ref{line:output-bys} computes the output coordinate system:
+    when a final groupby is present, each original key is replaced by \texttt{col(output\_name)};
+    for filter-only truncations, the keys are unchanged.
+    The matcher permits only filters followed by an optional final groupby,
+    and requires each preceding filter's keys to be a subset of that groupby's keys.
+    Thus all translated keys refer to values materialized by that same final groupby.
+    Line \ref{line:output-bound-by} assigns those output keys only after the original input bound has been used.
+    This preserves the numerical bounds while expressing them for the output rows.
 
     For each truncation on line \ref{line:truncation-bound},
     \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound} on line \ref{line:truncate-id-bound}

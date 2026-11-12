@@ -14,7 +14,7 @@ use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L01InfDistance};
 use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
-use crate::traits::{Hashable, InfCast, InfMul, Integer, ToFloatRounded};
+use crate::traits::{Hashable, InfCast, InfMul, Integer};
 use std::collections::hash_map::DefaultHasher;
 
 #[cfg(test)]
@@ -95,14 +95,12 @@ where
     let mut scale = FBig::<Down>::neg_inf_cast(scale)?;
     scale /= FBig::<Down>::inf_cast(alpha)?;
 
-    // Truncate bits that represents values below 2^-53
+    // Truncate bits that represents values below 2^-53.
+    // exp is the MSB position (scale in [2^(exp-1), 2^exp)), matching MPFR's get_exp
+    let exp = scale.repr().exponent() + scale.repr().digits() as isize;
     scale = scale
         .clone()
-        .with_precision(
-            (f64::MANTISSA_DIGITS as i32 - scale.exp())
-                .max(FBig::ONE)
-                .to_f64_rounded() as usize,
-        )
+        .with_precision((f64::MANTISSA_DIGITS as isize - exp).max(1) as usize)
         .value();
 
     let r = FBig::from(x.max(CI::zero()).to_u64().unwrap_or_else(|| u64::MAX))

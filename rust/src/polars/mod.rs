@@ -33,6 +33,8 @@ use polars_plan::{
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
+pub mod accuracy;
+
 #[cfg(test)]
 mod test;
 
@@ -364,7 +366,7 @@ impl DPExpr {
     /// `scale` must not be negative or inf.
     /// Scale and distribution may be left None, to be filled later by [`make_private_lazyframe`].
     /// The noise distribution is chosen according to the privacy definition:
-    ///    
+    ///
     /// * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
     /// * zCDP: Gaussian noise, where `scale` == standard_devation
     ///
@@ -379,36 +381,44 @@ impl DPExpr {
     ///
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
-    pub fn len(self, scale: Option<f64>) -> Expr {
+    /// * `signed` - if true, the exact count is cast to `Int64` before noise is added,
+    ///   so negative noisy outputs are preserved instead of being clamped to zero.
+    pub fn len(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale], DPLenShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPLenShim)
     }
 
     /// Compute the differentially private count (excluding nulls).
     ///
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
-    pub fn count(self, scale: Option<f64>) -> Expr {
+    /// * `signed` - if true, the exact count is cast to `Int64` before noise is added,
+    ///   so negative noisy outputs are preserved instead of being clamped to zero.
+    pub fn count(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale], DPCountShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPCountShim)
     }
 
     /// Compute the differentially private null count (exclusively nulls).
     ///
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
-    pub fn null_count(self, scale: Option<f64>) -> Expr {
+    /// * `signed` - if true, the exact count is cast to `Int64` before noise is added,
+    ///   so negative noisy outputs are preserved instead of being clamped to zero.
+    pub fn null_count(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale], DPNullCountShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNullCountShim)
     }
 
     /// Compute the differentially private count of unique elements (including null).
     ///
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
-    pub fn n_unique(self, scale: Option<f64>) -> Expr {
+    /// * `signed` - if true, the exact count is cast to `Int64` before noise is added,
+    ///   so negative noisy outputs are preserved instead of being clamped to zero.
+    pub fn n_unique(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale], DPNUniqueShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNUniqueShim)
     }
 
     /// Compute the differentially private sum.
@@ -477,9 +487,11 @@ impl DPExpr {
 ///
 /// # Arguments
 /// * `scale` - parameter for the noise distribution
-pub fn dp_len(scale: Option<f64>) -> Expr {
+/// * `signed` - if true, the exact count is cast to `Int64` before noise is added,
+///   so negative noisy outputs are preserved instead of being clamped to zero.
+pub fn dp_len(scale: Option<f64>, signed: bool) -> Expr {
     let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-    apply_anonymous_function(vec![scale], DPFrameLenShim)
+    apply_anonymous_function(vec![scale, lit(signed)], DPFrameLenShim)
 }
 
 pub enum OnceFrameQuery {
@@ -544,7 +556,7 @@ impl OnceFrame {
     ///
     /// 1. The LazyFrame (compute plan) is only ever executed once.
     /// 2. The analyst does not observe ordering of rows in the output.
-    ///    
+    ///
     /// To ensure that row ordering is not observed:
     ///
     /// 1. Do not extend the compute plan with order-sensitive computations.
@@ -568,8 +580,8 @@ pub(crate) fn get_disabled_features_message() -> String {
 
     #[cfg(not(feature = "contrib"))]
     disabled_features.push("contrib");
-    #[cfg(not(feature = "floating-point"))]
-    disabled_features.push("floating-point");
+    #[cfg(not(feature = "idealized-numerics"))]
+    disabled_features.push("idealized-numerics");
     #[cfg(not(feature = "honest-but-curious"))]
     disabled_features.push("honest-but-curious");
 

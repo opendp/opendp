@@ -76,7 +76,7 @@ pub(crate) mod expr_noisy_max;
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `output_measure` - How to measure privacy loss.
-/// * `expr` - The [`Expr`] to be privatized.
+/// * `expr` - The [`Expr`] to be calculated and released with differential privacy.
 /// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
 ///
 /// # Why honest-but-curious?
@@ -135,7 +135,7 @@ where
         output_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>> {
-        if match_shim::<DPFrameLenShim, 1>(&self)?.is_some() {
+        if match_shim::<DPFrameLenShim, 2>(&self)?.is_some() {
             return expr_dp_frame_len::make_expr_dp_frame_len(
                 input_domain,
                 input_metric,
@@ -146,7 +146,7 @@ where
         }
         macro_rules! counting_query {
             ($plugin:ident, $constructor:ident) => {
-                if match_shim::<$plugin, 2>(&self)?.is_some() {
+                if match_shim::<$plugin, 3>(&self)?.is_some() {
                     return expr_dp_counting_query::$constructor(
                         input_domain,
                         input_metric,
@@ -247,12 +247,14 @@ where
                 expr_literal::make_expr_private_lit(input_domain, input_metric, self)
             }
 
-            expr => fallible!(
-                MakeMeasurement,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            expr => {
+                fallible!(
+                    MakeMeasurement,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 # type: ignore
 def appproximate_to_tradeoff(
-    param: tuple[f64, f64]
+    param: tuple[f64, f64],
 ) -> tuple[Callable[[RBig], RBig], RBig]:
     epsilon, delta = param
 
