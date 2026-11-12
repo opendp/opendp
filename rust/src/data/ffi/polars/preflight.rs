@@ -147,13 +147,6 @@ fn check_value(value: &Value, depth: usize) -> Fallible<()> {
                 check_value(child, depth + 1)?;
             }
         }
-        Value::String(text) => {
-            // Unit enum variants may be represented as strings rather than
-            // one-entry maps. This can reject benign literals with such names.
-            if text.as_str().is_some_and(|s| FORBIDDEN_VARIANTS.contains(&s)) {
-                return Err(invalid("forbidden unit variant or string value"));
-            }
-        }
         Value::Ext(_, _) => return Err(invalid("MessagePack extensions are unsupported")),
         _ => {}
     }
