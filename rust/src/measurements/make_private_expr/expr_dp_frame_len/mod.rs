@@ -22,6 +22,9 @@ use crate::{
     transformations::{StableExpr, traits::UnboundedMetric},
 };
 
+#[cfg(test)]
+mod test;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct DPFrameLenShim;
 
@@ -72,7 +75,7 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some([scale]) = match_shim::<DPFrameLenShim, _>(&expr)? else {
+    let Some([scale, signed]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
         return fallible!(
             MakeMeasurement,
             "Expected {} function",
@@ -80,7 +83,18 @@ where
         );
     };
 
-    apply_plugin(vec![len(), scale], expr, NoiseShim).make_private(
+    let signed = match signed {
+        Expr::Literal(lit) => lit.bool().unwrap_or(false),
+        _ => return fallible!(MakeMeasurement, "signed argument must be a literal bool"),
+    };
+
+    let len_expr = if signed {
+        len().cast(DataType::Int64)
+    } else {
+        len()
+    };
+
+    apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,

@@ -6,7 +6,7 @@ Identifier Truncation and Bounds
 It's also important to be mindful of the structure of our data
 when thinking about identifier truncation and bounds.
 This is another area where there are opportunities to lower the
-sensitivity of the analysis to individual contributions, 
+sensitivity of the analysis to individual contributions,
 and hence reduce the amount of noise required to meet a given privacy guarantee.
 
 .. tab-set::
@@ -26,10 +26,7 @@ and hence reduce the amount of noise required to meet a given privacy guarantee.
             ...     contributions=1, identifier=pl.col("PIDENT")
             ... )
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=privacy_unit,
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
             ...     split_evenly_over=4,
@@ -130,10 +127,7 @@ each quarter, you can take this into account in your annalysis.
 
             >>> quarterly = [pl.col.QUARTER, pl.col.YEAR]
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path()),
             ...     privacy_unit=dp.unit_of(
             ...         contributions=[
             ...             # an individual may contribute data under up to 2 identifiers
@@ -157,7 +151,7 @@ each quarter, you can take this into account in your annalysis.
             ...     )  # each identifier may affect up to 5 groups
             ...     .group_by(quarterly)
             ...     .agg(
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )

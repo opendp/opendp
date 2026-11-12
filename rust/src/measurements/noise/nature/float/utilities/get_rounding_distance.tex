@@ -50,7 +50,7 @@ None
         &= \max_{x, x'} |(x - x') - 2 \cdot 2^{k - 1} + 2^{k_{min}}| \\
         &= \max_{x, x'} |x - x'| + 2^{k} - 2^{k_{min}} \\
     \end{align}
-    
+
     Now apply this same logic to a vector of rounded values.
     \begin{align}
         &\max_{x, x'} ||\mathrm{round}_k(x) - \mathrm{round}_k(x')||_P \\
@@ -65,14 +65,14 @@ None
         &\leq \max_{x, x'} ||x, x'||_P + n^{1/P} \cdot (2^k - 2^{k_{min}})  + \max_{x, x'} ||x, x'||_P\\
         &= n^{1/P} \cdot (2^k - 2^{k_{min}})
     \end{align}
-    
+
     We now focus on showing correctness of the implementation.
     By the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_min\_k} on line \ref{line:get-min-k},
     \texttt{min\_k} is the $k$ such that the smallest distance between adjacent non-equal values of type \texttt{T} is $2^k$
     (the distance between subnormals).
 
-    Line \ref{line:check-k} ensures that $k$ is not too small, 
-    as any smaller $k$ would result in unused precision in the noise sample 
+    Line \ref{line:check-k} ensures that $k$ is not too small,
+    as any smaller $k$ would result in unused precision in the noise sample
     due to the output being rounded to the nearest \texttt{T}.
     This check is not necessary for privacy; it prevents wasted performance.
 
@@ -83,8 +83,8 @@ None
 
     The greatest possible increase in distances between rounded values is thus $2^{k} - 2^{k_{min}}$,
     as defined on line \ref{line:distance}.
-    
-    When $k = k_{min}$, the rounding is a no-op and $2^k - 2^{k_{min}}$ is zero, 
+
+    When $k = k_{min}$, the rounding is a no-op and $2^k - 2^{k_{min}}$ is zero,
     so line \ref{line:zero-distance} skips the vector calculations.
     Otherwise line \ref{line:unknown-size} ensures the vector size $n$ is known,
     and the following lines increase the distance by a factor of $n^{1/P}$,

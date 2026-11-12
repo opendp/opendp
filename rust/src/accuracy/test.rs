@@ -315,6 +315,19 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
 }
 
 #[test]
+pub fn test_discrete_gaussian_scale_to_accuracy_rejects_invalid() {
+    // alpha == 1 is on the inclusive bound, so it stays valid.
+    assert!(discrete_gaussian_scale_to_accuracy(1.0, 1.0).is_ok());
+
+    // out-of-range inputs used to silently misbehave; now they error cleanly.
+    for (scale, alpha) in [(1.0, 0.0), (1.0, -0.1), (1.0, 1.5), (-1.0, 0.05)] {
+        let err = discrete_gaussian_scale_to_accuracy(scale, alpha)
+            .expect_err(&format!("scale={scale}, alpha={alpha} should be rejected"));
+        assert_eq!(err.variant, crate::error::ErrorVariant::InvalidDistance);
+    }
+}
+
+#[test]
 pub fn test_roundtrip() -> Fallible<()> {
     let accuracy = 1.;
     let alpha = 0.05;

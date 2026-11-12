@@ -4,12 +4,12 @@
 \title{\texttt{fn match\_group\_by\_truncation}}
 \author{\MichaelShoemateAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation} 
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation}
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
@@ -18,7 +18,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 Types matching pseudocode.
 
 \subsubsection*{Caller-verified}
-None 
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -28,7 +28,7 @@ None
 \begin{theorem}[Postcondition]
     For a given query plan and user identifier expression,
     if the query plan bounds row contributions per-identifier via a group-by,
-    returns a triple containing the input to the truncation, 
+    returns a triple containing the input to the truncation,
     the truncation itself, and the per-id bound on user contribution.
 \end{theorem}
 
@@ -37,7 +37,7 @@ None
     and exits without a match if not.
 
     A valid group-by truncation is a group-by where the grouping keys contain a user identifier.
-    So line \ref{line:partition} splits the group-by keys into two sets, 
+    So line \ref{line:partition} splits the group-by keys into two sets,
     and line \ref{line:check_ids} rejects the match if the user identifier is not in the group-by keys.
 
     The remaining grouping columns are then reflected in the bound on user contributions,

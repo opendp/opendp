@@ -95,6 +95,22 @@ fn test_overflow_sum_expr() -> Fallible<()> {
 }
 
 #[test]
+fn test_float_accumulator_keeps_sequential_analysis() -> Fallible<()> {
+    let n = 16;
+    let expected = round_up::<f64>(sum_relaxation(n, n - 1, 1f64)?)?;
+    assert_eq!(<f64 as Accumulator>::relaxation(n, -1., 1.)?, expected);
+    let expected = round_up::<f32>(sum_relaxation(n, n - 1, 1f32)?)?;
+    assert_eq!(<f32 as Accumulator>::relaxation(n, -1., 1.)?, expected);
+    assert!(<f32 as Accumulator>::relaxation((1 << 24) + 1, -1., 1.).is_err());
+    assert_eq!(
+        <f64 as Accumulator>::relaxation(1, -f64::MAX, f64::MAX)?,
+        0.
+    );
+    assert!(<f64 as Accumulator>::relaxation(2, -f64::MAX, f64::MAX).is_err());
+    Ok(())
+}
+
+#[test]
 fn test_polars_sum_types() -> Fallible<()> {
     let lf = df!(
         "i8" => &[1i8, 2, 3],

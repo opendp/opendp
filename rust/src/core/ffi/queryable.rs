@@ -58,8 +58,12 @@ pub extern "C" fn opendp_core__queryable_query_type(
 #[repr(C)]
 #[derive(Clone)]
 pub struct TransitionFn {
-    pub(crate) callback: extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>,
-    pub(crate) lifeline: ExtrinsicObject,
+    pub(crate) callback: extern "C" fn(
+        *const AnyObject,
+        c_bool,
+        *const std::ffi::c_void,
+    ) -> *mut FfiResult<*mut AnyObject>,
+    pub(crate) userdata: ExtrinsicObject,
 }
 
 // wrap a TransitionFn in a closure, so that it can be used in Queryables
@@ -71,13 +75,16 @@ fn wrap_transition(
         util::into_owned((transition.callback)(
             q as *const AnyObject,
             util::from_bool(is_internal),
+            transition.userdata.0,
         ))?
         .into()
     }
 
     move |_self: &AnyQueryable, arg: Query<AnyObject>| -> Fallible<Answer<AnyObject>> {
-        // extends the lifetime of transition.callback to the lifetime of this closure
-        let _ = &transition.lifeline;
+        // Keep `userdata` borrowed for the duration of the FFI call.
+        // The callback only receives the raw pointer, so this makes the
+        // lifetime dependency explicit.
+        let _ = &transition.userdata;
 
         Ok(match arg {
             Query::External(q) => Answer::External(eval(&transition, q, false)?),

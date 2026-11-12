@@ -1,8 +1,19 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, cast, get_args, TYPE_CHECKING
+from copy import deepcopy
+from dataclasses import dataclass, replace
+from typing import (
+    Callable,
+    Literal,
+    Optional,
+    Any,
+    Iterator,
+    Sequence,
+    TypeVar,
+    get_args,
+    TYPE_CHECKING,
+)
 from functools import reduce
-from math import sqrt
+from math import inf, isfinite, nextafter, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -16,11 +27,15 @@ from opendp.measurements import then_noise
 from opendp.measures import max_divergence, zero_concentrated_divergence
 from opendp.metrics import (
     _get_bound,
+    absolute_distance,
     frame_distance,
+    l01inf_distance,
     l1_distance,
     l2_distance,
     symmetric_distance,
 )
+from opendp.core import as_array
+from opendp._lib import import_optional_dependency
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -38,6 +53,7 @@ from opendp.mod import (
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
+
 @dataclass
 class Count:
     """Denotes a count query."""
@@ -45,16 +61,16 @@ class Count:
     by: tuple[str, ...]
     """Columns to group by."""
     weight: float = 1.0
-    """Importance of this count query. 
-    
+    """Importance of this count query.
+
     - Used by AIM to prioritize cliques.
     - Used by Fixed to distribute privacy budget.
     """
 
     def __post_init__(self):
         self.by = tuple(self.by)
-        if self.weight < 0:
-            raise ValueError(f"weight ({self.weight}) must be non-negative")
+        if not isfinite(self.weight) or self.weight <= 0:
+            raise ValueError(f"weight ({self.weight}) must be finite and positive")
 
 
 def mirror_descent(
@@ -64,17 +80,24 @@ def mirror_descent(
     potentials=None,  # CliqueVector | None
 ):  # MarkovRandomField
     """Fit a MarkovRandomField over the domain and loss function using mirror descent.
-    
+
     If you want to use a custom estimator, consider this a contract/example.
     Your function can then close over configuration for any MBI estimator."""
-    from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
+    jax = import_optional_dependency("jax")
 
-    return _mirror_descent(domain, loss_fn, potentials=potentials)
+    # mbi<2 enabled x64 on import; mbi>=2 only warns.
+    # Estimates must be f64 to pass through the OpenDP FFI.
+    jax.config.update("jax_enable_x64", True)
+    from mbi.estimation import MirrorDescent  # type: ignore
+
+    return MirrorDescent().estimate(domain, loss_fn, warm_start=potentials)
+
 
 OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
-@dataclass(kw_only=True, frozen=True)
+
+@dataclass(kw_only=True)
 class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms."""
 
@@ -82,7 +105,7 @@ class Algorithm(ABC):
     """Optimizer to use to fit a MarkovRandomField.
 
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
-    Any function matching the signature of ``mirror_descent`` 
+    Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
@@ -90,7 +113,7 @@ class Algorithm(ABC):
     """Fit one-way marginals for all columns, or only unkeyed columns."""
     oneway_split: Optional[float] = None
     """Proportion of budget to use for oneway release.
-    
+
     When ``oneway_split`` is not set, defaults to half of the budget.
 
     If oneway is ``unkeyed``, budget is further reduced by the proportion of columns with missing keys or cuts.
@@ -98,9 +121,16 @@ class Algorithm(ABC):
     and when no columns have keys, then ``oneway_split`` is one-half.
     """
 
+    @property
+    def needs_model(self) -> bool:
+        """Whether a fitted model is needed to select the workload."""
+        return True
+
     def __post_init__(self):
         if self.oneway not in get_args(OnewayType):
-            raise ValueError(f'oneway ({self.oneway}) must be in {get_args(OnewayType)}')
+            raise ValueError(
+                f"oneway ({self.oneway}) must be in {get_args(OnewayType)}"
+            )
 
         if self.oneway_split is not None and not (0 <= self.oneway_split < 1):
             raise ValueError(f"oneway_split ({self.oneway_split}) must be in [0, 1)")
@@ -114,13 +144,24 @@ class Algorithm(ABC):
         d_in: list["Bound"],
         d_out: float,
         *,
-        marginals: dict[tuple[str, ...], Any],
+        marginals: "Marginals",
         model,  # MarkovRandomField
     ) -> Measurement: ...
 
 
+A = TypeVar("A", bound=Algorithm)
+
+
+def _snapshot_algorithm(algorithm: A) -> A:
+    """Detach and validate configuration before a measurement captures it."""
+    snapshot = deepcopy(algorithm)
+    snapshot.__post_init__()
+    return snapshot
+
+
 def typed_dict_domain(domains: dict[Any, Domain]) -> ExtrinsicDomain:
     """Domain containing a fixed-key dictionary of elements, each with its own domain."""
+    domains = dict(domains)
 
     def _member(x):
         if not isinstance(x, dict):
@@ -171,6 +212,16 @@ def get_std(measure: Measure, scale: float) -> float:
     raise ValueError(message)
 
 
+def get_scale(measure: Measure, d_out: float, sensitivity: float) -> float:
+    """Returns the noise scale that spends ``d_out`` on a query of ``sensitivity``."""
+    if measure == max_divergence():
+        return sensitivity / d_out
+    if measure == zero_concentrated_divergence():
+        return sensitivity / sqrt(2 * d_out)
+    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    raise ValueError(message)
+
+
 def get_associated_metric(measure: Measure) -> Metric:
     if measure == max_divergence():
         return l1_distance(T="u32")
@@ -185,6 +236,11 @@ def prior(x: float) -> float:
     import numpy as np
 
     return np.nextafter(x, -np.inf)
+
+
+def _snapshot_bounds(bounds: list["Bound"]) -> list["Bound"]:
+    """Detach contribution bounds from caller-owned lists and Bound objects."""
+    return [replace(bound, by=tuple(bound.by)) for bound in bounds]
 
 
 def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
@@ -212,10 +268,9 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
 def make_stable_marginals(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    output_inner_metric: Metric,
-    cliques: list[tuple[str, ...]],
+    cliques: Sequence[Sequence[str]],
 ) -> Transformation:
-    """Return a transformation that computes all marginals in a workload."""
+    """Return marginals with (L0, L1, Linf) contribution bounds per clique."""
     from opendp.extras.numpy import arrayd_domain
     from opendp.extras.polars import Bound
     import polars as pl  # type: ignore[import-not-found]
@@ -226,43 +281,46 @@ def make_stable_marginals(
         raise ValueError(message)
 
     cardinalities = get_cardinalities(input_domain)
-
-    metrics = {l1_distance(T="u32"): 1, l2_distance(T="u32"): 2}
-    if output_inner_metric not in metrics:
-        message = f"inner_output_metric ({output_inner_metric}) must be in {set(metrics.keys())}"
-        raise ValueError(message)
-    p = metrics[output_inner_metric]
+    cliques_snapshot = tuple(tuple(c) for c in cliques)
 
     def shape(by: tuple[str, ...]) -> tuple[int, ...]:
         return tuple(cardinalities[c] for c in by)
 
     def pivot(x, clique: tuple[str, ...]):
         y = np.zeros(shape(clique), dtype=np.int32)
-        y[tuple(x[clique].to_numpy().T)] = x["len"].to_numpy()
+        # u32 counts are clipped before narrowing to i32: numpy treats
+        # uint32->int32 as a same-kind cast and silently wraps instead of erroring.
+        y[tuple(x[clique].to_numpy().T)] = (
+            x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32).to_numpy()
+        )
         return y
 
     def function(data):
-        dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques])
-        return {c: pivot(m, c) for m, c in zip(dfs, cliques)}
+        dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques_snapshot])
+        return {c: pivot(m, c) for m, c in zip(dfs, cliques_snapshot)}
 
-    def count_sensitivity(bounds: list[Bound], clique: tuple[str, ...]) -> float:
-        l1 = _get_bound(bounds, []).per_group
+    def count_sensitivity(
+        bounds: list[Bound], clique: tuple[str, ...]
+    ) -> tuple[int, int, int]:
+        total = _get_bound(bounds, []).per_group
+        if total is None:
+            raise ValueError("input bounds must specify total contributions")
 
         bound: Bound = _get_bound(bounds, [pl.col(c) for c in clique])
-        l0 = (bound.num_groups or l1) ** (1 / p)
-        li = bound.per_group or l1
-        return min(l1, l0 * li)
+        l0 = min(bound.num_groups if bound.num_groups is not None else total, total)
+        linf = min(bound.per_group if bound.per_group is not None else total, total)
+        return l0, min(total, l0 * linf), linf
 
-    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], float]:
-        return {clique: count_sensitivity(d_in, clique) for clique in cliques}
+    def stability_map(d_in: list[Bound]) -> dict[tuple[str, ...], tuple[int, int, int]]:
+        return {clique: count_sensitivity(d_in, clique) for clique in cliques_snapshot}
 
     return _make_transformation(
         input_domain,
         input_metric,
         output_domain=typed_dict_domain(
-            {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques}
+            {c: arrayd_domain(shape=shape(c), T="i32") for c in cliques_snapshot}
         ),
-        output_metric=typed_dict_distance(output_inner_metric),
+        output_metric=typed_dict_distance(l01inf_distance(absolute_distance(T="i32"))),
         function=function,
         stability_map=stability_map,
     )
@@ -297,37 +355,55 @@ def make_noise_marginal(
     scale: float,
 ) -> Measurement:
     """Make a measurement that releases a DP marginal"""
-    from opendp.extras.numpy import NPArrayDDomain
     # use jax arrays because lms will be used in optimization
     import jax.numpy as np  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from opendp.extras.numpy import NPArrayDDomain
 
     clique_domain = input_domain.cast(TypedDictDomain)[clique]
     inner_metric = input_metric.cast(TypedDictDistance).inner_metric
 
     clique_domain.cast(NPArrayDDomain)
 
-    associated_metric = get_associated_metric(output_measure)
-
-    if inner_metric != associated_metric:
-        message = f"input_metric's inner metric ({inner_metric}) doesn't match the output_measure's associated metric ({associated_metric})"
+    structural_metric = l01inf_distance(absolute_distance(T="i32"))
+    if inner_metric != structural_metric:
+        message = (
+            f"input_metric's inner metric ({inner_metric}) must be {structural_metric}"
+        )
         raise ValueError(message)
+
+    associated_metric = get_associated_metric(output_measure)
+    if output_measure == zero_concentrated_divergence():
+        associated_metric = l2_distance(T="f64")
 
     t_marginal = _make_transformation(
         input_domain,
         input_metric,
         output_domain=vector_domain(atom_domain(T="i32")),
-        output_metric=inner_metric,
+        output_metric=associated_metric,
         function=lambda exact_tabs: exact_tabs[clique].astype(np.int32).flatten(),
-        stability_map=lambda d_in: d_in[clique],
+        stability_map=lambda d_in: _noise_sensitivity(output_measure, d_in[clique]),
     )
 
     def function(x):
-        return LinearMeasurement(np.array(x), clique, stddev=get_std(output_measure, scale))
+        return LinearMeasurement(x, clique, stddev=get_std(output_measure, scale))
 
     return (
-        t_marginal >> then_noise(output_measure, scale) >> _new_pure_function(function)
+        t_marginal
+        >> then_noise(output_measure, scale)
+        >> as_array()
+        >> _new_pure_function(function)
     )
+
+
+def _noise_sensitivity(measure: Measure, distance: tuple[int, int, int]) -> float | int:
+    """Project marginal contribution bounds to the norm used by the noise."""
+    if measure == max_divergence():
+        return distance[1]
+
+    l0, l1, linf = distance
+    # sqrt may round down; advance by one representable float.
+    return min(l1, nextafter(sqrt(l0 * linf**2), inf))
 
 
 def row_major_order(keys: Iterator):
@@ -339,35 +415,82 @@ def row_major_order(keys: Iterator):
     return reduce(reducer, (keyset.to_frame() for keyset in keys))
 
 
-def weight_marginals(
-    marginals: dict[tuple[str, ...], Any], *new_marginals
-) -> dict[tuple[str, ...], Any]:
-    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+@dataclass(frozen=True)
+class SelectPrefixQuery:
+    """Select a prefix of a flattened MBI marginal.
 
-    marginals = marginals.copy()
+    Used when the final cell is a latent synthetic ``other`` bucket rather than
+    a directly measured count.
+    """
 
-    for new_marginal in new_marginals:
-        if not isinstance(new_marginal, LinearMeasurement):
-            raise ValueError("each new marginal must be of type LinearMeasurement")
+    length: int
 
-        clique = new_marginal.clique
-        old_marginal = cast(Optional[LinearMeasurement], marginals.get(clique))
+    def __call__(self, factor):
+        return factor.datavector()[: self.length]
 
-        if old_marginal is None:
-            marginals[clique] = new_marginal
-            continue
 
-        old_var = old_marginal.stddev**2
-        old = old_marginal.noisy_measurement
+def identity_query_precision(measurement) -> float:
+    """Return precision contributed by a full-datavector observation.
 
-        new_var = new_marginal.stddev**2
-        new = new_marginal.noisy_measurement
+    Partial queries do not provide a uniform uncertainty estimate for every
+    cell in a marginal, so they contribute zero precision.
+    """
+    from mbi import DatavectorQuery  # type: ignore[import-untyped,import-not-found]
 
-        weighted_var = 1 / (1 / old_var + 1 / new_var)
-        weighted = (old / old_var + new / new_var) * weighted_var
+    if isinstance(measurement.query, DatavectorQuery):
+        return 1 / measurement.stddev**2
+    return 0.0
 
-        marginals[clique] = LinearMeasurement(
-            weighted, clique, stddev=sqrt(weighted_var)
-        )
 
-    return marginals
+class Marginals:
+    """A multimap from clique to independent ``LinearMeasurement``.
+
+    A clique identifies the marginal a query operates on; it does not
+    uniquely identify the observation. Several independent measurements can
+    legitimately share a clique: an initial partial (prefix) release, a later
+    full release, a zero-way total, or any other linear query over the same
+    marginal. Distinct query operators are kept as separate observations,
+    even when their cliques match.
+    """
+
+    def __init__(self, by_clique: Optional[dict[tuple[str, ...], list]] = None):
+        self.by_clique: dict[tuple[str, ...], list] = {
+            clique: list(group) for clique, group in (by_clique or {}).items()
+        }
+
+    def cliques(self) -> list[tuple[str, ...]]:
+        """Unique cliques with at least one measurement."""
+        return list(self.by_clique)
+
+    def flatten(self) -> list:
+        """All measurements, across all cliques."""
+        return [
+            measurement for group in self.by_clique.values() for measurement in group
+        ]
+
+    def copy(self) -> "Marginals":
+        return Marginals(self.by_clique)
+
+    def add(self, *new_measurements) -> "Marginals":
+        """Return a new collection with `new_measurements` appended.
+
+        Each measurement is kept atomic: independent observations sharing a
+        clique (a repeated identity release, a prefix release alongside a
+        later full release, a repeated zero-way total, ...) are never
+        combined. Inverse-variance coalescing is exact only for the default
+        quadratic loss, and `Algorithm.estimator` is a public extension point
+        that may use an L1 or other custom loss, so combining measurements
+        here would silently change the meaning of the supplied collection
+        for such an estimator. MBI already sums losses across atomic
+        measurements, so keeping them separate is correct for any loss."""
+        from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+
+        result = self.copy()
+
+        for new in new_measurements:
+            if not isinstance(new, LinearMeasurement):
+                raise ValueError("each new marginal must be of type LinearMeasurement")
+
+            result.by_clique.setdefault(new.clique, []).append(new)
+
+        return result

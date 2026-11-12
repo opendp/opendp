@@ -39,9 +39,6 @@ test_that("make_sum", {
 
   expect_equal(trans(arg = c(1L, 2L)), 3L)
   expect_equal(trans(d_in = 1L), 2L)
-
-  expect_equal(trans(arg = c(1L, 2L)), 3L)
-  expect_equal(trans(d_in = 1L), 2L)
 })
 
 
@@ -85,10 +82,10 @@ test_that("test_cast_inherent", {
 })
 
 test_that("test_impute_constant_inherent", {
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_constant(-1.)
-  expect_equal(tester(arg = "nan\n1."), c(-1., 1.))
+  expect_equal(tester(arg = c("nan", "1.")), c(-1., 1.))
 })
 
 test_that("test_cast_default", {
@@ -118,42 +115,41 @@ test_that("test_is_equal", {
 })
 
 test_that("test_is_null", {
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_is_null()
-  expect_equal(tester(arg = "nan\n1.\ninf"), c(TRUE, FALSE, FALSE))
+  expect_equal(tester(arg = c("nan", "1.", "inf")), c(TRUE, FALSE, FALSE))
 
-  tester <- make_split_lines() |>
+  tester <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast(.TOA = f64) |>
     then_is_null()
-  expect_equal(tester(arg = "nan\n1.\ninf"), c(TRUE, FALSE, FALSE))
+  expect_equal(tester(arg = c("nan", "1.", "inf")), c(TRUE, FALSE, FALSE))
 })
 
-test_that("test_split_lines__cast__impute", {
-  expect_equal(make_split_lines()(arg = "1\n2\n3"), c("1", "2", "3"))
-  query <- make_split_lines() |>
+test_that("test_cast_impute_pipeline", {
+  query <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast(.TOA = i32) |>
     then_impute_constant(constant = 2L)
 
-  expect_equal(query(arg = "1\n2\n3"), c(1L, 2L, 3L))
+  expect_equal(query(arg = c("1", "2", "3")), c(1L, 2L, 3L))
   expect_equal(query(d_in = 1L), 1L)
 })
 
 test_that("test_inherent_cast__impute", {
-  casted <- make_split_lines() |>
+  casted <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_constant(constant = 9.)
 
-  expect_equal(casted(arg = "a\n23.23\n12"), c(9.0, 23.23, 12.0))
+  expect_equal(casted(arg = c("a", "23.23", "12")), c(9.0, 23.23, 12.0))
   expect_equal(casted(d_in = 1L), 1L)
 })
 
 test_that("test_inherent_cast__impute_uniform", {
-  casted <- make_split_lines() |>
+  casted <- c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_cast_inherent(.TOA = f64) |>
     then_impute_uniform_float(bounds = c(23., 32.5))
 
-  res <- casted(arg = "a\n23.23\n12")
+  res <- casted(arg = c("a", "23.23", "12"))
   expect_equal(tail(res, -1), c(23.23, 12.0))
   expect_lte(23.0, res[[1]])
   expect_lte(res[[1]], 32.5)
@@ -174,13 +170,13 @@ test_that("test_clamp", {
 })
 
 test_that("test_bounded_mean", {
-  query <- make_mean(vector_domain(atom_domain(bounds = c(0.0, 10.0)), size = 9L), symmetric_distance())
+  query <- make_mean(vector_domain(atom_domain(bounds = c(0.0, 10.0), nan = FALSE), size = 9L), symmetric_distance())
   expect_equal(query(arg = FLOAT_DATA), 5.)
   expect_lt(query(d_in = 2L), 10. / 9. + 1e-6)
 })
 
 test_that("test_bounded_sum", {
-  query <- make_sum(vector_domain(atom_domain(bounds = c(0., 10.))), symmetric_distance())
+  query <- make_sum(vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE)), symmetric_distance())
   expect_equal(query(arg = FLOAT_DATA), 45.)
   expect_lt(query(d_in = 1L), 20.)
 
@@ -191,26 +187,48 @@ test_that("test_bounded_sum", {
   expect_error(query(arg = FLOAT_DATA))
 })
 
+test_that("sum derives its safe integer length without public arguments", {
+  expect_named(formals(make_sum), c("input_domain", "input_metric"))
+  expect_named(formals(then_sum), "lhs")
+  domain <- vector_domain(atom_domain(bounds = c(0L, 1073741824L)))
+  expect_warning({
+    query <- make_sum(domain, insert_delete_distance())
+  }, "Polars or NumPy")
+  expect_equal(query(arg = c(1073741824L, 1073741824L)), 1073741824L)
+  expect_equal(query(arg = c(1L, 2L)), 1L)
+  fixed <- vector_domain(atom_domain(bounds = c(0L, 1073741824L)), size = 2L)
+  expect_error(make_sum(fixed, symmetric_distance()), "potential intermediate integer sum overflow")
+  fixed <- vector_domain(atom_domain(bounds = c(-1L, 1L)), size = 2L)
+  expect_equal(make_sum(fixed, symmetric_distance())(arg = c(1L, 1L)), 2L)
+})
+
+test_that("sum infers floating type and uses pairwise accumulation", {
+  a <- 2^53
+  domain <- vector_domain(atom_domain(bounds = c(-a, a), nan = FALSE), size = 4L)
+  query <- make_sum(domain, symmetric_distance())
+  expect_equal(query(arg = c(a, 1., 1., -a)), 1.)
+})
+
 test_that("test_sized_bounded_sum", {
-  domain <- vector_domain(atom_domain(bounds = c(0., 10.)), size = 9L)
+  domain <- vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 9L)
   metric <- symmetric_distance()
   query <- c(domain, metric) |> then_sum()
   expect_equal(query(arg = FLOAT_DATA), 45.)
   expect_lt(query(d_in = 1L), 10. + 1e-12)
 
-  domain <- vector_domain(atom_domain(bounds = c(0., 10.)), size = 10000L)
+  domain <- vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 10000L)
   query <- c(domain, metric) |> then_sum()
   expect_lt(query(d_in = 1L), 10. + 1e-9)
 
-  domain <- vector_domain(atom_domain(bounds = c(0., 10.)), size = 100000L)
+  domain <- vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 100000L)
   query <- c(domain, metric) |> then_sum()
   expect_lt(query(d_in = 1L), 10. + 1e-8)
 
-  domain <- vector_domain(atom_domain(bounds = c(0., 10.)), size = 1000000L)
+  domain <- vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 1000000L)
   query <- c(domain, metric) |> then_sum()
   expect_lt(query(d_in = 1L), 10. + 1e-7)
 
-  domain <- vector_domain(atom_domain(bounds = c(0., 10.)), size = 10000000L)
+  domain <- vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 10000000L)
   query <- c(domain, metric) |> then_sum()
   expect_lt(query(d_in = 1L), 10. + 1e-5)
 })
@@ -295,7 +313,7 @@ test_that("test_indexing", {
 })
 
 test_that("test_lipschitz_mul_float", {
-  trans <- make_sized_bounded_float_ordered_sum(10L, c(0., 10.)) |> then_lipschitz_float_mul(1 / 10, c(-3., 4.))
+  trans <- make_sum(vector_domain(atom_domain(bounds = c(0., 10.), nan = FALSE), size = 10L), insert_delete_distance()) |> then_lipschitz_float_mul(1 / 10, c(-3., 4.))
 
   expect_equal(trans(arg = rep(3., each = 10)), 0.4)
   expect_equal(trans(d_in = 2L), 1)
@@ -305,7 +323,11 @@ test_that("test_lipschitz_b_ary_tree", {
   leaf_count <- 7L
   branching_factor <- 2L
   input_space <- c(vector_domain(atom_domain(.T = i32)), l1_distance(.T = i32))
-  tree_builder <- input_space |> then_b_ary_tree(leaf_count, branching_factor)
+  tree_builder <- input_space |> then_b_ary_tree(
+    output_metric = l1_distance(.T = i32),
+    leaf_count = leaf_count,
+    branching_factor = branching_factor
+  )
   expect_equal(
     tree_builder(arg = rep(1L, each = leaf_count)),
     c(7L, 4L, 3L, 2L, 2L, 2L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L)
@@ -317,7 +339,11 @@ test_that("test_lipschitz_b_ary_tree", {
   meas_base <-
     c(vector_domain(atom_domain(.T = String)), symmetric_distance()) |>
     then_count_by_categories(categories = c("A", "B", "C", "D", "E", "F")) |>
-    then_b_ary_tree(leaf_count, branching_factor) |>
+    then_b_ary_tree(
+      output_metric = l1_distance(.T = i32),
+      leaf_count = leaf_count,
+      branching_factor = branching_factor
+    ) |>
     then_geometric(1.) |>
     then_consistent_b_ary_tree(branching_factor)
 

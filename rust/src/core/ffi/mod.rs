@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::ffi::{CStr, c_void};
 use std::fmt::{Debug, Formatter};
 use std::os::raw::c_char;
@@ -6,8 +7,8 @@ use std::{fmt, ptr};
 use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
-use crate::ffi::any::{AnyFunction, AnyObject, CallbackFn, wrap_func};
-use crate::ffi::util;
+use crate::ffi::any::{AnyFunction, AnyObject, CallbackFn, Downcast, wrap_func};
+use crate::ffi::util::{self, Type, TypeContents};
 
 mod measurement;
 pub use measurement::*;
@@ -160,6 +161,7 @@ impl From<FfiError> for Error {
         let variant = match variant {
             "FFI" => ErrorVariant::FFI,
             "TypeParse" => ErrorVariant::TypeParse,
+            "Type" => ErrorVariant::Type,
             "FailedFunction" => ErrorVariant::FailedFunction,
             "FailedMap" => ErrorVariant::FailedMap,
             "RelationDebug" => ErrorVariant::RelationDebug,
@@ -172,7 +174,9 @@ impl From<FfiError> for Error {
             "MakeMeasurement" => ErrorVariant::MakeMeasurement,
             "MetricSpace" => ErrorVariant::MetricSpace,
             "InvalidDistance" => ErrorVariant::InvalidDistance,
+            "Search" => ErrorVariant::Search,
             "Overflow" => ErrorVariant::Overflow,
+            "NumericError" => ErrorVariant::NumericError,
             "NotImplemented" => ErrorVariant::NotImplemented,
             unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
         };
@@ -215,7 +219,7 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     arguments(function(rust_type = "$pass_through(TO)"))
 )]
 /// Construct a Function from a user-defined callback.
-/// Can be used to build a post-processor.
+/// Can be used to build a postprocessor.
 ///
 /// # Why honest-but-curious?
 /// An OpenDP `function` must satisfy two criteria.
@@ -249,6 +253,49 @@ pub extern "C" fn opendp_core__new_function(
     let function = try_as_ref!(function).clone();
     let _TO = TO;
     FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
+}
+
+#[bootstrap(name = "as_array")]
+#[allow(dead_code)]
+fn as_array() -> Fallible<AnyFunction> {
+    panic!("this signature only exists for code generation")
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_core__as_array() -> FfiResult<*mut AnyFunction> {
+    fn monomorphize<T: 'static + Clone + Send + Sync>(arg: &AnyObject) -> Fallible<AnyObject> {
+        let type_ = Type::new(
+            TypeId::of::<Vec<T>>(),
+            std::format!("NDArray<{}>", Type::of::<T>().descriptor),
+            TypeContents::VEC(TypeId::of::<T>()),
+        );
+        Ok(AnyObject::new_type(
+            arg.downcast_ref::<Vec<T>>()?.clone(),
+            type_,
+        ))
+    }
+
+    let function = Function::new_fallible(move |arg: &AnyObject| {
+        let TypeContents::VEC(atom_id) = &arg.type_.contents else {
+            return fallible!(
+                FailedCast,
+                "Expected data of type Vec<T>. Got {}",
+                arg.type_.to_string()
+            );
+        };
+
+        let atom = try_!(Type::of_id(atom_id));
+        dispatch!(
+            monomorphize,
+            [(
+                atom,
+                [u8, u16, u32, u64, i8, i16, i32, i64, usize, f32, f64, bool]
+            )],
+            (arg)
+        )
+    });
+
+    FfiResult::Ok(util::into_raw(function))
 }
 
 #[bootstrap(
@@ -327,6 +374,24 @@ mod tests {
                 backtrace: "".to_char_p(),
             }))
         );
+    }
+
+    #[test]
+    fn test_numerical_error_ffi_round_trip() {
+        for (error, variant) in [
+            (
+                err!(NumericError, "numerical failure"),
+                ErrorVariant::NumericError,
+            ),
+            (err!(Overflow, "numerical failure"), ErrorVariant::Overflow),
+        ] {
+            let result: Fallible<()> = Err(error);
+            let ffi: FfiResult<*mut ()> = result.into();
+            let restored: Fallible<()> = ffi.into();
+            let error = restored.unwrap_err();
+            assert_eq!(error.variant, variant);
+            assert_eq!(error.message.as_deref(), Some("numerical failure"));
+        }
     }
 
     #[test]

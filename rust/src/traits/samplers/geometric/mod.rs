@@ -10,6 +10,9 @@ use crate::{
 
 use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
 
+#[cfg(test)]
+mod test;
+
 /// Sample from the censored geometric distribution.
 ///
 /// # Proof Definition
@@ -141,7 +144,7 @@ where
     P::Bits: ExactIntCast<usize>,
 {
     if scale.is_zero() {
-        return Ok(shift);
+        return shift.total_clamp(lower, upper);
     }
     // if the output interval is a point
     if lower == upper {
@@ -153,7 +156,15 @@ where
     )?);
 
     // make prob conservatively smaller, because a smaller probability means greater noise
-    let prob = P::one().neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
+    // For a positive subnormal scale, -1/scale can overflow natively.
+    // A finite upper bound on that exponent preserves conservative rounding.
+    let neg_inverse = -scale.recip();
+    let neg_inverse = if neg_inverse == P::neg_infinity() {
+        P::MIN_FINITE
+    } else {
+        neg_inverse
+    };
+    let prob = P::one().neg_inf_sub(&neg_inverse.inf_exp()?)?;
 
     // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
     // Thanks for the input @ctcovington (Christian Covington)
@@ -162,8 +173,11 @@ where
     let noised = loop {
         let direction = sample_standard_bernoulli()?;
         let sample = sample_geometric_linear(shift, direction, prob, trials)?;
-        // reject sampling no noise in the negative direction, to avoid double-drawing zero
-        if direction || sample != shift {
+        // Reject exactly one zero-magnitude proposal. At the type minimum,
+        // negative draws also saturate to `shift`, so reject positive zero
+        // instead to preserve that tail. Switching at other lower bounds is
+        // distribution-equivalent because both signed zeros are distinguishable.
+        if direction != (shift == lower) || sample != shift {
             break sample;
         }
     };

@@ -14,19 +14,9 @@ mod make_stable_expr;
 pub use make_stable_expr::*;
 
 #[cfg(feature = "contrib")]
-mod covariance;
-#[cfg(feature = "contrib")]
-pub use covariance::*;
-
-#[cfg(feature = "contrib")]
 mod b_ary_tree;
 #[cfg(feature = "contrib")]
 pub use b_ary_tree::*;
-
-#[cfg(feature = "contrib")]
-mod dataframe;
-#[cfg(feature = "contrib")]
-pub use dataframe::*;
 
 #[cfg(feature = "contrib")]
 pub mod quantile_score_candidates;

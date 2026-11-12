@@ -7,13 +7,16 @@ def make_private_group_by(
     global_scale: Optional[f64],
     threshold: Optional[u32],
 ):
-    input, group_by, aggs, key_sanitizer = match_group_by(plan) # |\label{line:match-group-by}|
+    input, group_by, aggs, key_sanitizer = match_group_by(
+        plan
+    )  # |\label{line:match-group-by}|
 
     # 1: establish stability of `group_by` |\label{line:input_stability}|
     t_prior = input.make_stable(input_domain, input_metric)  # |\label{line:tprior}|
     middle_domain, middle_metric = t_prior.output_space()
 
-    for expr in group_by: # |\label{line:group-by-stability}|
+    group_by_keys = []
+    for expr in group_by:  # |\label{line:group-by-stability}|
         # grouping keys must be stable
         t_group_by = expr.make_stable(
             WildExprDomain(
@@ -23,23 +26,17 @@ def make_private_group_by(
             L0PInfDistance(middle_metric[0]),
         )
 
-        series_domain = t_group_by.output_domain.column
-        try:
-            domain = series_domain.element_domain(CategoricalDomain)
-        except Exception:
-            pass
-            
-        if domain is not None and domain.categories() is None:
-            raise "Categories are data-dependent, which may reveal sensitive record ordering."
+        if t_group_by.output_domain.column.dtype() == DataType.Categorical:
+            raise "Categorical grouping keys have data-dependent encodings. Cast to String or Enum first."
+
+        group_by_keys.append(t_group_by.invoke(input).expr)
 
     group_by_id = HashSet.from_iter(group_by)  # |\label{line:groupcols}|
     margin = middle_domain.get_margin(group_by_id)  # |\label{line:margin}|
 
     # 2: prepare for release of `aggs` |\label{line:prep-release-aggs}|
     match key_sanitizer:
-        case KeySanitizer.Join(keys):
-            num_keys = LazyFrame.from_(keys).select([len()]).collect()
-            margin.max_num_partitions = num_keys.column("len").u32().last()  # |\label{line:keys-len}|
+        case KeySanitizer.Join(_):
             is_join = True
         case _:
             is_join = False
@@ -54,7 +51,8 @@ def make_private_group_by(
             output_measure,
             expr,
             global_scale,
-        ) for expr in aggs
+        )
+        for expr in aggs
     ]
     m_aggs = make_composition(m_expr_aggs)
 
@@ -62,7 +60,9 @@ def make_private_group_by(
     f_privacy_map = m_aggs.privacy_map
 
     # 3: prepare for release of `keys` |\label{line:prep-release-keys}|
-    dp_exprs, null_exprs = zip(*((plan.expr, plan.fill) for plan in m_aggs.invoke(input)))
+    dp_exprs, null_exprs = zip(
+        *((plan.expr, plan.fill) for plan in m_aggs.invoke(input))
+    )
 
     # 3.2: reconcile information about the threshold |\label{line:reconcile-threshold}|
     if margin.invariant is not None or is_join:  # |\label{line:no-thresholding}|
@@ -81,12 +81,16 @@ def make_private_group_by(
     if threshold_info is not None:  # |\label{line:incorporate-threshold}|
         name, _, threshold_value, is_present = threshold_info
         threshold_expr = col(name).gt(lit(threshold_value))
-        if not is_present and predicate is not None:  # |\label{line:new-threshold-sanitizer}|
+        if (
+            not is_present and predicate is not None
+        ):  # |\label{line:new-threshold-sanitizer}|
             key_sanitizer = KeySanitizer.Filter(threshold_expr.and_(predicate))
         else:
             key_sanitizer = KeySanitizer.Filter(threshold_expr)
 
-    elif isinstance(key_sanitizer, KeySanitizer.Join):  # |\label{line:incorporate-join-fill}|
+    elif isinstance(
+        key_sanitizer, KeySanitizer.Join
+    ):  # |\label{line:incorporate-join-fill}|
         key_sanitizer.fill_null = []
         for dp_expr, null_expr in zip(dp_exprs, null_exprs):
             name = dp_expr.meta().output_name()
@@ -94,12 +98,12 @@ def make_private_group_by(
                 raise f"fill expression for {name} is unknown"
 
             key_sanitizer.fill_null.append(col(name).fill_null(null_expr))
-    
+
     # 4: build final measurement |\label{line:build-meas}|
     def function(arg: DslPlan) -> DslPlan:  # |\label{line:function}|
         output = DslPlan.GroupBy(
             input=arg,
-            keys=group_by,
+            keys=group_by_keys,
             aggs=[p.expr for p in f_comp.eval(arg)],
             apply=None,
             maintain_order=False,
@@ -115,6 +119,16 @@ def make_private_group_by(
                 fill_null,
                 keys=labels,
             ):
+                # Deduplicate public keys before joining and imputing.
+                public_on = left_on if how == JoinType.Left else right_on
+                labels = DslPlan.Distinct(
+                    input=labels,
+                    options=DistinctOptionsDSL(
+                        subset=public_on,
+                        keep_strategy=UniqueKeepStrategy.Any,
+                        maintain_order=False,
+                    ),
+                )
                 match how:  # |\label{line:join-how}|
                     case JoinType.Left:
                         input_left, input_right = labels, output
@@ -142,34 +156,39 @@ def make_private_group_by(
 
         # incorporate all information into optional bounds
         l0 = option_min(bound.num_groups, margin.max_groups)
-        li = option_min(bound.per_group, margin.max_length)
+        max_length = margin.max_length
+        if max_length is not None:
+            max_length = max_length.alerting_mul(2)
+        li = option_min(bound.per_group, max_length)
         l1 = d_in.get_bound(HashSet.new()).per_group  # |\label{line:trivial-l1}|
 
         # reduce optional bounds to concrete bounds
         if l0 is not None and l1 is not None and li is not None:
             pass
         elif l1 is not None:
-            l0 = l0 or l1 # |\label{line:l0-from-l1}|
-            li = li or l1 # |\label{line:li-from-l1}|
+            l0 = l0 or l1  # |\label{line:l0-from-l1}|
+            li = li or l1  # |\label{line:li-from-l1}|
         elif l0 is not None and li is not None:
-            l1 = l0.inf_mul(li) # |\label{line:l1-from-l0-li}|
-        else: # |\label{line: helpful_error_message}|            
+            l1 = l0.inf_mul(li)  # |\label{line:l1-from-l0-li}|
+        else:  # |\label{line: helpful_error_message}|
             raise f"num_groups ({l0}), total contributions ({l1}), and per_group ({li}) are not sufficiently well-defined."
 
         # tighten the concrete bounds via identities that always hold
-        l0 = min(l0, l1) # |\label{line:l0-tighten}|
-        li = min(li, l1) # |\label{line:li-tighten}|
-        l1 = min(l1, l0.inf_mul(li)) # |\label{line:l1-tighten}|
+        l0 = min(l0, l1)  # |\label{line:l0-tighten}|
+        li = min(li, l1)  # |\label{line:li-tighten}|
+        l1 = min(l1, l0.inf_mul(li))  # |\label{line:l1-tighten}|
 
         d_out = f_privacy_map.eval((l0, l1, li))
 
-        if margin.invariant is not None or is_join:  # |\label{line:privacy-map-static-keys}|
+        if (
+            margin.invariant is not None or is_join
+        ):  # |\label{line:privacy-map-static-keys}|
             pass
         elif threshold_info is not None:  # |\label{line:privacy-map-threshold}|
             _, noise, threshold_value, _ = threshold_info
             if li >= threshold_value:
                 raise f"Threshold must be greater than {li}."
-            
+
             d_instability = threshold_value.neg_inf_sub(li)
             delta_single = integrate_discrete_noise_tail(
                 noise.distribution, noise.scale, d_instability

@@ -14,7 +14,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-    
+
 
     .. tab-item:: R
         :sync: r
@@ -24,7 +24,7 @@ us if you are interested in proof-writing. Thank you!
             :start-after: init
             :end-before: /init
 
-            
+
 
 Define a few queries you might want to run up-front:
 
@@ -60,7 +60,7 @@ Define a few queries you might want to run up-front:
             :language: r
             :start-after: up-front
             :end-before: /up-front
-            
+
 
 Notice that both of these measurements share the same input domain,
 input metric, and output measure:
@@ -95,7 +95,7 @@ input metric, and output measure:
 This is important, because compositors require these three supporting
 elements to match for all queries.
 
-The non-adaptive compositor takes a collection of queries to execute on the dataset simultaneously. 
+The non-adaptive compositor takes a collection of queries to execute on the dataset simultaneously.
 When the data is passed in, all queries are evaluated together, in a single batch.
 
 .. tab-set::

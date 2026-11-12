@@ -34,7 +34,7 @@ mod test;
     ),
     derived_types(TV = "$get_value_type(get_carrier_type(input_domain))")
 )]
-/// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
+/// Make a Measurement that uses propose-test-release to release a hashmap of counts.
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
@@ -62,7 +62,7 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-/// * `threshold` - Exclude pairs with values whose distance from zero exceeds this value.
+/// * `threshold` - Release noisy values strictly beyond this threshold in its signed direction.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
@@ -135,6 +135,7 @@ impl
 
                 let l2 = (l2.clone()).min(&li * RBig::try_from(f64::from(*l0).inf_sqrt()?)?);
                 let li = li.min(l2.floor().into_parts().1);
+                let rho = noise_privacy_map.eval(&l2)?;
 
                 if l2.is_zero() {
                     return Ok((0.0, 0.0));
@@ -143,8 +144,6 @@ impl
                 if scale.is_zero() {
                     return Ok((f64::INFINITY, 1.0));
                 }
-
-                let rho = noise_privacy_map.eval(&l2)?;
 
                 if li > threshold {
                     return fallible!(

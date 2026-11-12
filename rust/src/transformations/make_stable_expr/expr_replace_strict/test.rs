@@ -111,3 +111,30 @@ fn test_make_expr_replace_strict_impute_series() -> Fallible<()> {
 fn test_make_expr_replace_strict_wrong_dtype() -> Fallible<()> {
     check_replace_strict(lit("A"), lit(45), None, None, None)
 }
+
+#[test]
+fn test_replace_strict_rejects_categorical() -> Fallible<()> {
+    let categorical = Series::new("data".into(), ["A", "B"]).cast(&DataType::Categorical(
+        Categories::global(),
+        Categories::global().mapping(),
+    ))?;
+    let lf = DataFrame::new(vec![categorical.into_column()])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "data",
+        crate::domains::CategoricalDomain,
+    )])?;
+    assert!(
+        make_stable_lazyframe(
+            domain,
+            FrameDistance(SymmetricDistance),
+            lf.with_column(col("data").replace_strict(
+                lit(Series::new("".into(), ["A", "B"])),
+                lit(Series::new("".into(), ["X", "Y"])),
+                None,
+                None::<DataType>,
+            )),
+        )
+        .is_err()
+    );
+    Ok(())
+}

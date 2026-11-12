@@ -15,7 +15,7 @@ use polars::prelude::*;
 use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
-use super::group_by::{Resize, check_infallible};
+use super::group_by::{Resize, check_infallible, materialize_grouping_keys};
 
 #[cfg(test)]
 mod test;
@@ -73,6 +73,20 @@ pub fn make_stable_truncate(
             truncate_domain(domain, truncation)
         })?;
 
+    // The matcher permits filters followed by an optional final group-by.
+    // Only that final group-by changes the expressions naming the output groups.
+    let has_group_by = matches!(truncations.last(), Some(Truncation::GroupBy { .. }));
+    let output_bys = truncation_bounds
+        .iter()
+        .map(|bound| {
+            if has_group_by {
+                materialize_grouping_keys(&bound.by)
+            } else {
+                Ok(bound.by.clone())
+            }
+        })
+        .collect::<Fallible<Vec<_>>>()?;
+
     let t_truncate = Transformation::new(
         middle_domain,
         middle_metric.clone(),
@@ -113,12 +127,16 @@ pub fn make_stable_truncate(
 
             // each truncation is used to derive row bounds
             let new_bounds = (truncation_bounds.iter())
-                .map(|truncation_bound| {
-                    truncate_id_bound(
+                .zip(&output_bys)
+                .map(|(truncation_bound, output_by)| {
+                    // Input certificates still refer to the original grouping expressions.
+                    let mut row_bound = truncate_id_bound(
                         id_bounds.get_bound(&truncation_bound.by),
                         truncation_bound.clone(),
                         total_num_ids,
-                    )
+                    )?;
+                    row_bound.by = output_by.clone();
+                    Ok(row_bound)
                 })
                 .collect::<Fallible<Vec<Bound>>>()?;
             Ok(Bounds(new_bounds))
@@ -160,10 +178,11 @@ fn truncate_domain(mut domain: DslPlanDomain, truncation: &Truncation) -> Fallib
                     .filter(|m| m.by.is_subset(&HashSet::from_iter(keys.clone())))
                     // discard invariants as multiverses are mixed
                     .map(|mut m| {
+                        m.by = materialize_grouping_keys(&m.by)?;
                         m.invariant = None;
-                        m
+                        Ok(m)
                     })
-                    .collect(),
+                    .collect::<Fallible<_>>()?,
             )
         }
     }

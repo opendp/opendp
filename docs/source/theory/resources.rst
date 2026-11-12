@@ -1,5 +1,13 @@
+:orphan:
+
 Resources List
 ==============
+
+.. note::
+
+    We are not actively maintaining this list.
+    Instead see the OpenDP Project's `Educational Resources <https://learning.opendp.org/>`_ page.
+
 
 Foundations
 -----------
@@ -22,7 +30,6 @@ Learning About Differential Privacy
 * `Programming Differential Privacy <https://programming-dp.com/>`_
 * `Privacy and Confidentiality Protection Overview <https://www2.census.gov/cac/nac/meetings/2019-05/garfinkel-privacy-confidentiality-protection.pdf>`_
 * `Hands-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
-* A short list of `Educational Resources <https://opendp.github.io/learning/>`_ maintained by the community
 
 
 Papers
@@ -36,4 +43,4 @@ Papers
 * `Privacy-preserving Statistical Estimation with Optimal Convergence Rates <https://cs-people.bu.edu/ads22/pubs/2011/stoc194-smith.pdf>`_ (Sample/aggregate and quantiles)
 * `Deep Learning with Differential Privacy <https://arxiv.org/pdf/1607.00133.pdf>`_ (Gradient descent)
 * `U.S. Broadband Coverage Data Set: A Differentially Private Data Release <https://arxiv.org/pdf/2103.14035.pdf>`_
-* `A Feasibility Study of Differentially Private Summary Statistics and Regression Analyses for Administrative Tax Data <https://arxiv.org/pdf/2110.12055.pdf>`_ 
+* `A Feasibility Study of Differentially Private Summary Statistics and Regression Analyses for Administrative Tax Data <https://arxiv.org/pdf/2110.12055.pdf>`_

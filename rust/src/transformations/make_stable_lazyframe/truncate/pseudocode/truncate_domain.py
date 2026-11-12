@@ -18,7 +18,10 @@ def truncate_domain(
             def with_truncation(lf):
                 return lf.group_by(keys).agg(aggs)
 
-            def without_invariant(m):
+            def output_margin(m):
+                m.by = materialize_grouping_keys(
+                    m.by
+                )  # |\label{line:materialized-margin}|
                 m.invariant = None
                 return m
 
@@ -30,7 +33,7 @@ def truncate_domain(
                 ],
                 margins=[
                     # discard invariants as multiverses are mixed
-                    without_invariant(m.clone())
+                    output_margin(m.clone())
                     for m in domain.margins
                     # only keep margins that are a subset of the truncation keys
                     if m.by.is_subset(HashSet.from_iter(keys))

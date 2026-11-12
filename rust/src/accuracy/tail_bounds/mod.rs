@@ -21,13 +21,27 @@ mod test;
 ///
 /// $\mathcal{L}_\mathbb{R}(0, s)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{R}, \quad  
+/// \forall x \in \mathbb{R}, \quad
 /// P[X = x] = \frac{1}{2 s}e^{-|x|/s}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{R}(0, s)
 /// ```
 pub fn conservative_continuous_laplacian_tail_to_alpha(scale: RBig, tail: RBig) -> Fallible<f64> {
-    // tail and scale division should be big rationals for precision and to avoid overflow
-    f64::neg_inf_cast(-tail / scale)?.inf_exp()?.inf_div(&2.0)
+    check_tail_arguments(&scale, &tail)?;
+    // The exponent must be rounded up (inf_cast): exp is increasing,
+    // rounding the (negative) exponent down could underestimate the tail probability.
+    f64::inf_cast(-tail / scale)?.inf_exp()?.inf_div(&2.0)
+}
+
+/// The tail bounds assume a positive noise scale and a nonnegative tail threshold;
+/// violating either flips the exponent's sign and can cause > 1 probability or panics
+fn check_tail_arguments(scale: &RBig, tail: &RBig) -> Fallible<()> {
+    if scale <= &RBig::ZERO {
+        return fallible!(FailedFunction, "scale ({scale}) must be positive");
+    }
+    if tail < &RBig::ZERO {
+        return fallible!(FailedFunction, "tail ({tail}) must be nonnegative");
+    }
+    Ok(())
 }
 
 /// Computes the probability of sampling a value greater than `t` from the discrete laplace distribution.
@@ -41,11 +55,12 @@ pub fn conservative_continuous_laplacian_tail_to_alpha(scale: RBig, tail: RBig) 
 ///
 /// $\mathcal{L}_\mathbb{Z}(0, scale)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
 pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) -> Fallible<f64> {
+    check_tail_arguments(&scale, &RBig::from(tail.clone()))?;
     let numer = f64::inf_cast(-RBig::from(tail) / scale.clone())?.inf_exp()?;
     let denom = f64::neg_inf_cast(RBig::ONE / scale)?
         .neg_inf_exp()?
@@ -67,7 +82,7 @@ pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) ->
 ///
 /// $\mathcal{N}_\mathbb{Z}(0, scale)$ is distributed as follows:
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```
@@ -90,6 +105,7 @@ pub fn conservative_discrete_gaussian_tail_to_alpha(scale: RBig, tail: UBig) -> 
 /// f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x - \mu}{\sigma}\right)^2}
 /// ```
 pub fn conservative_continuous_gaussian_tail_to_alpha(scale: RBig, tail: RBig) -> Fallible<f64> {
+    check_tail_arguments(&scale, &tail)?;
     // the SQRT_2 constant is already rounded down
     let sqrt_2_ceil: f64 = std::f64::consts::SQRT_2.next_up_();
 

@@ -2,7 +2,7 @@
 def find_min_covering(
     must_cover: set[T], sets: list[set[T], u32]
 ) -> list[tuple[set[T], u32]] | None:
-    
+
     covered = list()  # `\label{covered}`
 
     while must_cover:  # `\label{loop}`

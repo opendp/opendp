@@ -62,6 +62,20 @@ fn test_make_geometric_extreme_int() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_geometric_positive_subnormal_scale() -> Fallible<()> {
+    let measurement = make_geometric(
+        AtomDomain::<u8>::default(),
+        AbsoluteDistance::<u8>::default(),
+        f64::from_bits(1),
+        Some((0, u8::MAX)),
+    )?;
+    measurement.invoke(&0)?;
+    sample_discrete_laplace_linear::<u8, f32>(0, f32::from_bits(1), (0, u8::MAX))?;
+    assert_eq!(measurement.map(&0)?, 0.0);
+    Ok(())
+}
+
+#[test]
 fn test_make_noise_zexpfamily1_zero_scale() -> Fallible<()> {
     let domain = VectorDomain::<AtomDomain<u8>>::default();
     let metric = L1Distance::default();

@@ -1,17 +1,26 @@
+from typing import Any
+
 import pytest
 
 import opendp.prelude as dp
-from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence, _new_pure_function
+from opendp._internal import (
+    _extrinsic_domain,
+    _extrinsic_distance,
+    _extrinsic_divergence,
+    _new_pure_function,
+)
 
 from .helpers import ids
 
+
 def test_version():
-    assert dp.__version__.startswith('0.')
+    assert dp.__version__.startswith("0.")
 
 
 def test_type_getters():
     transformation = dp.t.make_mean(
-        dp.vector_domain(dp.atom_domain((0.0, 10.0)), 9), dp.symmetric_distance()
+        dp.vector_domain(dp.atom_domain((0.0, 10.0), nan=False), 9),
+        dp.symmetric_distance(),
     )
     assert transformation.input_distance_type == "u32"
     assert transformation.output_distance_type == "f64"
@@ -70,6 +79,7 @@ def test_bisect_edge():
 
 def test_type_hinting():
     from opendp.mod import binary_search
+
     assert binary_search(lambda x: x > 0, (0, 1), int, True)[0] == 1
     assert binary_search(lambda x: x > 0, (0, 1), T=int, return_sign=True)[0] == 1
     assert binary_search(lambda x: x > 0, bounds=(0, 1), return_sign=True)[0] == 1
@@ -103,26 +113,30 @@ def test_supporting_elements():
     input_metric = symmetric_distance()
 
     clamper = make_clamp(input_domain, input_metric, (0, 2))
-    assert str(clamper.input_domain) == 'VectorDomain(AtomDomain(T=i32))'
-    assert str(clamper.input_domain.carrier_type) == 'Vec<i32>'
-    assert str(clamper.output_domain) == 'VectorDomain(AtomDomain(bounds=[0, 2], T=i32))'
-    assert str(clamper.output_domain.carrier_type) == 'Vec<i32>'
-    assert str(clamper.input_metric) == 'SymmetricDistance()'
-    assert str(clamper.input_metric.distance_type) == 'u32'
-    assert str(clamper.output_metric) == 'SymmetricDistance()'
-    assert str(clamper.output_metric.distance_type) == 'u32'
+    assert str(clamper.input_domain) == "VectorDomain(AtomDomain(T=i32))"
+    assert str(clamper.input_domain.carrier_type) == "Vec<i32>"
+    assert (
+        str(clamper.output_domain) == "VectorDomain(AtomDomain(bounds=[0, 2], T=i32))"
+    )
+    assert str(clamper.output_domain.carrier_type) == "Vec<i32>"
+    assert str(clamper.input_metric) == "SymmetricDistance()"
+    assert str(clamper.input_metric.distance_type) == "u32"
+    assert str(clamper.output_metric) == "SymmetricDistance()"
+    assert str(clamper.output_metric.distance_type) == "u32"
 
     from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
-    assert str(mechanism.input_domain) == 'AtomDomain(T=f64)'
-    assert str(mechanism.input_domain.carrier_type) == 'f64'
-    assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
-    assert str(mechanism.input_metric.distance_type) == 'f64'
-    assert str(mechanism.output_measure) == 'MaxDivergence'
-    assert str(mechanism.output_measure.distance_type) == 'f64'
+    mechanism = make_laplace(
+        atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0
+    )
+    assert str(mechanism.input_domain) == "AtomDomain(T=f64)"
+    assert str(mechanism.input_domain.carrier_type) == "f64"
+    assert str(mechanism.input_metric) == "AbsoluteDistance(f64)"
+    assert str(mechanism.input_metric.distance_type) == "f64"
+    assert str(mechanism.output_measure) == "MaxDivergence"
+    assert str(mechanism.output_measure.distance_type) == "f64"
 
 
 def test_function():
@@ -131,13 +145,17 @@ def test_function():
     from opendp.metrics import absolute_distance
     from opendp.transformations import make_identity
 
-    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(
+        atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0
+    )
     pow = 4  # add noise 2^pow times
     for _ in range(pow):
         mechanism = mechanism >> mechanism.function
 
     # Exercise postprocessing transformation
-    transformation = make_identity(atom_domain(T=float, nan=False), absolute_distance(T=float))
+    transformation = make_identity(
+        atom_domain(T=float, nan=False), absolute_distance(T=float)
+    )
     mechanism = mechanism >> transformation
     print("mechanism(0.0)", mechanism(0.0))
 
@@ -145,6 +163,7 @@ def test_function():
 def test_privacy_profile():
     from opendp.measures import new_privacy_profile
     import math
+
     profile = new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
     assert profile.epsilon(delta=1e-7) == 16.11809565095832
@@ -157,9 +176,9 @@ def test_member():
     int_10_domain = atom_domain(T=int, bounds=(0, 10))
     assert int_10_domain.member(0)
     assert not int_10_domain.member(100)
-    with pytest.warns(UserWarning, match=r'inferred type is f64, expected i32'):
+    with pytest.warns(UserWarning, match=r"inferred type is f64, expected i32"):
         assert not int_10_domain.member(0.0)
-    with pytest.warns(UserWarning, match=r'inferred type is f64, expected i32'):
+    with pytest.warns(UserWarning, match=r"inferred type is f64, expected i32"):
         assert not int_10_domain.member(100.0)
 
     input_domain = vector_domain(atom_domain(T=int))
@@ -175,7 +194,9 @@ def test_member():
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(
+        atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0
+    )
     assert not mechanism.input_domain.member(float("NaN"))
 
 
@@ -184,41 +205,44 @@ def test_new_domain():
 
     domain = atom_domain(T=dp.i32)
     assert domain.member(3)
-    assert str(domain) == 'AtomDomain(T=i32)'
+    assert str(domain) == "AtomDomain(T=i32)"
 
     domain = atom_domain(T=dp.f64, nan=False)
     assert not domain.member(float("nan"))
-    assert str(domain) == 'AtomDomain(T=f64)'
+    assert str(domain) == "AtomDomain(T=f64)"
 
     domain = atom_domain((1, 2))
     assert domain.member(2)
     assert not domain.member(3)
-    assert str(domain) == 'AtomDomain(bounds=[1, 2], T=i32)'
+    assert str(domain) == "AtomDomain(bounds=[1, 2], T=i32)"
 
     domain = vector_domain(atom_domain(T=dp.i32))
     assert domain.member([2])
-    assert str(domain) == 'VectorDomain(AtomDomain(T=i32))'
+    assert str(domain) == "VectorDomain(AtomDomain(T=i32))"
 
     domain = vector_domain(atom_domain((2, 3)))
     assert domain.member([2])
     assert not domain.member([2, 4])
-    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2, 3], T=i32))'
+    assert str(domain) == "VectorDomain(AtomDomain(bounds=[2, 3], T=i32))"
 
     domain = vector_domain(atom_domain(T=dp.i32), 10)
     assert domain.member([1] * 10)
-    assert str(domain) == 'VectorDomain(AtomDomain(T=i32), size=10)'
+    assert str(domain) == "VectorDomain(AtomDomain(T=i32), size=10)"
 
     domain = vector_domain(atom_domain((2.0, 7.0)), 10)
     assert domain.member([3.0] * 10)
     assert not domain.member([1.0] * 10)
-    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2.0, 7.0], nan=true, T=f64), size=10)'
+    assert (
+        str(domain)
+        == "VectorDomain(AtomDomain(bounds=[2.0, 7.0], nan=true, T=f64), size=10)"
+    )
 
     null_domain = atom_domain(nan=True, T=float)
-    assert str(null_domain) == 'AtomDomain(nan=true, T=f64)'
+    assert str(null_domain) == "AtomDomain(nan=true, T=f64)"
     assert null_domain.member(float("nan"))
 
     not_null_domain = atom_domain(nan=False, T=float)
-    assert str(not_null_domain) == 'AtomDomain(T=f64)'
+    assert str(not_null_domain) == "AtomDomain(T=f64)"
     assert not not_null_domain.member(float("nan"))
 
 
@@ -231,7 +255,7 @@ def test_new_domain():
             dp.max_divergence(),
             lambda x: x,
             lambda _: 0.0,
-        ), 
+        ),
         dp.t.make_user_transformation(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
@@ -255,6 +279,7 @@ def test_new_domain():
 def test_struct_iter(struct):
     with pytest.raises(ValueError):
         [*struct]
+
 
 @pytest.mark.parametrize("new_domain", [dp.user_domain, _extrinsic_domain])
 def test_custom_domain(new_domain):
@@ -280,7 +305,7 @@ def test_custom_domain(new_domain):
     # MEMORY CHECK: try to access data which would have fallen out-of-scope and been freed
     import gc
 
-    gc.collect() # if refcount is incorrect, then accessing .descriptor will trigger a use-after-free
+    gc.collect()  # if refcount is incorrect, then accessing .descriptor will trigger a use-after-free
 
     # can retrieve the descriptor for use in further analysis
     assert domain.descriptor == {1, 2, 3, 4}
@@ -292,7 +317,7 @@ def test_custom_domain(new_domain):
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
-    january_1 = datetime.fromisoformat('2024-01-01')
+    january_1 = datetime.fromisoformat("2024-01-01")
     assert vec_domain.member([january_1])
     trans = dp.t.make_identity(vec_domain, dp.symmetric_distance())
     misc_data = [1, january_1, "abc", 1j + 2]
@@ -306,6 +331,84 @@ def test_custom_domain(new_domain):
     misc_data = {"A": january_1, "C": 1j + 2}  # type: ignore[assignment]
     assert trans(misc_data) == misc_data
     assert not map_domain.member(misc_data)
+
+
+def test_extrinsic_descriptors_are_copied():
+    domain_descriptor = {"members": [1]}
+    domain = _extrinsic_domain(
+        "TestDomain",
+        lambda x: x in domain_descriptor["members"],
+        domain_descriptor,
+    )
+    domain.descriptor["members"].append(2)
+    domain.cast(dict)["members"].append(3)
+    assert domain.descriptor == {"members": [1]}
+    assert domain.member(1)
+    assert not domain.member(2)
+
+    metric = _extrinsic_distance("TestMetric", ["distance"])
+    metric.descriptor.append("changed")
+    metric.cast(list).append("changed")
+    assert metric.descriptor == ["distance"]
+
+    measure = _extrinsic_divergence("TestMeasure", {"kind": "custom"})
+    measure.descriptor["kind"] = "changed"
+    measure.cast(dict)["kind"] = "changed"
+    assert measure.descriptor == {"kind": "custom"}
+
+    with pytest.raises(ValueError, match="domain descriptor must be a int"):
+        domain.cast(int)
+    with pytest.raises(ValueError, match="metric descriptor must be a int"):
+        metric.cast(int)
+    with pytest.raises(ValueError, match="measure descriptor must be a int"):
+        measure.cast(int)
+
+
+def test_extrinsic_descriptors_copy_nested_native_handles():
+    # Native-backed OpenDP handles are shared; mutable Python state is not.
+    value = {
+        "domain": dp.atom_domain(T=int),
+        "metric": dp.symmetric_distance(),
+        "measure": dp.max_divergence(),
+        "items": [1],
+    }
+    domain = _extrinsic_domain("Nested", lambda _: True, value)
+
+    descriptor = domain.cast(dict)
+    for key in ("domain", "metric", "measure"):
+        assert descriptor[key] is value[key]
+
+    descriptor["items"].append(2)
+    assert domain.descriptor["items"] == [1]
+
+
+def test_extrinsic_descriptors_without_hbc(monkeypatch):
+    import opendp.mod as mod
+
+    monkeypatch.setattr(
+        mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+    )
+    dp.enable_features("contrib")
+    assert "honest-but-curious" not in mod.GLOBAL_FEATURES
+
+    objects: list[tuple[Any, type]] = [
+        (_extrinsic_domain("TestDomain", lambda _: True, {"a": [1]}), dict),
+        (_extrinsic_distance("TestMetric", ["a"]), list),
+        (_extrinsic_divergence("TestMeasure", {"a": [1]}), dict),
+    ]
+    for obj, expected_type in objects:
+        value = obj.descriptor
+        assert isinstance(value, expected_type)
+        assert obj.cast(expected_type) == value
+
+    constructors: list[tuple[Any, tuple]] = [
+        (dp.user_domain, ("TestDomain", lambda _: True)),
+        (dp.user_distance, ("TestMetric",)),
+        (dp.user_divergence, ("TestMeasure",)),
+    ]
+    for constructor, args in constructors:
+        with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+            constructor(*args)
 
 
 def test_extrinsic_free():
@@ -338,13 +441,21 @@ def test_extrinsic_free():
     # this test will pass if Queryable extends the lifetime of [] by holding a reference to it
 
 
-@pytest.mark.parametrize("new_distance,new_divergence", zip([dp.user_distance, _extrinsic_distance], [dp.user_divergence, _extrinsic_divergence]))
+@pytest.mark.parametrize(
+    "new_distance, new_divergence",
+    [
+        (dp.user_distance, dp.user_divergence),
+        (_extrinsic_distance, _extrinsic_divergence),
+    ],
+)
 def test_custom_distance(new_distance, new_divergence):
     from datetime import datetime, timedelta
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
-        dp.vector_domain(dp.user_domain("DatetimeDomain()", lambda x: isinstance(x, datetime))),
+        dp.vector_domain(
+            dp.user_domain("DatetimeDomain()", lambda x: isinstance(x, datetime))
+        ),
         new_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
@@ -352,7 +463,7 @@ def test_custom_distance(new_distance, new_divergence):
         lambda d_in: d_in.total_seconds() * 1000,
     )
 
-    january_1 = datetime.fromisoformat('2024-01-01')
+    january_1 = datetime.fromisoformat("2024-01-01")
     data = [january_1, january_1]
     assert trans(data) == sum(datetime.timestamp(x) for x in data)
 
@@ -363,7 +474,7 @@ def test_custom_distance(new_distance, new_divergence):
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
-        new_divergence("tCDP"),
+        new_divergence("tCDP", {"kind": "tCDP"}),
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
@@ -371,6 +482,11 @@ def test_custom_distance(new_distance, new_divergence):
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+    assert isinstance(meas.output_measure, dp.ExtrinsicDivergence)
+    assert meas.output_measure.descriptor == {"kind": "tCDP"}
+    assert meas.output_measure.cast(dict) == {"kind": "tCDP"}
+    with pytest.raises(ValueError, match=r"measure descriptor must be a list"):
+        meas.output_measure.cast(list)
 
 
 def test_pure_function():
@@ -382,11 +498,11 @@ def test_pointer_classes_dont_iter():
     import opendp.prelude as dp
 
     # since pointer classes like Domain, Transformation, etc. inherit from ctypes.POINTER,
-    # __iter__ is inherited and attempts to unpack the data behind the pointer 
+    # __iter__ is inherited and attempts to unpack the data behind the pointer
     # as if it were a pointer to an array of structs.
 
     # However, structs from OpenDP are opaque, so are zero-sized.
-    # Python will infinitely yield the data directly behind the pointer, 
+    # Python will infinitely yield the data directly behind the pointer,
     # stepping forward by zero bytes each time.
 
     # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
@@ -396,4 +512,5 @@ def test_pointer_classes_dont_iter():
 
 def test_erfc():
     from opendp._data import erfc
+
     assert erfc(0.5) == 0.4795001222363462

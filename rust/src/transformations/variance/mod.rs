@@ -1,6 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+use dashu::rational::RBig;
 use num::{Float as _, Zero};
 use opendp_derive::bootstrap;
 
@@ -8,7 +9,7 @@ use crate::core::Transformation;
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
-use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
+use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
 use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
 
@@ -17,6 +18,10 @@ use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_square
     arguments(bounds(rust_type = "(T, T)"), ddof(default = 1)),
     generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
+)]
+#[deprecated(
+    since = "0.17.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
 )]
 /// Make a Transformation that computes the variance of bounded data.
 ///
@@ -49,7 +54,7 @@ pub fn make_variance<S>(
 >
 where
     S: UncheckedSum,
-    S::Item: 'static + Float,
+    S::Item: 'static + Float + InfCast<RBig>,
 {
     let size = (input_domain.size).ok_or_else(|| {
         err!(

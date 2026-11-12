@@ -109,7 +109,7 @@ where
         input_metric,
         MaxDivergence,
         scale,
-        matches!(optimize, Optimize::Max),
+        matches!(optimize, Optimize::Min),
     )
 }
 

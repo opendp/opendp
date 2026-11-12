@@ -1,4 +1,4 @@
-'''
+"""
 The ``prelude`` module provides shortcuts that reduce the number of ``import`` statements needed to get started.
 In most of our notebooks we begin with:
 
@@ -7,7 +7,7 @@ In most of our notebooks we begin with:
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
 
-After that we can refer to members of 
+After that we can refer to members of
 :py:mod:`mod <opendp.mod>`,
 :py:mod:`domains <opendp.domains>`,
 :py:mod:`metrics <opendp.metrics>`,
@@ -33,9 +33,10 @@ For example:
     <class 'function'>
     >>> type(dp.c.make_composition)
     <class 'function'>
-'''
+"""
+
 from opendp.mod import *
-from opendp.extras import sklearn, numpy, polars, examples, mbi
+from opendp.extras import sklearn, numpy, polars, examples, mbi, ibis
 from opendp.extras.polars import dp_len as len
 import opendp.transformations as t
 import opendp.measurements as m
@@ -45,7 +46,7 @@ from opendp.metrics import *
 from opendp.measures import *
 from opendp.typing import *
 from opendp.accuracy import *
-from opendp.core import new_function, new_queryable
+from opendp.core import as_array, new_function, new_queryable
 from opendp.context import *
 
 __all__ = ["t", "m", "c"]
