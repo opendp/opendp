@@ -1,8 +1,6 @@
 //! Membership of concrete verified tables in OpenDP frame domains.
 //! Unbound VPlans are syntax; checking a plan on bound input is a test utility.
 
-use std::collections::HashMap;
-
 use polars::prelude::{DataType, Field, PlSmallStr};
 
 use crate::verified_query as verified;
@@ -148,22 +146,12 @@ fn roots(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmal
 }
 
 fn margin_member(margin: &Margin<VExpr>, table: &VTable) -> Fallible<bool> {
-    if margin.by.is_empty() {
-        return Ok(margin.max_groups != Some(0)
-            && margin.max_length.is_none_or(|max| table.rows.len() <= max as usize));
-    }
-
-    // Use one ordering of the HashSet keys for every row in this grouping.
-    // project::eval_prefix is Verus-verified against project::row_prefix.
-    let exprs = margin.by.iter().cloned().collect::<Vec<_>>();
-    let mut groups: HashMap<Vec<Option<VValue>>, usize> = HashMap::new();
-    for row in &table.rows {
-        let key = verified::project::eval_prefix(&exprs, row, exprs.len())
-            .map_err(|_| err!(MakeDomain, "invalid verified grouping expression"))?;
-        *groups.entry(key).or_default() += 1;
-    }
-    Ok(margin.max_groups.is_none_or(|max| groups.len() <= max as usize)
-        && margin.max_length.is_none_or(|max| groups.values().all(|size| *size <= max as usize)))
+    // Key order is arbitrary but fixed within this invocation.
+    // The verifier checks both expression evaluation and group counting.
+    let keys = margin.by.iter().cloned().collect::<Vec<_>>();
+    verified::margin::check_margin(
+        &table.rows, &keys, margin.max_length, margin.max_groups,
+    ).map_err(|_| err!(MakeDomain, "invalid verified grouping expression"))
 }
 
 fn table_member(table: &VTable, domain: &FrameDomain<VTable>) -> Fallible<bool> {

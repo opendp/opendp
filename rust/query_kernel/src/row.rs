@@ -2,6 +2,8 @@ use vstd::prelude::*;
 
 #[path = "row/project.rs"]
 pub mod project;
+#[path = "row/margin.rs"]
+pub mod margin;
 #[path = "row/filter.rs"]
 pub mod filter;
 #[path = "row/scalar.rs"]
