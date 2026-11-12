@@ -266,6 +266,7 @@ To improve the utility of this projection, you could release an updated continge
 
         .. code:: pycon
 
+            >>> dp.enable_features("honest-but-curious")
             >>> table2 = (
             ...     context.query(rho=0.05, delta=0.0)
             ...     .select("SEX")
