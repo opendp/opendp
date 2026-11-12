@@ -5,5 +5,11 @@ pub mod verified;
 #[path = "../../src/transformations/make_stable_vplan/stability.rs"]
 pub mod stability;
 
-#[path = "../../src/transformations/make_stable_vplan/certified.rs"]
-pub mod certified;
+#[path = "../../src/transformations/make_stable_vplan/input/proof.rs"]
+pub mod input_proof;
+
+#[path = "../../src/transformations/make_stable_vplan/filter/proof.rs"]
+pub mod filter_proof;
+
+#[path = "../../src/transformations/make_stable_vplan/project/proof.rs"]
+pub mod project_proof;

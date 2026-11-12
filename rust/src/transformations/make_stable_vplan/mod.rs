@@ -1,21 +1,23 @@
-//! Recursive, backend-independent constructors over the verified query DSL.
-//!
-//! Every constructor consumes a node (or, later, a recognized subtree), then
-//! composes with its recursively constructed child transformation.
+//! Verified, backend-independent OpenDP constructors for row-local VPlans.
+//! Each operator constructs and composes its own OpenDP Transformation.
+
+mod input;
+mod filter;
+mod project;
+mod stability;
+
+// Verus-only executable constructors are colocated with their OpenDP nodes.
+#[path = "input/proof.rs"]
+mod input_proof;
+#[path = "filter/proof.rs"]
+mod filter_proof;
+#[path = "project/proof.rs"]
+mod project_proof;
 
 use std::collections::HashSet;
-
-mod stability;
-mod certified;
-
 use crate::{
-    core::{Domain, Function, StabilityMap, Transformation},
-    domains::{
-        verified_frame::kernel_schema,
-        verified_plan::{
-            filter_domain, project_domain, VFrameBounds, VFrameMetric, VPlanDomain,
-        },
-    },
+    core::Transformation,
+    domains::verified_plan::{VFrameBounds, VFrameMetric, VPlanDomain},
     error::*,
     verified_query::{self as verified, VExpr, VField, VPlan},
 };
@@ -23,8 +25,6 @@ use crate::{
 type VTransformation =
     Transformation<VPlanDomain, VFrameMetric, VPlanDomain, VFrameMetric>;
 
-/// Admit only results whose verified schema matches the OpenDP output-domain
-/// contract. The executable checker itself is proved in Verus.
 fn checked_result(
     result: Option<(VPlan, Vec<VField>)>,
     expected: &Vec<VField>,
@@ -36,98 +36,23 @@ fn checked_result(
     }
 }
 
-fn make_input(
-    domain: VPlanDomain,
-    metric: VFrameMetric,
-) -> Fallible<VTransformation> {
-    let source = kernel_schema(&domain.source.series_domains)?;
-    let expected = kernel_schema(&domain.frame.series_domains)?;
-    let input_domain = domain.clone();
-    Transformation::new(
-        domain.clone(), metric.clone(), domain, metric,
-        Function::new_fallible(move |input: &VPlan| {
-            // The source-relative contract includes bounds, names, and margins,
-            // none of which are described by the Verus type schema alone.
-            if !input_domain.member(input)? {
-                return fallible!(MakeTransformation,
-                    "caller plan does not satisfy the verified input domain");
-            }
-            checked_result(
-                certified::make_input(input.clone(), &source),
-                &expected,
-            )
-        }),
-        StabilityMap::new(Clone::clone),
-    )
-}
-
 fn global_bound(bounds: &VFrameBounds) -> VFrameBounds {
-    // The current Verus stability theorem proves symmetric row distance,
-    // not preservation of arbitrary grouping-dependent bounds.
+    // Without a grouping-specific proof, retain only the global bound.
     crate::metrics::Bounds(vec![bounds.get_bound(&HashSet::new())])
 }
 
-fn make_project(
-    domain: VPlanDomain,
-    metric: VFrameMetric,
-    exprs: Vec<VExpr>,
-) -> Fallible<VTransformation> {
-    let output = domain.with_output(project_domain(&domain.frame, &exprs)?);
-    let source = kernel_schema(&domain.source.series_domains)?;
-    let expected = kernel_schema(&output.frame.series_domains)?;
-    Transformation::new(
-        domain, metric.clone(), output, metric,
-        Function::new_fallible(move |input: &VPlan| {
-            checked_result(
-                certified::make_project(input.clone(), exprs.clone(), &source),
-                &expected,
-            )
-        }),
-        StabilityMap::new(global_bound),
-    )
-}
-
-fn make_filter(
-    domain: VPlanDomain,
-    metric: VFrameMetric,
-    predicate: VExpr,
-) -> Fallible<VTransformation> {
-    let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
-    let source = kernel_schema(&domain.source.series_domains)?;
-    let expected = kernel_schema(&output.frame.series_domains)?;
-    Transformation::new(
-        domain, metric.clone(), output, metric,
-        Function::new_fallible(move |input: &VPlan| {
-            checked_result(
-                certified::make_filter(input.clone(), predicate.clone(), &source),
-                &expected,
-            )
-        }),
-        StabilityMap::new(global_bound),
-    )
-}
-
-/// Construct a stable VPlan-to-VPlan transformation from an AST subtree.
-///
-/// The leaf is the identity on the caller's plan. Project and Filter extend
-/// that plan; source data is neither accessed nor embedded in the AST.
+/// Compose node-level transformations, preserving their OpenDP contracts.
 pub(crate) fn make_stable_vplan(
     input_domain: VPlanDomain,
     input_metric: VFrameMetric,
     plan: VPlan,
 ) -> Fallible<VTransformation> {
     match plan {
-        VPlan::Input => make_input(input_domain, input_metric),
-        VPlan::Project { input, exprs } => {
-            let parent = make_stable_vplan(input_domain, input_metric, *input)?;
-            let (domain, metric) = parent.output_space();
-            parent >> make_project(domain, metric, exprs)?
-        },
-        VPlan::Filter { input, predicate } => {
-            let parent = make_stable_vplan(input_domain, input_metric, *input)?;
-            let (domain, metric) = parent.output_space();
-            parent >> make_filter(domain, metric, predicate)?
-        },
+        VPlan::Input => input::make_input(input_domain, input_metric),
+        VPlan::Project { input, exprs } =>
+            project::make_project(input_domain, input_metric, *input, exprs),
+        VPlan::Filter { input, predicate } =>
+            filter::make_filter(input_domain, input_metric, *input, predicate),
     }
 }
 
@@ -211,6 +136,34 @@ mod tests {
         assert!(transformation.output_domain.frame.member(
             &VTable { schema, rows: values },
         )?);
+        Ok(())
+    }
+
+    #[test]
+    fn insertion_and_deletion_have_unit_symmetric_distance() -> Fallible<()> {
+        let domain = VPlanDomain::new(source()?)?;
+        let transformation = make_stable_vplan(
+            domain, VFrameMetric::new(SymmetricDistance), query(),
+        )?;
+        let compiled = transformation.invoke(&VPlan::Input)?;
+        let original = verified::evaluate(&compiled, &table()).unwrap();
+
+        let mut inserted = table();
+        inserted.rows.push(vec![
+            Some(VValue::Int(7)), Some(VValue::Bool(true)),
+        ]);
+        let with_insert = verified::evaluate(&compiled, &inserted).unwrap();
+        assert_eq!(with_insert, vec![original[0].clone(), original[0].clone()]);
+
+        let mut deleted = table();
+        deleted.rows.remove(0);
+        let with_delete = verified::evaluate(&compiled, &deleted).unwrap();
+        assert!(with_delete.is_empty());
+
+        assert_eq!(
+            transformation.map(&Bounds::from(1))?
+                .get_bound(&HashSet::new()).per_group, Some(1),
+        );
         Ok(())
     }
 

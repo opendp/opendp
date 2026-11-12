@@ -11,6 +11,19 @@ use row_local::*;
 
 verus! {
 
+/// A successful executable node has the declared source-relative
+/// schema and is 1-Lipschitz for both insertion and deletion adjacency.
+pub open spec fn certified_result(
+    result: Option<(VPlan, Vec<VField>)>, source_schema: Seq<VField>,
+) -> bool {
+    match result {
+        Some((plan, fields)) =>
+            plan_schema(&plan, source_schema) == Some(fields@)
+            && stable_on_typed_edits(&plan, source_schema),
+        None => true,
+    }
+}
+
 pub open spec fn dataset_spec(
     plan: &VPlan, rows: Seq<Seq<Option<VValue>>>,
 ) -> Result<Multiset<Seq<Option<VValue>>>, ()> {
@@ -239,6 +252,108 @@ pub proof fn lemma_all_typed_insertions_stable(
         } by {
         assert(plan_schema(plan, before.schema@).is_Some());
         lemma_typed_row_insert_stable(plan, before, after, index);
+    }
+}
+
+/// Symmetric adjacency allows insertion or deletion of one typed row.
+pub open spec fn table_one_edit(before: &VTable, after: &VTable, index: int) -> bool {
+    table_one_insert(before, after, index) || table_one_insert(after, before, index)
+}
+
+pub proof fn lemma_bag_one_edit_symmetric(
+    before: Multiset<Seq<Option<VValue>>>,
+    after: Multiset<Seq<Option<VValue>>>,
+)
+    requires bag_one_edit(before, after),
+    ensures bag_one_edit(after, before),
+{
+    if before =~= after {
+    } else if exists|row: Seq<Option<VValue>>| after =~= before.insert(row) {
+        let row = choose|row: Seq<Option<VValue>>| after =~= before.insert(row);
+        assert(bag_one_edit(after, before));
+    } else {
+        let row = choose|row: Seq<Option<VValue>>| before =~= after.insert(row);
+        assert(bag_one_edit(after, before));
+    }
+}
+
+/// Insertion stability also proves deletion stability by swapping the tables.
+pub proof fn lemma_typed_row_edit_stable(
+    plan: &VPlan, before: &VTable, after: &VTable, index: int,
+)
+    requires
+        table_valid(before),
+        table_valid(after),
+        table_one_edit(before, after, index),
+        plan_schema(plan, before.schema@).is_Some(),
+    ensures
+        match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) =>
+                bag_one_edit(before_bag, after_bag),
+            _ => false,
+        },
+{
+    if table_one_insert(before, after, index) {
+        lemma_typed_row_insert_stable(plan, before, after, index);
+    } else {
+        assert(table_one_insert(after, before, index));
+        assert(after.schema@ == before.schema@);
+        lemma_typed_row_insert_stable(plan, after, before, index);
+        match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) => {
+                lemma_bag_one_edit_symmetric(after_bag, before_bag);
+            },
+            _ => { assert(false); },
+        }
+    }
+}
+
+/// Verus certificate for both directions of unit symmetric-distance edits.
+pub open spec fn stable_on_typed_edits(
+    plan: &VPlan, schema: Seq<VField>,
+) -> bool {
+    forall|before: &VTable, after: &VTable, index: int|
+        table_valid(before)
+        && table_valid(after)
+        && before.schema@ == schema
+        && table_one_edit(before, after, index)
+        ==> match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) =>
+                bag_one_edit(before_bag, after_bag),
+            _ => false,
+        }
+}
+
+pub proof fn lemma_all_typed_edits_stable(
+    plan: &VPlan, schema: Seq<VField>,
+)
+    requires plan_schema(plan, schema).is_Some(),
+    ensures stable_on_typed_edits(plan, schema),
+{
+    assert forall|before: &VTable, after: &VTable, index: int|
+        table_valid(before)
+        && table_valid(after)
+        && before.schema@ == schema
+        && table_one_edit(before, after, index)
+        implies match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) =>
+                bag_one_edit(before_bag, after_bag),
+            _ => false,
+        } by {
+        assert(plan_schema(plan, before.schema@).is_Some());
+        lemma_typed_row_edit_stable(plan, before, after, index);
     }
 }
 
