@@ -84,14 +84,10 @@ fn expression_column(
             "verified projection expressions must be named"),
     };
 
-    let mut inner = expr;
-    while let VExpr::Alias { expr, .. } = inner {
-        inner = expr;
-    }
-    let mut column = match inner {
-        VExpr::Column(index) => input.series_domains.get(*index)
+    let mut column = match verified::construct::identity_column(expr) {
+        Some(index) => input.series_domains.get(index)
             .ok_or_else(|| err!(MakeTransformation, "column outside verified schema"))?.clone(),
-        _ => broad_column(name.clone(), field)?,
+        None => broad_column(name.clone(), field)?,
     };
     column.name = name;
     Ok(column)

@@ -6,7 +6,7 @@ on:
     paths:
       - 'rust/query_kernel/**'
       - 'rust/query_verification/**'
-      - 'rust/src/transformations/make_verified_stable_lazyframe/stability.rs'
+      - 'rust/src/transformations/make_stable_vplan/**'
       - '.github/workflows/query-kernel-verus.yml'
   workflow_dispatch:
 

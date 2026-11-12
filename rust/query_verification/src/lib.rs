@@ -2,5 +2,8 @@
 #[path = "../../query_kernel/src/row.rs"]
 pub mod verified;
 
-#[path = "../../src/transformations/make_verified_stable_lazyframe/stability.rs"]
+#[path = "../../src/transformations/make_stable_vplan/stability.rs"]
 pub mod stability;
+
+#[path = "../../src/transformations/make_stable_vplan/certified.rs"]
+pub mod certified;

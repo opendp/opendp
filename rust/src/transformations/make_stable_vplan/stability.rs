@@ -194,4 +194,136 @@ pub proof fn lemma_typed_row_insert_stable(
     }
 }
 
+/// A compiled, well-typed plan is 1-Lipschitz for insert/delete
+/// adjacency on the typed source tables.
+///
+/// This is quantified over *all* valid table pairs, so a constructor can
+/// return this result as a postcondition rather than verifying one example.
+pub open spec fn stable_on_typed_insertions(
+    plan: &VPlan, schema: Seq<VField>,
+) -> bool {
+    forall|before: &VTable, after: &VTable, index: int|
+        table_valid(before)
+        && table_valid(after)
+        && before.schema@ == schema
+        && table_one_insert(before, after, index)
+        ==> match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) =>
+                bag_one_edit(before_bag, after_bag),
+            _ => false,
+        }
+}
+
+/// This proof is consumed by the executable, verified make_* entry points.
+pub proof fn lemma_all_typed_insertions_stable(
+    plan: &VPlan, schema: Seq<VField>,
+)
+    requires plan_schema(plan, schema).is_Some(),
+    ensures stable_on_typed_insertions(plan, schema),
+{
+    assert forall|before: &VTable, after: &VTable, index: int|
+        table_valid(before)
+        && table_valid(after)
+        && before.schema@ == schema
+        && table_one_insert(before, after, index)
+        implies match (
+            dataset_spec(plan, rows_view(before.rows@)),
+            dataset_spec(plan, rows_view(after.rows@)),
+        ) {
+            (Ok(before_bag), Ok(after_bag)) =>
+                bag_one_edit(before_bag, after_bag),
+            _ => false,
+        } by {
+        assert(plan_schema(plan, before.schema@).is_Some());
+        lemma_typed_row_insert_stable(plan, before, after, index);
+    }
+}
+
+/// One relational operator, applied to an arbitrary child relation, is
+/// 1-Lipschitz under a single row insertion. This is the property required
+/// by make_project and make_filter, independent of the child's AST.
+pub open spec fn stable_local_insertions(
+    plan: &VPlan, input_schema: Seq<VField>, output_schema: Seq<VField>,
+) -> bool {
+    forall|rows: Seq<Seq<Option<VValue>>>, index: int, row: Seq<Option<VValue>>|
+        rows_in_schema(rows, input_schema)
+        && row_in_schema(row, input_schema)
+        && 0 <= index <= rows.len()
+        ==> match (apply_spec(plan, rows), #[trigger] apply_spec(plan, rows.insert(index, row))) {
+            (Ok(before), Ok(after)) => seq_one_insert(before, after),
+            _ => false,
+        }
+}
+
+pub proof fn lemma_all_local_insertions_stable(
+    plan: &VPlan, input_schema: Seq<VField>, output_schema: Seq<VField>,
+)
+    requires local_schema(plan, input_schema) == Some(output_schema),
+    ensures stable_local_insertions(plan, input_schema, output_schema),
+{
+    assert forall|rows: Seq<Seq<Option<VValue>>>, index: int, row: Seq<Option<VValue>>|
+        rows_in_schema(rows, input_schema)
+        && row_in_schema(row, input_schema)
+        && 0 <= index <= rows.len()
+        implies match (apply_spec(plan, rows), #[trigger] apply_spec(plan, rows.insert(index, row))) {
+            (Ok(before), Ok(after)) => seq_one_insert(before, after),
+            _ => false,
+        } by {
+        lemma_apply_insert(plan, rows, input_schema, output_schema, index, row);
+        match (
+            apply_spec(plan, rows),
+            apply_spec(plan, rows.insert(index, row)),
+            local_row_spec(plan, row),
+        ) {
+            (Ok(before), Ok(after), Ok(Some(added))) => {
+                let j = choose|j: int|
+                    0 <= j <= before.len() && after =~= before.insert(j, added);
+                assert(seq_one_insert(before, after));
+            },
+            (Ok(before), Ok(after), Ok(None)) => {
+                assert(before =~= after);
+                assert(seq_one_insert(before, after));
+            },
+            _ => { assert(false); },
+        }
+    }
+}
+
+/// The local operator represented by any well-typed plan is stable. The
+/// constructor certificates ensure this for the actual plan they return.
+pub open spec fn stable_local_from_source(
+    plan: &VPlan, source_schema: Seq<VField>,
+) -> bool {
+    match plan {
+        VPlan::Input => stable_local_insertions(plan, source_schema, source_schema),
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } =>
+            match (plan_schema(input, source_schema), plan_schema(plan, source_schema)) {
+                (Some(child), Some(output)) => stable_local_insertions(plan, child, output),
+                _ => false,
+            },
+    }
+}
+
+pub proof fn lemma_well_typed_plan_locally_stable(
+    plan: &VPlan, source_schema: Seq<VField>,
+)
+    requires plan_schema(plan, source_schema).is_Some(),
+    ensures stable_local_from_source(plan, source_schema),
+{
+    match plan {
+        VPlan::Input => {
+            lemma_all_local_insertions_stable(plan, source_schema, source_schema);
+        },
+        VPlan::Project { input, .. } | VPlan::Filter { input, .. } => {
+            let child_schema = plan_schema(input, source_schema).unwrap();
+            let output_schema = plan_schema(plan, source_schema).unwrap();
+            assert(local_schema(plan, child_schema) == Some(output_schema));
+            lemma_all_local_insertions_stable(plan, child_schema, output_schema);
+        },
+    }
+}
+
 } // verus!

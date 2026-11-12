@@ -5,25 +5,51 @@
 
 use std::collections::HashSet;
 
+mod stability;
+mod certified;
+
 use crate::{
     core::{Function, StabilityMap, Transformation},
-    domains::verified_plan::{
-        filter_domain, project_domain, VFrameBounds, VFrameMetric, VPlanDomain,
+    domains::{
+        verified_frame::kernel_schema,
+        verified_plan::{
+            filter_domain, project_domain, VFrameBounds, VFrameMetric, VPlanDomain,
+        },
     },
     error::*,
-    verified_query::{VExpr, VPlan},
+    verified_query::{self as verified, VExpr, VField, VPlan},
 };
 
 type VTransformation =
     Transformation<VPlanDomain, VFrameMetric, VPlanDomain, VFrameMetric>;
 
+/// Admit only results whose verified schema matches the OpenDP output-domain
+/// contract. The executable checker itself is proved in Verus.
+fn checked_result(
+    result: Option<(VPlan, Vec<VField>)>,
+    expected: &Vec<VField>,
+) -> Fallible<VPlan> {
+    match result {
+        Some((plan, fields)) if &fields == expected => Ok(plan),
+        _ => fallible!(MakeTransformation,
+            "verified plan construction does not satisfy its declared schema"),
+    }
+}
+
 fn make_input(
     domain: VPlanDomain,
     metric: VFrameMetric,
 ) -> Fallible<VTransformation> {
+    let source = kernel_schema(&domain.source.series_domains)?;
+    let expected = kernel_schema(&domain.frame.series_domains)?;
     Transformation::new(
         domain.clone(), metric.clone(), domain, metric,
-        Function::new(Clone::clone),
+        Function::new_fallible(move |input: &VPlan| {
+            checked_result(
+                certified::make_input(input.clone(), &source),
+                &expected,
+            )
+        }),
         StabilityMap::new(Clone::clone),
     )
 }
@@ -40,11 +66,15 @@ fn make_project(
     exprs: Vec<VExpr>,
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(project_domain(&domain.frame, &exprs)?);
+    let source = kernel_schema(&domain.source.series_domains)?;
+    let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
-        Function::new(move |input: &VPlan| VPlan::Project {
-            input: Box::new(input.clone()),
-            exprs: exprs.clone(),
+        Function::new_fallible(move |input: &VPlan| {
+            checked_result(
+                certified::make_project(input.clone(), exprs.clone(), &source),
+                &expected,
+            )
         }),
         StabilityMap::new(global_bound),
     )
@@ -56,11 +86,15 @@ fn make_filter(
     predicate: VExpr,
 ) -> Fallible<VTransformation> {
     let output = domain.with_output(filter_domain(&domain.frame, &predicate)?);
+    let source = kernel_schema(&domain.source.series_domains)?;
+    let expected = kernel_schema(&output.frame.series_domains)?;
     Transformation::new(
         domain, metric.clone(), output, metric,
-        Function::new(move |input: &VPlan| VPlan::Filter {
-            input: Box::new(input.clone()),
-            predicate: predicate.clone(),
+        Function::new_fallible(move |input: &VPlan| {
+            checked_result(
+                certified::make_filter(input.clone(), predicate.clone(), &source),
+                &expected,
+            )
         }),
         StabilityMap::new(global_bound),
     )
