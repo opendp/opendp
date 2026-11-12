@@ -1,5 +1,6 @@
 use super::*;
 
+#[cfg(feature = "ffi")]
 fn plugin(input: Vec<Expr>, flags: FunctionOptions) -> Expr {
     Expr::Function {
         input,
@@ -12,6 +13,7 @@ fn plugin(input: Vec<Expr>, flags: FunctionOptions) -> Expr {
     }
 }
 
+#[cfg(feature = "ffi")]
 #[test]
 fn test_match_permute() {
     let expr = plugin(vec![col("x")], FunctionOptions::length_preserving());
@@ -59,5 +61,20 @@ fn test_permute_length_and_dtype() -> PolarsResult<()> {
 
     assert!(permute(&[]).is_err());
     assert!(permute(&[data.clone(), data]).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_match_native_permute() -> PolarsResult<()> {
+    use crate::polars::PrivacyNamespace;
+    let expr = col("x").dp().permute();
+    assert_eq!(match_permute(&expr), Some(&col("x")));
+
+    let input = df!("x" => [0i32, 1, 2, 3, 4, 5, 6, 7, 8, 9])?.lazy();
+    let output = input.select([expr]).collect()?;
+    let values = output.column("x")?.i32()?;
+    let mut sorted: Vec<_> = values.into_no_null_iter().collect();
+    sorted.sort();
+    assert_eq!(sorted, (0..10).collect::<Vec<_>>());
     Ok(())
 }

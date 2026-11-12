@@ -3,11 +3,18 @@
 //! Struct fields share a permutation. The sampler materializes the input and
 //! an O(n) index buffer.
 
+use std::sync::Arc;
+
 use polars::prelude::*;
 use polars_plan::prelude::FunctionOptions;
+#[cfg(feature = "ffi")]
+use polars_plan::dsl::FunctionExpr;
+#[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
+use crate::polars::OpenDPPlugin;
 use crate::traits::samplers::GeneratorOpenDP;
 
 /// A permutation changes neither the field name, dtype, nor length.
@@ -18,9 +25,49 @@ fn permute_type_udf(fields: &[Field]) -> PolarsResult<Field> {
     Ok(data.clone())
 }
 
+#[cfg(feature = "ffi")]
 #[polars_expr(output_type_func=permute_type_udf)]
 fn permute_plugin(inputs: &[Series]) -> PolarsResult<Series> {
     permute(inputs)
+}
+
+/// Native Rust expression implementation of the same trusted permutation.
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct PermutePlugin;
+
+impl ColumnsUdf for PermutePlugin {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn call_udf(&self, input: &mut [Column]) -> PolarsResult<Column> {
+        let [data] = input else {
+            polars_bail!(ComputeError: "permute expects one input");
+        };
+        Ok(permute(&[data.as_materialized_series().clone()])?.into_column())
+    }
+}
+
+impl AnonymousColumnsUdf for PermutePlugin {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(&self, _: &Schema, fields: &[Field]) -> PolarsResult<Field> {
+        permute_type_udf(fields)
+    }
+}
+
+impl OpenDPPlugin for PermutePlugin {
+    const NAME: &'static str = "permute_plugin";
+
+    fn function_options() -> FunctionOptions {
+        FunctionOptions::length_preserving()
+    }
 }
 
 /// Fisher-Yates permutation using the configured OpenDP random generator.
@@ -46,27 +93,38 @@ fn permute(inputs: &[Series]) -> PolarsResult<Series> {
 }
 
 /// Recognize only the full, length-preserving OpenDP permutation expression.
+///
+/// Both Python's FFI plugin and Rust's native anonymous UDF are trusted.
 pub(crate) fn match_permute(expr: &Expr) -> Option<&Expr> {
-    let Expr::Function {
-        input,
-        function:
-            FunctionExpr::FfiPlugin {
-                lib,
-                symbol,
-                kwargs,
-                flags,
-            },
-    } = expr
-    else {
-        return None;
+    let input = match expr {
+        #[cfg(feature = "ffi")]
+        Expr::Function {
+            input,
+            function:
+                FunctionExpr::FfiPlugin {
+                    lib,
+                    symbol,
+                    kwargs,
+                    flags,
+                },
+        } if lib.contains("opendp")
+            && symbol.as_str() == "permute_plugin"
+            && kwargs.is_empty()
+            && flags == &FunctionOptions::length_preserving() => input,
+        Expr::AnonymousFunction {
+            input,
+            function,
+            options,
+            ..
+        } if options == &FunctionOptions::length_preserving()
+            && function
+                .clone()
+                .materialize()
+                .ok()?
+                .as_any()
+                .is::<PermutePlugin>() => input,
+        _ => return None,
     };
-    if !lib.contains("opendp")
-        || symbol.as_str() != "permute_plugin"
-        || !kwargs.is_empty()
-        || flags != &FunctionOptions::length_preserving()
-    {
-        return None;
-    }
     let [data] = input.as_slice() else {
         return None;
     };
