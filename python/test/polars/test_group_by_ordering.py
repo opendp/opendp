@@ -39,7 +39,6 @@ def test_unordered_group_by_requires_invariant_aggregate(method):
         )
 
 
-
 @pytest.mark.parametrize(
     "value",
     [
@@ -70,6 +69,7 @@ def test_order_dependent_inputs_remain_rejected(value):
     domain, data = _input()
     with pytest.raises(dp.OpenDPException, match="Order-sensitive aggregation"):
         _stable(domain, dp.symmetric_distance(), data.group_by("key").agg(value()))
+
 
 def test_group_by_rejects_positional_literals():
     domain, data = _input()

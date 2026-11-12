@@ -29,7 +29,9 @@ def make_stable_group_by(
         key.make_stable(expr_domain, L0PInfDistance(middle_metric[0]))
 
     schema = middle_domain.schema()
-    for agg in aggs:  # |\label{line:infallible-aggs}\label{line:permutation-invariance}|
+    for (
+        agg
+    ) in aggs:  # |\label{line:infallible-aggs}\label{line:permutation-invariance}|
         check_permutation_invariance(agg, schema)
 
     if middle_metric[0].identifier().is_some():  # |\label{line:identifier}|
