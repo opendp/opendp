@@ -379,7 +379,8 @@ mod tests {
         assert!(domain.member(&caller)?);
         let composed = transformation.invoke(&caller)?;
         assert!(transformation.output_domain.member(&composed)?);
-        assert_eq!(transformation.output_domain.frame.margins.len(), 1);
+        // The final projection drops the grouped margin.
+        assert!(transformation.output_domain.frame.margins.is_empty());
         let rows = verified::evaluate(&composed, &table()).unwrap();
         assert_eq!(rows, vec![vec![
             Some(VValue::Int(5)), Some(VValue::Bool(true)),
