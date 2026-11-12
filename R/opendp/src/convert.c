@@ -78,23 +78,62 @@ ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
     return output_obj;
 }
 
-SEXP extract_error(FfiError *err)
+static void free_error(void *data)
 {
-    int msg_len = strlen(err->variant) + strlen(err->message) + 6;
-    char *msg = (char *)R_alloc(1, msg_len * sizeof(char));
-    snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
-
-    if (str_equal(err->backtrace, "backtrace disabled"))
-        error("%s", msg);
-    else
+    FfiError **owner = (FfiError **)data;
+    if (*owner)
     {
-        int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
-        char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
-        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error("%s", msg_backtrace);
+        FfiError *err = *owner;
+        *owner = NULL;
+        opendp_core___error_free(err);
+    }
+}
+
+static SEXP extract_error_body(void *data)
+{
+    FfiError *err = *(FfiError **)data;
+    const char *message = err->message ? err->message : "";
+    const char *backtrace = err->backtrace ? err->backtrace : "";
+    size_t msg_len = strlen(err->variant) + strlen(message) + 6;
+    char *msg = (char *)R_alloc(msg_len, sizeof(char));
+    snprintf(msg, msg_len, "[%s] : %s", err->variant, message);
+
+    if (*backtrace && !str_equal(backtrace, "backtrace disabled"))
+    {
+        size_t msg_len_bt = strlen(msg) + strlen(backtrace) + 2;
+        char *msg_backtrace = (char *)R_alloc(msg_len_bt, sizeof(char));
+        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, backtrace);
+        msg = msg_backtrace;
     }
 
-    return (R_NilValue);
+    // Keep Rust's diagnostic fields separate from the displayed message.
+    SEXP condition = PROTECT(allocVector(VECSXP, 5));
+    SEXP names = PROTECT(allocVector(STRSXP, 5));
+    const char *fields[] = {"message", "call", "variant", "raw_message", "backtrace"};
+    for (int i = 0; i < 5; i++)
+        SET_STRING_ELT(names, i, mkChar(fields[i]));
+    setAttrib(condition, R_NamesSymbol, names);
+    SET_VECTOR_ELT(condition, 0, mkString(msg));
+    SET_VECTOR_ELT(condition, 1, R_NilValue);
+    SET_VECTOR_ELT(condition, 2, mkString(err->variant));
+    SET_VECTOR_ELT(condition, 3, err->message ? mkString(err->message) : R_NilValue);
+    SET_VECTOR_ELT(condition, 4, err->backtrace ? mkString(err->backtrace) : R_NilValue);
+    SEXP classes = PROTECT(allocVector(STRSXP, 3));
+    SET_STRING_ELT(classes, 0, mkChar("opendp_error"));
+    SET_STRING_ELT(classes, 1, mkChar("error"));
+    SET_STRING_ELT(classes, 2, mkChar("condition"));
+    classgets(condition, classes);
+    free_error(data);
+    SEXP call = PROTECT(lang2(install("stop"), condition));
+    Rf_eval(call, R_BaseEnv);
+    UNPROTECT(4);
+    return R_NilValue;
+}
+
+SEXP extract_error(FfiError *err)
+{
+    // Also release the Rust error if allocating/copying its R condition fails.
+    return R_ExecWithCleanup(extract_error_body, &err, free_error, &err);
 }
 
 const char *sexp_to_charptr(SEXP type_name)

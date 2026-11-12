@@ -27,7 +27,7 @@ use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
-use crate::error::Fallible;
+use crate::error::{ErrorVariant, Fallible};
 use crate::ffi::any::{
     AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
 };
@@ -1411,6 +1411,38 @@ pub extern "C" fn ffiresult_err(
     })))
 }
 
+/// Construct a typed callback error without changing the legacy callback ABI.
+///
+/// Invalid variant names are normalized to FFI. Input strings are borrowed and
+/// copied into Rust-owned allocations.
+///
+/// # Arguments
+/// * `variant` - OpenDP error variant name.
+/// * `message` - Callback diagnostic.
+/// * `backtrace` - Optional diagnostic trace, supplied as an empty string if absent.
+#[unsafe(no_mangle)]
+pub extern "C" fn ffiresult_err_typed(
+    variant: *const c_char,
+    message: *const c_char,
+    backtrace: *const c_char,
+) -> *const FfiResult<*const AnyObject> {
+    let variant = util::to_str(variant)
+        .ok()
+        .and_then(|variant| variant.parse::<ErrorVariant>().ok())
+        .unwrap_or(ErrorVariant::FFI)
+        .to_string();
+    let (message, backtrace) =
+        match util::to_str(message).and_then(|message| Ok((message, util::to_str(backtrace)?))) {
+            Ok(strings) => strings,
+            Err(error) => return util::into_raw(FfiResult::from(error)),
+        };
+    util::into_raw(FfiResult::Err(util::into_raw(FfiError {
+        variant: CString::new(variant).unwrap().into_raw(),
+        message: CString::new(message).unwrap().into_raw(),
+        backtrace: CString::new(backtrace).unwrap().into_raw(),
+    })))
+}
+
 #[bootstrap(
     name = "fill_bytes",
     arguments(ptr(c_type = "uint8_t *", do_not_convert = true))
@@ -1431,6 +1463,29 @@ mod tests {
     use crate::ffi::util::ToCharP;
 
     use super::*;
+
+    #[test]
+    fn test_ffiresult_err_typed_roundtrip() {
+        let message = CString::new("callback diagnostic").unwrap();
+        let backtrace = CString::new("callback trace").unwrap();
+        for (name, expected) in [
+            ("Overflow", ErrorVariant::Overflow),
+            ("NumericError", ErrorVariant::NumericError),
+            ("UnknownVariant", ErrorVariant::FFI),
+        ] {
+            let variant = CString::new(name).unwrap();
+            let result =
+                ffiresult_err_typed(variant.as_ptr(), message.as_ptr(), backtrace.as_ptr());
+            let result = unsafe { Box::from_raw(result.cast_mut()) };
+            let FfiResult::Err(error) = *result else {
+                panic!("expected callback error");
+            };
+            let error = *unsafe { Box::from_raw(error) };
+            let error = Error::from(error);
+            assert_eq!(error.variant, expected);
+            assert_eq!(error.message.as_deref(), Some("callback diagnostic"));
+        }
+    }
 
     #[test]
     fn test_slice_as_object_number() -> Fallible<()> {

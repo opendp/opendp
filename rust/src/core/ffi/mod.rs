@@ -158,28 +158,7 @@ impl<TI: 'static, TO: 'static + Send + Sync> IntoAnyFunctionFfiResultExt
 impl From<FfiError> for Error {
     fn from(val: FfiError) -> Self {
         let variant = util::to_str(val.variant).unwrap_assert("variants do not contain null bytes");
-        let variant = match variant {
-            "FFI" => ErrorVariant::FFI,
-            "TypeParse" => ErrorVariant::TypeParse,
-            "Type" => ErrorVariant::Type,
-            "FailedFunction" => ErrorVariant::FailedFunction,
-            "FailedMap" => ErrorVariant::FailedMap,
-            "RelationDebug" => ErrorVariant::RelationDebug,
-            "FailedCast" => ErrorVariant::FailedCast,
-            "DomainMismatch" => ErrorVariant::DomainMismatch,
-            "MetricMismatch" => ErrorVariant::MetricMismatch,
-            "MeasureMismatch" => ErrorVariant::MeasureMismatch,
-            "MakeDomain" => ErrorVariant::MakeDomain,
-            "MakeTransformation" => ErrorVariant::MakeTransformation,
-            "MakeMeasurement" => ErrorVariant::MakeMeasurement,
-            "MetricSpace" => ErrorVariant::MetricSpace,
-            "InvalidDistance" => ErrorVariant::InvalidDistance,
-            "Search" => ErrorVariant::Search,
-            "Overflow" => ErrorVariant::Overflow,
-            "NumericError" => ErrorVariant::NumericError,
-            "NotImplemented" => ErrorVariant::NotImplemented,
-            unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),
-        };
+        let variant = variant.parse::<ErrorVariant>().unwrap_or(ErrorVariant::FFI);
         Error {
             variant,
             message: util::to_option_str(val.message)
