@@ -27,6 +27,10 @@ impl IsMetricOrdered for InsertDeleteDistance {
     arguments(constant(rust_type = "$get_atom(get_type(input_domain))")),
     generics(TA(suppress), MI(suppress), MO(default = "SymmetricDistance"))
 )]
+#[deprecated(
+    since = "0.17.0",
+    note = "Use Polars instead for new analyses; no direct replacement exists."
+)]
 /// Make a Transformation that either truncates or imputes records
 /// with `constant` to match a provided `size`.
 ///
@@ -76,8 +80,8 @@ where
                         .chain(vec![&constant; size - arg.len()])
                         .cloned()
                         .collect::<Vec<TA>>();
-                    // if output metric is ordered, then shuffle the imputed values into the data
-                    if MO::ORDERED {
+                    // Randomize the order only when converting unordered input to ordered output.
+                    if MO::ORDERED && !MI::ORDERED {
                         data.shuffle()?;
                     }
                     data

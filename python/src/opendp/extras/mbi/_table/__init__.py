@@ -1,7 +1,7 @@
 """High-level mechanism for applying mbi mechanisms to dataframes with mixed types."""
 
 from math import sqrt
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import (
     Any,
     Iterator,
@@ -29,6 +29,8 @@ from opendp.extras.mbi._utilities import (
     row_major_order,
     SelectPrefixQuery,
     Algorithm,
+    _snapshot_algorithm,
+    _snapshot_bounds,
     Marginals,
     ONEWAY_UNKEYED,
 )
@@ -42,7 +44,6 @@ from opendp.mod import (
     OpenDPException,
     Queryable,
     binary_search,
-    binary_search_param,
 )
 from opendp.domains import _lazyframe_from_domain
 from opendp.transformations import make_stable_lazyframe
@@ -66,7 +67,7 @@ class ContingencyTable:
     model: Any  # MarkovRandomField
     """MarkovRandomField spanning the same columns as keys"""
     thresholds: dict[str, int] = field(default_factory=dict)
-    """Cut-off point for discovered stable keys. 
+    """Cut-off point for discovered stable keys.
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):
@@ -97,10 +98,12 @@ class ContingencyTable:
                 raise ValueError(msg)
 
         if isinstance(self.marginals, dict):
-            self.marginals = Marginals({
-                tuple(clique): [measurement]
-                for clique, measurement in self.marginals.items()
-            })
+            self.marginals = Marginals(
+                {
+                    tuple(clique): [measurement]
+                    for clique, measurement in self.marginals.items()
+                }
+            )
 
     def synthesize(
         self, rows: Optional[int] = None, method: Literal["round", "sample"] = "round"
@@ -115,9 +118,9 @@ class ContingencyTable:
 
         model = cast(MarkovRandomField, self.model)
 
-        indices = model.synthetic_data(rows, method).df
+        indices = model.synthetic_data(rows, method).data
         data = {
-            c: _deindex(indices[c].to_numpy(), self.keys[c], cuts=self.cuts.get(c))
+            c: _deindex(indices[c], self.keys[c], cuts=self.cuts.get(c))
             for c in self.keys
         }
         return pl.DataFrame(data)
@@ -142,8 +145,15 @@ class ContingencyTable:
 
         attrs = [attrs] if isinstance(attrs, str) else list(attrs)
 
+        unknown = [attr for attr in attrs if attr not in self.keys]
+        if unknown:
+            raise ValueError(f"attrs ({unknown}) are not present in keys")
+
         lengths_arr = np.asarray(self.project(attrs).ravel())
         lengths = pl.Series("len", lengths_arr).to_frame()
+
+        if not attrs:
+            return lengths
 
         return row_major_order(self.keys[attr] for attr in attrs).hstack(lengths)
 
@@ -232,6 +242,8 @@ def make_contingency_table(
     import polars as pl
     import mbi
 
+    d_in = _snapshot_bounds(d_in)
+    algorithm = _snapshot_algorithm(algorithm)
     plan = _lazyframe_from_domain(input_domain)
     schema = plan.collect_schema()
 
@@ -241,13 +253,15 @@ def make_contingency_table(
     }
 
     cuts_pl: dict[str, pl.Series] = {
-        col: _unique(_increasing(pl.Series(col, cutset, dtype=schema.get(col))), "cuts")
-        for col, cutset in (cuts or dict()).items()
+        col: _validate_cuts(pl.Series(col, cutset, dtype=schema.get(col)))
+        for col, cutset in (cuts or {}).items()
     }
 
     # add cut bin labels to keys
     def get_categories(cutset):
-        labels = [f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])]
+        labels = [
+            f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])
+        ]
         return pl.Series(cutset.name, labels)
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
@@ -263,8 +277,19 @@ def make_contingency_table(
         marginals = Marginals()
         thresholds = {}
 
+    # The stable cut transformation casts bins to Enum with these public labels.
+    # Keep the private columns encoded; only cast public lookup keys to Enum.
+    cut_dtypes = {c: pl.Enum(get_categories(cutset)) for c, cutset in cuts_pl.items()}
+
+    def lookup_keys(c, keyset):
+        return keyset.cast(cut_dtypes[c]) if c in cut_dtypes else keyset
+
     if cuts_pl:
-        plan = plan.with_columns(pl.col(c).cut(cutset, labels=get_categories(cutset)) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
+        plan = plan.with_columns(
+            pl.col(c).cut(cutset, labels=get_categories(cutset))  # type: ignore[arg-type]
+            for c, cutset in cuts_pl.items()
+            if c in schema
+        )
 
     if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
         raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")
@@ -281,21 +306,30 @@ def make_contingency_table(
         message = f"delta ({delta}) must be nonzero because keys and cuts don't span all columns"
         raise ValueError(message)
 
-    if algorithm.oneway == ONEWAY_UNKEYED and all_keys_known:
+    if algorithm.oneway_split is None:
+        oneway_split = 0.5
+        if algorithm.oneway == ONEWAY_UNKEYED:
+            columns = set(input_domain.columns)
+            oneway_split *= len(columns - set(keys_pl)) / len(columns)
+    else:
+        oneway_split = algorithm.oneway_split
+
+    if oneway_split == 0:
+        if algorithm.needs_model and model is None:
+            raise ValueError(
+                "oneway_split must be positive without a prior model for adaptive algorithms"
+            )
+        # Unknown keysets must be discovered in the one-way phase.
+        if not all_keys_known:
+            message = "oneway_split must be positive when discovering private keysets"
+            raise ValueError(message)
+
         d_multiway: Union[float | tuple[float, float]] = d_out
         d_mids = [d_multiway if delta is None else (d_multiway, 0.0)]
         m_oneway = None
         scale, threshold = None, None
 
     else:
-        if algorithm.oneway_split is None:
-            oneway_split = 0.5
-            if algorithm.oneway == ONEWAY_UNKEYED:
-                columns = set(input_domain.columns)
-                oneway_split *= len(columns - set(keys_pl)) / len(columns)
-        else:
-            oneway_split = algorithm.oneway_split
-
         d_oneway = d_out * oneway_split
         d_multiway = float(prior(prior(d_out - d_oneway)))
         if delta is not None:
@@ -312,7 +346,7 @@ def make_contingency_table(
             output_measure,
             d_in=d_in,
             d_out=d_oneway,
-            keys=keys_pl,
+            keys={c: lookup_keys(c, keyset) for c, keyset in keys_pl.items()},
             plan=plan,
             unknown_only=algorithm.oneway == ONEWAY_UNKEYED,
             has_prior_total=has_prior_total,
@@ -346,19 +380,19 @@ def make_contingency_table(
 
         mbi_domain = mbi.Domain.fromdict({c: len(k) for c, k in stable_keys.items()})
 
-        potentials = None
-        if isinstance(model, mbi.MarkovRandomField):
-            import attr  # type: ignore[import-not-found]
+        same_domain = (
+            isinstance(model, mbi.MarkovRandomField)
+            and model.domain.config == mbi_domain.config
+        )
+        potentials = (
+            replace(model.potentials, domain=mbi_domain) if same_domain else None
+        )
 
-            potentials = attr.evolve(model.potentials, domain=mbi_domain)
-
-        current_model = (
-            algorithm.estimator(
+        current_model = model if same_domain else None
+        if algorithm.needs_model:
+            current_model = algorithm.estimator(
                 mbi_domain, current_marginals.flatten(), potentials=potentials
             )
-            if algorithm.needs_model
-            else model
-        )
 
         t_index = make_stable_lazyframe(
             input_domain,
@@ -366,14 +400,14 @@ def make_contingency_table(
             plan.with_columns(
                 pl.col(c)
                 .replace_strict(
-                    stable_keys[c],
+                    lookup_keys(c, stable_keys[c]),
                     pl.Series(range(len(stable_keys[c])), dtype=pl.UInt32),
                     default=_get_null_index(stable_keys[c], len(stable_keys[c]) - 1),
                 )
                 .clip(0, len(stable_keys[c]) - 1)
                 for c in input_domain.columns
             ),
-            MO="FrameDistance<SymmetricDistance>"
+            MO="FrameDistance<SymmetricDistance>",
         )
 
         m_marginals = algorithm.make_marginals(
@@ -418,14 +452,51 @@ def _unique(series, arg: str):
 
 def _increasing(series):
     """raise error if elements are not increasing"""
-    import polars as pl
-
-    diff = series.cast(pl.Float64).diff(null_behavior="drop")
-    if diff.le(0).any():  # pragma: no cover
+    if (
+        series.len() > 1 and series.slice(1).le(series.slice(0, series.len() - 1)).any()
+    ):  # pragma: no cover
         # this is actually tested, but coverage doesn't see it
         message = f'cuts must be strictly increasing: "{series.name}" is not strictly increasing'
         raise ValueError(message)
     return series
+
+
+def _validate_cuts(series):
+    """Validate numeric cut points."""
+    import numpy as np
+
+    if series.len() == 0:
+        raise ValueError(f'cuts must not be empty: "{series.name}" has no cut points')
+    if series.null_count():
+        raise ValueError(f'cuts must not contain null values: "{series.name}"')
+    if series.dtype.is_float() and not series.is_finite().all():
+        raise ValueError(
+            f'cuts must be finite: "{series.name}" contains a nan or infinite value'
+        )
+
+    values = series.to_numpy()
+    if series.dtype.is_integer():
+        max_value = np.iinfo(values.dtype).max
+        if values[-1] == max_value:
+            raise ValueError(
+                f'"{series.name}" integer cuts: the last cut cannot be the '
+                f"dtype maximum ({max_value}), since the final exterior bin "
+                "would contain no representable value"
+            )
+        if any(not -(2**53) < int(cut) < 2**53 for cut in series):
+            raise ValueError(
+                f'"{series.name}" integer cuts must lie strictly between -2**53 and 2**53'
+            )
+    elif series.dtype.is_float():
+        with np.errstate(over="ignore"):
+            next_value = np.nextafter(values[-1], np.inf)
+        if not np.isfinite(next_value):
+            raise ValueError(
+                f'"{series.name}" float cuts must leave a finite representable '
+                "value above the final cut"
+            )
+
+    return _increasing(series)
 
 
 def _with_null(series):
@@ -492,10 +563,7 @@ def _make_oneway_marginals(
             if name not in keys or not unknown_only
         ]
 
-        will_release_full_identity = any(
-            name in keys
-            for name in names
-        )
+        will_release_full_identity = any(name in keys for name in names)
 
         # An algorithm that selects its workload needs a total constraint
         # before that selection. A fixed workload does not: its own identity
@@ -578,8 +646,10 @@ def _make_oneway_marginals(
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
     if isinstance(output_measure, ApproximateDivergence):
-        compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
-        scale = binary_search(compare_s, T=float)
+        compare_s = lambda s: (
+            s > 0 and _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]
+        )  # type: ignore[index]
+        scale = binary_search(compare_s, bounds=(0.0, None), T=float)
 
         try:
             _make(scale, threshold=None)
@@ -589,24 +659,64 @@ def _make_oneway_marginals(
             threshold = binary_search(compare_t, T=int)  # type: ignore[assignment]
 
     else:
-        scale = binary_search_param(_make, d_in, d_out, T=float)
+        scale = binary_search(
+            lambda s: s > 0 and _make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
         threshold = None
 
     return _make(scale, threshold), scale, threshold
 
 
 def _deindex(indices, keys, cuts=None):
-    """Translate keyset indices into categorical data."""
+    """Map bin indices to values in left-open, right-closed bins."""
     import numpy as np
 
     if cuts is None:
         return keys[indices]
 
-    if cuts.dtype.is_integer():
-        # cuts are left-open
-        sampler = lambda lower, upper: np.random.randint(lower + 1, upper + 1)
-    elif cuts.dtype.is_float():
-        sampler = np.random.uniform  # type: ignore[assignment]
+    cut_values = cuts.to_numpy()
+    indices = np.asarray(indices)
+    values = np.empty(indices.shape, dtype=cut_values.dtype)
 
-    edges = np.array([cuts[0] - 1, *cuts, cuts[-1] + 1])
-    return sampler(edges[indices], edges[indices + 1])
+    first = indices == 0
+    last = indices == len(cut_values)
+    interior = ~(first | last)
+
+    values[first] = cut_values[0]
+
+    bin_indices = indices[interior]
+    lower = cut_values[bin_indices - 1]
+    upper = cut_values[bin_indices]
+
+    if cuts.dtype.is_integer():
+        values[last] = cut_values[-1] + 1
+        if lower.size:
+            values[interior] = np.random.randint(
+                lower + 1, upper + 1, size=lower.shape, dtype=cut_values.dtype
+            )
+
+    elif cuts.dtype.is_float():
+        with np.errstate(over="ignore"):
+            values[last] = np.nextafter(cut_values[-1], np.inf)
+
+        if lower.size:
+            # Avoid overflow across zero; clip to the open lower bound.
+            lower_open = np.nextafter(lower, upper)
+            fraction = np.random.random(size=lower.shape)
+            opposite = np.signbit(lower) != np.signbit(upper)
+            sampled = np.empty(lower.shape, dtype=np.float64)
+            same = ~opposite
+            sampled[same] = lower[same] + (upper[same] - lower[same]) * fraction[same]
+            sampled[opposite] = (
+                lower[opposite] * (1.0 - fraction[opposite])
+                + upper[opposite] * fraction[opposite]
+            )
+            sampled = sampled.astype(cut_values.dtype)
+            values[interior] = np.clip(sampled, lower_open, upper)
+
+    else:
+        raise TypeError(f"cuts must be integer or float, got {cuts.dtype}")
+
+    return values

@@ -26,7 +26,7 @@ def make_stable_group_by(
     )
 
     for key in keys:  # |\label{line:stable-keys}|
-        key.make_stable(expr_domain, PartitionDistance(middle_metric[0]))
+        key.make_stable(expr_domain, L0PInfDistance(middle_metric[0]))
 
     for agg in aggs:  # |\label{line:infallible-aggs}|
         check_infallible(agg, Resize.Allow)
@@ -41,14 +41,16 @@ def make_stable_group_by(
     series_domains = [SeriesDomain.new_from_field(f) for f in output_schema]
 
     # prepare output domain margins
-    h_keys = list(keys)
+    h_keys = set(keys)
 
-    def without_invariant(m: Margin) -> Margin:
+    def output_margin(m: Margin) -> Margin:
+        m = m.clone()
+        m.by = materialize_grouping_keys(m.by)  # |\label{line:materialized-margin}|
         m.invariant = None
         return m
 
     margins = [
-        without_invariant(m) for m in middle_domain.margins if m.by.is_subset(h_keys)
+        output_margin(m) for m in middle_domain.margins if m.by.is_subset(h_keys)
     ]
 
     output_domain = FrameDomain.new_with_margins(series_domains, margins)
@@ -65,8 +67,7 @@ def make_stable_group_by(
                 "an upper bound on the number of contributed rows or groups is required"
             )
 
-        if per_group is not None:  # |\label{line:double}|
-            per_group = per_group.inf_mul(2)
+        per_group = influenced_groups.inf_mul(2)  # |\label{line:double}|
 
         bound = Bound(by=set(), per_group=per_group, num_groups=None)
         return Bounds([bound])  # |\label{line:bound}|
@@ -88,3 +89,8 @@ def make_stable_group_by(
     )
 
     return t_prior >> t_group_agg
+
+
+# Called only for subsets of validated grouping expressions.
+def materialize_grouping_keys(by: set[Expr]) -> set[Expr]:
+    return {col(key.meta().output_name()) for key in by}

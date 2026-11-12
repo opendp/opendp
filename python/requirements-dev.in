@@ -1,10 +1,10 @@
 # To add dev dependencies, make changes here and then run uv to update
-# requirements-dev.txt with Python 3.10 + compatibility:
+# requirements-dev.txt with Python 3.11 + compatibility:
 #
-#   uv pip compile requirements-dev.in --universal --python-version 3.10 -o requirements-dev.txt
+#   uv pip compile requirements-dev.in --universal --python-version 3.11 -o requirements-dev.txt
 #
-# This produces a single requirements-dev.txt with support for 3.10 +.
-# Numpy versions differ across python 3.10 and 3.13 after the 2.5.0 release.
+# This produces a single requirements-dev.txt with support for 3.11 +.
+# Numpy versions differ between python 3.11 and 3.12 and later after the numpy 2.5.0 release.
 #
 # Only regenerating needs uv; CI and contributors install with plain pip
 # ("pip install -r requirements-dev.txt"), which evaluates the markers.
@@ -21,3 +21,4 @@ blacken-docs
 
 # Just needed for examples in documentation:
 pandas
+ibis-framework[sqlite]

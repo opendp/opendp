@@ -32,7 +32,6 @@ use crate::metrics::{Bound, Bounds, ChangeOneIdDistance, FrameDistance, Symmetri
 use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 
 use crate::traits::ProductOrd;
-use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
 use super::any::{AnyDomain, AnyMeasurement, AnyOdometer, AnyTransformation};
@@ -394,7 +393,6 @@ lazy_static! {
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![ExtrinsicDomain],
-            type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],

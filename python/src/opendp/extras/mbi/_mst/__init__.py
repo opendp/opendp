@@ -2,11 +2,11 @@
 
 from dataclasses import dataclass
 import itertools
-from typing import Any, Optional, cast, TYPE_CHECKING
+from typing import Any, Optional, Sequence, cast, TYPE_CHECKING
 
 from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.combinators import then_adaptive_composition
+from opendp.combinators import make_adaptive_composition, then_adaptive_composition
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDistance,
@@ -16,6 +16,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     make_stable_marginals,
     Algorithm,
+    _snapshot_algorithm,
     Marginals,
 )
 from opendp.measurements import make_noisy_max
@@ -28,26 +29,28 @@ from opendp.mod import (
     Measure,
     Measurement,
     Queryable,
-    binary_search_chain,
+    binary_search,
+    binary_search_param,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class MST(Algorithm):
     """MST mechanism from `MMS21 <https://arxiv.org/abs/2108.04978>`_.
-    
-    MST greedily chooses pairs of columns that are most poorly represented 
-    by the DP contingency table in a way that guarantees all columns become 
+
+    MST greedily chooses pairs of columns that are most poorly represented
+    by the DP contingency table in a way that guarantees all columns become
     connected by a minimum spanning tree.
     MST then releases all of the selected marginals.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
-    
+
     .. code:: pycon
 
         >>> import opendp.prelude as dp
@@ -66,7 +69,7 @@ class MST(Algorithm):
         ...     # transformations/truncation may be applied here
         ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
         ...     .contingency_table(
-        ...         keys={"SEX": [1, 2]}, 
+        ...         keys={"SEX": [1, 2]},
         ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
         ...         algorithm=dp.mbi.MST()
         ...     )
@@ -96,11 +99,11 @@ class MST(Algorithm):
 
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     num_selections: Optional[int] = None
     """Number of second-order marginals to estimate.
-    
+
     Defaults to one fewer than the number of columns in the data."""
 
     def __post_init__(self):
@@ -131,7 +134,7 @@ class MST(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -139,13 +142,19 @@ class MST(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        d_measure = d_out * self.measure_split
+        algorithm = _snapshot_algorithm(self)
+        d_measure = d_out * algorithm.measure_split
         d_select = prior(prior(d_out - d_measure))
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         edges = list(itertools.combinations(input_domain.columns, 2))
 
-        t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
+        t_marginals = make_stable_marginals(
+            input_domain,
+            input_metric,
+            edges,  # type: ignore[arg-type]
+        )
         d_marginals = t_marginals.map(d_in)
 
         def function(
@@ -160,28 +169,31 @@ class MST(Algorithm):
                 d_out=d_select,
                 edges=edges,
                 model=model,
-                num_selections=self.num_selections,
+                num_selections=algorithm.num_selections,
             )
 
             selected_cliques = qbl(m_select)
 
             # MEASURE selected marginals with noise
-            m_measure = binary_search_chain(
-                lambda s: make_noise_marginals(
+            def make_measurement(s):
+                return make_noise_marginals(
                     *t_marginals.output_space,
                     output_measure,
                     selected_cliques,
                     scale=s,
-                ),
-                d_in=d_marginals,
-                d_out=d_measure,
+                )
+
+            scale = binary_search(
+                lambda s: s > 0 and make_measurement(s).check(d_marginals, d_measure),
+                bounds=(0.0, None),
                 T=float,
             )
+            m_measure = make_measurement(scale)
 
             all_marginals = marginals.add(*qbl(m_measure))
 
             # GENERATE (fit a MarkovRandomField)
-            new_model = self.estimator(
+            new_model = algorithm.estimator(
                 model.domain,
                 all_marginals.flatten(),
                 potentials=model.potentials,
@@ -205,7 +217,7 @@ def _make_mst_select(
     output_measure: Measure,
     d_in,
     d_out,
-    edges: list[tuple[str, str]],
+    edges: Sequence[tuple[str, str]],
     model,  # MarkovRandomField
     num_selections: Optional[int] = None,
 ) -> Measurement:
@@ -214,17 +226,32 @@ def _make_mst_select(
     from scipy.cluster.hierarchy import DisjointSet  # type: ignore[import-untyped,import-not-found]
 
     model = cast(MarkovRandomField, model)
+    edges = tuple((a, b) for a, b in edges)
 
-    max_selections = len(model.domain.attrs) - 1
+    max_selections = len(model.domain.attributes) - 1
     num_selections = min(max(0, num_selections or max_selections), max_selections)
-    d_select = prior(d_out / num_selections)
-
     t_mst_scores = _make_mst_scores(input_domain, input_metric, edges, model)
     d_mst_scores = t_mst_scores.map(d_in)
 
+    # Calibrate against the conservative composition map, not d_out / n:
+    # rounding up each term can otherwise exceed the parent's allocation.
+    d_select = binary_search_param(
+        lambda budget: make_adaptive_composition(
+            input_domain=t_mst_scores.output_domain,
+            input_metric=t_mst_scores.output_metric,
+            output_measure=output_measure,
+            d_in=d_mst_scores,
+            d_mids=[budget] * num_selections,
+        ),
+        d_in=d_mst_scores,
+        d_out=d_out,
+        bounds=(0.0, None),
+        T=float,
+    )
+
     def function(qbl: Queryable) -> list[tuple[str, str]]:
         selected_edges = []
-        components = DisjointSet(model.domain.attrs)
+        components = DisjointSet(model.domain.attributes)
 
         for _ in range(num_selections):
             # filter down to only include edges that aren't connected
@@ -239,16 +266,21 @@ def _make_mst_select(
                 stability_map=lambda d_in: d_in,
             )
 
-            m_rnm = binary_search_chain(
-                lambda s: make_noisy_max(
-                    *t_unconnected.output_space, output_measure=output_measure, scale=s
-                ),
-                d_in=d_mst_scores,
-                d_out=d_select,
+            def make_measurement(s):
+                return t_unconnected >> make_noisy_max(
+                    *t_unconnected.output_space,
+                    output_measure=output_measure,
+                    scale=s,
+                )
+
+            scale = binary_search(
+                lambda s: s > 0 and make_measurement(s).check(d_mst_scores, d_select),
+                bounds=(0.0, None),
                 T=float,
             )
+            m_rnm = make_measurement(scale)
 
-            selected_edge = edges[unconnected[qbl(t_unconnected >> m_rnm)]]
+            selected_edge = edges[unconnected[qbl(m_rnm)]]
 
             selected_edges.append(selected_edge)
             components.merge(*selected_edge)
@@ -269,13 +301,15 @@ def _make_mst_select(
 def _make_mst_scores(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
-    queries: list[tuple[str, str]],
+    queries: Sequence[tuple[str, str]],
     model,  # MarkovRandomField
 ):
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
     import numpy as np  # type: ignore[import-not-found]
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
+
+    queries = tuple((a, b) for a, b in queries)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)
@@ -296,5 +330,5 @@ def _make_mst_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in.values()),
+        stability_map=lambda d_in: max(distance[1] for distance in d_in.values()),
     )

@@ -13,13 +13,17 @@ from opendp.combinators import (
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
+    _noise_sensitivity,
     get_associated_metric,
+    get_scale,
     make_noise_marginal,
     make_stable_marginals,
     prior,
     Count,
     Algorithm,
+    _snapshot_algorithm,
     Marginals,
+    _snapshot_bounds,
 )
 from opendp.measurements import then_noisy_max
 from opendp.measures import max_divergence, zero_concentrated_divergence
@@ -34,7 +38,7 @@ from opendp.mod import (
     OdometerQueryable,
     Queryable,
     Transformation,
-    binary_search_chain,
+    binary_search,
 )
 from opendp._internal import _make_transformation, _new_pure_function
 
@@ -44,7 +48,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
 
-@dataclass(kw_only=True, frozen=True)
+@dataclass(kw_only=True)
 class AIM(Algorithm):
     """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_.
 
@@ -56,6 +60,7 @@ class AIM(Algorithm):
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
     ..
+
         >>> import pytest  # `pip install opendp[mbi]` is necessary
         >>> _ = pytest.importorskip("mbi")
 
@@ -112,11 +117,11 @@ class AIM(Algorithm):
     This allows AIM to support higher-dimensional datasets.
     """
 
-    queries: list[Count] | int = 3
+    queries: Sequence[Count] | int = 3
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
     measure_split: float = 0.9
     """Remaining proportion of budget to allocate to measuring marginals.
-    
+
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
     """Maximum memory constraint in MB for the marginal selection."""
@@ -129,8 +134,12 @@ class AIM(Algorithm):
         if isinstance(self.queries, int) and self.queries < 1:
             raise ValueError(f"queries ({self.queries}) must be positive")
 
-        if isinstance(self.queries, list) and not self.queries:
-            raise ValueError("queries must not be empty")
+        if not isinstance(self.queries, int):
+            if not self.queries:
+                raise ValueError("queries must not be empty")
+            if not all(isinstance(query, Count) for query in self.queries):
+                raise ValueError("queries must be of type Count")
+            self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
 
         if not (0 < self.measure_split <= 1):
             raise ValueError(f"measure_split ({self.measure_split}) must be in (0, 1]")
@@ -157,7 +166,7 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of MarkovRandomField
+        :param model: warm-start fit of ``MarkovRandomField``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
@@ -165,15 +174,16 @@ class AIM(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        queries = _expand_queries(self.queries, input_domain.columns)
-        algorithm = replace(self, queries=queries)
+        d_in = _snapshot_bounds(d_in)
+        algorithm = _snapshot_algorithm(self)
+        queries = _expand_queries(algorithm.queries, input_domain.columns)
+        algorithm = replace(algorithm, queries=queries)
 
-        lp_metric = get_associated_metric(output_measure)
+        # Reject unsupported measures before constructing the workload.
+        get_associated_metric(output_measure)
         cliques = [query.by for query in queries]
 
-        t_marginals = make_stable_marginals(
-            input_domain, input_metric, lp_metric, cliques
-        )
+        t_marginals = make_stable_marginals(input_domain, input_metric, cliques)
         d_marginals = t_marginals.map(d_in)
 
         T = algorithm.rounds or (16 * len(input_domain.columns))
@@ -265,6 +275,7 @@ def _make_aim_marginal(
         model=model,
         d_in=d_in,
         d_out=d_select,
+        d_measure=d_measure,
         max_size=max_size,
     )
 
@@ -278,18 +289,21 @@ def _make_aim_marginal(
         selected_clique = qbl(m_select)
 
         # MEASURE selected marginal with noise
-        m_measure = binary_search_chain(
-            lambda s: make_noise_marginal(
+        def make_measurement(s):
+            return make_noise_marginal(
                 input_domain,
                 input_metric,
                 output_measure,
                 clique=selected_clique,
                 scale=s,
-            ),
-            d_in=d_in,
-            d_out=d_measure,
+            )
+
+        scale = binary_search(
+            lambda s: s > 0 and make_measurement(s).check(d_in, d_measure),
+            bounds=(0.0, None),
             T=float,
         )
+        m_measure = make_measurement(scale)
 
         new_marginal: LinearMeasurement = qbl(m_measure)
 
@@ -331,6 +345,7 @@ def _make_aim_select(
     output_measure: Measure,
     d_in,
     d_out,
+    d_measure,
     queries: list[Count],
     model,  # MarkovRandomField
     max_size: float,
@@ -345,28 +360,42 @@ def _make_aim_select(
         to_mu = sqrt(2 / pi)
 
     model = cast(mbi.MarkovRandomField, model)
+    queries = [replace(q, by=tuple(q.by)) for q in queries]
 
     def is_small(clique: tuple[str, ...]) -> bool:
         model_size = mbi.junction_tree.hypothetical_model_size(
-            model.domain, cliques=model.cliques + [clique]
+            model.domain, cliques=[*model.cliques, clique]
         )
         return model_size <= max_size
 
     # only keep queries that fit the memory constraint
     candidates = [q for q in queries if is_small(q.by)]
 
-    if not candidates:
+    if not candidates or d_out <= 0 or d_measure <= 0:
         return None
+
+    # penalize candidates by the expected error of the upcoming MEASURE step,
+    # not of this SELECT step
+    expectations = {
+        q.by: get_scale(
+            output_measure, d_measure, _noise_sensitivity(output_measure, d_in[q.by])
+        )
+        * to_mu
+        for q in candidates
+    }
 
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
-            input_domain, input_metric, candidates, scale * to_mu, model
+            input_domain, input_metric, candidates, expectations, model
         ) >> then_noisy_max(output_measure=output_measure, scale=scale)
 
     try:
-        return binary_search_chain(
-            make, d_in=d_in, d_out=d_out, T=float
-        ) >> _new_pure_function(lambda idx: candidates[idx].by)
+        scale = binary_search(
+            lambda s: s > 0 and make(s).check(d_in, d_out),
+            bounds=(0.0, None),
+            T=float,
+        )
+        return make(scale) >> _new_pure_function(lambda idx: candidates[idx].by)
     except ValueError:  # pragma: no cover
         # can fail in the unlikely scenario where
         #    d_out is so small that no scale is suitable
@@ -376,8 +405,8 @@ def _make_aim_select(
 def _make_aim_scores(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
-    queries: list[Count],
-    expectation: float,
+    queries: Sequence[Count],
+    expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
@@ -386,12 +415,14 @@ def _make_aim_scores(
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
     model = cast(MarkovRandomField, model)
+    queries = tuple(replace(q, by=tuple(q.by)) for q in queries)
+    expectations = dict(expectations)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)  # pragma: no cover
 
     def score_query(query: Count, exact: np.ndarray):
-        penalty = expectation * prod(exact.shape)
+        penalty = expectations[query.by] * prod(exact.shape)
         synth = model.project(query.by).values
 
         return (np.linalg.norm((exact - synth).flatten(), 1) - penalty) * query.weight
@@ -404,11 +435,11 @@ def _make_aim_scores(
         function=lambda exact_tabs: [
             score_query(query, exact_tabs[query.by]) for query in queries
         ],
-        stability_map=lambda d_in: max(d_in[q.by] * q.weight for q in queries),
+        stability_map=lambda d_in: max(d_in[q.by][1] * q.weight for q in queries),
     )
 
 
-def _expand_queries(queries: list[Count] | int, columns: list[str]) -> list[Count]:
+def _expand_queries(queries: Sequence[Count] | int, columns: list[str]) -> list[Count]:
     """Expand queries to include all subsets.
 
     :param queries: Explicit queries to shape workload, or maximum degree to preserve.

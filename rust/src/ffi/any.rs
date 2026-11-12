@@ -736,7 +736,7 @@ pub type AnyQueryable = Queryable<AnyObject, AnyObject>;
 #[cfg(test)]
 mod tests {
 
-    use crate::domains::AtomDomain;
+    use crate::domains::{AtomDomain, VectorDomain};
     use crate::error::*;
     use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
@@ -812,11 +812,11 @@ mod tests {
         use crate::metrics::AbsoluteDistance;
         use crate::{measurements, transformations};
 
-        #[allow(deprecated)]
-        let t1 = transformations::make_split_dataframe(None, vec!["a".to_owned(), "b".to_owned()])?
-            .into_any();
-        #[allow(deprecated)]
-        let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
+        let t1 = transformations::make_identity(
+            VectorDomain::new(AtomDomain::<String>::default()),
+            SymmetricDistance,
+        )?
+        .into_any();
         let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
         let t4 = transformations::then_impute_constant::<AtomDomain<f64>, SymmetricDistance>(0.0)
             .into_any();
@@ -829,8 +829,8 @@ mod tests {
             None,
         )?
         .into_any();
-        let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> t6 >> m1)?;
-        let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
+        let chain = (t1 >> t3 >> t4 >> t5 >> t6 >> m1)?;
+        let arg = AnyObject::new(vec!["1.0".to_owned(), "2.0".to_owned(), "3.0".to_owned()]);
         let res = chain.invoke(&arg)?;
         let res: f64 = res.downcast()?;
         assert_eq!(6.0, res);

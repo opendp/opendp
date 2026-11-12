@@ -9,15 +9,6 @@ from opendp.typing import *
 from opendp.typing import _INTEGER_TYPES
 
 
-def test_numpy_function():
-    np = pytest.importorskip("numpy")
-    assert str(RuntimeType.infer(np.array([1, 2, 3]))) == "Vec<i64>"
-    assert str(RuntimeType.infer(np.array(1))) == "i32"
-    assert str(RuntimeType.infer(np.array(1.0))) == "f64"
-    assert str(RuntimeType.infer(np.array("A"))) == "String"
-    assert str(RuntimeType.infer(np.array(["A", "B"]))) == "Vec<String>"
-
-
 def test_typing_infer_to_string():
     # Currently these return actual strings, which we test with `is`.
     # The plan is to change the response type to be consistent:
@@ -74,6 +65,17 @@ def test_typing_parse():
     assert isinstance(RuntimeType.parse("L1Distance<f64>"), SensitivityMetric)
     with pytest.raises(UnknownTypeException):
         RuntimeType.parse(list[Any])
+
+
+@pytest.mark.parametrize("type_name", ["T", "Vec<T>", "VectorDomain<AtomDomain<T>>"])
+def test_generic_atom_inference(type_name):
+    generic = RuntimeType.parse(type_name, generics=["T"])
+    assert get_atom(generic) is None
+    assert get_atom_or_infer(generic, 1.0) == f64
+
+
+def test_explicit_atom_takes_precedence_over_inference():
+    assert get_atom_or_infer("Vec<f32>", 1.0) == f32
 
 
 def test_sensitivity():

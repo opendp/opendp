@@ -6,11 +6,10 @@ from opendp.mod import OpenDPException, _call_rust_search
 def test_binary_search_fail():
     with pytest.raises(ZeroDivisionError) as e:
         dp.binary_search(lambda _: bool(1 / 0), T=float)
-    if hasattr(e.value, "add_note"):
-        assert (
-            e.value.__notes__[0]
-            == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
-        )  # type: ignore[attr-defined]
+    assert (
+        e.value.__notes__[0]
+        == "Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0."
+    )
 
 
 def test_binary_search_overflow():
@@ -45,7 +44,11 @@ def test_stuck():
         bounds=(0.0, real_v * 2.0),
         d_out=epsilon,
     )
-    assert discovered_scale == 192307694098.69745
+    # Independently account for both endpoint errors of a depth-20 pairwise sum.
+    n, h, u = 2**20, 20, 2.0**-53
+    relaxation = 2 * n * sens * (h * u) / (1 - h * u)
+    expected_scale = (sens + relaxation) / epsilon
+    assert discovered_scale == pytest.approx(expected_scale, rel=1e-14)
 
 
 def test_binary_search():
@@ -80,7 +83,8 @@ def test_binary_search_one_sided_errors(bounds, message):
 
 def test_mixed_type_bounds():
     with pytest.raises(TypeError, match="bounds must share the same type"):
-        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.))
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.0))
+
 
 def test_binary_search_inferred_int():
     def predicate(v):
@@ -143,7 +147,7 @@ def test_exponential_bounds_search():
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
             dp.symmetric_distance(),
         )
 
@@ -151,7 +155,7 @@ def test_type_inference():
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-20.0, 20.0)), size=n),
+            dp.vector_domain(dp.atom_domain(bounds=(-20.0, 20.0), nan=False), size=n),
             dp.symmetric_distance(),
         )
 
@@ -159,7 +163,7 @@ def test_type_inference():
 
     def mean_chainer_b(b):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b), nan=False), size=1000),
             dp.symmetric_distance(),
         )
 

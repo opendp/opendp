@@ -44,32 +44,6 @@ def test_make_custom_transformation_error():
         make_duplicate(2, raises=True)([1, 2, 3])
 
 
-def test_numpy_user_transformation_roundtrip():
-    np = pytest.importorskip("numpy")
-
-    input_is_ndarray = False
-
-    def function(arg):
-        nonlocal input_is_ndarray
-        input_is_ndarray |= isinstance(arg, np.ndarray)
-        return [v + 1 for v in arg]
-
-    trans = dp.t.make_user_transformation(
-        dp.vector_domain(dp.atom_domain(T=int)),
-        dp.symmetric_distance(),
-        dp.vector_domain(dp.atom_domain(T=int)),
-        dp.symmetric_distance(),
-        function,
-        lambda d_in: d_in,
-    )
-
-    result = dp.as_array()(trans(np.array([1, 2, 3], dtype=np.int32)))
-
-    assert not input_is_ndarray
-    assert isinstance(result, np.ndarray)
-    assert np.array_equal(result, np.array([2, 3, 4], dtype=np.int32))
-
-
 def make_constant_mechanism(constant):
     """An example user-defined measurement from Python"""
 
@@ -95,6 +69,24 @@ def test_make_user_measurement():
     assert mech.map(200) == 0.0
 
 
+def test_invocation_does_not_retain_private_data():
+    class Release:
+        pass
+
+    private_data = 17
+    release = Release()
+    measurement = dp.m.make_user_measurement(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(int),
+        dp.max_divergence(),
+        lambda _: release,
+        lambda _: 0.0,
+        TO="ExtrinsicObject",
+    )
+    assert measurement(private_data) is release
+    assert not hasattr(release, "__opendp_dict__")
+
+
 def make_postprocess_frac():
     """An example user-defined postprocessor from Python"""
 
@@ -107,37 +99,6 @@ def make_postprocess_frac():
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
     assert mech([12.0, 100.0]) == 0.12
-
-
-def test_user_constructors():
-    np = pytest.importorskip("numpy")
-
-    trans = dp.t.make_user_transformation(
-        dp.atom_domain((2, 10)),
-        dp.symmetric_distance(),
-        dp.vector_domain(dp.atom_domain((2, 10)), 10),
-        dp.symmetric_distance(),
-        lambda x: [x] * 10,
-        lambda d_in: d_in * 10,
-    )
-    assert trans(2) == [2] * 10
-    assert np.array_equal(dp.as_array()(trans(2)), np.repeat(2, 10))
-    assert trans.map(1) == 10
-
-    meas = dp.m.make_user_measurement(
-        dp.atom_domain((2, 10)),
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        lambda x: [x] * 10,
-        lambda d_in: float(d_in * 10),
-        TO=dp.Vec[int],
-    )
-
-    assert meas(2) == [2] * 10
-    assert np.array_equal((meas >> dp.as_array())(2), np.repeat(2, 10))
-    assert meas.map(1) == 10
-
-    assert (meas >> (lambda x: x[0]))(2) == 2
 
 
 def test_hash():

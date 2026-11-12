@@ -2,10 +2,10 @@ import opendp.prelude as dp
 import pytest
 import re
 
+pl = pytest.importorskip("polars")
+
 
 def test_lazyframe_bounded_dp_truncation():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(changes=1, identifier="id"),
@@ -19,14 +19,12 @@ def test_lazyframe_bounded_dp_truncation():
         context.query()
         .with_columns(x=pl.lit(10))
         .truncate_per_group(3)
-        .select(dp.len())
+        .select(dp.len(signed=True))
     )
     assert query.summarize()["scale"][0] == 6.000000000000001  # type: ignore[index]
 
 
 def test_unnecessary_lazyframe_truncation():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1),
@@ -42,8 +40,6 @@ def test_unnecessary_lazyframe_truncation():
 
 
 def test_frame_distance():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": range(300)}),
         privacy_unit=dp.unit_of(
@@ -60,7 +56,7 @@ def test_frame_distance():
         # user can contribute one group per id (2 groups total)
         .truncate_num_groups(1, by=["alpha"])
         .group_by("alpha")
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
     )
     # ...therefore sensitivity of count is 2 * 2
     assert query.summarize()["scale"][0] == 4.000000000000001  # type: ignore[index]
@@ -68,8 +64,6 @@ def test_frame_distance():
 
 @pytest.mark.parametrize("keep", ["first", "last", "sample"])
 def test_truncate_per_group(keep):
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1, identifier="id"),
@@ -77,7 +71,7 @@ def test_truncate_per_group(keep):
         split_evenly_over=1,
     )
 
-    query = context.query().truncate_per_group(2, keep=keep).select(dp.len())
+    query = context.query().truncate_per_group(2, keep=keep).select(dp.len(signed=True))
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
     context = dp.Context.compositor(
@@ -102,14 +96,12 @@ def test_truncate_per_group(keep):
         context.query()
         .truncate_per_group(2, by=["alpha"], keep=keep)
         .group_by("alpha")
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
     )
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
 def test_truncate_per_group_sort_by():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame(
             {
@@ -126,14 +118,12 @@ def test_truncate_per_group_sort_by():
     query = (
         context.query()
         .truncate_per_group(2, keep=dp.polars.SortBy(pl.col("sort")))
-        .select(dp.len())
+        .select(dp.len(signed=True))
     )
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
 def test_truncate_error_messages():
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame(
             {
@@ -147,7 +137,9 @@ def test_truncate_error_messages():
         split_evenly_over=1,
     )
 
-    query = context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len())
+    query = (
+        context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len(signed=True))
+    )
     with pytest.raises(
         dp.OpenDPException,
         match="`per_group` contributions is unknown. This is likely due to a missing truncation",
@@ -158,7 +150,7 @@ def test_truncate_error_messages():
         context.query()
         .truncate_num_groups(1, by=["alpha"])
         .group_by("sort")
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
     )
     with pytest.raises(
         dp.OpenDPException,
@@ -171,8 +163,6 @@ def test_truncate_error_messages():
 
 @pytest.mark.parametrize("keep", ["first", "last"])
 def test_truncate_num_groups(keep):
-    pl = pytest.importorskip("polars")
-
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1, identifier="id"),
@@ -185,17 +175,14 @@ def test_truncate_num_groups(keep):
         .truncate_per_group(2)
         .truncate_num_groups(1, keep=keep, by=["alpha"])
         .group_by("alpha")
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
     )
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
 def test_truncation_contingency():
-    pl = pytest.importorskip("polars")
     synth_context = dp.Context.compositor(
-        data=pl.scan_csv(
-            dp.examples.get_france_lfs_path(), encoding="utf8-lossy"
-        ),
+        data=pl.scan_csv(dp.examples.get_france_lfs_path(), encoding="utf8-lossy"),
         privacy_unit=dp.unit_of(contributions=1, identifier="PIDENT"),
         privacy_loss=dp.loss_of(epsilon=1),
         split_evenly_over=1,

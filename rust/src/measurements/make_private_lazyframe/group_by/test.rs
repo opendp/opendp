@@ -11,6 +11,94 @@ use polars::prelude::*;
 use super::*;
 
 #[test]
+fn test_reject_float_grouping_keys() -> Fallible<()> {
+    macro_rules! check {
+        ($ty:ty, $values:expr) => {{
+            let domain = LazyFrameDomain::new(vec![
+                SeriesDomain::new("key", AtomDomain::<$ty>::default()),
+            ])?;
+            let lf = df!("key" => $values)?.lazy();
+            for key in [col("key"), col("key").alias("aliased")] {
+                let err = make_private_lazyframe(
+                    domain.clone(),
+                    SymmetricDistance,
+                    Approximate(MaxDivergence),
+                    lf.clone().group_by(&[key]).agg(&[len().dp().noise(None)]),
+                    Some(1.),
+                    Some(10),
+                )
+                .map(|_| ())
+                .unwrap_err();
+
+                let message = err.message.as_deref().unwrap_or_default();
+                assert!(message.contains("Floating-point grouping keys"), "{err:?}");
+                assert_eq!(err.variant, MakeMeasurement);
+            }
+        }};
+    }
+
+    check!(f32, [-0.0f32, 0.0f32]);
+    check!(f64, [f64::NAN, f64::from_bits(0x7ff8_0000_0000_0001)]);
+    Ok(())
+}
+
+#[test]
+fn test_contains_float_nested() {
+    assert!(contains_float(&DataType::Float16));
+    assert!(contains_float(&DataType::Array(
+        Box::new(DataType::Float32),
+        2
+    )));
+    assert!(contains_float(&DataType::List(Box::new(DataType::Float64))));
+    assert!(contains_float(&DataType::Struct(vec![Field::new(
+        "nested".into(),
+        DataType::Array(Box::new(DataType::Float32), 2),
+    )])));
+
+    assert!(!contains_float(&DataType::Int32));
+    assert!(!contains_float(&DataType::Array(
+        Box::new(DataType::Int32),
+        2
+    )));
+}
+
+#[test]
+fn test_cast_float_grouping_keys_allowed() -> Fallible<()> {
+    let domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("key", AtomDomain::<f64>::default())])?;
+    let lf = df!("key" => [-0.0f64, 0.0, f64::NAN])?.lazy();
+
+    make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key").cast(DataType::Int64)])
+            .agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )?;
+    Ok(())
+}
+
+#[test]
+fn test_float_non_grouping_column_allowed() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+    ])?;
+    let lf = df!("key" => [1i32, 1], "value" => [-0.0f64, f64::NAN])?.lazy();
+    make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )?;
+    Ok(())
+}
+
+#[test]
 fn test_aggregate() -> Fallible<()> {
     let lf_domain = DslPlanDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
@@ -99,6 +187,43 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 }
 
 #[test]
+fn test_stable_keys_delta_empirical() -> Fallible<()> {
+    const N: u32 = 2048;
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<u32>::default())])?
+        .with_margin(Margin::by(["A"]).with_max_length(1))?;
+    let data = df!("A" => &(0..N).collect::<Vec<_>>())?.lazy();
+
+    // Match N, scale, threshold, and tolerance in
+    // noise_threshold/distribution/{laplace,gaussian}/test.rs::
+    // test_{laplace,gaussian}_threshold_delta_empirical (positive case).
+    // Each group is unstable relative to a neighboring frame without its row.
+    // Releasing a group at the threshold would exceed the reported delta.
+    macro_rules! check {
+        ($measure:expr) => {{
+            let meas = make_private_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                Approximate($measure),
+                data.clone()
+                    .group_by(&[col("A")])
+                    .agg(&[len().dp().noise(None)]),
+                Some(0.5),
+                Some(2),
+            )?;
+            let delta = meas.map(&1.into())?.1;
+            let release_rate = meas.invoke(&data)?.collect()?.height() as f64 / f64::from(N);
+            assert!(
+                release_rate <= delta + 0.05,
+                "release rate {release_rate} exceeds delta {delta}"
+            );
+        }};
+    }
+    check!(MaxDivergence);
+    check!(ZeroConcentratedDivergence);
+    Ok(())
+}
+
+#[test]
 fn test_explicit_keys() -> Fallible<()> {
     static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
@@ -107,10 +232,12 @@ fn test_explicit_keys() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<u32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
     ])?
-    .with_margin(Margin::by(["A"]).with_max_length(1))?;
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(1))?;
 
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
-    let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();
+    let mut key_values = (0u32..N_SAMPLES).collect::<Vec<_>>();
+    key_values.push(0); // Public key zero occurs twice; output must still have N_SAMPLES rows.
+    let keys = df!("A" => key_values)?.lazy();
 
     let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
@@ -159,6 +286,318 @@ fn test_explicit_keys() -> Fallible<()> {
     Ok(())
 }
 
+#[test]
+fn test_explicit_key_join_rejects_partial_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let grouped = data
+        .group_by(&[col("A"), col("B")])
+        .agg(&[len().dp().noise(Some(1.0))]);
+    for left in [true, false] {
+        let public = df!("A" => [0i32])?.lazy();
+        let joined = if left {
+            public.join(
+                grouped.clone(),
+                [col("A")],
+                [col("A")],
+                JoinType::Left.into(),
+            )
+        } else {
+            grouped
+                .clone()
+                .join(public, [col("A")], [col("A")], JoinType::Right.into())
+        };
+        let error = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+        assert_eq!(error.variant, MakeMeasurement);
+        assert_eq!(
+            error.message.as_deref(),
+            Some("join keys must match group-by keys")
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_deduplicates_public_keys() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<String>::default()),
+    ])?
+    .with_margin(Margin::by(["A", "B"]).with_max_length(1))?;
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let grouped = data
+        .clone()
+        .group_by([col("A"), col("B")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let public = df!(
+        "A" => [0i32, 0, 1],
+        "B" => ["private", "private", "absent"],
+        "meta" => ["first", "second", "third"]
+    )?
+    .lazy();
+
+    for left in [true, false] {
+        let joined = if left {
+            public.clone().join(
+                grouped.clone(),
+                [col("A"), col("B")],
+                [col("A"), col("B")],
+                JoinType::Left.into(),
+            )
+        } else {
+            grouped.clone().join(
+                public.clone(),
+                [col("A"), col("B")],
+                [col("A"), col("B")],
+                JoinType::Right.into(),
+            )
+        };
+
+        assert!(match_group_by(joined.logical_plan.clone())?.is_some());
+        let meas = make_private_group_by(
+            domain.clone().cast_carrier(),
+            FrameDistance(SymmetricDistance),
+            MaxDivergence,
+            joined.logical_plan,
+            Some(1.0),
+            None,
+        )?;
+        let released_plan = meas.invoke(&data.logical_plan)?;
+        let DslPlan::HStack { input, .. } = &released_plan else {
+            panic!("expected imputation after the join");
+        };
+        let DslPlan::Join {
+            input_left,
+            input_right,
+            ..
+        } = input.as_ref()
+        else {
+            panic!("expected public-key join");
+        };
+        let public_keys = if left { input_left } else { input_right };
+        let DslPlan::Distinct { options, .. } = public_keys.as_ref() else {
+            panic!("expected deduplication on the public side");
+        };
+        assert_eq!(options.subset, Some(vec![col("A"), col("B")]));
+
+        let release = LazyFrame::from(released_plan).collect()?;
+        assert_eq!(release.height(), 2);
+        assert!(release.column("meta").is_ok());
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_collisions() -> Fallible<()> {
+    let private = df!("A" => [0i32])?
+        .lazy()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0)).alias("count")]);
+
+    for left in [true, false] {
+        let keys = df!("A" => [0i32], "count" => [2u32])?.lazy();
+        let joined = if left {
+            keys.join(
+                private.clone(),
+                [col("A")],
+                [col("A")],
+                JoinType::Left.into(),
+            )
+        } else {
+            private
+                .clone()
+                .join(keys, [col("A")], [col("A")], JoinType::Right.into())
+        };
+        let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+        assert_eq!(err.variant, MakeMeasurement);
+        assert_eq!(
+            err.message.as_deref(),
+            Some("public columns must not conflict with private output columns")
+        );
+    }
+
+    // Even a public join key may shadow an aggregate with the same name.
+    let keys = df!("count" => [0i32])?.lazy();
+    let joined = private
+        .clone()
+        .join(keys, [col("A")], [col("count")], JoinType::Right.into());
+    let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("public columns must not conflict with private output columns")
+    );
+
+    // Different key names are fine when the schemas are otherwise disjoint.
+    let keys = df!("K" => [0i32])?.lazy();
+    let joined = private.join(keys, [col("A")], [col("K")], JoinType::Right.into());
+    assert!(match_group_by(joined.logical_plan)?.is_some());
+
+    // The private key A is coalesced even when public A is not paired with it.
+    let private = df!("A" => [0i32], "B" => [1i32])?
+        .lazy()
+        .group_by([col("A"), col("B")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let public = df!("A" => [1i32], "B" => [0i32])?.lazy();
+    let joined = private.join(
+        public,
+        [col("A"), col("B")],
+        [col("B"), col("A")],
+        JoinType::Right.into(),
+    );
+    assert!(match_group_by(joined.logical_plan)?.is_some());
+
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_unsafe_options() -> Fallible<()> {
+    let private = df!("A" => [0i32])?
+        .lazy()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0))]);
+    let keys = df!("A" => [0i32, 1])?.lazy();
+
+    let mut args: JoinArgs = JoinType::Left.into();
+    args.coalesce = JoinCoalesce::KeepColumns;
+    let joined = keys
+        .clone()
+        .join(private.clone(), [col("A")], [col("A")], args);
+    let err = match_group_by(joined.logical_plan).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("DP key joins must coalesce join keys")
+    );
+
+    // The LazyFrame join builder panics on slicing; construct the DSL directly.
+    let joined = private.join(keys, [col("A")], [col("A")], JoinType::Right.into());
+    let DslPlan::Join {
+        input_left,
+        input_right,
+        left_on,
+        right_on,
+        predicates,
+        options,
+    } = joined.logical_plan
+    else {
+        panic!("expected join");
+    };
+    let mut options = (*options).clone();
+    options.args.slice = Some((0, 1));
+    let joined = DslPlan::Join {
+        input_left,
+        input_right,
+        left_on,
+        right_on,
+        predicates,
+        options: Arc::new(options),
+    };
+    let err = match_group_by(joined).map(|_| ()).unwrap_err();
+    assert_eq!(
+        err.message.as_deref(),
+        Some("DP key joins cannot be sliced because slicing introduces order dependence")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_rejects_mismatched_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let mismatched = data
+        .group_by(&[col("A"), col("B")])
+        .agg(&[len().dp().noise(Some(1.0)).alias("C")])
+        .join(
+            df!("A" => [0i32], "C" => [0u32])?.lazy(),
+            [col("A"), col("C")],
+            [col("A"), col("C")],
+            JoinType::Right.into(),
+        );
+    let error = match_group_by(mismatched.logical_plan)
+        .map(|_| ())
+        .unwrap_err();
+    assert_eq!(error.variant, MakeMeasurement);
+    assert_eq!(
+        error.message.as_deref(),
+        Some("join keys must match group-by keys")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_accepts_computed_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let computed = data
+        .group_by(&[col("A").gt(lit(0))])
+        .agg(&[len().dp().noise(Some(1.0))])
+        .join(
+            df!("A" => [true, false])?.lazy(),
+            [col("A")],
+            [col("A")],
+            JoinType::Right.into(),
+        );
+    assert!(match_group_by(computed.logical_plan)?.is_some());
+    Ok(())
+}
+
+#[test]
+fn test_explicit_key_join_accepts_aliased_keys() -> Fallible<()> {
+    let data = df!("A" => [0i32], "B" => ["private"])?.lazy();
+    let aliased = data
+        .group_by(&[col("A").alias("key")])
+        .agg(&[len().dp().noise(Some(1.0))])
+        .join(
+            df!("key" => [0i32])?.lazy(),
+            [col("key")],
+            [col("key")],
+            JoinType::Right.into(),
+        );
+    assert!(match_group_by(aliased.logical_plan)?.is_some());
+    Ok(())
+}
+
+#[test]
+fn test_fill_after_filter_privacy_map() -> Fallible<()> {
+    // Regression for #3039: dp.sum implicitly fills nulls after a filter.
+    // Filling must not restore the public-length invariant lost by the filter.
+    let lf = df!("x" => [1i64, 3, 3], "k" => [0i64, 0, 0])?.lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", AtomDomain::<i64>::default()),
+        SeriesDomain::new("k", AtomDomain::<i64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["k"])
+            .with_invariant_lengths()
+            .with_max_length(50)
+            .with_max_groups(3),
+    )?;
+
+    let filtered = col("x").filter(col("x").gt(lit(1i64)));
+    for expr in [
+        filtered.clone().dp().sum((lit(2i64), lit(3i64)), Some(1.0)),
+        filtered
+            .fill_null(2i64)
+            .clip(lit(2i64), lit(3i64))
+            .sum()
+            .dp()
+            .noise(Some(1.0)),
+    ] {
+        let meas = make_private_lazyframe(
+            domain.clone(),
+            SymmetricDistance,
+            MaxDivergence,
+            lf.clone().group_by(&[col("k")]).agg(&[expr]),
+            None,
+            None,
+        )?;
+
+        let privacy_loss = meas.map(&2u32)?;
+        assert!(
+            (6.0..7.0).contains(&privacy_loss),
+            "filtering must invalidate public lengths; got privacy loss {privacy_loss}"
+        );
+    }
+    Ok(())
+}
+
 fn process_expr(expr: Expr) -> Fallible<Expr> {
     Ok(make_private_expr(
         WildExprDomain {
@@ -194,5 +633,65 @@ fn test_find_len_expr() -> Fallible<()> {
             supported_expr,
         );
     }
+    Ok(())
+}
+
+#[test]
+fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
+    use crate::core::Domain;
+
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<String>::default()),
+        SeriesDomain::new("B", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_max_length(3)
+            .with_max_groups(1)
+            .with_invariant_keys(),
+    )?;
+
+    let x = df!("A" => ["a", "a", "a"], "B" => [10i32, 10, 10])?.lazy();
+    let y = df!("A" => ["a", "a", "a"], "B" => [-10i32, -10, -10])?.lazy();
+    assert!(domain.member(&x)?);
+    assert!(domain.member(&y)?);
+
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        x.group_by(&[col("A")])
+            .agg(&[col("B").dp().sum((lit(-10), lit(10)), Some(30.0))]),
+        None,
+        None,
+    )?;
+
+    // Replacing three rows changes six rows under SymmetricDistance.
+    // The clipped sums differ by 60, giving epsilon 60 / 30 = 2.
+    assert!((measurement.map(&6)? - 2.0).abs() < 1e-6);
+    // A single insertion still incurs the sensitivity of just one row.
+    assert!((measurement.map(&1)? - 1.0 / 3.0).abs() < 1e-6);
+    Ok(())
+}
+
+#[test]
+fn test_max_length_overflow() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
+    let margin = Margin::by(["A"])
+        .with_max_length(u32::MAX)
+        .with_invariant_keys();
+    let domain = domain.with_margin(margin)?;
+
+    let lf = df!("A" => [1i32])?.lazy();
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        lf.group_by(&[col("A")]).agg(&[len().dp().noise(Some(1.0))]),
+        None,
+        None,
+    )?;
+
+    assert!(measurement.map(&1).is_err());
     Ok(())
 }

@@ -6,7 +6,7 @@ Identifier Truncation and Bounds
 It's also important to be mindful of the structure of our data
 when thinking about identifier truncation and bounds.
 This is another area where there are opportunities to lower the
-sensitivity of the analysis to individual contributions, 
+sensitivity of the analysis to individual contributions,
 and hence reduce the amount of noise required to meet a given privacy guarantee.
 
 .. tab-set::
@@ -151,7 +151,7 @@ each quarter, you can take this into account in your annalysis.
             ...     )  # each identifier may affect up to 5 groups
             ...     .group_by(quarterly)
             ...     .agg(
-            ...         dp.len(),
+            ...         dp.len(signed=True),
             ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )

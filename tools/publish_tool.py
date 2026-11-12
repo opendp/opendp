@@ -62,7 +62,7 @@ def sanity(args):
     version = get_python_version(version)
     run_command("Creating venv", f"rm -rf {args.venv} && python -m venv {args.venv}")
     if args.python_repository == "local":
-        package_name = f"opendp-{version}-cp310-abi3-manylinux_2_28_x86_64.whl"
+        package_name = f"opendp-{version}-cp311-abi3-manylinux_2_28_x86_64.whl"  # 3.11
         package = f"python/dist/{package_name}"
         run_command(
             f"Installing opendp {version}",

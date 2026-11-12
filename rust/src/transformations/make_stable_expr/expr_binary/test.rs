@@ -1,6 +1,7 @@
-use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
+use polars_plan::plans::typed_lit;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use super::*;
@@ -464,6 +465,16 @@ fn test_rem() -> Fallible<()> {
         ]
     )?;
     test_binary!(get_i32_data, rem, [None, Some(0), None])?;
+
+    // A zero divisor can produce null even if neither input column is nullable.
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<i32>::default()),
+        SeriesDomain::new("R", AtomDomain::<i32>::default()),
+    ])?;
+    let t_rem = col("L")
+        .rem(col("R"))
+        .make_stable(lf_domain.row_by_row(), FrameDistance(SymmetricDistance))?;
+    assert!(t_rem.output_domain.column.nullable);
     Ok(())
 }
 
@@ -490,5 +501,119 @@ fn test_overflow() -> Fallible<()> {
         ])
         .collect()?;
     assert_eq!(observed, expected);
+    Ok(())
+}
+
+#[test]
+fn test_enum_string_ordering_is_not_stable() -> Fallible<()> {
+    let enum_domain = EnumDomain::new(Series::new("".into(), vec!["low", "high"]))?;
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("E", enum_domain.clone()),
+        SeriesDomain::new("S", AtomDomain::<String>::default()),
+        SeriesDomain::new("E2", enum_domain),
+    ])?;
+
+    // Polars can fail when a private string is not one of the enum's categories.
+    for expr in [
+        col("E").lt(col("S")),
+        col("E").lt_eq(col("S")),
+        col("E").gt(col("S")),
+        col("E").gt_eq(col("S")),
+        col("S").lt(col("E")),
+        col("S").lt_eq(col("E")),
+        col("S").gt(col("E")),
+        col("S").gt_eq(col("E")),
+    ] {
+        let result = make_expr_binary(
+            domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            expr,
+        );
+        assert!(result.is_err());
+    }
+
+    // Equality and ordering between compatible enum columns remain supported.
+    for expr in [
+        col("E").eq(col("S")),
+        col("S").eq(col("E")),
+        col("E").lt(col("E2")),
+        col("S").lt(col("S")),
+    ] {
+        make_expr_binary(
+            domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            expr,
+        )?;
+    }
+    Ok(())
+}
+
+#[test]
+fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
+    let enum_domain = EnumDomain::new(Series::new("".into(), vec!["low", "high"]))?;
+    let enum_dtype = SeriesDomain::new("E", enum_domain.clone()).dtype();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("E", enum_domain),
+        SeriesDomain::new("S", AtomDomain::<String>::default()),
+    ])?;
+    let lf = df!(
+        "E" => ["low", "high", "low"],
+        "S" => ["low", "unknown", "high"],
+    )?
+    .lazy()
+    .with_column(col("E").cast(enum_dtype));
+
+    // Unlike ordering, equality with an unknown enum category does not fail.
+    for (expr, expected) in [
+        (col("E").eq(col("S")), [true, false, false]),
+        (col("S").eq(col("E")), [true, false, false]),
+        (col("E").neq(col("S")), [false, true, true]),
+        (col("S").neq(col("E")), [false, true, true]),
+        (col("E").eq_missing(col("S")), [true, false, false]),
+        (col("S").eq_missing(col("E")), [true, false, false]),
+        (col("E").neq_missing(col("S")), [false, true, true]),
+        (col("S").neq_missing(col("E")), [false, true, true]),
+    ] {
+        expr.clone().make_stable(
+            domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+        )?;
+        let observed = lf.clone().select([expr.alias("out")]).collect()?;
+        assert_eq!(
+            observed.column("out")?,
+            &Column::new("out".into(), expected)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "x",
+        AtomDomain::<f32>::new_non_nan(),
+    )])?
+    .row_by_row();
+    let data = df!("x" => [1.0f32, 2.0])?.lazy();
+
+    for expr in [
+        col("x") + lit(0.5f64),
+        col("x") + typed_lit(0.5f64),
+        lit(0.5f64) + col("x"),
+        col("x") + lit(1i32),
+        col("x") + typed_lit(1i32),
+    ] {
+        let actual_dtype = data.clone().select([expr.clone()]).collect()?.get_columns()[0]
+            .dtype()
+            .clone();
+        let transformation = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        assert_eq!(
+            transformation.output_domain.column.dtype(),
+            actual_dtype,
+            "{expr:?}"
+        );
+    }
     Ok(())
 }

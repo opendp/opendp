@@ -480,7 +480,7 @@ pub extern "C" fn opendp_domains__vector_domain(
     let atom_domain = try_as_ref!(atom_domain);
 
     match atom_domain.type_.contents {
-        TypeContents::GENERIC { name: "AtomDomain", .. } => 
+        TypeContents::GENERIC { name: "AtomDomain", .. } =>
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
         TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_user_domain(atom_domain, size),
         _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)")
@@ -569,21 +569,30 @@ pub extern "C" fn opendp_domains___vector_domain_get_size(
 
 #[bootstrap(
     name = "bitvector_domain",
-    arguments(max_weight(rust_type = "Option<u32>", default = b"null")),
+    arguments(
+        max_weight(rust_type = "Option<u32>", default = b"null"),
+        size(rust_type = "Option<u32>", default = b"null")
+    ),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `BitVectorDomain`.
 ///
 /// # Arguments
 /// * `max_weight` - The maximum number of positive bits.
+/// * `size` - The exact number of bits in the vector.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__bitvector_domain(
     max_weight: *const AnyObject,
+    size: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     let mut bitvector_domain = BitVectorDomain::new();
     if let Some(max_weight) = util::as_ref(max_weight) {
         let max_weight = *try_!(max_weight.downcast_ref::<u32>()) as usize;
         bitvector_domain = bitvector_domain.with_max_weight(max_weight)
+    };
+    if let Some(size) = util::as_ref(size) {
+        let size = *try_!(size.downcast_ref::<u32>()) as usize;
+        bitvector_domain = bitvector_domain.with_size(size)
     };
     Ok(AnyDomain::new(bitvector_domain)).into()
 }
@@ -621,9 +630,9 @@ pub extern "C" fn opendp_domains__map_domain(
     let value_domain = try_as_ref!(value_domain);
 
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) =>
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) =>
             dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
         _ => fallible!(FFI, "Value domain of MapDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)"),
     }.into()

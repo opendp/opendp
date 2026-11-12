@@ -8,19 +8,19 @@ use crate::accuracy::{
 };
 use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
-use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
+use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars::prelude::{DataType, DslPlan, JoinType, UniqueKeepStrategy, col, lit};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -28,7 +28,7 @@ mod test;
 
 mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
-use polars_plan::prelude::ProjectionOptions;
+use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
 
 #[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
@@ -72,39 +72,44 @@ where
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    for expr in &group_by {
-        // grouping keys must be stable
-        let t_group_by = expr.clone().make_stable(
-            WildExprDomain {
-                columns: middle_domain.series_domains.clone(),
-                context: Context::RowByRow,
-            },
-            L0PInfDistance(middle_metric.0.clone()),
-        )?;
+    let group_by_keys = group_by
+        .iter()
+        .map(|expr| {
+            // Grouping keys must be stable; preserve the normalized expression.
+            let t_key = expr.clone().make_stable(
+                WildExprDomain {
+                    columns: middle_domain.series_domains.clone(),
+                    context: Context::RowByRow,
+                },
+                L0PInfDistance(middle_metric.0.clone()),
+            )?;
 
-        let series_domain = &t_group_by.output_domain.column;
-        if let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() {
-            if domain.categories().is_none() {
+            let series_domain = &t_key.output_domain.column;
+            if contains_float(&series_domain.dtype()) {
                 return fallible!(
                     MakeMeasurement,
-                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.",
+                    "Floating-point grouping keys are not supported because Polars may reveal distinct representations of signed zero or NaN. Convert {} to a non-floating-point type before grouping.",
                     series_domain.name
                 );
             }
-        };
-    }
+            if matches!(series_domain.dtype(), DataType::Categorical(_, _)) {
+                return fallible!(
+                    MakeMeasurement,
+                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to String or Enum before grouping.",
+                    series_domain.name
+                );
+            }
+
+            Ok(t_key.invoke(&input)?.expr)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     // 2: prepare for release of `aggs`
     let group_by_id = HashSet::from_iter(group_by.iter().cloned());
-    let mut margin = middle_domain.get_margin(&group_by_id);
-
-    let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
-        let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
-        margin.max_groups = Some(num_keys.column("len")?.u32()?.last().unwrap());
-        true
-    } else {
-        false
-    };
+    // Do not infer max_groups from the public key frame: it may change
+    // between measurement construction and invocation, invalidating the bound.
+    let margin = middle_domain.get_margin(&group_by_id);
+    let is_join = matches!(key_sanitizer, Some(KeySanitizer::Join { .. }));
 
     let m_expr_aggs = aggs.into_iter().map(|expr| {
         expr.make_private(
@@ -176,7 +181,7 @@ where
         #[cfg(patch_polars)]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             predicates: vec![],
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
@@ -186,7 +191,7 @@ where
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
-            keys: group_by.clone(),
+            keys: group_by_keys.clone(),
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
@@ -205,12 +210,22 @@ where
                 options,
                 fill_null,
             }) => {
+                // Deduplicate before joining: duplicates repeat an existing group's
+                // noisy result but independently impute absent groups, revealing membership.
+                let distinct = |on: &[Expr]| {
+                    Arc::new(DslPlan::Distinct {
+                        input: labels,
+                        options: DistinctOptionsDSL {
+                            subset: Some(on.to_vec()),
+                            keep_strategy: UniqueKeepStrategy::Any,
+                            maintain_order: false,
+                        },
+                    })
+                };
                 let (input_left, input_right) = match how {
-                    JoinType::Left => (labels, Arc::new(output)),
-                    JoinType::Right => (Arc::new(output), labels),
-                    _ => unreachable!(
-                        "Invariant: by constructor checks, JoinType is only Left or Right"
-                    ),
+                    JoinType::Left => (distinct(&left_on), Arc::new(output)),
+                    JoinType::Right => (Arc::new(output), distinct(&right_on)),
+                    _ => unreachable!("Join type validated by match_group_by"),
                 };
                 DslPlan::HStack {
                     input: Arc::new(DslPlan::Join {
@@ -234,7 +249,9 @@ where
 
         // incorporate all information into optional bounds
         let l0 = option_min(bound.num_groups, margin.max_groups);
-        let li = option_min(bound.per_group, margin.max_length);
+        // Each input group has at most k rows, so two groups can differ by 2k rows.
+        let max_group_change = margin.max_length.map(|k| k.alerting_mul(&2)).transpose()?;
+        let li = option_min(bound.per_group, max_group_change);
         let l1 = d_in.get_bound(&HashSet::new()).per_group;
 
         // reduce optional bounds to concrete bounds
@@ -318,6 +335,17 @@ where
             function,
             privacy_map,
         )?
+}
+
+/// Polars groups signed zeros and NaNs together but may release an original
+/// representative, so floating-point values cannot occur in private group keys.
+fn contains_float(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
+        DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
+        _ => false,
+    }
 }
 
 fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {

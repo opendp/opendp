@@ -4,14 +4,14 @@
 \title{\texttt{fn make\_quantile\_score\_candidates}}
 \author{\MichaelShoemateAuthor \and \ChristianCovingtonAuthor \and \IraGlobusHarrusAuthor}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/fn}{make\_quantile\_score\_candidates} 
+Proves soundness of \rustdoc{transformations/fn}{make\_quantile\_score\_candidates}
 in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{make\_quantile\_score\_candidates} returns a Transformation that 
+\texttt{make\_quantile\_score\_candidates} returns a Transformation that
 takes a numeric vector database and a vector of numeric quantile candidates,
 and returns a vector of scores, where higher scores correspond to more accurate candidates.
 
@@ -24,7 +24,7 @@ The quantile score function scores each $c$ in a set of candidates $C$.
 \end{array}
 \end{equation}
 
-Where $\#(x < C_i) = |\{x \in x | x < C_i\}|$ is the number of values in $x$ less than $C_i$, 
+Where $\#(x < C_i) = |\{x \in x | x < C_i\}|$ is the number of values in $x$ less than $C_i$,
 and similarly for other variations of inequalities.
 The scalar score function can be equivalently stated:
 \begin{align}
@@ -33,10 +33,10 @@ The scalar score function can be equivalently stated:
     &= -|\#(x < c) - \alpha \cdot (|x| - \#(x = c))|
 \end{align}
 
-It has an intuitive interpretation as $-|candidate\_rank - ideal\_rank|$, 
+It has an intuitive interpretation as $-|candidate\_rank - ideal\_rank|$,
 where the absolute distance between the candidate and ideal rank penalizes the score.
 The ideal rank does not include values in the dataset equal to the candidate.
-This scoring function considers higher scores better, 
+This scoring function considers higher scores better,
 and the score is maximized at zero when the candidate rank is equivalent to the rank at the ideal $\alpha$-quantile.
 
 The scalar scorer is almost equivalent to Smith's\cite{Smith11}, but adjusts for a source of bias when there are values in the dataset equal to the candidate.
@@ -102,20 +102,20 @@ Let $x = \{0,1,2,3,4,5\}$ and $\alpha = 0.25$ (first quartile):
     score(x, 5, \alpha) = -|5 - .25 \cdot (6 - 1)| = -3.75
 \end{align*}
 
-The ideal rank is 1.25. The nearest candidate, 1, has the greatest score, followed by 2, and then 0. 
+The ideal rank is 1.25. The nearest candidate, 1, has the greatest score, followed by 2, and then 0.
 
 
 \section{Finite Data Types}
 The previous equation assumes the existence of real numbers to represent $\alpha$.
 We instead assume $\alpha$ is rational, such that $\alpha = \frac{\alpha_{num}}{\alpha_{den}}$.
-Multiply the equation through by $\alpha_{den}$ to get the following, 
+Multiply the equation through by $\alpha_{den}$ to get the following,
 which only uses integers:
 
 \begin{equation}
     \textrm{score}(x, c, \alpha_{num}, \alpha_{den}) = -|\alpha_{den} \cdot \#(x < c) - \alpha_{num} \cdot (|x| - \#(x = c))|
 \end{equation}
 
-This adjustment also increases the sensitivity by a factor $\alpha_{den}$, 
+This adjustment also increases the sensitivity by a factor $\alpha_{den}$,
 but does not affect the utility.
 We now make the scoring strictly non-negative.
 \begin{itemize}
@@ -127,13 +127,13 @@ We now make the scoring strictly non-negative.
     \textrm{score}(x, c, \alpha_{num}, \alpha_{den}) = \mathrm{abs\_diff}(\alpha_{den} \cdot \#(x < c), \alpha_{num} \cdot (|x| - \#(x = c)))
 \end{equation}
 
-To prevent a numerical overflow when computing the arguments to \texttt{abs\_diff}, 
+To prevent a numerical overflow when computing the arguments to \texttt{abs\_diff},
 first choose a data type that the scores are to be represented in.
-If the number of records is greater than can be represented in this data type, 
+If the number of records is greater than can be represented in this data type,
 then sample the dataset down to at most this number of records.
-Notice that when any given record is added or removed, 
+Notice that when any given record is added or removed,
 the counts differ by no more than they would have without this sampling down.
-In the OpenDP implementation, the dataset size may be no greater than the max value of a Rust usize, 
+In the OpenDP implementation, the dataset size may be no greater than the max value of a Rust usize,
 because each index into the dataset maps to a distinct computer memory address.
 
 Now allocate some of the bits of the data type for the alpha denominator,
@@ -177,7 +177,7 @@ None
 
 \begin{proof}[Proof of Appropriate Output Domain]
     \label{sec:approp-output-domain}
-    The raw type and domain are equivalent, save for potential nullity in the atomic type. 
+    The raw type and domain are equivalent, save for potential nullity in the atomic type.
     The scalar scorer structurally cannot emit null.
     Therefore the output of the function is a member of the output domain.
 \end{proof}

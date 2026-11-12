@@ -1,5 +1,4 @@
 import opendp.prelude as dp
 
-# We don't have tests that require a feature *not* to be enabled,
-# so more stable just to enable everything at the start.
+# Enable features for the test suite by default; gating tests override this locally.
 dp.enable_features("idealized-numerics", "contrib", "honest-but-curious")

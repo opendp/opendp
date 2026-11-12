@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
-[![Python](https://img.shields.io/badge/Python-3.10%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
+[![Python](https://img.shields.io/badge/Python-3.11%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
 [![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/stable/api/r/)
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 
@@ -35,7 +35,7 @@ We welcome you to try it and look forward to feedback on the library! However, p
 
 > OpenDP, like all real-world software, has both known and unknown issues.
 > If you intend to use OpenDP for a privacy-critical application, you should evaluate the impact of these issues on your use case.
-> 
+>
 > More details can be found in the [Limitations section of the User Guide](https://docs.opendp.org/en/stable/api/user-guide/limitations.html).
 
 
@@ -76,5 +76,5 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 
 ## Contributing
 
-OpenDP is a community effort, and we welcome your contributions to its development! 
+OpenDP is a community effort, and we welcome your contributions to its development!
 If you'd like to participate, please contact us! We also have a [contribution process section in the Contributor Guide](https://docs.opendp.org/en/stable/contributing/contribution-process.html).

@@ -12,7 +12,12 @@ def new_continuation_rule(d_in: MI_Distance, d_out: MO_Distance) -> Wrapper:
             else:
                 queryable = state
 
-            answer = queryable.eval_query(query)
+            # Retain an invocation error until the privacy loss is checked.
+            error = None
+            try:
+                answer = queryable.eval_query(query)
+            except Exception as caught_error:
+                error = caught_error
 
             match queryable.eval_poly(
                 OdometerQuery.PrivacyLoss(d_in.clone())
@@ -26,6 +31,8 @@ def new_continuation_rule(d_in: MI_Distance, d_out: MO_Distance) -> Wrapper:
                 state.take()  # `\label{free}`
                 raise "filter is now exhausted"
 
+            if error is not None:
+                raise error  # `\label{return-error}`
             return answer  # `\label{return}`
 
         return Queryable.new_raw(transition)

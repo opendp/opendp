@@ -1,5 +1,7 @@
-API User Guide
-==============
+.. _user-guide:
+
+User Guide
+==========
 
 This user guide gives a top-down picture of OpenDP;
 it complements the bottom-up view provided by the :doc:`Python API Reference <../python/index>`.
@@ -39,7 +41,7 @@ Features can be enabled via the following syntax:
       .. code-block:: toml
 
          opendp = { features = ["contrib"] }
-      
+
 
 Features that are available from Python and R:
 

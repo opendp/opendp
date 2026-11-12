@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \usepackage[backend=biber, style=authoryear-comp, sorting=nyt]{biblatex}
-\addbibresource{ref.bib} 
+\addbibresource{ref.bib}
 
 \title{\texttt{fn quantile\_cnd}}
 \author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
@@ -42,12 +42,12 @@ Compute the quantile of a canonical noise distribution, as specified by a tradeo
     as defined in Proposition F.6 of \cite{awan2023canonical}.
 \end{theorem}
 
-\begin{proof} 
+\begin{proof}
 
 We start by defining $F_f(\cdot)$:
 \begin{definition}[\protect{\cite[Definition~3.7]{awan2023canonical}}]
     \label{def1}  % Def 3.7
-    Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. 
+    Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$.
     We define $F_f:\mathbb{R}\rightarrow \mathbb{R}$ as
     \begin{equation}
         F_f(x) = \begin{cases}
@@ -70,14 +70,14 @@ The quantile function $F^{-1}_f(u)$ is defined in the following lemma.
             F_f^{-1}(f(1-u))+1&u>1-c,
         \end{cases}
     \end{equation}
-    
-    where $c$ is the unique fixed point of $f$. 
-    {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} 
-    if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
+
+    where $c$ is the unique fixed point of $f$.
+    {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,}
+    if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$.
 \end{proposition}
 
-\texttt{quantile\_cnd} is the quantile function $F^{-1}_f(u)$, 
-\texttt{f} is the tradeoff function $f$, 
+\texttt{quantile\_cnd} is the quantile function $F^{-1}_f(u)$,
+\texttt{f} is the tradeoff function $f$,
 \texttt{uniform} is $u$,
 and \texttt{c} is the fixed point of $f$, as guaranteed in the precondition.
 

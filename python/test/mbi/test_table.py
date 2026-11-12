@@ -9,6 +9,7 @@ from opendp.extras.mbi import (
     Sequential,
 )
 from opendp.extras.mbi._table import (
+    _deindex,
     _get_null_index,
     _increasing,
     _make_oneway_marginals,
@@ -19,6 +20,8 @@ from opendp.extras.mbi._utilities import mirror_descent, SelectPrefixQuery
 import pytest
 import opendp.prelude as dp
 import warnings
+
+from ..helpers import ids
 
 
 @pytest.mark.parametrize(
@@ -52,7 +55,8 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
 
     cov = np.array([[1.0, 0.75, 0.0], [0.75, 1.0, 0.0], [0.0, 0.0, 1.0]])
 
-    data_np = np.random.multivariate_normal(mean=[0.0] * 3, cov=cov, size=10_000)
+    rng = np.random.default_rng(1)
+    data_np = rng.multivariate_normal(mean=[0.0] * 3, cov=cov, size=10_000)
 
     categories_B = list("abcdef")
     edges_B = np.linspace(-2, 2, num=5)
@@ -69,10 +73,14 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     lookup_B = {"a": -2.5, "b": -1.5, "c": -0.5, "d": 0.5, "e": 1.5, "f": 2.5, None: 0}
     lookup_C = dict(zip(range(8), np.linspace(-3.5, 3.5, 8)))
     lookup_C[None] = np.float64(0)  # type: ignore[index]
+    # synthesize() resamples A uniformly within its bins, which inflates var(A) by ~0.15,
+    # so compare A at bin midpoints on both sides, like B and C
+    midpoints_A = np.linspace(-2.5, 2.5, 6)
+    to_mid_A = lambda a: midpoints_A[np.digitize(a, cuts["A"], right=True)]
 
     roundtrip_np = np.stack(
         [
-            data_dict["A"],
+            to_mid_A(data_dict["A"]),
             [lookup_B[i] for i in data_dict["B"]],
             [lookup_C[i] for i in data_dict["C"]],
         ]
@@ -106,17 +114,18 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         synthetic_df = table.synthesize()
 
     synthetic_list = [
-        synthetic_df["A"],
+        to_mid_A(synthetic_df["A"]),
         [lookup_B[c] for c in synthetic_df["B"]],
         [lookup_C[c] for c in synthetic_df["C"]],
     ]
     cov_syn = np.cov(np.stack(synthetic_list))
+    cov_ref = np.cov(roundtrip_np)
 
     def test_cov(clique):
         idx = {"A": 0, "B": 1, "C": 2}
         i, j = idx[clique[0]], idx[clique[-1]]
-        assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
-            f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
+        assert abs(cov_ref[i, j] - cov_syn[i, j]) < 0.2, (
+            f"{clique} cov drifted: {cov_ref[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
         )
 
     # in an MRF, a missing 2-way marginal does not imply independence
@@ -124,6 +133,63 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     test_cov(("A", "B"))
     for clique in (cl for cl in table.marginals.cliques() if 0 < len(cl) <= 2):
         test_cov(clique)
+
+
+def test_contingency_table_snapshots_mutable_algorithm():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+    from opendp.extras.mbi._table import make_contingency_table
+
+    algorithm = Fixed(queries=[Count(("A",))])
+    measurement, _, _ = make_contingency_table(
+        input_domain=dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 1)))]
+        ),
+        input_metric=dp.frame_distance(dp.symmetric_distance()),
+        output_measure=dp.max_divergence(),
+        d_in=[dp.polars.Bound(per_group=1)],
+        d_out=5.0,
+        keys={"A": [0, 1]},
+        algorithm=algorithm,
+    )
+
+    def changed_estimator(*args, **kwargs):
+        raise AssertionError("configuration mutated after construction")
+
+    algorithm.estimator = changed_estimator
+    algorithm.queries = [Count(("B",))]
+    result = measurement(pl.LazyFrame({"A": pl.Series("A", [0, 1], dtype=pl.Int32)}))
+    assert result.model is not None
+
+
+@pytest.mark.parametrize("oneway", ["unkeyed", "all"])
+@pytest.mark.parametrize("with_null", [False, True])
+def test_contingency_table_cut_enum_indexing(oneway, with_null):
+    pytest.importorskip("mbi")
+    import polars as pl
+
+    # Both one-way and final indexing must use the Enum encoding of cut bins,
+    # including nulls, while the released labels remain strings.
+    values: list[float | None] = [-1.0, 0.0, 1.0, 2.0]
+    if with_null:
+        values[0] = None
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": values}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=10.0),
+    )
+    table = (
+        context.query(epsilon=10.0)
+        .contingency_table(
+            cuts={"A": [0.5]},
+            algorithm=Fixed(queries=[Count(("A",))], oneway=oneway),
+        )
+        .release()
+    )
+
+    assert table.keys["A"].to_list() == ["(-inf, 0.5]", "(0.5, inf]"]
+    assert table.schema == {"A": pl.String}
+    assert table.project(["A"]).shape == (2,)
 
 
 def test_contingency_table_int_cuts():
@@ -258,7 +324,7 @@ def test_make_contingency_table_invalid_d_out():
 def get_model(domain: dict[str, int]):
     from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
 
-    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], arrays={})
+    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], tables={})
     return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)
 
 
@@ -379,21 +445,31 @@ def test_contingency_table_minimum_variance_weighted_total():
     pytest.importorskip("mbi")
     import polars as pl  # type: ignore[import-not-found]
 
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"A": [1] * 1000}),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
-    )
-
     # tests fit when no columns have keys, using the fixed identity marginal
     # to constrain the total
-    table: ContingencyTable = (
-        context.query(epsilon=1.0, delta=1e-8)
-        .contingency_table(algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9))
-        .release()
-    )
+    num_retries = 5
+    for _ in range(num_retries):
+        context = dp.Context.compositor(
+            data=pl.LazyFrame({"A": [1] * 1000}),
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
+        )
+        table: ContingencyTable = (
+            context.query(epsilon=1.0, delta=1e-8)
+            .contingency_table(
+                algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9)
+            )
+            .release()
+        )
 
-    assert 950 < table.project([]) < 1050
+        fixed_measurement = table.marginals.by_clique[("A",)][-1]
+        assert not isinstance(fixed_measurement.query, SelectPrefixQuery)
+        total = table.project([])
+        assert total == pytest.approx(fixed_measurement.noisy_measurement.sum())
+        if 950 < total < 1050:
+            break
+    else:
+        pytest.fail(f"total was inaccurate {num_retries} times")
 
 
 def test_fixed_unkeyed_does_not_release_zero_way_total():
@@ -579,3 +655,396 @@ def test_get_null_index():
     assert _get_null_index(pl.Series(["a", "b", None])) == 2
     assert _get_null_index(pl.Series(["a", None, "b"])) == 1
     assert _get_null_index(pl.Series(["a", "b"])) is None
+
+
+@pytest.mark.parametrize(
+    "cuts",
+    [
+        {"A": []},
+        {"A": [1, 1]},
+        {"A": [2, 1]},
+        {"A": [float("-inf"), 0.0]},
+        {"A": [0.0, float("inf")]},
+        {"A": [0.0, float("nan")]},
+        {"A": [0.0, None]},
+        {"A": [0.0, float.fromhex("0x1.fffffffffffffp+1023")]},
+    ],
+    ids=[
+        "empty",
+        "duplicate",
+        "decreasing",
+        "-inf",
+        "+inf",
+        "nan",
+        "null",
+        "float-max",
+    ],
+)
+def test_make_contingency_table_rejects_invalid_float_cuts(cuts):
+    pytest.importorskip("mbi")
+
+    with pytest.raises(ValueError):
+        dp.mbi.make_contingency_table(
+            dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T="f64"))]),
+            dp.frame_distance(dp.symmetric_distance()),
+            dp.max_divergence(),
+            d_in=[dp.polars.Bound(per_group=1)],
+            d_out=1.0,
+            cuts=cuts,
+        )
+
+
+def test_make_contingency_table_rejects_integer_cuts_at_dtype_bounds():
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+
+    info = np.iinfo(np.int32)
+
+    def make(cutset):
+        dp.mbi.make_contingency_table(
+            dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T="i32"))]),
+            dp.frame_distance(dp.symmetric_distance()),
+            dp.max_divergence(),
+            d_in=[dp.polars.Bound(per_group=1)],
+            d_out=1.0,
+            cuts={"A": cutset},
+        )
+
+    with pytest.raises(
+        ValueError, match='"A" integer cuts: the last cut cannot be the dtype maximum'
+    ):
+        make([0, info.max])
+
+    make([info.min, 5])
+    make([0, 5])
+
+
+def test_deindex_rejects_non_numeric_bins():
+    pytest.importorskip("polars")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    cuts = pl.Series("A", ["a", "b"])
+    keys = pl.Series("A", ["(-inf, a]", "(a, b]", "(b, inf]"])
+
+    with pytest.raises(TypeError, match="cuts must be integer or float"):
+        _deindex(np.array([0, 1, 2]), keys, cuts=cuts)
+
+
+@pytest.mark.parametrize("dtype_str", ["Int32", "Int64", "UInt32", "UInt64"], ids=ids)
+def test_deindex_integer_bins(dtype_str):
+    pytest.importorskip("polars")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    dtype = getattr(pl, dtype_str)
+
+    np.random.seed(0)
+    np_dtype = pl.Series("_", [], dtype=dtype).to_numpy().dtype
+    info = np.iinfo(np_dtype)
+
+    cutset = [10, 20]
+    keys = pl.Series("A", ["(-inf, 10]", "(10, 20]", "(20, inf]"])
+    cuts = pl.Series("A", cutset, dtype=dtype)
+
+    repeats = 50
+    indices = np.repeat(np.arange(3), repeats)
+    values = _deindex(indices, keys, cuts=cuts)
+
+    assert values.dtype == np_dtype
+
+    first, interior, last = indices == 0, indices == 1, indices == 2
+    assert np.all(values[first] <= 10)
+    assert np.all((values[interior] > 10) & (values[interior] <= 20))
+    assert np.all(values[last] > 20)
+
+    # Sampling above the signed 64-bit maximum preserves unsigned precision
+    if np_dtype == np.uint64:
+        big = 2**63 + 1000
+        cuts_big = pl.Series("A", [2**63, big], dtype=dtype)
+        values_big = _deindex(indices, keys, cuts=cuts_big)
+        assert values_big.dtype == np.uint64
+        assert np.all(values_big[first] <= 2**63)
+        assert np.all((values_big[interior] > 2**63) & (values_big[interior] <= big))
+        assert np.all(values_big[last] > big)
+
+    # The dtype minimum is a valid first cut.
+    cuts_min = pl.Series("A", [info.min, 20], dtype=dtype)
+    values_min = _deindex(indices, keys, cuts=cuts_min)
+    assert np.all(values_min[indices == 0] == info.min)
+
+
+@pytest.mark.parametrize("dtype_str", ["Float32", "Float64"], ids=ids)
+def test_deindex_float_bins(dtype_str):
+    pytest.importorskip("polars")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    dtype = getattr(pl, dtype_str)
+
+    np.random.seed(0)
+    np_dtype = pl.Series("_", [], dtype=dtype).to_numpy().dtype
+
+    cutset = [10.0, 20.0]
+    keys = pl.Series("A", ["(-inf, 10.0]", "(10.0, 20.0]", "(20.0, inf]"])
+    cuts = pl.Series("A", cutset, dtype=dtype)
+
+    repeats = 50
+    indices = np.repeat(np.arange(3), repeats)
+    values = _deindex(indices, keys, cuts=cuts)
+
+    assert values.dtype == np_dtype
+    assert np.all(np.isfinite(values))
+
+    first, interior, last = indices == 0, indices == 1, indices == 2
+    assert np.all(values[first] <= 10.0)
+    assert np.all((values[interior] > 10.0) & (values[interior] <= 20.0))
+    assert np.all(values[last] > 20.0)
+
+    # Wide intervals must not overflow.
+    large = float(2**53)
+    cuts_large = pl.Series("A", [-large, large], dtype=dtype)
+    values_large = _deindex(indices, keys, cuts=cuts_large)
+    assert np.all(np.isfinite(values_large))
+    assert np.all(values_large[first] <= -large)
+    assert np.all((values_large[interior] > -large) & (values_large[interior] <= large))
+    assert np.all(values_large[last] > large)
+
+    # adjacent representable floats: the interior bin has exactly one member
+    adjacent_upper = np.nextafter(np_dtype.type(10.0), np_dtype.type(np.inf))
+    cuts_adjacent = pl.Series("A", [10.0, float(adjacent_upper)], dtype=dtype)
+    values_adjacent = _deindex(indices, keys, cuts=cuts_adjacent)
+    assert np.all(values_adjacent[interior] == adjacent_upper)
+
+
+@pytest.mark.parametrize(
+    "dtype_str, cutset",
+    [("Int32", [1, 3, 5]), ("Float64", [1.0, 3.0, 5.0])],
+)
+def test_synthesize_with_cuts(monkeypatch, dtype_str, cutset):
+    pytest.importorskip("mbi")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    deindex = _deindex
+
+    def assert_correct_bin(indices, keys, cuts=None):
+        values = deindex(indices, keys, cuts=cuts)
+        if cuts is not None:
+            np.testing.assert_array_equal(
+                np.searchsorted(cuts.to_numpy(), values, side="left"),
+                np.asarray(indices),
+            )
+        return values
+
+    monkeypatch.setattr("opendp.extras.mbi._table._deindex", assert_correct_bin)
+
+    dtype = getattr(pl, dtype_str)
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": list(range(20)) * 5}, schema={"A": dtype}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=5.0),
+    )
+    table: ContingencyTable = (
+        context.query(epsilon=5.0)
+        .contingency_table(cuts={"A": cutset}, algorithm=Fixed(queries=[Count(("A",))]))
+        .release()
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        synthetic = table.synthesize(rows=2000)["A"]
+
+    assert synthetic.dtype == dtype
+    if dtype == pl.Float64:
+        assert synthetic.is_finite().all()
+
+    assert synthetic.len() == 2000
+
+
+def test_project_melted_empty():
+    pytest.importorskip("mbi")
+    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    A_lm = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=1.0)
+    model = mirror_descent(Domain(("A",), (2,)), [A_lm])
+    table = ContingencyTable(
+        keys={"A": pl.Series("A", ["a1", "a2"])},
+        cuts={},
+        marginals=Marginals({("A",): [A_lm]}),
+        model=model,
+    )
+
+    melted = table.project_melted([])
+    assert melted.shape == (1, 1)
+    assert melted["len"][0] == pytest.approx(8.0)
+
+
+def test_project_melted_unknown_attr():
+    pytest.importorskip("mbi")
+    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    A_lm = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=1.0)
+    model = mirror_descent(Domain(("A",), (2,)), [A_lm])
+    table = ContingencyTable(
+        keys={"A": pl.Series("A", ["a1", "a2"])},
+        cuts={},
+        marginals=Marginals({("A",): [A_lm]}),
+        model=model,
+    )
+
+    with pytest.raises(
+        ValueError, match=re.escape("attrs (['Z']) are not present in keys")
+    ):
+        table.project_melted(["Z"])
+
+
+@pytest.mark.parametrize(
+    "weight", [0, float("nan"), float("inf"), float("-inf")], ids=ids
+)
+def test_count_rejects_invalid_weight(weight):
+    with pytest.raises(ValueError, match="must be finite and positive"):
+        Count(("A",), weight=weight)
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    [
+        Fixed(queries=[Count(("A",))], oneway_split=0),
+        Fixed(queries=[Count(("A",))], oneway="unkeyed"),
+    ],
+    ids=["explicit-zero", "default-zero"],
+)
+def test_oneway_split_zero_all_keys_known(algorithm):
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [0, 1, 2] * 10}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+
+    table: ContingencyTable = (
+        context.query(epsilon=1.0)
+        .contingency_table(
+            keys={"A": [0, 1, 2]},
+            algorithm=algorithm,
+        )
+        .release()
+    )
+    assert table.schema == {"A": pl.Int64}
+
+
+def test_oneway_split_zero_unknown_keys():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [0, 1, 2] * 10}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
+    )
+
+    message = "oneway_split must be positive when discovering private keysets"
+    with pytest.raises(ValueError, match=re.escape(message)):
+        context.query(epsilon=1.0, delta=1e-8).contingency_table(
+            algorithm=Fixed(queries=[Count(("A",))], oneway_split=0),
+        )
+
+
+def test_table_extension_removes_need_for_new_oneway_phase():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [0, 1, 2] * 10, "B": [0, 1] * 15}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=2.0),
+    )
+
+    table: ContingencyTable = (
+        context.query(epsilon=1.0)
+        .select("A")
+        .contingency_table(
+            keys={"A": [0, 1, 2]},
+            algorithm=Fixed(queries=[Count(("A",))]),
+        )
+        .release()
+    )
+
+    table2: ContingencyTable = (
+        context.query(epsilon=1.0)
+        .select("A", "B")
+        .contingency_table(
+            keys={"B": [0, 1]},
+            table=table,
+            algorithm=Fixed(queries=[Count(("A", "B"))], oneway_split=0),
+        )
+        .release()
+    )
+    assert table2.schema == {"A": pl.Int64, "B": pl.Int64}
+
+
+def test_integer_cuts_reject_precision_loss():
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    big = 2**63
+    cutset = pl.Series("A", [big, big + 1000], dtype=pl.UInt64)
+    assert _increasing(cutset).len() == 2
+
+    with pytest.raises(ValueError, match="integer cuts must lie strictly between"):
+        dp.mbi.make_contingency_table(
+            dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T="u64"))]),
+            dp.frame_distance(dp.symmetric_distance()),
+            dp.max_divergence(),
+            d_in=[dp.polars.Bound(per_group=1)],
+            d_out=1.0,
+            cuts={"A": cutset.to_list()},
+        )
+
+
+@pytest.mark.parametrize("dtype_str", ["Float32", "Float64"], ids=ids)
+def test_deindex_float_extreme_range(dtype_str):
+    pytest.importorskip("polars")
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+
+    dtype = getattr(pl, dtype_str)
+    max_value = np.finfo(getattr(np, dtype_str.lower())).max
+    cuts = pl.Series("A", [-max_value, max_value / 2], dtype=dtype)
+    keys = pl.Series("A", ["low", "middle", "high"])
+    indices = np.ones(500, dtype=np.int64)
+    values = _deindex(indices, keys, cuts)
+    assert np.all(np.isfinite(values))
+    assert np.all(values > cuts[0])
+    assert np.all(values <= cuts[1])
+
+
+@pytest.mark.parametrize(
+    "algorithm",
+    [
+        AIM(queries=1, oneway_split=0),
+        AIM(queries=1, oneway="unkeyed"),
+    ],
+    ids=["explicit-zero", "default-zero"],
+)
+def test_oneway_split_zero_adaptive_requires_prior_model(algorithm):
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [0, 1, 2] * 10}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+    with pytest.raises(ValueError, match="without a prior model"):
+        context.query(epsilon=1.0).contingency_table(
+            keys={"A": [0, 1, 2]},
+            algorithm=algorithm,
+        )

@@ -60,7 +60,7 @@ make html-rustdoc
 
 ### LaTeX docs
 
-It is possible to fully simulate all documentation locally, 
+It is possible to fully simulate all documentation locally,
 with functioning links across documentation sites and proofs.
 
 If the following environment variables are set, Sphinx and Rustdoc will build with links to locally-hosted docs:
@@ -90,8 +90,8 @@ Changes should automatically manifest without restarting the server.
 Docs are deployed to http://docs.opendp.org using GitHub Actions.
 
 Note that `make html` is replaced with `make versions` to build multiple versions (branches, tags) using the [`sphinx-multiversion`](https://sphinx-contrib.github.io/multiversion) extension.
-Be sure you have installed `sphinx-multiversion` from the fork in requirements.txt. 
-Otherwise, you will get an error that includes: 
+Be sure you have installed `sphinx-multiversion` from the fork in requirements.txt.
+Otherwise, you will get an error that includes:
 
 ```
 /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
@@ -112,12 +112,13 @@ Code formatting in Wordpress can be a headache, and we don't get the benefit of 
 
 `docs.opendp.org` is the OpenDP **Library** site.
 It is organized to reflect the needs of different classes of users.
-- [Getting Started](https://docs.opendp.org/en/stable/getting-started/index.html) provides just a little background on differential privacy as well as a tutorial on OpenDP. We want to touch on all the main features, but won't get into details. It should make sense read from start to finish: Links for more information are fine, but it shouldn't require forward references.
-- [API](https://docs.opendp.org/en/stable/api/index.html) is a reference primarily for Python OpenDP library users, and provides links to R and Rust documentation. It includes both a top-down "User Guide" and a bottom-up "API Reference".
-- [Theory](https://docs.opendp.org/en/stable/theory/index.html) provides background information and motivation for differential privacy, and OpenDP in particular.
+- [Getting Started](https://docs.opendp.org/en/stable/getting-started/index.html) provides a little background on differential privacy as well as a tutorial on OpenDP. We want to touch on all the main features, but won't get into details. It should make sense read from start to finish: Links for more information are fine, but it shouldn't require forward references.
+- [User Guide](https://docs.opendp.org/en/stable/api/user-guide/index.html) goes into more depth and explains how different parts of the OpenDP Library work together.
+- [API Reference](https://docs.opendp.org/en/stable/api/index.html) is a reference for Python users, and provides links to R and Rust documentation.
 - [Contributing](https://docs.opendp.org/en/stable/contributing/index.html) is for people interested in contributing to the OpenDP Library.
+- Finally, [Cookbook](https://cookbook.opendp.org/) provides a home for more loosely structured community contributions to docs, outside of this repo.
 
-After someone has read "Contributing", they can turn to a `README.md` or comments in the code for the details on a particular part of the codebase. 
+After someone has read "Contributing", they can turn to a `README.md` or comments in the code for the details on a particular part of the codebase.
 
 ### RST idioms
 

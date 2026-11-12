@@ -70,7 +70,7 @@ jobs:
           python --version
           python -m venv .venv-docs
           source .venv-docs/bin/activate
-          
+
           echo "Upgrade pip and install requirements."
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -96,13 +96,13 @@ jobs:
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
-      
+
       - name: Download R Docs
         uses: actions/download-artifact@v7
         with:
           name: r_docs
           path: en/stable/api/r
-      
+
       - name: Checkout artifacts
         uses: actions/checkout@v6
         with:
@@ -123,7 +123,7 @@ jobs:
               mv "$source"/* "$target"
             fi
           done
-          
+
           # discard unused pdfs
           rm -r artifacts
 

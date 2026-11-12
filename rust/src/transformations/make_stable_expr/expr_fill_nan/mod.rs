@@ -34,7 +34,8 @@ where
     };
 
     // only enforce row-by-row context if the fill expression is not broadcastable
-    let expr_domain = if fill.clone().meta().root_names().len() > 0 {
+    let is_column_fill = !fill.clone().meta().root_names().is_empty();
+    let expr_domain = if is_column_fill {
         input_domain.as_row_by_row()
     } else if let Expr::Literal(value) = fill.clone() {
         if !value.is_scalar() {
@@ -94,21 +95,35 @@ where
         );
     }
 
+    if !matches!(
+        data_domain.column.dtype(),
+        DataType::Float32 | DataType::Float64
+    ) {
+        return fallible!(
+            MakeTransformation,
+            "fill_nan may only be applied to float data"
+        );
+    }
+
     let mut series_domain = data_domain.column.clone();
-    match series_domain.dtype() {
+    match super::infer_output_dtype(&expr, &input_domain)? {
         DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::new(None, None)),
         DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::new(None, None)),
-        _ => {
+        dtype => {
             return fallible!(
                 MakeTransformation,
-                "fill_nan may only be applied to float data"
+                "fill_nan produced an unsupported dtype: {}",
+                dtype
             );
         }
     }
     let output_domain = ExprDomain {
         column: series_domain,
-        // fill_nan should not change the output context-- just require that its input is row-by-row
-        context: input_domain.context.clone(),
+        context: if is_column_fill {
+            input_domain.context.clone()
+        } else {
+            data_domain.context.clone()
+        },
     };
 
     Transformation::new(

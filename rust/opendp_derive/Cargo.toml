@@ -18,8 +18,11 @@ proc-macro = true
 [dependencies]
 syn = { workspace = true, optional = true }
 quote = { workspace = true, optional = true }
-opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.15.1-dev" }
+opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.16.0-dev" }
 
 [features]
 full = ["syn", "quote", "opendp_tooling"]
 partials = ["full"]
+
+[package.metadata.docs.rs]
+features = ["full"]

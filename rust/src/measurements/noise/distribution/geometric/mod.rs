@@ -130,8 +130,17 @@ where
         let privacy_map =
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;
 
-        let p = 1f64.neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
-        if !(0.0..=1.0).contains(&p) {
+        // At zero scale, the limiting success probability is 1.
+        let p = if scale == 0.0 {
+            1.0
+        } else {
+            // A positive subnormal scale can overflow the native reciprocal.
+            // Saturating -1/scale upward keeps exp's argument finite and its
+            // probability bound conservative; it does not assert exp=0.
+            let neg_inverse = (-scale.recip()).max(f64::MIN);
+            1f64.neg_inf_sub(&neg_inverse.inf_exp()?)?
+        };
+        if !(p > 0.0 && p <= 1.0) {
             return fallible!(
                 MakeMeasurement,
                 "p ({p}) must be in (0, 1]. This is likely because the noise scale is so large that conservative arithmetic causes the probability of termination to go negative"

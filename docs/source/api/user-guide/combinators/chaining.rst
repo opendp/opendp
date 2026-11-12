@@ -49,8 +49,8 @@ In the following example we chain :py:func:`~opendp.measurements.make_laplace` w
         >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`~opendp.combinators.make_chain_mt`, 
-:func:`~opendp.combinators.make_chain_tt`, 
+The syntax automatically chooses between :func:`~opendp.combinators.make_chain_mt`,
+:func:`~opendp.combinators.make_chain_tt`,
 and :func:`~opendp.combinators.make_chain_pm`.
 
 .. tab-set::
@@ -80,13 +80,15 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0.0, 1.0))),
+        ...     dp.vector_domain(
+        ...         dp.atom_domain(bounds=(0.0, 1.0), nan=False)
+        ...     ),
         ...     dp.symmetric_distance(),
         ... )
         >>> sum_trans >> lap_meas
         Traceback (most recent call last):
         ...
-        opendp.mod.OpenDPException: 
+        opendp.mod.OpenDPException:...
           DomainMismatch("Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
             output_domain: AtomDomain(T=f64)
             input_domain:  AtomDomain(T=i32)
@@ -97,7 +99,7 @@ This is intended to enable further chaining with preprocessors such as:
 
 * :py:func:`~opendp.transformations.make_cast`
 * :py:func:`~opendp.transformations.make_impute_constant`
-* :py:func:`~opendp.transformations.make_clamp` 
+* :py:func:`~opendp.transformations.make_clamp`
 * :py:func:`~opendp.transformations.make_resize`.
 
 See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.

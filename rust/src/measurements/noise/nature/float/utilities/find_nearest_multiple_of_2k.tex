@@ -46,7 +46,7 @@ $k \neq \texttt{i32.MIN}$
 
     Several implementation considerations are worth noting:
     \begin{itemize}
-        \item Negation of $k$ is well-defined for all values of \texttt{i32}, 
+        \item Negation of $k$ is well-defined for all values of \texttt{i32},
             except for \texttt{i32.MIN}, which is not allowed by the precondition.
         \item The left shift operator \texttt{<{}<} is equivalent to integer multiplication by $2$.
         \item The right shift operator \texttt{>{}>} is equivalent to floor integer division by $2$,

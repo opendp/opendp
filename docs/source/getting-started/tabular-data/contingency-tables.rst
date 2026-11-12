@@ -6,7 +6,7 @@ Contingency Tables
 A *contingency table* counts the number of records in each group, when grouping by the columns in a dataset.
 Contingency tables capture the relationships between columns in your data.
 
-As the number of columns in the contingency table grows, 
+As the number of columns in the contingency table grows,
 the number of possible combinations of keys (AKA groups) increases exponentially quickly.
 This results in the contingency table becoming too large to hold in memory or measure with any utility.
 For this reason, it is recommended to instead estimate specific relationships between smaller sets of two or maybe three columns
@@ -15,7 +15,7 @@ by releasing *marginals* (counts when data is grouped by some subset of the colu
 Unlike releasing these grouped counts separately, with marginals the results will be internally consistent.
 This makes them a good basis for hierarchical queries.
 
-OpenDP uses `Private-PGM <https://private-pgm.readthedocs.io/en/latest/introduction.html>`_ 
+OpenDP uses `Private-PGM <https://private-pgm.readthedocs.io/en/latest/introduction.html>`_
 to build a contingency table that is consistent with a set of marginal queries via a process called model-based inference (``mbi``).
 This functionality is not enabled by default.
 
@@ -35,12 +35,12 @@ This functionality is not enabled by default.
     .. tab-item:: R
         :sync: r
 
-        ``mbi`` (Private-PGM) is only available in Python. 
+        ``mbi`` (Private-PGM) is only available in Python.
 
     .. tab-item:: Rust
         :sync: rust
 
-        ``mbi`` (Private-PGM) is only available in Python. 
+        ``mbi`` (Private-PGM) is only available in Python.
 
 Let's get started by setting up the context for the Labor Force dataset.
 
@@ -118,7 +118,7 @@ Before releasing, you can view the noise scale and threshold to be used when est
             1364
 
 In this setting, the scale and threshold are reasonably small.
-To make the threshold smaller, consider adding more key-sets 
+To make the threshold smaller, consider adding more key-sets
 or bounding the number of groups a user may contribute.
 
 When you release, all marginals are estimated and stored inside a :py:class:`~opendp.extras.mbi.ContingencyTable`.
@@ -197,7 +197,7 @@ The same projection can be viewed in a melted dataframe form:
 
 Since ``("ILOSTAT",)`` is covered by the query workload,
 an estimate of the standard deviation can be derived.
-Since all noise added is gaussian-distributed, 
+Since all noise added is gaussian-distributed,
 the resulting noise distribution remains approximately gaussian-distributed,
 so it is possible to construct a confidence interval for each scalar in the projection.
 
@@ -218,7 +218,7 @@ with ``(1 - alpha)100%`` confidence.
 Adaptive Estimation
 -------------------
 
-Now consider the ``SEX`` column, which contains three keys: 
+Now consider the ``SEX`` column, which contains three keys:
 the two specified in ``keys``, as well as ``null`` for any records not in the key set.
 
 .. tab-set::
@@ -294,9 +294,9 @@ The updated table now much more accurately reflects the distribution of counts o
             >>> table2.std(("SEX",))
             113.84199576606166
 
-The contingency table mechanism can satisfy either pure-DP (epsilon) or zCDP (rho). 
+The contingency table mechanism can satisfy either pure-DP (epsilon) or zCDP (rho).
 If approximate-DP (delta) is not enabled, then the key-set and cut-set must be exhaustive.
-Since microdata is never materialized outside of Polars, 
+Since microdata is never materialized outside of Polars,
 datasets can be as large in size as can be handled by the Polars library.
 
 The sensitivity of marginals released by the mechanism are derived in the same fashion as any other OpenDP Polars marginal query,

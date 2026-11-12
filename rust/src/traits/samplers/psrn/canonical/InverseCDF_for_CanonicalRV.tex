@@ -8,7 +8,7 @@
 \maketitle
 \contrib
 
-Proves soundness of the implementation of \rustdoc{traits/samplers/psrn/trait}{InverseCDF} 
+Proves soundness of the implementation of \rustdoc{traits/samplers/psrn/trait}{InverseCDF}
 for \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}.
 
 The implementation computes the inverse CDF of the canonical noise random variable.
@@ -41,7 +41,7 @@ with error in direction \texttt{R}, or \texttt{None}.
 The error between \texttt{out} and the exactly-computed CDF decreases monotonically as \texttt{refinements} increases.
 \end{theorem}
 
-\begin{proof} 
+\begin{proof}
 
 By the definition of \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV},
 \begin{itemize}
@@ -54,8 +54,8 @@ so \texttt{f\_inv} on line \ref{f_inv} is a sample from the canonical noise dist
 
 The function then returns the outcome, scaled by \texttt{self.scale} and shifted by \texttt{self.shift}.
 
-Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic, 
-so making use of refinements is not necessary, 
+Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic,
+so making use of refinements is not necessary,
 as the error in computing the inverse CDF is already zero, satisfying the monotonicity property of the error.
 
 \end{proof}

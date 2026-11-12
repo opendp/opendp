@@ -11,21 +11,21 @@ from opendp.extras.polars import Margin
 
 from .helpers import ids
 
+pl = pytest.importorskip("polars")
+pl_testing = pytest.importorskip("polars.testing")
+
 
 def test_polars_version():
-    pl = pytest.importorskip("polars")
     from opendp.mod import _EXPECTED_POLARS_VERSION
 
     assert pl.__version__ == _EXPECTED_POLARS_VERSION
 
 
 def seed(schema):
-    pl = pytest.importorskip("polars")
     return pl.DataFrame(None, schema, orient="row").lazy()  # type: ignore[attr-defined]
 
 
 def example_series():
-    pl = pytest.importorskip("polars")
     return [
         dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.f64))),
         dp.series_domain("B", dp.atom_domain(T=dp.i32)),
@@ -40,7 +40,6 @@ def example_series():
 
 
 def test_infer():
-    pl = pytest.importorskip("polars")
     series = pl.Series("A", [1] * 100)
     assert dp.RuntimeType.infer(series) == dp.Series
     assert dp.RuntimeType.infer(pl.DataFrame(series)) == dp.DataFrame
@@ -49,7 +48,6 @@ def test_infer():
 
 
 def example_lf(margin=None, **kwargs):
-    pl = pytest.importorskip("polars")
     domains, series = example_series()
     lf_domain, lf = dp.lazyframe_domain(domains), pl.LazyFrame(series)
     if margin is not None:
@@ -61,7 +59,6 @@ def example_lf(margin=None, **kwargs):
 def test_expr_domain():
     series_domains, _ = example_series()
 
-    pl = pytest.importorskip("polars")
     by = [pl.col("A"), pl.col("B")]
     dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by))
     dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, max_groups=10))
@@ -87,7 +84,6 @@ def test_domains():
 )
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
-    pl_testing = pytest.importorskip("polars.testing")
 
     t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
     pl_testing.assert_series_equal(t_ident(series), series)
@@ -95,11 +91,24 @@ def test_series_ffi(domain, series):
 
 def test_lazyframe_ffi():
     """ensure that lazyframes can be passed to/from Rust"""
-    pl_testing = pytest.importorskip("polars.testing")
     lf_domain, lf = example_lf()
     t_ident = (lf_domain, dp.symmetric_distance()) >> dp.t.then_identity()
 
     pl_testing.assert_frame_equal(t_ident(lf).collect(), lf.collect())
+
+
+@pytest.mark.parametrize("dtype, atom_type", [(pl.UInt8, dp.u8), (pl.UInt16, dp.u16)])
+@pytest.mark.parametrize("nullable", [False, True])
+def test_small_unsigned_series_ffi(dtype, atom_type, nullable):
+    element_domain = dp.atom_domain(T=atom_type)
+    if nullable:
+        element_domain = dp.option_domain(element_domain)
+    domain = dp.series_domain("A", element_domain)
+    values = [1, None] if nullable else [1, 2]
+    series = pl.Series("A", values, dtype=dtype)
+
+    t_ident = (domain, dp.symmetric_distance()) >> dp.t.then_identity()
+    pl_testing.assert_series_equal(t_ident(series), series)
 
 
 @pytest.mark.parametrize(
@@ -108,9 +117,6 @@ def test_lazyframe_ffi():
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
     lf_domain, lf = example_lf(
         margin=["B"],
         invariant="keys",
@@ -140,9 +146,6 @@ def test_private_lazyframe_explicit_sum(measure):
     ids=ids,
 )
 def test_private_lazyframe_sum(measure):
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
     lf_domain, lf = example_lf(
         margin=["B"],
         invariant="keys",
@@ -170,9 +173,6 @@ def test_private_lazyframe_sum(measure):
     ids=ids,
 )
 def test_private_lazyframe_mean(measure):
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
     lf_domain, lf = example_lf(
         margin=["B"],
         invariant="lengths",
@@ -196,7 +196,6 @@ def test_private_lazyframe_mean(measure):
 
 
 def test_cast():
-    pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
     m_lf = dp.t.make_stable_lazyframe(
         lf_domain,
@@ -213,15 +212,12 @@ def test_stable_expr():
 
 
 def test_private_expr():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
     m_len = dp.m.make_private_expr(
         dp.wild_expr_domain([], dp.polars.Margin(by=[])),
         dp.l01inf_distance(dp.symmetric_distance()),
         dp.max_divergence(),
-        dp.len(scale=1.0),
+        dp.len(scale=1.0, signed=True),
     )
-
     e_plan = m_len(pl.LazyFrame(dict()))
 
     pl_testing.assert_frame_equal(e_plan.plan, pl.LazyFrame(dict()))
@@ -231,13 +227,10 @@ def test_private_expr():
 
 
 def test_private_lazyframe_median():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
-    lf_domain, lf = example_lf(margin=["A"], invariant="keys", max_length=50)
+    lf_domain, lf = example_lf(margin=["D"], invariant="keys", max_length=50)
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
-    plan = seed(lf.collect_schema()).group_by("A").agg(expr)
+    plan = seed(lf.collect_schema()).group_by("D").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
@@ -246,7 +239,7 @@ def test_private_lazyframe_median():
         0.0,
     )
     expect = pl.DataFrame(
-        [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.Int64)]
+        [pl.Series("D", [2], dtype=pl.Int32), pl.Series("B", [3], dtype=pl.Int64)]
     )
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
@@ -262,9 +255,6 @@ def test_private_lazyframe_median():
 )
 def test_filter(measure, signed):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-
     lf_domain, lf = example_lf(margin=[], invariant="keys", max_length=50)
 
     plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0, signed=signed))
@@ -280,9 +270,106 @@ def test_filter(measure, signed):
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expected)
 
 
+@pytest.mark.parametrize(
+    "signed_kwargs",
+    [{}, {"signed": None}, {"signed": False}, {"signed": True}],
+    ids=["omitted", "none", "unsigned", "signed"],
+)
+def test_signed_counting_queries(signed_kwargs):
+    """Zero-noise dtype and value check for all five counting query APIs."""
+    dp.enable_features("contrib")
+
+    lf = pl.LazyFrame({"A": [1, 2, None, 2]})
+    lf_domain = dp.lazyframe_domain(
+        [dp.series_domain("A", dp.option_domain(dp.atom_domain(T="i64")))]
+    )
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        plan = lf.select(
+            [
+                dp.len(scale=0.0, **signed_kwargs).alias("frame_len"),
+                pl.col.A.dp.len(scale=0.0, **signed_kwargs).alias("expr_len"),
+                pl.col.A.dp.count(scale=0.0, **signed_kwargs).alias("count"),
+                pl.col.A.dp.null_count(scale=0.0, **signed_kwargs).alias("null_count"),
+                pl.col.A.dp.n_unique(scale=0.0, **signed_kwargs).alias("n_unique"),
+            ]
+        )
+    if signed_kwargs.get("signed") is None:
+        assert len(caught) == 5
+        for warning in caught:
+            assert warning.category is FutureWarning
+            assert "default value is now signed=True" in str(warning.message)
+            assert warning.filename == __file__
+    else:
+        assert not caught
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        plan,
+        0.0,
+    )
+    result = measurement(lf).collect()
+
+    dtype = pl.UInt32 if signed_kwargs.get("signed") == False else pl.Int64
+    expected = pl.DataFrame(
+        {
+            "frame_len": pl.Series([4], dtype=dtype),
+            "expr_len": pl.Series([4], dtype=dtype),
+            "count": pl.Series([3], dtype=dtype),
+            "null_count": pl.Series([1], dtype=dtype),
+            "n_unique": pl.Series([3], dtype=dtype),
+        }
+    )
+    pl_testing.assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("dtype", "T", "values", "bounds", "expected"),
+    [
+        ("UInt32", dp.u32, [1, 2], (0, 2), 3),
+        ("UInt64", dp.u64, [2**63 - 1, 1], (0, 2**63 - 1), 2**63),
+    ],
+)
+def test_unsigned_sum(dtype, T, values, bounds, expected):
+    """Signed counting defaults do not change unsigned sums or clip them to Int64."""
+    dp.enable_features("contrib")
+
+    lf = pl.LazyFrame({"A": pl.Series(values, dtype=getattr(pl, dtype))})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=T))]),
+        dp.polars.Margin(max_length=len(values)),
+    )
+    plan = lf.select(pl.col("A").dp.sum(bounds, scale=0.0))
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        plan,
+        0.0,
+    )
+    result = measurement(lf).collect()
+
+    assert result.schema["A"] == getattr(pl, dtype)
+    assert result["A"][0] == expected
+
+
+@pytest.mark.parametrize("signed", [1, 0, "True", [], object()])
+def test_signed_counting_rejects_non_bool(signed):
+    for query in (
+        dp.len,
+        pl.col.A.dp.len,
+        pl.col.A.dp.count,
+        pl.col.A.dp.null_count,
+        pl.col.A.dp.n_unique,
+    ):
+        with pytest.raises(TypeError, match="signed must be a bool or None"):
+            query(scale=0.0, signed=signed)
+
+
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(dp.len(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0, signed=True))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
@@ -294,10 +381,9 @@ def test_onceframe_multi_collect():
 
 
 def test_onceframe_lazy():
-    pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(dp.len(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0, signed=True))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
@@ -312,10 +398,6 @@ def test_onceframe_lazy():
     ids=ids,
 )
 def test_mechanisms(measure):
-    pl_testing = pytest.importorskip("polars.testing")
-
-    pl = pytest.importorskip("polars")
-
     lf_domain, lf = example_lf()
 
     with pytest.warns(DeprecationWarning):
@@ -334,7 +416,6 @@ def test_mechanisms(measure):
 
 
 def test_polars_context():
-    pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame(
         {"A": [1, 2, 3, 4], "B": ["x", "x", "y", None]},
@@ -364,15 +445,13 @@ def test_polars_context():
     (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
+        .agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
 
 
 def test_polars_describe():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 
@@ -401,7 +480,11 @@ def test_polars_describe():
 
     summer = pl.col("A").dp.sum((0, 3))
 
-    query = context.query().group_by("B").agg(dp.len(), summer, summer.alias("B"))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), summer, summer.alias("B"))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -417,8 +500,6 @@ def test_polars_describe():
 
 
 def test_polars_accuracy_threshold():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String}),
@@ -441,14 +522,17 @@ def test_polars_accuracy_threshold():
         schema_overrides={"threshold": pl.UInt32},
     )
 
-    query = context.query().group_by("B").agg(dp.len(), pl.col("A").dp.sum((0, 3)))
+    query = (
+        context.query()
+        .group_by("B")
+        .agg(dp.len(signed=True), pl.col("A").dp.sum((0, 3)))
+    )
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
 
 
 def test_polars_non_wrapping():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": ["x", "x", "y", None]}),
@@ -464,13 +548,12 @@ def test_polars_non_wrapping():
     context.query()._ldf
 
     # serialize/deserialize roundtrip
-    query = context.query().select(dp.len())
+    query = context.query().select(dp.len(signed=True))
     serde_plan = pl.LazyFrame.deserialize(io.BytesIO(query.serialize()))  # type: ignore
     assert query.serialize() == serde_plan.serialize()
 
 
 def test_polars_collect_early():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": ["x", "x", "y", None]}),
@@ -488,8 +571,6 @@ def test_polars_collect_early():
 
 
 def test_polars_threshold_epsilon():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
@@ -506,7 +587,7 @@ def test_polars_threshold_epsilon():
         ],
     )
 
-    actual = context.query().group_by("A").agg(dp.len()).summarize()
+    actual = context.query().group_by("A").agg(dp.len(signed=True)).summarize()
 
     expected = pl.DataFrame(
         {
@@ -522,9 +603,9 @@ def test_polars_threshold_epsilon():
 
     # check that query runs.
     print('output should be two columns ("A" and "len") with one row (1, ~1000)')
-    print(context.query().group_by("A").agg(dp.len()).release().collect())
+    print(context.query().group_by("A").agg(dp.len(signed=True)).release().collect())
 
-    actual = context.query().group_by("B").agg(dp.len()).summarize()
+    actual = context.query().group_by("B").agg(dp.len(signed=True)).summarize()
 
     expected = pl.DataFrame(
         {
@@ -542,12 +623,10 @@ def test_polars_threshold_epsilon():
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500) each')
-    print(context.query().group_by("B").agg(dp.len()).release().collect())
+    print(context.query().group_by("B").agg(dp.len(signed=True)).release().collect())
 
 
 def test_polars_threshold_rho():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
@@ -561,7 +640,7 @@ def test_polars_threshold_rho():
         split_evenly_over=2,
     )
 
-    query = context.query().group_by("B").agg(dp.len())
+    query = context.query().group_by("B").agg(dp.len(signed=True))
 
     actual = query.summarize()
     expected = pl.DataFrame(
@@ -607,8 +686,6 @@ def test_polars_threshold_rho():
 def test_polars_grouped_quantile_max_groups_contribution_bound():
     # Regression test for https://github.com/opendp/opendp/issues/2640
     # A loose explicit max_groups should not dominate a tighter total contribution bound.
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     counts = {"first year": 485, "sophomore": 361, "junior": 85, "senior": 67}
     rows = []
@@ -641,7 +718,7 @@ def test_polars_grouped_quantile_max_groups_contribution_bound():
         context.query()
         .group_by(["class_year_str"])
         .agg(
-            dp.len(),
+            dp.len(signed=True),
             pl.col("grade").dp.quantile(0.5, [50, 60, 70, 80, 90, 100]),
         )
     )
@@ -671,8 +748,7 @@ def test_polars_grouped_quantile_max_groups_contribution_bound():
 def test_replace_binary_path():
     import os
 
-    pl = pytest.importorskip("polars")
-    expr = dp.len(scale=1.0)
+    expr = dp.len(scale=1.0, signed=True)
 
     # check that the library overwrites paths
     os.environ["OPENDP_POLARS_LIB_PATH"] = "opendp_testing!"
@@ -687,14 +763,16 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len([false])"
+    assert (
+        str(dp.len(scale=1.0, signed=True))
+        == f"dyn float: 1.{__file__}:dp_frame_len([true])"
+    )
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
 
 
 def test_pickle_bomb():
-    pl = pytest.importorskip("polars")
 
     from polars._utils.parse import parse_into_list_of_expressions  # type: ignore[import-not-found]
     from polars._utils.wrap import wrap_expr  # type: ignore[import-not-found]
@@ -764,14 +842,13 @@ def test_pickle_bomb():
 
 
 def test_execute_shim():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1]}),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
-    plan = context.query(epsilon=1.0).select(dp.len()).polars_plan
+    plan = context.query(epsilon=1.0).select(dp.len(signed=True)).polars_plan
 
     with pytest.raises(
         pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"
@@ -780,8 +857,6 @@ def test_execute_shim():
 
 
 def test_cut():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
     by = [pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()]
@@ -793,13 +868,70 @@ def test_cut():
             split_evenly_over=1,
             margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
-    actual = context.query().group_by(*by).agg(dp.len()).release().collect().sort("x")
+    actual = (
+        context.query()
+        .group_by(*by)
+        .agg(dp.len(signed=True))
+        .release()
+        .collect()
+        .sort("x")
+    )
     expected = pl.DataFrame(
         {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
-        schema={"x": pl.UInt32, "len": pl.UInt32},
+        schema={"x": pl.UInt8, "len": pl.Int64},
     )
 
     pl_testing.assert_frame_equal(actual, expected)
+
+
+def test_cut_nan_count_is_not_free():
+    # #2939: NaN is a non-null float, but cut maps it to null.
+    # Fixed row count therefore does not fix the count of non-null bins.
+    dp.enable_features("contrib")
+    frame = pl.LazyFrame({"x": [float("nan")] + [1.0] * 15})
+    neighbor = pl.LazyFrame({"x": [1.0] * 16})
+    domain = dp.with_margin(
+        dp.lazyframe_domain(
+            [dp.series_domain("x", dp.option_domain(dp.atom_domain(T=float)))]
+        ),
+        dp.polars.Margin(max_length=16, invariant="lengths"),
+    )
+    count = pl.col("x").fill_null(0.0).cut([1.5]).count()
+    assert frame.select(count).collect().item() == 15
+    assert neighbor.select(count).collect().item() == 16
+
+    measurement = dp.m.make_private_lazyframe(
+        domain,
+        dp.frame_distance(dp.symmetric_distance()),
+        dp.max_divergence(),
+        frame.select(count.dp.noise()),
+        global_scale=1.0,
+    )
+    assert measurement.map([dp.polars.Bound(per_group=2)]) > 0.0
+
+
+def test_cut_direct_enum_group_by():
+    by = pl.col("x").cut([1.0], labels=["low", "high"])
+    data = pl.LazyFrame({"x": [2.0, 0.5, 0.5]})
+    context = dp.Context.compositor(
+        data=data,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=10000.0),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=[by], invariant="keys")],
+    )
+    actual = (
+        context.query()
+        .group_by(by)
+        .agg(dp.len(signed=True))
+        .release()
+        .collect()
+        .with_columns(pl.col("x").cast(pl.String))
+        .sort("x")
+    )
+    pl_testing.assert_frame_equal(
+        actual, pl.DataFrame({"x": ["high", "low"], "len": [1, 2]})
+    )
 
 
 @pytest.mark.xfail(raises=AssertionError)
@@ -809,8 +941,6 @@ def test_csv_bad_encoding_loading():
     # Since we tell users not to look at their data,
     # we may want to try harder to load the csv,
     # or give more information on failure.
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
     import tempfile
 
     name = "André"
@@ -830,7 +960,6 @@ def test_csv_bad_encoding_loading():
 
 
 def test_categorical_domain_no_mapping():
-    pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame(
         [pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)]
@@ -854,31 +983,27 @@ def test_categorical_domain_no_mapping():
 
 
 @pytest.mark.parametrize("wrap_with_option", [False, True])
-def test_categorical_domain_with_mapping(wrap_with_option):
-    pl = pytest.importorskip("polars")
-
+def test_categorical_group_by_rejected(wrap_with_option):
     categories = ["Texas", "New York"]
     keys = pl.LazyFrame([pl.Series("A", categories, dtype=pl.Categorical)])
     lf = pl.LazyFrame([pl.Series("A", categories + [None], dtype=pl.Categorical)])
 
-    element_domain = dp.categorical_domain(categories)
+    element_domain = dp.categorical_domain()
     if wrap_with_option:
         element_domain = dp.option_domain(element_domain)
 
     lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
-    assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
-    # checks that categorical grouping keys can be released if encoding is public
-    dp.m.make_private_lazyframe(
-        lf_domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
-        global_scale=1.0,
-    )
+    with pytest.raises(dp.OpenDPException, match="Categories are data-dependent"):
+        dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            lf.group_by("A").agg(dp.len(signed=True)).join(keys, how="right", on=["A"]),
+            global_scale=1.0,
+        )
 
 
 def test_categorical_context():
-    pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame(
         {"A": [1] * 1000, "B": ["x"] * 500 + ["y"] * 500},
@@ -893,7 +1018,7 @@ def test_categorical_context():
     )
 
     with pytest.raises(dp.OpenDPException, match=r"Categories are data-dependent"):
-        context.query().group_by("B").agg(dp.len()).release()
+        context.query().group_by("B").agg(dp.len(signed=True)).release()
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')
@@ -901,7 +1026,7 @@ def test_categorical_context():
         context.query()
         .select(pl.col.B.cast(str))
         .group_by("B")
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
         .release()
         .collect()
     )
@@ -909,21 +1034,25 @@ def test_categorical_context():
 
 
 def test_to_physical_unordered():
-    pl = pytest.importorskip("polars")
-    lf_domain = dp.lazyframe_domain([dp.series_domain("A", dp.categorical_domain())])
-    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York"], dtype=pl.Categorical)])
-
-    # check that row ordering is protected
-    with pytest.raises(dp.OpenDPException, match=re.escape("to_physical: to prevent")):
-        dp.t.make_stable_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            lf.with_columns(pl.col("A").to_physical()),
-        )
+    lf = pl.LazyFrame(
+        [pl.Series("A", ["New York", "Texas", "New York"], dtype=pl.Categorical)]
+    )
+    for element_domain in [
+        dp.categorical_domain(),
+        dp.option_domain(dp.categorical_domain()),
+    ]:
+        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+        with pytest.raises(
+            dp.OpenDPException, match="categorical encodings are data-dependent"
+        ):
+            dp.t.make_stable_lazyframe(
+                lf_domain,
+                dp.symmetric_distance(),
+                lf.with_columns(pl.col("A").to_physical()),
+            )
 
 
 def test_float_sum_with_unlimited_reorderable_partitions():
-    pl = pytest.importorskip("polars")
     lf_domain = dp.lazyframe_domain(
         [
             dp.series_domain("region", dp.atom_domain(T=dp.i64)),
@@ -940,7 +1069,6 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     lf = _lazyframe_from_domain(lf_domain)
 
     # sum of income per region, add noise with scale of 1.0
-    pl = pytest.importorskip("polars")
     plan = lf.group_by("region").agg(
         [pl.col("income").fill_nan(0.0).dp.sum(bounds=(1_000, 100_000), scale=1.0)]
     )
@@ -956,7 +1084,6 @@ def test_float_sum_with_unlimited_reorderable_partitions():
 
 
 def test_sort_usability():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame(schema={"A": pl.Int32}),
@@ -969,8 +1096,6 @@ def test_sort_usability():
 
 
 def test_count_queries():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain = dp.lazyframe_domain(
         [dp.series_domain("data", dp.atom_domain(T=dp.i64))]
@@ -983,10 +1108,10 @@ def test_count_queries():
     # sum of income per region, add noise with scale of 1.0
     plan = lf.select(
         [
-            pl.col("data").dp.len(scale=0).alias("len"),
-            pl.col("data").dp.count(scale=0).alias("count"),
-            pl.col("data").dp.n_unique(scale=0).alias("n_unique"),
-            pl.col("data").dp.null_count(scale=0).alias("null_count"),
+            pl.col("data").dp.len(scale=0, signed=True).alias("len"),
+            pl.col("data").dp.count(scale=0, signed=True).alias("count"),
+            pl.col("data").dp.n_unique(scale=0, signed=True).alias("n_unique"),
+            pl.col("data").dp.null_count(scale=0, signed=True).alias("null_count"),
         ]
     )
 
@@ -1002,13 +1127,11 @@ def test_count_queries():
             "n_unique": [2],
             "null_count": [1],
         }
-    ).cast({pl.Int64: pl.UInt32})
+    ).cast({pl.Int64: pl.Int64})
     pl_testing.assert_frame_equal(release, expected)
 
 
 def test_explicit_grouping_keys():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
@@ -1033,8 +1156,6 @@ def test_explicit_grouping_keys():
 
 
 def test_explicit_grouping_keys_context():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
@@ -1064,7 +1185,6 @@ def test_explicit_grouping_keys_context():
 
 
 def test_large_keys_warns(monkeypatch):
-    pl = pytest.importorskip("polars")
     local_limit = 0.001
     local_scale_factor = int(local_limit * 1000**2)  # for mb comparison
     monkeypatch.setattr("opendp.extras.polars._KEY_SIZE_THRESHOLD_MB", local_limit)
@@ -1099,9 +1219,20 @@ def test_large_keys_warns(monkeypatch):
         )
 
 
+@pytest.mark.parametrize("time_unit", ["ms", "us"])
+def test_out_of_range_datetime_component(time_unit):
+    dtype = pl.Datetime(time_unit)
+    domain = dp.lazyframe_domain(
+        [dp.series_domain("t", dp.datetime_domain(time_unit=time_unit))]
+    )
+    query = seed({"t": dtype}).select(pl.col("t").dt.year())
+    with pytest.raises(dp.OpenDPException, match="out-of-range") as exc:
+        dp.t.make_stable_lazyframe(domain, dp.symmetric_distance(), query)
+    assert "pl.Datetime('ns')" in str(exc.value)
+
+
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
 def test_datetime(dtype):
-    pl = pytest.importorskip("polars")
     dtype = getattr(pl, dtype)
 
     context = dp.Context.compositor(
@@ -1113,14 +1244,13 @@ def test_datetime(dtype):
     query = (
         context.query()
         .group_by(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
     )
     observed = query.release().collect()
     assert observed["x"].dtype == dtype
 
 
 def test_temporal_domain():
-    pl = pytest.importorskip("polars")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
@@ -1151,8 +1281,6 @@ def test_temporal_domain():
 
 
 def test_replace():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
@@ -1167,7 +1295,7 @@ def test_replace():
     pl_testing.assert_series_equal(
         context.query()
         .group_by(pl.col.alpha.replace(["A", "B"], "D"))
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
         .release()
         .collect()["alpha"]
         .sort(),
@@ -1178,7 +1306,7 @@ def test_replace():
     pl_testing.assert_series_equal(
         context.query()
         .group_by(pl.col.alpha.replace(["A", "B"], ["D", "E"]))
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
         .release()
         .collect()["alpha"]
         .sort(),
@@ -1189,7 +1317,7 @@ def test_replace():
     pl_testing.assert_series_equal(
         context.query()
         .group_by(pl.col.alpha.replace({"A": "D", "B": "E"}))
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
         .release()
         .collect()["alpha"]
         .sort(),
@@ -1198,7 +1326,6 @@ def test_replace():
 
 
 def test_replace_strict():
-    pl = pytest.importorskip("polars")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
@@ -1224,8 +1351,6 @@ def test_replace_strict():
 
 
 def test_cast_enum():
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
         data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
@@ -1241,7 +1366,7 @@ def test_cast_enum():
         context.query()
         .with_columns(pl.col.alpha.cast(enum_dtype))
         .group_by(pl.col.alpha)
-        .agg(dp.len())
+        .agg(dp.len(signed=True))
         .release()
         .collect()["alpha"]
         .sort()
@@ -1251,7 +1376,6 @@ def test_cast_enum():
 
 
 def test_enum_domain():
-    pl = pytest.importorskip("polars")
 
     enum_dtype = pl.Enum(["A", "B", "C"])
     # this triggers construction of a lazyframe domain from the schema
@@ -1278,7 +1402,6 @@ def test_enum_domain():
     reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed"
 )
 def test_array_domain_query():
-    pl = pytest.importorskip("polars")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
@@ -1292,12 +1415,11 @@ def test_array_domain_query():
 
     # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
     context.query().with_columns(pl.col.alpha.explode()).select(
-        dp.len()
+        dp.len(signed=True)
     ).release().collect()
 
 
 def test_arithmetic():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame(
@@ -1312,7 +1434,9 @@ def test_arithmetic():
         margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    context.query().filter(pl.col.data.truediv(2) > 1.5).select(dp.len()).summarize()
+    context.query().filter(pl.col.data.truediv(2) > 1.5).select(
+        dp.len(signed=True)
+    ).summarize()
 
     observed = (
         context.query()
@@ -1331,7 +1455,6 @@ def test_arithmetic():
     ids=ids,
 )
 def test_private_lazyframe_bounded_dp(privacy_unit):
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
@@ -1346,7 +1469,6 @@ def test_private_lazyframe_bounded_dp(privacy_unit):
 
 
 def test_zero_budget():
-    pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
@@ -1357,9 +1479,8 @@ def test_zero_budget():
     context.query().select(pl.len()).release().collect()
 
 
-def test_unbiased_groupby_len():
-    """Tests that dp.len() can return counts centered on zero."""
-    pl = pytest.importorskip("polars")
+def test_signed_groupby_len_preserves_negative_noise():
+    """Tests that dp.len(signed=True) preserves negative noisy counts."""
     dp.enable_features("contrib")
 
     TEST_SIZE = 10_000
