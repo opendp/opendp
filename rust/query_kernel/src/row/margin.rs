@@ -52,7 +52,11 @@ pub fn count_key(
             Ok(value) => value,
             Err(_) => return Err(()),
         };
-        Ok(prior + if current == *key { 1 } else { 0 })
+        let matches = current == *key;
+        proof {
+            assert(matches == (current@ == key@));
+        }
+        Ok(prior + if matches { 1 } else { 0 })
     }
 }
 
