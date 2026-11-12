@@ -237,7 +237,12 @@ def c_to_py(value: Any) -> Any:
             return Queryable(value, query_type)
 
         runtime_type = RuntimeType.parse(obj_type)
-        if _supports_owned_slice(runtime_type):
+        # Functions transfer an independently allocated AnyFunction to Python.
+        # Every copied output uses the owner, so supported-type dispatch lives
+        # only in Rust rather than in a parallel Python whitelist.
+        if not (
+            isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function"
+        ):
             create = lib.opendp_data__object_as_slice_owned
             create.argtypes = [ctypes.POINTER(AnyObject)]
             create.restype = FfiResult
@@ -335,45 +340,6 @@ def c_to_py(value: Any) -> Any:
         return
 
     return value
-
-
-def _supports_owned_slice(type_name: Union[RuntimeType, str]) -> bool:
-    """Select only the representations supported by the scratch-owner API."""
-    primitives = set(ATOM_MAP) - {"AnyMeasurementPtr", "AnyTransformationPtr"}
-    if isinstance(type_name, str):
-        return type_name in primitives | {
-            "String",
-            "BitVector",
-            "ExtrinsicObject",
-            "Expr",
-            "LazyFrame",
-            "ExprPlan",
-            "Bound",
-            "Bounds",
-            "Margin",
-            "Series",
-            "DataFrame",
-        }
-    if type_name.origin == "Vec":
-        return type_name.args[0] in primitives | {
-            "String",
-            "ExtrinsicObject",
-            "AnyObject",
-            "Expr",
-            "Bound",
-        }
-    if type_name.origin == "HashMap":
-        return True
-    if type_name.origin == "Tuple":
-        return type_name.args == ["PrivacyProfile", "f64"] or all(
-            t in primitives for t in type_name.args
-        )
-    if type_name.origin == "Option":
-        inner = type_name.args[0]
-        return inner == "AnyObject" or (
-            isinstance(inner, RuntimeType) and _supports_owned_slice(inner)
-        )
-    return False
 
 
 def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
