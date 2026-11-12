@@ -18,6 +18,32 @@ pub open spec fn schema_prefix(
     }
 }
 
+/// Executable projection typing, equivalent to the semantic schema rule.
+pub fn check_schema_prefix(
+    exprs: &Vec<VExpr>, schema: &Vec<VField>, count: usize,
+) -> (result: Option<Vec<VField>>)
+    requires count <= exprs.len(),
+    ensures
+        match result {
+            Some(fields) => schema_prefix(exprs@, schema@, count as nat) == Some(fields@),
+            None => schema_prefix(exprs@, schema@, count as nat).is_None(),
+        },
+    decreases count,
+{
+    if count == 0 {
+        Some(Vec::new())
+    } else {
+        match (check_schema_prefix(exprs, schema, count - 1),
+               check_expr(&exprs[count - 1], schema)) {
+            (Some(mut prefix), Some(field)) => {
+                prefix.push(field);
+                Some(prefix)
+            },
+            _ => None,
+        }
+    }
+}
+
 pub open spec fn row_prefix(
     exprs: Seq<VExpr>, row: Seq<Option<VValue>>, count: nat,
 ) -> Result<Seq<Option<VValue>>, ()>

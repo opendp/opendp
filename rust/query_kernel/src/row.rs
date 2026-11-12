@@ -10,13 +10,13 @@ use scalar::{binary_field, clip_field, eval_binary, eval_clip};
 
 verus! {
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VDType { Int64, Boolean }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VValue { Int(i64), Bool(bool) }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct VField {
     pub dtype: VDType,
     pub nullable: bool,
@@ -24,6 +24,7 @@ pub struct VField {
 
 /// Typed rows are the sole physical and logical representation in the
 /// verified kernel. Arrow conversion is handled by an external adapter.
+#[derive(Clone, Debug)]
 pub struct VTable {
     pub schema: Vec<VField>,
     pub rows: Vec<Vec<Option<VValue>>>,
@@ -33,9 +34,10 @@ pub open spec fn table_valid(table: &VTable) -> bool {
     rows_in_schema(rows_view(table.rows@), table.schema@)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum VBinaryOp { Lt, Gt, Eq, And }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum VExpr {
     Column(usize),
     Alias { expr: Box<VExpr>, name: String },
@@ -49,6 +51,7 @@ pub enum VExpr {
     },
 }
 
+#[derive(Debug)]
 pub enum VPlan {
     Input,
     Project { input: Box<VPlan>, exprs: Vec<VExpr> },
@@ -130,6 +133,33 @@ pub open spec fn plan_schema(plan: &VPlan, input_schema: Seq<VField>) -> Option<
                 Some(child_schema) => local_schema(plan, child_schema),
                 None => None,
             },
+    }
+}
+
+/// Executable whole-plan typing composed from operator-local checkers.
+pub fn check_plan(plan: &VPlan, input_schema: &Vec<VField>)
+    -> (result: Option<Vec<VField>>)
+    ensures
+        match result {
+            Some(fields) => plan_schema(plan, input_schema@) == Some(fields@),
+            None => plan_schema(plan, input_schema@).is_None(),
+        },
+    decreases *plan,
+{
+    match plan {
+        VPlan::Input => Some(input_schema.clone()),
+        VPlan::Project { input, exprs } => {
+            match check_plan(input, input_schema) {
+                Some(child) => project::check_schema_prefix(exprs, &child, exprs.len()),
+                None => None,
+            }
+        },
+        VPlan::Filter { input, predicate } => {
+            match check_plan(input, input_schema) {
+                Some(child) => filter::check_schema(predicate, &child),
+                None => None,
+            }
+        },
     }
 }
 
@@ -573,6 +603,48 @@ pub proof fn lemma_relation_type_sound(
 }
 
 } // verus!
+
+// The recursive Clone implementation is ordinary executable Rust; Verus
+// currently rejects its automatically derived termination dependencies.
+impl Clone for VPlan {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Input => Self::Input,
+            Self::Project { input, exprs } => Self::Project {
+                input: input.clone(),
+                exprs: exprs.clone(),
+            },
+            Self::Filter { input, predicate } => Self::Filter {
+                input: input.clone(),
+                predicate: predicate.clone(),
+            },
+        }
+    }
+}
+
+impl Clone for VExpr {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Column(index) => Self::Column(*index),
+            Self::Alias { expr, name } => Self::Alias {
+                expr: expr.clone(),
+                name: name.clone(),
+            },
+            Self::Literal(value) => Self::Literal(*value),
+            Self::Null(dtype) => Self::Null(*dtype),
+            Self::Binary { left, op, right } => Self::Binary {
+                left: left.clone(),
+                op: *op,
+                right: right.clone(),
+            },
+            Self::Clip { expr, lower, upper } => Self::Clip {
+                expr: expr.clone(),
+                lower: lower.clone(),
+                upper: upper.clone(),
+            },
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

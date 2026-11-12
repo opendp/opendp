@@ -10,7 +10,7 @@ fn broad_column(dtype: DataType, nullable: bool) -> Fallible<SeriesDomain> {
     Ok(domain)
 }
 
-pub(super) fn kernel_schema(columns: &[SeriesDomain]) -> Fallible<Vec<verified::VField>> {
+pub(super) fn kernel_schema<C>(columns: &[crate::domains::ColumnDomain<C>]) -> Fallible<Vec<verified::VField>> {
     columns.iter().map(|column| {
         let dtype = match column.dtype() {
             DataType::Int64 => verified::VDType::Int64,

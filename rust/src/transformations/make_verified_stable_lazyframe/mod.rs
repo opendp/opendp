@@ -7,6 +7,7 @@ use std::collections::HashSet;
 mod verified;
 mod frontend;
 mod backend;
+mod vframe;
 use frontend::normalize_plan;
 use backend::render_plan;
 use polars::prelude::*;

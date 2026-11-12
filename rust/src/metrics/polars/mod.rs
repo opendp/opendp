@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashSet, fmt::Debug, hash::Hash};
+use std::{cmp::Ordering, collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData};
 
 use polars::prelude::Expr;
 
@@ -91,6 +91,25 @@ impl Metric for ChangeOneIdDistance {
 /// $x, x'$ are $d_i$-close under the ith frame distance for all $d_i$ in $d$.
 #[derive(Clone, PartialEq, Debug)]
 pub struct FrameDistance<M: UnboundedMetric>(pub M);
+
+/// Frame distance with an explicit grouping-expression language.
+///
+/// The existing FrameDistance<M> tuple constructor remains Polars-compatible.
+#[derive(Clone, PartialEq, Debug)]
+pub struct FrameDistanceFor<M: UnboundedMetric, E: Eq + Hash + Clone + Debug>(
+    pub M,
+    PhantomData<E>,
+);
+
+impl<M: UnboundedMetric, E: Eq + Hash + Clone + Debug> FrameDistanceFor<M, E> {
+    pub fn new(metric: M) -> Self {
+        Self(metric, PhantomData)
+    }
+}
+
+impl<M: UnboundedMetric, E: Eq + Hash + Clone + Debug> Metric for FrameDistanceFor<M, E> {
+    type Distance = Bounds<E>;
+}
 
 impl MicrodataMetric for SymmetricIdDistance {
     const SIZED: bool = false;

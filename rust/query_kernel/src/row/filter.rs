@@ -9,6 +9,37 @@ pub open spec fn schema(predicate: &VExpr, input: Seq<VField>) -> Option<Seq<VFi
     }
 }
 
+/// Executable filter typing, equivalent to the semantic schema rule.
+pub fn check_schema(
+    predicate: &VExpr, input: &Vec<VField>,
+) -> (result: Option<Vec<VField>>)
+    ensures
+        match result {
+            Some(fields) => schema(predicate, input@) == Some(fields@),
+            None => schema(predicate, input@).is_None(),
+        },
+{
+    match check_expr(predicate, input) {
+        Some(field) => {
+            proof { assert(expr_field(predicate, input@) == Some(field)); }
+            match field.dtype {
+                VDType::Boolean => {
+                    proof { assert(schema(predicate, input@) == Some(input@)); }
+                    Some(input.clone())
+                },
+                _ => {
+                    proof { assert(schema(predicate, input@).is_None()); }
+                    None
+                },
+            }
+        },
+        None => {
+            proof { assert(schema(predicate, input@).is_None()); }
+            None
+        },
+    }
+}
+
 /// A filter returns its input row or drops it.
 pub open spec fn row_spec(
     predicate: &VExpr, row: Seq<Option<VValue>>,

@@ -8,7 +8,7 @@ use polars::lazy::dsl::len;
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::{FrameDistance, LInfDistance, LpDistance, MicrodataMetric};
+use crate::metrics::{FrameDistance, FrameDistanceFor, LInfDistance, LpDistance, MicrodataMetric};
 use crate::traits::{InfMul, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use crate::{core::MetricSpace, domains::{ColumnDomain, SeriesDomain}, error::Fallible};
@@ -134,6 +134,14 @@ impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {
 }
 
 impl<F: Frame, M: UnboundedMetric> MetricSpace for (FrameDomain<F>, FrameDistance<M>) {
+    fn check_space(&self) -> Fallible<()> {
+        (self.0.clone(), self.1.0.clone()).check_space()
+    }
+}
+
+impl<F: Frame, M: UnboundedMetric> MetricSpace
+    for (FrameDomain<F>, FrameDistanceFor<M, F::Expr>)
+{
     fn check_space(&self) -> Fallible<()> {
         (self.0.clone(), self.1.0.clone()).check_space()
     }
