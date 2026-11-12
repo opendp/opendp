@@ -13,6 +13,8 @@ mod make_stable_expr;
 
 #[cfg(all(feature = "contrib", feature = "polars", feature = "verified-query"))]
 mod make_verified_stable_lazyframe;
+#[cfg(all(feature = "contrib", feature = "polars", feature = "verified-query"))]
+pub(crate) mod make_stable_vplan;
 #[cfg(all(feature = "contrib", feature = "polars"))]
 pub use make_stable_expr::*;
 

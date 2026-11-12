@@ -18,6 +18,8 @@ pub use polars::*;
 
 #[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
 pub(crate) mod verified_frame;
+#[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
+pub(crate) mod verified_plan;
 
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.
 #[cfg(feature = "contrib")]
