@@ -471,12 +471,14 @@ def test_theil_sen_fitting_cloning_scoring_and_refitting(route):
     if route == "context":
         assert context.current_privacy_loss() == [1.0, 1.0]
     model._ingest_release((2.0, 1.0))
-    np.testing.assert_array_equal(model.predict([1.0, 2.0]), [3.0, 5.0])
+    np.testing.assert_array_equal(model.predict([[1.0], [2.0]]), [3.0, 5.0])
     X, y, weights = [[1.0], [2.0], [3.0]], [3.0, 4.0, 8.0], [1.0, 2.0, 3.0]
     assert model.score(X, y, sample_weight=weights) == r2_score(
         y, model.predict(X), sample_weight=weights
     )
-    with pytest.raises(ValueError, match="shape"):
+    with pytest.raises(ValueError, match="2D"):
+        model.predict([1.0, 2.0])
+    with pytest.raises(ValueError, match="features"):
         model.predict([[1.0, 2.0]])
 
 
