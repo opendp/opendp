@@ -38,6 +38,9 @@ const FORBIDDEN_VARIANTS: &[&str] = &[
     "PipeWithSchema", // plan callback
     "FoldHorizontal", // function expression callback
     "ReduceHorizontal",
+    "CumFoldHorizontal",
+    "CumReduceHorizontal",
+    "Map",            // RollingFunction::Map callback
     "MapFieldNames",  // struct-field callback
     "SubPlan",        // an independently supplied nested plan
     "Scan",           // user-controlled external sources and providers
