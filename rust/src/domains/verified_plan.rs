@@ -12,7 +12,7 @@ use crate::{
     verified_query::{VExpr, VPlan, VTable},
 };
 
-use super::verified_frame::{check_filter_predicate, kernel_schema, project_columns};
+use super::verified_query_domain::{check_filter_predicate, kernel_schema, project_columns};
 
 pub(crate) type VFrameDomain = FrameDomain<VTable>;
 pub(crate) type VFrameMetric = FrameDistanceFor<SymmetricDistance, VExpr>;

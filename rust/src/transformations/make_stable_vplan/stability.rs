@@ -246,7 +246,7 @@ pub proof fn lemma_all_typed_insertions_stable(
 /// 1-Lipschitz under a single row insertion. This is the property required
 /// by make_project and make_filter, independent of the child's AST.
 pub open spec fn stable_local_insertions(
-    plan: &VPlan, input_schema: Seq<VField>, output_schema: Seq<VField>,
+    plan: &VPlan, input_schema: Seq<VField>,
 ) -> bool {
     forall|rows: Seq<Seq<Option<VValue>>>, index: int, row: Seq<Option<VValue>>|
         rows_in_schema(rows, input_schema)
@@ -262,7 +262,7 @@ pub proof fn lemma_all_local_insertions_stable(
     plan: &VPlan, input_schema: Seq<VField>, output_schema: Seq<VField>,
 )
     requires local_schema(plan, input_schema) == Some(output_schema),
-    ensures stable_local_insertions(plan, input_schema, output_schema),
+    ensures stable_local_insertions(plan, input_schema),
 {
     assert forall|rows: Seq<Seq<Option<VValue>>>, index: int, row: Seq<Option<VValue>>|
         rows_in_schema(rows, input_schema)
@@ -298,10 +298,10 @@ pub open spec fn stable_local_from_source(
     plan: &VPlan, source_schema: Seq<VField>,
 ) -> bool {
     match plan {
-        VPlan::Input => stable_local_insertions(plan, source_schema, source_schema),
+        VPlan::Input => stable_local_insertions(plan, source_schema),
         VPlan::Project { input, .. } | VPlan::Filter { input, .. } =>
             match (plan_schema(input, source_schema), plan_schema(plan, source_schema)) {
-                (Some(child), Some(output)) => stable_local_insertions(plan, child, output),
+                (Some(child), Some(_)) => stable_local_insertions(plan, child),
                 _ => false,
             },
     }

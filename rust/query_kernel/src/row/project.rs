@@ -24,30 +24,6 @@ pub fn identity_column(expr: &VExpr) -> (result: Option<usize>)
     }
 }
 
-/// Reusing the source column's value-domain constraints is sound for
-/// projections made of a column reference and zero or more aliases.
-pub proof fn lemma_identity_column_value(
-    expr: &VExpr, row: Seq<Option<VValue>>, index: usize,
-)
-    requires
-        identity_column_spec(expr) == Some(index),
-        index < row.len(),
-    ensures expr_row_spec(expr, row) == Ok(row[index as int]),
-    decreases *expr,
-{
-    match expr {
-        VExpr::Column(i) => {
-            assert(*i == index);
-        },
-        VExpr::Alias { expr: inner, .. } => {
-            lemma_identity_column_value(inner, row, index);
-        },
-        _ => {
-            assert(false);
-        },
-    }
-}
-
 pub open spec fn schema_prefix(
     exprs: Seq<VExpr>, schema: Seq<VField>, count: nat,
 ) -> Option<Seq<VField>>

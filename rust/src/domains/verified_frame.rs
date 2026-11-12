@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use polars::prelude::{DataType, Field, PlSmallStr};
+use polars::prelude::{DataType, PlSmallStr};
 
 use crate::verified_query as verified;
 use crate::{
@@ -12,71 +12,8 @@ use crate::{
     error::*,
 };
 
-use verified::{VExpr, VField, VTable, VValue, VDType};
-
-/// Translate logical OpenDP column constraints into the verified kernel's
-/// types. Shared by native membership and Polars normalization.
-pub(crate) fn kernel_schema<C>(columns: &[ColumnDomain<C>]) -> Fallible<Vec<VField>> {
-    columns.iter().map(|column| {
-        let dtype = match column.dtype() {
-            DataType::Int64 => verified::VDType::Int64,
-            DataType::Boolean => verified::VDType::Boolean,
-            dtype => return fallible!(MakeTransformation,
-                "unsupported verified column dtype: {:?}", dtype),
-        };
-        Ok(verified::VField { dtype, nullable: column.nullable })
-    }).collect()
-}
-
-/// Infer the same verified projection columns for any frame carrier.
-/// Only a column reference (possibly wrapped in aliases) retains its
-/// original value-domain constraints; derived expressions get broad domains.
-pub(crate) fn project_columns<C: Clone>(
-    input: &[ColumnDomain<C>], exprs: &[VExpr],
-) -> Fallible<Vec<ColumnDomain<C>>> {
-    let schema = kernel_schema(input)?;
-    exprs.iter().map(|expr| {
-        let field = verified::check_expr(expr, &schema)
-            .ok_or_else(|| err!(MakeTransformation, "ill-typed verified projection expression"))?;
-        let name = match expr {
-            VExpr::Alias { name, .. } => PlSmallStr::from(name.as_str()),
-            VExpr::Column(index) => input.get(*index)
-                .ok_or_else(|| err!(MakeTransformation, "column outside verified schema"))?
-                .name.clone(),
-            _ => return fallible!(MakeTransformation,
-                "verified projection expressions must be named"),
-        };
-        let mut column = match verified::project::identity_column(expr) {
-            Some(index) => input.get(index)
-                .ok_or_else(|| err!(MakeTransformation, "column outside verified schema"))?
-                .clone(),
-            None => {
-                let dtype = match field.dtype {
-                    VDType::Int64 => DataType::Int64,
-                    VDType::Boolean => DataType::Boolean,
-                };
-                let mut column = ColumnDomain::<C>::new_from_field(Field::new(name.clone(), dtype))?;
-                column.nullable = field.nullable;
-                column
-            },
-        };
-        column.name = name;
-        Ok(column)
-    }).collect()
-}
-
-/// The shared filter typing rule for native and verified plan frontends.
-pub(crate) fn check_filter_predicate<C>(
-    input: &[ColumnDomain<C>], predicate: &VExpr,
-) -> Fallible<()> {
-    let field = verified::check_expr(predicate, &kernel_schema(input)?)
-        .ok_or_else(|| err!(MakeTransformation, "ill-typed verified filter predicate"))?;
-    if field.dtype != VDType::Boolean {
-        return fallible!(MakeTransformation, "verified filter predicate must be boolean");
-    }
-    Ok(())
-}
-
+use verified::{VExpr, VField, VTable, VValue};
+use super::verified_query_domain::kernel_schema;
 
 #[derive(Clone)]
 pub struct VColumn(pub Vec<Option<VValue>>);
@@ -170,8 +107,9 @@ fn table_member(table: &VTable, domain: &FrameDomain<VTable>) -> Fallible<bool> 
         return Ok(false);
     }
     let expected_schema = kernel_schema(&domain.series_domains)?;
-    if !table.schema.iter().zip(&expected_schema)
-        .all(|(actual, expected)| actual.dtype == expected.dtype) {
+    // The Verus theorems quantify over tables with exactly the declared
+    // source schema, including nullability (even for empty tables).
+    if table.schema != expected_schema {
         return Ok(false);
     }
     for (index, column) in domain.series_domains.iter().enumerate() {
@@ -257,9 +195,34 @@ mod tests {
         value.rows[1][0] = Some(VValue::Int(5));
         assert!(!domain.member(&value)?); // x is non-nullable
         value.rows[2][0] = Some(VValue::Int(0));
+        value.schema[0].nullable = false;
         assert!(domain.member(&value)?);
         value.rows[1][0] = Some(VValue::Bool(true));
         assert!(!domain.member(&value)?);
+        Ok(())
+    }
+
+    #[test]
+    fn verified_table_schema_requires_exact_nullability() -> Fallible<()> {
+        let domain = FrameDomain::<VTable>::new(vec![
+            ColumnDomain::new("x", AtomDomain::<i64>::default()),
+        ])?;
+        let mut table = VTable {
+            schema: vec![VField { dtype: verified::VDType::Int64, nullable: false }],
+            rows: vec![],
+        };
+        assert!(domain.member(&table)?);
+        // A nullable *declaration* does not satisfy a non-null contract,
+        // even if the data happens to contain no nulls.
+        table.schema[0].nullable = true;
+        assert!(!domain.member(&table)?);
+
+        let nullable = FrameDomain::<VTable>::new(vec![
+            ColumnDomain::new("x", OptionDomain::new(AtomDomain::<i64>::default())),
+        ])?;
+        assert!(nullable.member(&table)?);
+        table.schema[0].nullable = false;
+        assert!(!nullable.member(&table)?);
         Ok(())
     }
 
@@ -298,7 +261,10 @@ mod tests {
 
     #[test]
     fn bound_plan_membership_uses_verified_evaluation() -> Fallible<()> {
-        let domain = domain()?;
+        let mut domain = domain()?;
+        domain.series_domains[0] = ColumnDomain::new(
+            "x", OptionDomain::new(AtomDomain::<i64>::new_closed((0, 5))?),
+        );
         let plan = VPlan::Project {
             input: Box::new(VPlan::Filter {
                 input: Box::new(VPlan::Input),

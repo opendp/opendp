@@ -11,7 +11,7 @@ mod certified;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::{
-        verified_frame::kernel_schema,
+        verified_query_domain::kernel_schema,
         verified_plan::{
             filter_domain, project_domain, VFrameBounds, VFrameMetric, VPlanDomain,
         },

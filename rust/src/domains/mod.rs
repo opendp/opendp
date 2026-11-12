@@ -17,6 +17,8 @@ mod polars;
 pub use polars::*;
 
 #[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
+pub(crate) mod verified_query_domain;
+#[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
 pub(crate) mod verified_frame;
 #[cfg(all(feature = "polars", feature = "contrib", feature = "verified-query"))]
 pub(crate) mod verified_plan;
