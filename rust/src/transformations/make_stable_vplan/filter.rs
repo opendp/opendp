@@ -25,7 +25,8 @@ pub(super) fn make_filter(
                 &expected,
             )
         }),
-        StabilityMap::new(global_bound),
+        // Filtering preserves every row and grouping key it retains.
+        StabilityMap::new(Clone::clone),
     )?;
     prior >> step
 }

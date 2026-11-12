@@ -94,13 +94,131 @@ pub open spec fn preserves_filter_multiset(plan: &VPlan, schema: Seq<VField>) ->
         }
 }
 
+/// On each well-typed row value, filtering either retains every copy
+/// or drops every copy. This is stronger than submultiset containment.
+pub proof fn lemma_filter_exact_count(
+    plan: &VPlan, rows: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    value: Seq<Option<VValue>>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(rows, schema),
+        verified::row_in_schema(value, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+    ensures
+        match verified::apply_spec(plan, rows) {
+            Ok(out) => {
+                let selected = verified::local_row_spec(plan, value) == Ok(Some(value));
+                out.to_multiset().count(value) ==
+                    if selected { rows.to_multiset().count(value) } else { 0 }
+            },
+            Err(_) => false,
+        },
+    decreases rows.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    verified::lemma_apply_prefix_type_sound(plan, rows, schema, schema, rows.len());
+    verified::lemma_local_type_sound(plan, schema, value, schema);
+    if rows.len() == 0 {
+        let out = verified::apply_spec(plan, rows).unwrap();
+        assert(out.len() == 0);
+        out.to_multiset_ensures();
+        rows.to_multiset_ensures();
+        assert(out.to_multiset().count(value) == 0);
+        assert(rows.to_multiset().count(value) == 0);
+    } else {
+        stability::lemma_rows_drop_last_valid(rows, schema);
+        let previous = rows.drop_last();
+        let last = rows.last();
+        lemma_filter_exact_count(plan, previous, schema, value);
+        stability::lemma_apply_prefix_ignores_last(plan, rows, previous.len());
+        assert(rows =~= previous.push(last));
+        let old_out = verified::apply_spec(plan, previous).unwrap();
+        previous.to_multiset_ensures();
+        old_out.to_multiset_ensures();
+        assert(rows.to_multiset() =~= previous.to_multiset().insert(last));
+        match plan {
+            VPlan::Filter { predicate, .. } => {
+                match verified::filter::row_spec(predicate, last) {
+                    Ok(Some(retained)) => {
+                        assert(retained == last);
+                        assert(verified::apply_spec(plan, rows) == Ok(old_out.push(last)));
+                        old_out.to_multiset_ensures();
+                        assert(old_out.push(last).to_multiset()
+                            =~= old_out.to_multiset().insert(last));
+                    },
+                    Ok(None) => {
+                        assert(verified::apply_spec(plan, rows) == Ok(old_out));
+                    },
+                    Err(_) => { assert(false); },
+                }
+            },
+            _ => { assert(false); },
+        }
+        if last == value {
+            assert(verified::local_row_spec(plan, last)
+                == verified::local_row_spec(plan, value));
+        }
+        assert(verified::apply_spec(plan, rows).is_Ok());
+    }
+}
+
+/// Pointwise contraction of the multiplicity difference for two datasets.
+/// Each row's grouping key is unchanged by filtering, so this is the
+/// per-row algebra underlying every grouped symmetric-distance bound.
+pub proof fn lemma_filter_count_contraction(
+    plan: &VPlan, left: Seq<Seq<Option<VValue>>>,
+    right: Seq<Seq<Option<VValue>>>, schema: Seq<VField>,
+    value: Seq<Option<VValue>>,
+)
+    requires
+        matches!(plan, VPlan::Filter { .. }),
+        verified::rows_in_schema(left, schema),
+        verified::rows_in_schema(right, schema),
+        verified::row_in_schema(value, schema),
+        verified::local_schema(plan, schema) == Some(schema),
+    ensures
+        match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
+            (Ok(out_left), Ok(out_right)) => {
+                let a = left.to_multiset().count(value) as int;
+                let b = right.to_multiset().count(value) as int;
+                let x = out_left.to_multiset().count(value) as int;
+                let y = out_right.to_multiset().count(value) as int;
+                (if x >= y { x - y } else { y - x })
+                    <= (if a >= b { a - b } else { b - a })
+            },
+            _ => false,
+        },
+{
+    lemma_filter_exact_count(plan, left, schema, value);
+    lemma_filter_exact_count(plan, right, schema, value);
+}
+
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)
     ensures
         stability::certified_result(result, source_schema@),
         match result {
-            Some((plan, fields)) => preserves_filter_multiset(&plan, fields@),
+            Some((plan, fields)) =>
+                preserves_filter_multiset(&plan, fields@)
+                && (forall|left: Seq<Seq<Option<VValue>>>,
+                    right: Seq<Seq<Option<VValue>>>, value: Seq<Option<VValue>>|
+                    verified::rows_in_schema(left, fields@)
+                    && verified::rows_in_schema(right, fields@)
+                    && verified::row_in_schema(value, fields@)
+                    ==> match (verified::apply_spec(&plan, left),
+                               verified::apply_spec(&plan, right)) {
+                        (Ok(out_left), Ok(out_right)) => {
+                            let a = left.to_multiset().count(value) as int;
+                            let b = right.to_multiset().count(value) as int;
+                            let x = out_left.to_multiset().count(value) as int;
+                            let y = out_right.to_multiset().count(value) as int;
+                            (if x >= y { x - y } else { y - x })
+                                <= (if a >= b { a - b } else { b - a })
+                        },
+                        _ => false,
+                    }),
             None => true,
         },
 {
@@ -118,6 +236,25 @@ pub fn construct(
                         Err(_) => false,
                     } by {
                     lemma_filter_submultiset(&plan, rows, fields@);
+                }
+                assert forall|left: Seq<Seq<Option<VValue>>>,
+                    right: Seq<Seq<Option<VValue>>>, value: Seq<Option<VValue>>|
+                    verified::rows_in_schema(left, fields@)
+                    && verified::rows_in_schema(right, fields@)
+                    && verified::row_in_schema(value, fields@)
+                    implies match (verified::apply_spec(&plan, left),
+                                   verified::apply_spec(&plan, right)) {
+                        (Ok(out_left), Ok(out_right)) => {
+                            let a = left.to_multiset().count(value) as int;
+                            let b = right.to_multiset().count(value) as int;
+                            let x = out_left.to_multiset().count(value) as int;
+                            let y = out_right.to_multiset().count(value) as int;
+                            (if x >= y { x - y } else { y - x })
+                                <= (if a >= b { a - b } else { b - a })
+                        },
+                        _ => false,
+                    } by {
+                    lemma_filter_count_contraction(&plan, left, right, fields@, value);
                 }
             }
             Some((plan, fields))
