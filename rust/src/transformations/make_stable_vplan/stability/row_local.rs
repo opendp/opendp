@@ -146,4 +146,150 @@ pub proof fn lemma_apply_insert(
     }
 }
 
+
+/// A deterministic map-or-drop operator never produces more output rows
+/// than there are input rows, counting duplicates.
+pub proof fn lemma_lift_length<X, Y>(
+    rows: Seq<X>, f: spec_fn(X) -> Option<Y>,
+)
+    ensures lifting::lift(rows, f).to_multiset().len() <= rows.to_multiset().len(),
+    decreases rows.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if rows.len() > 0 {
+        let prefix = rows.drop_last();
+        lemma_lift_length(prefix, f);
+        assert(rows =~= prefix.push(rows.last()));
+        prefix.to_multiset_ensures();
+        let before = lifting::lift(prefix, f);
+        before.to_multiset_ensures();
+        match f(rows.last()) {
+            Some(value) => {
+                assert(lifting::lift(rows, f) =~= before.push(value));
+                assert(lifting::lift(rows, f).to_multiset().len()
+                    == before.to_multiset().len() + 1);
+            },
+            None => {
+                assert(lifting::lift(rows, f) =~= before);
+            },
+        }
+        rows.to_multiset_ensures();
+        assert(rows.to_multiset().len() == prefix.to_multiset().len() + 1);
+    } else {
+        rows.to_multiset_ensures();
+        lifting::lift(rows, f).to_multiset_ensures();
+    }
+}
+
+/// A sequence insertion corresponds to either one output multiset
+/// insertion or no change. This is valid even for many-to-one maps.
+pub proof fn lemma_lift_bag_insert<X, Y>(
+    rows: Seq<X>, index: int, value: X, f: spec_fn(X) -> Option<Y>,
+)
+    requires 0 <= index <= rows.len(),
+    ensures
+        match f(value) {
+            Some(y) => lifting::lift(rows.insert(index, value), f).to_multiset()
+                =~= lifting::lift(rows, f).to_multiset().insert(y),
+            None => lifting::lift(rows.insert(index, value), f).to_multiset()
+                =~= lifting::lift(rows, f).to_multiset(),
+        },
+{
+    lifting::lemma_lift_insert(rows, index, value, f);
+    if let Some(y) = f(value) {
+        let before = lifting::lift(rows, f);
+        let after = lifting::lift(rows.insert(index, value), f);
+        let j = choose|j: int| 0 <= j <= before.len()
+            && after =~= before.insert(j, y);
+        lemma_seq_insert_bag(before, j, y);
+    }
+}
+
+/// Every deterministic row-local map-or-drop is nonexpansive under
+/// symmetric multiset distance. The proof cancels matching input copies;
+/// each remaining insertion or deletion can change the output by at most
+/// one. No injectivity or row preservation assumption is needed.
+pub proof fn lemma_lift_contraction<X, Y>(
+    left: Seq<X>, right: Seq<X>, f: spec_fn(X) -> Option<Y>,
+)
+    ensures
+        super::verified::symmetric_distance::distance(
+            lifting::lift(left, f).to_multiset(),
+            lifting::lift(right, f).to_multiset(),
+        ) <= super::verified::symmetric_distance::distance(
+            left.to_multiset(), right.to_multiset(),
+        ),
+    decreases left.len() + right.len(),
+{
+    use super::verified::symmetric_distance as metric;
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if left.len() == 0 {
+        assert(left.to_multiset() =~= Multiset::<X>::empty());
+        assert(lifting::lift(left, f).to_multiset() =~= Multiset::<Y>::empty());
+        lemma_lift_length(right, f);
+        metric::lemma_empty_distance(right.to_multiset());
+        metric::lemma_empty_distance(lifting::lift(right, f).to_multiset());
+    } else {
+        let prefix = left.drop_last();
+        let value = left.last();
+        assert(left =~= prefix.push(value));
+        prefix.to_multiset_ensures();
+        left.to_multiset_ensures();
+        let left_before = lifting::lift(prefix, f).to_multiset();
+        let left_after = lifting::lift(left, f).to_multiset();
+        lifting::lift(prefix, f).to_multiset_ensures();
+        if right.to_multiset().count(value) > 0 {
+            right.to_multiset_ensures();
+            assert(right.contains(value));
+            let index = choose|i: int| 0 <= i < right.len() && right[i] == value;
+            let reduced = right.remove(index);
+            right.remove_ensures(index);
+            assert(right =~= reduced.insert(index, value)) by {
+                reduced.insert_ensures(index, value);
+                assert forall|i: int| 0 <= i < right.len()
+                    implies right[i] == reduced.insert(index, value)[i] by {
+                    if i < index {
+                    } else if i == index {
+                    } else {
+                    }
+                }
+            }
+            lemma_seq_insert_bag(reduced, index, value);
+            assert(right.to_multiset() =~= reduced.to_multiset().insert(value));
+            lemma_lift_contraction(prefix, reduced, f);
+            lemma_lift_bag_insert(reduced, index, value, f);
+            assert(left.to_multiset() =~= prefix.to_multiset().insert(value));
+            let right_before = lifting::lift(reduced, f).to_multiset();
+            let right_after = lifting::lift(right, f).to_multiset();
+            match f(value) {
+                Some(y) => {
+                    assert(left_after =~= left_before.insert(y));
+                    assert(right_after =~= right_before.insert(y));
+                    metric::lemma_insert_common(left_before, right_before, y);
+                },
+                None => {
+                    assert(left_after =~= left_before);
+                    assert(right_after =~= right_before);
+                },
+            }
+            metric::lemma_insert_common(
+                prefix.to_multiset(), reduced.to_multiset(), value);
+        } else {
+            lemma_lift_contraction(prefix, right, f);
+            assert(left.to_multiset() =~= prefix.to_multiset().insert(value));
+            metric::lemma_insert_fresh(prefix.to_multiset(), right.to_multiset(), value);
+            match f(value) {
+                Some(y) => {
+                    assert(left_after =~= left_before.insert(y));
+                    metric::lemma_insert_bound(
+                        left_before, lifting::lift(right, f).to_multiset(), y);
+                },
+                None => {
+                    assert(left_after =~= left_before);
+                },
+            }
+        }
+    }
+}
+
 } // verus!
