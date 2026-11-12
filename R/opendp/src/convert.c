@@ -815,11 +815,23 @@ static void free_conversion_metadata(void *data)
 {
     ObjectConversion *conversion = (ObjectConversion *)data;
     if (conversion->slice)
-        opendp_data__slice_free(conversion->slice);
+    {
+        FfiSlice *slice = conversion->slice;
+        conversion->slice = NULL;
+        opendp_data__slice_free(slice);
+    }
     if (conversion->type_name)
-        opendp_data__str_free(conversion->type_name);
+    {
+        char *type_name = conversion->type_name;
+        conversion->type_name = NULL;
+        opendp_data__str_free(type_name);
+    }
     if (conversion->owned && conversion->object)
-        opendp_data__object_free(conversion->object);
+    {
+        AnyObject *object = conversion->object;
+        conversion->object = NULL;
+        opendp_data__object_free(object);
+    }
 }
 
 static SEXP anyobjectptr_to_sexp_body(void *data)
@@ -836,28 +848,31 @@ static SEXP anyobjectptr_to_sexp_body(void *data)
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (str_equal(c_origin, "PrivacyProfile"))
     {
-        SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         if (conversion->owned)
-            conversion->object = NULL; // R external pointer now owns it.
-        UNPROTECT(1);
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP profile = PROTECT(privacyprofileptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return profile;
     }
 
     if (str_equal(c_origin, "AnyOdometerQueryable"))
     {
-        SEXP queryable = anyodometerqueryableptr_to_sexp(obj, R_NilValue);
         if (conversion->owned)
-            conversion->object = NULL; // R external pointer now owns it.
-        UNPROTECT(1);
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP queryable = PROTECT(anyodometerqueryableptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return queryable;
     }
 
     if (str_equal(c_origin, "AnyQueryable"))
     {
-        SEXP queryable = anyqueryableptr_to_sexp(obj, R_NilValue);
         if (conversion->owned)
-            conversion->object = NULL; // R external pointer now owns it.
-        UNPROTECT(1);
+            conversion->object = NULL; // Ownership transfers to an R external pointer.
+        SEXP queryable = PROTECT(anyqueryableptr_to_sexp(obj, R_NilValue));
+        free_conversion_metadata(data);
+        UNPROTECT(2);
         return queryable;
     }
 
@@ -866,8 +881,9 @@ static SEXP anyobjectptr_to_sexp_body(void *data)
         extract_error(slice_result.err);
     FfiSlice *slice = conversion->slice = slice_result.ok;
 
-    SEXP value = slice_to_sexp(slice, type_name);
-    UNPROTECT(1);
+    SEXP value = PROTECT(slice_to_sexp(slice, type_name));
+    free_conversion_metadata(data);
+    UNPROTECT(2);
     return value;
 }
 
