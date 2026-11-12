@@ -79,21 +79,23 @@ ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 
 SEXP extract_error(FfiError *err)
 {
-    int msg_len = strlen(err->variant) + strlen(err->message) + 6;
-    char *msg = (char *)R_alloc(1, msg_len * sizeof(char));
-    snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
-
-    if (str_equal(err->backtrace, "backtrace disabled"))
-        error("%s", msg);
+    const char *message = err->message ? err->message : "";
+    const char *backtrace = err->backtrace;
+    int show_backtrace = backtrace && !str_equal(backtrace, "backtrace disabled");
+    size_t msg_len = strlen(err->variant) + strlen(message) + 6;
+    if (show_backtrace)
+        msg_len += strlen(backtrace) + 1;
+    char *msg = (char *)R_alloc(msg_len, sizeof(char));
+    if (show_backtrace)
+        snprintf(msg, msg_len, "[%s] : %s\n%s", err->variant, message, backtrace);
     else
-    {
-        int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
-        char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
-        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error("%s", msg_backtrace);
-    }
+        snprintf(msg, msg_len, "[%s] : %s", err->variant, message);
 
-    return (R_NilValue);
+    // error() longjmps, so release the Rust error only after copying its text
+    // and before transferring control back to R.
+    opendp_core___error_free(err);
+    error("%s", msg);
+    return R_NilValue;
 }
 
 const char *sexp_to_charptr(SEXP type_name)

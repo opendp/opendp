@@ -13,6 +13,16 @@ test_that("temporary tuple and measurement arrays survive repeated FFI calls", {
   gc()
 })
 
+test_that("Rust error text survives releasing its FFI allocation", {
+  for (i in 1:20) {
+    expect_error(
+      atom_domain(bounds = c(1., 0.)),
+      "\\[MakeDomain\\] : lower bound .* may not be greater than upper bound"
+    )
+  }
+  gc()
+})
+
 test_that("tuple gc", {
   input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), symmetric_distance())
 
