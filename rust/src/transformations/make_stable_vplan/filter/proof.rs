@@ -427,7 +427,7 @@ pub open spec fn complete_group_support(
     &&& forall|i: int| 0 <= i < values.len() ==> exists|j: int|
         0 <= j < groups.len()
         && groups[j] == verified::project::row_prefix(
-            keys, values[i], keys.len()).unwrap()
+            keys, #[trigger] values[i], keys.len()).unwrap()
     &&& forall|i: int, j: int|
         0 <= i < j < groups.len() ==> groups[i] != groups[j]
 }
