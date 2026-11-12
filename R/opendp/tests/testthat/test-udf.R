@@ -351,3 +351,29 @@ test_that("incomparable extrinsic descriptors fail cleanly", {
     "not comparable|FailedFunction|comparison"
   )
 })
+
+test_that("extrinsic descriptor is released with its Rust wrapper", {
+  enable_features("honest-but-curious")
+
+  released <- new.env(parent = emptyenv())
+  released$count <- 0L
+
+  local({
+    descriptor <- new.env(parent = emptyenv())
+    descriptor$kind <- "temporary"
+    reg.finalizer(descriptor, function(e) {
+      released$count <- released$count + 1L
+    })
+
+    domain <- user_domain(
+      identifier = "TemporaryDomain",
+      member = \(x) is.integer(x),
+      descriptor = descriptor
+    )
+    expect_identical(domain("descriptor"), descriptor)
+    invisible(NULL)
+  })
+
+  for (i in seq_len(5)) gc()
+  expect_identical(released$count, 1L)
+})
