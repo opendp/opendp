@@ -199,7 +199,7 @@ class AIM(Algorithm):
 
         def function(
             qbl: OdometerQueryable,
-        ) -> tuple[Marginals, MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField | GemPlusModel]:
             # mutable state
             current_model = model
             current_marginals = marginals.copy()
@@ -211,11 +211,7 @@ class AIM(Algorithm):
             enable_filtering = current_algorithm.gem_filter
             while d_step:
                 if isinstance(current_model, GemPlusModel) and enable_filtering:
-                    queries_not_selected = [
-                        q
-                        for q in queries
-                        if q.by not in selected
-                    ]
+                    queries_not_selected = [q for q in queries if q.by not in selected]
                     current_algorithm = replace(
                         current_algorithm,
                         queries=queries_not_selected,
@@ -235,7 +231,7 @@ class AIM(Algorithm):
                     break
 
                 R: TypeAlias = tuple[
-                    Marginals, MarkovRandomField, bool, tuple[str, ...]
+                    Marginals, MarkovRandomField | GemPlusModel, bool, tuple[str, ...]
                 ]
                 current_marginals, current_model, is_significant, selected_clique = (
                     cast(R, qbl(m_step))
