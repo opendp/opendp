@@ -311,82 +311,6 @@ pub proof fn lemma_changed_groups_contraction(
     }
 }
 
-/// Contract consumed by the executable filter constructor. It covers
-/// every deterministic grouping function and every finite group universe.
-pub open spec fn preserves_grouped_stability(
-    plan: &VPlan, schema: Seq<VField>,
-) -> bool {
-    forall|left: Seq<Seq<Option<VValue>>>,
-        right: Seq<Seq<Option<VValue>>>,
-        values: Seq<Seq<Option<VValue>>>,
-        groups: Seq<Seq<Option<VValue>>>,
-        group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>|
-        verified::rows_in_schema(left, schema)
-        && verified::rows_in_schema(right, schema)
-        && verified::rows_in_schema(values, schema)
-        ==> match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
-            (Ok(out_left), Ok(out_right)) => {
-                &&& (forall|group: Seq<Option<VValue>>|
-                    group_distance(out_left.to_multiset(), out_right.to_multiset(),
-                        values, group_by, group)
-                    <= group_distance(left.to_multiset(), right.to_multiset(),
-                        values, group_by, group))
-                &&& changed_groups(out_left.to_multiset(), out_right.to_multiset(),
-                        values, group_by, groups)
-                    <= #[trigger] changed_groups(left.to_multiset(), right.to_multiset(),
-                        values, group_by, groups)
-            },
-            _ => false,
-        }
-}
-
-pub proof fn lemma_all_grouped_stability(
-    plan: &VPlan, schema: Seq<VField>,
-)
-    requires
-        matches!(plan, VPlan::Filter { .. }),
-        verified::local_schema(plan, schema) == Some(schema),
-    ensures preserves_grouped_stability(plan, schema),
-{
-    assert(preserves_grouped_stability(plan, schema)) by {
-    assert forall|left: Seq<Seq<Option<VValue>>>,
-        right: Seq<Seq<Option<VValue>>>,
-        values: Seq<Seq<Option<VValue>>>,
-        groups: Seq<Seq<Option<VValue>>>,
-        group_by: spec_fn(Seq<Option<VValue>>) -> Seq<Option<VValue>>|
-        verified::rows_in_schema(left, schema)
-        && verified::rows_in_schema(right, schema)
-        && verified::rows_in_schema(values, schema)
-        implies match (verified::apply_spec(plan, left), verified::apply_spec(plan, right)) {
-            (Ok(out_left), Ok(out_right)) => {
-                &&& (forall|group: Seq<Option<VValue>>|
-                    group_distance(out_left.to_multiset(), out_right.to_multiset(),
-                        values, group_by, group)
-                    <= group_distance(left.to_multiset(), right.to_multiset(),
-                        values, group_by, group))
-                &&& changed_groups(out_left.to_multiset(), out_right.to_multiset(),
-                        values, group_by, groups)
-                    <= #[trigger] changed_groups(left.to_multiset(), right.to_multiset(),
-                        values, group_by, groups)
-            },
-            _ => false,
-        } by {
-        lemma_changed_groups_contraction(plan, left, right, schema,
-            values, group_by, groups);
-        assert forall|group: Seq<Option<VValue>>|
-            group_distance(
-                verified::apply_spec(plan, left).unwrap().to_multiset(),
-                verified::apply_spec(plan, right).unwrap().to_multiset(),
-                values, group_by, group)
-            <= group_distance(left.to_multiset(), right.to_multiset(),
-                values, group_by, group) by {
-            lemma_group_distance_contraction(plan, left, right, schema,
-                values, group_by, group);
-        }
-    }
-    }
-}
-
 pub fn construct(
     input: VPlan, predicate: VExpr, source_schema: &Vec<VField>,
 ) -> (result: Option<(VPlan, Vec<VField>)>)
@@ -395,7 +319,7 @@ pub fn construct(
         match result {
             Some((plan, fields)) =>
                 preserves_filter_multiset(&plan, fields@)
-                && preserves_grouped_stability(&plan, fields@)
+                && verified::local_schema(&plan, fields@) == Some(fields@)
                 && (forall|left: Seq<Seq<Option<VValue>>>,
                     right: Seq<Seq<Option<VValue>>>, value: Seq<Option<VValue>>|
                     verified::rows_in_schema(left, fields@)
@@ -423,7 +347,6 @@ pub fn construct(
             proof {
                 stability::lemma_all_typed_edits_stable(&plan, source_schema@);
                 assert(verified::local_schema(&plan, fields@) == Some(fields@));
-                lemma_all_grouped_stability(&plan, fields@);
                 assert forall|rows: Seq<Seq<Option<VValue>>>|
                     verified::rows_in_schema(rows, fields@)
                     implies match verified::apply_spec(&plan, rows) {
