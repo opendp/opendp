@@ -254,7 +254,7 @@ def c_to_py(value: Any) -> Any:
             finally:
                 unwrap(release(owner), ctypes.c_void_p)
 
-        # Polars and function outputs retain their existing representation.
+        # Function outputs retain their existing ownership-transfer representation.
         ffi_slice = object_as_slice(value)
         try:
             return _slice_to_py(ffi_slice, runtime_type)
@@ -340,12 +340,26 @@ def _supports_owned_slice(type_name: Union[RuntimeType, str]) -> bool:
     """Select only the representations supported by the scratch-owner API."""
     primitives = set(ATOM_MAP) - {"AnyMeasurementPtr", "AnyTransformationPtr"}
     if isinstance(type_name, str):
-        return type_name in primitives | {"String", "BitVector", "ExtrinsicObject"}
+        return type_name in primitives | {
+            "String",
+            "BitVector",
+            "ExtrinsicObject",
+            "Expr",
+            "LazyFrame",
+            "ExprPlan",
+            "Bound",
+            "Bounds",
+            "Margin",
+            "Series",
+            "DataFrame",
+        }
     if type_name.origin == "Vec":
         return type_name.args[0] in primitives | {
             "String",
             "ExtrinsicObject",
             "AnyObject",
+            "Expr",
+            "Bound",
         }
     if type_name.origin == "HashMap":
         return True
@@ -950,7 +964,12 @@ def _slice_to_margin(raw: FfiSlicePtr):
 
     invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(
+            ctypes.cast(
+                ptr_data[0],
+                ctypes.POINTER(AnyObject) if raw._object_pointers else AnyObjectPtr,
+            )
+        ),
         max_length=_from_optional_u32_void_ptr(ptr_data[1]),
         max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
         invariant=invariant.value.decode() if invariant.value else None,  # type: ignore[arg-type]
@@ -995,7 +1014,12 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     return Bound(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(
+            ctypes.cast(
+                ptr_data[0],
+                ctypes.POINTER(AnyObject) if raw._object_pointers else AnyObjectPtr,
+            )
+        ),
         per_group=_from_optional_u32_void_ptr(ptr_data[1]),
         num_groups=_from_optional_u32_void_ptr(ptr_data[2]),
     )

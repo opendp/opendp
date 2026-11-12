@@ -1,13 +1,21 @@
-//! Ownership-safe scratch views for R. The legacy slice API remains unchanged.
+//! Ownership-safe scratch views. The legacy slice API remains unchanged.
 
 use std::any::Any;
 
 use super::*;
 
+#[cfg(feature = "polars")]
+#[path = "owned_polars.rs"]
+mod owned_polars;
+
 /// Opaque owner of an FfiSlice header and its scratch allocations.
 ///
 /// The source AnyObject is borrowed, not retained: it must outlive this owner
-/// and every use of the view. All view pointers are read-only. Child AnyObjects
+/// and every use of the view. View pointers are read-only, except for the
+/// owner-allocated ArrowArray/ArrowSchema scratch headers: Arrow C consumers may
+/// move/release their payloads and mark the headers released. These headers use
+/// interior mutability; the borrowed source is never mutated. The owner must
+/// still free the header boxes, even after payload consumption. Child AnyObjects
 /// and pointer arrays belong to this owner and must not be freed separately.
 pub struct FfiSliceOwner {
     view: FfiSlice,
@@ -51,6 +59,14 @@ impl FfiSliceOwner {
             }
             TypeContents::VEC(element_id) => {
                 let element = Type::of_id(element_id)?;
+                #[cfg(feature = "polars")]
+                if element == Type::of::<Expr>() {
+                    owner.polars_vector(obj.downcast_ref::<Vec<Expr>>()?);
+                    return Ok(owner);
+                } else if element == Type::of::<Bound>() {
+                    owner.polars_vector(obj.downcast_ref::<Vec<Bound>>()?);
+                    return Ok(owner);
+                }
                 if element == Type::of::<String>() {
                     let pointers = obj
                         .downcast_ref::<Vec<String>>()?
@@ -139,6 +155,11 @@ impl FfiSliceOwner {
                     dispatch!(hashmap, [(key, @hashable), (value, @primitives)], (obj, &mut owner))?;
                 }
             }
+            #[cfg(feature = "polars")]
+            TypeContents::PLAIN(
+                "Expr" | "LazyFrame" | "ExprPlan" | "Bound" | "Bounds" | "Margin" | "Series"
+                | "DataFrame",
+            ) => owner.polars_plain(obj)?,
             TypeContents::PLAIN("BitVector" | "ExtrinsicObject") => {
                 owner.view = borrowed_legacy(obj)?;
             }
@@ -231,7 +252,10 @@ fn hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
 /// Strings use C strings (embedded NUL is an error); tuples use field pointer
 /// arrays. Maps use pointers to owned key/value vector AnyObjects.
 /// Vec<AnyObject> uses an array of borrowed AnyObject pointers, NOT contiguous
-/// AnyObjects. Other primitive data is borrowed directly from obj.
+/// AnyObjects. With Polars enabled, Vec<Expr>, Vec<Bound>, and Bounds likewise
+/// use pointer arrays, but their child AnyObjects are owned scratch clones.
+/// Polars fields, serialization, and Arrow views retain the legacy layouts.
+/// Other primitive data is borrowed directly from obj.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_as_slice_owned(
     obj: *const AnyObject,
@@ -240,6 +264,8 @@ pub extern "C" fn opendp_data__object_as_slice_owned(
 }
 
 /// Borrow the owner's read-only header. Do not pass it to slice_free.
+/// Arrow payload consumers may mutate only the scratch Arrow headers described
+/// on FfiSliceOwner; do not pass these views to legacy arrow_array_free.
 /// The header and everything it references expire when owner is freed;
 /// the source AnyObject must also remain alive throughout their use.
 #[unsafe(no_mangle)]
