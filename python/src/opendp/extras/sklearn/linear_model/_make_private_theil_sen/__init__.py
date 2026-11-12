@@ -175,8 +175,12 @@ def make_private_theil_sen(
     if budget == 0:
         raise ValueError("d_out is too small to allocate two positive stage budgets")
     compositor = compose(budget)
-    slope_candidates = np.unique(np.linspace(slope_bounds[0], slope_bounds[1], _CANDIDATE_COUNT))
-    intercept_candidates = np.unique(np.linspace(intercept_bounds[0], intercept_bounds[1], _CANDIDATE_COUNT))
+    slope_candidates = np.unique(
+        np.linspace(slope_bounds[0], slope_bounds[1], _CANDIDATE_COUNT)
+    )
+    intercept_candidates = np.unique(
+        np.linspace(intercept_bounds[0], intercept_bounds[1], _CANDIDATE_COUNT)
+    )
     slopes = make_pairwise_slopes(input_domain, input_metric)
     slope_measurement = dp.binary_search_chain(
         lambda scale: (
