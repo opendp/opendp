@@ -1191,6 +1191,13 @@ class LazyFrameQuery:
         :param cuts: dictionary of column names and bin edges for numerical columns
         :param table: ContingencyTable from prior release
         :param algorithm: configuration for internal estimation algorithm
+
+        Why honest-but-curious?
+        -----------------------
+        A reused table can contain mutable models and callable query operators.
+        Reuse only OpenDP-produced tables without modifying these internals.
+        Custom algorithms must account for all private-data queries.
+        Custom estimators must use only DP releases and public inputs.
         """
         from .contingency_table import ContingencyTableQuery
 

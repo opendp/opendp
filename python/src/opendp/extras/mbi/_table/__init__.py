@@ -236,8 +236,13 @@ def make_contingency_table(
     :param d_out: upper bound on the privacy loss
     :param keys: dictionary of column names and unique categories
     :param cuts: dictionary of column names and left-open bin edges
-    :param table: ContingencyTable from prior release; requires "honest-but-curious"
+    :param table: ContingencyTable from prior release
     :param algorithm: configuration for internal estimation algorithm
+
+    Why honest-but-curious?
+    -----------------------
+    A reused table can contain mutable models and callable query operators.
+    Reuse only OpenDP-produced tables without modifying these internals.
     """
     if table is not None:
         assert_features("honest-but-curious")

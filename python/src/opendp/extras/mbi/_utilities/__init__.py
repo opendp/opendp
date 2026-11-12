@@ -104,7 +104,11 @@ ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 class Algorithm(ABC):
     """Base class for configuration of contingency table algorithms.
 
-    Custom subclasses and estimators require "honest-but-curious".
+    Why honest-but-curious?
+    -----------------------
+    Custom algorithms must account for every private-data query.
+    Custom estimators must depend only on DP releases and public inputs.
+    Neither may use external private state, side channels, or data-dependent exceptions.
     """
 
     estimator: Callable = mirror_descent
@@ -113,7 +117,6 @@ class Algorithm(ABC):
     Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
     Any function matching the signature of ``mirror_descent``
     can be used to customize how the MarkovRandomField is optimized/estimated.
-    Custom estimators require enabling "honest-but-curious".
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
     oneway: OnewayType = ONEWAY_ALL
