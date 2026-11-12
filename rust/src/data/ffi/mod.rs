@@ -1034,7 +1034,7 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 /// * `this` - A pointer to the string to free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
-    util::into_owned(this).map(|_| ()).into()
+    util::into_string(this).map(|_| ()).into()
 }
 
 #[bootstrap(
