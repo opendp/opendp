@@ -290,11 +290,11 @@ impl CertifiedTableProject {
     pub fn invoke(&self, input: &VTable) -> (result: Result<VTable, ()>)
         ensures self.valid() ==> match result {
             Ok(output) =>
-                domain::table_member(input, self.input_rules@)
-                    && domain::table_member(&output, self.output_rules@)
+                domain::table_member(input, self.input_rules_spec())
+                    && domain::table_member(&output, self.output_rules_spec())
                     && self.result_spec(verified::rows_view(input.rows@))
                         == Ok(verified::rows_view(output.rows@)),
-            Err(_) => !domain::table_member(input, self.input_rules@),
+            Err(_) => !domain::table_member(input, self.input_rules_spec()),
         },
     {
         if !domain::check_table(input, &self.input_rules) {
