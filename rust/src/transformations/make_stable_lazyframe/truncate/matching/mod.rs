@@ -1,12 +1,7 @@
 use std::collections::HashSet;
 
-use crate::{
-    error::Fallible,
-    metrics::Bound,
-    polars::literal_value_of,
-    traits::InfAdd,
-    transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
-};
+use super::super::group_by::is_permutation_equivariant;
+use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
@@ -238,23 +233,27 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             // account for distinction between gt and ge
             let threshold_value = threshold.inf_add(&offset)?;
 
-            let num_groups = match_num_groups_predicate(
-                function.as_ref(),
-                partition_by,
-                identifier,
-                threshold_value,
-            )?;
             let per_group = match_per_group_predicate(
                 function.as_ref(),
                 partition_by,
                 identifier,
                 threshold_value,
             )?;
+            let num_groups = if per_group.is_none() {
+                match_num_groups_predicate(
+                    function.as_ref(),
+                    partition_by,
+                    identifier,
+                    threshold_value.saturating_sub(1),
+                )?
+            } else {
+                None
+            };
 
             let Some(bound) = num_groups.or(per_group) else {
                 return fallible!(
                     MakeTransformation,
-                    "expected a predicate that limits per_group contributions (via int_range) or num_groups contributions (via rank). Found {:?}",
+                    "expected per_group truncation via a trusted permutation or sort-by ranks, or num_groups truncation via dense rank. Found {:?}",
                     function
                 );
             };
@@ -308,6 +307,13 @@ fn match_num_groups_predicate(
         );
     };
 
+    fn strip_alias(expr: &Expr) -> &Expr {
+        match expr {
+            Expr::Alias(inner, _) => strip_alias(inner),
+            other => other,
+        }
+    }
+
     let by = match input_item.clone() {
         // Treat as_struct as a special case that represents multiple columns.
         // Could still actually have a struct column via to_struct(to_struct(...)).
@@ -323,9 +329,9 @@ fn match_num_groups_predicate(
                 input: hash_input,
                 function: FunctionExpr::Hash(_, _, _, _),
                 ..
-            }) = input.get(0)
+            }) = input.first().map(strip_alias)
             {
-                if hash_input.get(0) == input.get(1) {
+                if hash_input.first() == input.get(1).map(strip_alias) {
                     let Some(Expr::Function {
                         input: true_input,
                         function: FunctionExpr::AsStruct,
@@ -360,43 +366,25 @@ fn match_num_groups_predicate(
 /// when grouped by the non-identifier columns in `partition_by`.
 #[proven]
 fn match_per_group_predicate(
-    mut enumeration: &Expr,
+    enumeration: &Expr,
     partition_by: &Vec<Expr>,
     identifier: &Expr,
     threshold: u32,
 ) -> Fallible<Option<Bound>> {
-    // reorderings of an enumeration are still enumerations
-    match enumeration {
-        Expr::Function {
-            input, function, ..
-        } => {
-            // FunctionExprs that may reorder data
-            let is_reorder = match function {
-                FunctionExpr::Reverse => true,
-                FunctionExpr::Random { method, .. } => {
-                    // since method is not public, we can't match on the enum directly.
-                    // however, we can convert it to a string and match on that.
-                    let method: &'static str = method.into();
-                    method == "shuffle"
-                }
-                _ => false,
-            };
-
-            if is_reorder {
-                enumeration = input
-                    .get(0)
-                    .ok_or_else(|| err!(MakeTransformation, "expected one input"))?;
-            }
-        }
-        Expr::SortBy { expr, by, .. } => {
-            by.iter()
-                .try_for_each(|key| check_infallible(key, Resize::Ban))?;
-            enumeration = expr.as_ref()
-        }
-        _ => (),
-    };
-
-    if enumeration.ne(&int_range(lit(0), len(), 1, DataType::Int64)) {
+    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    if enumeration == &range {
+        return fallible!(
+            MakeTransformation,
+            "per-group truncation requires a full trusted random permutation; physical first/last are not stable under unordered identifier metrics."
+        );
+    }
+    let (trusted, one_based) =
+        if crate::polars::permute::match_permute(enumeration)?.is_some_and(|data| data == &range) {
+            (true, false)
+        } else {
+            (match_ordinal_rank(enumeration, &range)?, true)
+        };
+    if !trusted {
         return Ok(None);
     }
     // we now know this is a per group predicate,
@@ -417,7 +405,51 @@ fn match_per_group_predicate(
 
     Ok(Some(Bound {
         by,
-        per_group: Some(threshold),
+        per_group: Some(if one_based {
+            threshold.saturating_sub(1)
+        } else {
+            threshold
+        }),
         num_groups: None,
     }))
+}
+
+fn match_ordinal_rank(enumeration: &Expr, range: &Expr) -> Fallible<bool> {
+    let Expr::Function {
+        input,
+        function: FunctionExpr::Rank { options, .. },
+    } = enumeration
+    else {
+        return Ok(false);
+    };
+    if options.method != RankMethod::Ordinal {
+        return Ok(false);
+    }
+    let [
+        Expr::Function {
+            input: fields,
+            function: FunctionExpr::AsStruct,
+        },
+    ] = input.as_slice()
+    else {
+        return Ok(false);
+    };
+    let Some((random_priority, sort_keys)) = fields.split_last() else {
+        return Ok(false);
+    };
+    let Expr::Alias(random_priority, _) = random_priority else {
+        return Ok(false);
+    };
+    if !crate::polars::permute::match_permute(random_priority)?.is_some_and(|data| data == range) {
+        return Ok(false);
+    }
+    for key in sort_keys {
+        if !is_permutation_equivariant(key) {
+            return fallible!(
+                MakeTransformation,
+                "SortBy truncation keys must be permutation-equivariant expressions."
+            );
+        }
+    }
+    Ok(true)
 }

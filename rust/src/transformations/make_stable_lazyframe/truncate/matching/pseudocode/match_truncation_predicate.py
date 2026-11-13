@@ -53,16 +53,23 @@ def match_truncation_predicate(
             offset
         )  # |\label{line:threshold_value}|
 
-        num_groups = match_num_groups_predicate(
-            over.function, over.partition_by, identifier, threshold_value
-        )
         per_group = match_per_group_predicate(
             over.function, over.partition_by, identifier, threshold_value
+        )
+        num_groups = (
+            match_num_groups_predicate(
+                over.function,
+                over.partition_by,
+                identifier,
+                threshold_value.saturating_sub(1),  # dense ranks start at 1
+            )
+            if per_group is None
+            else None
         )
 
         if num_groups is None and per_group is None:  # |\label{line:check_bounds}|
             raise ValueError(
-                f"expected a predicate that limits per_group contributions (via int_range) or num_groups contributions (via rank). Found {over.function}"
+                f"expected a trusted per_group enumeration or dense-rank num_groups truncation. Found {over.function}"
             )
 
         return [num_groups or per_group]  # |\label{line:return}|

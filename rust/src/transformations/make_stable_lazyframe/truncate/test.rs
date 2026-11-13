@@ -210,8 +210,8 @@ fn test_truncate_computed_key_bound_after_group_by() -> Fallible<()> {
     assert!(output_bounds.0.iter().all(|b| !b.by.contains(&key)));
     let materialized_bound = output_bounds.get_bound(&HashSet::from([col("A")]));
     assert_eq!(materialized_bound.per_group, Some(1));
-    // The matcher conservatively interprets <= 4 as an upper bound of 5.
-    assert_eq!(materialized_bound.num_groups, Some(5));
+    // Dense ranks start at one, so <= 4 bounds the number of groups to four.
+    assert_eq!(materialized_bound.num_groups, Some(4));
     let recomputed_bound = output_bounds.get_bound(&HashSet::from([key.clone()]));
     assert!(recomputed_bound.per_group.is_none_or(|bound| bound >= 4));
 
@@ -318,7 +318,7 @@ fn test_truncate_plain_key_bound_after_group_by() -> Fallible<()> {
 
     let bound = t.map(&1)?.get_bound(&HashSet::from([col("A")]));
     assert_eq!(bound.per_group, Some(1));
-    assert_eq!(bound.num_groups, Some(5));
+    assert_eq!(bound.num_groups, Some(4));
     Ok(())
 }
 
@@ -359,8 +359,8 @@ fn test_truncate_materializes_each_bound_grouping_subset() -> Fallible<()> {
 
     let bounds = t.map(&1)?;
     let subset_bound = bounds.get_bound(&HashSet::from([col("A")]));
-    // The <= 1 predicate receives the same conservative offset.
-    assert_eq!(subset_bound.num_groups, Some(2));
+    // Dense ranks start at one, so <= 1 retains at most one group.
+    assert_eq!(subset_bound.num_groups, Some(1));
     assert_eq!(subset_bound.per_group, None);
     let full_bound = bounds.get_bound(&HashSet::from([col("A"), col("C")]));
     assert_eq!(full_bound.per_group, Some(1));
@@ -369,5 +369,75 @@ fn test_truncate_materializes_each_bound_grouping_subset() -> Fallible<()> {
     // per (A + B, C). Four different C values still contribute to output A.
     let output = t.invoke(&lf)?.group_by([col("A")]).agg([len()]).collect()?;
     assert_eq!(output.column("len")?.u32()?.get(0), Some(4));
+    Ok(())
+}
+
+#[test]
+fn test_truncate_domain_requires_permutation_invariant_aggregations() -> Fallible<()> {
+    let domain = DslPlanDomain::new(vec![
+        SeriesDomain::new("ID", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+        SeriesDomain::new("integer", AtomDomain::<i64>::default()),
+    ])?;
+    for agg in [
+        col("value").first(),
+        col("value").mean(),
+        col("value").sum(),
+        col("value").sort(Default::default()).mean(),
+    ] {
+        assert!(
+            truncate_domain(
+                domain.clone(),
+                &Truncation::GroupBy {
+                    keys: vec![col("ID")],
+                    aggs: vec![agg],
+                }
+            )
+            .is_err()
+        );
+    }
+    // Sorting integers does not establish a permutation-invariance proof
+    // for an order-sensitive reducer. Integer sums are invariant.
+    assert!(
+        truncate_domain(
+            domain.clone(),
+            &Truncation::GroupBy {
+                keys: vec![col("ID")],
+                aggs: vec![col("integer").sort(Default::default()).mean()],
+            }
+        )
+        .is_err()
+    );
+    assert!(
+        truncate_domain(
+            domain,
+            &Truncation::GroupBy {
+                keys: vec![col("ID")],
+                aggs: vec![col("integer").sum()],
+            }
+        )
+        .is_ok()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_truncate_rejects_floating_grouping_representatives() -> Fallible<()> {
+    let domain = DslPlanDomain::new(vec![
+        SeriesDomain::new("ID", AtomDomain::<i64>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+    ])?;
+    for keys in [vec![col("ID"), col("value")], vec![col("value")]] {
+        assert!(
+            truncate_domain(
+                domain.clone(),
+                &Truncation::GroupBy {
+                    keys,
+                    aggs: vec![len()],
+                }
+            )
+            .is_err()
+        );
+    }
     Ok(())
 }

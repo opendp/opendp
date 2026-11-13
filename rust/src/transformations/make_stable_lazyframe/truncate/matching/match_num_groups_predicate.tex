@@ -47,8 +47,9 @@ None
     Special consideration is made for structs, which are considered multiple grouping columns.
 
     Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
-    This effectively randomizes the ranking of the grouping columns, as the ranking is based on a lexicographic ordering.
-    and gives in effect a random sample of grouping columns.
+    Field aliases are ignored when checking this relationship: they prevent duplicate
+    field names in Polars without changing the values.
+    This deterministically orders grouping columns by hash and then by the original keys; it does not produce a uniformly random sample.
     The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
     which prevents different combinations of grouping keys from being assigned the same rank,
     preventing more distinct groups being kept than is permitted.
@@ -56,7 +57,7 @@ None
     This predicate corresponds to a \texttt{num\_groups} truncation predicate,
     because the over expression groups by the \texttt{identifier} column,
     and within each group, a dense ranking is applied to unique combinations of the grouping columns.
-    If the only rows kept are those corresponding to grouping keys assigned dense ranks less than \texttt{threshold},
+    If the only rows kept are those corresponding to grouping keys assigned dense ranks at most \texttt{threshold},
     then each user identifier will have at most \texttt{threshold} unique combinations of the grouping columns
     after filtering by the predicate.
 

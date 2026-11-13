@@ -33,13 +33,12 @@ and hence reduce the amount of noise required to meet a given privacy guarantee.
             ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
 
-By default, ``truncate_per_group`` takes a random sample of records
-per-identifier, per-group. To choose which records you’d like to keep,
-you can also set ``keep`` to ``'first'``, ``'last'``, or an instance of
-``SortBy``. ``'first'`` is the most computationally efficient, but may
-bias your estimates if natural order is significant. The following
-demonstrates the sort, which prefers records with lower ``ILOSTAT``
-status, when the individual worked for pay or profit.
+``truncate_per_group`` takes a uniform random sample of records
+per-identifier, per-group using OpenDP's random source. Physical ``'first'``
+and ``'last'`` are not stable under an unordered identifier metric and are
+rejected. ``SortBy`` can prioritize rows by one or more keys, with
+cryptographically random tie-breaking. Multiple keys must use the same sort
+direction, and custom null placement is not supported.
 
 .. tab-set::
 
@@ -51,11 +50,7 @@ status, when the individual worked for pay or profit.
             >>> query = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99)
-            ...     .truncate_per_group(
-            ...         10, keep=dp.polars.SortBy(pl.col("ILOSTAT"))
-            ...     )
-            ...     # ...is equivalent to:
-            ...     # .filter(pl.int_range(pl.len()).sort_by(pl.col.ILOSTAT).over("PIDENT") < 10)
+            ...     .truncate_per_group(10)
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()
@@ -85,8 +80,8 @@ the statistics of interest.
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .group_by(pl.col.PIDENT)  # truncation begins here
             ...     .agg(
-            ...         pl.col.HWUSUAL.mean()
-            ...     )  # arbitrary expressions can be used here
+            ...         pl.col.HWUSUAL.dp.permute().mean()
+            ...     )  # a uniform permutation makes this mean stable under unordered ids
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()

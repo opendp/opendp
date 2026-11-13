@@ -53,7 +53,7 @@ def _query(
     )
     query = context.query()
     if global_truncation:
-        query = query.truncate_per_group(NUM_GROUPS, by=[], keep="first")
+        query = query.truncate_per_group(NUM_GROUPS, by=[], keep="sample")
     if filter_at == "before":
         query = query.filter(pl.col("B") >= 0)
     if bound_source == "truncate":
