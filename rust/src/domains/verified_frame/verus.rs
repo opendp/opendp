@@ -6,13 +6,13 @@ use vstd::multiset::Multiset;
 
 verus! {
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, StructuralEq)]
 pub enum VCellRange {
     Int { lower: Option<i64>, upper: Option<i64> },
     Bool { min: Option<bool>, max: Option<bool> },
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, StructuralEq)]
 pub struct VColumnRule {
     pub nullable: bool,
     pub range: VCellRange,

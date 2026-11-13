@@ -175,6 +175,7 @@ impl CertifiedTableProject {
                 return None;
             }
             proof {
+                assert(output_rules@[i as int] == input_rules@[index as int]);
                 assert forall|k: int| #![trigger exprs@[k]] 0 <= k < i + 1
                     implies match verified::project::identity_column_spec(&exprs@[k]) {
                         Some(selected) => selected < input_rules@.len()
