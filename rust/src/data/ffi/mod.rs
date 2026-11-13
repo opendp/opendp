@@ -21,6 +21,12 @@ use polars_arrow::ffi::{
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
+mod owned;
+pub use owned::{
+    FfiSliceOwner, opendp_data__object_as_slice_owned, opendp_data__slice_owner_free,
+    opendp_data__slice_owner_view,
+};
+
 #[cfg(feature = "polars")]
 mod polars;
 use bitvec::slice::BitSlice;
