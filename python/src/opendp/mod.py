@@ -29,6 +29,7 @@ import json
 import warnings
 
 from opendp._lib import (
+    _make_finalizer,
     AnyMeasurement,
     AnyTransformation,
     AnyDomain,
@@ -286,15 +287,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)):  # type: ignore[misc]
 
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
-    def __del__(self):
-        try:
-            from opendp.core import _measurement_free
-
-            _measurement_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_core___measurement_free")
 
     def __repr__(self) -> str:
         return f"""Measurement(
@@ -427,15 +420,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)):  # type: ignore[misc]
         """
         return self.input_domain.carrier_type
 
-    def __del__(self):
-        try:
-            from opendp.core import _odometer_free
-
-            _odometer_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # ImportError: sys.meta_path is None, Python is likely shutting down
-            # TypeError: similar setting as above
-            pass
+    __del__ = _make_finalizer("opendp_core___odometer_free")
 
     def __repr__(self) -> str:
         return f"""Odometer(
@@ -687,15 +672,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)):  # type: ignore[misc]
 
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
-    def __del__(self):
-        try:
-            from opendp.core import _transformation_free
-
-            _transformation_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_core___transformation_free")
 
     def __repr__(self) -> str:
         return f"""Transformation(
@@ -782,15 +759,7 @@ class Function(ctypes.POINTER(AnyFunction)):  # type: ignore[misc]
 
         return function_eval(self, arg)
 
-    def __del__(self):
-        try:
-            from opendp.core import _function_free
-
-            _function_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_core___function_free")
 
     def __iter__(self):
         raise ValueError("Function does not support iteration")
@@ -853,15 +822,7 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
 
         return domain_debug(self)
 
-    def __del__(self):
-        try:
-            from opendp.domains import _domain_free
-
-            _domain_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_domains___domain_free")
 
     def __eq__(self, other) -> bool:
         from opendp.domains import _domain_equal
@@ -1071,15 +1032,7 @@ class Metric(ctypes.POINTER(AnyMetric)):  # type: ignore[misc]
 
         return metric_debug(self)
 
-    def __del__(self):
-        try:
-            from opendp.metrics import _metric_free
-
-            _metric_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_metrics___metric_free")
 
     def __eq__(self, other) -> bool:
         from opendp.metrics import _metric_equal
@@ -1211,15 +1164,7 @@ class Measure(ctypes.POINTER(AnyMeasure)):  # type: ignore[misc]
 
         return measure_debug(self)
 
-    def __del__(self):
-        try:
-            from opendp.measures import _measure_free
-
-            _measure_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_measures___measure_free")
 
     def __eq__(self, other):
         from opendp.measures import _measure_equal
