@@ -25,25 +25,30 @@ def match_num_groups_predicate(
 
     input_item = input[0]
 
+    def strip_alias(expr):
+        while isinstance(expr, Expr.Alias):
+            expr = expr.expr
+        return expr
+
     # Treat as_struct as a special case that represents multiple columns.
     if isinstance(input_item, Expr.Function) and isinstance(
         input_item.function, FunctionExpr.AsStruct
     ):  # |\label{line:extract_grouping_columns}|
-        # If the first field is a hash of the second field,
-        # then interpret the grouping columns as the hash input.
-        # The second field disambiguates hash collisions when ranking.
-        if isinstance(input_item, Expr.Function) and isinstance(
-            input_item.function, FunctionExpr.Hash
-        ):  # |\label{line:check_hash}|
-            hash_input = input_item.input
-            if hash_input.get(0) == input.get(1):
-                if not isinstance(hash_input.get(0), Expr.Function) or not isinstance(
-                    hash_input.get(0).function, FunctionExpr.AsStruct
-                ):
-                    raise f"expected hash input to be a struct, found {hash_input}"
-                input = hash_input.get(0)
-
-        by = set(input_item.input)
+        fields = input_item.input
+        # Hash and key fields may have distinct aliases to avoid name collisions.
+        if fields:
+            first = strip_alias(fields[0])
+            second = strip_alias(fields[1]) if len(fields) > 1 else None
+            if isinstance(first, Expr.Function) and isinstance(
+                first.function, FunctionExpr.Hash
+            ):  # |\label{line:check_hash}|
+                if first.input[0] == second:
+                    if not isinstance(second, Expr.Function) or not isinstance(
+                        second.function, FunctionExpr.AsStruct
+                    ):
+                        raise f"expected hash input to be a struct, found {first.input}"
+                    fields = second.input
+        by = set(fields)
     else:
         by = {input_item}
 

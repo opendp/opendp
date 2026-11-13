@@ -73,7 +73,7 @@ contributions to ten.
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .truncate_per_group(10)
             ...     # ...is equivalent to:
-            ...     # .filter(pl.int_range(pl.len()).over("PIDENT") < 10)
+            ...     # .filter(pl.int_range(pl.len()).dp.permute().over("PIDENT") < 10)
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()
@@ -87,9 +87,13 @@ contributions to ten.
             │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 80.0   │
             └─────────┴───────────┴─────────────────┴────────┘
 
-The ``.truncate_per_group(10)`` is equivalent to ``.filter(pl.int_range(pl.len()).over("PIDENT") < 10)``
+The ``.truncate_per_group(10)`` is equivalent to ``.filter(pl.int_range(pl.len()).dp.permute().over("PIDENT") < 10)``
 and returns the same scale parameters,
 but ``truncate_per_group`` is easier to read and write.
+
+To prioritize rows by a value instead of sampling uniformly, pass
+``keep=dp.polars.SortBy(pl.col("score"), descending=True)``.
+Rows with equal sort keys are selected with a cryptographically random tie-breaker.
 
 Previous examples with this dataset assumed the worst-case of 36
 contributed records per individual (one contribution per quarter for
@@ -123,10 +127,10 @@ number of records per quarter.
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .truncate_per_group(1, by=quarterly)
             ...     # ...is equivalent to:
-            ...     # .filter(pl.int_range(pl.len()).over("PIDENT", *quarterly) < 1)
+            ...     # .filter(pl.int_range(pl.len()).dp.permute().over("PIDENT", *quarterly) < 1)
             ...     .truncate_num_groups(10, by=quarterly)
             ...     # ...is roughly equivalent to:
-            ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") < 10)
+            ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") <= 10)
             ...     .group_by(quarterly)
             ...     .agg(
             ...         dp.len(signed=True),

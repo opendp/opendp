@@ -33,23 +33,27 @@ None
 \end{theorem}
 
 \begin{proof}
-    Reorderings of an enumeration, like reversal, shuffling and sorting are also valid enumerations,
-    so lines \ref{line:reordering_start}-\ref{line:reordering_end} ignore these reorderings and re-assign the enumeration to the input of the reordering.
+    The matcher accepts only a full trusted uniform permutation of
+    \texttt{int\_range(0, len)}, or ordinal ranks of a struct consisting
+    of permutation-equivariant sort keys (or invariant scalars) and a final
+    trusted uniform permutation.
+    Line \ref{line:check_enumeration} rejects other expressions.
 
-    Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
-    an error is only raised if the predicate is unambiguously a \texttt{num\_groups} truncation predicate.
-    This check happens on line \ref{line:check_enumeration}.
+    In the sorted case, each row has a distinct random tie-breaking priority.
+    The sort keys commute with input-row permutations and are infallible
+    and non-resizing, as checked on line \ref{line:sort-keys}. This
+    condition does not imply that each key is row-local: for example,
+    uniqueness tests can depend on other rows in the partition.
+    The enclosing window evaluates the ranking within each partition,
+    which contains the identifier. Consequently, changing one identifier's
+    rows cannot affect keys in another identifier's partition. The uniform
+    tie-breaker makes selection invariant in distribution under physical
+    input-row permutations.
 
-    Line \ref{line:partition} splits the partition by expressions into two sets,
-    one containing the \texttt{identifier} and the other containing the grouping columns.
-
-    This predicate corresponds to a \texttt{per\_group} truncation predicate,
-    because the over expression groups by both the \texttt{identifier} column and any expressions in \texttt{by},
-    and within each group, an enumeration is applied to count the number of rows.
-    If the only rows kept are those whose enumeration is less than \texttt{threshold},
-    then each user identifier will have at most \texttt{threshold} rows when their records are grouped by \texttt{by}.
-    Reorderings of the enumeration, like reversal, shuffling and sorting can be used to choose which records from each individual are kept.
-
-    Therefore the bound on user contributions constructed on line \ref{line:bound} is valid.
+    By line \ref{line:partition}, the window partitions rows by identifier
+    and the additional grouping expressions. Full permutations assign
+    distinct values $0,\ldots,n-1$; ordinal ranks assign $1,\ldots,n$.
+    Line \ref{line:bound} accounts for this offset when converting the
+    predicate threshold into a per-group contribution bound.
 \end{proof}
 \end{document}

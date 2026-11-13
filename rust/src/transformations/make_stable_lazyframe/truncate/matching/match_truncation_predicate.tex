@@ -49,7 +49,7 @@ None
     Therefore, if the ``over'' expression is a window expression, as checked on line \ref{line:check_over},
     then any further failures to match the truncation predicates can now be raised as errors.
 
-    \texttt{threshold\_value} on line \ref{line:threshold_value} is resolved to the literal u32 upper bound on contributions.
+    \texttt{threshold\_value} on line \ref{line:threshold_value} accounts for strict versus inclusive comparisons. Dense group ranks start at one, so their bound is reduced by one. Per-group ordinal ranks are also one-based and are adjusted by their own matcher.
 
     By the postconditions of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate},
     and \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate},

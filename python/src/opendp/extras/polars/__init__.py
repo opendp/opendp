@@ -749,25 +749,25 @@ _LAZY_EXECUTION_METHODS = {
 
 @dataclass
 class SortBy:
-    """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
+    """Priority ordering for :py:meth:`LazyFrameQuery.truncate_per_group`.
 
-    Follows the arguments in Polars' ``sort_by`` method.
+    Rows are sorted by these keys, with cryptographically random tie-breaking.
     """
 
     by: Any
     """Column(s) to sort by. Accepts expression input. Strings are parsed as column names."""
 
     descending: bool | Sequence[bool] = False
-    """Sort in descending order. When sorting by multiple columns, can be specified per column by passing a sequence of booleans."""
+    """Sort descending; multiple columns must share the same direction."""
 
     nulls_last: bool | Sequence[bool] = False
-    """Place null values last; can specify a single boolean applying to all columns or a sequence of booleans for per-column control."""
+    """Custom null ordering is not yet supported; this must be False."""
 
     multithreaded: bool = True
-    """Sort using multiple threads."""
+    """Compatibility option; ordinal ranking manages execution internally."""
 
     maintain_order: bool = False
-    """Whether the order should be maintained if elements are equal."""
+    """Compatibility option; ties are always broken randomly."""
 
 
 class LazyFrameQuery:
@@ -987,14 +987,16 @@ class LazyFrameQuery:
         self,
         k: int,
         by: list[Any] | None = None,
-        keep: Literal["sample", "first", "last"] | SortBy = "sample",
+        keep: Literal["sample"] | SortBy = "sample",
     ) -> LazyFrameQuery:
         """
         Limit the number of contributed rows per group.
 
         :param k: the number of rows to keep for each identifier and group
         :param by: optional, additional columns to group by
-        :param keep: which rows to keep for each identifier in each group
+        :param keep: ``"sample"`` selects rows uniformly at random.
+            ``SortBy(...)`` selects rows by priority, breaking ties uniformly
+            at random. Physical first/last selection is not supported.
         """
         input_metric = self._query._chain[1]
 
@@ -1008,20 +1010,43 @@ class LazyFrameQuery:
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
             raise ValueError("truncation is only valid when identifier is defined")
 
+        indices = pl.int_range(pl.len())
         if keep == "sample":
-            indexes = pl.int_range(pl.len()).shuffle()
-        elif keep == "first":
-            indexes = pl.int_range(pl.len())
-        elif keep == "last":
-            indexes = pl.int_range(pl.len()).reverse()
+            ranks = indices.dp.permute()
+            predicate = ranks.over(input_metric.identifier, *by or []) < k
         elif isinstance(keep, SortBy):
-            indexes = pl.int_range(pl.len()).sort_by(**asdict(keep))
-        else:
-            raise ValueError(
-                "keep must be 'sample', 'first', 'last' or SortBy"
-            )  # pragma: no cover
+            keys = [keep.by] if isinstance(keep.by, (str, pl.Expr)) else list(keep.by)
+            descending = keep.descending
+            if not isinstance(descending, bool):
+                flags = list(descending)
+                if len(flags) != len(keys) or len(set(flags)) != 1:
+                    raise ValueError("SortBy keys must use the same sort direction")
+                descending = flags[0]
 
-        return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
+            nulls_last = keep.nulls_last
+            if not isinstance(nulls_last, bool):
+                flags = list(nulls_last)
+                nulls_last = len(flags) != len(keys) or any(flags)
+            if nulls_last:
+                raise ValueError("SortBy does not support custom null placement")
+
+            # Struct ranking orders by priority, breaking ties with a trusted
+            # uniform permutation. The final field makes every tuple distinct.
+            fields = [
+                (pl.col(key) if isinstance(key, str) else key).alias(
+                    f"__opendp_sort_{i}"
+                )
+                for i, key in enumerate(keys)
+            ]
+            ranks = pl.struct(
+                *fields,
+                indices.dp.permute().alias("__opendp_tie"),
+            ).rank("ordinal", descending=descending)
+            predicate = ranks.over(input_metric.identifier, *by or []) <= k
+        else:
+            raise ValueError("keep must be 'sample' or SortBy(...)")
+
+        return self.filter(predicate)
 
     def truncate_num_groups(
         self,
@@ -1034,7 +1059,7 @@ class LazyFrameQuery:
 
         :param k: the number of groups to keep for each identifier
         :param by: when grouped by these grouping columns
-        :param keep: which groups to keep for each identifier
+        :param keep: how to order group keys; "sample" uses a deterministic hash priority
         """
         input_metric = self._query._chain[1]
 
@@ -1050,7 +1075,10 @@ class LazyFrameQuery:
 
         struct = pl.struct(*by)
         if keep == "sample":
-            ranks = pl.struct(struct.hash(), struct).rank("dense")
+            ranks = pl.struct(
+                struct.hash().alias("__opendp_hash"),
+                struct.alias("__opendp_key"),
+            ).rank("dense")
         elif keep == "first":
             ranks = struct.rank("dense", descending=False)
         elif keep == "last":
@@ -1060,7 +1088,7 @@ class LazyFrameQuery:
                 "keep must be 'sample', 'first' or 'last'"
             )  # pragma: no cover
 
-        return self.filter(ranks.over(input_metric.identifier) < k)
+        return self.filter(ranks.over(input_metric.identifier) <= k)
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
