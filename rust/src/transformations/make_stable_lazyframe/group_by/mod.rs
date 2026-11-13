@@ -1122,7 +1122,6 @@ fn inspect_function(
                 );
             }
             check_inputs!(Resize::Allow);
-            behavior = Unproven;
         }
 
         // Mode can return multiple values (ties) => resizes based on data.
