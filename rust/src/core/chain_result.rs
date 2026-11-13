@@ -28,6 +28,37 @@ pub(crate) fn chain_result<T, U, E>(
     }
 }
 
+/// Compose typed callbacks before their eventual erasure into OpenDP's
+/// Arc<dyn Fn> representation. Verus checks the actual executable call path,
+/// including both callbacks' contracts and Result short-circuiting.
+///
+/// The inner callback must be callable on this input; the outer callback is
+/// required only for successful outputs permitted by the inner contract.
+#[cfg_attr(verus_keep_ghost, verus_spec(output =>
+    requires
+        call_requires(inner, (input,)),
+        forall|middle: Result<M, E>| #![trigger call_ensures(inner, (input,), middle)]
+            call_ensures(inner, (input,), middle)
+            ==> match middle {
+                Ok(value) => call_requires(outer, (&value,)),
+                Err(_) => true,
+            },
+    ensures
+        exists|middle: Result<M, E>| #![trigger call_ensures(inner, (input,), middle)]
+            call_ensures(inner, (input,), middle)
+            && match middle {
+                Ok(value) => call_ensures(outer, (&value,), output),
+                Err(error) => output == Err(error),
+            },
+))]
+pub(crate) fn chain_callbacks<T, M, U, E>(
+    input: &T,
+    inner: impl Fn(&T) -> Result<M, E>,
+    outer: impl Fn(&M) -> Result<U, E>,
+) -> Result<U, E> {
+    chain_result(inner(input), outer)
+}
+
 #[cfg(test)]
 mod tests {
     use super::chain_result;

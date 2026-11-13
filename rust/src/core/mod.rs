@@ -70,7 +70,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 mod chain_result;
-use chain_result::chain_result;
+use chain_result::chain_callbacks;
 
 /// A mathematical function.
 pub struct Function<TI, TO> {
@@ -107,7 +107,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
     ) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| chain_result(function0(arg), |middle| function1(middle)))
+        Self::new_fallible(move |arg| chain_callbacks(arg, function0.as_ref(), function1.as_ref()))
     }
 }
 
@@ -183,7 +183,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
         PrivacyMap(Arc::new(move |d_in: &MI::Distance| {
-            chain_result(map0(d_in), |bound| map1(bound))
+            chain_callbacks(d_in, map0.as_ref(), map1.as_ref())
         }))
     }
 }
@@ -241,7 +241,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
         StabilityMap(Arc::new(move |d_in: &MI::Distance| {
-            chain_result(map0(d_in), |bound| map1(bound))
+            chain_callbacks(d_in, map0.as_ref(), map1.as_ref())
         }))
     }
 }
