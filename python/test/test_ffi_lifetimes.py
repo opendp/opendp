@@ -29,6 +29,42 @@ def test_transition_argument_conversion_error_does_not_free_borrowed_object():
     gc.collect()
 
 
+def test_retained_callback_queryable_outlives_producing_measurement():
+    dp.enable_features("contrib", "honest-but-curious")
+    rr = dp.m.make_randomized_response_bool(0.75)
+    saved = []
+    for _ in range(3):
+        adaptive = dp.c.make_adaptive_composition(
+            rr.input_domain, rr.input_metric, rr.output_measure, 1, [2.0, 2.0]
+        )
+        post = dp.new_function(lambda q: saved.append(q) or 0, int)
+        chained = dp.c.make_chain_pm(post, adaptive)
+        assert chained(True) == 0
+        del chained, post, adaptive
+        gc.collect()
+        assert isinstance(saved[0](rr), bool)
+        assert isinstance(saved[0](rr), bool)
+        with pytest.raises(dp.OpenDPException):
+            saved[0](rr)
+        saved.clear()
+        gc.collect()
+
+
+def test_borrowed_profile_conversion_owns_an_independent_clone():
+    import ctypes
+    from opendp._lib import AnyObject, AnyObjectPtr
+
+    dp.enable_features("contrib", "honest-but-curious")
+    profile = dp.new_privacy_profile(lambda epsilon: 1.0 if epsilon < 0.5 else 0.0)
+    borrowed = ctypes.cast(profile.curve, ctypes.POINTER(AnyObject))
+    copied = _convert.c_to_py(borrowed)
+    assert isinstance(copied.curve, AnyObjectPtr)
+    del borrowed, profile
+    gc.collect()
+    assert copied.delta(0.0) == 1.0
+    assert copied.delta(1.0) == 0.0
+
+
 def test_nested_conversion_error_does_not_free_source(monkeypatch):
     obj = _convert.py_to_c(42, AnyObjectPtr, "i32")
     raw = _convert._wrap_in_slice(obj, 1)
