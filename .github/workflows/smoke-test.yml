@@ -66,18 +66,6 @@ jobs:
 
       ### Quick checks good? Then slow checks:
 
-      # Add rust caching following example:
-      #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-      - uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       # Enables caching of compilation results via:
       #   https://github.com/marketplace/actions/sccache-action
       - name: Run sccache-cache

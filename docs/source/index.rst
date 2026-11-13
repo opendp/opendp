@@ -40,7 +40,6 @@ Some of the applications of OpenDP in healthcare, government, and tech include:
 
 * The `UN High Commissioner for Refugees (UNHCR) <https://www.unhcr.org>`_ used OpenDP to explore the creation of `synthetic microdata for refugee populations <https://microdata.unhcr.org/index.php/synthetic-data>`_.
 * The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ used OpenDP to prototype tools to `release income statistics <https://www.bfs.admin.ch/bfs/en/home/dscc/blog/2024-02-opendp.html>`_ and has built `Lomas <https://github.com/dscc-admin-ch/lomas>`_, a platform for remote data science that integrates with OpenDP.
-* `Oblivious <https://www.oblivious.com>`_ used OpenDP for major U.N. and telecom pilot projects as part of their `Antigranular <https://docs.antigranular.com/private-python/packages/opendp/>`_ data privacy platform.
 * `OpenMined <https://openmined.org>`_ used OpenDP as part of PySyft deployments with Microsoft and DailyMotion, with pilots at multiple national statistical organizations.
 * Researchers at `Microsoft <https://microsoft.com>`_ used OpenDP to construct a `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
 * Researchers at `Harvard Business School <https://www.hbs.edu/>`_ and `Microsoft <https://microsoft.com>`_ used OpenDP to create `a detailed atlas of internet usage in the US <https://www.nber.org/papers/w32932>`_ and found substantial disparities between urban and rural areas, and even within cities.
