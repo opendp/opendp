@@ -26,11 +26,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_measure_free",
     "_domain_free",
     // data
-    "object_as_slice",
-    "ffislice_of_anyobjectptrs",
     "slice_as_object",
     "str_free",
-    "slice_free",
     "object_free",
     "extrinsic_object_free",
     "fill_bytes",
@@ -38,7 +35,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "debias_randomized_response_bitvec",
     "as_array",
     // polars
-    "new_arrow_array",
     "series_domain",
     "_series_domain_get_element_domain",
     "_series_domain_get_name",
@@ -47,7 +43,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "enum_domain",
     "array_domain",
     "datetime_domain",
-    "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
     "_lazyframe_domain_get_columns",

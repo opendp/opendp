@@ -2,7 +2,7 @@ from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
-from opendp._lib import _ArrowArrayPtr, _OwnedFfiSliceHeader
+from opendp._lib import _OwnedFfiSliceOwner
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
@@ -205,7 +205,7 @@ def c_to_py(value: Any) -> Any:
     :return: copy of data in Python representation
     """
     if isinstance(value, ctypes.POINTER(AnyObject)):
-        from opendp._data import object_type, object_as_slice, slice_free
+        from opendp._data import object_type
 
         obj_type = object_type(value)
 
@@ -237,35 +237,28 @@ def c_to_py(value: Any) -> Any:
             return Queryable(value, query_type)
 
         runtime_type = RuntimeType.parse(obj_type)
-        # Functions transfer an independently allocated AnyFunction to Python.
-        # Every copied output uses the owner, so supported-type dispatch lives
-        # only in Rust rather than in a parallel Python whitelist.
-        if not (
-            isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function"
-        ):
-            create = lib.opendp_data__object_as_slice_owned
-            create.argtypes = [ctypes.POINTER(AnyObject)]
-            create.restype = FfiResult
-            view = lib.opendp_data__slice_owner_view
-            view.argtypes = [ctypes.c_void_p]
-            view.restype = FfiResult
-            release = lib.opendp_data__slice_owner_free
-            release.argtypes = [ctypes.c_void_p]
-            release.restype = FfiResult
-            owner = unwrap(create(value), ctypes.c_void_p)
-            try:
-                ffi_slice = unwrap(view(owner), FfiSlicePtr)
-                ffi_slice._object_pointers = True
-                return _slice_to_py(ffi_slice, runtime_type)
-            finally:
-                unwrap(release(owner), ctypes.c_void_p)
+        if isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function":
+            # Explicitly transfer a new AnyFunction handle, not a scratch view.
+            clone = lib.opendp_data__clone_function
+            clone.argtypes = [ctypes.POINTER(AnyObject)]
+            clone.restype = FfiResult
+            return unwrap(clone(value), Function)
 
-        # Function outputs retain their existing ownership-transfer representation.
-        ffi_slice = object_as_slice(value)
+        create = lib.opendp_data__object_as_slice_owned
+        create.argtypes = [ctypes.POINTER(AnyObject)]
+        create.restype = FfiResult
+        view = lib.opendp_data__slice_owner_view
+        view.argtypes = [ctypes.c_void_p]
+        view.restype = FfiResult
+        release = lib.opendp_data__slice_owner_free
+        release.argtypes = [ctypes.c_void_p]
+        release.restype = FfiResult
+        owner = unwrap(create(value), ctypes.c_void_p)
         try:
+            ffi_slice = unwrap(view(owner), FfiSlicePtr)
             return _slice_to_py(ffi_slice, runtime_type)
         finally:
-            slice_free(ffi_slice)
+            unwrap(release(owner), ctypes.c_void_p)
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
@@ -401,10 +394,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
         if type_name.origin == "NDArray":
             return _slice_to_numpy(raw, type_name)
-
-        if type_name.origin == "Function":
-            # TODO add test_convert.py unit test
-            return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
@@ -625,27 +614,11 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     inner_type_name = type_name.args[0]
 
     if inner_type_name in {"AnyObject", "Expr", "Bound"}:
-        from opendp._data import ffislice_of_anyobjectptrs
-
-        if raw._object_pointers:
-            # The owner keeps this array and its borrowed elements alive.
-            array = ctypes.cast(
-                raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
-            )[0 : raw.contents.len]
-            return list(map(c_to_py, array))
-
-        release = lib.opendp_data__ffislice_of_anyobjectptrs_free
-        release.argtypes = [FfiSlicePtr]
-        release.restype = FfiResult
-        pointers = ffislice_of_anyobjectptrs(raw)
-        try:
-            # Elements belong to the source object, even if conversion raises.
-            array = ctypes.cast(
-                pointers.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
-            )[0 : pointers.contents.len]
-            return list(map(c_to_py, array))
-        finally:
-            unwrap(release(pointers), ctypes.c_void_p)
+        # Both Rust output views and Python input slices contain borrowed pointers.
+        array = ctypes.cast(
+            raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+        )[0 : raw.contents.len]
+        return list(map(c_to_py, array))
 
     if inner_type_name == "ExtrinsicObject":
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[
@@ -774,11 +747,8 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
 
     if inner_type_names == ["PrivacyProfile", "f64"]:
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        if raw._object_pointers:
-            curve = ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))
-            return c_to_py(curve), delta.contents.value
-        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
-        return PrivacyProfile(curve), delta.contents.value
+        curve = ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))
+        return c_to_py(curve), delta.contents.value
 
     if inner_type_names == ["f64", "AnyObject"]:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
@@ -826,13 +796,6 @@ def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePt
     # so we can't allow their refcount to go to zero until ffislice is freed.
     ffislice.depends_on(keys, vals)
     return ffislice
-
-
-def _slice_to_function(raw: FfiSlicePtr) -> Function:
-    # for ε(α)-RDP curves
-    function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
-    # put the contents behind a new, python pointer
-    return ctypes.cast(ctypes.pointer(function), Function)
 
 
 def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
@@ -931,12 +894,7 @@ def _slice_to_margin(raw: FfiSlicePtr):
 
     invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
-        by=c_to_py(
-            ctypes.cast(
-                ptr_data[0],
-                ctypes.POINTER(AnyObject) if raw._object_pointers else AnyObjectPtr,
-            )
-        ),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         max_length=_from_optional_u32_void_ptr(ptr_data[1]),
         max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
         invariant=invariant.value.decode() if invariant.value else None,  # type: ignore[arg-type]
@@ -981,12 +939,7 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     return Bound(
-        by=c_to_py(
-            ctypes.cast(
-                ptr_data[0],
-                ctypes.POINTER(AnyObject) if raw._object_pointers else AnyObjectPtr,
-            )
-        ),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         per_group=_from_optional_u32_void_ptr(ptr_data[1]),
         num_groups=_from_optional_u32_void_ptr(ptr_data[2]),
     )
@@ -1032,19 +985,21 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array
-
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
-    raw = new_arrow_array(val.name)
-    # Establish both owners before to_arrow/export can raise. Storing integer
-    # addresses avoids a reference cycle back to the dependency-bearing slice.
-    raw.depends_on(
-        _OwnedFfiSliceHeader(ctypes.cast(raw, ctypes.c_void_p).value),
-        _ArrowArrayPtr(raw.contents.ptr),
-    )
+    create = lib.opendp_data__new_arrow_array_owned
+    create.argtypes = [ctypes.c_char_p]
+    create.restype = FfiResult
+    view = lib.opendp_data__slice_owner_view
+    view.argtypes = [ctypes.c_void_p]
+    view.restype = FfiResult
+
+    owner_ptr = unwrap(create(val.name.encode()), ctypes.c_void_p)
+    owner = _OwnedFfiSliceOwner(owner_ptr.value)
+    raw = unwrap(view(owner), FfiSlicePtr)
+    raw.depends_on(owner)  # Retain the owner even if PyArrow export fails.
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr = slice_array[0:2]
 

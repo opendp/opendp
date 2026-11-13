@@ -305,9 +305,6 @@ class AnyQueryable(ctypes.Structure):
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
     _type_ = FfiSlice
     _dependencies: MutableMapping = {}  # TODO: Tighten this
-    # Owned scratch views expose Vec<AnyObject> as borrowed pointer arrays.
-    _object_pointers: bool = False
-
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
         FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
@@ -317,16 +314,10 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
         _dependencies.pop(id(self), None)
 
 
-class _OwnedFfiSliceHeader(ctypes.c_void_p):
-    """Own just a Rust-allocated slice header, not its referenced buffers."""
+class _OwnedFfiSliceOwner(ctypes.c_void_p):
+    """Own Rust FFI input scratch, including unconsumed Arrow payloads."""
 
-    __del__ = _make_finalizer("opendp_data__slice_free")
-
-
-class _ArrowArrayPtr(ctypes.c_void_p):
-    """Own the Arrow input triple, including any unconsumed array payload."""
-
-    __del__ = _make_finalizer("opendp_data__arrow_array_free")
+    __del__ = _make_finalizer("opendp_data__slice_owner_free")
 
 
 class ExtrinsicObject(ctypes.Structure):
