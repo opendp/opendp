@@ -4,6 +4,7 @@ use polars::prelude::{DataType, NamedFrom, col, lit};
 use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
+#[cfg(not(feature = "polars-ffi"))]
 use crate::core::Domain;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
@@ -121,6 +122,7 @@ fn test_fill_nan_coercion() -> Fallible<()> {
             _ => unreachable!(),
         };
         assert!(!nan, "{expr:?}");
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(
             output.member(&transformation.invoke(&data.logical_plan)?)?,
             "{expr:?}"

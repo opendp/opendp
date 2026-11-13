@@ -1,8 +1,11 @@
+use polars::prelude::IntoLazy;
+#[cfg(not(feature = "polars-ffi"))]
 use polars::{
     df,
-    prelude::{IntoLazy, NamedFrom, col},
+    prelude::{NamedFrom, col},
 };
 
+#[cfg(not(feature = "polars-ffi"))]
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     measurements::make_private_lazyframe,
@@ -13,6 +16,38 @@ use crate::{
 use super::*;
 
 #[test]
+fn test_take_lazy_exhausts_shared_queryable() -> Fallible<()> {
+    let mut onceframe = OnceFrame::from(DataFrame::empty().lazy());
+    let mut alias = onceframe.clone();
+
+    let _: LazyFrame = onceframe.eval_internal(&ExtractLazyFrame)?;
+    let _: LazyFrame = alias.eval_internal(&TakeLazyFrame)?;
+
+    assert!(
+        onceframe
+            .eval_internal::<LazyFrame>(&TakeLazyFrame)
+            .is_err()
+    );
+    assert!(alias.eval_internal::<LazyFrame>(&ExtractLazyFrame).is_err());
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "polars-ffi")]
+fn test_rust_collect_unsupported() {
+    let onceframe = OnceFrame::from(DataFrame::empty().lazy());
+    assert!(
+        onceframe
+            .collect()
+            .unwrap_err()
+            .message
+            .unwrap()
+            .contains("unsupported")
+    );
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_dp_quantile() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "A",

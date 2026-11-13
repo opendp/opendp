@@ -172,6 +172,15 @@ impl From<LazyFrame> for ExprPlan {
 impl Domain for ExprDomain {
     type Carrier = ExprPlan;
 
+    #[cfg(feature = "polars-ffi")]
+    fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        fallible!(
+            NotImplemented,
+            "ExprDomain membership is unsupported with polars-ffi"
+        )
+    }
+
+    #[cfg(not(feature = "polars-ffi"))]
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
@@ -355,7 +364,17 @@ mod test {
                 margin: Margin::select().with_max_length(1),
             },
         };
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(domain.member(&plan)?);
+        #[cfg(feature = "polars-ffi")]
+        assert!(
+            domain
+                .member(&plan)
+                .unwrap_err()
+                .message
+                .unwrap()
+                .contains("unsupported")
+        );
         Ok(())
     }
 }

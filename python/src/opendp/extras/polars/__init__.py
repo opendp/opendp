@@ -644,11 +644,20 @@ class OnceFrame(object):
     def __init__(self, queryable):
         self.queryable = queryable
 
+    def _take_lazy(self):
+        """Internal: extract the plan and exhaust this OnceFrame.
+
+        Does not require "honest-but-curious", but callers must follow the
+        privacy requirements documented in :meth:`lazy`.
+        """
+        from opendp._data import _onceframe_take_lazy
+
+        return _onceframe_take_lazy(self.queryable)
+
     def collect(self):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
-        from opendp._data import onceframe_collect
-
-        return onceframe_collect(self.queryable)
+        df = self._take_lazy().collect()
+        return df.sample(n=df.height, shuffle=True)
 
     def lazy(self):
         """Extracts a ``LazyFrame`` from a ``OnceFrame``,
