@@ -2,10 +2,30 @@
 
 use super::*;
 use crate::{
-    core::{Domain, Function, StabilityMap, Transformation},
+    core::{CertifiedTransformationParts, Domain, Function, StabilityMap, Transformation},
     domains::{verified_frame::{kernel_schema, verified_rules}, verified_plan::filter_domain},
 };
 
+type VTableDomain = crate::domains::verified_plan::VFrameDomain;
+type VTableMetric = crate::metrics::SymmetricDistance;
+
+impl CertifiedTransformationParts<VTableDomain, VTableMetric, VTableDomain, VTableMetric>
+    for filter_proof::CertifiedTableFilter
+{
+    fn into_parts(self) -> (
+        Function<verified::VTable, verified::VTable>,
+        StabilityMap<VTableMetric, VTableMetric>,
+    ) {
+        (
+            Function::new_fallible(move |table: &verified::VTable| {
+                self.invoke(table).map_err(|_| {
+                    err!(MakeTransformation, "input outside certified filter domain")
+                })
+            }),
+            StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
+        )
+    }
+}
 
 /// Construct an OpenDP Transformation whose executed filter, type preservation,
 /// and unit symmetric stability are verified in Verus. Currently restricted
@@ -25,14 +45,8 @@ pub(super) fn make_stable_vtable_filter(
     let rules = verified_rules(&input_domain.series_domains)?;
     let certified = filter_proof::CertifiedTableFilter::new(predicate, &rules)
         .ok_or_else(|| err!(MakeTransformation, "invalid verified filter predicate"))?;
-    Transformation::new(
-        input_domain.clone(), metric.clone(), input_domain, metric,
-        Function::new_fallible(move |table: &verified::VTable| {
-            certified.invoke(table).map_err(|_| {
-                err!(MakeTransformation, "input outside certified filter domain")
-            })
-        }),
-        StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
+    Transformation::new_certified(
+        input_domain.clone(), metric.clone(), input_domain, metric, certified,
     )
 }
 

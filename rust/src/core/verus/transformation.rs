@@ -67,6 +67,66 @@ pub open spec fn valid_transformation<X, Y, DI, DO, E, ME>(
         }
 }
 
+/// Exact correspondence between a callback and its declared semantic model.
+///
+/// This is the only property the erased callback needs to retain: the
+/// transformation validity predicate is established for the *pair* of models,
+/// not stored separately in Function and StabilityMap.
+pub open spec fn realizes_callback<A, B, E>(
+    callback: spec_fn(A) -> Result<B, E>,
+    model: spec_fn(A) -> Result<B, E>,
+) -> bool {
+    forall|input: A| #[trigger] callback(input) == model(input)
+}
+
+/// A certified constructor uses the pre-erasure validity proof together with
+/// the call contracts of the two callbacks. No second transformation-specific
+/// validity certificate needs to survive in the runtime object.
+pub proof fn lemma_new_certified<X, Y, DI, DO, E, ME>(
+    input_member: spec_fn(X) -> bool,
+    output_member: spec_fn(Y) -> bool,
+    input_close: spec_fn(X, X, DI) -> bool,
+    payload_close: spec_fn(Y, Y, DO) -> bool,
+    output_is_infinite: spec_fn(DO) -> bool,
+    function_model: spec_fn(X) -> Result<Y, E>,
+    map_model: spec_fn(DI) -> Result<DO, ME>,
+    function: spec_fn(X) -> Result<Y, E>,
+    map: spec_fn(DI) -> Result<DO, ME>,
+)
+    requires
+        valid_transformation(
+            input_member, output_member, input_close, payload_close,
+            output_is_infinite, function_model, map_model),
+        realizes_callback(function, function_model),
+        realizes_callback(map, map_model),
+    ensures
+        valid_transformation(
+            input_member, output_member, input_close, payload_close,
+            output_is_infinite, function, map),
+{
+    assert forall|x: X|
+        #[trigger] input_member(x)
+        implies match function(x) {
+            Ok(y) => output_member(y),
+            Err(_) => true,
+        } by {
+        assert(function(x) == function_model(x));
+    }
+    assert forall|x: X, x_prime: X, d_in: DI|
+        input_member(x) && input_member(x_prime)
+            && #[trigger] input_close(x, x_prime, d_in)
+        implies match map(d_in) {
+            Ok(d_out) => result_close(
+                function(x), function(x_prime), d_out,
+                payload_close, output_is_infinite),
+            Err(_) => true,
+        } by {
+        assert(map(d_in) == map_model(d_in));
+        assert(function(x) == function_model(x));
+        assert(function(x_prime) == function_model(x_prime));
+    }
+}
+
 /// In the finite-distance case, an error and a success cannot be close.
 pub proof fn lemma_mixed_result_requires_infinity<Y, E, D>(
     y: Y,

@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::{
-    core::{Function, StabilityMap, Transformation},
+    core::{CertifiedTransformationParts, Function, StabilityMap, Transformation},
     domains::{verified_frame::kernel_schema, verified_plan::project_domain},
 };
 
@@ -31,6 +31,27 @@ pub(super) fn make_project(
 }
 
 
+impl CertifiedTransformationParts<
+    crate::domains::verified_plan::VFrameDomain,
+    crate::metrics::SymmetricDistance,
+    crate::domains::verified_plan::VFrameDomain,
+    crate::metrics::SymmetricDistance,
+> for project_proof::CertifiedTableProject {
+    fn into_parts(self) -> (
+        Function<verified::VTable, verified::VTable>,
+        StabilityMap<crate::metrics::SymmetricDistance, crate::metrics::SymmetricDistance>,
+    ) {
+        (
+            Function::new_fallible(move |table: &verified::VTable| {
+                self.invoke(table).map_err(|_| {
+                    err!(MakeTransformation, "input outside certified projection domain")
+                })
+            }),
+            StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
+        )
+    }
+}
+
 /// Construct a certified concrete projection. Identity columns retain their
 /// value bounds; derived expressions retain only dtype and nullability.
 pub(super) fn make_stable_vtable_project(
@@ -54,13 +75,7 @@ pub(super) fn make_stable_vtable_project(
         exprs, &input_rules, &output_rules,
     ).ok_or_else(|| err!(MakeTransformation,
         "projection output rules are not certified"))?;
-    Transformation::new(
-        input_domain, metric.clone(), output_domain, metric,
-        Function::new_fallible(move |table: &verified::VTable| {
-            certified.invoke(table).map_err(|_| {
-                err!(MakeTransformation, "input outside certified projection domain")
-            })
-        }),
-        StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
+    Transformation::new_certified(
+        input_domain, metric.clone(), output_domain, metric, certified,
     )
 }

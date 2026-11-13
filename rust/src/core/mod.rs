@@ -356,6 +356,22 @@ pub trait MetricSpace {
     fn check_space(&self) -> Fallible<()>;
 }
 
+/// Parts of a transformation produced by a Verus-checked constructor.
+///
+/// Implementations are a trusted connection between a verified operator and
+/// the ordinary Rust callback wrappers. They must expose exactly the verified
+/// function and stability map; wrapping arbitrary closures is not certification.
+/// The paired contract lives here, not redundantly in Function, StabilityMap,
+/// or Transformation.
+pub(crate) trait CertifiedTransformationParts<
+    DI: Domain, MI: Metric, DO: Domain, MO: Metric,
+> {
+    fn into_parts(self) -> (
+        Function<DI::Carrier, DO::Carrier>,
+        StabilityMap<MI, MO>,
+    );
+}
+
 /// A data transformation with certain stability characteristics.
 /// Formal Result-valued validity is specified in core/verus/transformation.rs.
 ///
@@ -390,6 +406,39 @@ where
     /// verified constructors must not obtain certification by invoking this
     /// function and inheriting an assumed postcondition.
     pub fn new(
+        input_domain: DI,
+        input_metric: MI,
+        output_domain: DO,
+        output_metric: MO,
+        function: Function<DI::Carrier, DO::Carrier>,
+        stability_map: StabilityMap<MI, MO>,
+    ) -> Fallible<Self> {
+        Self::construct(
+            input_domain, input_metric, output_domain, output_metric,
+            function, stability_map,
+        )
+    }
+
+    /// Build a transformation from a proof-backed operator, without accepting
+    /// arbitrary erased callbacks at the certification boundary.
+    ///
+    /// The proof of the operator is checked by Verus. Its implementation of
+    /// CertifiedTransformationParts is the small native adapter to audit.
+    pub(crate) fn new_certified<P: CertifiedTransformationParts<DI, MI, DO, MO>>(
+        input_domain: DI,
+        input_metric: MI,
+        output_domain: DO,
+        output_metric: MO,
+        certified: P,
+    ) -> Fallible<Self> {
+        let (function, stability_map) = certified.into_parts();
+        Self::construct(
+            input_domain, input_metric, output_domain, output_metric,
+            function, stability_map,
+        )
+    }
+
+    fn construct(
         input_domain: DI,
         input_metric: MI,
         output_domain: DO,
