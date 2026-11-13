@@ -432,8 +432,8 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "AnyMeasurementPtr"))
     {
-        // TODO: does this ever get freed?
-        AnyMeasurement **p = malloc(LENGTH(value) * sizeof(AnyMeasurement *));
+        // Rust only borrows this array for the duration of the FFI call.
+        AnyMeasurement **p = (AnyMeasurement **)R_alloc(LENGTH(value), sizeof(AnyMeasurement *));
         for (int i = 0; i < LENGTH(value); i++)
             p[i] = sexp_to_anymeasurementptr(VECTOR_ELT(value, i));
         result.ptr = p;
@@ -516,7 +516,9 @@ FfiSlice tuple_to_slice(SEXP value, SEXP type_name)
     PROTECT(value);
     PROTECT(type_name);
     size_t len = LENGTH(value);
-    void **array = (void **)malloc(len * sizeof(void *));
+    // Like the scalar buffers, this array is only needed during the R call.
+    // R_alloc also releases it if conversion or the Rust call raises an error.
+    void **array = (void **)R_alloc(len, sizeof(void *));
 
     // extract substring
     SEXP args = get_args(type_name);
