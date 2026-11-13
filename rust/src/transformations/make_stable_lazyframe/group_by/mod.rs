@@ -621,17 +621,31 @@ fn inspect_function(
             }
         };
     }
+    // Keep fallibility, resizing, and permutation behavior in one dispatch.
+    // The macros below classify a function after validating its inputs.
+    macro_rules! check_unproven {
+        ($($args:tt)*) => {{
+            check_inputs!($($args)*);
+            behavior = Unproven;
+        }};
+    }
+    macro_rules! check_reducer {
+        ($($args:tt)*) => {{
+            check_inputs!($($args)*);
+            behavior = behavior.reducer();
+        }};
+    }
     match function {
         FunctionExpr::Boolean(bool_expr) => match bool_expr {
-            BooleanFunction::Any { .. } => check_inputs!(aggregate),
-            BooleanFunction::All { .. } => check_inputs!(aggregate),
+            BooleanFunction::Any { .. } => check_reducer!(aggregate),
+            BooleanFunction::All { .. } => check_reducer!(aggregate),
             BooleanFunction::IsClose { .. } => check_inputs!(),
             BooleanFunction::IsNull => check_inputs!(),
             BooleanFunction::IsNotNull => check_inputs!(),
             BooleanFunction::IsFinite => check_inputs!(),
             BooleanFunction::IsInfinite => check_inputs!(),
-            BooleanFunction::IsFirstDistinct => check_inputs!(),
-            BooleanFunction::IsLastDistinct => check_inputs!(),
+            BooleanFunction::IsFirstDistinct => check_unproven!(),
+            BooleanFunction::IsLastDistinct => check_unproven!(),
             BooleanFunction::IsBetween { .. } => check_inputs!(),
             BooleanFunction::IsNan => check_inputs!(),
             BooleanFunction::IsNotNan => check_inputs!(),
@@ -656,7 +670,7 @@ fn inspect_function(
         },
         FunctionExpr::Abs => check_inputs!(),
         FunctionExpr::Negate => check_inputs!(),
-        FunctionExpr::NullCount => check_inputs!(aggregate),
+        FunctionExpr::NullCount => check_reducer!(aggregate),
         FunctionExpr::Pow(PowFunction::Generic) => {
             return fallible!(
                 MakeTransformation,
@@ -664,11 +678,11 @@ fn inspect_function(
             );
         }
         FunctionExpr::Pow(_) => check_inputs!(aligned_rows),
-        FunctionExpr::Range(_) => check_inputs!(),
+        FunctionExpr::Range(_) => check_unproven!(),
         FunctionExpr::FillNull => check_inputs!(),
-        FunctionExpr::FillNullWithStrategy(_) => check_inputs!(),
-        FunctionExpr::ShiftAndFill => check_inputs!(),
-        FunctionExpr::Shift => check_inputs!(),
+        FunctionExpr::FillNullWithStrategy(_) => check_unproven!(),
+        FunctionExpr::ShiftAndFill => check_unproven!(),
+        FunctionExpr::Shift => check_unproven!(),
         FunctionExpr::DropNans => check_inputs!(resize = "drop_nans"),
         FunctionExpr::DropNulls => check_inputs!(resize = "drop_nulls"),
         FunctionExpr::Reshape(_) => {
@@ -678,22 +692,22 @@ fn inspect_function(
             );
         }
         FunctionExpr::RepeatBy => check_inputs!(aligned_rows),
-        FunctionExpr::ArgUnique => check_inputs!(),
-        FunctionExpr::Rank { .. } => check_inputs!(),
+        FunctionExpr::ArgUnique => check_unproven!(),
+        FunctionExpr::Rank { .. } => check_unproven!(),
         FunctionExpr::Repeat => check_inputs!(),
         FunctionExpr::Clip { .. } => check_inputs!(aligned_rows),
         FunctionExpr::AsStruct => check_inputs!(aligned_rows),
-        FunctionExpr::Reverse => check_inputs!(),
-        FunctionExpr::ValueCounts { .. } => check_inputs!(resize = "value_counts"),
+        FunctionExpr::Reverse => check_unproven!(),
+        FunctionExpr::ValueCounts { .. } => check_unproven!(resize = "value_counts"),
         FunctionExpr::Coalesce => check_inputs!(aligned_rows),
-        FunctionExpr::Unique(_) => check_inputs!(resize = "unique"),
+        FunctionExpr::Unique(_) => check_unproven!(resize = "unique"),
         FunctionExpr::Round { .. } => check_inputs!(),
         FunctionExpr::RoundSF { .. } => check_inputs!(),
         FunctionExpr::Floor => check_inputs!(),
         FunctionExpr::Ceil => check_inputs!(),
         FunctionExpr::UpperBound => check_inputs!(),
         FunctionExpr::LowerBound => check_inputs!(),
-        FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
+        FunctionExpr::ConcatExpr(_) => check_unproven!(resize = "concat_expr"),
         FunctionExpr::Cut { .. } => check_inputs!(),
         FunctionExpr::QCut { .. } => {
             // Duplicate quantiles are only one possible failure; even with
@@ -710,7 +724,7 @@ fn inspect_function(
                 "Random may raise data-dependent errors due to sampling n without replacement from a set of length less than n."
             );
         }
-        FunctionExpr::SetSortedFlag(_) => check_inputs!(),
+        FunctionExpr::SetSortedFlag(_) => check_unproven!(),
         #[cfg(feature = "ffi")]
         FunctionExpr::FfiPlugin { .. } => {
             return fallible!(
@@ -1090,11 +1104,12 @@ fn inspect_function(
             let [cond] = <&[Expr; 1]>::try_from(inputs.as_slice())
                 .map_err(|_| err!(MakeTransformation, "arg_where must have one argument"))?;
             behavior = behavior.combine(inspect_expr(cond, Resize::Ban, schema)?);
+            behavior = Unproven;
         }
 
         // Fixed-length rolling windows are value-safe (bad args are param-dependent, not data-dependent).
-        FunctionExpr::RollingExpr { .. } => check_inputs!(),
-        FunctionExpr::RollingExprBy { .. } => check_inputs!(aligned_rows),
+        FunctionExpr::RollingExpr { .. } => check_unproven!(),
+        FunctionExpr::RollingExprBy { .. } => check_unproven!(aligned_rows),
 
         FunctionExpr::Rechunk => check_inputs!(),
 
@@ -1106,11 +1121,8 @@ fn inspect_function(
                     "append resizes the data (concatenates chunks/rows)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
+            behavior = Unproven;
         }
 
         // Mode can return multiple values (ties) => resizes based on data.
@@ -1121,30 +1133,27 @@ fn inspect_function(
                     "mode resizes the data (can return multiple values)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
+            behavior = Unproven;
         }
 
         // Scalar aggregates (broadcastable)
         FunctionExpr::Skew(_) => check_inputs!(aggregate),
         FunctionExpr::Kurtosis(_, _) => check_inputs!(aggregate),
-        FunctionExpr::ArgMin => check_inputs!(aggregate),
-        FunctionExpr::ArgMax => check_inputs!(aggregate),
+        FunctionExpr::ArgMin => check_unproven!(aggregate),
+        FunctionExpr::ArgMax => check_unproven!(aggregate),
         FunctionExpr::Product => check_inputs!(aggregate),
-        FunctionExpr::ApproxNUnique => check_inputs!(aggregate),
+        FunctionExpr::ApproxNUnique => check_reducer!(aggregate),
 
         // Argsort returns permutation indices of same length.
-        FunctionExpr::ArgSort { .. } => check_inputs!(),
+        FunctionExpr::ArgSort { .. } => check_unproven!(),
 
         // Cumulative ops keep length.
         FunctionExpr::CumCount { .. }
         | FunctionExpr::CumSum { .. }
         | FunctionExpr::CumProd { .. }
         | FunctionExpr::CumMin { .. }
-        | FunctionExpr::CumMax { .. } => check_inputs!(),
+        | FunctionExpr::CumMax { .. } => check_unproven!(),
 
         // unique_counts returns counts per unique value => resizes.
         FunctionExpr::UniqueCounts => {
@@ -1154,19 +1163,16 @@ fn inspect_function(
                     "unique_counts resizes the data (one row per unique value)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
+            behavior = Unproven;
         }
 
-        FunctionExpr::Diff(_) => check_inputs!(),
-        FunctionExpr::Interpolate(_) => check_inputs!(),
-        FunctionExpr::InterpolateBy => check_inputs!(aligned_rows),
+        FunctionExpr::Diff(_) => check_unproven!(),
+        FunctionExpr::Interpolate(_) => check_unproven!(),
+        FunctionExpr::InterpolateBy => check_unproven!(aligned_rows),
 
-        FunctionExpr::PeakMin => check_inputs!(),
-        FunctionExpr::PeakMax => check_inputs!(),
+        FunctionExpr::PeakMin => check_unproven!(),
+        FunctionExpr::PeakMax => check_unproven!(),
 
         // rle returns runs => resizes based on values.
         FunctionExpr::RLE => {
@@ -1176,14 +1182,11 @@ fn inspect_function(
                     "rle resizes the data (one row per run)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
+            behavior = Unproven;
         }
         // rle_id is per-row run labels => same length.
-        FunctionExpr::RLEID => check_inputs!(),
+        FunctionExpr::RLEID => check_unproven!(),
 
         // These carry callbacks; treat as potentially value-fallible.
         FunctionExpr::FoldHorizontal { .. }
@@ -1215,11 +1218,8 @@ fn inspect_function(
                     "gather_every resizes the data (subsamples rows)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
+            behavior = Unproven;
         }
         // Extends series by constants => resizes.
         FunctionExpr::ExtendConstant => {
@@ -1229,11 +1229,7 @@ fn inspect_function(
                     "extend_constant resizes the data (adds rows)."
                 );
             }
-            inputs.iter().try_for_each(|e| {
-                inspect_expr(e, Resize::Allow, schema).map(|b| {
-                    behavior = behavior.combine(b);
-                })
-            })?;
+            check_inputs!(Resize::Allow);
         }
 
         // Row encoding is length-preserving (encodes multiple cols into one binary col).
@@ -1247,20 +1243,20 @@ fn inspect_function(
             );
         }
         _ => match function.to_string().as_str() {
-            "hist" => check_inputs!(resize = "hist"),
-            "index_of" => check_inputs!(aggregate),
-            "search_sorted" => check_inputs!(aligned_rows),
-            "top_k" | "top_k_by" => check_inputs!(resize = "top_k"),
-            "pct_change" => check_inputs!(aligned_rows),
-            "ewm_mean" | "ewm_std" | "ewm_var" | "reinterpret" => check_inputs!(),
+            "hist" => check_unproven!(resize = "hist"),
+            "index_of" => check_unproven!(aggregate),
+            "search_sorted" => check_unproven!(aligned_rows),
+            "top_k" | "top_k_by" => check_unproven!(resize = "top_k"),
+            "pct_change" => check_unproven!(aligned_rows),
+            "ewm_mean" | "ewm_std" | "ewm_var" => check_unproven!(),
+            "reinterpret" => check_inputs!(),
             "cos" | "cot" | "sin" | "tan" | "arccos" | "arcsin" | "arctan" | "cosh" | "sinh"
             | "tanh" | "arccosh" | "arcsinh" | "arctanh" | "degrees" | "radians" | "sign"
             | "log" | "log1p" | "exp" => check_inputs!(),
             "atan2" => check_inputs!(aligned_rows),
-            "ewm_mean_by" | "business_day_count" | "add_business_days" => {
-                check_inputs!(aligned_rows)
-            }
-            "entropy" | "corr" | "spearman_rank_corr" => check_inputs!(aggregate),
+            "ewm_mean_by" => check_unproven!(aligned_rows),
+            "business_day_count" | "add_business_days" => check_inputs!(aligned_rows)
+            "entropy" | "corr" | "spearman_rank_corr" => check_unproven!(aggregate),
             "is_business_day" | "ext.storage()" => check_inputs!(),
             name if name.starts_with("ext.to(") => check_inputs!(),
             _ => {
@@ -1272,68 +1268,5 @@ fn inspect_function(
         },
     };
 
-    // The dispatch above has already checked errors, arity and input
-    // alignment. Only exceptional permutation behaviors need annotation.
-    Ok(match function {
-        _ if matches!(
-            function.to_string().as_str(),
-            "pct_change"
-                | "ewm_mean"
-                | "ewm_std"
-                | "ewm_var"
-                | "ewm_mean_by"
-                | "search_sorted"
-                | "top_k"
-                | "top_k_by"
-                | "hist"
-                | "index_of"
-                | "entropy"
-                | "corr"
-                | "spearman_rank_corr"
-        ) =>
-        {
-            Unproven
-        }
-        FunctionExpr::NullCount
-        | FunctionExpr::Boolean(BooleanFunction::Any { .. } | BooleanFunction::All { .. })
-        | FunctionExpr::ApproxNUnique => behavior.reducer(),
-        FunctionExpr::Boolean(
-            BooleanFunction::IsFirstDistinct | BooleanFunction::IsLastDistinct,
-        )
-        | FunctionExpr::Range(_)
-        | FunctionExpr::Shift
-        | FunctionExpr::ShiftAndFill
-        | FunctionExpr::FillNullWithStrategy(_)
-        | FunctionExpr::ArgUnique
-        | FunctionExpr::Rank { .. }
-        | FunctionExpr::Reverse
-        | FunctionExpr::ValueCounts { .. }
-        | FunctionExpr::Unique(_)
-        | FunctionExpr::ConcatExpr(_)
-        | FunctionExpr::SetSortedFlag(_)
-        | FunctionExpr::ArgWhere
-        | FunctionExpr::RollingExpr { .. }
-        | FunctionExpr::RollingExprBy { .. }
-        | FunctionExpr::Mode { .. }
-        | FunctionExpr::ArgMin
-        | FunctionExpr::ArgMax
-        | FunctionExpr::ArgSort { .. }
-        | FunctionExpr::CumCount { .. }
-        | FunctionExpr::CumSum { .. }
-        | FunctionExpr::CumProd { .. }
-        | FunctionExpr::CumMin { .. }
-        | FunctionExpr::CumMax { .. }
-        | FunctionExpr::UniqueCounts
-        | FunctionExpr::Diff(_)
-        | FunctionExpr::Interpolate(_)
-        | FunctionExpr::InterpolateBy
-        | FunctionExpr::PeakMin
-        | FunctionExpr::PeakMax
-        | FunctionExpr::RLE
-        | FunctionExpr::RLEID
-        | FunctionExpr::CumReduceHorizontal { .. }
-        | FunctionExpr::CumFoldHorizontal { .. }
-        | FunctionExpr::GatherEvery { .. } => Unproven,
-        _ => behavior,
-    })
+    Ok(behavior)
 }
