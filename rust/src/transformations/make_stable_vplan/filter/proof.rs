@@ -369,6 +369,17 @@ impl CertifiedTableFilter {
                 Err(_) => false,
             } by {
             self.lemma_preserves_rules(rows);
+            assert(self.result_spec(rows) == verified::relation_spec(&self.plan, rows));
+            assert(self.rules_spec() == self.rules@);
+        }
+        assert forall|rows: Seq<Seq<Option<VValue>>>|
+            domain::rows_member(rows, self.rules@)
+            implies match verified::relation_spec(&self.plan, rows) {
+                Ok(output) => domain::rows_member(output, self.rules@),
+                Err(_) => false,
+            } by {
+            self.lemma_preserves_rules(rows);
+            assert(self.result_spec(rows) == verified::relation_spec(&self.plan, rows));
         }
         super::table_proof::lemma_valid_table_transformation(
             &self.plan, self.schema@, self.schema@, self.rules@, self.rules@);
