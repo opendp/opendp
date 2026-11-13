@@ -507,6 +507,10 @@ FfiSlice vector_to_slice(SEXP value, SEXP type_name)
     SEXP atom_type = VECTOR_ELT(get_args(type_name), 0);
     // all SEXP are vectors, so scalars are also vectors
     FfiSlice slice = scalar_to_slice(value, atom_type);
+    // R_alloc(0, ...) can return NULL, but Rust slices require an aligned,
+    // non-null pointer even when their length is zero. No element is read.
+    if (slice.len == 0 && slice.ptr == NULL)
+        slice.ptr = R_alloc(1, sizeof(void *));
     UNPROTECT(2);
     return slice;
 }
