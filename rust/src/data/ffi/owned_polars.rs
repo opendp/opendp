@@ -68,6 +68,24 @@ impl FfiSliceOwner {
         Ok(self.kept_slice(bytes))
     }
 
+    /// Create mutable Arrow C headers for a Python producer. All allocations
+    /// remain owned by this object, even if export fails or only some input
+    /// columns are consumed. The pointer triple has interior mutability because
+    /// the Rust importer clears the consumed array slot.
+    fn new_arrow_input(name: &str) -> Fallible<Self> {
+        let mut owner = Self::new();
+        let name = owner.string(name)?;
+        let array = UnsafeCell::raw_get(owner.keep(UnsafeCell::new(ArrowArray::empty())));
+        let schema = UnsafeCell::raw_get(owner.keep(UnsafeCell::new(ArrowSchema::empty())));
+        let pointers = UnsafeCell::raw_get(owner.keep(UnsafeCell::new([
+            array.cast::<c_void>().cast_const(),
+            schema.cast::<c_void>().cast_const(),
+            name.cast::<c_void>(),
+        ])));
+        owner.view = FfiSlice::new(pointers.cast::<c_void>(), 3);
+        Ok(owner)
+    }
+
     fn polars_series(&mut self, series: &Series) -> Fallible<FfiSlice> {
         // Validate before Arrow schema construction (which also needs a CString).
         let name = self.string(series.name().as_str())?;
@@ -153,6 +171,15 @@ impl FfiSliceOwner {
         }
         Ok(())
     }
+}
+
+/// Allocate a Rust-owned Arrow input view. The caller borrows the headers
+/// until slice_owner_free, including on export failure or partial consumption.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__new_arrow_array_owned(
+    name: *const c_char,
+) -> FfiResult<*mut FfiSliceOwner> {
+    FfiSliceOwner::new_arrow_input(try_!(util::to_str(name))).into()
 }
 
 #[cfg(test)]
@@ -481,6 +508,41 @@ mod tests {
             .to_str()
             .unwrap();
         Ok(Series::try_from((PlSmallStr::from_str(name), array))?)
+    }
+
+    #[test]
+    fn arrow_input_owner_cleans_empty_headers_and_invalid_names() -> Fallible<()> {
+        for name in ["", "column λ", "long name"] {
+            let name = CString::new(name).unwrap();
+            let owner: FfiSliceOwner =
+                Fallible::from(opendp_data__new_arrow_array_owned(name.as_ptr()))?;
+            let pointers = pointers::<c_void>(&owner.view);
+            assert_eq!(pointers.len(), 3);
+            assert_eq!(
+                unsafe { CStr::from_ptr(pointers[2].cast()) }
+                    .to_str()
+                    .unwrap(),
+                name.to_str().unwrap()
+            );
+            assert!(
+                owner
+                    .keepalives
+                    .iter()
+                    .any(|v| v.is::<UnsafeCell<ArrowArray>>())
+            );
+            assert!(
+                owner
+                    .keepalives
+                    .iter()
+                    .any(|v| v.is::<UnsafeCell<ArrowSchema>>())
+            );
+            drop(owner);
+        }
+        let invalid = CString::new(vec![0xff]).unwrap();
+        let result: Fallible<FfiSliceOwner> =
+            opendp_data__new_arrow_array_owned(invalid.as_ptr()).into();
+        assert!(result.is_err());
+        Ok(())
     }
 
     #[test]

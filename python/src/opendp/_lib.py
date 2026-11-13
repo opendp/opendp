@@ -315,6 +315,12 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
         _dependencies.pop(id(self), None)
 
 
+class _OwnedFfiSliceOwner(ctypes.c_void_p):
+    """Own Rust FFI input scratch, including unconsumed Arrow payloads."""
+
+    __del__ = _make_finalizer("opendp_data__slice_owner_free")
+
+
 class ExtrinsicObject(ctypes.Structure):
     _fields_ = [
         ("ptr", ctypes.py_object),

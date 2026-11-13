@@ -2,6 +2,7 @@ from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
+from opendp._lib import _OwnedFfiSliceOwner
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
@@ -237,6 +238,7 @@ def c_to_py(value: Any) -> Any:
 
         runtime_type = RuntimeType.parse(obj_type)
         if isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function":
+            # Explicitly transfer a new AnyFunction handle, not a scratch view.
             clone = lib.opendp_data__clone_function
             clone.argtypes = [ctypes.POINTER(AnyObject)]
             clone.restype = FfiResult
@@ -612,6 +614,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     inner_type_name = type_name.args[0]
 
     if inner_type_name in {"AnyObject", "Expr", "Bound"}:
+        # Both Rust output views and Python input slices contain borrowed pointers.
         array = ctypes.cast(
             raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
         )[0 : raw.contents.len]
@@ -982,13 +985,21 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array, arrow_array_free
-
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
-    raw = new_arrow_array(val.name)
+    create = lib.opendp_data__new_arrow_array_owned
+    create.argtypes = [ctypes.c_char_p]
+    create.restype = FfiResult
+    view = lib.opendp_data__slice_owner_view
+    view.argtypes = [ctypes.c_void_p]
+    view.restype = FfiResult
+
+    owner_ptr = unwrap(create(val.name.encode()), ctypes.c_void_p)
+    owner = _OwnedFfiSliceOwner(owner_ptr.value)
+    raw = unwrap(view(owner), FfiSlicePtr)
+    raw.depends_on(owner)  # Retain the owner even if PyArrow export fails.
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr = slice_array[0:2]
 
@@ -997,15 +1008,6 @@ def _series_to_slice(val) -> FfiSlicePtr:
     # NOTE: consider changing to PyCapsule when available. https://github.com/pola-rs/polars/issues/12530
     val.to_arrow()._export_to_c(array_ptr, schema_ptr)
 
-    # when freeing the slice, also free up the memory of what's left behind the slice
-    class ArrowArrayFFIBuffer(object):
-        def __init__(self, ptr) -> None:
-            self.ptr = ptr
-
-        def __del__(self) -> None:
-            arrow_array_free(self.ptr)
-
-    raw.depends_on(ArrowArrayFFIBuffer(raw.contents.ptr))
     return raw
 
 
