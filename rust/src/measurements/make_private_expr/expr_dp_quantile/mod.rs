@@ -19,7 +19,7 @@ use crate::{
         expr_noisy_max::NoisyMaxShim,
     },
     metrics::L01InfDistance,
-    polars::{OpenDPPlugin, apply_anonymous_function, literal_value_of, match_shim},
+    polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_shim},
     transformations::{
         StableExpr, expr_discrete_quantile_score::DiscreteQuantileScoreShim,
         traits::UnboundedMetric,
@@ -108,14 +108,17 @@ where
     if series_domain.dtype().is_float() {
         input = input.fill_nan(lit(midpoint))
     }
-    input = apply_anonymous_function(
+    // Preserve the caller's Rust/FFI representation through desugaring, so
+    // resolved quantiles and their split continuations remain serializable.
+    input = apply_plugin(
         vec![input, alpha, candidates.clone()],
+        expr.clone(),
         DiscreteQuantileScoreShim,
     );
 
     let negate = lit(true);
-    input = apply_anonymous_function(vec![input, negate, scale], NoisyMaxShim);
-    input = apply_anonymous_function(vec![input, candidates], IndexCandidatesShim);
+    input = apply_plugin(vec![input, negate, scale], expr.clone(), NoisyMaxShim);
+    input = apply_plugin(vec![input, candidates], expr, IndexCandidatesShim);
 
     input.make_private(input_domain, input_metric, output_measure, global_scale)
 }

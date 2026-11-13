@@ -17,7 +17,9 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
+mod plugin_histogram;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
+pub(crate) use plugin_histogram::HistogramQuantileScorePlugin;
 use polars::prelude::{AnyValue, LiteralValue, NamedFrom, PolarsPhysicalType, Scalar};
 use polars::series::Series;
 
