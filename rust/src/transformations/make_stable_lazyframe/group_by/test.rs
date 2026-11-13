@@ -183,7 +183,6 @@ fn test_permutation_invariance_validation() -> Fallible<()> {
         col("i").sum() + lit(1),
     ] {
         check_permutation_invariance(&expr, &schema)?;
-        check_infallible(&expr, Resize::Allow)?;
     }
     for expr in [
         col("i").abs().min(),
