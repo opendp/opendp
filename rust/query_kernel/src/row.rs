@@ -78,6 +78,69 @@ pub enum VPlan {
     Filter { input: Box<VPlan>, predicate: VExpr },
 }
 
+//// A bound, backend-neutral query. S is not required to be executable.
+//// Production backends lower the data-free plan using their own source handle.
+pub struct VLazyFrame<S> {
+    pub plan: VPlan,
+    pub source: S,
+}
+
+impl<S> VLazyFrame<S> {
+    pub fn new(source: S) -> Self {
+        Self { plan: VPlan::Input, source }
+    }
+
+    /// Build a lazy filter without inspecting or materializing the source.
+    pub fn filter(self, predicate: VExpr) -> Self {
+        Self {
+            plan: VPlan::Filter {
+                input: Box::new(self.plan),
+                predicate,
+            },
+            source: self.source,
+        }
+    }
+
+    /// Build a lazy projection without inspecting or materializing the source.
+    pub fn project(self, exprs: Vec<VExpr>) -> Self {
+        Self {
+            plan: VPlan::Project {
+                input: Box::new(self.plan),
+                exprs,
+            },
+            source: self.source,
+        }
+    }
+}
+
+impl VLazyFrame<VTable> {
+    /// The reference interpreter is intentionally only available for VTable.
+    /// Other source bindings must supply separate backend semantics.
+    pub fn collect(&self) -> (output: Result<VTable, ()>)
+        ensures
+            match output {
+                Ok(table) =>
+                    table_valid(&self.source)
+                    && plan_schema(&self.plan, self.source.schema@) == Some(table.schema@)
+                    && relation_spec(&self.plan, rows_view(self.source.rows@))
+                        == Ok(rows_view(table.rows@)),
+                Err(_) => true,
+            },
+    {
+        if !check_table(&self.source) {
+            return Err(());
+        }
+        let schema = match check_plan(&self.plan, &self.source.schema) {
+            Some(schema) => schema,
+            None => return Err(()),
+        };
+        match evaluate(&self.plan, &self.source) {
+            Ok(rows) => Ok(VTable { schema, rows }),
+            Err(_) => Err(()),
+        }
+    }
+}
+
 pub open spec fn value_dtype(value: VValue) -> VDType {
     match value {
         VValue::Int(_) => VDType::Int64,
@@ -711,6 +774,14 @@ pub proof fn lemma_relation_type_sound(
 
 } // verus!
 
+// Clone is needed by the OpenDP Frame carrier. Only the reference source
+// needs to implement Clone; generic plan construction has no source bound.
+impl<S: Clone> Clone for VLazyFrame<S> {
+    fn clone(&self) -> Self {
+        Self { plan: self.plan.clone(), source: self.source.clone() }
+    }
+}
+
 // The recursive Clone implementation is ordinary executable Rust; Verus
 // currently rejects its automatically derived termination dependencies.
 impl Clone for VPlan {
@@ -756,6 +827,60 @@ impl Clone for VExpr {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bound_plan_collects_with_verified_reference_evaluator() {
+        let table = VTable {
+            schema: vec![
+                VField { dtype: VDType::Int64, nullable: false },
+                VField { dtype: VDType::Boolean, nullable: true },
+            ],
+            rows: vec![
+                vec![Some(VValue::Int(5)), Some(VValue::Bool(true))],
+                vec![Some(VValue::Int(9)), Some(VValue::Bool(false))],
+                vec![Some(VValue::Int(1)), None],
+            ],
+        };
+        let query = VLazyFrame::new(table)
+            .filter(VExpr::Column(1))
+            .project(vec![VExpr::Column(0)]);
+        let collected = query.collect().unwrap();
+        assert_eq!(collected.schema, vec![
+            VField { dtype: VDType::Int64, nullable: false },
+        ]);
+        assert_eq!(collected.rows, vec![vec![Some(VValue::Int(5))]]);
+    }
+
+    #[test]
+    fn opaque_source_can_build_plans_without_execution_contract() {
+        struct OpaqueSource { label: &'static str }
+        let query = VLazyFrame::new(OpaqueSource { label: "backend-handle" })
+            .filter(VExpr::Column(0))
+            .project(vec![VExpr::Column(0)]);
+        assert_eq!(query.source.label, "backend-handle");
+        let VPlan::Project { input, .. } = query.plan else {
+            panic!("expected projection");
+        };
+        assert!(matches!(*input, VPlan::Filter { .. }));
+        // An opaque source deliberately has no collect() implementation.
+    }
+
+    #[test]
+    fn reference_collection_rejects_invalid_source_and_invalid_plan() {
+        let malformed = VTable {
+            schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
+            rows: vec![vec![Some(VValue::Int(5))]],
+        };
+        assert!(VLazyFrame::new(malformed).collect().is_err());
+
+        let well_formed = VTable {
+            schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
+            rows: vec![vec![Some(VValue::Bool(true))]],
+        };
+        assert!(VLazyFrame::new(well_formed)
+            .filter(VExpr::Column(3)).collect().is_err());
+    }
+
     #[test]
     fn nested_projection_and_nullable_filter() {
         let input = VTable {

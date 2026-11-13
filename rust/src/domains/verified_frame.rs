@@ -240,6 +240,22 @@ impl Frame for VTable {
     }
 }
 
+
+impl Frame for verified::VLazyFrame<VTable> {
+    type Column = VColumn;
+    type Expr = VExpr;
+
+    fn root_names(expr: &VExpr, columns: &[ColumnDomain<VColumn>]) -> Fallible<Vec<PlSmallStr>> {
+        <VTable as Frame>::root_names(expr, columns)
+    }
+
+    fn frame_member(&self, domain: &FrameDomain<Self>) -> Fallible<bool> {
+        let realized = self.collect()
+            .map_err(|_| err!(FailedFunction, "invalid verified bound plan"))?;
+        domain.cast_carrier::<VTable>().member(&realized)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
