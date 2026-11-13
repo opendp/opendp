@@ -1,6 +1,6 @@
 //! Executable identity node, checked in Verus before OpenDP wraps it.
 
-use super::verified::{self, VField, VPlan};
+use super::verified::{VField, VPlan};
 use super::stability;
 use vstd::prelude::*;
 
@@ -11,14 +11,9 @@ pub fn construct(
 ) -> (result: Option<(VPlan, Vec<VField>)>)
     ensures stability::certified_result(result, source_schema@),
 {
-    match verified::check_plan(&input, source_schema) {
+    match stability::check_certified_plan(&input, source_schema) {
+        Some(fields) => Some((input, fields)),
         None => None,
-        Some(fields) => {
-            proof {
-                stability::lemma_all_typed_edits_stable(&input, source_schema@);
-            }
-            Some((input, fields))
-        },
     }
 }
 

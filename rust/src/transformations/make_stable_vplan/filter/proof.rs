@@ -134,11 +134,10 @@ pub fn construct(
         },
 {
     let plan = VPlan::Filter { input: Box::new(input), predicate };
-    match verified::check_plan(&plan, source_schema) {
+    match stability::check_certified_plan(&plan, source_schema) {
         None => None,
         Some(fields) => {
             proof {
-                stability::lemma_all_typed_edits_stable(&plan, source_schema@);
                 assert(verified::local_schema(&plan, fields@) == Some(fields@));
             }
             Some((plan, fields))

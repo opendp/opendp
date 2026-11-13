@@ -1,6 +1,6 @@
 //! Executable projection node, checked in Verus before OpenDP wraps it.
 
-use super::verified::{self, VExpr, VField, VPlan};
+use super::verified::{VExpr, VField, VPlan};
 use super::stability;
 use vstd::prelude::*;
 
@@ -12,14 +12,9 @@ pub fn construct(
     ensures stability::certified_result(result, source_schema@),
 {
     let plan = VPlan::Project { input: Box::new(input), exprs };
-    match verified::check_plan(&plan, source_schema) {
+    match stability::check_certified_plan(&plan, source_schema) {
+        Some(fields) => Some((plan, fields)),
         None => None,
-        Some(fields) => {
-            proof {
-                stability::lemma_all_typed_edits_stable(&plan, source_schema@);
-            }
-            Some((plan, fields))
-        },
     }
 }
 
