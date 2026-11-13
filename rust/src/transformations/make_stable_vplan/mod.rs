@@ -195,16 +195,47 @@ mod tests {
         let mut bad = data.clone();
         bad.rows[0][0] = Some(VValue::Int(11));
         assert!(trans.invoke(&bad).is_err());
-        assert!(project::make_stable_vtable_project(
-            source, SymmetricDistance, vec![VExpr::Alias {
-                expr: Box::new(VExpr::Binary {
-                    left: Box::new(VExpr::Column(0)),
-                    op: VBinaryOp::Gt,
-                    right: Box::new(VExpr::Literal(VValue::Int(5))),
-                }),
-                name: "derived".into(),
-            }],
-        ).is_err());
+        let derived = project::make_stable_vtable_project(
+            source, SymmetricDistance, vec![
+                VExpr::Alias {
+                    expr: Box::new(VExpr::Binary {
+                        left: Box::new(VExpr::Column(0)),
+                        op: VBinaryOp::Gt,
+                        right: Box::new(VExpr::Literal(VValue::Int(5))),
+                    }),
+                    name: "above".into(),
+                },
+                VExpr::Alias {
+                    expr: Box::new(VExpr::Clip {
+                        expr: Box::new(VExpr::Column(0)),
+                        lower: None,
+                        upper: Some(Box::new(VExpr::Literal(VValue::Int(5)))),
+                    }),
+                    name: "clipped".into(),
+                },
+                VExpr::Alias {
+                    expr: Box::new(VExpr::Binary {
+                        left: Box::new(VExpr::Column(1)),
+                        op: VBinaryOp::Eq,
+                        right: Box::new(VExpr::Literal(VValue::Bool(true))),
+                    }),
+                    name: "flag_is_true".into(),
+                },
+            ],
+        )?;
+        let result = derived.invoke(&data)?;
+        assert!(derived.output_domain.member(&result)?);
+        assert_eq!(result.rows, vec![
+            vec![Some(VValue::Bool(true)), Some(VValue::Int(5)), Some(VValue::Bool(true))],
+            vec![Some(VValue::Bool(false)), Some(VValue::Int(3)), Some(VValue::Bool(false))],
+            vec![Some(VValue::Bool(false)), Some(VValue::Int(2)), None],
+        ]);
+        let columns = &derived.output_domain.series_domains;
+        assert!(columns[0].atom_domain::<bool>()?.bounds.is_none());
+        assert!(columns[1].atom_domain::<i64>()?.bounds.is_none());
+        assert!(columns[2].nullable);
+        assert!(columns[2].atom_domain::<bool>()?.bounds.is_none());
+        assert_eq!(derived.map(&u32::MAX)?, u32::MAX);
         Ok(())
     }
 
