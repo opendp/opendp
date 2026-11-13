@@ -14,15 +14,16 @@ pub proof fn lemma_bound_step_contraction(
     left_plan: &VPlan, right_plan: &VPlan, step: &VPlan,
     left_source: Seq<Seq<Option<VValue>>>,
     right_source: Seq<Seq<Option<VValue>>>,
-    source_schema: Seq<VField>,
+    left_source_schema: Seq<VField>,
+    right_source_schema: Seq<VField>,
     input_schema: Seq<VField>,
     output_schema: Seq<VField>,
 )
     requires
-        verified::rows_in_schema(left_source, source_schema),
-        verified::rows_in_schema(right_source, source_schema),
-        verified::plan_schema(left_plan, source_schema) == Some(input_schema),
-        verified::plan_schema(right_plan, source_schema) == Some(input_schema),
+        verified::rows_in_schema(left_source, left_source_schema),
+        verified::rows_in_schema(right_source, right_source_schema),
+        verified::plan_schema(left_plan, left_source_schema) == Some(input_schema),
+        verified::plan_schema(right_plan, right_source_schema) == Some(input_schema),
         verified::plan_schema(step, input_schema) == Some(output_schema),
     ensures
         match (
@@ -46,9 +47,9 @@ pub proof fn lemma_bound_step_contraction(
         },
 {
     verified::lemma_relation_type_sound(
-        left_plan, left_source, source_schema, input_schema);
+        left_plan, left_source, left_source_schema, input_schema);
     verified::lemma_relation_type_sound(
-        right_plan, right_source, source_schema, input_schema);
+        right_plan, right_source, right_source_schema, input_schema);
     let left = verified::relation_spec(left_plan, left_source).unwrap();
     let right = verified::relation_spec(right_plan, right_source).unwrap();
     stability::lemma_relation_contraction(

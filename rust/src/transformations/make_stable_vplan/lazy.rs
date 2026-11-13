@@ -83,7 +83,7 @@ impl<S: VSource> CertifiedTransformationParts<
                 plan: node.apply(input.plan.clone()),
                 source: input.source.clone(),
             }),
-            self.table.stability_map,
+            self.table.stability_map.clone(),
         ))
     }
 }
@@ -193,7 +193,7 @@ mod tests {
         }
     }
 
-    fn domain() -> Fallible<LazyDomain<CountingSource>> {
+    fn domain<S: VSource>() -> Fallible<LazyDomain<S>> {
         FrameDomain::new(vec![
             ColumnDomain::new("x", AtomDomain::<i64>::new_closed((0, 10))?),
             ColumnDomain::new("flag", OptionDomain::new(AtomDomain::<bool>::default())),
@@ -220,12 +220,23 @@ mod tests {
             table: Arc::new(source()), reads: reads.clone(),
         };
         let transformation = make_stable_vlazyframe(
-            domain()?, SymmetricDistance, plan(),
+            domain::<CountingSource>()?, SymmetricDistance, plan(),
         )?;
         let bound = VLazyFrame::new(source.clone());
         let output = transformation.invoke(&bound)?;
         assert_eq!(reads.load(Ordering::SeqCst), 0);
-        assert_eq!(output.plan, plan());
+        let VPlan::Project { input, exprs } = &output.plan else {
+            panic!("expected project plan");
+        };
+        assert_eq!(exprs, &vec![VExpr::Alias {
+            expr: Box::new(VExpr::Column(0)),
+            name: "selected".into(),
+        }]);
+        let VPlan::Filter { input, predicate } = &**input else {
+            panic!("expected filter child");
+        };
+        assert_eq!(*predicate, VExpr::Column(1));
+        assert!(matches!(&**input, VPlan::Input));
         assert!(Arc::ptr_eq(&output.source.table, &source.table));
         for distance in [0, 1, 3, u32::MAX] {
             assert_eq!(transformation.map(&distance)?, distance);
@@ -240,7 +251,7 @@ mod tests {
     #[test]
     fn realized_domains_and_different_sources() -> Fallible<()> {
         let transformation = make_stable_vlazyframe(
-            domain()?, SymmetricDistance, plan(),
+            domain::<VTable>()?, SymmetricDistance, plan(),
         )?;
         let original = VLazyFrame::new(source());
         assert!(transformation.input_domain.member(&original)?);
@@ -266,13 +277,13 @@ mod tests {
             predicate: VExpr::Column(0),
         };
         assert!(make_stable_vlazyframe(
-            domain()?, SymmetricDistance, bad_filter,
+            domain::<VTable>()?, SymmetricDistance, bad_filter,
         ).is_err());
         let bad_project = VPlan::Project {
             input: Box::new(VPlan::Input), exprs: vec![VExpr::Column(99)],
         };
         assert!(make_stable_vlazyframe(
-            domain()?, SymmetricDistance, bad_project,
+            domain::<VTable>()?, SymmetricDistance, bad_project,
         ).is_err());
         Ok(())
     }
