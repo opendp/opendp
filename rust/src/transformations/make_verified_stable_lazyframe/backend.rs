@@ -91,3 +91,21 @@ pub(super) fn render_plan(
     }
 }
 
+
+/// Apply an OpenDP plan to a Polars source without collecting its data.
+/// This implements backend lowering, not a proved correspondence to VTable.
+impl verified::Lower for LazyFrame {
+    type Output = LazyFrame;
+    type Error = crate::error::Error;
+
+    fn lower(&self, plan: &verified::VPlan) -> Fallible<LazyFrame> {
+        // Schema resolution may inspect metadata but does not collect rows.
+        let schema = self.collect_schema().map_err(|e|
+            err!(MakeTransformation, "cannot determine Polars source schema: {}", e)
+        )?;
+        let columns = schema.iter_names().cloned().collect::<Vec<_>>();
+        let (output, _) = render_plan(plan, self.logical_plan.clone(), &columns)?;
+        Ok(LazyFrame::from(output)
+            .with_optimizations(self.get_current_optimizations()))
+    }
+}

@@ -250,7 +250,7 @@ impl Frame for verified::Deferred<VTable> {
     }
 
     fn frame_member(&self, domain: &FrameDomain<Self>) -> Fallible<bool> {
-        let realized = self.collect()
+        let realized = self.apply()
             .map_err(|_| err!(FailedFunction, "invalid verified bound plan"))?;
         domain.cast_carrier::<VTable>().member(&realized)
     }

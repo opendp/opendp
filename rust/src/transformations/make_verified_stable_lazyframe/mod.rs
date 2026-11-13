@@ -7,7 +7,6 @@ use crate::verified_query as verified;
 mod frontend;
 mod backend;
 use frontend::normalize_plan;
-use backend::render_plan;
 use polars::prelude::*;
 
 use crate::{
@@ -48,8 +47,6 @@ pub(crate) fn make_verified_stable_lazyframe(
             "Polars normalization and verified plan domains disagree");
     }
     let output_domain = LazyFrameDomain::new(verified_columns)?;
-    let source_columns = input_domain.series_domains.iter()
-        .map(|column| column.name.clone()).collect::<Vec<_>>();
     // Only the global distance crosses the Polars/VExpr boundary. The
     // verified table transformation supplies its 1-Lipschitz stability map.
     // The Polars backend equivalence remains a separate adapter obligation.
@@ -59,11 +56,10 @@ pub(crate) fn make_verified_stable_lazyframe(
         output_domain,
         input_metric,
         Function::new_fallible(move |input: &LazyFrame| {
-            let (output, _) = render_plan(
-                &plan, input.logical_plan.clone(), &source_columns,
-            )?;
-            Ok(LazyFrame::from(output)
-                .with_optimizations(input.get_current_optimizations()))
+            verified::Deferred {
+                plan: plan.clone(),
+                source: input.clone(),
+            }.apply()
         }),
         StabilityMap::new_fallible(move |bounds: &Bounds| {
             let global = bounds.get_bound(&HashSet::new());
@@ -91,6 +87,26 @@ mod tests {
             SeriesDomain::new("upper", OptionDomain::new(AtomDomain::<i64>::default())),
             SeriesDomain::new("flag", OptionDomain::new(AtomDomain::<bool>::default())),
         ])
+    }
+
+    #[test]
+    fn deferred_polars_apply_lowers_without_collecting() -> Fallible<()> {
+        let source = df!(
+            "x" => [Some(2i64), Some(9), None],
+            "flag" => [Some(true), Some(false), None],
+        )?.lazy();
+        let deferred = verified::Deferred::new(source.clone())
+            .filter(verified::VExpr::Column(1))
+            .project(vec![verified::VExpr::Alias {
+                expr: Box::new(verified::VExpr::Column(0)),
+                name: "result".to_string(),
+            }]);
+        let lowered: LazyFrame = deferred.apply()?;
+        let expected = source
+            .filter(col("flag"))
+            .select([col("x").alias("result")]);
+        assert_eq!(lowered.collect()?, expected.collect()?);
+        Ok(())
     }
 
     #[test]

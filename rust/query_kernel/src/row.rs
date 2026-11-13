@@ -113,31 +113,30 @@ impl<S> Deferred<S> {
     }
 }
 
-impl Deferred<VTable> {
-    /// The reference interpreter is intentionally only available for VTable.
-    /// Other source bindings must supply separate backend semantics.
-    pub fn collect(&self) -> (output: Result<VTable, ()>)
-        ensures
-            match output {
-                Ok(table) =>
-                    table_valid(&self.source)
-                    && plan_schema(&self.plan, self.source.schema@) == Some(table.schema@)
-                    && relation_spec(&self.plan, rows_view(self.source.rows@))
-                        == Ok(rows_view(table.rows@)),
-                Err(_) => true,
-            },
-    {
-        if !check_table(&self.source) {
-            return Err(());
-        }
-        let schema = match check_plan(&self.plan, &self.source.schema) {
-            Some(schema) => schema,
-            None => return Err(()),
-        };
-        match evaluate(&self.plan, &self.source) {
-            Ok(rows) => Ok(VTable { schema, rows }),
-            Err(_) => Err(()),
-        }
+/// Verified reference application. Backend lowering adapters must preserve
+/// these semantics, but do not inherit this proof merely by implementing Lower.
+pub fn apply_vtable(plan: &VPlan, source: &VTable)
+    -> (output: Result<VTable, ()>)
+    ensures
+        match output {
+            Ok(table) =>
+                table_valid(source)
+                && plan_schema(plan, source.schema@) == Some(table.schema@)
+                && relation_spec(plan, rows_view(source.rows@))
+                    == Ok(rows_view(table.rows@)),
+            Err(_) => true,
+        },
+{
+    if !check_table(source) {
+        return Err(());
+    }
+    let schema = match check_plan(plan, &source.schema) {
+        Some(schema) => schema,
+        None => return Err(()),
+    };
+    match evaluate(plan, source) {
+        Ok(rows) => Ok(VTable { schema, rows }),
+        Err(_) => Err(()),
     }
 }
 
@@ -774,6 +773,32 @@ pub proof fn lemma_relation_type_sound(
 
 } // verus!
 
+/// Backend-specific lowering of a data-free OpenDP plan onto a source.
+/// A backend may return a deferred expression rather than materialized data.
+/// This contract alone does not certify equivalence to apply_vtable.
+pub trait Lower {
+    type Output;
+    type Error;
+
+    fn lower(&self, plan: &VPlan) -> Result<Self::Output, Self::Error>;
+}
+
+impl<S: Lower> Deferred<S> {
+    /// Apply the OpenDP plan to the source using its native backend.
+    pub fn apply(&self) -> Result<S::Output, S::Error> {
+        self.source.lower(&self.plan)
+    }
+}
+
+impl Lower for VTable {
+    type Output = VTable;
+    type Error = ();
+
+    fn lower(&self, plan: &VPlan) -> Result<VTable, ()> {
+        apply_vtable(plan, self)
+    }
+}
+
 // Clone is needed by the OpenDP Frame carrier. Only the reference source
 // needs to implement Clone; generic plan construction has no source bound.
 impl<S: Clone> Clone for Deferred<S> {
@@ -829,7 +854,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bound_plan_collects_with_verified_reference_evaluator() {
+    fn bound_plan_applies_with_verified_reference_evaluator() {
         let table = VTable {
             schema: vec![
                 VField { dtype: VDType::Int64, nullable: false },
@@ -844,7 +869,7 @@ mod tests {
         let query = Deferred::new(table)
             .filter(VExpr::Column(1))
             .project(vec![VExpr::Column(0)]);
-        let collected = query.collect().unwrap();
+        let collected = query.apply().unwrap();
         assert_eq!(collected.schema, vec![
             VField { dtype: VDType::Int64, nullable: false },
         ]);
@@ -862,23 +887,23 @@ mod tests {
             panic!("expected projection");
         };
         assert!(matches!(*input, VPlan::Filter { .. }));
-        // An opaque source deliberately has no collect() implementation.
+        // An opaque source deliberately has no apply() implementation until it satisfies Lower.
     }
 
     #[test]
-    fn reference_collection_rejects_invalid_source_and_invalid_plan() {
+    fn reference_apply_rejects_invalid_source_and_invalid_plan() {
         let malformed = VTable {
             schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
             rows: vec![vec![Some(VValue::Int(5))]],
         };
-        assert!(Deferred::new(malformed).collect().is_err());
+        assert!(Deferred::new(malformed).apply().is_err());
 
         let well_formed = VTable {
             schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
             rows: vec![vec![Some(VValue::Bool(true))]],
         };
         assert!(Deferred::new(well_formed)
-            .filter(VExpr::Column(3)).collect().is_err());
+            .filter(VExpr::Column(3)).apply().is_err());
     }
 
     #[test]

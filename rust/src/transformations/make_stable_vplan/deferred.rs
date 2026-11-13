@@ -1,7 +1,7 @@
 //! OpenDP transformations over executable, bound reference plans.
 //!
 //! The generic Deferred<S> and AST builders live in the standalone kernel.
-//! Certification here is restricted to VTable bindings, whose collected
+//! Certification here is restricted to VTable bindings, whose realized
 //! semantics are verified. External backends need their own correspondence
 //! obligations before receiving certified transformations.
 
@@ -194,7 +194,7 @@ mod tests {
         for distance in [0, 1, 3, u32::MAX] {
             assert_eq!(transformation.map(&distance)?, distance);
         }
-        let collected = output.collect()
+        let collected = output.apply()
             .map_err(|_| err!(FailedFunction, "reference collection failed"))?;
         assert_eq!(collected.rows, vec![vec![Some(VValue::Int(7))]]);
         assert!(transformation.output_domain.member(&output)?);
@@ -209,10 +209,10 @@ mod tests {
             rows: vec![vec![Some(VValue::Int(4))]],
         };
         // Applying a lazy operator need not read or validate the source.
-        // A malformed source is outside the domain, so collect() rejects it.
+        // A malformed source is outside the domain, so apply() rejects it.
         let output = transformation.invoke(&Deferred::new(bad))?;
         assert!(matches!(output.plan, VPlan::Project { .. }));
-        assert!(output.collect().is_err());
+        assert!(output.apply().is_err());
         Ok(())
     }
 
@@ -223,11 +223,11 @@ mod tests {
         assert!(transformation.input_domain.member(&original)?);
         let selected = transformation.invoke(&original)?;
         assert!(transformation.output_domain.member(&selected)?);
-        assert_eq!(selected.collect().unwrap().rows.len(), 1);
+        assert_eq!(selected.apply().unwrap().rows.len(), 1);
         let mut changed = source();
         changed.rows.push(vec![Some(VValue::Int(4)), Some(VValue::Bool(true))]);
         let other = transformation.invoke(&Deferred::new(changed))?;
-        assert_eq!(other.collect().unwrap().rows.len(), 2);
+        assert_eq!(other.apply().unwrap().rows.len(), 2);
         assert!(transformation.output_domain.member(&other)?);
 
         let mut invalid = source();
