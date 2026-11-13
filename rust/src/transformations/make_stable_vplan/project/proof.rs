@@ -174,6 +174,22 @@ impl CertifiedTableProject {
             if index >= input_rules.len() || output_rules[i] != input_rules[index] {
                 return None;
             }
+            proof {
+                assert forall|k: int| #![trigger exprs@[k]] 0 <= k < i + 1
+                    implies match verified::project::identity_column_spec(&exprs@[k]) {
+                        Some(selected) => selected < input_rules@.len()
+                            && output_rules@[k] == input_rules@[selected as int],
+                        None => false,
+                    } by {
+                    if k < i {
+                    } else {
+                        assert(k == i);
+                        assert(verified::project::identity_column_spec(&exprs@[k])
+                            == Some(index));
+                        assert(output_rules@[k] == input_rules@[index as int]);
+                    }
+                }
+            }
             i += 1;
         }
         let input_schema = domain::rule_schema(input_rules);
