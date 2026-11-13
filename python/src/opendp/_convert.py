@@ -204,7 +204,7 @@ def c_to_py(value: Any) -> Any:
     :return: copy of data in Python representation
     """
     if isinstance(value, ctypes.POINTER(AnyObject)):
-        from opendp._data import object_type, object_as_slice, slice_free
+        from opendp._data import object_type
 
         obj_type = object_type(value)
 
@@ -235,11 +235,28 @@ def c_to_py(value: Any) -> Any:
 
             return Queryable(value, query_type)
 
-        ffi_slice = object_as_slice(value)
+        runtime_type = RuntimeType.parse(obj_type)
+        if isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function":
+            clone = lib.opendp_data__clone_function
+            clone.argtypes = [ctypes.POINTER(AnyObject)]
+            clone.restype = FfiResult
+            return unwrap(clone(value), Function)
+
+        create = lib.opendp_data__object_as_slice_owned
+        create.argtypes = [ctypes.POINTER(AnyObject)]
+        create.restype = FfiResult
+        view = lib.opendp_data__slice_owner_view
+        view.argtypes = [ctypes.c_void_p]
+        view.restype = FfiResult
+        release = lib.opendp_data__slice_owner_free
+        release.argtypes = [ctypes.c_void_p]
+        release.restype = FfiResult
+        owner = unwrap(create(value), ctypes.c_void_p)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            ffi_slice = unwrap(view(owner), FfiSlicePtr)
+            return _slice_to_py(ffi_slice, runtime_type)
         finally:
-            slice_free(ffi_slice)
+            unwrap(release(owner), ctypes.c_void_p)
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
@@ -375,10 +392,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
         if type_name.origin == "NDArray":
             return _slice_to_numpy(raw, type_name)
-
-        if type_name.origin == "Function":
-            # TODO add test_convert.py unit test
-            return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
@@ -599,10 +612,6 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     inner_type_name = type_name.args[0]
 
     if inner_type_name in {"AnyObject", "Expr", "Bound"}:
-        from opendp._data import ffislice_of_anyobjectptrs
-
-        raw = ffislice_of_anyobjectptrs(raw)
-        # Elements belong to the source object, even if conversion raises.
         array = ctypes.cast(
             raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
         )[0 : raw.contents.len]
@@ -734,9 +743,9 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     if inner_type_names == ["PrivacyProfile", "f64"]:
-        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        return PrivacyProfile(curve), delta.contents.value
+        curve = ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))
+        return c_to_py(curve), delta.contents.value
 
     if inner_type_names == ["f64", "AnyObject"]:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
@@ -784,13 +793,6 @@ def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePt
     # so we can't allow their refcount to go to zero until ffislice is freed.
     ffislice.depends_on(keys, vals)
     return ffislice
-
-
-def _slice_to_function(raw: FfiSlicePtr) -> Function:
-    # for ε(α)-RDP curves
-    function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
-    # put the contents behind a new, python pointer
-    return ctypes.cast(ctypes.pointer(function), Function)
 
 
 def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
@@ -889,7 +891,7 @@ def _slice_to_margin(raw: FfiSlicePtr):
 
     invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         max_length=_from_optional_u32_void_ptr(ptr_data[1]),
         max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
         invariant=invariant.value.decode() if invariant.value else None,  # type: ignore[arg-type]
@@ -934,7 +936,7 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     return Bound(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         per_group=_from_optional_u32_void_ptr(ptr_data[1]),
         num_groups=_from_optional_u32_void_ptr(ptr_data[2]),
     )
