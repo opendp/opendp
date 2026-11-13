@@ -69,6 +69,25 @@ pub trait Domain: Clone + PartialEq + Debug {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
+/// Short-circuit fallible composition. The verified-query build executes
+/// the same Result helper whose body is checked by Verus.
+fn chain_result<TX, TO, E>(
+    intermediate: Result<TX, E>,
+    outer: impl Fn(&TX) -> Result<TO, E>,
+) -> Result<TO, E> {
+    #[cfg(feature = "verified-query")]
+    {
+        crate::verified_query::chain::chain_result(intermediate, outer)
+    }
+    #[cfg(not(feature = "verified-query"))]
+    {
+        match intermediate {
+            Ok(value) => outer(&value),
+            Err(error) => Err(error),
+        }
+    }
+}
+
 /// A mathematical function.
 pub struct Function<TI, TO> {
     pub function: Arc<dyn Fn(&TI) -> Fallible<TO>>,
@@ -104,18 +123,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
     ) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| {
-            #[cfg(feature = "verified-query")]
-            {
-                crate::verified_query::chain::chain_result(
-                    function0(arg), |middle| function1(middle),
-                )
-            }
-            #[cfg(not(feature = "verified-query"))]
-            {
-                function1(&function0(arg)?)
-            }
-        })
+        Self::new_fallible(move |arg| chain_result(function0(arg), |middle| function1(middle)))
     }
 }
 
@@ -191,16 +199,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
         PrivacyMap(Arc::new(move |d_in: &MI::Distance| {
-            #[cfg(feature = "verified-query")]
-            {
-                crate::verified_query::chain::chain_result(
-                    map0(d_in), |bound| map1(bound),
-                )
-            }
-            #[cfg(not(feature = "verified-query"))]
-            {
-                map1(&map0(d_in)?)
-            }
+            chain_result(map0(d_in), |bound| map1(bound))
         }))
     }
 }
@@ -258,16 +257,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
         StabilityMap(Arc::new(move |d_in: &MI::Distance| {
-            #[cfg(feature = "verified-query")]
-            {
-                crate::verified_query::chain::chain_result(
-                    map0(d_in), |bound| map1(bound),
-                )
-            }
-            #[cfg(not(feature = "verified-query"))]
-            {
-                map1(&map0(d_in)?)
-            }
+            chain_result(map0(d_in), |bound| map1(bound))
         }))
     }
 }
