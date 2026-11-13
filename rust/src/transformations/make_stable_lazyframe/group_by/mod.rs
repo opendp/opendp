@@ -1254,7 +1254,7 @@ fn inspect_function(
             | "log" | "log1p" | "exp" => check_inputs!(),
             "atan2" => check_inputs!(aligned_rows),
             "ewm_mean_by" => check_unproven!(aligned_rows),
-            "business_day_count" | "add_business_days" => check_inputs!(aligned_rows)
+            "business_day_count" | "add_business_days" => check_inputs!(aligned_rows),
             "entropy" | "corr" | "spearman_rank_corr" => check_unproven!(aggregate),
             "is_business_day" | "ext.storage()" => check_inputs!(),
             name if name.starts_with("ext.to(") => check_inputs!(),
