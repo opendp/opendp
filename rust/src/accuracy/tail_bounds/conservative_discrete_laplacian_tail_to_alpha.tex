@@ -14,15 +14,12 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_discrete\_laplacian\_
 \subsubsection*{Compiler-verified}
 
 \begin{itemize}
-    \item Argument \texttt{scale} is of type \texttt{f64}.
-    \item Argument \texttt{tail} is of type \texttt{u32}.
+    \item Argument \texttt{scale} is of type \texttt{RBig}.
+    \item Argument \texttt{tail} is of type \texttt{UBig}.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
-\begin{itemize}
-    \item Argument $\texttt{scale} > 0$.
-    \item Argument $\texttt{tail} > 0$.
-\end{itemize}
+None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/conservative_discrete_laplacian_tail_to_alpha.py}
@@ -35,25 +32,41 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_discrete\_laplacian\_
     \end{equation}
 \end{definition}
 
-\begin{theorem}
-    Assume $X \sim \mathcal{L}_\mathbb{Z}(0, s)$, and $t > 0$, where $s = \texttt{scale}$ and $t = \texttt{tail}$.
+\begin{lemma}\label{lem:tail-mass}
+    Assume $X \sim \mathcal{L}_\mathbb{Z}(0, s)$, and $t \ge 0$, where $s = \texttt{scale}$ and $t = \texttt{tail}$.
     \begin{equation}
         \alpha = P[X > t] = \frac{e^{-t/s}}{e^{1/s} + 1}
     \end{equation}
-\end{theorem}
+\end{lemma}
 
 \begin{proof}
     \begin{align*}
         \alpha &= P[X > t] \\
         &= \sum_{x=t + 1}^{\infty} \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-|x|/s} \\
         &= \frac{1 - e^{-1/s}}{1 + e^{-1/s}} \sum_{x=t + 1}^{\infty} e^{-x/s}
-            && \text{since } t > 0 \\
+            && \text{since } t \ge 0 \\
         &= \frac{1 - e^{-1/s}}{1 + e^{-1/s}} \frac{e^{-(t + 1)/s}}{1 - e^{-1/s}}
             && \text{since } \sum_{x=t}^\infty p^x = \frac{p^t}{1 - p} \text{ if } |p| < 1 \text{, let } p = e^{-1/s}\\
         &= \frac{e^{-(t + 1)/s}}{1 + e^{-1/s}} \\
         &= \frac{e^{-t/s}}{e^{1/s} + 1}
     \end{align*}
 
+\end{proof}
+
+\begin{theorem}\label{thm:postcondition}
+    For any inputs \texttt{scale} and \texttt{tail} satisfying the preconditions, \\
+    \texttt{conservative\_discrete\_laplacian\_tail\_to\_alpha} either:
+    \begin{itemize}
+        \item returns \texttt{Err(e)}, or
+        \item returns \texttt{Ok(out)} with $\texttt{out} \ge \Pr[X > \texttt{tail}]$, where $X \sim \mathcal{L}_\mathbb{Z}(0, \texttt{scale})$.
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    Let $s = \texttt{scale}$ and $t = \texttt{tail}$.
+    \texttt{check\_tail\_arguments} returns \texttt{Err(e)} unless $s > 0$, while $t \ge 0$ holds by type \texttt{UBig}.
+    Otherwise, if no remaining operation returns \texttt{Err(e)}, \texttt{numer} computes $e^{-t/s}$ with conservative upward rounding, so $\texttt{numer} \ge e^{-t/s} > 0$, and \texttt{denom} computes $e^{1/s} + 1$ with conservative downward rounding, so $0 < \texttt{denom} \le e^{1/s} + 1$.
+    Dividing \texttt{numer} by \texttt{denom} with conservative upward rounding therefore yields a result at least $\frac{e^{-t/s}}{e^{1/s} + 1}$, which equals $\Pr[X > t]$ by Lemma~\ref{lem:tail-mass}.
 \end{proof}
 
 \end{document}
