@@ -47,4 +47,6 @@ unsigned char str_equal(const char *str1, const char *str2);
 
 void init_udf_support(void);
 RetainedSexp *new_retained_sexp(SEXP value);
+void retained_sexp_release(void *retained);
 SEXP extrinsic_object_to_sexp(const ExtrinsicObject *input);
+SEXP owned_extrinsic_object_to_sexp(ExtrinsicObject *input);
