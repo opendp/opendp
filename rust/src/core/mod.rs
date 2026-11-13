@@ -104,7 +104,18 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
     ) -> Function<TI, TO> {
         let function0 = function0.function.clone();
         let function1 = function1.function.clone();
-        Self::new_fallible(move |arg| function1(&function0(arg)?))
+        Self::new_fallible(move |arg| {
+            #[cfg(feature = "verified-query")]
+            {
+                crate::verified_query::chain::chain_result(
+                    function0(arg), |middle| function1(middle),
+                )
+            }
+            #[cfg(not(feature = "verified-query"))]
+            {
+                function1(&function0(arg)?)
+            }
+        })
     }
 }
 
@@ -179,7 +190,18 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     ) -> Self {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
-        PrivacyMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        PrivacyMap(Arc::new(move |d_in: &MI::Distance| {
+            #[cfg(feature = "verified-query")]
+            {
+                crate::verified_query::chain::chain_result(
+                    map0(d_in), |bound| map1(bound),
+                )
+            }
+            #[cfg(not(feature = "verified-query"))]
+            {
+                map1(&map0(d_in)?)
+            }
+        }))
     }
 }
 
@@ -235,7 +257,18 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
     ) -> Self {
         let map1 = map1.0.clone();
         let map0 = map0.0.clone();
-        StabilityMap(Arc::new(move |d_in: &MI::Distance| map1(&map0(d_in)?)))
+        StabilityMap(Arc::new(move |d_in: &MI::Distance| {
+            #[cfg(feature = "verified-query")]
+            {
+                crate::verified_query::chain::chain_result(
+                    map0(d_in), |bound| map1(bound),
+                )
+            }
+            #[cfg(not(feature = "verified-query"))]
+            {
+                map1(&map0(d_in)?)
+            }
+        }))
     }
 }
 

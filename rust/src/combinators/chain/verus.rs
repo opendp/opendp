@@ -52,6 +52,29 @@ pub open spec fn preserves_infinity<DX, DO, ME>(
         }
 }
 
+/// Executable Result short-circuiting used by the native Function,
+/// StabilityMap, and PrivacyMap composition closures.
+///
+/// The body is verified, not modeled by a separate ghost function. The caller
+/// supplies a callable outer closure; its postcondition is retained here.
+pub fn chain_result<Y, Z, E>(
+    inner: Result<Y, E>,
+    outer: impl Fn(&Y) -> Result<Z, E>,
+) -> (output: Result<Z, E>)
+    requires
+        forall|value: Y| call_requires(outer, (&value,)),
+    ensures
+        match inner {
+            Err(error) => output == Err(error),
+            Ok(value) => call_ensures(outer, (&value,), output),
+        },
+{
+    match inner {
+        Ok(value) => outer(&value),
+        Err(error) => Err(error),
+    }
+}
+
 /// The semantic contract of `make_chain_tt`, independently of any
 /// particular data domain, metric, or operator. The same intermediate
 /// membership and distance predicates are used by both transformations.
