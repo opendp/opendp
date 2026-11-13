@@ -142,14 +142,17 @@ pub proof fn lemma_row_prefix_cell(
     decreases count,
 {
     let prefix = row_prefix(exprs, row, (count - 1) as nat);
+    let last = expr_row_spec(&exprs[(count - 1) as int], row);
     assert(prefix.is_Ok());
+    assert(last.is_Ok());
     let output = row_prefix(exprs, row, count).unwrap();
-    assert(output =~= prefix.unwrap().push(
-        expr_row_spec(&exprs[(count - 1) as int], row).unwrap()));
+    assert(output =~= prefix.unwrap().push(last.unwrap()));
     if index < count - 1 {
         lemma_row_prefix_cell(exprs, row, (count - 1) as nat, index);
+        assert(output[index] == prefix.unwrap()[index]);
     } else {
         assert(index == count - 1);
+        assert(output[index] == last.unwrap());
     }
 }
 
