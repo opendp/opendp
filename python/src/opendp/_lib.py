@@ -263,6 +263,8 @@ class AnyQueryable(ctypes.Structure):
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
     _type_ = FfiSlice
     _dependencies: MutableMapping = {}  # TODO: Tighten this
+    # Owned scratch views expose Vec<AnyObject> as borrowed pointer arrays.
+    _object_pointers: bool = False
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
