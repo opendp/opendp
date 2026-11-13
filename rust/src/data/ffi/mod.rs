@@ -217,13 +217,18 @@ pub extern "C" fn opendp_data__slice_as_object(
     pub fn raw_to_concrete_series(
         raw: &FfiSlice
     ) -> Fallible<Series> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        let slice = unsafe { slice::from_raw_parts_mut(raw.ptr as *mut *const c_void, raw.len) };
         if slice.len() != 3 {
             return fallible!(FFI, "Series FfiSlice must have length 3, found a length of {}", slice.len());
         }
+        if slice[0].is_null() {
+            return fallible!(FFI, "ArrowArray has already been consumed");
+        }
         Ok(unsafe {
-            // consume the arrow array eagerly
-            let array = *Box::from_raw(slice[0] as *mut ArrowArray);
+            // Record the transfer before any fallible field/name import. The
+            // slice cleanup still owns an array that the loader never consumed.
+            let array_ptr = std::mem::replace(&mut slice[0], std::ptr::null());
+            let array = *Box::from_raw(array_ptr as *mut ArrowArray);
             let schema = try_as_ref!(slice[1] as *const ArrowSchema);
             let name = util::to_str(slice[2] as *const c_char)?;
 
@@ -1027,21 +1032,26 @@ pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut
     arguments(this(do_not_convert = true, rust_type = b"null", c_type = "void *")),
     returns(c_type = "FfiResult<void *>")
 )]
-/// Internal function. Free the memory associated with `this`, a slice containing an Arrow array, schema, and name.
+/// Internal function. Free the input triple allocated by new_arrow_array.
+/// A non-null array slot still belongs to this triple; the Series loader clears
+/// it when taking ownership. Releases the schema/name and any unconsumed array,
+/// but not the outer FfiSlice header (release that separately with slice_free).
+/// Do not use this on output scratch views owned by FfiSliceOwner.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<*mut ()> {
     #[cfg(feature = "polars")]
     {
-        let parts = unsafe { slice::from_raw_parts(this as *const *const c_void, 3) };
-        // array has already been consumed by the data loader
-        // try_!(util::into_owned(parts[0] as *mut ArrowArray));
-        // the Drop impl calls schema.release
+        // Own the pointer array first so all fallible cleanup paths drop it.
+        let parts = try_!(util::into_owned(this as *mut [*const c_void; 3]));
+        if !parts[0].is_null() {
+            // Export failed, was abandoned, or the loader rejected the slice
+            // before taking its array. ArrowArray::drop releases live payloads.
+            try_!(util::into_owned(parts[0] as *mut ArrowArray));
+        }
+        // The field importer borrows the schema; its Drop calls schema.release.
         try_!(util::into_owned(parts[1] as *mut ArrowSchema));
-        // takes ownership of the memory behind the pointer, which then gets dropped
-        try_!(util::into_owned(parts[2] as *mut c_char));
-
-        // free the array holding the null pointers itself
-        util::into_owned(this as *mut [*mut c_void; 3])
+        // Match CString::into_raw from new_arrow_array.
+        util::into_string(parts[2] as *mut c_char)
             .map(|_| ())
             .into()
     }
@@ -1379,6 +1389,8 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
 #[cfg(feature = "polars")]
 /// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
 /// The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.
+/// Pair its triple with arrow_array_free, including when export fails or the
+/// loader is never called. The returned FfiSlice header also needs slice_free.
 ///
 /// # Arguments
 /// * `name` - The name of the ArrowArray. A clone of this string owned by Rust will be returned in the slice.
@@ -1386,15 +1398,19 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
 #[unsafe(no_mangle)]
 extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mut FfiSlice> {
     #[cfg(feature = "polars")]
-    // prepare a pointer to receive the Array struct
-    return FfiResult::Ok(util::into_raw(FfiSlice {
-        ptr: util::into_raw([
-            util::into_raw(ArrowArray::empty()) as *const c_void,
-            util::into_raw(ArrowSchema::empty()) as *const c_void,
-            try_!(into_c_char_p(try_!(util::to_str(name)).to_string())) as *const c_void,
-        ]) as *mut c_void,
-        len: 3,
-    }));
+    {
+        // Validate/allocate the name before transferring any headers to raw
+        // pointers. Invalid UTF-8 must not strand the two empty Arrow boxes.
+        let name = try_!(into_c_char_p(try_!(util::to_str(name)).to_string()));
+        return FfiResult::Ok(util::into_raw(FfiSlice {
+            ptr: util::into_raw([
+                util::into_raw(ArrowArray::empty()) as *const c_void,
+                util::into_raw(ArrowSchema::empty()) as *const c_void,
+                name as *const c_void,
+            ]) as *mut c_void,
+            len: 3,
+        }));
+    }
 
     #[cfg(not(feature = "polars"))]
     {
@@ -1479,6 +1495,40 @@ mod tests {
             if !objects.is_empty() {
                 assert_eq!(*objects[0].downcast_ref::<i32>()?, 42);
             }
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_arrow_name_cleanup() -> Fallible<()> {
+        for name in [
+            "".to_owned(),
+            "column λ".to_owned(),
+            "long name".repeat(100),
+        ] {
+            let name = CString::new(name).unwrap();
+            let raw: FfiSlice = Fallible::from(opendp_data__new_arrow_array(name.as_ptr()))?;
+            let parts = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
+            // Match the loader contract: it consumes the ArrowArray box first.
+            drop(util::into_owned(parts[0] as *mut ArrowArray)?);
+            unsafe { *(raw.ptr as *mut *const c_void) = std::ptr::null() };
+            let _: () = Fallible::from(opendp_data__arrow_array_free(raw.ptr.cast_mut()))?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_arrow_input_abandoned_and_invalid_name_cleanup() -> Fallible<()> {
+        for _ in 0..20 {
+            let raw: FfiSlice =
+                Fallible::from(opendp_data__new_arrow_array(c"abandoned λ".as_ptr()))?;
+            // No loader ever consumed the empty array.
+            let _: () = Fallible::from(opendp_data__arrow_array_free(raw.ptr.cast_mut()))?;
+            let invalid = CString::new(vec![0xff]).unwrap();
+            let result: Fallible<FfiSlice> = opendp_data__new_arrow_array(invalid.as_ptr()).into();
+            assert!(result.is_err());
         }
         Ok(())
     }

@@ -2,6 +2,7 @@ from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
+from opendp._lib import _ArrowArrayPtr, _OwnedFfiSliceHeader
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
@@ -1031,13 +1032,19 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array, arrow_array_free
+    from opendp._data import new_arrow_array
 
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
     raw = new_arrow_array(val.name)
+    # Establish both owners before to_arrow/export can raise. Storing integer
+    # addresses avoids a reference cycle back to the dependency-bearing slice.
+    raw.depends_on(
+        _OwnedFfiSliceHeader(ctypes.cast(raw, ctypes.c_void_p).value),
+        _ArrowArrayPtr(raw.contents.ptr),
+    )
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr = slice_array[0:2]
 
@@ -1046,15 +1053,6 @@ def _series_to_slice(val) -> FfiSlicePtr:
     # NOTE: consider changing to PyCapsule when available. https://github.com/pola-rs/polars/issues/12530
     val.to_arrow()._export_to_c(array_ptr, schema_ptr)
 
-    # when freeing the slice, also free up the memory of what's left behind the slice
-    class ArrowArrayFFIBuffer(object):
-        def __init__(self, ptr) -> None:
-            self.ptr = ptr
-
-        def __del__(self) -> None:
-            arrow_array_free(self.ptr)
-
-    raw.depends_on(ArrowArrayFFIBuffer(raw.contents.ptr))
     return raw
 
 
