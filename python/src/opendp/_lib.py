@@ -317,6 +317,18 @@ class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
         _dependencies.pop(id(self), None)
 
 
+class _OwnedFfiSliceHeader(ctypes.c_void_p):
+    """Own just a Rust-allocated slice header, not its referenced buffers."""
+
+    __del__ = _make_finalizer("opendp_data__slice_free")
+
+
+class _ArrowArrayPtr(ctypes.c_void_p):
+    """Own the Arrow input triple, including any unconsumed array payload."""
+
+    __del__ = _make_finalizer("opendp_data__arrow_array_free")
+
+
 class ExtrinsicObject(ctypes.Structure):
     _fields_ = [
         ("ptr", ctypes.py_object),
