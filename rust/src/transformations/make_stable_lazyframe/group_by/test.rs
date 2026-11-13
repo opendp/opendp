@@ -233,14 +233,14 @@ fn test_group_locality_validation() -> Fallible<()> {
         high: 2,
         dtype: DataType::Int32,
     }));
-    assert!(!is_rowwise(&range));
+    assert!(!is_permutation_equivariant(&range));
     assert!(check_infallible(&range, Resize::Allow).is_err());
     // A genuine scalar list broadcasts, unlike a positional Series literal.
     let list = Expr::Literal(LiteralValue::Scalar(Scalar::new(
         DataType::List(Box::new(DataType::Int32)),
         AnyValue::List(Series::new("list".into(), [1i32, 2])),
     )));
-    assert!(is_rowwise(&list));
+    assert!(is_permutation_equivariant(&list));
     check_infallible(&list, Resize::Allow)?;
     assert!(
         check_infallible(

@@ -267,8 +267,10 @@ pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fall
     }
 }
 
-/// Used by truncation to verify that sort keys follow row permutations.
-pub(crate) fn is_rowwise(expr: &Expr) -> bool {
+/// Check that an expression is infallible, does not resize, and commutes with
+/// input-row permutations (possibly as an invariant scalar).
+/// This does not establish row locality: aggregate expressions can qualify.
+pub(crate) fn is_permutation_equivariant(expr: &Expr) -> bool {
     inspect_expr(expr, Resize::Ban, None).is_ok_and(|behavior| {
         matches!(
             behavior,
@@ -438,12 +440,21 @@ fn inspect_expr(
             Unproven
         }
         Expr::Agg(agg) => {
-            let (input, kind) = match agg {
-                AggExpr::Sum(input) => (input.as_ref(), "sum"),
-                AggExpr::Count { input, .. } => (input.as_ref(), "count"),
-                AggExpr::NUnique(input) => (input.as_ref(), "n_unique"),
+            enum Reducer {
+                Invariant,
+                Sum,
+                MinMax,
+                OrderSensitive,
+            }
+            use Reducer::*;
+
+            let (input, reducer) = match agg {
+                AggExpr::Sum(input) => (input.as_ref(), Sum),
+                AggExpr::Count { input, .. } | AggExpr::NUnique(input) => {
+                    (input.as_ref(), Invariant)
+                }
                 AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => {
-                    (input.as_ref(), "min_max")
+                    (input.as_ref(), MinMax)
                 }
                 AggExpr::Mean(input)
                 | AggExpr::Median(input)
@@ -451,18 +462,18 @@ fn inspect_expr(
                 | AggExpr::Last(input)
                 | AggExpr::Implode(input)
                 | AggExpr::Std(input, _)
-                | AggExpr::Var(input, _) => (input.as_ref(), "ordered"),
+                | AggExpr::Var(input, _) => (input.as_ref(), OrderSensitive),
                 AggExpr::Quantile {
                     expr: input,
                     quantile,
                     ..
                 } => {
                     check_quantile(quantile)?;
-                    (input.as_ref(), "ordered")
+                    (input.as_ref(), OrderSensitive)
                 }
                 #[cfg(patch_polars)]
                 AggExpr::FirstNonNull(input) | AggExpr::LastNonNull(input) => {
-                    (input.as_ref(), "ordered")
+                    (input.as_ref(), OrderSensitive)
                 }
                 AggExpr::AggGroups(_) => {
                     return fallible!(
@@ -478,18 +489,10 @@ fn inspect_expr(
                 }
             };
             let input_behavior = inspect_expr(input, Resize::Allow, schema)?;
-            let is_canonical = || -> Fallible<bool> {
-                Ok(schema.is_some_and(|schema| {
-                    input
-                        .clone()
-                        .to_field(schema)
-                        .is_ok_and(|field| canonical_sort_dtype(&field.dtype))
-                }))
-            };
-            let invariant = match kind {
-                "count" | "n_unique" => input_behavior.reducer(),
-                "sum" => {
-                    let is_integer = if let Some(schema) = schema {
+            let invariant_reducer = match reducer {
+                Invariant => true,
+                Sum => {
+                    if let Some(schema) = schema {
                         use DataType::*;
                         matches!(
                             input.clone().to_field(schema)?.dtype,
@@ -505,23 +508,22 @@ fn inspect_expr(
                         )
                     } else {
                         false
-                    };
-                    if is_integer {
-                        input_behavior.reducer()
-                    } else {
-                        input_behavior.order_sensitive_reducer()
                     }
                 }
-                "min_max" => {
-                    if is_canonical()? {
-                        input_behavior.reducer()
-                    } else {
-                        input_behavior.order_sensitive_reducer()
-                    }
-                }
-                _ => input_behavior.order_sensitive_reducer(),
+                MinMax => schema.is_some_and(|schema| {
+                    input
+                        .clone()
+                        .to_field(schema)
+                        .is_ok_and(|field| canonical_sort_dtype(&field.dtype))
+                }),
+                OrderSensitive => false,
             };
-            if schema.is_some() && invariant != Invariant {
+            let invariant = if invariant_reducer {
+                input_behavior.reducer()
+            } else {
+                input_behavior.order_sensitive_reducer()
+            };
+            if schema.is_some() && invariant != PermutationBehavior::Invariant {
                 return fallible!(
                     MakeTransformation,
                     "Order-sensitive aggregation requires a trusted random permutation of its input, or a permutation-equivariant input for an invariant reducer."
