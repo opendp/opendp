@@ -65,6 +65,64 @@ def test_borrowed_profile_conversion_owns_an_independent_clone():
     assert copied.delta(1.0) == 0.0
 
 
+@pytest.mark.parametrize(
+    "value,type_name",
+    [
+        ("hello λ", "String"),
+        (["", "hello", "λ"], "Vec<String>"),
+        ([], "Vec<String>"),
+        ((1.0, 2.0), "(f64, f64)"),
+        ({"a": 1, "b": 2}, "HashMap<String, i32>"),
+    ],
+)
+def test_owned_scratch_roundtrip_and_reuse(value, type_name):
+    obj = _convert.py_to_c(value, AnyObjectPtr, type_name)
+    for _ in range(10):
+        assert _convert.c_to_py(obj) == value
+    del obj
+    gc.collect()
+
+
+def test_profile_tuple_survives_scratch_and_source_release():
+    dp.enable_features("contrib", "honest-but-curious")
+    measurement = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool),
+        dp.absolute_distance(T=float),
+        dp.approximate(dp.zero_concentrated_divergence()),
+        lambda x: x,
+        lambda d: (d * 0.05, d * 1e-7),
+    )
+    converted = dp.c.make_zCDP_to_approxDP(measurement)
+    for _ in range(10):
+        profile, delta = converted.map(1.0)
+        assert delta == 1e-7
+        assert 0 <= profile.delta(1.0) <= 1
+    del converted, measurement
+    gc.collect()
+    assert 0 <= profile.delta(1.0) <= 1
+
+
+def test_owned_scratch_released_on_conversion_error(monkeypatch):
+    obj = _convert.py_to_c(["a", "b"], AnyObjectPtr, "Vec<String>")
+    release = _convert.lib.opendp_data__slice_owner_free
+    released = []
+
+    def track_release(owner):
+        released.append(owner.value)
+        return release(owner)
+
+    def fail(*_):
+        raise ValueError("conversion failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(_convert.lib, "opendp_data__slice_owner_free", track_release)
+        patch.setattr(_convert, "_slice_to_py", fail)
+        with pytest.raises(ValueError, match="conversion failed"):
+            _convert.c_to_py(obj)
+    assert len(released) == 1
+    assert _convert.c_to_py(obj) == ["a", "b"]
+
+
 def test_nested_conversion_error_does_not_free_source(monkeypatch):
     obj = _convert.py_to_c(42, AnyObjectPtr, "i32")
     raw = _convert._wrap_in_slice(obj, 1)
