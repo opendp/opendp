@@ -107,12 +107,18 @@ _TOTAL_CMP = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.py_objec
 )
 
 
-def _ref_count(ptr, increment):
+def _ref_count(
+    ptr,
+    increment,
+    _inc=ctypes.pythonapi.Py_IncRef,
+    _dec=ctypes.pythonapi.Py_DecRef,
+    _py_object=ctypes.py_object,
+):
     try:
         if increment:
-            ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
+            _inc(_py_object(ptr))
         else:
-            ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
+            _dec(_py_object(ptr))
     except Exception:  # pragma: no cover
         return False
     return True
@@ -243,38 +249,6 @@ class BoolPtr(ctypes.POINTER(ctypes.c_bool)):  # type: ignore[misc]
     _type_ = ctypes.c_bool
 
 
-class AnyObjectPtr(ctypes.POINTER(AnyObject)):  # type: ignore[misc]
-    _type_ = AnyObject
-
-    def __del__(self):
-        try:
-            from opendp._data import object_free
-
-            object_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
-
-
-class AnyQueryable(ctypes.Structure):
-    pass  # Opaque struct
-
-
-class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
-    _type_ = FfiSlice
-    _dependencies: MutableMapping = {}  # TODO: Tighten this
-    # Owned scratch views expose Vec<AnyObject> as borrowed pointer arrays.
-    _object_pointers: bool = False
-
-    def depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
-
-    def __del__(self):
-        """When self is deleted, stop keeping dependencies alive by freeing the reference."""
-        FfiSlicePtr._dependencies.pop(id(self), None)
-
-
 class FfiError(ctypes.Structure):
     _fields_ = [
         ("variant", ctypes.c_char_p),
@@ -297,6 +271,52 @@ class FfiResult(ctypes.Structure):
     ]
 
 
+def _make_finalizer(symbol):
+    """Keep native cleanup callable without imports during module teardown."""
+    if lib is None:  # documentation-only/headless imports
+        return lambda self: None  # pragma: no cover
+    # Independent function pointers avoid mutating generated wrappers' argtypes.
+    release = ctypes.CFUNCTYPE(FfiResult, ctypes.c_void_p)((symbol, lib))
+    free_error = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.POINTER(FfiError))(
+        ("opendp_core___error_free", lib)
+    )
+
+    def finalize(self, _callbacks=(_REF_COUNT, _TOTAL_CMP)):
+        # Retain both the CDLL and the host reference-count callback until all
+        # native owners are gone; Rust may drop callback userdata while freeing.
+        if self:
+            result = release(self)
+            if result.tag:
+                free_error(result.payload.Err)
+                raise RuntimeError(f"{symbol} failed")  # pragma: no cover
+
+    return finalize
+
+
+class AnyObjectPtr(ctypes.POINTER(AnyObject)):  # type: ignore[misc]
+    _type_ = AnyObject
+    __del__ = _make_finalizer("opendp_data__object_free")
+
+
+class AnyQueryable(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
+    _type_ = FfiSlice
+    _dependencies: MutableMapping = {}  # TODO: Tighten this
+    # Owned scratch views expose Vec<AnyObject> as borrowed pointer arrays.
+    _object_pointers: bool = False
+
+    def depends_on(self, *args):
+        """Extends the memory lifetime of args to the lifetime of self."""
+        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
+
+    def __del__(self, _dependencies=_dependencies):
+        """Release dependencies even after this module's globals are cleared."""
+        _dependencies.pop(id(self), None)
+
+
 class ExtrinsicObject(ctypes.Structure):
     _fields_ = [
         ("ptr", ctypes.py_object),
@@ -306,15 +326,7 @@ class ExtrinsicObject(ctypes.Structure):
 class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)):  # type: ignore[misc]
     _type_ = ExtrinsicObject
 
-    def __del__(self):
-        try:
-            from opendp._data import extrinsic_object_free
-
-            extrinsic_object_free(self)
-        except (ImportError, TypeError):  # pragma: no cover
-            # an example error that this catches:
-            #   ImportError: sys.meta_path is None, Python is likely shutting down
-            pass
+    __del__ = _make_finalizer("opendp_data__extrinsic_object_free")
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:

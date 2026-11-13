@@ -125,6 +125,44 @@ def test_noise_dispatch_type_strings_on_success_and_error(gaussian):
             )
 
 
+@pytest.mark.parametrize("kind", ["object", "metric", "measure", "function"])
+def test_finalizers_release_native_references_without_imports(kind, monkeypatch):
+    import builtins
+    import weakref
+
+    dp.enable_features("contrib", "honest-but-curious")
+
+    class Payload:
+        pass
+
+    def make_owner(value):
+        if kind == "object":
+            return _convert.py_to_c(value, AnyObjectPtr, "ExtrinsicObject")
+        if kind == "metric":
+            return dp.user_distance("lifetime", descriptor=value)
+        if kind == "measure":
+            return dp.user_divergence("lifetime", descriptor=value)
+        return dp.new_function(lambda _, payload=value: payload, "ExtrinsicObject")
+
+    value = Payload()
+    reference = weakref.ref(value)
+    owner = make_owner(value)
+    del value
+    assert reference() is not None
+    original_import = builtins.__import__
+
+    def unavailable(name, *args, **kwargs):
+        if name.startswith("opendp"):
+            raise ImportError("module teardown")
+        return original_import(name, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(builtins, "__import__", unavailable)
+        del owner
+        gc.collect()
+    assert reference() is None
+
+
 def test_owned_scratch_released_on_conversion_error(monkeypatch):
     obj = _convert.py_to_c(["a", "b"], AnyObjectPtr, "Vec<String>")
     release = _convert.lib.opendp_data__slice_owner_free
