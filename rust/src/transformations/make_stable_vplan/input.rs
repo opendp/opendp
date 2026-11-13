@@ -22,7 +22,7 @@ pub(super) fn make_input(
                 return fallible!(MakeTransformation,
                     "caller plan does not satisfy the verified input domain");
             }
-            checked_plan(input.clone(), &source, &expected)
+            checked_result(input_proof::construct(input.clone(), &source), &expected)
         }),
         StabilityMap::new(Clone::clone),
     )

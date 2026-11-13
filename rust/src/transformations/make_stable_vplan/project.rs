@@ -20,11 +20,9 @@ pub(super) fn make_project(
     let step = Transformation::new(
         domain, metric.clone(), output, metric,
         Function::new_fallible(move |input: &VPlan| {
-            checked_plan(
-                VPlan::Project {
-                    input: Box::new(input.clone()), exprs: exprs.clone(),
-                },
-                &source, &expected,
+            checked_result(
+                project_proof::construct(input.clone(), exprs.clone(), &source),
+                &expected,
             )
         }),
         StabilityMap::new(global_bound),
