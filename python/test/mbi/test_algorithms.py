@@ -34,7 +34,9 @@ def test_algorithm_err_elements(algorithm):
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-untyped,import-not-found]
 
-    model = mirror_descent(mbi.Domain(("A",), (2,)), [])
+    domain = mbi.Domain(("A",), (2,))
+    potentials = mbi.CliqueVector(domain=domain, cliques=[], tables={})
+    model = mbi.MarkovRandomField(potentials=potentials, marginals=potentials)
 
     msg = "input_domain columns must be bounded"
     with pytest.raises(ValueError, match=re.escape(msg)):
