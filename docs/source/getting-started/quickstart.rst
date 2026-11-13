@@ -8,11 +8,12 @@ OpenDP is available for Python, R, and Rust.
     .. tab-item:: Python
         :sync: python
 
-        Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI:
+        Use ``pip`` to install the `opendp <https://pypi.org/project/opendp/>`_ package from PyPI,
+        either ``all`` functionality, or just the subset you require:
 
         .. prompt:: bash
 
-            pip install opendp
+            pip install 'opendp[all]'
 
     .. tab-item:: R
         :sync: r
