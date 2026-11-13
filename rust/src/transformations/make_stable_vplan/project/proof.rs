@@ -124,6 +124,11 @@ impl CertifiedTableProject {
         verified::relation_spec(&self.plan, rows)
     }
 
+    // A certificate is well formed by construction. Its stability theorem is
+    // derived from this invariant; no proof field is stored on the value.
+    #[verifier::type_invariant]
+    spec fn invariant(&self) -> bool { self.valid() }
+
     pub closed spec fn valid(&self) -> bool {
         &&& domain::schema_member(self.input_schema@, self.input_rules@)
         &&& domain::schema_member(self.output_schema@, self.output_rules@)
@@ -299,10 +304,10 @@ impl CertifiedTableProject {
         }
     }
 
-    pub proof fn lemma_valid_as_transformation(&self)
-        requires self.valid(),
+    pub proof fn lemma_valid_as_transformation(tracked &self)
         ensures self.valid_as_transformation(),
     {
+        use_type_invariant(self);
         assert forall|rows: Seq<Seq<Option<verified::VValue>>>|
             domain::rows_member(rows, self.input_rules@)
             implies match verified::relation_spec(&self.plan, rows) {

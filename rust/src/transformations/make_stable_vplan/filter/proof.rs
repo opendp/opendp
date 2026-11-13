@@ -191,6 +191,11 @@ impl CertifiedTableFilter {
         verified::relation_spec(&self.plan, rows)
     }
 
+    // A certificate is well formed by construction. Its stability theorem is
+    // derived from this invariant; no proof field is stored on the value.
+    #[verifier::type_invariant]
+    spec fn invariant(&self) -> bool { self.valid() }
+
     pub closed spec fn valid(&self) -> bool {
         &&& domain::schema_member(self.schema@, self.rules@)
         &&& single_filter(&self.plan)
@@ -242,10 +247,10 @@ impl CertifiedTableFilter {
             &self.plan, self.rules_spec(), self.rules_spec())
     }
 
-    pub proof fn lemma_valid_as_transformation(&self)
-        requires self.valid(),
+    pub proof fn lemma_valid_as_transformation(tracked &self)
         ensures self.valid_as_transformation(),
     {
+        use_type_invariant(self);
         assert forall|rows: Seq<Seq<Option<VValue>>>|
             domain::rows_member(rows, self.rules_spec())
             implies match self.result_spec(rows) {
