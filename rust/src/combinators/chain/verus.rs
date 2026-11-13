@@ -6,10 +6,10 @@
 //! evaluations to these spec functions is a separate implementation boundary.
 
 use vstd::prelude::*;
+#[cfg(verus_keep_ghost)]
+use super::transformation::{result_close, valid_transformation};
 
 verus! {
-
-use super::transformation::{result_close, valid_transformation};
 
 /// `Function::make_chain` evaluates the inner function first and propagates
 /// its error without invoking the outer function.
