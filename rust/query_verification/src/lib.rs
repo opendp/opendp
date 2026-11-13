@@ -13,3 +13,6 @@ pub mod filter_proof;
 
 #[path = "../../src/transformations/make_stable_vplan/project/proof.rs"]
 pub mod project_proof;
+
+#[path = "../../src/transformations/make_stable_vplan/table/proof.rs"]
+pub mod table_proof;

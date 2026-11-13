@@ -352,75 +352,26 @@ impl CertifiedTableFilter {
         Ok(output)
     }
 
-    /// The general Result-valued transformation contract. The semantic
-    /// carrier is a row sequence; invoke proves its executable realization.
-    /// The source of this transformation is the actual VTable carrier, not
-    /// a second row-sequence domain that must be trusted as equivalent.
-    /// The output carrier is the semantic rows; invoke additionally proves
-    /// that its concrete returned VTable has exactly these rows and schema.
+    /// The concrete transformation contract is shared by all table nodes.
     pub closed spec fn valid_as_transformation(&self) -> bool {
-        &&& verified::frame_metric_space::symmetric_table_space(self.rules_spec())
-        &&& verified::frame_metric_space::symmetric_rows_space(self.rules_spec())
-        &&& transformation::valid_transformation::<
-            VTable, Seq<Seq<Option<VValue>>>,
-            u32, u32, (), (),
-        >(
-            |table: VTable| domain::table_member(&table, self.rules_spec()),
-            |rows: Seq<Seq<Option<VValue>>>|
-                domain::rows_member(rows, self.rules_spec()),
-            |left: VTable, right: VTable, d: u32|
-                symmetric_distance::close(
-                    verified::rows_view(left.rows@).to_multiset(),
-                    verified::rows_view(right.rows@).to_multiset(), d),
-            |left: Seq<Seq<Option<VValue>>>,
-             right: Seq<Seq<Option<VValue>>>, d: u32|
-                symmetric_distance::close(left.to_multiset(), right.to_multiset(), d),
-            |_: u32| false,
-            |table: VTable|
-                self.result_spec(verified::rows_view(table.rows@)),
-            |d: u32| Ok(d),
-        )
+        super::table_proof::valid_table_transformation(
+            &self.plan, self.rules_spec(), self.rules_spec())
     }
 
-    /// Membership in the concrete VTable domain now supplies the input
-    /// hypotheses to the already proved row-local contraction theorem.
     pub proof fn lemma_valid_as_transformation(&self)
         requires self.valid(),
         ensures self.valid_as_transformation(),
     {
-        verified::frame_metric_space::lemma_symmetric_rows_space(self.rules@);
-        verified::frame_metric_space::lemma_symmetric_table_space(self.rules@);
-        assert forall|table: VTable|
-            #[trigger] domain::table_member(&table, self.rules_spec())
-            implies match self.result_spec(verified::rows_view(table.rows@)) {
+        assert forall|rows: Seq<Seq<Option<VValue>>>|
+            domain::rows_member(rows, self.rules_spec())
+            implies match self.result_spec(rows) {
                 Ok(output) => domain::rows_member(output, self.rules_spec()),
-                Err(_) => true,
+                Err(_) => false,
             } by {
-            domain::lemma_table_rows_domain(&table, self.rules@);
-            self.lemma_preserves_rules(verified::rows_view(table.rows@));
+            self.lemma_preserves_rules(rows);
         }
-        assert forall|left: VTable, right: VTable, d: u32|
-            #[trigger] domain::table_member(&left, self.rules_spec())
-            && #[trigger] domain::table_member(&right, self.rules_spec())
-            && #[trigger] symmetric_distance::close(
-                verified::rows_view(left.rows@).to_multiset(),
-                verified::rows_view(right.rows@).to_multiset(), d)
-            implies transformation::result_close(
-                self.result_spec(verified::rows_view(left.rows@)),
-                self.result_spec(verified::rows_view(right.rows@)), d,
-                |a: Seq<Seq<Option<VValue>>>,
-                 b: Seq<Seq<Option<VValue>>>, bound: u32|
-                    symmetric_distance::close(a.to_multiset(), b.to_multiset(), bound),
-                |_: u32| false,
-            ) by {
-            domain::lemma_table_rows_domain(&left, self.rules@);
-            domain::lemma_table_rows_domain(&right, self.rules@);
-            self.lemma_preserves_rules(verified::rows_view(left.rows@));
-            self.lemma_preserves_rules(verified::rows_view(right.rows@));
-            self.lemma_symmetric_contraction(
-                verified::rows_view(left.rows@),
-                verified::rows_view(right.rows@), d);
-        }
+        super::table_proof::lemma_valid_table_transformation(
+            &self.plan, self.schema@, self.schema@, self.rules@, self.rules@);
     }
 
     proof fn lemma_preserves_rules(

@@ -11,6 +11,8 @@ mod stability;
 mod input_proof;
 #[path = "filter/proof.rs"]
 mod filter_proof;
+#[path = "table/proof.rs"]
+mod table_proof;
 #[path = "project/proof.rs"]
 mod project_proof;
 
