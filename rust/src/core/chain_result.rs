@@ -8,7 +8,10 @@ use vstd::prelude::*;
 
 #[cfg_attr(verus_keep_ghost, verus_spec(output =>
     requires
-        forall|value: T| call_requires(outer, (&value,)),
+        match intermediate {
+            Ok(value) => call_requires(outer, (&value,)),
+            Err(_) => true,
+        },
     ensures
         match intermediate {
             Err(error) => output == Err(error),

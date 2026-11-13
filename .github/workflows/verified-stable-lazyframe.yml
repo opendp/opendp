@@ -56,6 +56,8 @@ jobs:
           cargo test --no-default-features --features contrib,polars,verified-query domains::verified_frame::tests --lib
           cargo test --no-default-features --features contrib,polars,verified-query make_stable_vplan --lib
           cargo test --no-default-features --features contrib,polars,verified-query combinators::chain::test --lib
+          cargo test --no-default-features --features contrib combinators::chain::test --lib
+          cargo test --no-default-features --features contrib core::chain_result::tests --lib
           cargo test --no-default-features --features contrib,polars,verified-query domains::verified_plan::tests --lib
 
       - name: Publish push constructor status
