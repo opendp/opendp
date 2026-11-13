@@ -69,24 +69,8 @@ pub trait Domain: Clone + PartialEq + Debug {
     fn member(&self, val: &Self::Carrier) -> Fallible<bool>;
 }
 
-/// Short-circuit fallible composition. The verified-query build executes
-/// the same Result helper whose body is checked by Verus.
-fn chain_result<TX, TO, E>(
-    intermediate: Result<TX, E>,
-    outer: impl Fn(&TX) -> Result<TO, E>,
-) -> Result<TO, E> {
-    #[cfg(feature = "verified-query")]
-    {
-        crate::verified_query::chain::chain_result(intermediate, outer)
-    }
-    #[cfg(not(feature = "verified-query"))]
-    {
-        match intermediate {
-            Ok(value) => outer(&value),
-            Err(error) => Err(error),
-        }
-    }
-}
+mod chain_result;
+use chain_result::chain_result;
 
 /// A mathematical function.
 pub struct Function<TI, TO> {

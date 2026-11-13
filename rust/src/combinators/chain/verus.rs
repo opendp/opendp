@@ -2,8 +2,9 @@
 //!
 //! The executable implementation is in the sibling `mod.rs`. This module
 //! proves the generic semantic rule used by that combinator. The runtime
-//! `Function` and `StabilityMap` use erased Rust closures; connecting their
-//! evaluations to these spec functions is a separate implementation boundary.
+//! `Function` and `StabilityMap` use erased Rust closures. Their composition
+//! shares the executable, Verus-checked `core/chain_result.rs` implementation;
+//! closure contracts are still erased at the native trait-object boundary.
 
 use vstd::prelude::*;
 #[cfg(verus_keep_ghost)]
@@ -50,29 +51,6 @@ pub open spec fn preserves_infinity<DX, DO, ME>(
             Ok(output) => output_is_infinite(output),
             Err(_) => true,
         }
-}
-
-/// Executable Result short-circuiting used by the native Function,
-/// StabilityMap, and PrivacyMap composition closures.
-///
-/// The body is verified, not modeled by a separate ghost function. The caller
-/// supplies a callable outer closure; its postcondition is retained here.
-pub fn chain_result<Y, Z, E>(
-    inner: Result<Y, E>,
-    outer: impl Fn(&Y) -> Result<Z, E>,
-) -> (output: Result<Z, E>)
-    requires
-        forall|value: Y| call_requires(outer, (&value,)),
-    ensures
-        match inner {
-            Err(error) => output == Err(error),
-            Ok(value) => call_ensures(outer, (&value,), output),
-        },
-{
-    match inner {
-        Ok(value) => outer(&value),
-        Err(error) => Err(error),
-    }
 }
 
 /// The semantic contract of `make_chain_tt`, independently of any

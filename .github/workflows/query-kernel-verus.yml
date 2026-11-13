@@ -8,6 +8,7 @@ on:
       - 'rust/query_verification/**'
       - 'rust/src/transformations/make_stable_vplan/**'
       - 'rust/src/core/verus/**'
+      - 'rust/src/core/chain_result.rs'
       - 'rust/src/combinators/chain/verus.rs'
       - 'rust/src/domains/verified_frame/**'
       - 'rust/src/domains/polars/frame/verus.rs'

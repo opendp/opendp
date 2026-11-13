@@ -18,6 +18,7 @@ on:
       - 'rust/src/metrics/symmetric_distance/**'
       - 'rust/src/metrics/mod.rs'
       - 'rust/src/core/mod.rs'
+      - 'rust/src/core/chain_result.rs'
       - 'rust/src/domains/mod.rs'
       - 'rust/src/lib.rs'
       - 'rust/src/metrics/polars/**'
