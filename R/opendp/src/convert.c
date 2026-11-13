@@ -98,6 +98,29 @@ SEXP extract_error(FfiError *err)
     return R_NilValue;
 }
 
+static SEXP charptr_to_sexp_exec(void *input)
+{
+    return mkString((char *)input);
+}
+
+static void charptr_cleanup(void *input)
+{
+    opendp_data__str_free((char *)input);
+}
+
+SEXP charptr_to_sexp(char *input)
+{
+    // Even an R allocation error must release the Rust-owned string.
+    return R_ExecWithCleanup(charptr_to_sexp_exec, input, charptr_cleanup, input);
+}
+
+SEXP boolptr_to_sexp(c_bool *input)
+{
+    SEXP output = ScalarLogical(*input);
+    opendp_data__bool_free(input);
+    return output;
+}
+
 const char *sexp_to_charptr(SEXP type_name)
 {
     PROTECT(type_name = AS_CHARACTER(type_name));
@@ -768,7 +791,10 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         extract_error(type_name_result.err);
     char *c_type_name = type_name_result.ok;
 
-    SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
+    SEXP type_string = PROTECT(charptr_to_sexp(c_type_name));
+    SEXP type_name = PROTECT(parse_runtime_type(sexp_to_charptr(type_string)));
+    UNPROTECT(2);
+    PROTECT(type_name);
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (str_equal(c_origin, "PrivacyProfile"))
