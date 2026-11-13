@@ -1,12 +1,13 @@
 """Ownership regressions; also run these tests under Valgrind."""
 
+import ctypes
 import gc
 
 import pytest
 
 import opendp.prelude as dp
 from opendp import _convert
-from opendp._lib import AnyObjectPtr
+from opendp._lib import AnyObject, AnyObjectPtr
 
 
 def test_callback_argument_conversion_error_does_not_free_borrowed_object():
@@ -187,6 +188,33 @@ def test_owned_scratch_released_on_conversion_error(monkeypatch):
             _convert.c_to_py(obj)
     assert len(released) == 1
     assert _convert.c_to_py(obj) == ["a", "b"]
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_borrowed_pointer_array_does_not_consume_elements(monkeypatch, fail):
+    obj = _convert.py_to_c(42, AnyObjectPtr, "i32")
+    array = (ctypes.POINTER(AnyObject) * 1)(ctypes.cast(obj, ctypes.POINTER(AnyObject)))
+    raw = _convert._wrap_in_slice(array, 1)
+
+    if fail:
+
+        def failed_conversion(*_):
+            raise ValueError("nested conversion failed")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(_convert, "c_to_py", failed_conversion)
+            with pytest.raises(ValueError, match="nested conversion failed"):
+                _convert._slice_to_vector(raw, dp.Vec["AnyObject"])
+    else:
+        assert _convert._slice_to_vector(raw, dp.Vec["AnyObject"]) == [42]
+
+    assert _convert.c_to_py(obj) == 42
+    assert (
+        _convert._slice_to_vector(
+            _convert._wrap_in_slice(array, 0), dp.Vec["AnyObject"]
+        )
+        == []
+    )
 
 
 def test_nested_conversion_error_does_not_free_source(monkeypatch):
