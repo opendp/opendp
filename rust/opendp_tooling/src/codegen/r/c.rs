@@ -414,13 +414,13 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
         ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
-        ty if ty == "char *" => format!("ScalarString(mkChar({name}))"),
+        ty if ty == "char *" => format!("charptr_to_sexp({name})"),
         ty if ty == "double" => format!("ScalarReal(*(double *){name})"),
         ty if ty == "int32_t" => format!("ScalarInteger(*(int *){name})"),
         ty if ty == "size_t" => format!("ScalarInteger(*(size_t *){name})"),
         ty if ty == "uint32_t" => format!("ScalarInteger((int){name})"),
         ty if ty == "bool" => format!("ScalarLogical({name})"),
-        ty if ty == "bool *" => format!("ScalarLogical(*(bool *){name})"),
+        ty if ty == "bool *" => format!("boolptr_to_sexp({name})"),
 
         _ => format!("\"UNKNOWN RET TYPE: {}\"", arg.c_type()),
     };
