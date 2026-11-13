@@ -110,6 +110,8 @@ where
 }
 
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
+/// The generic Result-valued stability rule is proved in the adjacent
+/// `verus.rs`; the closure-to-spec correspondence remains a verification boundary.
 /// Returns a Measurement that when invoked, computes `transformation1(transformation0(x))`.
 ///
 /// # Arguments

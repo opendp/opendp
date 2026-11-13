@@ -10,6 +10,8 @@ pub mod filter;
 pub mod domain;
 #[path = "../../src/core/verus/transformation.rs"]
 pub mod transformation;
+#[path = "../../src/combinators/chain/verus.rs"]
+pub mod chain;
 #[path = "../../src/core/verus/metric_space.rs"]
 pub mod metric_space;
 #[path = "../../src/core/verus/row_local.rs"]
