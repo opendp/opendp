@@ -28,12 +28,13 @@ pub(crate) fn chain_result<T, U, E>(
     }
 }
 
-/// Compose typed callbacks before their eventual erasure into OpenDP's
-/// Arc<dyn Fn> representation. Verus checks the actual executable call path,
-/// including both callbacks' contracts and Result short-circuiting.
+/// Verified higher-order composition for any callbacks whose call contracts
+/// are available. This same implementation is used by native OpenDP.
 ///
-/// The inner callback must be callable on this input; the outer callback is
-/// required only for successful outputs permitted by the inner contract.
+/// In native Function::make_chain the callbacks are already Arc<dyn Fn>;
+/// this theorem proves the call path conditional on those contracts, not the
+/// correctness of arbitrary erased callbacks. The inner callback must be
+/// callable here; the outer only for permitted successful inner results.
 #[cfg_attr(verus_keep_ghost, verus_spec(output =>
     requires
         call_requires(inner, (input,)),
