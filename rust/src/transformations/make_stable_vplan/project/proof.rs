@@ -1,6 +1,6 @@
 //! Executable projection node, checked in Verus before OpenDP wraps it.
 
-use super::verified::{VExpr, VField, VPlan};
+use super::verified::{self, VExpr, VField, VPlan, VTable};
 use super::stability;
 use super::table_proof;
 use super::verified::{domain, symmetric_distance};
