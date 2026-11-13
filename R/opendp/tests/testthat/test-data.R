@@ -21,6 +21,17 @@ test_that("vector data loaders", {
   expect_equal((vector_space_of(String) |> then_identity())(arg = "A"), "A")
 })
 
+test_that("scratch slice owners release repeated string and map conversions", {
+  strings <- vector_space_of(String) |> then_identity()
+  maps <- map_space_of(String, bool) |> then_identity()
+  input <- new_hashtab(c("A", "B"), c(TRUE, FALSE))
+  for (i in 1:20) {
+    expect_identical(strings(arg = c("", "λ", "hello")), c("", "λ", "hello"))
+    expect_true(hashtab_eq(maps(arg = input), input))
+  }
+  gc()
+})
+
 test_that("scalar data loaders", {
   expect_equal((scalar_space_of(f64) |> then_identity())(arg = 1), 1)
   expect_equal((scalar_space_of(i32) |> then_identity())(arg = 1L), 1L)

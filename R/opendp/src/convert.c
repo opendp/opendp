@@ -485,12 +485,9 @@ SEXP slice_to_scalar(FfiSlice *raw, SEXP type_name)
     else if (str_equal(c_origin, "AnyObject"))
     {
         result = PROTECT(allocVector(VECSXP, raw->len));
-        FfiResult_____FfiSlice result_slice = opendp_data__ffislice_of_anyobjectptrs(raw);
-        if (result_slice.tag == Err_____FfiSlice)
-            extract_error(result_slice.err);
-        FfiSlice *slice = result_slice.ok;
+        // Owned scratch views already expose an array of borrowed pointers.
         for (int i = 0; i < raw->len; i++)
-            SET_VECTOR_ELT(result, i, anyobjectptr_to_sexp(((AnyObject **)slice->ptr)[i]));
+            SET_VECTOR_ELT(result, i, anyobjectptr_to_sexp(((AnyObject **)raw->ptr)[i]));
         UNPROTECT(1);
     }
     else
@@ -784,6 +781,11 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     return result.ok;
 }
 
+static void slice_owner_cleanup(void *owner)
+{
+    opendp_data__slice_owner_free((FfiSliceOwner *)owner);
+}
+
 static void anyobject_cleanup(void *obj)
 {
     opendp_data__object_free((AnyObject *)obj);
@@ -838,12 +840,16 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         return queryable;
     }
 
-    FfiResult_____FfiSlice slice_result = opendp_data__object_as_slice(obj);
-    if (slice_result.tag == Err_____FfiSlice)
+    FfiResult_____FfiSliceOwner owner_result = opendp_data__object_as_slice_owned(obj);
+    if (owner_result.tag == Err_____FfiSliceOwner)
+        extract_error(owner_result.err);
+    FfiSliceOwner *owner = owner_result.ok;
+    opendp_register_resource(owner, slice_owner_cleanup);
+    FfiResult______FfiSlice slice_result = opendp_data__slice_owner_view(owner);
+    if (slice_result.tag == Err______FfiSlice)
         extract_error(slice_result.err);
-    FfiSlice *slice = slice_result.ok;
 
-    SEXP value = slice_to_sexp(slice, type_name);
+    SEXP value = slice_to_sexp((FfiSlice *)slice_result.ok, type_name);
     UNPROTECT(1);
     return value;
 }
