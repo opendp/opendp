@@ -52,7 +52,7 @@ pub proof fn lemma_project_row_member(
         domain::row_member(row, input_rules),
         count <= exprs.len(),
         output_rules.len() == exprs.len(),
-        forall|j: int| 0 <= j < exprs.len() ==>
+        forall|j: int| #![trigger exprs[j]] 0 <= j < exprs.len() ==>
             match verified::project::identity_column_spec(&exprs[j]) {
                 Some(index) => index < input_rules.len()
                     && output_rules[j] == input_rules[index as int],
@@ -159,7 +159,7 @@ impl CertifiedTableProject {
             invariant
                 i <= exprs.len(),
                 exprs.len() == output_rules.len(),
-                forall|j: int| 0 <= j < i ==>
+                forall|j: int| #![trigger exprs@[j]] 0 <= j < i ==>
                     match verified::project::identity_column_spec(&exprs@[j]) {
                         Some(index) => index < input_rules@.len()
                             && output_rules@[j] == input_rules@[index as int],
