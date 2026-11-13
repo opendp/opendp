@@ -14,12 +14,12 @@ use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::{
         verified_frame::VColumn,
-        verified_plan::{VFrameDomain, VFrameMetric, VPlanDomain},
+        verified_plan::VFrameDomain,
         LazyFrameDomain, SeriesDomain,
     },
     error::*,
     metrics::{Bound, Bounds, FrameDistance, SymmetricDistance},
-    transformations::make_stable_vplan::make_stable_vplan,
+    transformations::make_stable_vplan::make_stable_vtable,
 };
 
 /// Experimental private constructor. Unsupported plans fail closed.
@@ -33,17 +33,15 @@ pub(crate) fn make_verified_stable_lazyframe(
 >> {
     let (plan, columns) =
         normalize_plan(&lazyframe.logical_plan, &input_domain.series_domains)?;
-    // Construct through the verified OpenDP transformation, not directly
-    // from the normalized AST. Margins are discarded conservatively because
-    // their Polars grouping expressions are not part of the verified DSL.
+    // Certify execution on concrete tables, not construction of query syntax:
+    // the FrameDistance metric applies to datasets, not to pairs of VPlans.
+    // Margins are discarded conservatively because their Polars grouping
+    // expressions cannot be represented in the verified DSL.
     let source = VFrameDomain::new(input_domain.series_domains.iter()
         .map(|column| column.cast_carrier::<VColumn>()).collect())?;
-    let certified = make_stable_vplan(
-        VPlanDomain::new(source)?, VFrameMetric::new(SymmetricDistance), plan,
-    )?;
-    let plan = certified.invoke(&verified::VPlan::Input)?;
+    let certified = make_stable_vtable(source, SymmetricDistance, plan.clone())?;
     let verified_map = certified.stability_map.clone();
-    let verified_columns = certified.output_domain.frame.series_domains.iter()
+    let verified_columns = certified.output_domain.series_domains.iter()
         .map(|column| column.cast_carrier::<Series>()).collect::<Vec<_>>();
     if columns != verified_columns {
         return fallible!(MakeTransformation,
@@ -52,9 +50,9 @@ pub(crate) fn make_verified_stable_lazyframe(
     let output_domain = LazyFrameDomain::new(verified_columns)?;
     let source_columns = input_domain.series_domains.iter()
         .map(|column| column.name.clone()).collect::<Vec<_>>();
-    // Only global distances cross the Polars/VExpr boundary. Delegate
-    // their propagation to the verified transformation rather than
-    // maintaining a second stability map in this adapter.
+    // Only the global distance crosses the Polars/VExpr boundary. The
+    // verified table transformation supplies its 1-Lipschitz stability map.
+    // The Polars backend equivalence remains a separate adapter obligation.
     Transformation::new(
         input_domain,
         input_metric.clone(),
@@ -69,17 +67,12 @@ pub(crate) fn make_verified_stable_lazyframe(
         }),
         StabilityMap::new_fallible(move |bounds: &Bounds| {
             let global = bounds.get_bound(&HashSet::new());
-            let verified_input = Bounds::<verified::VExpr>(vec![Bound {
-                by: HashSet::new(),
-                per_group: global.per_group,
-                num_groups: global.num_groups,
-            }]);
-            let output = verified_map.eval(&verified_input)?
-                .get_bound(&HashSet::new());
             Ok(Bounds(vec![Bound {
                 by: HashSet::new(),
-                per_group: output.per_group,
-                num_groups: output.num_groups,
+                per_group: global.per_group
+                    .map(|d| verified_map.eval(&d)).transpose()?,
+                num_groups: global.num_groups
+                    .map(|d| verified_map.eval(&d)).transpose()?,
             }]))
         }),
     )
@@ -244,13 +237,21 @@ mod tests {
             schema: crate::domains::verified_frame::kernel_schema(&input_domain.series_domains)?,
             rows: to_cells(&source)?,
         };
-        let expected = verified::evaluate(&plan, &reference)
-            .expect("well-typed reference evaluation");
+        let physical = make_stable_vtable(
+            VFrameDomain::new(input_domain.series_domains.iter()
+                .map(|column| column.cast_carrier::<VColumn>()).collect())?,
+            SymmetricDistance, plan,
+        )?;
+        let expected = physical.invoke(&reference)?;
         let actual = transformation.invoke(&source.clone().lazy())?.collect()?;
         if compare_original {
             assert_eq!(actual, query.collect()?);
         }
-        assert!(to_cells(&actual)? == expected, "backend disagrees with reference evaluator");
+        assert!(to_cells(&actual)? == expected.rows,
+            "backend disagrees with certified table evaluator");
+        assert_eq!(expected.schema,
+            crate::domains::verified_frame::kernel_schema(
+                &physical.output_domain.series_domains)?);
         assert_eq!(transformation.output_domain.series_domains, expected_columns);
         assert_eq!(actual.width(), expected_columns.len());
         for (column, expected) in actual.get_columns().iter().zip(&expected_columns) {
