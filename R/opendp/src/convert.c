@@ -804,13 +804,20 @@ AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name)
     return obj;
 }
 
+static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned);
+
 SEXP owned_anyobjectptr_to_sexp(AnyObject *obj)
 {
     opendp_register_resource(obj, anyobject_cleanup);
-    return anyobjectptr_to_sexp(obj);
+    return anyobjectptr_to_sexp_impl(obj, 1);
 }
 
 SEXP anyobjectptr_to_sexp(AnyObject *obj)
+{
+    return anyobjectptr_to_sexp_impl(obj, 0);
+}
+
+static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned)
 {
     FfiResult_____c_char type_name_result = opendp_data__object_type(obj);
     if (type_name_result.tag == Err_____c_char)
@@ -823,6 +830,18 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     PROTECT(type_name);
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
+    if (!owned && (str_equal(c_origin, "PrivacyProfile") ||
+                   str_equal(c_origin, "AnyOdometerQueryable") ||
+                   str_equal(c_origin, "AnyQueryable")))
+    {
+        // Callback arguments and nested slice elements are borrowed. Opaque
+        // R wrappers escape this call, so give their finalizers a real owner.
+        FfiResult_____AnyObject cloned = opendp_data__clone_opaque_object(obj);
+        if (cloned.tag == Err_____AnyObject)
+            extract_error(cloned.err);
+        obj = cloned.ok;
+        opendp_register_resource(obj, anyobject_cleanup);
+    }
     if (str_equal(c_origin, "PrivacyProfile"))
     {
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
