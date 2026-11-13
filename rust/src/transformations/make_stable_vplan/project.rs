@@ -29,3 +29,39 @@ pub(super) fn make_project(
     )?;
     prior >> step
 }
+
+
+/// Construct a certified transformation over concrete VTables. This initial
+/// certificate supports projections of existing columns (including aliases,
+/// reordering and duplication) and preserves their exact atom bounds.
+pub(super) fn make_stable_vtable_project(
+    input_domain: crate::domains::verified_plan::VFrameDomain,
+    metric: crate::metrics::SymmetricDistance,
+    exprs: Vec<VExpr>,
+) -> Fallible<Transformation<
+    crate::domains::verified_plan::VFrameDomain, crate::metrics::SymmetricDistance,
+    crate::domains::verified_plan::VFrameDomain, crate::metrics::SymmetricDistance,
+>> {
+    if !input_domain.margins.is_empty() {
+        return fallible!(MakeTransformation,
+            "verified table projection requires a margin-free domain");
+    }
+    let output_domain = project_domain(&input_domain, &exprs)?;
+    let input_rules = crate::domains::verified_frame::verified_rules(
+        &input_domain.series_domains)?;
+    let output_rules = crate::domains::verified_frame::verified_rules(
+        &output_domain.series_domains)?;
+    let certified = project_proof::CertifiedTableProject::new(
+        exprs, &input_rules, &output_rules,
+    ).ok_or_else(|| err!(MakeTransformation,
+        "projection is not a certified column selection"))?;
+    Transformation::new(
+        input_domain, metric.clone(), output_domain, metric,
+        Function::new_fallible(move |table: &verified::VTable| {
+            certified.invoke(table).map_err(|_| {
+                err!(MakeTransformation, "input outside certified projection domain")
+            })
+        }),
+        StabilityMap::new(|d: &u32| project_proof::CertifiedTableProject::map_distance(*d)),
+    )
+}

@@ -160,6 +160,54 @@ mod tests {
         Ok(())
     }
 
+
+    #[test]
+    fn certified_table_project_preserves_column_bounds_and_duplicates() -> Fallible<()> {
+        let source = source()?;
+        let selected = vec![
+            VExpr::Alias {
+                expr: Box::new(VExpr::Column(0)), name: "first".into(),
+            },
+            VExpr::Alias {
+                expr: Box::new(VExpr::Column(0)), name: "second".into(),
+            },
+            VExpr::Column(1),
+        ];
+        let trans = project::make_stable_vtable_project(
+            source.clone(), SymmetricDistance, selected,
+        )?;
+        let data = table();
+        assert!(trans.input_domain.member(&data)?);
+        let output = trans.invoke(&data)?;
+        assert!(trans.output_domain.member(&output)?);
+        assert_eq!(output.rows, data.rows.iter().map(|row| {
+            vec![row[0], row[0], row[1]]
+        }).collect::<Vec<_>>());
+        assert_eq!(output.schema.len(), 3);
+        let cols = &trans.output_domain.series_domains;
+        assert_eq!(cols[0].name.as_str(), "first");
+        assert_eq!(cols[1].name.as_str(), "second");
+        assert_eq!(cols[0].atom_domain::<i64>()?.get_closed_bounds()?, (0, 10));
+        assert_eq!(cols[1].atom_domain::<i64>()?.get_closed_bounds()?, (0, 10));
+        for d in [0, 1, 3, u32::MAX] {
+            assert_eq!(trans.map(&d)?, d);
+        }
+        let mut bad = data.clone();
+        bad.rows[0][0] = Some(VValue::Int(11));
+        assert!(trans.invoke(&bad).is_err());
+        assert!(project::make_stable_vtable_project(
+            source, SymmetricDistance, vec![VExpr::Alias {
+                expr: Box::new(VExpr::Binary {
+                    left: Box::new(VExpr::Column(0)),
+                    op: VBinaryOp::Gt,
+                    right: Box::new(VExpr::Literal(VValue::Int(5))),
+                }),
+                name: "derived".into(),
+            }],
+        ).is_err());
+        Ok(())
+    }
+
     #[test]
     fn recursive_project_filter_domain_and_execution() -> Fallible<()> {
         let input = source()?;
