@@ -122,7 +122,7 @@ impl CertifiedTableProject {
             VPlan::Project { input, exprs } =>
                 matches!(**input, VPlan::Input)
                 && self.output_rules@.len() == exprs@.len()
-                && forall|j: int| 0 <= j < exprs@.len() ==>
+                && forall|j: int| #![trigger exprs@[j]] 0 <= j < exprs@.len() ==>
                     match verified::project::identity_column_spec(&exprs@[j]) {
                         Some(index) => index < self.input_rules@.len()
                             && self.output_rules@[j]
