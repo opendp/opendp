@@ -71,11 +71,7 @@ pub(crate) fn make_stable_vtable(
     plan: VPlan,
 ) -> Fallible<Transformation<VFrameDomain, SymmetricDistance, VFrameDomain, SymmetricDistance>> {
     match plan {
-        VPlan::Input => Transformation::new(
-            input_domain.clone(), metric.clone(), input_domain, metric,
-            Function::new(|table: &verified::VTable| table.clone()),
-            StabilityMap::new(|d: &u32| *d),
-        ),
+        VPlan::Input => input::make_stable_vtable_input(input_domain, metric),
         VPlan::Filter { input, predicate } => {
             let prior = make_stable_vtable(input_domain, metric, *input)?;
             let (domain, metric) = prior.output_space();
@@ -148,6 +144,20 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn certified_table_identity_preserves_membership_and_distance() -> Fallible<()> {
+        let identity = make_stable_vtable(source()?, SymmetricDistance, VPlan::Input)?;
+        let original = table();
+        let returned = identity.invoke(&original)?;
+        assert_eq!(returned.schema, original.schema);
+        assert_eq!(returned.rows, original.rows);
+        assert_eq!(identity.map(&5)?, 5);
+        let mut invalid = original;
+        invalid.rows[0][0] = Some(VValue::Int(11));
+        assert!(identity.invoke(&invalid).is_err());
+        Ok(())
+    }
 
     #[test]
     fn certified_table_filter_builds_valid_transformation() -> Fallible<()> {

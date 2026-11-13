@@ -151,6 +151,54 @@ pub fn invoke_table(
     Ok(output)
 }
 
+/// The executable identity path used by the certified OpenDP source node.
+/// It delegates to the already-verified table evaluator with the Input plan.
+pub fn invoke_identity(
+    rules: &Vec<VColumnRule>, input: &VTable,
+) -> (result: Result<VTable, ()>)
+    ensures match result {
+        Ok(output) =>
+            domain::table_member(input, rules@)
+            && domain::table_member(&output, rules@)
+            && verified::rows_view(output.rows@) == verified::rows_view(input.rows@),
+        Err(_) => !domain::table_member(input, rules@),
+    },
+{
+    let schema = domain::rule_schema(rules);
+    let plan = VPlan::Input;
+    proof {
+        assert(verified::plan_schema(&plan, schema@) == Some(schema@));
+        assert forall|rows: Seq<Seq<Option<VValue>>>|
+            domain::rows_member(rows, rules@)
+            implies match verified::relation_spec(&plan, rows) {
+                Ok(output) => domain::rows_member(output, rules@),
+                Err(_) => false,
+            } by {
+            assert(verified::relation_spec(&plan, rows) == Ok(rows));
+        }
+        assert(certified_table_plan(
+            &plan, schema@, schema@, rules@, rules@,
+        ));
+        lemma_valid_table_transformation(
+            &plan, schema@, schema@, rules@, rules@,
+        );
+    }
+    let result = invoke_table(
+        &plan, &schema, &schema, rules, rules, input,
+    );
+    proof {
+        if let Ok(output) = &result {
+            assert(verified::relation_spec(
+                &plan, verified::rows_view(input.rows@)
+            ) == Ok(verified::rows_view(output.rows@)));
+            assert(verified::relation_spec(
+                &plan, verified::rows_view(input.rows@)
+            ) == Ok(verified::rows_view(input.rows@)));
+        }
+    }
+    result
+}
+
 pub fn map_distance(distance: u32) -> (output: u32)
     ensures output == distance,
 {
