@@ -56,6 +56,8 @@ void opendp_register_resource(void *ptr, void (*release)(void *))
 
 void opendp_forget_resource(void *ptr)
 {
+    if (!current_scope)
+        error("OpenDP ownership transfer outside a resource scope");
     for (Resource **node = &current_scope->resources; *node; node = &(*node)->next)
     {
         if ((*node)->ptr == ptr)
@@ -66,4 +68,5 @@ void opendp_forget_resource(void *ptr)
             return;
         }
     }
+    error("OpenDP ownership transfer of an unregistered resource");
 }
