@@ -244,7 +244,14 @@ impl CertifiedTableProject {
             let row = rows[(count - 1) as int];
             assert(domain::row_member(row, self.input_rules@));
             match &self.plan {
-                VPlan::Project { exprs, .. } => {
+                VPlan::Project { input, exprs } => {
+                    assert(matches!(**input, VPlan::Input));
+                    assert(verified::plan_schema(input, self.input_schema@)
+                        == Some(self.input_schema@));
+                    assert(verified::plan_schema(&self.plan, self.input_schema@)
+                        == Some(self.output_schema@));
+                    assert(verified::local_schema(&self.plan, self.input_schema@)
+                        == Some(self.output_schema@));
                     assert(verified::project::schema_prefix(
                         exprs@, self.input_schema@, exprs@.len())
                         == Some(self.output_schema@));
