@@ -604,9 +604,9 @@ FfiSlice hashmap_to_slice(SEXP value, SEXP type_name)
     if (errorOccurred)
         error("Error getting val type");
 
-    void *ptr = malloc(2 * sizeof(void *));
-    ((void **)ptr)[0] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 0), key_rt);
-    ((void **)ptr)[1] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 1), val_rt);
+    void *ptr = R_alloc(2, sizeof(void *));
+    ((void **)ptr)[0] = sexp_to_anyobjectptr_temp(VECTOR_ELT(hashitems, 0), key_rt);
+    ((void **)ptr)[1] = sexp_to_anyobjectptr_temp(VECTOR_ELT(hashitems, 1), val_rt);
 
     FfiSlice result = {ptr, 2};
     UNPROTECT(9);
@@ -782,6 +782,26 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
         extract_error(result.err);
 
     return result.ok;
+}
+
+static void anyobject_cleanup(void *obj)
+{
+    opendp_data__object_free((AnyObject *)obj);
+}
+
+AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name)
+{
+    AnyObject *obj = sexp_to_anyobjectptr(data, type_name);
+    // A NULL type signals an already-owned external pointer: do not free it.
+    if (!isNull(type_name))
+        opendp_register_resource(obj, anyobject_cleanup);
+    return obj;
+}
+
+SEXP owned_anyobjectptr_to_sexp(AnyObject *obj)
+{
+    opendp_register_resource(obj, anyobject_cleanup);
+    return anyobjectptr_to_sexp(obj);
 }
 
 SEXP anyobjectptr_to_sexp(AnyObject *obj)
