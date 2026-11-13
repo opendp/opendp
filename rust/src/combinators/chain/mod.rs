@@ -4,10 +4,11 @@ mod ffi;
 mod shr;
 
 use crate::core::{
-    Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap, StabilityMap,
-    Transformation,
+    CertifiedTransformationParts, Domain, Function, Measure, Measurement, Metric,
+    MetricSpace, PrivacyMap, StabilityMap, Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
+use crate::metrics::SymmetricDistance;
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
@@ -164,6 +165,98 @@ where
             &transformation1.stability_map,
             &transformation0.stability_map,
         ),
+    )
+}
+
+/// A proof-backed realization of the generic composition theorem for a
+/// finite intermediate metric. Both callbacks are composed without replacing
+/// them with an independently trusted implementation.
+///
+/// The inputs' validity contracts come from their constructors: legacy new
+/// assumes validity, while new_certified requires proof-backed parts. No
+/// duplicate certificate or runtime certification flag is carried.
+struct CertifiedSymmetricChain<'a, DI: Domain, DX: Domain, DO: Domain> {
+    inner: &'a Transformation<DI, SymmetricDistance, DX, SymmetricDistance>,
+    outer: &'a Transformation<DX, SymmetricDistance, DO, SymmetricDistance>,
+}
+
+impl<DI, DX, DO>
+    CertifiedTransformationParts<DI, SymmetricDistance, DO, SymmetricDistance>
+    for CertifiedSymmetricChain<'_, DI, DX, DO>
+where
+    DI: Domain,
+    DX: Domain,
+    DO: Domain,
+    DI::Carrier: 'static,
+    DX::Carrier: 'static,
+    DO::Carrier: 'static,
+{
+    fn into_parts(
+        self, input_domain: &DI, output_domain: &DO,
+    ) -> Fallible<(
+        Function<DI::Carrier, DO::Carrier>,
+        StabilityMap<SymmetricDistance, SymmetricDistance>,
+    )> {
+        if &self.inner.input_domain != input_domain
+            || &self.outer.output_domain != output_domain
+            || self.inner.output_domain != self.outer.input_domain
+            || self.inner.output_metric != self.outer.input_metric
+        {
+            return Err(mismatch_error(
+                ErrorVariant::DomainMismatch,
+                &self.inner.output_domain,
+                &self.outer.input_domain,
+            ));
+        }
+        Ok((
+            Function::make_chain(&self.outer.function, &self.inner.function),
+            StabilityMap::make_chain(
+                &self.outer.stability_map, &self.inner.stability_map,
+            ),
+        ))
+    }
+}
+
+/// Compose transformations certified (or trusted by the legacy constructor)
+/// over finite symmetric distances. The theorem in verus.rs applies without
+/// an infinity-preservation assumption because u32 has no infinite bound.
+///
+/// Generic make_chain_tt remains available for other metrics, for which
+/// certification needs an additional infinity-preservation argument.
+pub(crate) fn make_chain_tt_certified_symmetric<DI, DX, DO>(
+    transformation1: &Transformation<DX, SymmetricDistance, DO, SymmetricDistance>,
+    transformation0: &Transformation<DI, SymmetricDistance, DX, SymmetricDistance>,
+) -> Fallible<Transformation<DI, SymmetricDistance, DO, SymmetricDistance>>
+where
+    DI: 'static + Domain,
+    DX: 'static + Domain,
+    DO: 'static + Domain,
+    DI::Carrier: 'static,
+    DX::Carrier: 'static,
+    DO::Carrier: 'static,
+    (DI, SymmetricDistance): MetricSpace,
+    (DX, SymmetricDistance): MetricSpace,
+    (DO, SymmetricDistance): MetricSpace,
+{
+    assert_elements_match!(
+        DomainMismatch,
+        transformation0.output_domain,
+        transformation1.input_domain
+    );
+    assert_elements_match!(
+        MetricMismatch,
+        transformation0.output_metric,
+        transformation1.input_metric
+    );
+    Transformation::new_certified(
+        transformation0.input_domain.clone(),
+        transformation0.input_metric.clone(),
+        transformation1.output_domain.clone(),
+        transformation1.output_metric.clone(),
+        CertifiedSymmetricChain {
+            inner: transformation0,
+            outer: transformation1,
+        },
     )
 }
 

@@ -17,6 +17,7 @@ mod table_proof;
 mod project_proof;
 
 use std::collections::HashSet;
+use crate::combinators::make_chain_tt_certified_symmetric;
 use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::verified_plan::{VFrameBounds, VFrameDomain, VFrameMetric, VPlanDomain},
@@ -79,13 +80,13 @@ pub(crate) fn make_stable_vtable(
             let prior = make_stable_vtable(input_domain, metric, *input)?;
             let (domain, metric) = prior.output_space();
             let step = filter::make_stable_vtable_filter(domain, metric, predicate)?;
-            prior >> step
+            make_chain_tt_certified_symmetric(&step, &prior)
         },
         VPlan::Project { input, exprs } => {
             let prior = make_stable_vtable(input_domain, metric, *input)?;
             let (domain, metric) = prior.output_space();
             let step = project::make_stable_vtable_project(domain, metric, exprs)?;
-            prior >> step
+            make_chain_tt_certified_symmetric(&step, &prior)
         },
     }
 }

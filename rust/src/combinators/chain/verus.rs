@@ -8,7 +8,7 @@
 
 use vstd::prelude::*;
 #[cfg(verus_keep_ghost)]
-use super::transformation::{result_close, valid_transformation};
+use super::transformation::{result_close, valid_transformation, realizes_callback, lemma_new_certified};
 
 verus! {
 
@@ -148,6 +148,91 @@ pub proof fn lemma_make_chain_tt<X, Y, Z, DI, DX, DO, E, ME>(
             },
         }
     }
+}
+
+/// When the intermediate metric has finite u32 distances, chaining two
+/// valid models and their realized callbacks produces a valid native chain.
+/// This combines the general stability theorem with callback-to-model
+/// correspondence before dynamic closure erasure.
+pub proof fn lemma_make_chain_tt_certified_u32<X, Y, Z, DI, E, ME>(
+    input_member: spec_fn(X) -> bool,
+    middle_member: spec_fn(Y) -> bool,
+    output_member: spec_fn(Z) -> bool,
+    input_close: spec_fn(X, X, DI) -> bool,
+    middle_close: spec_fn(Y, Y, u32) -> bool,
+    output_close: spec_fn(Z, Z, u32) -> bool,
+    inner_model: spec_fn(X) -> Result<Y, E>,
+    outer_model: spec_fn(Y) -> Result<Z, E>,
+    inner_map_model: spec_fn(DI) -> Result<u32, ME>,
+    outer_map_model: spec_fn(u32) -> Result<u32, ME>,
+    inner: spec_fn(X) -> Result<Y, E>,
+    outer: spec_fn(Y) -> Result<Z, E>,
+    inner_map: spec_fn(DI) -> Result<u32, ME>,
+    outer_map: spec_fn(u32) -> Result<u32, ME>,
+)
+    requires
+        valid_transformation(
+            input_member, middle_member, input_close, middle_close,
+            |_: u32| false, inner_model, inner_map_model),
+        valid_transformation(
+            middle_member, output_member, middle_close, output_close,
+            |_: u32| false, outer_model, outer_map_model),
+        realizes_callback(inner, inner_model),
+        realizes_callback(outer, outer_model),
+        realizes_callback(inner_map, inner_map_model),
+        realizes_callback(outer_map, outer_map_model),
+    ensures
+        valid_transformation(
+            input_member, output_member, input_close, output_close,
+            |_: u32| false,
+            |x: X| chain_function(inner, outer, x),
+            |d: DI| chain_map(inner_map, outer_map, d)),
+{
+    assert(preserves_infinity(
+        |_: u32| false, |_: u32| false, outer_map_model,
+    ));
+    lemma_make_chain_tt(
+        input_member, middle_member, output_member, input_close,
+        middle_close, output_close,
+        |_: u32| false, |_: u32| false,
+        inner_model, outer_model, inner_map_model, outer_map_model,
+    );
+    assert(realizes_callback(
+        |x: X| chain_function(inner, outer, x),
+        |x: X| chain_function(inner_model, outer_model, x),
+    )) by {
+        assert forall|x: X|
+            #[trigger] chain_function(inner, outer, x)
+                == chain_function(inner_model, outer_model, x) by {
+            assert(inner(x) == inner_model(x));
+            match inner_model(x) {
+                Ok(mid) => { assert(outer(mid) == outer_model(mid)); },
+                Err(_) => {},
+            }
+        }
+    }
+    assert(realizes_callback(
+        |d: DI| chain_map(inner_map, outer_map, d),
+        |d: DI| chain_map(inner_map_model, outer_map_model, d),
+    )) by {
+        assert forall|d: DI|
+            #[trigger] chain_map(inner_map, outer_map, d)
+                == chain_map(inner_map_model, outer_map_model, d) by {
+            assert(inner_map(d) == inner_map_model(d));
+            match inner_map_model(d) {
+                Ok(mid) => { assert(outer_map(mid) == outer_map_model(mid)); },
+                Err(_) => {},
+            }
+        }
+    }
+    lemma_new_certified(
+        input_member, output_member, input_close, output_close,
+        |_: u32| false,
+        |x: X| chain_function(inner_model, outer_model, x),
+        |d: DI| chain_map(inner_map_model, outer_map_model, d),
+        |x: X| chain_function(inner, outer, x),
+        |d: DI| chain_map(inner_map, outer_map, d),
+    );
 }
 
 } // verus!
