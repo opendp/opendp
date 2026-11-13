@@ -100,7 +100,7 @@ impl verified::Lower for LazyFrame {
 
     fn lower(&self, plan: &verified::VPlan) -> Fallible<LazyFrame> {
         // Schema resolution may inspect metadata but does not collect rows.
-        let schema = self.collect_schema().map_err(|e|
+        let schema = self.clone().collect_schema().map_err(|e|
             err!(MakeTransformation, "cannot determine Polars source schema: {}", e)
         )?;
         let columns = schema.iter_names().cloned().collect::<Vec<_>>();
