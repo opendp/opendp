@@ -1,5 +1,6 @@
 #include <Rinternals.h>
 #include "opendp.h"
+#include "ownership.h"
 
 // /**
 //  * A Transformation with all generic types filled by Any types. This is the type of Transformation
@@ -22,13 +23,15 @@ char *rt_to_string(SEXP type_name);
 SEXP get_private_func(const char *func_name);
 SEXP parse_runtime_type(const char *type_name);
 
+// Plain conversions return owned pointers, except when type_name is NULL
+// (an existing external pointer is borrowed). Callback results transfer to Rust.
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name);
+AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name);
 SEXP anyobjectptr_to_sexp(AnyObject *obj);
+SEXP owned_anyobjectptr_to_sexp(AnyObject *obj);
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value);
 CallbackFn sexp_to_callbackfn(SEXP function, const char *type_name);
 TransitionFn sexp_to_transitionfn(SEXP function, const char *type_name);
-void callbackfn_release(CallbackFn *function);
-void transitionfn_release(TransitionFn *transition);
 
 void *sexp_to_voidptr(SEXP input, SEXP rust_type);
 SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len);
