@@ -120,6 +120,90 @@ test_that("user-defined callbacks surface conversion failures cleanly", {
   )
 })
 
+test_that("callbacks can retain borrowed opaque queryables", {
+  enable_features("contrib", "honest-but-curious")
+  for (i in 1:5) {
+    meas <- make_randomized_response_bool(prob = 0.75)
+    adaptive <- make_adaptive_composition(
+      meas("input_domain"), meas("input_metric"), meas("output_measure"),
+      d_in = 1L, d_mids = c(2., 2.)
+    )
+    saved <- NULL
+    post <- new_function(function_ = function(q) {
+      saved <<- q
+      1L
+    }, .TO = i32)
+    chained <- make_chain_pm(post, adaptive)
+    expect_equal(chained(arg = TRUE), 1L)
+    rm(chained, post, adaptive)
+    gc()
+    expect_type(saved(query = meas), "logical")
+    expect_type(saved(query = meas), "logical")
+    expect_error(saved(query = meas))
+    rm(saved, meas)
+    gc()
+  }
+})
+
+test_that("extrinsic descriptors and callback results release their R references", {
+  enable_features("contrib", "honest-but-curious")
+  released <- 0L
+  on_finalize <- function(e) released <<- released + 1L
+  for (i in 1:20) local({
+    # Avoid a cross-language cycle through the environment's parent or callback.
+    value <- new.env(parent = emptyenv())
+    reg.finalizer(value, on_finalize)
+    metric <- user_distance("LifetimeTest", descriptor = list(value = value))
+    expect_identical(metric("descriptor")$value, value)
+    callback <- function(x) value
+    environment(callback) <- list2env(list(value = value), parent = baseenv())
+    fn <- new_function(function_ = callback, .TO = "ExtrinsicObject")
+    expect_identical(fn(arg = 1L), value)
+  })
+  gc()
+  gc()
+  expect_equal(released, 20L)
+})
+
+test_that("callback userdata is released when later argument conversion raises", {
+  # The native fixture calls the same converters as generated wrappers, then
+  # raises before a Rust call. Source headers are absent in installed-only tests.
+  src <- test_path("..", "..", "src")
+  skip_if_not(file.exists(file.path(src, "opendp.h")), "requires generated source headers")
+  build <- tempfile("callback-scope-")
+  dir.create(build)
+  on.exit(unlink(build, recursive = TRUE), add = TRUE)
+  file.copy(test_path("..", "native", "callback-scope.c"), build)
+  file.copy(file.path(src, c("convert.h", "ownership.h", "opendp.h")), build)
+  dll <- file.path(build, paste0("callback-scope", .Platform$dynlib.ext))
+  output <- system2(file.path(R.home("bin"), "R"),
+    c("CMD", "SHLIB", shQuote(file.path(build, "callback-scope.c")), "-o", shQuote(dll)),
+    stdout = TRUE, stderr = TRUE
+  )
+  expect_null(attr(output, "status"), info = paste(output, collapse = "\n"))
+  fixture <- dyn.load(dll)
+  on.exit(dyn.unload(dll), add = TRUE, after = FALSE)
+  invoke <- getNativeSymbolInfo("test_callback_scope", fixture)$address
+  scope <- getNativeSymbolInfo("opendp_with_scope", "opendp")$address
+  released <- 0L
+  on_finalize <- function(e) released <<- released + 1L
+  for (transition in c(FALSE, TRUE)) {
+    converter <- getNativeSymbolInfo(
+      if (transition) "sexp_to_transitionfn" else "sexp_to_callbackfn", "opendp"
+    )$address
+    for (i in 1:10) local({
+      value <- new.env(parent = emptyenv())
+      reg.finalizer(value, on_finalize)
+      callback <- function(arg) value
+      environment(callback) <- list2env(list(value = value), parent = baseenv())
+      expect_error(.Call(invoke, callback, transition, scope, converter), "later argument conversion failed")
+    })
+  }
+  gc()
+  gc()
+  expect_equal(released, 20L)
+})
+
 test_that("new queryable supports user-defined transitions", {
   enable_features("contrib")
 
