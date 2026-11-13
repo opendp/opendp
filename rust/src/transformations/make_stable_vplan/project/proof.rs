@@ -314,42 +314,24 @@ impl CertifiedTableProject {
             Err(_) => !domain::table_member(input, self.input_rules_spec()),
         },
     {
-        if !domain::check_table(input, &self.input_rules) {
-            return Err(());
-        }
-        proof {
-            domain::lemma_table_typed(input, self.input_rules@);
-            if self.valid() {
-                domain::lemma_unique_schema(
-                    input.schema@, self.input_schema@, self.input_rules@);
-                verified::lemma_relation_type_sound(
-                    &self.plan, verified::rows_view(input.rows@),
-                    self.input_schema@, self.output_schema@);
-            }
-        }
-        let rows = match verified::evaluate(&self.plan, input) {
-            Ok(rows) => rows,
-            Err(_) => {
-                proof { if self.valid() { assert(false); } }
-                return Err(());
-            },
-        };
-        let output = VTable { schema: self.output_schema.clone(), rows };
         proof {
             if self.valid() {
-                let input_rows = verified::rows_view(input.rows@);
-                domain::lemma_table_rows_domain(input, self.input_rules@);
-                self.lemma_preserves_rules(input_rows);
-                domain::lemma_table_rows_domain(&output, self.output_rules@);
+                assert forall|rows: Seq<Seq<Option<verified::VValue>>>|
+                    domain::rows_member(rows, self.input_rules@)
+                    implies match verified::relation_spec(&self.plan, rows) {
+                        Ok(output) => domain::rows_member(output, self.output_rules@),
+                        Err(_) => false,
+                    } by {
+                    self.lemma_preserves_rules(rows);
+                }
+                assert(table_proof::certified_table_plan(
+                    &self.plan, self.input_schema@, self.output_schema@,
+                    self.input_rules@, self.output_rules@));
             }
         }
-        Ok(output)
-    }
-
-    pub fn map_distance(distance: u32) -> (output: u32)
-        ensures output == distance,
-    {
-        distance
+        table_proof::invoke_table(
+            &self.plan, &self.input_schema, &self.output_schema,
+            &self.input_rules, &self.output_rules, input)
     }
 }
 

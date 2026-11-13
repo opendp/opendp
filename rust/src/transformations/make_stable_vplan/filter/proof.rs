@@ -236,122 +236,6 @@ impl CertifiedTableFilter {
         }
     }
 
-    /// The implementation used by the OpenDP transformation below.
-    /// Every valid input in the certified schema returns a typed submultiset.
-    pub fn apply(&self, input: &VTable) -> (result: Result<VTable, ()>)
-        ensures
-            match result {
-                Ok(output) => {
-                    &&& verified::table_valid(&output)
-                    &&& self.output_schema(input.schema@) == Some(output.schema@)
-                    &&& self.result_spec(verified::rows_view(input.rows@))
-                        == Ok(verified::rows_view(output.rows@))
-                },
-                Err(_) => true,
-            },
-            self.valid()
-                && verified::table_valid(input)
-                && input.schema@ == self.schema_spec()
-                ==> match result {
-                    Ok(output) => {
-                        &&& output.schema@ == input.schema@
-                        &&& verified::rows_view(output.rows@).to_multiset()
-                            .subset_of(verified::rows_view(input.rows@).to_multiset())
-                    },
-                    Err(_) => false,
-                },
-            self.valid() && domain::table_member(input, self.rules_spec())
-                ==> match result {
-                    Ok(output) => domain::table_member(&output, self.rules_spec()),
-                    Err(_) => false,
-                },
-    {
-        if !verified::check_table(input) {
-            proof {
-                if self.valid() && domain::table_member(input, self.rules@) {
-                    domain::lemma_table_typed(input, self.rules@);
-                    assert(verified::table_valid(input));
-                }
-            }
-            return Err(());
-        }
-        proof {
-            if self.valid() && domain::table_member(input, self.rules@) {
-                domain::lemma_unique_schema(
-                    input.schema@, self.schema@, self.rules@);
-            }
-        }
-        let fields = match verified::check_plan(&self.plan, &input.schema) {
-            Some(fields) => fields,
-            None => {
-                proof {
-                    if self.valid() && domain::table_member(input, self.rules@) {
-                        assert(input.schema@ == self.schema@);
-                        assert(verified::plan_schema(&self.plan, input.schema@)
-                            == Some(self.schema@));
-                    }
-                }
-                return Err(());
-            },
-        };
-        let rows = match verified::evaluate(&self.plan, input) {
-            Ok(rows) => rows,
-            Err(_) => {
-                proof {
-                    if self.valid() && input.schema@ == self.schema@ {
-                        verified::lemma_relation_type_sound(
-                            &self.plan, verified::rows_view(input.rows@),
-                            input.schema@, self.schema@);
-                    }
-                    if self.valid() && domain::table_member(input, self.rules@) {
-                        assert(input.schema@ == self.schema@);
-                        verified::lemma_relation_type_sound(
-                            &self.plan, verified::rows_view(input.rows@),
-                            input.schema@, self.schema@);
-                    }
-                }
-                return Err(());
-            },
-        };
-        proof {
-            verified::lemma_relation_type_sound(
-                &self.plan, verified::rows_view(input.rows@),
-                input.schema@, fields@);
-            if self.valid() && input.schema@ == self.schema@ {
-                assert(verified::plan_schema(&self.plan, input.schema@)
-                    == Some(self.schema@));
-                assert(fields@ == self.schema@);
-                assert(verified::relation_spec(
-                    &self.plan, verified::rows_view(input.rows@))
-                    == Ok(verified::rows_view(rows@)));
-                lemma_single_filter_relation(
-                    &self.plan, verified::rows_view(input.rows@));
-                assert(verified::apply_spec(
-                    &self.plan, verified::rows_view(input.rows@))
-                    == Ok(verified::rows_view(rows@)));
-                let input_rows = verified::rows_view(input.rows@);
-                let output_rows = verified::rows_view(rows@);
-                lemma_filter_multiset_equivalent(&self.plan, input_rows, self.schema@);
-                let keep = |row: Seq<Option<VValue>>|
-                    verified::local_row_spec(&self.plan, row) == Ok(Some(row));
-                assert(output_rows.to_multiset() =~= input_rows.to_multiset().filter(keep));
-                broadcast use vstd::multiset::group_multiset_axioms;
-                assert forall|row: Seq<Option<VValue>>|
-                    output_rows.to_multiset().count(row)
-                        <= input_rows.to_multiset().count(row) by { }
-                assert(output_rows.to_multiset().subset_of(input_rows.to_multiset()));
-            }
-        }
-        let output = VTable { schema: fields, rows };
-        proof {
-            if self.valid() && domain::table_member(input, self.rules@) {
-                assert(output.schema@ == input.schema@);
-                domain::lemma_table_submultiset(input, &output, self.rules@);
-            }
-        }
-        Ok(output)
-    }
-
     /// The concrete transformation contract is shared by all table nodes.
     pub closed spec fn valid_as_transformation(&self) -> bool {
         super::table_proof::valid_table_transformation(
@@ -449,30 +333,32 @@ impl CertifiedTableFilter {
     /// the certified input domain; valid inputs always succeed and return a
     /// member of that same domain.
     pub fn invoke(&self, input: &VTable) -> (result: Result<VTable, ()>)
-        ensures
-            self.valid() ==> match result {
-                Ok(output) => {
-                    &&& domain::table_member(input, self.rules_spec())
-                    &&& domain::table_member(&output, self.rules_spec())
-                    &&& self.result_spec(verified::rows_view(input.rows@))
-                        == Ok(verified::rows_view(output.rows@))
-                },
-                Err(_) => !domain::table_member(input, self.rules_spec()),
-            },
+        ensures self.valid() ==> match result {
+            Ok(output) =>
+                domain::table_member(input, self.rules_spec())
+                && domain::table_member(&output, self.rules_spec())
+                && self.result_spec(verified::rows_view(input.rows@))
+                    == Ok(verified::rows_view(output.rows@)),
+            Err(_) => !domain::table_member(input, self.rules_spec()),
+        },
     {
-        if !domain::check_table(input, &self.rules) {
-            return Err(());
-        }
         proof {
-            domain::lemma_table_rows_domain(input, self.rules@);
+            if self.valid() {
+                assert forall|rows: Seq<Seq<Option<VValue>>>|
+                    domain::rows_member(rows, self.rules@)
+                    implies match verified::relation_spec(&self.plan, rows) {
+                        Ok(output) => domain::rows_member(output, self.rules@),
+                        Err(_) => false,
+                    } by {
+                    self.lemma_preserves_rules(rows);
+                }
+                assert(super::table_proof::certified_table_plan(
+                    &self.plan, self.schema@, self.schema@, self.rules@, self.rules@));
+            }
         }
-        self.apply(input)
-    }
-
-    pub fn map_distance(distance: u32) -> (output: u32)
-        ensures output == distance,
-    {
-        distance
+        super::table_proof::invoke_table(
+            &self.plan, &self.schema, &self.schema,
+            &self.rules, &self.rules, input)
     }
 }
 

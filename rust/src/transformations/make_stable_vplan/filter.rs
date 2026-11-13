@@ -32,7 +32,7 @@ pub(super) fn make_stable_vtable_filter(
                 err!(MakeTransformation, "input outside certified filter domain")
             })
         }),
-        StabilityMap::new(|d: &u32| filter_proof::CertifiedTableFilter::map_distance(*d)),
+        StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
     )
 }
 

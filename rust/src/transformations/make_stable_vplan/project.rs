@@ -62,6 +62,6 @@ pub(super) fn make_stable_vtable_project(
                 err!(MakeTransformation, "input outside certified projection domain")
             })
         }),
-        StabilityMap::new(|d: &u32| project_proof::CertifiedTableProject::map_distance(*d)),
+        StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
     )
 }
