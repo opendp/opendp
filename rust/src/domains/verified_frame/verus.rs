@@ -41,6 +41,38 @@ pub open spec fn cell_member(cell: Option<VValue>, rule: VColumnRule) -> bool {
     }
 }
 
+/// A derived expression has no value-range promise beyond its dtype and nullability.
+pub open spec fn unbounded_rule(rule: VColumnRule) -> bool {
+    match rule.range {
+        VCellRange::Int { lower, upper } => lower.is_None() && upper.is_None(),
+        VCellRange::Bool { min, max } => min.is_None() && max.is_None(),
+    }
+}
+
+pub fn check_unbounded_rule(rule: VColumnRule) -> (valid: bool)
+    ensures valid == unbounded_rule(rule),
+{
+    match rule.range {
+        VCellRange::Int { lower, upper } => lower.is_none() && upper.is_none(),
+        VCellRange::Bool { min, max } => min.is_none() && max.is_none(),
+    }
+}
+
+/// Type correctness is sufficient for membership in an unbounded column.
+pub proof fn lemma_unbounded_cell(cell: Option<VValue>, rule: VColumnRule)
+    requires
+        unbounded_rule(rule),
+        cell_matches_field(cell, rule_field(rule)),
+    ensures cell_member(cell, rule),
+{
+    match (cell, rule.range) {
+        (None, _) => {},
+        (Some(VValue::Int(_)), VCellRange::Int { .. }) => {},
+        (Some(VValue::Bool(_)), VCellRange::Bool { .. }) => {},
+        _ => { assert(false); },
+    }
+}
+
 pub open spec fn row_member(
     row: Seq<Option<VValue>>, rules: Seq<VColumnRule>,
 ) -> bool {

@@ -31,9 +31,8 @@ pub(super) fn make_project(
 }
 
 
-/// Construct a certified transformation over concrete VTables. This initial
-/// certificate supports projections of existing columns (including aliases,
-/// reordering and duplication) and preserves their exact atom bounds.
+/// Construct a certified concrete projection. Identity columns retain their
+/// value bounds; derived expressions retain only dtype and nullability.
 pub(super) fn make_stable_vtable_project(
     input_domain: crate::domains::verified_plan::VFrameDomain,
     metric: crate::metrics::SymmetricDistance,
@@ -54,7 +53,7 @@ pub(super) fn make_stable_vtable_project(
     let certified = project_proof::CertifiedTableProject::new(
         exprs, &input_rules, &output_rules,
     ).ok_or_else(|| err!(MakeTransformation,
-        "projection is not a certified column selection"))?;
+        "projection output rules are not certified"))?;
     Transformation::new(
         input_domain, metric.clone(), output_domain, metric,
         Function::new_fallible(move |table: &verified::VTable| {

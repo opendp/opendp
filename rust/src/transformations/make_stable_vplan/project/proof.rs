@@ -41,57 +41,68 @@ pub proof fn lemma_identity_value(
     }
 }
 
-/// A projection composed of selections and aliases preserves exactly the
-/// column rules selected by each expression, including duplicate values.
+/// Identity columns retain their original rule; derived expressions must
+/// have an unbounded rule, with their dtype/nullability checked separately.
+pub open spec fn projection_rule(
+    expr: &VExpr,
+    input_rules: Seq<VColumnRule>,
+    output_rule: VColumnRule,
+) -> bool {
+    match verified::project::identity_column_spec(expr) {
+        Some(index) =>
+            index < input_rules.len() && output_rule == input_rules[index as int],
+        None => domain::unbounded_rule(output_rule),
+    }
+}
+
+/// Well-typed expressions always satisfy their declared output column rules.
 pub proof fn lemma_project_row_member(
     exprs: Seq<VExpr>,
+    input_schema: Seq<VField>, output_schema: Seq<VField>,
     input_rules: Seq<VColumnRule>, output_rules: Seq<VColumnRule>,
-    row: Seq<Option<verified::VValue>>, count: nat,
+    row: Seq<Option<verified::VValue>>,
 )
     requires
         domain::row_member(row, input_rules),
-        count <= exprs.len(),
+        domain::schema_member(input_schema, input_rules),
+        domain::schema_member(output_schema, output_rules),
+        verified::project::schema_prefix(exprs, input_schema, exprs.len())
+            == Some(output_schema),
         output_rules.len() == exprs.len(),
-        forall|j: int| #![trigger exprs[j]] 0 <= j < exprs.len() ==>
-            match verified::project::identity_column_spec(&exprs[j]) {
-                Some(index) => index < input_rules.len()
-                    && output_rules[j] == input_rules[index as int],
-                None => false,
-            },
+        forall|j: int| #![trigger exprs[j]] 0 <= j < exprs.len()
+            ==> projection_rule(&exprs[j], input_rules, output_rules[j]),
     ensures
-        match verified::project::row_prefix(exprs, row, count) {
-            Ok(output) =>
-                output.len() == count
-                && forall|j: int| 0 <= j < count
-                    ==> domain::cell_member(output[j], output_rules[j]),
+        match verified::project::row_prefix(exprs, row, exprs.len()) {
+            Ok(output) => domain::row_member(output, output_rules),
             Err(_) => false,
         },
-    decreases count,
 {
-    if count > 0 {
-        lemma_project_row_member(
-            exprs, input_rules, output_rules, row, (count - 1) as nat);
-        let previous = verified::project::row_prefix(exprs, row, (count - 1) as nat).unwrap();
-        let expr = &exprs[(count - 1) as int];
-        let index = verified::project::identity_column_spec(expr).unwrap();
-        lemma_identity_value(expr, row, index);
-        assert(domain::cell_member(row[index as int], input_rules[index as int]));
-        assert(output_rules[(count - 1) as int] == input_rules[index as int]);
-        let output = previous.push(row[index as int]);
-        assert(verified::project::row_prefix(exprs, row, count) == Ok(output));
-        assert forall|j: int| 0 <= j < count
-            implies domain::cell_member(output[j], output_rules[j]) by {
-            if j < previous.len() {
-            } else {
-                assert(j == previous.len());
-            }
+    domain::lemma_row_typed(row, input_schema, input_rules);
+    verified::project::lemma_row_prefix_type_sound(
+        exprs, input_schema, row, exprs.len());
+    let output = verified::project::row_prefix(exprs, row, exprs.len()).unwrap();
+    assert(verified::row_in_schema(output, output_schema));
+    assert forall|j: int| 0 <= j < exprs.len()
+        implies domain::cell_member(output[j], output_rules[j]) by {
+        match verified::project::identity_column_spec(&exprs[j]) {
+            Some(index) => {
+                verified::project::lemma_row_prefix_cell(
+                    exprs, row, exprs.len(), j);
+                lemma_identity_value(&exprs[j], row, index);
+                assert(output[j] == row[index as int]);
+                assert(output_rules[j] == input_rules[index as int]);
+            },
+            None => {
+                assert(verified::cell_matches_field(output[j], output_schema[j]));
+                assert(domain::rule_field(output_rules[j]) == output_schema[j]);
+                domain::lemma_unbounded_cell(output[j], output_rules[j]);
+            },
         }
     }
 }
 
-/// A concrete table projection is limited to column references and aliases,
-/// retaining their exact value constraints. Other expressions remain
-/// available in the symbolic VPlan API until their bounds are certified.
+/// Concrete projections preserve exact bounds for pass-through columns and
+/// use type/nullability-only domains for arbitrary derived expressions.
 pub struct CertifiedTableProject {
     plan: VPlan,
     input_schema: Vec<VField>,
@@ -122,13 +133,9 @@ impl CertifiedTableProject {
             VPlan::Project { input, exprs } =>
                 matches!(**input, VPlan::Input)
                 && self.output_rules@.len() == exprs@.len()
-                && forall|j: int| #![trigger exprs@[j]] 0 <= j < exprs@.len() ==>
-                    match verified::project::identity_column_spec(&exprs@[j]) {
-                        Some(index) => index < self.input_rules@.len()
-                            && self.output_rules@[j]
-                                == self.input_rules@[index as int],
-                        None => false,
-                    },
+                && forall|j: int| #![trigger exprs@[j]] 0 <= j < exprs@.len()
+                    ==> projection_rule(
+                        &exprs@[j], self.input_rules@, self.output_rules@[j]),
             _ => false,
         }
     }
@@ -159,35 +166,30 @@ impl CertifiedTableProject {
             invariant
                 i <= exprs.len(),
                 exprs.len() == output_rules.len(),
-                forall|j: int| #![trigger exprs@[j]] 0 <= j < i ==>
-                    match verified::project::identity_column_spec(&exprs@[j]) {
-                        Some(index) => index < input_rules@.len()
-                            && output_rules@[j] == input_rules@[index as int],
-                        None => false,
-                    },
+                forall|j: int| #![trigger exprs@[j]] 0 <= j < i
+                    ==> projection_rule(&exprs@[j], input_rules@, output_rules@[j]),
             decreases exprs.len() - i,
         {
-            let index = match verified::project::identity_column(&exprs[i]) {
-                Some(index) => index,
-                None => return None,
-            };
-            if index >= input_rules.len() || output_rules[i] != input_rules[index] {
-                return None;
+            match verified::project::identity_column(&exprs[i]) {
+                Some(index) => {
+                    if index >= input_rules.len() || output_rules[i] != input_rules[index] {
+                        return None;
+                    }
+                },
+                None => {
+                    if !domain::check_unbounded_rule(output_rules[i]) {
+                        return None;
+                    }
+                },
             }
             proof {
-                assert(output_rules@[i as int] == input_rules@[index as int]);
+                assert(projection_rule(
+                    &exprs@[i as int], input_rules@, output_rules@[i as int]));
                 assert forall|k: int| #![trigger exprs@[k]] 0 <= k < i + 1
-                    implies match verified::project::identity_column_spec(&exprs@[k]) {
-                        Some(selected) => selected < input_rules@.len()
-                            && output_rules@[k] == input_rules@[selected as int],
-                        None => false,
-                    } by {
+                    implies projection_rule(&exprs@[k], input_rules@, output_rules@[k]) by {
                     if k < i {
                     } else {
                         assert(k == i);
-                        assert(verified::project::identity_column_spec(&exprs@[k])
-                            == Some(index));
-                        assert(output_rules@[k] == input_rules@[index as int]);
                     }
                 }
             }
@@ -243,9 +245,12 @@ impl CertifiedTableProject {
             assert(domain::row_member(row, self.input_rules@));
             match &self.plan {
                 VPlan::Project { exprs, .. } => {
+                    assert(verified::project::schema_prefix(
+                        exprs@, self.input_schema@, exprs@.len())
+                        == Some(self.output_schema@));
                     lemma_project_row_member(
-                        exprs@, self.input_rules@, self.output_rules@,
-                        row, exprs@.len());
+                        exprs@, self.input_schema@, self.output_schema@,
+                        self.input_rules@, self.output_rules@, row);
                     let projected = verified::project::row_prefix(
                         exprs@, row, exprs@.len()).unwrap();
                     assert(domain::row_member(projected, self.output_rules@));

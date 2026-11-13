@@ -129,6 +129,30 @@ pub proof fn lemma_row_prefix_type_sound(
     }
 }
 
+/// Every output column equals the value of its defining expression.
+pub proof fn lemma_row_prefix_cell(
+    exprs: Seq<VExpr>, row: Seq<Option<VValue>>, count: nat, index: int,
+)
+    requires
+        0 <= index < count <= exprs.len(),
+        row_prefix(exprs, row, count).is_Ok(),
+    ensures
+        expr_row_spec(&exprs[index], row)
+            == Ok(row_prefix(exprs, row, count).unwrap()[index]),
+    decreases count,
+{
+    let prefix = row_prefix(exprs, row, (count - 1) as nat);
+    assert(prefix.is_Ok());
+    let output = row_prefix(exprs, row, count).unwrap();
+    assert(output =~= prefix.unwrap().push(
+        expr_row_spec(&exprs[(count - 1) as int], row).unwrap()));
+    if index < count - 1 {
+        lemma_row_prefix_cell(exprs, row, (count - 1) as nat, index);
+    } else {
+        assert(index == count - 1);
+    }
+}
+
 pub fn eval_prefix(
     exprs: &Vec<VExpr>, row: &Vec<Option<VValue>>, count: usize,
 ) -> (result: Result<Vec<Option<VValue>>, ()>)
