@@ -383,6 +383,12 @@ where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
+    /// Legacy constructor. A successful return checks metric-space compatibility,
+    /// but does not establish the function/stability-map contract in Verus.
+    ///
+    /// Its semantic validity is a trusted obligation of the caller. Future
+    /// verified constructors must not obtain certification by invoking this
+    /// function and inheriting an assumed postcondition.
     pub fn new(
         input_domain: DI,
         input_metric: MI,

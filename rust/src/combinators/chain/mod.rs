@@ -111,8 +111,10 @@ where
 
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
 /// The generic Result-valued stability rule is proved in the adjacent
-/// `verus.rs`; the closure-to-spec correspondence remains a verification boundary.
-/// Returns a Measurement that when invoked, computes `transformation1(transformation0(x))`.
+/// `verus.rs`. The native constructor still uses the legacy trusted
+/// `Transformation::new`; proving the closure-to-spec correspondence is
+/// required before switching it to a certified constructor.
+/// Returns a Transformation that computes `transformation1(transformation0(x))`.
 ///
 /// # Arguments
 /// * `transformation1` - outer transformation

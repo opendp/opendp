@@ -145,10 +145,9 @@ fn test_make_chain_tt_and_shr_preserve_result_semantics() -> Fallible<()> {
             .and_then(|value| outer.invoke(&value));
         let actual = chained.invoke(&input);
         let shr = via_shr.invoke(&input);
-        assert_eq!(actual.as_ref().ok(), expected.as_ref().ok());
-        assert_eq!(shr.as_ref().ok(), expected.as_ref().ok());
-        assert_eq!(actual.is_err(), expected.is_err());
-        assert_eq!(shr.is_err(), expected.is_err());
+        // Error identity, not merely the presence of an error, is observable.
+        assert_eq!(actual, expected);
+        assert_eq!(shr, expected);
     }
 
     // Check success and both possible map-error propagation paths.
@@ -157,10 +156,9 @@ fn test_make_chain_tt_and_shr_preserve_result_semantics() -> Fallible<()> {
             .and_then(|bound| outer.map(&bound));
         let actual = chained.map(&distance);
         let shr = via_shr.map(&distance);
-        assert_eq!(actual.as_ref().ok(), expected.as_ref().ok());
-        assert_eq!(shr.as_ref().ok(), expected.as_ref().ok());
-        assert_eq!(actual.is_err(), expected.is_err());
-        assert_eq!(shr.is_err(), expected.is_err());
+        // Error identity, not merely the presence of an error, is observable.
+        assert_eq!(actual, expected);
+        assert_eq!(shr, expected);
     }
 
     // The constructor and its operator reject unequal intermediate domains.
