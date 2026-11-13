@@ -5,7 +5,7 @@ mod input;
 mod filter;
 mod project;
 mod stability;
-mod lazy;
+mod deferred;
 
 // Verus-only executable constructors are colocated with their OpenDP nodes.
 #[path = "input/proof.rs"]

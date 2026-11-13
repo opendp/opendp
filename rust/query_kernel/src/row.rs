@@ -80,12 +80,12 @@ pub enum VPlan {
 
 //// A bound, backend-neutral query. S is not required to be executable.
 //// Production backends lower the data-free plan using their own source handle.
-pub struct VLazyFrame<S> {
+pub struct Deferred<S> {
     pub plan: VPlan,
     pub source: S,
 }
 
-impl<S> VLazyFrame<S> {
+impl<S> Deferred<S> {
     pub fn new(source: S) -> Self {
         Self { plan: VPlan::Input, source }
     }
@@ -113,7 +113,7 @@ impl<S> VLazyFrame<S> {
     }
 }
 
-impl VLazyFrame<VTable> {
+impl Deferred<VTable> {
     /// The reference interpreter is intentionally only available for VTable.
     /// Other source bindings must supply separate backend semantics.
     pub fn collect(&self) -> (output: Result<VTable, ()>)
@@ -776,7 +776,7 @@ pub proof fn lemma_relation_type_sound(
 
 // Clone is needed by the OpenDP Frame carrier. Only the reference source
 // needs to implement Clone; generic plan construction has no source bound.
-impl<S: Clone> Clone for VLazyFrame<S> {
+impl<S: Clone> Clone for Deferred<S> {
     fn clone(&self) -> Self {
         Self { plan: self.plan.clone(), source: self.source.clone() }
     }
@@ -841,7 +841,7 @@ mod tests {
                 vec![Some(VValue::Int(1)), None],
             ],
         };
-        let query = VLazyFrame::new(table)
+        let query = Deferred::new(table)
             .filter(VExpr::Column(1))
             .project(vec![VExpr::Column(0)]);
         let collected = query.collect().unwrap();
@@ -854,7 +854,7 @@ mod tests {
     #[test]
     fn opaque_source_can_build_plans_without_execution_contract() {
         struct OpaqueSource { label: &'static str }
-        let query = VLazyFrame::new(OpaqueSource { label: "backend-handle" })
+        let query = Deferred::new(OpaqueSource { label: "backend-handle" })
             .filter(VExpr::Column(0))
             .project(vec![VExpr::Column(0)]);
         assert_eq!(query.source.label, "backend-handle");
@@ -871,13 +871,13 @@ mod tests {
             schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
             rows: vec![vec![Some(VValue::Int(5))]],
         };
-        assert!(VLazyFrame::new(malformed).collect().is_err());
+        assert!(Deferred::new(malformed).collect().is_err());
 
         let well_formed = VTable {
             schema: vec![VField { dtype: VDType::Boolean, nullable: false }],
             rows: vec![vec![Some(VValue::Bool(true))]],
         };
-        assert!(VLazyFrame::new(well_formed)
+        assert!(Deferred::new(well_formed)
             .filter(VExpr::Column(3)).collect().is_err());
     }
 

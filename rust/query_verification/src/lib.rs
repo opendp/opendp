@@ -17,5 +17,5 @@ pub mod project_proof;
 #[path = "../../src/transformations/make_stable_vplan/table/proof.rs"]
 pub mod table_proof;
 
-#[path = "../../src/transformations/make_stable_vplan/lazy/proof.rs"]
-pub mod lazy_proof;
+#[path = "../../src/transformations/make_stable_vplan/deferred/proof.rs"]
+pub mod deferred_proof;

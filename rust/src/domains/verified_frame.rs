@@ -241,7 +241,7 @@ impl Frame for VTable {
 }
 
 
-impl Frame for verified::VLazyFrame<VTable> {
+impl Frame for verified::Deferred<VTable> {
     type Column = VColumn;
     type Expr = VExpr;
 
