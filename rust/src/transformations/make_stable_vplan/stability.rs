@@ -19,14 +19,35 @@ pub open spec fn certified_result(
     match result {
         Some((plan, fields)) =>
             plan_schema(&plan, source_schema) == Some(fields@)
-            && stable_on_typed_edits(&plan, source_schema),
+            && stable_on_typed_rows(&plan, source_schema),
         None => true,
+    }
+}
+
+/// Check a complete plan once, producing the shared schema and stability
+/// certificate used by every node constructor.
+pub fn check_certified_plan(
+    plan: &VPlan, source_schema: &Vec<VField>,
+) -> (result: Option<Vec<VField>>)
+    ensures match result {
+        Some(fields) =>
+            plan_schema(plan, source_schema@) == Some(fields@)
+                && stable_on_typed_rows(plan, source_schema@),
+        None => true,
+    },
+{
+    match check_plan(plan, source_schema) {
+        None => None,
+        Some(fields) => {
+            proof { lemma_all_typed_rows_stable(plan, source_schema@); }
+            Some(fields)
+        },
     }
 }
 
 /// Every pair of typed input relations satisfies the identity stability map.
 /// This includes both insertions and removals, duplicate rows, and all bounds.
-pub open spec fn stable_on_typed_edits(
+pub open spec fn stable_on_typed_rows(
     plan: &VPlan, schema: Seq<VField>,
 ) -> bool {
     forall|left: Seq<Seq<Option<VValue>>>, right: Seq<Seq<Option<VValue>>>|
@@ -91,11 +112,11 @@ pub proof fn lemma_relation_contraction(
     }
 }
 
-pub proof fn lemma_all_typed_edits_stable(
+pub proof fn lemma_all_typed_rows_stable(
     plan: &VPlan, schema: Seq<VField>,
 )
     requires plan_schema(plan, schema).is_Some(),
-    ensures stable_on_typed_edits(plan, schema),
+    ensures stable_on_typed_rows(plan, schema),
 {
     let output_schema = plan_schema(plan, schema).unwrap();
     assert forall|left: Seq<Seq<Option<VValue>>>,
