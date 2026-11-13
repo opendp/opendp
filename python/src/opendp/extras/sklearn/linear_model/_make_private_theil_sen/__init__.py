@@ -1,123 +1,122 @@
-from opendp.mod import Domain, Measure, Metric
-import opendp.prelude as dp
-from opendp._lib import import_optional_dependency
+"""Private Theil-Sen regression."""
+
+from __future__ import annotations
+
+import math
+from numbers import Integral, Real
+
+import numpy as np
+
 from opendp._internal import _new_pure_function
+from opendp._lib import get_np_csprng
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
+from opendp.mod import AtomDomain, Domain, Measure, Measurement, Metric, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
-
-def pairwise_predict(data, x_cuts):
-    """
-    The function matches data points together into pairs,
-    fits a line that passes through each pair of points,
-    and then computes the y values of each line at `x_cuts`.
-    That is, it predicts the y values at `x_cuts`, pairwise.
-    """
-    np = import_optional_dependency("numpy")
-    data = np.array(data, copy=True, dtype=np.float64)
-
-    # Shuffling the data improves the utility of results.
-    np.random.shuffle(data)
-
-    # Get an even number of rows after shuffling so that, on odd-sized
-    # datasets, the dropped row is uniformly random.
-    data = data[: len(data) // 2 * 2]
-
-    # Split data into pairs, where pair i is (p1[i], p2[i]).
-    p1, p2 = np.array_split(data, 2)
-
-    # Compute differences.
-    dx, dy = (p2 - p1).T
-
-    # Compute the midpoints of the pairs.
-    x_bar, y_bar = (p1 + p2).T / 2
-
-    # Compute y values on the pairwise slopes at x_cuts.
-    points = dy / dx * (x_cuts[None].T - x_bar) + y_bar
-
-    # Pairs where the x difference is zero are degenerate.
-    return points.T[dx != 0]
+_CANDIDATE_COUNT = 100
 
 
-def make_pairwise_predict(
-    input_domain: Domain,
-    input_metric: Metric,
-    x_cuts,
-    runs: int = 1,
-):
-    """
-    The parameter `runs` controls how many times randomized pairwise predictions are computed.
-    The default is 1. Increasing `runs` can improve the robustness and accuracy of the results;
-    however, it can also increase computational cost and amount of noise needed later in the algorithm.
-    """
-    np = import_optional_dependency("numpy")
+def _validate_bounds(bounds, name) -> tuple[float, float]:
+    try:
+        if len(bounds) != 2:
+            raise ValueError
+        pair = tuple(bounds)
+        if any(isinstance(v, bool) or not isinstance(v, Real) for v in pair):
+            raise ValueError
+        lower, upper = map(float, pair)
+        if not math.isfinite(lower) or not math.isfinite(upper) or lower >= upper:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError):
+        raise ValueError(f"{name} must be a finite, strictly increasing pair") from None
+    return lower, upper
 
-    if not str(input_domain).startswith("NPArray2Domain"):
-        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
-    if input_domain.descriptor.num_columns != 2:
-        raise ValueError("input_domain must have two columns")  # pragma: no cover
+
+def _input_size(input_domain, input_metric):
+    import opendp.prelude as dp
+
+    desc = getattr(input_domain, "descriptor", None)
+    if not isinstance(desc, SklearnFitDescriptor):
+        raise ValueError("TheilSenRegressor requires a SklearnFit input domain")
+    if desc.y is None:
+        raise ValueError("TheilSenRegressor requires a SklearnFit input domain with y")
+    x_desc = getattr(desc.X, "descriptor", None)
+    if not isinstance(x_desc, dp.numpy.NPArray2Domain) or x_desc.num_columns != 1:
+        raise ValueError("TheilSenRegressor requires exactly one feature column")
+    if not isinstance(desc.y, VectorDomain):
+        raise ValueError("TheilSenRegressor requires a vector target domain")
+    if (
+        x_desc.T not in _NUMERIC_TYPES
+        or not isinstance(desc.y.element_domain, AtomDomain)
+        or str(desc.y.element_domain.carrier_type) not in _NUMERIC_TYPES
+    ):
+        raise ValueError("TheilSenRegressor requires numeric elements")
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input_metric must be symmetric distance")  # pragma: no cover
+        raise ValueError("TheilSenRegressor supports symmetric_distance() only")
+    if (
+        x_desc.size is not None
+        and desc.y.size is not None
+        and x_desc.size != desc.y.size
+    ):
+        raise ValueError("X and y domains must have matching row counts")
+    return x_desc.size if x_desc.size is not None else desc.y.size
 
-    input_desc = input_domain.descriptor
-    if input_desc.T not in _NUMERIC_TYPES:
-        raise ValueError("input_domain must have numeric elements")
-    size = input_desc.size
-    x_cuts = np.asarray(x_cuts, dtype=np.float64)
 
-    if size is None:
-        # One input addition or removal can change one matched pair, replacing one
-        # pairwise prediction. This has symmetric distance two. A tighter 3/2-style
-        # bound is possible with a more careful coupling across multiple edits.
-        stability_map = lambda d_in: d_in * runs * 2
-    else:
-        # With known size, realizable symmetric distances are even and correspond
-        # to record replacements. Each replacement can change one matched pair.
-        stability_map = lambda d_in: 2 * runs * (d_in // 2)
+def pairwise_slopes(data: SklearnFit):
+    """Finite slopes from a random disjoint matching."""
+    X, y = np.asarray(data.X, dtype=np.float64), np.asarray(data.y, dtype=np.float64)
+    indices = np.arange(len(X))
+    get_np_csprng().shuffle(indices)
+    first, second = np.array_split(indices[: len(X) // 2 * 2], 2)
+    with np.errstate(all="ignore"):
+        dx = X[second, 0] - X[first, 0]
+        valid = dx != 0
+        slopes = (y[second] - y[first])[valid] / dx[valid]
+    return slopes[np.isfinite(slopes)]
+
+
+def make_pairwise_slopes(input_domain, input_metric):
+    """Randomly matched slopes.
+
+    Under even-to-odd insertion, either omit the new row or replace one
+    endpoint of a pair and omit that endpoint. Odd-to-even insertion adds
+    one pair. Both couplings change at most one slope. Filtering is nonexpansive.
+    """
+    import opendp.prelude as dp
+
+    size = _input_size(input_domain, input_metric)
+    return dp.t.make_user_transformation(
+        input_domain,
+        input_metric,
+        dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+        dp.symmetric_distance(),
+        function=pairwise_slopes,
+        stability_map=(lambda d: 2 * d) if size is None else (lambda d: 2 * (d // 2)),
+    )
+
+
+def make_residuals(input_domain, input_metric, slope, intercept_bounds):
+    """Size-preserving residuals for a fixed slope."""
+    import opendp.prelude as dp
+
+    size = _input_size(input_domain, input_metric)
+    lower, upper = _validate_bounds(intercept_bounds, "intercept_bounds")
+
+    def residuals(data):
+        with np.errstate(all="ignore"):
+            values = (
+                np.asarray(data.y, dtype=np.float64)
+                - slope * np.asarray(data.X, dtype=np.float64)[:, 0]
+            )
+        # Replace only non-finite residuals.
+        return np.nan_to_num(values, nan=lower, posinf=upper, neginf=lower)
 
     return dp.t.make_user_transformation(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        # Outputs are Nx2 float numpy arrays, but are half as long.
-        output_domain=dp.numpy.array2_domain(num_columns=2, T="f64"),
-        # Neighboring output datasets also differ by additions/removals.
-        output_metric=dp.symmetric_distance(),
-        # Apply the function `runs` times.
-        function=lambda x: np.vstack(
-            [pairwise_predict(x, x_cuts) for _ in range(runs)]
-        ),
-        stability_map=stability_map,
-    )
-
-
-def make_select_column(j, T="f64"):
-    return dp.t.make_user_transformation(
-        input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
-        input_metric=dp.symmetric_distance(),
-        output_domain=dp.vector_domain(dp.atom_domain(T=T)),
-        output_metric=dp.symmetric_distance(),
-        function=lambda x: x[:, j],
-        stability_map=lambda b_in: b_in,
-    )
-
-
-def make_private_percentile_medians(
-    output_measure, y_bounds, scale, candidates_count=100
-):
-    np = import_optional_dependency("numpy")
-    # this median mechanism favors candidates closest to the true median
-    m_median = dp.m.then_private_quantile(
-        output_measure=output_measure,
-        # Evenly spaced points between y_bounds
-        candidates=np.linspace(*y_bounds, candidates_count),
-        alpha=0.5,
-        scale=scale,
-    )
-    # apply the median mechanism to the 25th and 75th percentile columns
-    return dp.c.make_composition(
-        [
-            make_select_column(0) >> dp.t.then_drop_null() >> m_median,
-            make_select_column(1) >> dp.t.then_drop_null() >> m_median,
-        ]
+        input_domain,
+        input_metric,
+        dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size),
+        dp.symmetric_distance(),
+        function=residuals,
+        stability_map=lambda d: d,
     )
 
 
@@ -125,46 +124,96 @@ def make_private_theil_sen(
     input_domain: Domain,
     input_metric: Metric,
     output_measure: Measure,
-    x_bounds: tuple[float, float],
-    y_bounds: tuple[float, float],
-    scale: float,
-    runs: int = 1,
-    candidates_count: int = 100,
-    fraction_bounds: tuple[float, float] = (0.25, 0.75),
-) -> dp.Measurement:
+    d_in,
+    d_out,
+    *,
+    slope_bounds,
+    intercept_bounds,
+) -> Measurement:
+    """Private slope median followed by private residual median.
+
+    Bounds specify output candidates, not input clipping.
     """
-    Makes a measurement that takes a numpy array of (x, y) pairs,
-    and returns a (slope, intercept) tuple.
+    import opendp.prelude as dp
 
-    >>> import numpy as np
-    >>> input_domain = dp.numpy.array2_domain(num_columns=2, T=float)
-    >>> input_metric = dp.symmetric_distance()
-    >>> meas = make_private_theil_sen(
-    ...     input_domain,
-    ...     input_metric,
-    ...     dp.max_divergence(),
-    ...     (0, 100),
-    ...     (0, 100),
-    ...     scale=1.0,
-    ... )
-    >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
-    """
-    np = import_optional_dependency("numpy")
-    # x_cuts are the fraction_bounds (for example, 25th and 75th percentiles) of x_bounds.
-    # We'll predict y's at these x_cuts.
-    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array(fraction_bounds)
+    slope_bounds = _validate_bounds(slope_bounds, "slope_bounds")
+    intercept_bounds = _validate_bounds(intercept_bounds, "intercept_bounds")
+    size = _input_size(input_domain, input_metric)
+    if size == 0:
+        raise ValueError("input size must be positive")
+    if isinstance(d_in, bool) or not isinstance(d_in, Integral) or d_in <= 0:
+        raise ValueError("d_in must be a positive integer")
+    if size is not None and d_in % 2:
+        raise ValueError("d_in must be even for fixed-size domains")
+    if (
+        isinstance(d_out, bool)
+        or not isinstance(d_out, Real)
+        or not math.isfinite(d_out)
+        or d_out <= 0
+    ):
+        raise ValueError("d_out must be finite and positive")
+    if output_measure not in (dp.max_divergence(), dp.zero_concentrated_divergence()):
+        raise ValueError("output_measure must be max divergence or zCDP")
 
-    # we want coefficients, not y values!
-    # Luckily y values are related to coefficients via a linear system
-    P_inv = np.linalg.inv(np.vstack([x_cuts, np.ones_like(x_cuts)]).T)
-
-    return (
-        # pairwise_predict will return a 2xN array of y values at the x_cuts.
-        make_pairwise_predict(input_domain, input_metric, x_cuts, runs)
-        # privately select median y values for each x_cut
-        >> make_private_percentile_medians(
-            output_measure, y_bounds, scale, candidates_count=candidates_count
+    def compose(budget):
+        return dp.c.make_adaptive_composition(
+            input_domain,
+            input_metric,
+            output_measure,
+            d_in,
+            [budget, budget],
         )
-        # transform median y values to coefficients (slope and intercept)
-        >> _new_pure_function(lambda ys: P_inv @ np.asarray(ys))
+
+    # Respect directed rounding when splitting the budget.
+    budget = dp.binary_search_param(
+        compose,
+        d_in=d_in,
+        d_out=float(d_out),
+        bounds=(0.0, float(d_out)),
+        T=float,
     )
+    if budget == 0:
+        raise ValueError("d_out is too small to allocate two positive stage budgets")
+    compositor = compose(budget)
+    slope_candidates = np.unique(
+        np.linspace(slope_bounds[0], slope_bounds[1], _CANDIDATE_COUNT)
+    )
+    intercept_candidates = np.unique(
+        np.linspace(intercept_bounds[0], intercept_bounds[1], _CANDIDATE_COUNT)
+    )
+    slopes = make_pairwise_slopes(input_domain, input_metric)
+    slope_measurement = dp.binary_search_chain(
+        lambda scale: (
+            slopes
+            >> dp.m.then_private_quantile(
+                output_measure, slope_candidates, alpha=0.5, scale=scale
+            )
+        ),
+        d_in=d_in,
+        d_out=budget,
+        T=float,
+    )
+
+    residual_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False), size=size)
+    residual_median = dp.binary_search_chain(
+        lambda scale: (
+            (residual_domain, input_metric)
+            >> dp.m.then_private_quantile(
+                output_measure,
+                intercept_candidates,
+                alpha=0.5,
+                scale=scale,
+            )
+        ),
+        d_in=d_in,
+        d_out=budget,
+        T=float,
+    )
+
+    def fit(queryable):
+        slope = queryable(slope_measurement)
+        residuals = make_residuals(input_domain, input_metric, slope, intercept_bounds)
+        intercept = queryable(residuals >> residual_median)
+        return slope, intercept
+
+    return compositor >> _new_pure_function(fit)
