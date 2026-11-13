@@ -68,6 +68,27 @@ pub fn invoke_table(
                 == Ok(verified::rows_view(output.rows@)),
         Err(_) => !domain::table_member(input, input_rules@),
     },
+    // The executable output is stable against the model of every other
+    // admissible input. Every actual invocation satisfies the same contract.
+    certified_table_plan(
+        plan, input_schema@, output_schema@, input_rules@, output_rules@,
+    ) && domain::table_member(input, input_rules@)
+        ==> match result {
+            Ok(output) => forall|other: VTable, d: u32|
+                domain::table_member(&other, input_rules@)
+                && symmetric_distance::close(
+                    verified::rows_view(input.rows@).to_multiset(),
+                    verified::rows_view(other.rows@).to_multiset(), d)
+                ==> match verified::relation_spec(
+                    plan, verified::rows_view(other.rows@)
+                ) {
+                    Ok(other_rows) => symmetric_distance::close(
+                        verified::rows_view(output.rows@).to_multiset(),
+                        other_rows.to_multiset(), d),
+                    Err(_) => false,
+                },
+            Err(_) => false,
+        },
 {
     if !domain::check_table(input, input_rules) {
         return Err(());
@@ -102,6 +123,29 @@ pub fn invoke_table(
         ) {
             domain::lemma_table_rows_domain(input, input_rules@);
             domain::lemma_table_rows_domain(&output, output_rules@);
+            assert forall|other: VTable, d: u32|
+                domain::table_member(&other, input_rules@)
+                && symmetric_distance::close(
+                    verified::rows_view(input.rows@).to_multiset(),
+                    verified::rows_view(other.rows@).to_multiset(), d)
+                implies match verified::relation_spec(
+                    plan, verified::rows_view(other.rows@)
+                ) {
+                    Ok(other_rows) => symmetric_distance::close(
+                        verified::rows_view(output.rows@).to_multiset(),
+                        other_rows.to_multiset(), d),
+                    Err(_) => false,
+                } by {
+                domain::lemma_table_rows_domain(&other, input_rules@);
+                let left = verified::rows_view(input.rows@);
+                let right = verified::rows_view(other.rows@);
+                domain::lemma_rows_member_typed(left, input_schema@, input_rules@);
+                domain::lemma_rows_member_typed(right, input_schema@, input_rules@);
+                stability::lemma_relation_contraction(
+                    plan, left, right, input_schema@, output_schema@);
+                assert(verified::relation_spec(plan, left)
+                    == Ok(verified::rows_view(output.rows@)));
+            }
         }
     }
     Ok(output)
