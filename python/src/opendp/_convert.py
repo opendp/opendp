@@ -593,15 +593,11 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         from opendp._data import ffislice_of_anyobjectptrs
 
         raw = ffislice_of_anyobjectptrs(raw)
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[
-            0 : raw.contents.len
-        ]
-        res = list(map(c_to_py, array))
-        # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
-        # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
-        for elem in array:
-            elem.__class__ = ctypes.POINTER(AnyObject)
-        return res
+        # Elements belong to the source object, even if conversion raises.
+        array = ctypes.cast(
+            raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+        )[0 : raw.contents.len]
+        return list(map(c_to_py, array))
 
     if inner_type_name == "ExtrinsicObject":
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[
@@ -735,9 +731,8 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
 
     if inner_type_names == ["f64", "AnyObject"]:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
-        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
+        candidate_obj = ctypes.cast(ptr_data[1], ctypes.POINTER(AnyObject))
         candidate = c_to_py(c_to_py(candidate_obj))
-        candidate_obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
         return score.contents.value, candidate
 
     # tuple of instances of Python types
@@ -798,17 +793,12 @@ def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
 
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
-    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
-    keys: AnyObjectPtr = slice_array[0]
-    vals: AnyObjectPtr = slice_array[1]
-    result = dict(zip(c_to_py(keys), c_to_py(vals)))
-
-    # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
-    # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
-    # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
-    keys.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-    vals.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-    return result
+    # These pointers may also come from a Python-owned input slice. Never
+    # assume ownership merely to inspect them, even on conversion failures.
+    slice_array = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+    )
+    return dict(zip(c_to_py(slice_array[0]), c_to_py(slice_array[1])))
 
 
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
@@ -1029,13 +1019,8 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
     Used to return an Option<AnyObject> from Rust to Python.
     """
 
-    obj = ctypes.cast(raw.contents.ptr, AnyObjectPtr)
-    ret = c_to_py(obj)
-    # don't free obj, because it is owned by Rust
-    # c_to_py cares that the type is AnyObject, so this needs to happen after c_to_py
-    obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-
-    return ret
+    obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObject))
+    return c_to_py(obj)
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
@@ -1050,8 +1035,6 @@ def _invoke_py_callback(c_arg, userdata):
     try:
         # 1. convert AnyObject to Python type
         py_arg = c_to_py(c_arg)
-        # don't free c_arg, because it is owned by Rust
-        c_arg.__class__ = ctypes.POINTER(AnyObject)
 
         # 2. invoke the user-supplied function
         py_out = func(py_arg)
@@ -1094,7 +1077,7 @@ def _wrap_py_func(func, TO):
 #   https://bugs.python.org/issue5710#msg85731
 #                                   (answer         , query       , is_internal  , userdata        )
 TransitionFnValue = ctypes.CFUNCTYPE(
-    ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool, ctypes.py_object
+    ctypes.c_void_p, ctypes.POINTER(AnyObject), ctypes.c_bool, ctypes.py_object
 )
 
 
@@ -1115,8 +1098,6 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         # 1. convert to Python type
         py_query = c_to_py(c_query)
         py_is_internal = c_is_internal
-        # don't free c_arg, because it is owned by Rust
-        c_query.__class__ = ctypes.POINTER(AnyObject)
 
         # 2. invoke the user-supplied function
         py_out = py_transition(py_query, py_is_internal)
