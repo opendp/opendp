@@ -196,6 +196,22 @@ static bool ref_count_callback(const void *ptr, bool increment)
     return false;
 }
 
+void retained_sexp_release(void *retained)
+{
+    ref_count_callback(retained, false);
+}
+
+static void extrinsic_object_cleanup(void *obj)
+{
+    opendp_data__extrinsic_object_free((ExtrinsicObject *)obj);
+}
+
+SEXP owned_extrinsic_object_to_sexp(ExtrinsicObject *obj)
+{
+    opendp_register_resource(obj, extrinsic_object_cleanup);
+    return extrinsic_object_to_sexp(obj);
+}
+
 typedef struct CompareContext {
     SEXP left;
     SEXP right;
