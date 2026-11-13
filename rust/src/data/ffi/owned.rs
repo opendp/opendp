@@ -82,9 +82,10 @@ impl FfiSliceOwner {
                             .collect(),
                     );
                 } else {
-                    // Only these legacy vector paths borrow without allocating.
+                    // Numeric vectors borrow the source allocation directly.
                     fn borrowed_vec<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-                        borrowed_legacy(obj)
+                        let values = obj.downcast_ref::<Vec<T>>()?;
+                        Ok(FfiSlice::new(values.as_ptr() as *mut c_void, values.len()))
                     }
                     owner.view = dispatch!(
                         borrowed_vec,
@@ -160,13 +161,19 @@ impl FfiSliceOwner {
                 "Expr" | "LazyFrame" | "ExprPlan" | "Bound" | "Bounds" | "Margin" | "Series"
                 | "DataFrame",
             ) => owner.polars_plain(obj)?,
-            TypeContents::PLAIN("BitVector" | "ExtrinsicObject") => {
-                owner.view = borrowed_legacy(obj)?;
+            TypeContents::PLAIN("BitVector") => {
+                let bits = obj.downcast_ref::<BitVector>()?;
+                owner.view = FfiSlice::new(bits.as_bitptr().pointer() as *mut c_void, bits.len());
+            }
+            TypeContents::PLAIN("ExtrinsicObject") => {
+                let value = obj.downcast_ref::<ExtrinsicObject>()?;
+                owner.view = FfiSlice::new(value as *const ExtrinsicObject as *mut c_void, 1);
             }
             _ => {
-                // Explicitly gate the fallback: never call an allocating legacy path.
+                // Plain values borrow the original AnyObject without scratch allocation.
                 fn borrowed_plain<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-                    borrowed_legacy(obj)
+                    let value = obj.downcast_ref::<T>()?;
+                    Ok(FfiSlice::new(value as *const T as *mut c_void, 1))
                 }
                 owner.view = dispatch!(
                     borrowed_plain,
@@ -197,12 +204,6 @@ impl FfiSliceOwner {
         }
         Ok(owner)
     }
-}
-
-// Consume the temporary legacy header, but only for the explicitly gated,
-// nonallocating paths above. The data continues to borrow from obj.
-fn borrowed_legacy(obj: &AnyObject) -> Fallible<FfiSlice> {
-    opendp_data__object_as_slice(obj).into()
 }
 
 fn tuple2<T0: 'static, T1: 'static>(obj: &AnyObject, owner: &mut FfiSliceOwner) -> Fallible<()> {
@@ -246,6 +247,36 @@ fn hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
     let values = owner.keep(AnyObject::new(map.values().cloned().collect::<Vec<_>>()));
     owner.pointers(vec![keys, values]);
     Ok(())
+}
+
+/// Transfer an independent AnyFunction clone to the binding that receives it.
+/// Functions are owned handles, not copied values, so no scratch view is involved.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__clone_function(
+    obj: *const AnyObject,
+) -> FfiResult<*mut AnyFunction> {
+    let obj = try_as_ref!(obj);
+    let TypeContents::GENERIC {
+        name: "Function",
+        args,
+    } = &obj.type_.contents
+    else {
+        return err!(FFI, "expected Function object").into();
+    };
+    let [input, output] = try_!(parse_type_args(args, "Function"));
+    fn clone_function<I: 'static + Clone, O: 'static>(
+        obj: &AnyObject,
+    ) -> Fallible<*mut AnyFunction> {
+        Ok(util::into_raw(
+            obj.downcast_ref::<Function<I, O>>()?.clone().into_any(),
+        ))
+    }
+    dispatch!(
+        clone_function,
+        [(input, @primitives), (output, @primitives)],
+        (obj)
+    )
+    .into()
 }
 
 /// Create a scratch view owner, borrowing obj until the owner is freed.
@@ -324,6 +355,16 @@ mod tests {
             let result: Fallible<()> = opendp_data__slice_owner_free(self.0).into();
             assert!(result.is_ok());
         }
+    }
+
+    #[test]
+    fn owned_function_clone_survives_source_destruction() -> Fallible<()> {
+        let source = AnyObject::new(Function::new(|value: &i32| value + 1));
+        let function: AnyFunction = Fallible::from(opendp_data__clone_function(&source))?;
+        drop(source);
+        let answer = function.eval(&AnyObject::new(41_i32))?;
+        assert_eq!(*answer.downcast_ref::<i32>()?, 42);
+        Ok(())
     }
 
     #[test]
