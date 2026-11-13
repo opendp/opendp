@@ -112,9 +112,12 @@ class AIM(Algorithm):
     The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
     in that the exponential mechanism selects a marginal in each step.
 
-    AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
-    instead of joint distribution densities and the multiplicative weights update rule.
+    AIM differs from MWEM in that, by default, the distribution is represented via a graphical model
+    and fitted via mirror descent, instead of joint distribution densities and the multiplicative weights update rule.
     This allows AIM to support higher-dimensional datasets.
+
+    Setting ``estimator`` to Gem+ (`MGCB25 <https://arxiv.org/abs/2511.09672>`_) instead fits a neural generator
+    to the measured marginals. Each round continues training the previous generator, and ``max_size`` is not applied.
     """
 
     queries: Sequence[Count] | int = 3
@@ -124,9 +127,11 @@ class AIM(Algorithm):
 
     The complement is spent on selecting marginals."""
     max_size: float = 80.0
-    """Maximum memory constraint in MB for the marginal selection."""
+    """Maximum memory constraint in MB for the marginal selection. Only applies to graphical-model estimators"""
     rounds: Optional[int] = None
     """Maximum number of rounds to run the algorithm."""
+    gem_filter: bool = False  # paper sets this to True but we default to false as it may cause early termination
+    """Filter for queries. Only applies to GEM+"""
 
     def __post_init__(self):
         super().__post_init__()
@@ -147,6 +152,9 @@ class AIM(Algorithm):
         if self.max_size <= 0.0:
             raise ValueError(f"max_size ({self.max_size}) must be positive")
 
+        if not isinstance(self.gem_filter, bool):
+            raise ValueError(f"gem_filter ({self.gem_filter}) must be a bool")
+
     def make_marginals(
         self,
         input_domain: LazyFrameDomain,
@@ -156,7 +164,7 @@ class AIM(Algorithm):
         d_out: float,
         *,
         marginals: Marginals,
-        model,  # MarkovRandomField
+        model,  # MarkovRandomField | GemPlusModel
     ) -> Measurement:
         """Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
 
@@ -166,13 +174,14 @@ class AIM(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of ``MarkovRandomField``
+        :param model: warm-start fit of ``MarkovRandomField`` or ``GemPlusModel``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from opendp.extras.mbi._gem import GemPlusModel
 
-        if not isinstance(model, MarkovRandomField):
-            raise ValueError("model must be a MarkovRandomField")
+        if not isinstance(model, (MarkovRandomField, GemPlusModel)):
+            raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         d_in = _snapshot_bounds(d_in)
         algorithm = _snapshot_algorithm(self)
@@ -190,14 +199,24 @@ class AIM(Algorithm):
 
         def function(
             qbl: OdometerQueryable,
-        ) -> tuple[Marginals, MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField | GemPlusModel]:
             # mutable state
             current_model = model
             current_marginals = marginals.copy()
+            current_algorithm = algorithm
             d_step = d_out / T
             d_spent = 0.0
 
+            selected: set[tuple[str, ...]] = set()
+            enable_filtering = current_algorithm.gem_filter
             while d_step:
+                if isinstance(current_model, GemPlusModel) and enable_filtering:
+                    queries_not_selected = [q for q in queries if q.by not in selected]
+                    current_algorithm = replace(
+                        current_algorithm,
+                        queries=queries_not_selected,
+                    )
+
                 m_step = _make_aim_marginal(
                     *t_marginals.output_space,
                     output_measure,
@@ -206,13 +225,18 @@ class AIM(Algorithm):
                     marginals=current_marginals,
                     model=current_model,
                     max_size=algorithm.max_size * (d_spent + d_step) / d_out,
-                    algorithm=algorithm,
+                    algorithm=current_algorithm,
                 )
                 if not m_step:
                     break
 
-                R: TypeAlias = tuple[Marginals, MarkovRandomField, bool]
-                current_marginals, current_model, is_significant = cast(R, qbl(m_step))
+                R: TypeAlias = tuple[
+                    Marginals, MarkovRandomField | GemPlusModel, bool, tuple[str, ...]
+                ]
+                current_marginals, current_model, is_significant, selected_clique = (
+                    cast(R, qbl(m_step))
+                )
+                selected.add(selected_clique)
 
                 if not is_significant:
                     d_step *= 4
@@ -242,7 +266,7 @@ def _make_aim_marginal(
     d_in: int,
     d_out: float,
     marginals: Marginals,
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
     max_size: float,
     algorithm: AIM,
 ) -> Optional[Measurement]:
@@ -284,7 +308,7 @@ def _make_aim_marginal(
 
     def function(
         qbl: Queryable,
-    ) -> tuple[Marginals, MarkovRandomField, bool]:
+    ) -> tuple[Marginals, MarkovRandomField, bool, tuple[str, ...]]:
         # SELECT a query that best reduces the error
         selected_clique = qbl(m_select)
 
@@ -312,11 +336,15 @@ def _make_aim_marginal(
 
         all_marginals = marginals.add(new_marginal)
 
-        new_model: MarkovRandomField = algorithm.estimator(
-            model.domain,
-            all_marginals.flatten(),
-            potentials=model.potentials,
-        )
+        if isinstance(model, MarkovRandomField):
+            new_model = algorithm.estimator(
+                model.domain, all_marginals.flatten(), potentials=model.potentials
+            )
+        else:
+            # Gem+ continues training the previous generator.
+            new_model = algorithm.estimator(
+                model.domain, all_marginals.flatten(), warm_start=model
+            )
 
         next_tab = new_model.project(selected_clique).values
         diff = float(np.linalg.norm((next_tab - prev_tab).flatten(), 1))
@@ -328,7 +356,7 @@ def _make_aim_marginal(
         #    is greater than the expectation of the noise's half-distribution.
         is_significant = diff > mean
 
-        return all_marginals, new_model, is_significant
+        return all_marginals, new_model, is_significant, selected_clique
 
     return make_adaptive_composition(
         input_domain,
@@ -363,6 +391,9 @@ def _make_aim_select(
     queries = [replace(q, by=tuple(q.by)) for q in queries]
 
     def is_small(clique: tuple[str, ...]) -> bool:
+        # Gem+ has no junction tree, so the size limit does not apply.
+        if not isinstance(model, mbi.MarkovRandomField):
+            return True
         model_size = mbi.junction_tree.hypothetical_model_size(
             model.domain, cliques=[*model.cliques, clique]
         )

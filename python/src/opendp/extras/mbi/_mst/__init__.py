@@ -124,7 +124,7 @@ class MST(Algorithm):
         d_out: float,
         *,
         marginals: Marginals,
-        model: Any,  # MarkovRandomField
+        model: Any,  # MarkovRandomField | GemPlusModel
     ) -> Measurement:
         """Implements MST (Minimum Spanning Tree) over ordinal data.
 
@@ -134,13 +134,14 @@ class MST(Algorithm):
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
-        :param model: warm-start fit of ``MarkovRandomField``
+        :param model: warm-start fit of ``MarkovRandomField`` or ``GemPlusModel``
         """
         import_optional_dependency("mbi")
         from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        from opendp.extras.mbi._gem import GemPlusModel
 
-        if not isinstance(model, MarkovRandomField):
-            raise ValueError("model must be a MarkovRandomField")
+        if not isinstance(model, (MarkovRandomField, GemPlusModel)):
+            raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         algorithm = _snapshot_algorithm(self)
         d_measure = d_out * algorithm.measure_split
@@ -159,7 +160,7 @@ class MST(Algorithm):
 
         def function(
             qbl: Queryable,
-        ) -> tuple[Marginals, MarkovRandomField]:
+        ) -> tuple[Marginals, MarkovRandomField | GemPlusModel]:
 
             # SELECT a set of queries that best reduces the error
             m_select = _make_mst_select(
@@ -192,12 +193,17 @@ class MST(Algorithm):
 
             all_marginals = marginals.add(*qbl(m_measure))
 
-            # GENERATE (fit a MarkovRandomField)
-            new_model = algorithm.estimator(
-                model.domain,
-                all_marginals.flatten(),
-                potentials=model.potentials,
-            )
+            # GENERATE (fit a MarkovRandomField or a GemPlusModel)
+            if isinstance(model, MarkovRandomField):
+                new_model = algorithm.estimator(
+                    model.domain,
+                    all_marginals.flatten(),
+                    potentials=model.potentials,
+                )
+            else:
+                new_model = algorithm.estimator(
+                    model.domain, all_marginals.flatten(), warm_start=model
+                )
             return all_marginals, new_model
 
         return (
@@ -218,7 +224,7 @@ def _make_mst_select(
     d_in,
     d_out,
     edges: Sequence[tuple[str, str]],
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
     num_selections: Optional[int] = None,
 ) -> Measurement:
     """Make a measurement that selects a set of cliques that will minimize error."""
@@ -302,7 +308,7 @@ def _make_mst_scores(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
     queries: Sequence[tuple[str, str]],
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
 ):
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
