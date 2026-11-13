@@ -194,9 +194,10 @@ Group By / Agg (Stable)
 the private ``group_by/agg`` or ``select`` aggregation. This is a
 generalization of the *sample and aggregate* framework.
 
-The approach is appealing because arbitrary expressions can be used in
+The approach is appealing because many aggregation expressions can be used in
 the ``agg`` argument, but it comes with the drawback that a large amount
-of data is needed to get reasonable utility.
+of data is needed to get reasonable utility. The random permutation below
+ensures that the minimum does not depend on Polars' row-order optimizations.
 
 The following query demonstrates how you can use the approach to compute
 arbitrary statistics, by first computing a statistic of interest (the
@@ -215,7 +216,7 @@ private mean.
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     # group 1000 ways
             ...     .group_by(pl.col.PIDENT % 1000)
-            ...     .agg(pl.col.HWUSUAL.min())
+            ...     .agg(pl.col.HWUSUAL.dp.permute().min())
             ...     # up to 1000 records left to work with to compute a DP mean
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 30)))
             ... )
@@ -262,7 +263,7 @@ the context doesn’t know that all records from a user share the same
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     # group 1000 ways
             ...     .group_by(pl.col.PIDENT % 1000)
-            ...     .agg(pl.col.HWUSUAL.min())
+            ...     .agg(pl.col.HWUSUAL.dp.permute().min())
             ...     # up to 1000 records left to work with to compute a DP mean
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 30)))
             ... )

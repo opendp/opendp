@@ -169,3 +169,143 @@ fn test_stable_group_by_categorical() -> Fallible<()> {
     assert_eq!(t.invoke(&lf)?.collect()?.height(), 2);
     Ok(())
 }
+
+#[test]
+fn test_permutation_invariance_validation() -> Fallible<()> {
+    let schema = Schema::from_iter([
+        Field::new("i".into(), DataType::Int32),
+        Field::new("x".into(), DataType::Float64),
+    ]);
+    for expr in [
+        col("i").sum(),
+        col("i").min(),
+        col("i").max(),
+        col("i").sum() + lit(1),
+    ] {
+        check_permutation_invariance(&expr, &schema)?;
+    }
+    for expr in [
+        col("i").abs().min(),
+        col("i").is_null().sum(),
+        col("i").fill_null(lit(0)).sum(),
+        col("i").drop_nulls().min(),
+    ] {
+        check_permutation_invariance(&expr, &schema)?;
+    }
+    for expr in [col("i").shift(lit(1)).sum(), col("i").reverse().min()] {
+        assert!(
+            check_permutation_invariance(&expr, &schema).is_err(),
+            "{expr:?}"
+        );
+    }
+    for expr in [
+        col("i").sort(Default::default()).first(),
+        col("i").sort(Default::default()).mean(),
+        col("i").sort(Default::default()).sum(),
+        col("i")
+            .sort(Default::default())
+            .quantile(lit(0.5), QuantileMethod::Linear),
+        col("x").sum(),
+        col("x").mean(),
+        col("x").min(),
+        col("x").max(),
+        col("x").first(),
+        col("x").sort(Default::default()).first(),
+        col("x").sort(Default::default()).mean(),
+        (col("i") * lit(Series::new("weights".into(), [1i32, 0]))).sum(),
+        col("x").sort(Default::default()).agg_groups(),
+        col("x")
+            .sort(Default::default())
+            .quantile(col("x").first(), QuantileMethod::Linear),
+    ] {
+        assert!(
+            check_permutation_invariance(&expr, &schema).is_err(),
+            "{expr:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_group_locality_validation() -> Fallible<()> {
+    let range = Expr::Literal(LiteralValue::Range(polars_plan::plans::RangeLiteralValue {
+        low: 0,
+        high: 2,
+        dtype: DataType::Int32,
+    }));
+    assert!(!is_permutation_equivariant(&range));
+    assert!(check_infallible(&range, Resize::Allow).is_err());
+    // A genuine scalar list broadcasts, unlike a positional Series literal.
+    let list = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        DataType::List(Box::new(DataType::Int32)),
+        AnyValue::List(Series::new("list".into(), [1i32, 2])),
+    )));
+    assert!(is_permutation_equivariant(&list));
+    check_infallible(&list, Resize::Allow)?;
+    assert!(
+        check_infallible(
+            &(col("i") * lit(Series::new("weights".into(), [1i32, 0]))).sum(),
+            Resize::Allow
+        )
+        .is_err()
+    );
+    assert!(
+        check_infallible(
+            &col("x").sort(Default::default()).agg_groups(),
+            Resize::Allow
+        )
+        .is_err()
+    );
+    for quantile in [
+        col("q").first(),
+        lit(-0.1),
+        lit(1.1),
+        lit(f64::NAN),
+        lit(f64::INFINITY),
+        lit(NULL),
+        lit("0.5"),
+        lit(true),
+        lit(Series::new("q".into(), [0.5f64])),
+    ] {
+        assert!(
+            check_infallible(
+                &col("x").quantile(quantile, QuantileMethod::Linear),
+                Resize::Allow
+            )
+            .is_err()
+        );
+    }
+    for quantile in [lit(0), lit(1), lit(0.5)] {
+        check_infallible(
+            &col("x").quantile(quantile, QuantileMethod::Linear),
+            Resize::Allow,
+        )?;
+    }
+    Ok(())
+}
+
+#[test]
+fn test_group_by_rejects_ordered_metrics() -> Fallible<()> {
+    use crate::metrics::{HammingDistance, InsertDeleteDistance};
+
+    let lf = df!("key" => [1i32, 2, 1], "value" => [1i32, 2, 3])?.lazy();
+    let domain = LazyFrameDomain::new_from_schema((*lf.clone().collect_schema()?).clone())?;
+    let grouped = lf.group_by([col("key")]).agg([col("value").sum()]);
+    assert!(
+        make_stable_lazyframe::<_, FrameDistance<InsertDeleteDistance>>(
+            domain.clone(),
+            InsertDeleteDistance,
+            grouped.clone(),
+        )
+        .is_err()
+    );
+    assert!(
+        make_stable_lazyframe::<_, FrameDistance<InsertDeleteDistance>>(
+            domain,
+            HammingDistance,
+            grouped,
+        )
+        .is_err()
+    );
+    Ok(())
+}
