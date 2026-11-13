@@ -29,7 +29,7 @@ from opendp.extras.mbi._utilities import (
     row_major_order,
     SelectPrefixQuery,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     _snapshot_bounds,
     Marginals,
     ONEWAY_UNKEYED,
@@ -43,6 +43,7 @@ from opendp.mod import (
     Measurement,
     OpenDPException,
     Queryable,
+    assert_features,
     binary_search,
 )
 from opendp.domains import _lazyframe_from_domain
@@ -237,13 +238,20 @@ def make_contingency_table(
     :param cuts: dictionary of column names and left-open bin edges
     :param table: ContingencyTable from prior release
     :param algorithm: configuration for internal estimation algorithm
+
+    # Why honest-but-curious?
+    Reused tables must derive only from DP releases and public information.
+    Their callbacks must not access external private data or have observable side effects.
     """
+    if table is not None:
+        assert_features("honest-but-curious")
+
     import_optional_dependency("mbi")
     import polars as pl
     import mbi
 
     d_in = _snapshot_bounds(d_in)
-    algorithm = _snapshot_algorithm(algorithm)
+    algorithm = _check_and_snapshot_algorithm(algorithm)
     plan = _lazyframe_from_domain(input_domain)
     schema = plan.collect_schema()
 
@@ -266,7 +274,7 @@ def make_contingency_table(
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
 
-    if table:
+    if table is not None:
         keys_pl |= table.keys
         cuts_pl |= table.cuts
         model = cast(mbi.MarkovRandomField, table.model)

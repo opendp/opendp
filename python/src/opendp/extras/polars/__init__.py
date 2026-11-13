@@ -1191,6 +1191,11 @@ class LazyFrameQuery:
         :param cuts: dictionary of column names and bin edges for numerical columns
         :param table: ContingencyTable from prior release
         :param algorithm: configuration for internal estimation algorithm
+
+        # Why honest-but-curious?
+        Custom algorithms must return valid Measurements.
+        Reused tables must derive only from DP releases and public information.
+        Custom callbacks must not access external private data or have observable side effects.
         """
         from .contingency_table import ContingencyTableQuery
 
