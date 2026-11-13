@@ -18,8 +18,9 @@ mod project_proof;
 
 use std::collections::HashSet;
 use crate::{
-    core::Transformation,
-    domains::verified_plan::{VFrameBounds, VFrameMetric, VPlanDomain},
+    core::{Function, StabilityMap, Transformation},
+    domains::verified_plan::{VFrameBounds, VFrameDomain, VFrameMetric, VPlanDomain},
+    metrics::SymmetricDistance,
     error::*,
     verified_query::{self as verified, VExpr, VField, VPlan},
 };
@@ -55,6 +56,37 @@ pub(crate) fn make_stable_vplan(
             project::make_project(input_domain, input_metric, *input, exprs),
         VPlan::Filter { input, predicate } =>
             filter::make_filter(input_domain, input_metric, *input, predicate),
+    }
+}
+
+/// Construct a verified concrete-table transformation for a row-local plan.
+///
+/// Unlike the symbolic VPlan constructor, this executes the individual
+/// certified operators. The output domain of each node is the input domain
+/// of the next, so native composition carries the stability maps along.
+pub(crate) fn make_stable_vtable(
+    input_domain: VFrameDomain,
+    metric: SymmetricDistance,
+    plan: VPlan,
+) -> Fallible<Transformation<VFrameDomain, SymmetricDistance, VFrameDomain, SymmetricDistance>> {
+    match plan {
+        VPlan::Input => Transformation::new(
+            input_domain.clone(), metric.clone(), input_domain, metric,
+            Function::new(|table: &verified::VTable| table.clone()),
+            StabilityMap::new(|d: &u32| *d),
+        ),
+        VPlan::Filter { input, predicate } => {
+            let prior = make_stable_vtable(input_domain, metric, *input)?;
+            let (domain, metric) = prior.output_space();
+            let step = filter::make_stable_vtable_filter(domain, metric, predicate)?;
+            prior >> step
+        },
+        VPlan::Project { input, exprs } => {
+            let prior = make_stable_vtable(input_domain, metric, *input)?;
+            let (domain, metric) = prior.output_space();
+            let step = project::make_stable_vtable_project(domain, metric, exprs)?;
+            prior >> step
+        },
     }
 }
 
@@ -236,6 +268,88 @@ mod tests {
         assert!(columns[2].nullable);
         assert!(columns[2].atom_domain::<bool>()?.bounds.is_none());
         assert_eq!(derived.map(&u32::MAX)?, u32::MAX);
+        Ok(())
+    }
+
+    #[test]
+    fn concrete_filter_then_project_composes_certificates() -> Fallible<()> {
+        let domain = source()?;
+        let plan = query();
+        let data = table();
+        let expected = verified::evaluate(&plan, &data)
+            .expect("well-typed filter and projection evaluate");
+
+        let transformation = make_stable_vtable(domain.clone(), SymmetricDistance, plan)?;
+        let output = transformation.invoke(&data)?;
+        assert!(transformation.input_domain.member(&data)?);
+        assert!(transformation.output_domain.member(&output)?);
+        assert_eq!(output.rows, expected);
+        assert_eq!(output.rows, vec![
+            vec![Some(VValue::Int(5)), Some(VValue::Bool(true))],
+        ]);
+        assert_eq!(output.schema.len(), 2);
+        let columns = &transformation.output_domain.series_domains;
+        assert_eq!(columns[0].name.as_str(), "clipped");
+        assert!(columns[0].atom_domain::<i64>()?.bounds.is_none());
+        assert_eq!(columns[1].name.as_str(), "selected");
+        for d in [0, 1, 3, u32::MAX] {
+            assert_eq!(transformation.map(&d)?, d);
+        }
+
+        // Both insertions and removals are accounted for by the composed map.
+        let mut inserted = data.clone();
+        inserted.rows.push(data.rows[0].clone());
+        let more = transformation.invoke(&inserted)?;
+        assert_eq!(more.rows.len(), output.rows.len() + 1);
+        let mut removed = data.clone();
+        removed.rows.remove(0);
+        assert!(transformation.invoke(&removed)?.rows.is_empty());
+
+        let mut invalid = data.clone();
+        invalid.rows[0][0] = Some(VValue::Int(11));
+        assert!(!transformation.input_domain.member(&invalid)?);
+        assert!(transformation.invoke(&invalid).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn concrete_project_then_filter_uses_projected_domain() -> Fallible<()> {
+        let plan = VPlan::Filter {
+            input: Box::new(VPlan::Project {
+                input: Box::new(VPlan::Input),
+                exprs: vec![
+                    VExpr::Alias {
+                        expr: Box::new(VExpr::Column(0)), name: "copied_x".into(),
+                    },
+                    VExpr::Alias {
+                        expr: Box::new(VExpr::Binary {
+                            left: Box::new(VExpr::Column(0)),
+                            op: VBinaryOp::Gt,
+                            right: Box::new(VExpr::Literal(VValue::Int(5))),
+                        }),
+                        name: "above_five".into(),
+                    },
+                ],
+            }),
+            predicate: VExpr::Column(1),
+        };
+        let data = table();
+        let expected = verified::evaluate(&plan, &data)
+            .expect("well-typed projection and filter evaluate");
+        let transformation = make_stable_vtable(source()?, SymmetricDistance, plan)?;
+        let output = transformation.invoke(&data)?;
+        assert!(transformation.output_domain.member(&output)?);
+        assert_eq!(output.rows, expected);
+        assert_eq!(output.rows, vec![
+            vec![Some(VValue::Int(8)), Some(VValue::Bool(true))],
+        ]);
+        assert_eq!(transformation.output_domain.series_domains[0]
+            .atom_domain::<i64>()?.get_closed_bounds()?, (0, 10));
+        assert!(transformation.output_domain.series_domains[1]
+            .atom_domain::<bool>()?.bounds.is_none());
+        for d in [0, 1, 3, u32::MAX] {
+            assert_eq!(transformation.map(&d)?, d);
+        }
         Ok(())
     }
 
