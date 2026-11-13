@@ -145,6 +145,26 @@ test_that("callbacks can retain borrowed opaque queryables", {
   }
 })
 
+test_that("extrinsic descriptors and callback results release their R references", {
+  enable_features("contrib", "honest-but-curious")
+  released <- 0L
+  on_finalize <- function(e) released <<- released + 1L
+  for (i in 1:20) local({
+    # Avoid a cross-language cycle through the environment's parent or callback.
+    value <- new.env(parent = emptyenv())
+    reg.finalizer(value, on_finalize)
+    metric <- user_distance("LifetimeTest", descriptor = list(value = value))
+    expect_identical(metric("descriptor")$value, value)
+    callback <- function(x) value
+    environment(callback) <- list2env(list(value = value), parent = baseenv())
+    fn <- new_function(function_ = callback, .TO = "ExtrinsicObject")
+    expect_identical(fn(arg = 1L), value)
+  })
+  gc()
+  gc()
+  expect_equal(released, 20L)
+})
+
 test_that("callback userdata is released when later argument conversion raises", {
   # The native fixture calls the same converters as generated wrappers, then
   # raises before a Rust call. Source headers are absent in installed-only tests.

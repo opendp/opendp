@@ -64,15 +64,14 @@ unsigned char is_in(const char *str, const char **arr)
 static ExtrinsicObject sexp_to_extrinsicobject(SEXP value)
 {
     RetainedSexp *retained = new_retained_sexp(value);
+    opendp_register_resource(retained, retained_sexp_release);
     ExtrinsicObject output = {(const void *)retained};
     return output;
 }
 
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 {
-    ExtrinsicObject *output_obj = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
-    if (!output_obj)
-        error("failed to allocate extrinsic object");
+    ExtrinsicObject *output_obj = (ExtrinsicObject *)R_alloc(1, sizeof(ExtrinsicObject));
     output_obj[0] = sexp_to_extrinsicobject(value);
     return output_obj;
 }
@@ -450,7 +449,7 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     {
         if (TYPEOF(value) != VECSXP)
             error("expected a list when constructing Vec<ExtrinsicObject>");
-        ExtrinsicObject *objects = (ExtrinsicObject *)malloc(LENGTH(value) * sizeof(ExtrinsicObject));
+        ExtrinsicObject *objects = (ExtrinsicObject *)R_alloc(LENGTH(value), sizeof(ExtrinsicObject));
         for (int i = 0; i < LENGTH(value); i++)
             objects[i] = sexp_to_extrinsicobject(VECTOR_ELT(value, i));
         result.ptr = objects;
@@ -646,7 +645,7 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
-        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+        ExtrinsicObject *object = (ExtrinsicObject *)R_alloc(1, sizeof(ExtrinsicObject));
         object[0] = sexp_to_extrinsicobject(value);
         FfiSlice t = {.ptr = object, .len = 1};
         result = t;

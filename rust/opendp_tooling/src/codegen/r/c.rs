@@ -412,7 +412,7 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
-        ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
+        ty if ty == "ExtrinsicObject *" => format!("owned_extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
         ty if ty == "char *" => format!("charptr_to_sexp({name})"),
         ty if ty == "double" => format!("ScalarReal(*(double *){name})"),
