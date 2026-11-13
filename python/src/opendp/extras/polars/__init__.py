@@ -110,6 +110,22 @@ class DPExpr(object):
     def __init__(self, expr):
         self.expr = expr
 
+    def permute(self):
+        """Return a uniformly random permutation of this expression's rows.
+
+        Randomness is cryptographically secure.
+        This operation materializes its input and an O(n) index buffer.
+        """
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="permute_plugin",
+            args=(self.expr,),
+            is_elementwise=False,
+            changes_length=False,
+        )
+
     def noise(
         self,
         scale: float | None = None,
