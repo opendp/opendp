@@ -181,6 +181,12 @@ impl CertifiedTableFilter {
     // Public contracts use closed projections, so callers cannot forge a
     // valid certificate by modifying its plan, domain rules or schema.
     pub closed spec fn rules_spec(&self) -> Seq<VColumnRule> { self.rules@ }
+
+    pub fn matches_rules(&self, rules: &Vec<VColumnRule>) -> (matches: bool)
+        ensures matches == (self.rules_spec() == rules@),
+    {
+        domain::same_rules(&self.rules, rules)
+    }
     pub closed spec fn schema_spec(&self) -> Seq<VField> { self.schema@ }
     pub closed spec fn output_schema(&self, input: Seq<VField>) -> Option<Seq<VField>> {
         verified::plan_schema(&self.plan, input)

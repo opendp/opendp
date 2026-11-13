@@ -366,10 +366,12 @@ pub trait MetricSpace {
 pub(crate) trait CertifiedTransformationParts<
     DI: Domain, MI: Metric, DO: Domain, MO: Metric,
 > {
-    fn into_parts(self) -> (
+    fn into_parts(
+        self, input_domain: &DI, output_domain: &DO,
+    ) -> Fallible<(
         Function<DI::Carrier, DO::Carrier>,
         StabilityMap<MI, MO>,
-    );
+    )>;
 }
 
 /// A data transformation with certain stability characteristics.
@@ -431,7 +433,8 @@ where
         output_metric: MO,
         certified: P,
     ) -> Fallible<Self> {
-        let (function, stability_map) = certified.into_parts();
+        let (function, stability_map) =
+            certified.into_parts(&input_domain, &output_domain)?;
         Self::construct(
             input_domain, input_metric, output_domain, output_metric,
             function, stability_map,

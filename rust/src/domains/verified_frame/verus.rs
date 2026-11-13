@@ -18,6 +18,33 @@ pub struct VColumnRule {
     pub range: VCellRange,
 }
 
+/// Compare executable rule vectors with their mathematical sequence views.
+/// This binds a proof-carrying operator to its OpenDP input/output domains.
+pub fn same_rules(left: &Vec<VColumnRule>, right: &Vec<VColumnRule>)
+    -> (equal: bool)
+    ensures equal == (left@ == right@),
+{
+    if left.len() != right.len() {
+        return false;
+    }
+    let mut i: usize = 0;
+    while i < left.len()
+        invariant
+            i <= left.len(),
+            left.len() == right.len(),
+            forall|j: int| 0 <= j < i ==> left@[j] == right@[j],
+        decreases left.len() - i,
+    {
+        if left[i] != right[i] {
+            assert(left@[i as int] != right@[i as int]);
+            return false;
+        }
+        i += 1;
+    }
+    assert(left@ =~= right@);
+    true
+}
+
 pub open spec fn rule_field(rule: VColumnRule) -> VField {
     VField {
         dtype: match rule.range {

@@ -115,6 +115,16 @@ impl CertifiedTableProject {
     pub closed spec fn input_rules_spec(&self) -> Seq<VColumnRule> {
         self.input_rules@
     }
+
+    pub fn matches_rules(
+        &self, input: &Vec<VColumnRule>, output: &Vec<VColumnRule>,
+    ) -> (matches: bool)
+        ensures matches == (self.input_rules_spec() == input@
+            && self.output_rules_spec() == output@),
+    {
+        domain::same_rules(&self.input_rules, input)
+            && domain::same_rules(&self.output_rules, output)
+    }
     pub closed spec fn output_rules_spec(&self) -> Seq<VColumnRule> {
         self.output_rules@
     }

@@ -12,18 +12,29 @@ type VTableMetric = crate::metrics::SymmetricDistance;
 impl CertifiedTransformationParts<VTableDomain, VTableMetric, VTableDomain, VTableMetric>
     for filter_proof::CertifiedTableFilter
 {
-    fn into_parts(self) -> (
+    fn into_parts(
+        self, input_domain: &VTableDomain, output_domain: &VTableDomain,
+    ) -> Fallible<(
         Function<verified::VTable, verified::VTable>,
         StabilityMap<VTableMetric, VTableMetric>,
-    ) {
-        (
+    )> {
+        let input_rules = verified_rules(&input_domain.series_domains)?;
+        let output_rules = verified_rules(&output_domain.series_domains)?;
+        if !input_domain.margins.is_empty() || !output_domain.margins.is_empty()
+            || !self.matches_rules(&input_rules)
+            || !self.matches_rules(&output_rules)
+        {
+            return fallible!(MakeTransformation,
+                "certified filter rules do not match transformation domains");
+        }
+        Ok((
             Function::new_fallible(move |table: &verified::VTable| {
                 self.invoke(table).map_err(|_| {
                     err!(MakeTransformation, "input outside certified filter domain")
                 })
             }),
             StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
-        )
+        ))
     }
 }
 

@@ -37,18 +37,32 @@ impl CertifiedTransformationParts<
     crate::domains::verified_plan::VFrameDomain,
     crate::metrics::SymmetricDistance,
 > for project_proof::CertifiedTableProject {
-    fn into_parts(self) -> (
+    fn into_parts(
+        self,
+        input_domain: &crate::domains::verified_plan::VFrameDomain,
+        output_domain: &crate::domains::verified_plan::VFrameDomain,
+    ) -> Fallible<(
         Function<verified::VTable, verified::VTable>,
         StabilityMap<crate::metrics::SymmetricDistance, crate::metrics::SymmetricDistance>,
-    ) {
-        (
+    )> {
+        let input_rules = crate::domains::verified_frame::verified_rules(
+            &input_domain.series_domains)?;
+        let output_rules = crate::domains::verified_frame::verified_rules(
+            &output_domain.series_domains)?;
+        if !input_domain.margins.is_empty() || !output_domain.margins.is_empty()
+            || !self.matches_rules(&input_rules, &output_rules)
+        {
+            return fallible!(MakeTransformation,
+                "certified projection rules do not match transformation domains");
+        }
+        Ok((
             Function::new_fallible(move |table: &verified::VTable| {
                 self.invoke(table).map_err(|_| {
                     err!(MakeTransformation, "input outside certified projection domain")
                 })
             }),
             StabilityMap::new(|d: &u32| table_proof::map_distance(*d)),
-        )
+        ))
     }
 }
 
