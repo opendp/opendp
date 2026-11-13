@@ -7,12 +7,8 @@ mod project;
 mod stability;
 
 // Verus-only executable constructors are colocated with their OpenDP nodes.
-#[path = "input/proof.rs"]
-mod input_proof;
 #[path = "filter/proof.rs"]
 mod filter_proof;
-#[path = "project/proof.rs"]
-mod project_proof;
 
 use std::collections::HashSet;
 use crate::{
@@ -25,12 +21,11 @@ use crate::{
 type VTransformation =
     Transformation<VPlanDomain, VFrameMetric, VPlanDomain, VFrameMetric>;
 
-fn checked_result(
-    result: Option<(VPlan, Vec<VField>)>,
-    expected: &Vec<VField>,
+fn checked_plan(
+    plan: VPlan, source_schema: &Vec<VField>, expected: &Vec<VField>,
 ) -> Fallible<VPlan> {
-    match result {
-        Some((plan, fields)) if &fields == expected => Ok(plan),
+    match stability::check_certified_plan(&plan, source_schema) {
+        Some(fields) if &fields == expected => Ok(plan),
         _ => fallible!(MakeTransformation,
             "verified plan construction does not satisfy its declared schema"),
     }
