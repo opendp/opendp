@@ -930,9 +930,11 @@ fn check_l0Pinf_distance_types(types: &Vec<Type>) -> Fallible<()> {
     returns(do_not_convert = true)
 )]
 /// Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
+/// The returned view must be released with ffislice_of_anyobjectptrs_free,
+/// not header-only slice_free. Its elements remain borrowed from `raw`.
 ///
 /// # Arguments
-/// * `raw` - A pointer to the slice to free.
+/// * `raw` - A borrowed slice of contiguous AnyObjects.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     raw: *const FfiSlice,
@@ -940,18 +942,39 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     // dereference the pointer
     let raw = try_as_ref!(raw);
 
-    // read contents as a slice of AnyObjects, and then construct a vector of pointers to each of the elements
-    let vec_any_ptrs = unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
+    let objects = if raw.len == 0 {
+        &[]
+    } else {
+        if raw.ptr.is_null() {
+            return err!(FFI, "null AnyObject array").into();
+        }
+        unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
+    };
+    let pointers = objects
         .iter()
         .map(|v| v as *const AnyObject)
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+        .into_boxed_slice();
 
-    // build a new ffislice out of the pointers
+    // The matching destructor knows this allocation's layout from its length.
+    // This view borrows the objects; it owns only the pointer array and header.
     Ok(FfiSlice::new(
-        vec_any_ptrs.leak() as *mut _ as *mut c_void,
+        Box::into_raw(pointers) as *mut *const AnyObject as *mut c_void,
         raw.len,
     ))
     .into()
+}
+
+/// Release only a view returned by ffislice_of_anyobjectptrs, never its objects.
+/// Unlike slice_free, this also releases the explicitly boxed pointer array.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs_free(
+    this: *mut FfiSlice,
+) -> FfiResult<*mut ()> {
+    let view = try_!(util::into_owned(this));
+    let pointers = std::ptr::slice_from_raw_parts_mut(view.ptr as *mut *const AnyObject, view.len);
+    drop(unsafe { Box::from_raw(pointers) });
+    Ok(()).into()
 }
 
 #[bootstrap(
@@ -1435,6 +1458,25 @@ mod tests {
     use crate::ffi::util::ToCharP;
 
     use super::*;
+
+    #[test]
+    fn test_anyobject_pointer_view_free_preserves_source() -> Fallible<()> {
+        for objects in [vec![], vec![AnyObject::new(42_i32), AnyObject::new(7_i32)]] {
+            let source = FfiSlice::new(objects.as_ptr() as *mut c_void, objects.len());
+            for _ in 0..20 {
+                let view = match opendp_data__ffislice_of_anyobjectptrs(&source) {
+                    FfiResult::Ok(view) => view,
+                    FfiResult::Err(err) => return Err(util::into_owned(err)?.into()),
+                };
+                assert_eq!(unsafe { &*view }.len, objects.len());
+                let _: () = Fallible::from(opendp_data__ffislice_of_anyobjectptrs_free(view))?;
+            }
+            if !objects.is_empty() {
+                assert_eq!(*objects[0].downcast_ref::<i32>()?, 42);
+            }
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_str_free() -> Fallible<()> {
