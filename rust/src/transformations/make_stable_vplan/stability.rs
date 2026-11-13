@@ -3,8 +3,7 @@
 use super::verified::*;
 use vstd::prelude::*;
 
-#[path = "../../core/verus/row_local.rs"]
-pub(crate) mod lifting;
+pub(crate) use super::verified::row_local as lifting;
 
 #[path = "stability/row_local.rs"]
 mod row_local;
@@ -79,7 +78,7 @@ pub proof fn lemma_relation_contraction(
             lemma_apply_as_lift(plan, child_left, child_schema, output_schema);
             lemma_apply_as_lift(plan, child_right, child_schema, output_schema);
             let f = |row: Seq<Option<VValue>>| local_row_spec(plan, row).unwrap();
-            lemma_lift_contraction(child_left, child_right, f);
+            symmetric_distance::lemma_lift_contraction(child_left, child_right, f);
             let out_left = relation_spec(plan, left).unwrap();
             let out_right = relation_spec(plan, right).unwrap();
             assert(out_left =~= lifting::lift(child_left, f));

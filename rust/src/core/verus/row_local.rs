@@ -183,4 +183,92 @@ pub proof fn lemma_filter_lift_multiset<X>(
     }
 }
 
+/// A deterministic map-or-drop operator never produces more output rows
+/// than there are input rows, counting duplicates.
+pub proof fn lemma_lift_length<X, Y>(
+    rows: Seq<X>, f: spec_fn(X) -> Option<Y>,
+)
+    ensures lift(rows, f).to_multiset().len() <= rows.to_multiset().len(),
+    decreases rows.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if rows.len() > 0 {
+        let prefix = rows.drop_last();
+        lemma_lift_length(prefix, f);
+        assert(rows =~= prefix.push(rows.last()));
+        prefix.to_multiset_ensures();
+        let before = lift(prefix, f);
+        before.to_multiset_ensures();
+        match f(rows.last()) {
+            Some(value) => {
+                assert(lift(rows, f) =~= before.push(value));
+                assert(lift(rows, f).to_multiset().len()
+                    == before.to_multiset().len() + 1);
+            },
+            None => {
+                assert(lift(rows, f) =~= before);
+            },
+        }
+        rows.to_multiset_ensures();
+        assert(rows.to_multiset().len() == prefix.to_multiset().len() + 1);
+    } else {
+        rows.to_multiset_ensures();
+        lift(rows, f).to_multiset_ensures();
+    }
+}
+
+/// Inserting a row anywhere in a sequence inserts one copy in its multiset.
+pub proof fn lemma_seq_insert_bag<T>(xs: Seq<T>, index: int, value: T)
+    requires 0 <= index <= xs.len(),
+    ensures xs.insert(index, value).to_multiset() =~= xs.to_multiset().insert(value),
+    decreases xs.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if index == xs.len() {
+        assert(xs.insert(index, value) =~= xs.push(value));
+        xs.to_multiset_ensures();
+    } else {
+        let tail = xs.last();
+        let prefix = xs.drop_last();
+        assert(index <= prefix.len());
+        lemma_seq_insert_bag(prefix, index, value);
+        assert(xs.insert(index, value).last() == tail);
+        assert(xs.insert(index, value).drop_last() =~= prefix.insert(index, value));
+        assert(xs.insert(index, value) =~= prefix.insert(index, value).push(tail));
+        assert(xs =~= prefix.push(tail));
+        prefix.to_multiset_ensures();
+        prefix.insert(index, value).to_multiset_ensures();
+        assert(xs.insert(index, value).to_multiset() =~=
+            prefix.to_multiset().insert(value).insert(tail));
+        assert(xs.to_multiset().insert(value) =~=
+            prefix.to_multiset().insert(tail).insert(value));
+        assert(prefix.to_multiset().insert(value).insert(tail) =~=
+            prefix.to_multiset().insert(tail).insert(value));
+    }
+}
+
+/// A sequence insertion corresponds to either one output multiset
+/// insertion or no change. This is valid even for many-to-one maps.
+pub proof fn lemma_lift_bag_insert<X, Y>(
+    rows: Seq<X>, index: int, value: X, f: spec_fn(X) -> Option<Y>,
+)
+    requires 0 <= index <= rows.len(),
+    ensures
+        match f(value) {
+            Some(y) => lift(rows.insert(index, value), f).to_multiset()
+                =~= lift(rows, f).to_multiset().insert(y),
+            None => lift(rows.insert(index, value), f).to_multiset()
+                =~= lift(rows, f).to_multiset(),
+        },
+{
+    lemma_lift_insert(rows, index, value, f);
+    if let Some(y) = f(value) {
+        let before = lift(rows, f);
+        let after = lift(rows.insert(index, value), f);
+        let j = choose|j: int| 0 <= j <= before.len()
+            && after =~= before.insert(j, y);
+        lemma_seq_insert_bag(before, j, y);
+    }
+}
+
 } // verus!

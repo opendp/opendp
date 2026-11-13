@@ -8,6 +8,7 @@
 
 use vstd::prelude::*;
 use vstd::multiset::Multiset;
+use super::row_local;
 
 verus! {
 
@@ -227,6 +228,99 @@ pub proof fn lemma_empty_distance<T>(rows: Multiset<T>)
         Multiset::<T>::empty().sub(rows).count(v) == 0 by { }
     assert(rows.sub(Multiset::<T>::empty()) =~= rows);
     assert(Multiset::<T>::empty().sub(rows) =~= Multiset::<T>::empty());
+}
+
+/// Every deterministic row-local map-or-drop is nonexpansive under
+/// symmetric multiset distance. The proof cancels matching input copies;
+/// each remaining insertion or deletion can change the output by at most
+/// one. No injectivity or row preservation assumption is needed.
+pub proof fn lemma_lift_contraction<X, Y>(
+    left: Seq<X>, right: Seq<X>, f: spec_fn(X) -> Option<Y>,
+)
+    ensures
+        distance(
+            row_local::lift(left, f).to_multiset(),
+            row_local::lift(right, f).to_multiset(),
+        ) <= distance(
+            left.to_multiset(), right.to_multiset(),
+        ),
+    decreases left.len() + right.len(),
+{
+    broadcast use vstd::multiset::group_multiset_axioms;
+    if left.len() == 0 {
+        assert(left =~= Seq::<X>::empty());
+        assert(row_local::lift(left, f) =~= Seq::<Y>::empty());
+        left.to_multiset_ensures();
+        row_local::lift(left, f).to_multiset_ensures();
+        assert(left.to_multiset() =~= Multiset::<X>::empty());
+        assert(row_local::lift(left, f).to_multiset() =~= Multiset::<Y>::empty());
+        row_local::lemma_lift_length(right, f);
+        lemma_empty_distance(right.to_multiset());
+        lemma_empty_distance(row_local::lift(right, f).to_multiset());
+    } else {
+        let prefix = left.drop_last();
+        let value = left.last();
+        assert(left =~= prefix.push(value));
+        prefix.to_multiset_ensures();
+        left.to_multiset_ensures();
+        let left_before = row_local::lift(prefix, f).to_multiset();
+        let left_after = row_local::lift(left, f).to_multiset();
+        row_local::lift(prefix, f).to_multiset_ensures();
+        if right.to_multiset().count(value) > 0 {
+            right.to_multiset_ensures();
+            assert(right.contains(value));
+            let index = choose|i: int| 0 <= i < right.len() && right[i] == value;
+            let reduced = right.remove(index);
+            right.remove_ensures(index);
+            assert(reduced.len() + 1 == right.len());
+            assert(0 <= index <= reduced.len());
+            reduced.insert_ensures(index, value);
+            let restored = reduced.insert(index, value);
+            assert(restored.len() == right.len());
+            assert forall|i: int| 0 <= i < right.len()
+                implies right[i] == restored[i] by {
+                if i < index {
+                } else if i == index {
+                } else {
+                }
+            }
+            assert(right =~= restored);
+            row_local::lemma_seq_insert_bag(reduced, index, value);
+            assert(right.to_multiset() =~= reduced.to_multiset().insert(value));
+            lemma_lift_contraction(prefix, reduced, f);
+            row_local::lemma_lift_bag_insert(reduced, index, value, f);
+            assert(left.to_multiset() =~= prefix.to_multiset().insert(value));
+            let right_before = row_local::lift(reduced, f).to_multiset();
+            let right_after = row_local::lift(right, f).to_multiset();
+            match f(value) {
+                Some(y) => {
+                    assert(left_after =~= left_before.insert(y));
+                    assert(right_after =~= right_before.insert(y));
+                    lemma_insert_common(left_before, right_before, y);
+                },
+                None => {
+                    assert(left_after =~= left_before);
+                    assert(right_after =~= right_before);
+                },
+            }
+            lemma_insert_common(
+                prefix.to_multiset(), reduced.to_multiset(), value);
+        } else {
+            lemma_lift_contraction(prefix, right, f);
+            assert(left.to_multiset() =~= prefix.to_multiset().insert(value));
+            lemma_insert_fresh(prefix.to_multiset(), right.to_multiset(), value);
+            match f(value) {
+                Some(y) => {
+                    assert(left_after =~= left_before.insert(y));
+                    lemma_insert_bound(
+                        left_before, row_local::lift(right, f).to_multiset(), y);
+                },
+                None => {
+                    assert(left_after =~= left_before);
+                },
+            }
+        }
+    }
 }
 
 } // verus!

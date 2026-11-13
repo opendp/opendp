@@ -12,6 +12,8 @@ pub mod domain;
 pub mod transformation;
 #[path = "../../src/core/verus/metric_space.rs"]
 pub mod metric_space;
+#[path = "../../src/core/verus/row_local.rs"]
+pub mod row_local;
 #[path = "../../src/domains/polars/frame/verus.rs"]
 pub mod frame_metric_space;
 #[path = "../../src/metrics/symmetric_distance/verus.rs"]
