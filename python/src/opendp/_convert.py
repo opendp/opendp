@@ -208,6 +208,15 @@ def c_to_py(value: Any) -> Any:
 
         obj_type = object_type(value)
 
+        if obj_type in {"PrivacyProfile", "AnyOdometerQueryable", "AnyQueryable"}:
+            if not isinstance(value, AnyObjectPtr):
+                # Opaque wrappers escape conversion. Callback/nested pointers
+                # are borrowed, so give the wrapper an independently owned clone.
+                clone = lib.opendp_data__clone_opaque_object
+                clone.argtypes = [ctypes.POINTER(AnyObject)]
+                clone.restype = FfiResult
+                value = unwrap(clone(value), AnyObjectPtr)
+
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
 
