@@ -89,3 +89,90 @@ fn test_make_chain_pm() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_make_chain_tt_and_shr_preserve_result_semantics() -> Fallible<()> {
+    // These errors are deliberately outside the relevant input domains.
+    // The test checks executable propagation; the Verus lemma establishes
+    // the separate semantic validity theorem for certified transformations.
+    let inner = Transformation::new(
+        AtomDomain::<i32>::new_closed((0, 10))?,
+        AbsoluteDistance::<i32>::default(),
+        AtomDomain::<i32>::new_closed((1, 11))?,
+        AbsoluteDistance::<i32>::default(),
+        Function::new_fallible(|x: &i32| {
+            if *x < 0 {
+                return fallible!(FailedFunction, "inner function error");
+            }
+            x.checked_add(1)
+                .ok_or_else(|| err!(FailedFunction, "overflow"))
+        }),
+        StabilityMap::new_fallible(|d: &i32| {
+            if *d < 0 {
+                return fallible!(FailedMap, "inner map error");
+            }
+            d.checked_add(1)
+                .ok_or_else(|| err!(FailedMap, "overflow"))
+        }),
+    )?;
+    let outer = Transformation::new(
+        AtomDomain::<i32>::new_closed((1, 11))?,
+        AbsoluteDistance::<i32>::default(),
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
+        Function::new_fallible(|x: &i32| {
+            if *x > 50 {
+                return fallible!(FailedFunction, "outer function error");
+            }
+            x.checked_mul(2)
+                .ok_or_else(|| err!(FailedFunction, "overflow"))
+        }),
+        StabilityMap::new_fallible(|d: &i32| {
+            if *d == 9 {
+                return fallible!(FailedMap, "outer map error");
+            }
+            d.checked_mul(2)
+                .ok_or_else(|| err!(FailedMap, "overflow"))
+        }),
+    )?;
+
+    let chained = make_chain_tt(&outer, &inner)?;
+    let via_shr = (inner.clone() >> outer.clone())?;
+
+    // Check success, inner error, and outer error through both entrypoints.
+    for input in [-1, 0, 8, 50, 99] {
+        let expected = inner.invoke(&input)
+            .and_then(|value| outer.invoke(&value));
+        let actual = chained.invoke(&input);
+        let shr = via_shr.invoke(&input);
+        assert_eq!(actual.as_ref().ok(), expected.as_ref().ok());
+        assert_eq!(shr.as_ref().ok(), expected.as_ref().ok());
+        assert_eq!(actual.is_err(), expected.is_err());
+        assert_eq!(shr.is_err(), expected.is_err());
+    }
+
+    // Check success and both possible map-error propagation paths.
+    for distance in [-1, 0, 2, 8] {
+        let expected = inner.map(&distance)
+            .and_then(|bound| outer.map(&bound));
+        let actual = chained.map(&distance);
+        let shr = via_shr.map(&distance);
+        assert_eq!(actual.as_ref().ok(), expected.as_ref().ok());
+        assert_eq!(shr.as_ref().ok(), expected.as_ref().ok());
+        assert_eq!(actual.is_err(), expected.is_err());
+        assert_eq!(shr.is_err(), expected.is_err());
+    }
+
+    // The constructor and its operator reject unequal intermediate domains.
+    let incompatible = Transformation::new(
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
+        Function::new(|x: &i32| *x),
+        StabilityMap::new(|d: &i32| *d),
+    )?;
+    assert!(make_chain_tt(&incompatible, &inner).is_err());
+    assert!((inner >> incompatible).is_err());
+    Ok(())
+}

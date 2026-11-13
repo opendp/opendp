@@ -5,10 +5,11 @@
 //! `Function` and `StabilityMap` use erased Rust closures; connecting their
 //! evaluations to these spec functions is a separate implementation boundary.
 
-use super::transformation::{result_close, valid_transformation};
 use vstd::prelude::*;
 
 verus! {
+
+use super::transformation::{result_close, valid_transformation};
 
 /// `Function::make_chain` evaluates the inner function first and propagates
 /// its error without invoking the outer function.

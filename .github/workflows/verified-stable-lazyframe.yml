@@ -7,6 +7,7 @@ on:
       - 'rust/Cargo.toml'
       - 'rust/src/transformations/make_verified_stable_lazyframe/**'
       - 'rust/src/transformations/make_stable_vplan/**'
+      - 'rust/src/combinators/chain/**'
       - 'rust/src/domains/verified_plan.rs'
       - 'rust/src/transformations/mod.rs'
       - 'rust/query_kernel/**'
@@ -53,6 +54,7 @@ jobs:
           cargo test --no-default-features --features contrib,polars,verified-query domains::polars::frame::test --lib
           cargo test --no-default-features --features contrib,polars,verified-query domains::verified_frame::tests --lib
           cargo test --no-default-features --features contrib,polars,verified-query make_stable_vplan --lib
+          cargo test --no-default-features --features contrib,polars,verified-query combinators::chain::test --lib
           cargo test --no-default-features --features contrib,polars,verified-query domains::verified_plan::tests --lib
 
       - name: Publish push constructor status
