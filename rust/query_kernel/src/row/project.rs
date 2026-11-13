@@ -129,6 +129,20 @@ pub proof fn lemma_row_prefix_type_sound(
     }
 }
 
+/// A successful projection prefix emits exactly one cell per expression.
+pub proof fn lemma_row_prefix_length(
+    exprs: Seq<VExpr>, row: Seq<Option<VValue>>, count: nat,
+)
+    requires count <= exprs.len(), row_prefix(exprs, row, count).is_Ok(),
+    ensures row_prefix(exprs, row, count).unwrap().len() == count,
+    decreases count,
+{
+    if count > 0 {
+        assert(row_prefix(exprs, row, (count - 1) as nat).is_Ok());
+        lemma_row_prefix_length(exprs, row, (count - 1) as nat);
+    }
+}
+
 /// Every output column equals the value of its defining expression.
 pub proof fn lemma_row_prefix_cell(
     exprs: Seq<VExpr>, row: Seq<Option<VValue>>, count: nat, index: int,
@@ -145,8 +159,11 @@ pub proof fn lemma_row_prefix_cell(
     let last = expr_row_spec(&exprs[(count - 1) as int], row);
     assert(prefix.is_Ok());
     assert(last.is_Ok());
+    lemma_row_prefix_length(exprs, row, (count - 1) as nat);
+    assert(prefix.unwrap().len() == count - 1);
     let output = row_prefix(exprs, row, count).unwrap();
     assert(output =~= prefix.unwrap().push(last.unwrap()));
+    assert(output.len() == count);
     if index < count - 1 {
         lemma_row_prefix_cell(exprs, row, (count - 1) as nat, index);
         assert(output[index] == prefix.unwrap()[index]);
