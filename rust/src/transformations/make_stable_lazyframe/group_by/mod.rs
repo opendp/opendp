@@ -453,9 +453,7 @@ fn inspect_expr(
                 AggExpr::Count { input, .. } | AggExpr::NUnique(input) => {
                     (input.as_ref(), Invariant)
                 }
-                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => {
-                    (input.as_ref(), MinMax)
-                }
+                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => (input.as_ref(), MinMax),
                 AggExpr::Mean(input)
                 | AggExpr::Median(input)
                 | AggExpr::First(input)
