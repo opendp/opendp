@@ -16,8 +16,6 @@ The members of this module will then be accessible at ``dp.polars``.
 
 from __future__ import annotations
 
-import os
-
 from dataclasses import asdict, dataclass, field, replace
 from deprecated import deprecated
 from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
@@ -54,10 +52,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 # Exposed as global for testing.
 _KEY_SIZE_THRESHOLD_MB = 2**10
-
-
-def _get_opendp_polars_lib_path():
-    return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
 
 def _resolve_signed(signed: bool | None) -> bool:
@@ -147,7 +141,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="noise",
             args=(self.expr, scale),
             is_elementwise=True,
@@ -225,7 +219,7 @@ class DPExpr(object):
 
         signed = _resolve_signed(signed)
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_len",
             args=(self.expr, scale, signed),
             returns_scalar=True,
@@ -275,7 +269,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -329,7 +323,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_null_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -379,7 +373,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_n_unique",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -426,7 +420,7 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_sum",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -480,7 +474,7 @@ class DPExpr(object):
             )
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_mean",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -527,7 +521,7 @@ class DPExpr(object):
         from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_quantile",
             args=(self.expr, lit(alpha), lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -572,7 +566,7 @@ class DPExpr(object):
         from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_median",
             args=(self.expr, lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -625,7 +619,7 @@ def dp_len(scale: float | None = None, signed: bool | None = None):
     from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
     return register_plugin_function(
-        plugin_path=_get_opendp_polars_lib_path(),
+        plugin_path=lib_path,
         function_name="dp_frame_len",
         args=(scale, _resolve_signed(signed)),
         returns_scalar=True,
@@ -790,7 +784,61 @@ class LazyFrameQuery:
         self._query = query
         # do not initialize super() because inheritance is only used to mimic the API surface
 
+    def deserialize(
+        self,
+        serialized_plan: bytes,
+        trusted: bool = False,
+    ) -> LazyFrameQuery:
+        """Deserialize a binary Polars plan into this query.
+
+        By default OpenDP validates the plan and rebinds supported DP plugins
+        to the locally loaded OpenDP library before Polars deserializes it.
+        Returns a new query without modifying this one.
+
+        :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
+        File scans are rejected in untrusted plans; public data must be in memory.
+        :param trusted: Set to True only for locally constructed, trusted plans.
+            Skips security checks against malicious serialized plans; Polars
+            deserialization can execute Python callbacks and load native plugins.
+        """
+        import io
+        from pathlib import Path
+
+        if not isinstance(serialized_plan, (bytes, bytearray, memoryview)):
+            raise TypeError("serialized_plan must be binary Polars plan bytes")
+
+        # Snapshot mutable inputs so the loader observes the validated bytes.
+        serialized_plan = bytes(serialized_plan)
+        if not trusted:
+            from opendp._data import sanitize_polars_plan
+
+            trusted_lib = str(Path(lib_path).resolve(strict=True))
+            try:
+                serialized_plan = sanitize_polars_plan(serialized_plan, trusted_lib)
+            except OpenDPException as error:
+                if "Cannot deserialize Polars plan." not in str(error):
+                    raise
+                from opendp.mod import _EXPECTED_POLARS_VERSION
+
+                raise ValueError(
+                    f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
+                ) from error
+
+        plan = import_optional_dependency("polars").LazyFrame.deserialize(
+            io.BytesIO(serialized_plan)
+        )
+        return LazyFrameQuery(plan, object.__getattribute__(self, "_query"))
+
     def __getattribute__(self, name):
+        # The Polars classmethod is unsafe for untrusted input. Always use our
+        # preflight-aware instance method, not the forwarded Polars method.
+        if name == "deserialize":
+            return object.__getattribute__(self, name)
+        if name == "__setstate__":
+            raise AttributeError(
+                "Use LazyFrameQuery.deserialize() to load a Polars plan"
+            )
+
         # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
 

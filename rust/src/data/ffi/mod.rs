@@ -265,8 +265,13 @@ pub extern "C" fn opendp_data__slice_as_object(
     pub fn deserialize_raw_dslplan(
         raw: &FfiSlice
     ) -> Fallible<DslPlan> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
-        DslPlan::deserialize_versioned(slice)
+        if raw.ptr.is_null() {
+            return fallible!(FFI, "Invalid serialized Polars plan buffer");
+        }
+        let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        // This FFI loader handles plans supplied by the trusted local caller.
+        // Remote plans must be sanitized explicitly before deserialization.
+        DslPlan::deserialize_versioned(bytes)
             .map_err(
             |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
         )

@@ -15,7 +15,10 @@ def test_deserialize_polars_plan_error():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
     )
-    with pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"):
+    with (
+        pytest.warns(DeprecationWarning),
+        pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"),
+    ):
         context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
 
 
@@ -114,3 +117,210 @@ def test_serializable_polars(dp_obj):
 def test_not_currently_serializable(dp_obj):
     with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
         dp.serialize(dp_obj)
+
+
+def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
+    import io
+
+    original = context.query()
+    raw = original.polars_plan.serialize()
+
+    from opendp import _data
+
+    sanitize = _data.sanitize_polars_plan
+    checked = []
+
+    def checked_sanitize(data, trusted_lib):
+        checked.append(data)
+        return sanitize(data, trusted_lib)
+
+    monkeypatch.setattr(_data, "sanitize_polars_plan", checked_sanitize)
+    restored = original.deserialize(raw)
+
+    assert checked == [raw]
+    assert isinstance(restored, type(original))
+    assert restored is not original
+    assert restored.polars_plan is not original.polars_plan
+    assert restored._query is original._query
+    assert restored._query._d_in == context.d_in
+    assert restored._query._d_out == context.d_mids[0]
+
+    # Polars supports deserializing directly from a stream, but the OpenDP
+    # entry point intentionally accepts binary plan bytes only.
+    with pytest.raises(TypeError):
+        original.deserialize(io.BytesIO(raw))
+
+    # Bypass through Polars' state-restoration method must also be unavailable.
+    with pytest.raises(AttributeError, match="LazyFrameQuery.deserialize"):
+        original.__setstate__(raw)
+
+
+def test_deprecated_context_deserialize_polars_plan():
+    serialized = query.polars_plan.serialize()
+    with pytest.warns(DeprecationWarning, match="context.query\\(\\).deserialize"):
+        restored = context.deserialize_polars_plan(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+    assert restored._query._d_in == context.d_in
+    assert restored._query._d_out == context.d_mids[0]
+
+
+def _identity_batches(frame):
+    return frame
+
+
+def _identity_element(value):
+    return value
+
+
+def test_serialized_plan_preflight_allows_opendp_query():
+    from opendp._data import sanitize_polars_plan
+    from opendp._lib import lib_path
+
+    serialized = query.polars_plan.serialize()
+    assert isinstance(sanitize_polars_plan(serialized, str(lib_path)), bytes)
+    restored = context.query().deserialize(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+    renamed = pl.LazyFrame({"value": [1]}).select(
+        pl.col("value").name.prefix("renamed_")
+    )
+    assert isinstance(sanitize_polars_plan(renamed.serialize(), str(lib_path)), bytes)
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["plan_callback", "expression_callback", "group_callback", "rename_callback"],
+)
+def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
+    from opendp._data import sanitize_polars_plan
+    from opendp._lib import lib_path
+
+    source = pl.LazyFrame({"value": [1]})
+    if kind == "plan_callback":
+        malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
+    elif kind == "expression_callback":
+        malicious = source.select(
+            pl.col("value").map_elements(_identity_element, return_dtype=pl.Int64)
+        )
+    elif kind == "group_callback":
+        malicious = source.group_by("value").map_groups(
+            _identity_batches, schema={"value": pl.Int64}
+        )
+    else:
+        malicious = source.select(pl.col("value").name.map(_identity_element))
+    serialized = malicious.serialize()
+    with pytest.raises(dp.OpenDPException):
+        sanitize_polars_plan(serialized, str(lib_path))
+
+    # The security preflight must fail before Python calls the Polars loader.
+    def forbidden_deserialize(*args, **kwargs):
+        pytest.fail("Polars deserialized an untrusted Python callback")
+
+    monkeypatch.setattr(pl.LazyFrame, "deserialize", forbidden_deserialize)
+    with pytest.raises(dp.OpenDPException):
+        context.query().deserialize(serialized)
+
+
+def test_deserialize_reports_expected_polars_version():
+    from opendp.mod import _EXPECTED_POLARS_VERSION
+
+    serialized = bytearray(query.polars_plan.serialize())
+    serialized[len(b"DSL_VERSION")] ^= 1
+    with pytest.raises(ValueError, match=f"Expected Polars {_EXPECTED_POLARS_VERSION}"):
+        context.query().deserialize(serialized)
+
+
+@pytest.mark.parametrize("format", ["parquet", "csv"])
+def test_untrusted_deserialize_rejects_file_scans(tmp_path, monkeypatch, format):
+    keys = tmp_path / f"keys.{format}"
+    frame = pl.DataFrame({"age": [1, 2, 3]})
+    if format == "parquet":
+        frame.write_parquet(keys)
+        scan = pl.scan_parquet(keys)
+    else:
+        frame.write_csv(keys)
+        scan = pl.scan_csv(keys)
+
+    plan = (
+        context.query()
+        .group_by("age")
+        .agg(dp.len(signed=True))
+        .with_keys(scan)
+    )
+
+    def reject_polars(*args, **kwargs):
+        pytest.fail("Polars deserialized a file scan before preflight")
+
+    monkeypatch.setattr(pl.LazyFrame, "deserialize", reject_polars)
+    with pytest.raises(dp.OpenDPException, match="forbidden construct: Scan"):
+        context.query().deserialize(plan.polars_plan.serialize())
+
+
+def test_untrusted_deserialize_allows_in_memory_public_keys():
+    plan = (
+        context.query()
+        .group_by("age")
+        .agg(dp.len(signed=True))
+        .with_keys(pl.LazyFrame({"age": [1, 2, 3]}))
+    )
+    restored = context.query().deserialize(plan.polars_plan.serialize())
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+
+def test_trusted_local_plan_can_scan_file(tmp_path, monkeypatch):
+    from opendp._convert import _lazyframe_to_slice
+    from opendp._data import slice_as_object
+
+    source = tmp_path / "keys.csv"
+    pl.DataFrame({"age": [1]}).write_csv(source)
+    plan = pl.scan_csv(source)
+    serialized = plan.serialize()
+
+    # Normal local FFI conversion does not apply remote-plan restrictions.
+    assert slice_as_object(_lazyframe_to_slice(plan), "LazyFrame") is not None
+
+    with pytest.raises(dp.OpenDPException, match="file scans are not allowed"):
+        context.query().deserialize(serialized)
+
+    from opendp import _data
+
+    def unexpected_preflight(*args, **kwargs):
+        pytest.fail("Preflight ran on a trusted plan")
+
+    monkeypatch.setattr(_data, "sanitize_polars_plan", unexpected_preflight)
+    restored = context.query().deserialize(serialized, trusted=True)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+
+def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
+    from opendp import _data
+
+    supplied = bytearray(query.polars_plan.serialize())
+    sanitize = _data.sanitize_polars_plan
+
+    def mutate_original(snapshot, trusted_lib):
+        assert type(snapshot) is bytes
+        rewritten = sanitize(snapshot, trusted_lib)
+        supplied[:] = b"\x00" * len(supplied)
+        return rewritten
+
+    monkeypatch.setattr(_data, "sanitize_polars_plan", mutate_original)
+    restored = context.query().deserialize(supplied)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+
+def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
+    from polars.plugins import register_plugin_function
+
+    # The file is deliberately not a valid shared library. The remote library
+    # path must never be passed to Polars' dynamic loader.
+    fake_lib = tmp_path / "spoof_opendp.so"
+    fake_lib.write_bytes(b"not a shared library")
+    plugin = register_plugin_function(
+        plugin_path=fake_lib,
+        function_name="noise",
+        args=[pl.col("value"), pl.lit(None)],
+        is_elementwise=True,
+    )
+    serialized = pl.LazyFrame({"value": [1]}).select(plugin).serialize()
+    restored = context.query().deserialize(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)

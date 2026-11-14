@@ -36,18 +36,32 @@ perhaps on a remote server.
         ...     )
         ... )
         >>> # Then use the serialized plan from the client:
-        >>> new_query = new_context.deserialize_polars_plan(
-        ...     serialized_plan
-        ... )
+        >>> new_query = new_context.query().deserialize(serialized_plan)
         >>> print("DP len:", new_query.release().collect().item())
         DP len: ...
 
 
-Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deserialize_polars_plan`` is a convenience method for `Polars binary serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
+The ``polars_plan`` is a Polars ``LazyFrame``. The binary plan is produced by `Polars serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
 
-Polars serializations will include the path of the local binary.
-These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH`` :ref:`environment variable <envvars>`.
+For plans received from untrusted clients, use
+:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` with its default
+``trusted=False``, rather than calling ``polars.LazyFrame.deserialize``
+directly. OpenDP checks and sanitizes the serialized DSL before Polars can
+unpickle Python callbacks or load native plugins. Python callbacks and
+pickled plugin arguments are rejected. Only OpenDP's supported DP plugins
+are allowed, and library paths are replaced with the OpenDP library loaded
+by the server.
 
+File scans are rejected in untrusted plans. Public key sets and other
+public data must be supplied as in-memory sources within the serialized
+query. The server may check ``len(serialized_plan)`` to set its own
+request-size limit.
+
+For locally created, trusted plans, ``deserialize(..., trusted=True)``
+skips the security checks and permits ordinary Polars features, including
+local file scans and Python callbacks. Never set ``trusted=True`` for plans
+from untrusted clients. The regular OpenDP FFI data conversion path also
+assumes its caller is trusted.
 
 Context Serialization
 ---------------------
