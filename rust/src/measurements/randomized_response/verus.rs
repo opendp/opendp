@@ -7,6 +7,7 @@
 //! sampler contract obligation.
 use vstd::prelude::*;
 use crate::measurement::valid_discrete_max_divergence_measurement;
+use crate::dyadic53;
 use crate::kernel;
 
 verus! {
@@ -356,6 +357,35 @@ pub proof fn lemma_dyadic53_randomized_response_valid(
         assert(p <= factor * (1real - p));
     }
     lemma_make_randomized_response_bool_returns_valid(p, q, factor);
+}
+
+/// Specialize the constructor theorem to the exact *production* bit decoding
+/// of a public binary64 probability in [0.5, 1.0].
+///
+/// There is no second rational-probability constructor in the specification:
+/// the parameter is decoded by dyadic53::numerator_from_bits, which is the
+/// actual function used by make_randomized_response_bool.
+pub proof fn lemma_randomized_response_valid_for_f64_bits(
+    bits: u64, q: real, factor: real,
+)
+    requires
+        0x3fe0_0000_0000_0000u64 <= bits <= 0x3ff0_0000_0000_0000u64,
+        0real <= q <= 1real,
+        factor >= 1real,
+        dyadic53::numerator_from_bits(bits) < 9_007_199_254_740_992u64 ==>
+            crate::bernoulli_proof::dyadic53_mass(dyadic53::numerator_from_bits(bits))
+                <= factor * (
+                    1real - crate::bernoulli_proof::dyadic53_mass(
+                        dyadic53::numerator_from_bits(bits))),
+    ensures
+        rr_valid_measurement(
+            crate::bernoulli_proof::dyadic53_mass(dyadic53::numerator_from_bits(bits)),
+            q, factor),
+{
+    let numerator = dyadic53::numerator_from_bits(bits);
+    assert(4_503_599_627_370_496u64 <= numerator);
+    assert(numerator <= 9_007_199_254_740_992u64);
+    lemma_dyadic53_randomized_response_valid(numerator, q, factor);
 }
 
 } // verus!
