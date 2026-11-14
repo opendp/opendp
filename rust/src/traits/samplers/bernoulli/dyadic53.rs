@@ -8,14 +8,14 @@ use vstd::prelude::*;
 #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures
-        result >= (1u64 << 52),
-        result <= (1u64 << 53),
+        result >= 4_503_599_627_370_496u64,
+        result <= 9_007_199_254_740_992u64,
 ))]
 pub fn numerator_from_bits(bits: u64) -> u64 {
     if bits == 0x3ff0_0000_0000_0000 {
-        1u64 << 53
+        9_007_199_254_740_992u64
     } else {
-        (1u64 << 52) + (bits % (1u64 << 52))
+        4_503_599_627_370_496u64 + (bits % 4_503_599_627_370_496u64)
     }
 }
 
