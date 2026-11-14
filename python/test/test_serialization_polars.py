@@ -138,16 +138,15 @@ def test_serialized_plan_preflight_allows_opendp_query():
 
 
 @pytest.mark.parametrize(
-    "kind", ["plan_callback", "expression_callback", "group_callback", "rename_callback"]
+    "kind",
+    ["plan_callback", "expression_callback", "group_callback", "rename_callback"],
 )
 def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
     from opendp._data import validate_polars_plan
 
     source = pl.LazyFrame({"value": [1]})
     if kind == "plan_callback":
-        malicious = source.map_batches(
-            _identity_batches, schema={"value": pl.Int64}
-        )
+        malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
     elif kind == "expression_callback":
         malicious = source.select(
             pl.col("value").map_elements(
@@ -181,7 +180,6 @@ def test_serialized_plan_preflight_rejects_malformed_bytes():
             validate_polars_plan(data)
 
 
-
 def test_ffi_plan_loader_preflights_callbacks():
     from opendp._convert import _lazyframe_to_slice
     from opendp._data import slice_as_object
@@ -190,7 +188,6 @@ def test_ffi_plan_loader_preflights_callbacks():
     malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
     with pytest.raises(dp.OpenDPException):
         slice_as_object(_lazyframe_to_slice(malicious), "LazyFrame")
-
 
 
 def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
