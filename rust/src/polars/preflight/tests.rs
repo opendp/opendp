@@ -251,12 +251,16 @@ fn validates_and_rebinds_native_plugin_symbols() {
 
     let trusted_lib = "/server/libopendp.so";
     let rewritten = sanitize_serialized_dslplan(&raw, trusted_lib, &[]).unwrap();
-    assert!(!rewritten
-        .windows(b"/untrusted/libopendp.so".len())
-        .any(|chunk| chunk == b"/untrusted/libopendp.so"));
-    assert!(rewritten
-        .windows(trusted_lib.len())
-        .any(|chunk| chunk == trusted_lib.as_bytes()));
+    assert!(
+        !rewritten
+            .windows(b"/untrusted/libopendp.so".len())
+            .any(|chunk| chunk == b"/untrusted/libopendp.so")
+    );
+    assert!(
+        rewritten
+            .windows(trusted_lib.len())
+            .any(|chunk| chunk == trusted_lib.as_bytes())
+    );
 
     let unknown = plugin_plan("unknown_symbol", Value::Binary(vec![]), Value::Nil);
     assert!(validate_serialized_dslplan(&unknown).is_err());
