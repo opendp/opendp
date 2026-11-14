@@ -44,12 +44,11 @@ perhaps on a remote server.
 The ``polars_plan`` is a Polars ``LazyFrame``. The binary plan is produced by `Polars serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
 
 For plans received from untrusted clients, use
-:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` on the query
-returned by ``context.query()``, rather than calling
+:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` rather than calling
 ``polars.LazyFrame.deserialize`` directly. OpenDP checks and sanitizes the
 serialized DSL before Polars can unpickle Python callbacks or load native
-plugins. Python callbacks and pickled plugin arguments are rejected;
-only OpenDP's supported DP plugins are allowed, and library paths are
+plugins. Python callbacks and pickled plugin arguments are rejected.
+Only OpenDP's supported DP plugins are allowed, and library paths are
 replaced with the OpenDP library loaded by the server.
 
 Context Serialization
