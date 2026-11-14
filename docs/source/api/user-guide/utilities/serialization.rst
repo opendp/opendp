@@ -47,11 +47,20 @@ Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deser
 
 For plans received from untrusted clients, use
 :py:meth:`~opendp.context.Context.deserialize_polars_plan` rather than calling
-``polars.LazyFrame.deserialize`` directly. OpenDP inspects the serialized
-DSL before Polars can unpickle embedded Python callbacks, rejecting unsupported
-plan nodes and serialization versions. This protects the deserialization
-boundary; it does not sandbox arbitrary plan execution, native plugins, or
-external data access.
+``polars.LazyFrame.deserialize`` directly. OpenDP checks the serialized DSL
+before Polars can unpickle Python callbacks or load native plugins. Incoming
+plugins must be supported OpenDP shims without keyword arguments or altered
+execution flags. Their library paths are replaced with the server's installed
+OpenDP library, or the library specified by the server's
+``OPENDP_POLARS_LIB_PATH`` environment variable. This path must identify a
+trusted shared library which remote clients cannot modify.
+
+Serialized ``polars.Expr`` objects use a separate binary format and are not
+protected by this entry point. To submit expressions from a remote client,
+serialize the entire ``LazyFrame`` containing them and use
+``Context.deserialize_polars_plan``. Do not directly deserialize untrusted
+``Expr`` bytes or pass them to OpenDP's low-level FFI. This check does not
+sandbox arbitrary plan execution or external data access.
 
 
 Polars serializations will include the path of the local binary.
