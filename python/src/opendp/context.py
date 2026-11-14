@@ -506,8 +506,9 @@ class Context(object):
         import io
         from opendp._data import validate_polars_plan
 
-        # Polars can eagerly unpickle Python callbacks embedded in the plan.
-        # Validate serialized bytes before letting Polars instantiate any node.
+        # Validate and deserialize the same immutable snapshot: callers may
+        # otherwise mutate a bytearray between the check and Polars' loader.
+        serialized_plan = bytes(serialized_plan)
         validate_polars_plan(serialized_plan)
         pl = import_optional_dependency("polars")
 
