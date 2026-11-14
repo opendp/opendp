@@ -16,8 +16,7 @@ use crate::{
     name = "sanitize_polars_plan",
     arguments(
         serialized_plan(rust_type = "BitVector", hint = "bytes"),
-        trusted_lib(c_type = "char *", rust_type = "String"),
-        allowed_files(rust_type = "Vec<String>", default = b"null")
+        trusted_lib(c_type = "char *", rust_type = "String")
     ),
     returns(
         c_type = "FfiResult<AnyObject *>",
@@ -30,25 +29,15 @@ use crate::{
 pub extern "C" fn opendp_data__sanitize_polars_plan(
     serialized_plan: *const FfiSlice,
     trusted_lib: *const c_char,
-    allowed_files: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let serialized_plan = try_as_ref!(serialized_plan);
     let trusted_lib = try_!(util::to_str(trusted_lib));
-    let allowed_files = if allowed_files.is_null() {
-        &[][..]
-    } else {
-        try_!(try_as_ref!(allowed_files).downcast_ref::<Vec<String>>()).as_slice()
-    };
     if serialized_plan.ptr.is_null() || serialized_plan.len % 8 != 0 {
         return err!(FFI, "Invalid serialized Polars plan buffer").into();
     }
     let len = serialized_plan.len / 8;
     let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
-    let sanitized = try_!(preflight::sanitize_serialized_dslplan(
-        bytes,
-        trusted_lib,
-        allowed_files,
-    ));
+    let sanitized = try_!(preflight::sanitize_serialized_dslplan(bytes, trusted_lib));
     Ok(AnyObject::new(BitVector::from_vec(sanitized))).into()
 }
 
