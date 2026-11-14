@@ -82,7 +82,7 @@ fn refuses_python_and_callback_variants_before_polars_deserialization() {
             "{name}"
         );
     }
-    for name in FORBIDDEN_EXPR_VARIANTS {
+    for name in FORBIDDEN_VARIANTS {
         let callback = Value::Map(vec![(Value::String((*name).into()), Value::Nil)]);
         let select = Value::Map(vec![(
             Value::String("Select".into()),
@@ -165,6 +165,64 @@ fn only_approved_local_scans_can_be_deserialized() {
 
     let python = serialized_scan(&path, "PythonDataset");
     assert!(sanitize_serialized_dslplan(&python, "opendp", &[path]).is_err());
+}
+
+#[test]
+fn checks_dangerous_tags_under_unknown_nested_variants() {
+    let string = |s: &str| Value::String(s.into());
+    let nested = |child: Value| {
+        let unknown = Value::Map(vec![(
+            string("FuturePlanNode"),
+            Value::Map(vec![(
+                string("arbitrary_children"),
+                Value::Array(vec![Value::Map(vec![(string("nested"), child)])]),
+            )]),
+        )]);
+        encoded(&root_with(Value::Array(vec![Value::Map(vec![
+            (string("value"), unknown),
+            (string("version"), Value::from(1)),
+        ])])))
+    };
+
+    // Unknown structure does not stop traversal, even if it has no known
+    // input/children fields.
+    let harmless = nested(Value::Map(vec![(string("Filter"), Value::Nil)]));
+    validate_serialized_dslplan(&harmless).unwrap();
+
+    for tag in ["PythonScan", "OpaquePython", "Sink"] {
+        let dangerous = nested(Value::Map(vec![(string(tag), Value::Nil)]));
+        assert!(validate_serialized_dslplan(&dangerous).is_err(), "{tag}");
+    }
+
+    let group_by = nested(Value::Map(vec![(
+        string("GroupBy"),
+        Value::Map(vec![(string("apply"), Value::Bool(true))]),
+    )]));
+    assert!(format!("{:?}", validate_serialized_dslplan(&group_by).unwrap_err())
+        .contains("group-by callbacks"));
+
+    let scan = nested(Value::Map(vec![(
+        string("Scan"),
+        Value::Map(vec![
+            (
+                string("sources"),
+                Value::Map(vec![(
+                    string("Paths"),
+                    Value::Array(vec![Value::Map(vec![(
+                        string("Local"),
+                        string("/private/secret.csv"),
+                    )])]),
+                )]),
+            ),
+            (string("unified_scan_args"), Value::Map(vec![])),
+            (
+                string("scan_type"),
+                Value::Map(vec![(string("Csv"), Value::Map(vec![]))]),
+            ),
+        ]),
+    )]));
+    assert!(format!("{:?}", validate_serialized_dslplan(&scan).unwrap_err())
+        .contains("file scans are not allowed"));
 }
 
 fn plugin_plan(symbol: &str, kwargs: Value, flags: Value) -> Vec<u8> {
