@@ -785,7 +785,32 @@ class LazyFrameQuery:
         self._query = query
         # do not initialize super() because inheritance is only used to mimic the API surface
 
+    def deserialize(self, serialized_plan: bytes) -> LazyFrameQuery:
+        """Deserialize an untrusted binary Polars plan into this query.
+
+        OpenDP validates the serialized plan and rebinds supported DP plugins
+        to the locally loaded OpenDP library before Polars deserializes it.
+        Returns a new query without modifying this one.
+
+        :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
+        """
+        import io
+        from pathlib import Path
+
+        from opendp._data import sanitize_polars_plan
+
+        # Snapshot the input so validation and deserialization see the same bytes.
+        trusted_lib = str(Path(lib_path).resolve(strict=True))
+        sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
+        plan = import_optional_dependency("polars").LazyFrame.deserialize(io.BytesIO(sanitized))
+        return LazyFrameQuery(plan, object.__getattribute__(self, "_query"))
+
     def __getattribute__(self, name):
+        # The Polars classmethod is unsafe for untrusted input. Always use our
+        # preflight-aware instance method, not the forwarded Polars method.
+        if name == "deserialize":
+            return object.__getattribute__(self, name)
+
         # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
 
