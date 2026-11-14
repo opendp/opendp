@@ -121,10 +121,10 @@ polars = [
     "dep:polars-arrow",
     "dep:serde",
     "dep:serde-pickle",
-    "dep:rmpv",
     "dep:chrono",
 ]
 polars-ffi = [
+    "dep:rmpv",
     "polars",
     "ffi",
     "dep:polars-python",
