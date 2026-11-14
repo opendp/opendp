@@ -125,16 +125,17 @@ def _identity_element(value):
 
 
 def test_serialized_plan_preflight_allows_opendp_query():
-    from opendp._data import validate_polars_plan
+    from opendp._data import sanitize_polars_plan
+    from opendp._lib import lib_path
 
     serialized = query.polars_plan.serialize()
-    assert validate_polars_plan(serialized) is True
+    assert isinstance(sanitize_polars_plan(serialized, str(lib_path)), bytes)
     restored = context.deserialize_polars_plan(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
     renamed = pl.LazyFrame({"value": [1]}).select(
         pl.col("value").name.prefix("renamed_")
     )
-    assert validate_polars_plan(renamed.serialize()) is True
+    assert isinstance(sanitize_polars_plan(renamed.serialize(), str(lib_path)), bytes)
 
 
 @pytest.mark.parametrize(
@@ -142,7 +143,8 @@ def test_serialized_plan_preflight_allows_opendp_query():
     ["plan_callback", "expression_callback", "group_callback", "rename_callback"],
 )
 def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
-    from opendp._data import validate_polars_plan
+    from opendp._data import sanitize_polars_plan
+    from opendp._lib import lib_path
 
     source = pl.LazyFrame({"value": [1]})
     if kind == "plan_callback":
@@ -161,7 +163,7 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
         malicious = source.select(pl.col("value").name.map(_identity_element))
     serialized = malicious.serialize()
     with pytest.raises(dp.OpenDPException):
-        validate_polars_plan(serialized)
+        sanitize_polars_plan(serialized, str(lib_path))
 
     # The security preflight must fail before Python calls the Polars loader.
     def forbidden_deserialize(*args, **kwargs):
@@ -173,11 +175,12 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
 
 
 def test_serialized_plan_preflight_rejects_malformed_bytes():
-    from opendp._data import validate_polars_plan
+    from opendp._data import sanitize_polars_plan
+    from opendp._lib import lib_path
 
     for data in [b"", b"not a Polars plan", b"DSL_VERSION"]:
         with pytest.raises(dp.OpenDPException):
-            validate_polars_plan(data)
+            sanitize_polars_plan(data, str(lib_path))
 
 
 def test_ffi_plan_loader_preflights_callbacks():
