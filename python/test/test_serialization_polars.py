@@ -186,3 +186,21 @@ def test_ffi_plan_loader_preflights_callbacks():
     malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
     with pytest.raises(dp.OpenDPException):
         slice_as_object(_lazyframe_to_slice(malicious), "LazyFrame")
+
+
+
+def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
+    from opendp import _data
+
+    supplied = bytearray(query.polars_plan.serialize())
+    validate = _data.validate_polars_plan
+
+    def mutate_original(snapshot):
+        assert type(snapshot) is bytes
+        assert validate(snapshot) is True
+        supplied[:] = b"\x00" * len(supplied)
+        return True
+
+    monkeypatch.setattr(_data, "validate_polars_plan", mutate_original)
+    restored = context.deserialize_polars_plan(supplied)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
