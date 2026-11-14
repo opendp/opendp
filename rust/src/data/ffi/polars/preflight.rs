@@ -9,8 +9,8 @@ use std::collections::HashSet;
 use std::io::{self, Read};
 
 use polars::prelude::DslPlan;
-use rmpv::decode::value_ref::BorrowRead;
 use rmpv::ValueRef;
+use rmpv::decode::value_ref::BorrowRead;
 
 #[cfg(test)]
 use rmpv::Value;
@@ -444,7 +444,10 @@ mod tests {
     fn refuses_python_and_callback_variants_before_polars_deserialization() {
         for name in ["PythonScan", "PipeWithSchema", "Scan", "Sink"] {
             let bad = root_with(Value::Array(vec![slot(name)]));
-            assert!(validate_serialized_dslplan(&encoded(&bad)).is_err(), "{name}");
+            assert!(
+                validate_serialized_dslplan(&encoded(&bad)).is_err(),
+                "{name}"
+            );
         }
         for name in FORBIDDEN_EXPR_VARIANTS {
             let callback = Value::Map(vec![(Value::String((*name).into()), Value::Nil)]);
@@ -460,7 +463,10 @@ mod tests {
                 (Value::String("version".into()), Value::from(1)),
             ])]));
             let error = validate_serialized_dslplan(&encoded(&bad)).unwrap_err();
-            assert!(format!("{error:?}").contains("forbidden construct"), "{name}");
+            assert!(
+                format!("{error:?}").contains("forbidden construct"),
+                "{name}"
+            );
         }
         let bad = root_with(Value::Array(vec![Value::Map(vec![
             (
