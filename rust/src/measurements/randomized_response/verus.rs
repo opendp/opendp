@@ -18,7 +18,7 @@ pub fn rr_from_entropy_word(
     truth: bool, numerator: u64, entropy: Result<u64, ()>,
 ) -> (output: Result<bool, ()>)
     ensures output == match entropy {
-        Ok(bits) => Ok(truth ^ !((bits >> 11) < numerator)),
+        Ok(bits) => Ok(truth ^ !((bits / 2048u64) < numerator)),
         Err(err) => Err(err),
     },
 {
