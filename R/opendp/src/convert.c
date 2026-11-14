@@ -79,21 +79,46 @@ ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 
 SEXP extract_error(FfiError *err)
 {
-    int msg_len = strlen(err->variant) + strlen(err->message) + 6;
-    char *msg = (char *)R_alloc(1, msg_len * sizeof(char));
-    snprintf(msg, msg_len, "[%s] : %s", err->variant, err->message);
-
-    if (str_equal(err->backtrace, "backtrace disabled"))
-        error("%s", msg);
+    const char *message = err->message ? err->message : "";
+    const char *backtrace = err->backtrace;
+    int show_backtrace = backtrace && !str_equal(backtrace, "backtrace disabled");
+    size_t msg_len = strlen(err->variant) + strlen(message) + 6;
+    if (show_backtrace)
+        msg_len += strlen(backtrace) + 1;
+    char *msg = (char *)R_alloc(msg_len, sizeof(char));
+    if (show_backtrace)
+        snprintf(msg, msg_len, "[%s] : %s\n%s", err->variant, message, backtrace);
     else
-    {
-        int msg_len_bt = strlen(msg) + strlen(err->backtrace) + 2;
-        char *msg_backtrace = (char *)R_alloc(1, msg_len_bt * sizeof(char));
-        snprintf(msg_backtrace, msg_len_bt, "%s\n%s", msg, err->backtrace);
-        error("%s", msg_backtrace);
-    }
+        snprintf(msg, msg_len, "[%s] : %s", err->variant, message);
 
-    return (R_NilValue);
+    // error() longjmps, so release the Rust error only after copying its text
+    // and before transferring control back to R.
+    opendp_core___error_free(err);
+    error("%s", msg);
+    return R_NilValue;
+}
+
+static SEXP charptr_to_sexp_exec(void *input)
+{
+    return mkString((char *)input);
+}
+
+static void charptr_cleanup(void *input)
+{
+    opendp_data__str_free((char *)input);
+}
+
+SEXP charptr_to_sexp(char *input)
+{
+    // Even an R allocation error must release the Rust-owned string.
+    return R_ExecWithCleanup(charptr_to_sexp_exec, input, charptr_cleanup, input);
+}
+
+SEXP boolptr_to_sexp(c_bool *input)
+{
+    SEXP output = ScalarLogical(*input);
+    opendp_data__bool_free(input);
+    return output;
 }
 
 const char *sexp_to_charptr(SEXP type_name)
@@ -432,8 +457,8 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "AnyMeasurementPtr"))
     {
-        // TODO: does this ever get freed?
-        AnyMeasurement **p = malloc(LENGTH(value) * sizeof(AnyMeasurement *));
+        // Rust only borrows this array for the duration of the FFI call.
+        AnyMeasurement **p = (AnyMeasurement **)R_alloc(LENGTH(value), sizeof(AnyMeasurement *));
         for (int i = 0; i < LENGTH(value); i++)
             p[i] = sexp_to_anymeasurementptr(VECTOR_ELT(value, i));
         result.ptr = p;
@@ -482,6 +507,10 @@ FfiSlice vector_to_slice(SEXP value, SEXP type_name)
     SEXP atom_type = VECTOR_ELT(get_args(type_name), 0);
     // all SEXP are vectors, so scalars are also vectors
     FfiSlice slice = scalar_to_slice(value, atom_type);
+    // R_alloc(0, ...) can return NULL, but Rust slices require an aligned,
+    // non-null pointer even when their length is zero. No element is read.
+    if (slice.len == 0 && slice.ptr == NULL)
+        slice.ptr = R_alloc(1, sizeof(void *));
     UNPROTECT(2);
     return slice;
 }
@@ -516,7 +545,9 @@ FfiSlice tuple_to_slice(SEXP value, SEXP type_name)
     PROTECT(value);
     PROTECT(type_name);
     size_t len = LENGTH(value);
-    void **array = (void **)malloc(len * sizeof(void *));
+    // Like the scalar buffers, this array is only needed during the R call.
+    // R_alloc also releases it if conversion or the Rust call raises an error.
+    void **array = (void **)R_alloc(len, sizeof(void *));
 
     // extract substring
     SEXP args = get_args(type_name);
@@ -764,7 +795,10 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         extract_error(type_name_result.err);
     char *c_type_name = type_name_result.ok;
 
-    SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
+    SEXP type_string = PROTECT(charptr_to_sexp(c_type_name));
+    SEXP type_name = PROTECT(parse_runtime_type(sexp_to_charptr(type_string)));
+    UNPROTECT(2);
+    PROTECT(type_name);
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (str_equal(c_origin, "PrivacyProfile"))
