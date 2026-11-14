@@ -1,3 +1,5 @@
+use std::ffi::c_char;
+
 use opendp_derive::bootstrap;
 
 pub(super) mod preflight;
@@ -5,6 +7,7 @@ use polars::lazy::frame::LazyFrame;
 
 use crate::{
     core::{FfiResult, FfiSlice},
+    domains::BitVector,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
     ffi::util::{self, c_bool},
     polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
@@ -37,6 +40,34 @@ pub extern "C" fn opendp_data__validate_polars_plan(
     let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
     try_!(preflight::validate_serialized_dslplan(bytes));
     FfiResult::Ok(util::into_raw(util::from_bool(true)))
+}
+
+#[bootstrap(
+    name = "sanitize_polars_plan",
+    arguments(
+        serialized_plan(rust_type = "BitVector", hint = "bytes"),
+        trusted_lib(c_type = "char *", rust_type = "String")
+    ),
+    returns(c_type = "FfiResult<AnyObject *>", rust_type = "BitVector", hint = "bytes")
+)]
+/// Validate a serialized plan and rebind approved OpenDP shims to a server-owned library.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__sanitize_polars_plan(
+    serialized_plan: *const FfiSlice,
+    trusted_lib: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    let serialized_plan = try_as_ref!(serialized_plan);
+    let trusted_lib = try_!(util::to_str(trusted_lib));
+    if serialized_plan.ptr.is_null() || serialized_plan.len % 8 != 0 {
+        return err!(FFI, "Invalid serialized Polars plan buffer").into();
+    }
+    let len = serialized_plan.len / 8;
+    if len > preflight::MAX_PLAN_BYTES {
+        return err!(FFI, "Serialized Polars plan exceeds the size limit").into();
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
+    let sanitized = try_!(preflight::sanitize_serialized_dslplan(bytes, trusted_lib));
+    Ok(AnyObject::new(BitVector::from_vec(sanitized))).into()
 }
 
 #[bootstrap(
