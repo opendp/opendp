@@ -103,15 +103,22 @@ fn invalid(message: &str) -> crate::error::Error {
     )
 }
 
-// Only client-side OpenDP shims may be submitted. The values mirror the
-// FunctionFlags set by Python's register_plugin_function in Polars 1.36.1.
-fn shim_flags(symbol: &str) -> Option<u64> {
-    Some(match symbol {
-        "noise" => 192, // ROW_SEPARABLE | LENGTH_PRESERVING
-        "dp_len" | "dp_count" | "dp_null_count" | "dp_n_unique" | "dp_frame_len" => 136,
-        "dp_sum" | "dp_mean" | "dp_quantile" | "dp_median" => 8,
-        _ => return None,
-    })
+// Only DP expressions exposed by OpenDP may be submitted. The executable
+// plugin's flags and arguments are constructed later by OpenDP.
+fn is_supported_plugin(symbol: &str) -> bool {
+    matches!(
+        symbol,
+        "noise"
+            | "dp_len"
+            | "dp_count"
+            | "dp_null_count"
+            | "dp_n_unique"
+            | "dp_frame_len"
+            | "dp_sum"
+            | "dp_mean"
+            | "dp_quantile"
+            | "dp_median"
+    )
 }
 
 fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
@@ -130,26 +137,13 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
     let symbol = field("symbol")
         .and_then(ValueRef::as_str)
         .ok_or_else(|| invalid("missing plugin symbol"))?;
-    let expected = shim_flags(symbol).ok_or_else(|| invalid("unsupported native plugin"))?;
+    if !is_supported_plugin(symbol) {
+        return Err(invalid("unsupported native plugin"));
+    }
     match field("kwargs") {
         Some(ValueRef::Binary(bytes)) if bytes.is_empty() => {}
         Some(ValueRef::Array(values)) if values.is_empty() => {}
         _ => return Err(invalid("plugin keyword arguments are forbidden")),
-    }
-    let Some(ValueRef::Map(options)) = field("flags") else {
-        return Err(invalid("invalid plugin options"));
-    };
-    let option = |name: &str| {
-        options
-            .iter()
-            .find(|(key, _)| key.as_str() == Some(name))
-            .map(|(_, value)| value)
-    };
-    if options.len() != 2
-        || !matches!(option("check_lengths"), Some(ValueRef::Boolean(true)))
-        || option("flags").and_then(ValueRef::as_u64) != Some(expected)
-    {
-        return Err(invalid("untrusted plugin execution flags"));
     }
     Ok(())
 }
@@ -171,7 +165,7 @@ pub(crate) fn sanitize_serialized_dslplan(raw: &[u8], trusted_lib: &str) -> Fall
         return Err(invalid("server plugin library path is not configured"));
     }
     let mut value = inspect_serialized_dslplan(raw)?.to_owned();
-    if !rebind_plugins(&mut value, trusted_lib) {
+    if !rebind_plugins(&mut value, trusted_lib)? {
         return Ok(raw.to_vec());
     }
     let mut output = raw[..HEADER_LENGTH].to_vec();
@@ -180,31 +174,36 @@ pub(crate) fn sanitize_serialized_dslplan(raw: &[u8], trusted_lib: &str) -> Fall
     Ok(output)
 }
 
-fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> bool {
+fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> Fallible<bool> {
     match value {
         Value::Map(fields) => {
             let mut rewritten = false;
             for (key, child) in fields {
                 if key.as_str() == Some("FfiPlugin") {
                     let Value::Map(plugin) = child else {
-                        unreachable!()
+                        return Err(invalid("invalid FfiPlugin"));
                     };
-                    let (_, path) = plugin
+                    let path = plugin
                         .iter_mut()
                         .find(|(name, _)| name.as_str() == Some("lib"))
-                        .expect("validated plugin has lib");
+                        .map(|(_, value)| value)
+                        .ok_or_else(|| invalid("missing plugin library"))?;
                     *path = Value::String(trusted_lib.into());
                     rewritten = true;
                 } else {
-                    rewritten |= rebind_plugins(child, trusted_lib);
+                    rewritten |= rebind_plugins(child, trusted_lib)?;
                 }
             }
-            rewritten
+            Ok(rewritten)
         }
-        Value::Array(values) => values.iter_mut().fold(false, |changed, child| {
-            rebind_plugins(child, trusted_lib) | changed
-        }),
-        _ => false,
+        Value::Array(values) => {
+            let mut rewritten = false;
+            for child in values {
+                rewritten |= rebind_plugins(child, trusted_lib)?;
+            }
+            Ok(rewritten)
+        }
+        _ => Ok(false),
     }
 }
 
