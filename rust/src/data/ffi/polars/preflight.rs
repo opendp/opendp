@@ -174,7 +174,26 @@ fn inspect_serialized_dslplan<'a>(
         .serialize_versioned(&mut reference, Default::default())
         .map_err(|e| err!(FFI, "Unable to determine Polars DSL version: {}", e))?;
     if raw[..HEADER_LENGTH] != reference[..HEADER_LENGTH] {
-        return Err(invalid("Polars DSL version or schema hash mismatch"));
+        let version_offset = DSL_MAGIC.len();
+        let version_end = version_offset + 4;
+        if raw[version_offset..version_end] != reference[version_offset..version_end] {
+            let version = |header: &[u8]| {
+                let major = u16::from_le_bytes([header[version_offset], header[version_offset + 1]]);
+                let minor =
+                    u16::from_le_bytes([header[version_offset + 2], header[version_offset + 3]]);
+                format!("{major}.{minor}")
+            };
+            return Err(err!(
+                FFI,
+                "Cannot deserialize Polars plan. The client's DSL version ({}) differs from the server's ({}). Use compatible Polars versions on the client and server.",
+                version(raw),
+                version(&reference)
+            ));
+        }
+        return Err(err!(
+            FFI,
+            "Cannot deserialize Polars plan. Its serialization schema does not match the server's Polars build. Use compatible Polars versions and builds on the client and server."
+        ));
     }
 
     let payload = &raw[HEADER_LENGTH..];
@@ -475,7 +494,16 @@ mod tests {
             .unwrap();
         let mut bad_header = bytes.clone();
         bad_header[DSL_MAGIC.len()] ^= 1;
-        assert!(validate_serialized_dslplan(&bad_header).is_err());
+        let version_error = validate_serialized_dslplan(&bad_header).unwrap_err();
+        let version_message = format!("{version_error:?}");
+        assert!(version_message.contains("client"));
+        assert!(version_message.contains("server"));
+        assert!(version_message.contains("Polars versions"));
+
+        let mut bad_schema = bytes.clone();
+        bad_schema[DSL_MAGIC.len() + 4] ^= 1;
+        let schema_error = validate_serialized_dslplan(&bad_schema).unwrap_err();
+        assert!(format!("{schema_error:?}").contains("serialization schema"));
 
         let mut trailing = bytes.clone();
         trailing.push(0);
