@@ -796,7 +796,7 @@ class LazyFrameQuery:
         Returns a new query without modifying this one.
 
         :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
-        :param allowed_files: Optional list of server-side Parquet files the plan may read.
+        :param allowed_files: Optional list of server-side files the plan may read.
             File scans are rejected by default.
         """
         import io
