@@ -116,6 +116,43 @@ def test_not_currently_serializable(dp_obj):
         dp.serialize(dp_obj)
 
 
+def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
+    import io
+
+    original = context.query()
+    raw = original.polars_plan.serialize()
+
+    from opendp import _data
+
+    sanitize = _data.sanitize_polars_plan
+    checked = []
+
+    def checked_sanitize(data, trusted_lib):
+        checked.append(data)
+        return sanitize(data, trusted_lib)
+
+    monkeypatch.setattr(_data, "sanitize_polars_plan", checked_sanitize)
+    restored = original.deserialize(raw)
+
+    assert checked == [raw]
+    assert isinstance(restored, type(original))
+    assert restored is not original
+    assert restored.polars_plan is not original.polars_plan
+    assert restored._query is original._query
+
+    # Polars supports deserializing directly from a stream, but the OpenDP
+    # entry point intentionally accepts binary plan bytes only.
+    with pytest.raises(TypeError):
+        original.deserialize(io.BytesIO(raw))
+
+
+def test_deprecated_context_deserialize_polars_plan():
+    serialized = query.polars_plan.serialize()
+    with pytest.warns(DeprecationWarning, match="context.query\\(\\).deserialize"):
+        restored = context.deserialize_polars_plan(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+
 def _identity_batches(frame):
     return frame
 
@@ -130,7 +167,7 @@ def test_serialized_plan_preflight_allows_opendp_query():
 
     serialized = query.polars_plan.serialize()
     assert isinstance(sanitize_polars_plan(serialized, str(lib_path)), bytes)
-    restored = context.deserialize_polars_plan(serialized)
+    restored = context.query().deserialize(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
     renamed = pl.LazyFrame({"value": [1]}).select(
         pl.col("value").name.prefix("renamed_")
@@ -171,7 +208,7 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
 
     monkeypatch.setattr(pl.LazyFrame, "deserialize", forbidden_deserialize)
     with pytest.raises(dp.OpenDPException):
-        context.deserialize_polars_plan(serialized)
+        context.query().deserialize(serialized)
 
 
 def test_serialized_plan_preflight_rejects_malformed_bytes():
@@ -206,7 +243,7 @@ def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
         return rewritten
 
     monkeypatch.setattr(_data, "sanitize_polars_plan", mutate_original)
-    restored = context.deserialize_polars_plan(supplied)
+    restored = context.query().deserialize(supplied)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
@@ -231,7 +268,7 @@ def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
     assert str(fake_lib).encode() in serialized
     assert str(fake_lib).encode() not in sanitized
     assert str(lib_path).encode() in sanitized
-    restored = context.deserialize_polars_plan(serialized)
+    restored = context.query().deserialize(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
