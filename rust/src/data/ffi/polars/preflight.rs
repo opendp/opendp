@@ -349,6 +349,8 @@ fn check_plan_node(node: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()
             return Err(invalid("group-by callbacks are unsupported"));
         }
     }
+    // These variants embed plan nodes directly. The other supported variants
+    // reference the node table, whose entries are all inspected above.
     if matches!(name, "Union" | "HConcat" | "ExtContext") {
         let ValueRef::Map(fields) = payload else {
             return Err(invalid("invalid nested plan node"));
