@@ -67,8 +67,6 @@ const FORBIDDEN_VARIANTS: &[&str] = &[
     "PythonScan",        // eagerly deserializes scan_fn/schema_fn
     "OpaquePython",      // eagerly deserializes PythonFunction
     "AnonymousFunction", // lazily deserializes Python UDFs
-    "Python",            // PlanCallback::Python (including nested function options)
-    "RenameAlias",       // callback applied to a column name
     "PipeWithDtype",     // expression callback
     "PipeWithSchema",    // plan callback
     "FoldHorizontal",    // function expression callback
@@ -105,10 +103,6 @@ const ALLOWED_PLAN_NODES: &[&str] = &[
     "MergeSorted",
     "IR",
 ];
-
-// These are callback slots in other (otherwise admissible) constructs.
-// Null callbacks are fine, but a non-null callback must never reach Polars.
-const FORBIDDEN_NON_NULL_FIELDS: &[&str] = &["apply", "callback", "scan_fn", "schema_fn"];
 
 fn invalid(message: &str) -> crate::error::Error {
     err!(
@@ -218,6 +212,17 @@ fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
             name
         ));
     }
+    if name == "GroupBy" {
+        let ValueRef::Map(fields) = payload else {
+            return Err(invalid("invalid GroupBy plan node"));
+        };
+        if fields
+            .iter()
+            .any(|(key, value)| key.as_str() == Some("apply") && !matches!(value, ValueRef::Nil))
+        {
+            return Err(invalid("group-by callbacks are unsupported"));
+        }
+    }
     if matches!(name, "Union" | "HConcat" | "ExtContext") {
         let ValueRef::Map(fields) = payload else {
             return Err(invalid("invalid nested plan node"));
@@ -264,13 +269,6 @@ fn check_value(value: &ValueRef<'_>, depth: usize) -> Fallible<()> {
                     return Err(err!(
                         FFI,
                         "Serialized Polars plan contains a forbidden construct: {}",
-                        name
-                    ));
-                }
-                if FORBIDDEN_NON_NULL_FIELDS.contains(&name) && !matches!(child, ValueRef::Nil) {
-                    return Err(err!(
-                        FFI,
-                        "Serialized Polars plan contains a callback in field {}",
                         name
                     ));
                 }
