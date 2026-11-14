@@ -15,9 +15,11 @@ def test_deserialize_polars_plan_error():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
     )
-    with pytest.warns(DeprecationWarning):
-        with pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"):
-            context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
+    with (
+        pytest.warns(DeprecationWarning),
+        pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"),
+    ):
+        context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
 
 
 # member() will warn if instance is not even of the carrier type,
@@ -197,9 +199,7 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
         malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
     elif kind == "expression_callback":
         malicious = source.select(
-            pl.col("value").map_elements(
-                _identity_element, return_dtype=pl.Int64
-            )
+            pl.col("value").map_elements(_identity_element, return_dtype=pl.Int64)
         )
     elif kind == "group_callback":
         malicious = source.group_by("value").map_groups(
@@ -256,7 +256,6 @@ def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
-
 def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
     from opendp._data import sanitize_polars_plan
     from opendp._lib import lib_path
@@ -288,9 +287,7 @@ def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
         (None, "arbitrary_symbol"),
     ],
 )
-def test_serialized_plan_rejects_untrusted_native_plugin(
-    tmp_path, kwargs, symbol
-):
+def test_serialized_plan_rejects_untrusted_native_plugin(tmp_path, kwargs, symbol):
     from opendp._data import sanitize_polars_plan
     from opendp._lib import lib_path
     from polars.plugins import register_plugin_function
