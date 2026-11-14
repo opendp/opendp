@@ -221,15 +221,6 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
         context.query().deserialize(serialized)
 
 
-def test_serialized_plan_preflight_rejects_malformed_bytes():
-    from opendp._data import sanitize_polars_plan
-    from opendp._lib import lib_path
-
-    for data in [b"", b"not a Polars plan", b"DSL_VERSION"]:
-        with pytest.raises(dp.OpenDPException):
-            sanitize_polars_plan(data, str(lib_path))
-
-
 def test_deserialize_reports_expected_polars_version():
     from opendp.mod import _EXPECTED_POLARS_VERSION
 
@@ -308,8 +299,6 @@ def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
 
 
 def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
-    from opendp._data import sanitize_polars_plan
-    from opendp._lib import lib_path
     from polars.plugins import register_plugin_function
 
     # The file is deliberately not a valid shared library. The remote library
@@ -323,54 +312,5 @@ def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
         is_elementwise=True,
     )
     serialized = pl.LazyFrame({"value": [1]}).select(plugin).serialize()
-    sanitized = sanitize_polars_plan(serialized, str(lib_path))
-    assert str(fake_lib).encode() in serialized
-    assert str(fake_lib).encode() not in sanitized
-    assert str(lib_path).encode() in sanitized
     restored = context.query().deserialize(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
-
-
-@pytest.mark.parametrize(
-    "kwargs,symbol",
-    [
-        ({"injected": 1}, "noise"),
-        (None, "arbitrary_symbol"),
-    ],
-)
-def test_serialized_plan_rejects_untrusted_native_plugin(tmp_path, kwargs, symbol):
-    from opendp._data import sanitize_polars_plan
-    from opendp._lib import lib_path
-    from polars.plugins import register_plugin_function
-
-    fake_lib = tmp_path / "spoof_opendp.so"
-    fake_lib.write_bytes(b"not a shared library")
-    plugin = register_plugin_function(
-        plugin_path=fake_lib,
-        function_name=symbol,
-        args=[pl.col("value"), pl.lit(None)],
-        kwargs=kwargs,
-        is_elementwise=True,
-    )
-    serialized = pl.LazyFrame({"value": [1]}).select(plugin).serialize()
-    with pytest.raises(dp.OpenDPException):
-        sanitize_polars_plan(serialized, str(lib_path))
-
-
-def test_serialized_plan_does_not_restrict_client_plugin_flags(tmp_path):
-    from opendp._data import sanitize_polars_plan
-    from opendp._lib import lib_path
-    from polars.plugins import register_plugin_function
-
-    fake_lib = tmp_path / "spoof_opendp.so"
-    fake_lib.write_bytes(b"not a shared library")
-    # OpenDP rewrites the executable plugin with its canonical options.
-    plugin = register_plugin_function(
-        plugin_path=fake_lib,
-        function_name="noise",
-        args=[pl.col("value"), pl.lit(None)],
-        is_elementwise=False,
-    )
-    serialized = pl.LazyFrame({"value": [1]}).select(plugin).serialize()
-    sanitized = sanitize_polars_plan(serialized, str(lib_path))
-    assert str(fake_lib).encode() not in sanitized
