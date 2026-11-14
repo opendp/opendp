@@ -18,7 +18,9 @@ def test_np_sum():
 
     # sized data
     space = (
-        dp.numpy.array2_domain(norm=1.0, p=2, size=1000, num_columns=4, nan=False, T=float),
+        dp.numpy.array2_domain(
+            norm=1.0, p=2, size=1000, num_columns=4, nan=False, T=float
+        ),
         dp.symmetric_distance(),
     )
     trans = space >> then_np_sum()
