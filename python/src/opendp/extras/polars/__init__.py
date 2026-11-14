@@ -787,7 +787,6 @@ class LazyFrameQuery:
     def deserialize(
         self,
         serialized_plan: bytes,
-        allowed_files: Sequence[str] | None = None,
         trusted: bool = False,
     ) -> LazyFrameQuery:
         """Deserialize a binary Polars plan into this query.
@@ -797,8 +796,7 @@ class LazyFrameQuery:
         Returns a new query without modifying this one.
 
         :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
-        :param allowed_files: Server-side files an untrusted plan may read.
-            File scans are rejected by default.
+        File scans are rejected in untrusted plans; public data must be in memory.
         :param trusted: Set to True only for locally constructed, trusted plans.
             Skips security checks against malicious serialized plans; Polars
             deserialization can execute Python callbacks and load native plugins.
@@ -814,23 +812,9 @@ class LazyFrameQuery:
         if not trusted:
             from opendp._data import sanitize_polars_plan
 
-            if isinstance(allowed_files, (str, bytes, Path)):
-                raise TypeError("allowed_files must be a sequence of file paths")
-            permitted = []
-            for file in allowed_files or ():
-                path = Path(file)
-                if any(char in str(path) for char in "*?[]{}"):
-                    raise ValueError(f"Glob characters are not allowed in file paths: {path}")
-                path = path.resolve(strict=True)
-                if not path.is_file():
-                    raise ValueError(f"Allowed path is not a file: {path}")
-                permitted.append(str(path))
-
             trusted_lib = str(Path(lib_path).resolve(strict=True))
             try:
-                serialized_plan = sanitize_polars_plan(
-                    serialized_plan, trusted_lib, permitted
-                )
+                serialized_plan = sanitize_polars_plan(serialized_plan, trusted_lib)
             except OpenDPException as error:
                 if "Cannot deserialize Polars plan." not in str(error):
                     raise
@@ -839,8 +823,6 @@ class LazyFrameQuery:
                 raise ValueError(
                     f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
                 ) from error
-        elif allowed_files is not None:
-            raise ValueError("allowed_files requires trusted=False")
 
         plan = import_optional_dependency("polars").LazyFrame.deserialize(
             io.BytesIO(serialized_plan)
