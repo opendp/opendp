@@ -51,25 +51,19 @@ impl<'a> BorrowRead<'a> for BoundedReader<'a> {
     }
 }
 
-// This list is intentionally broader than the set of known code-execution
-// paths. False-positive rejection is preferable to running a Python callback.
-// Audit ALL callback-bearing variants before updating the pinned Polars build.
-const FORBIDDEN_VARIANTS: &[&str] = &[
-    "PythonScan",        // eagerly deserializes scan_fn/schema_fn
-    "OpaquePython",      // eagerly deserializes PythonFunction
-    "AnonymousFunction", // lazily deserializes Python UDFs
-    "PipeWithDtype",     // expression callback
-    "PipeWithSchema",    // plan callback
-    "FoldHorizontal",    // function expression callback
+// The plan-node allowlist separately rejects Python scans and callbacks at
+// the plan level. These variants embed executable code in expression trees.
+const FORBIDDEN_EXPR_VARIANTS: &[&str] = &[
+    "OpaquePython",
+    "AnonymousFunction",
+    "PipeWithDtype",
+    "FoldHorizontal",
     "ReduceHorizontal",
     "CumFoldHorizontal",
     "CumReduceHorizontal",
-    "Map",           // RollingFunction::Map callback
-    "MapFieldNames", // struct-field callback
-    "SubPlan",       // an independently supplied nested plan
-    "Scan",          // user-controlled external sources and providers
-    "Sink",          // user-controlled output destination
-    "SinkMultiple",
+    "Map",
+    "MapFieldNames",
+    "SubPlan",
 ];
 
 // Only these Polars 1.36.1 plan node variants can cross the untrusted
@@ -355,15 +349,19 @@ fn check_value(value: &ValueRef<'_>, depth: usize) -> Fallible<()> {
                 if !seen.insert(name) {
                     return Err(invalid("duplicate MessagePack map field"));
                 }
-                if name == "FfiPlugin" {
-                    check_ffi_plugin(child)?;
-                }
-                if FORBIDDEN_VARIANTS.contains(&name) {
-                    return Err(err!(
-                        FFI,
-                        "Serialized Polars plan contains a forbidden construct: {}",
-                        name
-                    ));
+                // Serde represents enum variants as single-entry maps.
+                // Inspect variant tags, not arbitrary fields with the same name.
+                if pairs.len() == 1 {
+                    if name == "FfiPlugin" {
+                        check_ffi_plugin(child)?;
+                    }
+                    if FORBIDDEN_EXPR_VARIANTS.contains(&name) {
+                        return Err(err!(
+                            FFI,
+                            "Serialized Polars plan contains a forbidden construct: {}",
+                            name
+                        ));
+                    }
                 }
                 check_value(child, depth + 1)?;
             }
@@ -458,7 +456,7 @@ mod tests {
 
     #[test]
     fn refuses_python_and_callback_variants_before_polars_deserialization() {
-        for name in FORBIDDEN_VARIANTS {
+        for name in FORBIDDEN_EXPR_VARIANTS {
             let bad = root_with(Value::Array(vec![slot(name)]));
             assert!(
                 validate_serialized_dslplan(&encoded(&bad)).is_err(),
