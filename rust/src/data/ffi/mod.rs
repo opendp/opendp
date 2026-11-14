@@ -271,12 +271,10 @@ pub extern "C" fn opendp_data__slice_as_object(
         // Copy untrusted FFI bytes once, so validation and deserialization
         // consume the exact same snapshot.
         let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) }.to_vec();
-        let bytes = if let Ok(trusted_lib) = std::env::var("OPENDP_POLARS_LIB_PATH") {
-            polars::preflight::sanitize_serialized_dslplan(&bytes, &trusted_lib)?
-        } else {
-            polars::preflight::validate_serialized_dslplan(&bytes)?;
-            bytes
-        };
+        // Native FFI inputs are supplied by the trusted local caller.
+        // Remote serialized plans must first use Context.deserialize_polars_plan,
+        // which rebinds all plugin libraries before Polars can load them.
+        polars::preflight::validate_serialized_dslplan(&bytes)?;
         DslPlan::deserialize_versioned(bytes.as_slice())
             .map_err(
             |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
