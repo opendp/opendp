@@ -193,7 +193,9 @@ fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> bool {
             let mut rewritten = false;
             for (key, child) in fields {
                 if key.as_str() == Some("FfiPlugin") {
-                    let Value::Map(plugin) = child else { unreachable!() };
+                    let Value::Map(plugin) = child else {
+                        unreachable!()
+                    };
                     let (_, path) = plugin
                         .iter_mut()
                         .find(|(name, _)| name.as_str() == Some("lib"))
