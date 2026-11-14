@@ -19,7 +19,6 @@ use crate::error::Fallible;
 
 const DSL_MAGIC: &[u8] = b"DSL_VERSION";
 const HEADER_LENGTH: usize = DSL_MAGIC.len() + 4 + 64;
-pub(crate) const MAX_PLAN_BYTES: usize = 64 * 1024 * 1024;
 const MAX_NESTING: usize = 128;
 const MAX_PARSE_READS: usize = 1_000_000;
 
@@ -72,7 +71,6 @@ const FORBIDDEN_EXPR_VARIANTS: &[&str] = &[
 // Reject callbacks and external I/O before Polars deserializes the plan.
 const FORBIDDEN_PLAN_VARIANTS: &[&str] = &[
     "PythonScan",
-    "Scan",
     "PipeWithSchema",
     "Sink",
     "SinkMultiple",
@@ -137,16 +135,20 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
 /// from silently introducing a new Python-object deserialization path. This
 /// check cannot be bypassed by POLARS_SKIP_DSL_HASH_VERIFICATION.
 pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
-    inspect_serialized_dslplan(raw, None).map(|_| ())
+    inspect_serialized_dslplan(raw, None, &[]).map(|_| ())
 }
 
 // Rebind plugin paths in MessagePack before Polars can load a shared library.
 // The borrowed value tree can be rewritten without copying the entire payload.
-pub(crate) fn sanitize_serialized_dslplan(raw: &[u8], trusted_lib: &str) -> Fallible<Vec<u8>> {
+pub(crate) fn sanitize_serialized_dslplan(
+    raw: &[u8],
+    trusted_lib: &str,
+    allowed_files: &[String],
+) -> Fallible<Vec<u8>> {
     if trusted_lib.is_empty() {
         return Err(invalid("server plugin library path is not configured"));
     }
-    let (value, rewritten) = inspect_serialized_dslplan(raw, Some(trusted_lib))?;
+    let (value, rewritten) = inspect_serialized_dslplan(raw, Some(trusted_lib), allowed_files)?;
     if !rewritten {
         return Ok(raw.to_vec());
     }
@@ -159,10 +161,8 @@ pub(crate) fn sanitize_serialized_dslplan(raw: &[u8], trusted_lib: &str) -> Fall
 fn inspect_serialized_dslplan<'a>(
     raw: &'a [u8],
     trusted_lib: Option<&'a str>,
+    allowed_files: &[String],
 ) -> Fallible<(ValueRef<'a>, bool)> {
-    if raw.len() > MAX_PLAN_BYTES {
-        return Err(invalid("plan exceeds the size limit"));
-    }
     if raw.len() < HEADER_LENGTH || !raw.starts_with(DSL_MAGIC) {
         return Err(invalid("not a versioned Polars DslPlan"));
     }
@@ -245,15 +245,83 @@ fn inspect_serialized_dslplan<'a>(
             .map(|(_, value)| value)
             .ok_or_else(|| invalid("missing plan slot value"))?;
         if !matches!(node, ValueRef::Nil) {
-            check_plan_node(node)?;
+            check_plan_node(node, allowed_files)?;
         }
     }
     let rewritten = check_value(&mut value, 0, trusted_lib)?;
     Ok((value, rewritten))
 }
 
+// Only exact local Parquet files approved by the server can be scanned.
+// All other file formats, cloud sources and Python-backed scan providers are rejected.
+fn check_file_scan(scan: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()> {
+    if allowed_files.is_empty() {
+        return Err(invalid("file scans are not allowed"));
+    }
+    let ValueRef::Map(fields) = scan else {
+        return Err(invalid("invalid file scan"));
+    };
+    let field = |name: &str| {
+        fields
+            .iter()
+            .find(|(key, _)| key.as_str() == Some(name))
+            .map(|(_, value)| value)
+    };
+    if fields.len() != 3 {
+        return Err(invalid("invalid file scan fields"));
+    }
+
+    let Some(ValueRef::Map(scan_type)) = field("scan_type") else {
+        return Err(invalid("invalid scan type"));
+    };
+    if scan_type.len() != 1 || scan_type[0].0.as_str() != Some("Parquet") {
+        return Err(invalid("only local Parquet file scans are supported"));
+    }
+
+    let Some(ValueRef::Map(options)) = field("unified_scan_args") else {
+        return Err(invalid("invalid scan options"));
+    };
+    for name in ["cloud_options", "deletion_files"] {
+        if options.iter().any(|(key, value)| {
+            key.as_str() == Some(name) && !matches!(value, ValueRef::Nil)
+        }) {
+            return Err(invalid("external scan options are unsupported"));
+        }
+    }
+
+    let Some(ValueRef::Map(sources)) = field("sources") else {
+        return Err(invalid("invalid scan sources"));
+    };
+    if sources.len() != 1 || sources[0].0.as_str() != Some("Paths") {
+        return Err(invalid("only local file paths are supported"));
+    }
+    let ValueRef::Array(paths) = &sources[0].1 else {
+        return Err(invalid("invalid scan paths"));
+    };
+    if paths.is_empty() {
+        return Err(invalid("empty file scan"));
+    }
+    for path in paths {
+        let ValueRef::Map(source) = path else {
+            return Err(invalid("invalid local file path"));
+        };
+        if source.len() != 1 || source[0].0.as_str() != Some("Local") {
+            return Err(invalid("only local file paths are supported"));
+        }
+        let Some(path) = source[0].1.as_str() else {
+            return Err(invalid("invalid local file path"));
+        };
+        // Reject glob expansion and path aliases. The caller supplies canonical
+        // absolute paths, and each serialized path must match one of them.
+        if !allowed_files.iter().any(|allowed| allowed == path) {
+            return Err(invalid("file scan path is not allowed"));
+        }
+    }
+    Ok(())
+}
+
 /// Check the serialized plan variant without constructing any Polars objects.
-fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
+fn check_plan_node(node: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()> {
     let ValueRef::Map(variant) = node else {
         return Err(invalid("invalid plan node"));
     };
@@ -270,6 +338,9 @@ fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
             "Serialized Polars plan contains a forbidden plan node: {}",
             name
         ));
+    }
+    if name == "Scan" {
+        return check_file_scan(payload, allowed_files);
     }
     if name == "GroupBy" {
         let ValueRef::Map(fields) = payload else {
@@ -300,7 +371,7 @@ fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
             return Err(invalid("invalid nested plan nodes"));
         };
         for child in children {
-            check_plan_node(child)?;
+            check_plan_node(child, allowed_files)?;
         }
     }
     Ok(())
