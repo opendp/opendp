@@ -6,7 +6,7 @@
 //! probability q. Whether the actual errors have this law is a separate
 //! sampler contract obligation.
 use vstd::prelude::*;
-use crate::measurement::valid_measurement;
+use crate::measurement::valid_max_divergence_measurement;
 
 verus! {
 
@@ -87,27 +87,11 @@ pub open spec fn rr_map(p: real, factor: real, distance: u32) -> Option<real> {
     else { Some(factor) }
 }
 
-/// A pointwise pure-DP relation on the full result law.
-pub open spec fn max_divergence_bound<Y>(
-    left: spec_fn(Y) -> real,
-    right: spec_fn(Y) -> real,
-    bound: Option<real>,
-) -> bool {
-    match bound {
-        None => true,
-        Some(factor) => forall|outcome: Y|
-            #[trigger] left(outcome) <= factor * right(outcome),
-    }
-}
-
 pub open spec fn rr_valid_measurement(p: real, q: real, factor: real) -> bool {
-    valid_measurement::<bool, Result<bool, ()>, u32, Option<real>, ()>(
+    valid_max_divergence_measurement::<bool, Result<bool, ()>, u32, ()>(
         |_: bool| true,
         |left: bool, right: bool, distance: u32| discrete_close(left, right, distance),
         |truth: bool, outcome: Result<bool, ()>| rr_result_mass(truth, outcome, p, q),
-        |left: spec_fn(Result<bool, ()>) -> real,
-         right: spec_fn(Result<bool, ()>) -> real,
-         bound: Option<real>| max_divergence_bound(left, right, bound),
         |distance: u32| Ok(rr_map(p, factor, distance)),
     )
 }
@@ -186,11 +170,12 @@ pub proof fn lemma_make_randomized_response_bool_returns_valid(
 {
     assert forall|left: bool, right: bool, distance: u32|
         #[trigger] discrete_close(left, right, distance)
-        implies max_divergence_bound(
-            |outcome: Result<bool, ()>| rr_result_mass(left, outcome, p, q),
-            |outcome: Result<bool, ()>| rr_result_mass(right, outcome, p, q),
-            rr_map(p, factor, distance),
-        ) by {
+        implies match rr_map(p, factor, distance) {
+            None => true,
+            Some(cost) => forall|outcome: Result<bool, ()>|
+                rr_result_mass(left, outcome, p, q)
+                    <= cost * rr_result_mass(right, outcome, p, q),
+        } by {
         if distance == 0 {
             assert(left == right);
         } else if p == 1real {
