@@ -22,9 +22,9 @@ pub proof fn lemma_success_is_prefix(numerator: u64, bits: u64)
     let quotient = bits as nat / 2048nat;
     assert(dyadic53::success(numerator, bits) == (quotient < numerator as nat));
     if quotient < numerator as nat {
-        assert(bits as nat < (numerator as nat) * 2048nat);
+        assert((bits as nat) < (numerator as nat) * 2048nat);
     } else {
-        assert(bits as nat >= (numerator as nat) * 2048nat);
+        assert((bits as nat) >= (numerator as nat) * 2048nat);
     }
 }
 
