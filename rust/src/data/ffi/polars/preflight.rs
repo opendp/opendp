@@ -16,9 +16,7 @@ use std::collections::HashSet;
 use std::io::{self, Read};
 
 use polars::prelude::DslPlan;
-#[cfg(test)]
-use rmpv::Value;
-use rmpv::ValueRef;
+use rmpv::{Value, ValueRef};
 use rmpv::decode::value_ref::BorrowRead;
 
 use crate::error::Fallible;
@@ -112,12 +110,109 @@ fn invalid(message: &str) -> crate::error::Error {
     )
 }
 
+// Only client-side OpenDP shims may be submitted. The values mirror the
+// FunctionFlags set by Python's register_plugin_function in Polars 1.36.1.
+fn shim_flags(symbol: &str) -> Option<u64> {
+    Some(match symbol {
+        "noise" => 192, // ROW_SEPARABLE | LENGTH_PRESERVING
+        "dp_len" | "dp_count" | "dp_null_count" | "dp_n_unique" | "dp_frame_len" => 136,
+        "dp_sum" | "dp_mean" | "dp_quantile" | "dp_median" => 8,
+        _ => return None,
+    })
+}
+
+fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
+    let ValueRef::Map(fields) = plugin else {
+        return Err(invalid("invalid FfiPlugin"));
+    };
+    let field = |name: &str| {
+        fields
+            .iter()
+            .find(|(key, _)| key.as_str() == Some(name))
+            .map(|(_, value)| value)
+    };
+    if fields.len() != 4 || field("lib").and_then(ValueRef::as_str).is_none() {
+        return Err(invalid("invalid FfiPlugin fields"));
+    }
+    let symbol = field("symbol")
+        .and_then(ValueRef::as_str)
+        .ok_or_else(|| invalid("missing plugin symbol"))?;
+    let expected = shim_flags(symbol).ok_or_else(|| invalid("unsupported native plugin"))?;
+    match field("kwargs") {
+        Some(ValueRef::Binary([])) | Some(ValueRef::Array(ref empty)) if empty.is_empty() => {},
+        _ => return Err(invalid("plugin keyword arguments are forbidden")),
+    }
+    let Some(ValueRef::Map(options)) = field("flags") else {
+        return Err(invalid("invalid plugin options"));
+    };
+    let option = |name: &str| {
+        options
+            .iter()
+            .find(|(key, _)| key.as_str() == Some(name))
+            .map(|(_, value)| value)
+    };
+    if options.len() != 2
+        || !matches!(option("check_lengths"), Some(ValueRef::Boolean(true)))
+        || option("flags").and_then(ValueRef::as_u64) != Some(expected)
+    {
+        return Err(invalid("untrusted plugin execution flags"));
+    }
+    Ok(())
+}
+
 /// Validate a versioned serialized DslPlan *before* Polars deserializes it.
 ///
 /// Requiring the exact header prevents a new Polars schema or minor version
 /// from silently introducing a new Python-object deserialization path. This
 /// check cannot be bypassed by POLARS_SKIP_DSL_HASH_VERIFICATION.
 pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
+    inspect_serialized_dslplan(raw).map(|_| ())
+}
+
+// Rebind plugin paths in MessagePack, before Polars can load a shared library
+// during expression/schema reconstruction. No client-provided library path is
+// carried into the reconstructed plan.
+pub(crate) fn sanitize_serialized_dslplan(raw: &[u8], trusted_lib: &str) -> Fallible<Vec<u8>> {
+    if trusted_lib.is_empty() {
+        return Err(invalid("server plugin library path is not configured"));
+    }
+    let mut value = inspect_serialized_dslplan(raw)?.to_owned();
+    if !rebind_plugins(&mut value, trusted_lib) {
+        return Ok(raw.to_vec());
+    }
+    let mut output = raw[..HEADER_LENGTH].to_vec();
+    rmpv::encode::write_value(&mut output, &value)
+        .map_err(|e| err!(FFI, "Unable to rewrite Polars plan: {}", e))?;
+    Ok(output)
+}
+
+fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> bool {
+    match value {
+        Value::Map(fields) => {
+            let mut rewritten = false;
+            for (key, child) in fields {
+                if key.as_str() == Some("FfiPlugin") {
+                    let Value::Map(plugin) = child else { unreachable!() };
+                    let (_, path) = plugin
+                        .iter_mut()
+                        .find(|(name, _)| name.as_str() == Some("lib"))
+                        .expect("validated plugin has lib");
+                    *path = Value::String(trusted_lib.into());
+                    rewritten = true;
+                } else {
+                    rewritten |= rebind_plugins(child, trusted_lib);
+                }
+            }
+            rewritten
+        }
+        Value::Array(values) => values
+            .iter_mut()
+            .fold(false, |changed, child| rebind_plugins(child, trusted_lib) | changed),
+        _ => false,
+    }
+}
+
+fn inspect_serialized_dslplan(raw: &[u8]) -> Fallible<ValueRef<'_>> {
     if raw.len() > MAX_PLAN_BYTES {
         return Err(invalid("plan exceeds the size limit"));
     }
@@ -190,7 +285,7 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
             check_plan_node(node)?;
         }
     }
-    Ok(())
+    Ok(value)
 }
 
 /// Check the serialized plan variant without constructing any Polars objects.
@@ -264,6 +359,9 @@ fn check_value(value: &ValueRef<'_>, depth: usize) -> Fallible<()> {
                 };
                 if !seen.insert(name) {
                     return Err(invalid("duplicate MessagePack map field"));
+                }
+                if name == "FfiPlugin" {
+                    check_ffi_plugin(child)?;
                 }
                 if FORBIDDEN_VARIANTS.contains(&name) {
                     return Err(err!(
