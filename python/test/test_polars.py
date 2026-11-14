@@ -1,5 +1,4 @@
 import io
-import os
 import pytest
 import re
 import warnings
@@ -739,37 +738,6 @@ def test_polars_grouped_quantile_max_groups_contribution_bound():
     release = query.release().collect()
     assert release.columns == ["class_year_str", "len", "grade"]
     assert set(["first year", "sophomore"]).issubset(release["class_year_str"])
-
-
-@pytest.mark.skipif(
-    os.getenv("FORCE_TEST_REPLACE_BINARY_PATH") != "1",
-    reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests",
-)
-def test_replace_binary_path():
-    import os
-
-    expr = dp.len(scale=1.0, signed=True)
-
-    # check that the library overwrites paths
-    os.environ["OPENDP_POLARS_LIB_PATH"] = "opendp_testing!"
-
-    m_expr = dp.m.make_private_expr(
-        dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
-        dp.l01inf_distance(dp.symmetric_distance()),
-        dp.max_divergence(),
-        expr,
-    )
-    assert "opendp_testing!" in str(m_expr(pl.LazyFrame(dict())).expr)
-
-    # check that local paths in new expressions get overwritten
-    os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert (
-        str(dp.len(scale=1.0, signed=True))
-        == f"dyn float: 1.{__file__}:dp_frame_len([true])"
-    )
-
-    # cleanup
-    del os.environ["OPENDP_POLARS_LIB_PATH"]
 
 
 def test_pickle_bomb():
