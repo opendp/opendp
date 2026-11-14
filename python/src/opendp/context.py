@@ -497,7 +497,7 @@ class Context(object):
     d_out      = {self.d_out})"""
 
     @deprecated(
-        version="0.16.0",
+        version="0.17.0",
         reason="Use context.query().deserialize(serialized_plan) instead.",
     )
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
