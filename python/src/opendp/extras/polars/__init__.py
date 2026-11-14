@@ -799,6 +799,9 @@ class LazyFrameQuery:
 
         from opendp._data import sanitize_polars_plan
 
+        if not isinstance(serialized_plan, (bytes, bytearray, memoryview)):
+            raise TypeError("serialized_plan must be binary Polars plan bytes")
+
         # Snapshot the input so validation and deserialization see the same bytes.
         trusted_lib = str(Path(lib_path).resolve(strict=True))
         sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
