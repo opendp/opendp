@@ -442,12 +442,25 @@ mod tests {
 
     #[test]
     fn refuses_python_and_callback_variants_before_polars_deserialization() {
-        for name in FORBIDDEN_EXPR_VARIANTS {
+        for name in ["PythonScan", "PipeWithSchema", "Scan", "Sink"] {
             let bad = root_with(Value::Array(vec![slot(name)]));
-            assert!(
-                validate_serialized_dslplan(&encoded(&bad)).is_err(),
-                "{name}"
-            );
+            assert!(validate_serialized_dslplan(&encoded(&bad)).is_err(), "{name}");
+        }
+        for name in FORBIDDEN_EXPR_VARIANTS {
+            let callback = Value::Map(vec![(Value::String((*name).into()), Value::Nil)]);
+            let select = Value::Map(vec![(
+                Value::String("Select".into()),
+                Value::Map(vec![(
+                    Value::String("expr".into()),
+                    Value::Array(vec![callback]),
+                )]),
+            )]);
+            let bad = root_with(Value::Array(vec![Value::Map(vec![
+                (Value::String("value".into()), select),
+                (Value::String("version".into()), Value::from(1)),
+            ])]));
+            let error = validate_serialized_dslplan(&encoded(&bad)).unwrap_err();
+            assert!(format!("{error:?}").contains("forbidden construct"), "{name}");
         }
         let bad = root_with(Value::Array(vec![Value::Map(vec![
             (
