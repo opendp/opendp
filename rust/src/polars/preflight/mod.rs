@@ -31,6 +31,7 @@ const FORBIDDEN_VARIANTS: &[&str] = &[
     "PipeWithSchema",
     "Sink",
     "SinkMultiple",
+    "Scan",
 ];
 
 fn invalid(message: &str) -> crate::error::Error {
@@ -88,16 +89,15 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
 
 /// Validate a plan and replace approved plugin library paths with a trusted path.
 ///
-/// Only local file scans named in `allowed_files` may be deserialized.
+/// File scans are rejected; public sources must be in memory.
 pub fn sanitize_serialized_dslplan(
     raw: &[u8],
     trusted_lib: &str,
-    allowed_files: &[String],
 ) -> Fallible<Vec<u8>> {
     if trusted_lib.is_empty() {
         return Err(invalid("server plugin library path is not configured"));
     }
-    let (value, rewritten) = inspect_serialized_dslplan(raw, trusted_lib, allowed_files)?;
+    let (value, rewritten) = inspect_serialized_dslplan(raw, trusted_lib)?;
     if !rewritten {
         return Ok(raw.to_vec());
     }
@@ -110,7 +110,6 @@ pub fn sanitize_serialized_dslplan(
 fn inspect_serialized_dslplan<'a>(
     raw: &'a [u8],
     trusted_lib: &'a str,
-    allowed_files: &[String],
 ) -> Fallible<(ValueRef<'a>, bool)> {
     if raw.len() < HEADER_LENGTH || !raw.starts_with(DSL_MAGIC) {
         return Err(invalid("not a versioned Polars DslPlan"));
@@ -172,80 +171,8 @@ fn inspect_serialized_dslplan<'a>(
     }
 
     // Check every map and array, including unreachable slots and nested nodes.
-    let rewritten = check_value(&mut value, 0, trusted_lib, allowed_files)?;
+    let rewritten = check_value(&mut value, 0, trusted_lib)?;
     Ok((value, rewritten))
-}
-
-// Only exact local files approved by the server can be scanned.
-// Python-backed scan providers and remote sources are rejected.
-fn check_file_scan(scan: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()> {
-    if allowed_files.is_empty() {
-        return Err(invalid("file scans are not allowed"));
-    }
-    let ValueRef::Map(fields) = scan else {
-        return Err(invalid("invalid file scan"));
-    };
-    let field = |name: &str| {
-        fields
-            .iter()
-            .find(|(key, _)| key.as_str() == Some(name))
-            .map(|(_, value)| value)
-    };
-    if fields.len() != 3 {
-        return Err(invalid("invalid file scan fields"));
-    }
-
-    let Some(ValueRef::Map(scan_type)) = field("scan_type") else {
-        return Err(invalid("invalid scan type"));
-    };
-    if scan_type.len() != 1 {
-        return Err(invalid("invalid scan type"));
-    }
-    if matches!(scan_type[0].0.as_str(), Some("PythonDataset" | "Anonymous")) {
-        return Err(invalid("Python-backed file scans are unsupported"));
-    }
-
-    let Some(ValueRef::Map(options)) = field("unified_scan_args") else {
-        return Err(invalid("invalid scan options"));
-    };
-    for name in ["cloud_options", "deletion_files"] {
-        if options
-            .iter()
-            .any(|(key, value)| key.as_str() == Some(name) && !matches!(value, ValueRef::Nil))
-        {
-            return Err(invalid("external scan options are unsupported"));
-        }
-    }
-
-    let Some(ValueRef::Map(sources)) = field("sources") else {
-        return Err(invalid("invalid scan sources"));
-    };
-    if sources.len() != 1 || sources[0].0.as_str() != Some("Paths") {
-        return Err(invalid("only local file paths are supported"));
-    }
-    let ValueRef::Array(paths) = &sources[0].1 else {
-        return Err(invalid("invalid scan paths"));
-    };
-    if paths.is_empty() {
-        return Err(invalid("empty file scan"));
-    }
-    for path in paths {
-        let ValueRef::Map(source) = path else {
-            return Err(invalid("invalid local file path"));
-        };
-        if source.len() != 1 || source[0].0.as_str() != Some("Local") {
-            return Err(invalid("only local file paths are supported"));
-        }
-        let Some(path) = source[0].1.as_str() else {
-            return Err(invalid("invalid local file path"));
-        };
-        // Reject glob expansion and path aliases. The caller supplies canonical
-        // absolute paths, and each serialized path must match one of them.
-        if !allowed_files.iter().any(|allowed| allowed.as_str() == path) {
-            return Err(invalid("file scan path is not allowed"));
-        }
-    }
-    Ok(())
 }
 
 /// Inspect inert MessagePack data and rebind approved plugin paths in one pass.
@@ -253,7 +180,6 @@ fn check_value<'a>(
     value: &mut ValueRef<'a>,
     depth: usize,
     trusted_lib: &'a str,
-    allowed_files: &[String],
 ) -> Fallible<bool> {
     if depth > MAX_NESTING {
         return Err(invalid("plan nesting limit exceeded"));
@@ -293,9 +219,6 @@ fn check_value<'a>(
                             name
                         ));
                     }
-                    if name == "Scan" {
-                        check_file_scan(child, allowed_files)?;
-                    }
                     if name == "GroupBy" {
                         let ValueRef::Map(fields) = child else {
                             return Err(invalid("invalid GroupBy plan node"));
@@ -307,12 +230,12 @@ fn check_value<'a>(
                         }
                     }
                 }
-                rewritten |= check_value(child, depth + 1, trusted_lib, allowed_files)?;
+                rewritten |= check_value(child, depth + 1, trusted_lib)?;
             }
         }
         ValueRef::Array(values) => {
             for child in values {
-                rewritten |= check_value(child, depth + 1, trusted_lib, allowed_files)?;
+                rewritten |= check_value(child, depth + 1, trusted_lib)?;
             }
         }
         ValueRef::Ext(_, _) => return Err(invalid("MessagePack extensions are unsupported")),
