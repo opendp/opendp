@@ -504,22 +504,15 @@ class Context(object):
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
         """
         import io
-        import os
         from pathlib import Path
 
         from opendp._data import sanitize_polars_plan
         from opendp._lib import lib_path
 
-        # The server selects the library; the client-supplied paths in plugin
-        # expressions are never passed to Polars' dynamic loader.
-        trusted_lib = Path(os.environ.get("OPENDP_POLARS_LIB_PATH") or lib_path)
-        trusted_lib = trusted_lib.resolve(strict=True)
-        if not trusted_lib.is_file():
-            raise ValueError("OPENDP_POLARS_LIB_PATH must point to a shared library")
-
-        # Validate and rewrite an immutable snapshot before Polars deserializes
-        # any expressions (which can load plugin libraries during schema inference).
-        serialized_plan = sanitize_polars_plan(bytes(serialized_plan), str(trusted_lib))
+        # Replace any submitted plugin paths with this process's OpenDP binary.
+        # Validate and rewrite an immutable snapshot before Polars deserializes it.
+        trusted_lib = str(Path(lib_path).resolve(strict=True))
+        serialized_plan = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
         pl = import_optional_dependency("polars")
 
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
