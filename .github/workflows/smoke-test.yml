@@ -20,7 +20,20 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
+      ### Quick Python checks:
+
+      - name: Install pre-commit
+        run: python3 -m pip install --user pre-commit
+
+      - name: Run pre-commit checks
+        run: |
+          cd ../python
+          python3 -m pre_commit run --all-files
+
+      # Disk cleanup is needed for compilation, not pre-commit.
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
@@ -31,9 +44,6 @@ jobs:
           haskell: true         # 6.2GiB
           large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
-
-      - name: Checkout repository
-        uses: actions/checkout@v6
 
       ### Quick Rust checks:
 
@@ -50,19 +60,10 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
-      ### Quick Python checks:
-
+      # Python is also needed for the PyO3 builds.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install minimal dependencies
-        run: pip install ruff pre-commit
-
-      - name: Run pre-commit checks
-        run: |
-          cd ../python
-          pre-commit run --all-files
 
       ### Quick checks good? Then slow checks:
 
@@ -202,9 +203,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
-
-      - name: Run pre-commit checks
-        run: pre-commit run --all-files
 
       - name: Download dynamic lib
         uses: actions/download-artifact@v7
