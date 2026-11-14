@@ -292,11 +292,11 @@ def test_trusted_local_plan_can_scan_file(tmp_path, monkeypatch):
         pytest.fail("Preflight ran on a trusted plan")
 
     monkeypatch.setattr(_data, "sanitize_polars_plan", unexpected_preflight)
-    restored = context.query().deserialize(serialized, preflight=False)
+    restored = context.query().deserialize(serialized, trusted=True)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
-    with pytest.raises(ValueError, match="allowed_files requires preflight=True"):
+    with pytest.raises(ValueError, match="allowed_files requires trusted=False"):
         context.query().deserialize(
-            serialized, preflight=False, allowed_files=[source]
+            serialized, trusted=True, allowed_files=[source]
         )
 
 
