@@ -788,52 +788,62 @@ class LazyFrameQuery:
         self,
         serialized_plan: bytes,
         allowed_files: Sequence[str] | None = None,
+        preflight: bool = True,
     ) -> LazyFrameQuery:
-        """Deserialize an untrusted binary Polars plan into this query.
+        """Deserialize a binary Polars plan into this query.
 
-        OpenDP validates the serialized plan and rebinds supported DP plugins
+        By default OpenDP validates the plan and rebinds supported DP plugins
         to the locally loaded OpenDP library before Polars deserializes it.
         Returns a new query without modifying this one.
 
         :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
-        :param allowed_files: Optional list of server-side files the plan may read.
+        :param allowed_files: Server-side files the plan may read when preflight is enabled.
             File scans are rejected by default.
+        :param preflight: Validate and sanitize untrusted plans before deserialization.
+            Set to False only for plans from trusted sources, as Polars
+            deserialization can execute Python callbacks and load native plugins.
         """
         import io
         from pathlib import Path
 
-        from opendp._data import sanitize_polars_plan
-
         if not isinstance(serialized_plan, (bytes, bytearray, memoryview)):
             raise TypeError("serialized_plan must be binary Polars plan bytes")
 
-        if isinstance(allowed_files, (str, bytes, Path)):
-            raise TypeError("allowed_files must be a sequence of file paths")
-        permitted = []
-        for file in allowed_files or ():
-            path = Path(file)
-            if any(char in str(path) for char in "*?[]{}"):
-                raise ValueError(f"Glob characters are not allowed in file paths: {path}")
-            path = path.resolve(strict=True)
-            if not path.is_file():
-                raise ValueError(f"Allowed path is not a file: {path}")
-            permitted.append(str(path))
+        # Snapshot mutable inputs so the loader observes the validated bytes.
+        serialized_plan = bytes(serialized_plan)
+        if preflight:
+            from opendp._data import sanitize_polars_plan
 
-        # Snapshot the input so validation and deserialization see the same bytes.
-        trusted_lib = str(Path(lib_path).resolve(strict=True))
-        try:
-            sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib, permitted)
-        except OpenDPException as error:
-            if "Cannot deserialize Polars plan." not in str(error):
-                raise
-            from opendp.mod import _EXPECTED_POLARS_VERSION
+            if isinstance(allowed_files, (str, bytes, Path)):
+                raise TypeError("allowed_files must be a sequence of file paths")
+            permitted = []
+            for file in allowed_files or ():
+                path = Path(file)
+                if any(char in str(path) for char in "*?[]{}"):
+                    raise ValueError(f"Glob characters are not allowed in file paths: {path}")
+                path = path.resolve(strict=True)
+                if not path.is_file():
+                    raise ValueError(f"Allowed path is not a file: {path}")
+                permitted.append(str(path))
 
-            raise ValueError(
-                f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
-            ) from error
+            trusted_lib = str(Path(lib_path).resolve(strict=True))
+            try:
+                serialized_plan = sanitize_polars_plan(
+                    serialized_plan, trusted_lib, permitted
+                )
+            except OpenDPException as error:
+                if "Cannot deserialize Polars plan." not in str(error):
+                    raise
+                from opendp.mod import _EXPECTED_POLARS_VERSION
+
+                raise ValueError(
+                    f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
+                ) from error
+        elif allowed_files is not None:
+            raise ValueError("allowed_files requires preflight=True")
 
         plan = import_optional_dependency("polars").LazyFrame.deserialize(
-            io.BytesIO(sanitized)
+            io.BytesIO(serialized_plan)
         )
         return LazyFrameQuery(plan, object.__getattribute__(self, "_query"))
 
