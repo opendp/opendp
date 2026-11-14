@@ -36,17 +36,16 @@ perhaps on a remote server.
         ...     )
         ... )
         >>> # Then use the serialized plan from the client:
-        >>> new_query = new_context.deserialize_polars_plan(
-        ...     serialized_plan
-        ... )
+        >>> new_query = new_context.query().deserialize(serialized_plan)
         >>> print("DP len:", new_query.release().collect().item())
         DP len: ...
 
 
-Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deserialize_polars_plan`` is a convenience method for `Polars binary serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
+The ``polars_plan`` is a Polars ``LazyFrame``. The binary plan is produced by `Polars serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
 
 For plans received from untrusted clients, use
-:py:meth:`~opendp.context.Context.deserialize_polars_plan` rather than calling
+:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` on the query
+returned by ``context.query()``, rather than calling
 ``polars.LazyFrame.deserialize`` directly. OpenDP checks and sanitizes the
 serialized DSL before Polars can unpickle Python callbacks or load native
 plugins. Python callbacks and pickled plugin arguments are rejected;
