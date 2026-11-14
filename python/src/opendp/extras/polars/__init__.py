@@ -810,6 +810,8 @@ class LazyFrameQuery:
         # preflight-aware instance method, not the forwarded Polars method.
         if name == "deserialize":
             return object.__getattribute__(self, name)
+        if name == "__setstate__":
+            raise AttributeError("Use LazyFrameQuery.deserialize() to load a Polars plan")
 
         # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
