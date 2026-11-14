@@ -211,26 +211,29 @@ fn check_value(value: &ValueRef<'_>, depth: usize) -> Fallible<()> {
         ValueRef::Map(pairs) => {
             let mut seen = HashSet::new();
             for (key, child) in pairs {
-                if let Some(name) = key.as_str() {
-                    if !seen.insert(name) {
-                        return Err(invalid("duplicate MessagePack map field"));
-                    }
-                    if FORBIDDEN_VARIANTS.contains(&name) {
-                        return Err(err!(
-                            FFI,
-                            "Serialized Polars plan contains a forbidden construct: {}",
-                            name
-                        ));
-                    }
-                    if FORBIDDEN_NON_NULL_FIELDS.contains(&name) && !matches!(child, ValueRef::Nil) {
-                        return Err(err!(
-                            FFI,
-                            "Serialized Polars plan contains a callback in field {}",
-                            name
-                        ));
-                    }
+                // Versioned Polars DSL uses string-keyed struct maps. Reject
+                // alternate key encodings rather than allowing an enum tag to
+                // evade inspection.
+                let Some(name) = key.as_str() else {
+                    return Err(invalid("non-string MessagePack map field"));
+                };
+                if !seen.insert(name) {
+                    return Err(invalid("duplicate MessagePack map field"));
                 }
-                check_value(key, depth + 1)?;
+                if FORBIDDEN_VARIANTS.contains(&name) {
+                    return Err(err!(
+                        FFI,
+                        "Serialized Polars plan contains a forbidden construct: {}",
+                        name
+                    ));
+                }
+                if FORBIDDEN_NON_NULL_FIELDS.contains(&name) && !matches!(child, ValueRef::Nil) {
+                    return Err(err!(
+                        FFI,
+                        "Serialized Polars plan contains a callback in field {}",
+                        name
+                    ));
+                }
                 check_value(child, depth + 1)?;
             }
         }
