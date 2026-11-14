@@ -68,8 +68,7 @@ fn test_bool_dyadic_53_numerator() {
 
 #[test]
 fn test_bool_dyadic_53_extremes() -> Fallible<()> {
-    use crate::traits::samplers::dyadic53_numerator;
-    let success = |n, b| ((b >> 11) < n);
+    use crate::traits::samplers::dyadic53_success as success;
     let max = (1u64 << 53) - 1;
     assert!(!success(0, 0));
     assert!(success(1u64 << 53, u64::MAX));

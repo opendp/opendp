@@ -12,12 +12,10 @@ use vstd::prelude::*;
         result <= (1u64 << 53),
 ))]
 pub fn numerator_from_bits(bits: u64) -> u64 {
-    const ONE_BITS: u64 = 0x3ff0_0000_0000_0000;
-    const MANTISSA_MASK: u64 = (1u64 << 52) - 1;
-    if bits == ONE_BITS {
+    if bits == 0x3ff0_0000_0000_0000 {
         1u64 << 53
     } else {
-        (1u64 << 52) | (bits & MANTISSA_MASK)
+        (1u64 << 52) | (bits & 0x000f_ffff_ffff_ffff)
     }
 }
 

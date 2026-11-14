@@ -5,7 +5,7 @@ pub(crate) mod test;
 
 mod bernoulli;
 pub use bernoulli::*;
-pub(crate) use bernoulli::{sample_bernoulli_dyadic53, dyadic53::numerator_from_bits as dyadic53_numerator};
+pub(crate) use bernoulli::{sample_bernoulli_dyadic53, dyadic53::{numerator_from_bits as dyadic53_numerator, success as dyadic53_success}};
 
 mod cks20;
 pub use cks20::*;
