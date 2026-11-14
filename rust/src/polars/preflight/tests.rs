@@ -3,7 +3,7 @@ use rmpv::Value;
 
 // The sanitizer is the only entry point for untrusted serialized plans.
 fn preflight(raw: &[u8]) -> Fallible<Vec<u8>> {
-    sanitize_serialized_dslplan(raw, "/trusted/libopendp.so", &[])
+    sanitize_serialized_dslplan(raw, "/trusted/libopendp.so")
 }
 
 fn encoded(body: &Value) -> Vec<u8> {
@@ -120,55 +120,11 @@ fn refuses_python_and_callback_variants_before_polars_deserialization() {
     assert!(format!("{error:?}").contains("group-by callbacks"));
 }
 
-fn serialized_scan(path: &str, scan_type: &str) -> Vec<u8> {
-    let string = |value: &str| Value::String(value.into());
-    let node = Value::Map(vec![(
-        string("Scan"),
-        Value::Map(vec![
-            (
-                string("sources"),
-                Value::Map(vec![(
-                    string("Paths"),
-                    Value::Array(vec![Value::Map(vec![(string("Local"), string(path))])]),
-                )]),
-            ),
-            (
-                string("unified_scan_args"),
-                Value::Map(vec![
-                    (string("cloud_options"), Value::Nil),
-                    (string("deletion_files"), Value::Nil),
-                ]),
-            ),
-            (
-                string("scan_type"),
-                Value::Map(vec![(string(scan_type), Value::Map(vec![]))]),
-            ),
-        ]),
-    )]);
-    encoded(&root_with(Value::Array(vec![Value::Map(vec![
-        (string("value"), node),
-        (string("version"), Value::from(1)),
-    ])])))
-}
-
 #[test]
-fn only_approved_local_scans_can_be_deserialized() {
-    let path = "/public/keys.parquet".to_string();
-    let bytes = serialized_scan(&path, "Parquet");
-    assert!(preflight(&bytes).is_err());
-    sanitize_serialized_dslplan(&bytes, "opendp", &[path.clone()]).unwrap();
-
-    let other = vec!["/public/other.parquet".to_string()];
-    assert!(sanitize_serialized_dslplan(&bytes, "opendp", &other).is_err());
-
-    let alias = serialized_scan("/public/../public/keys.parquet", "Parquet");
-    assert!(sanitize_serialized_dslplan(&alias, "opendp", &[path.clone()]).is_err());
-
-    let csv = serialized_scan(&path, "Csv");
-    sanitize_serialized_dslplan(&csv, "opendp", &[path.clone()]).unwrap();
-
-    let python = serialized_scan(&path, "PythonDataset");
-    assert!(sanitize_serialized_dslplan(&python, "opendp", &[path]).is_err());
+fn rejects_file_scans() {
+    let bad = root_with(Value::Array(vec![slot("Scan")]));
+    let error = preflight(&encoded(&bad)).unwrap_err();
+    assert!(format!("{error:?}").contains("forbidden construct: Scan"));
 }
 
 #[test]
@@ -226,7 +182,7 @@ fn checks_dangerous_tags_under_unknown_nested_variants() {
         ]),
     )]));
     assert!(format!("{:?}", preflight(&scan).unwrap_err())
-        .contains("file scans are not allowed"));
+        .contains("forbidden construct: Scan"));
 }
 
 fn plugin_plan(symbol: &str, kwargs: Value, flags: Value) -> Vec<u8> {
@@ -254,7 +210,7 @@ fn validates_and_rebinds_native_plugin_symbols() {
     preflight(&raw).unwrap();
 
     let trusted_lib = "/server/libopendp.so";
-    let rewritten = sanitize_serialized_dslplan(&raw, trusted_lib, &[]).unwrap();
+    let rewritten = sanitize_serialized_dslplan(&raw, trusted_lib).unwrap();
     assert!(
         !rewritten
             .windows(b"/untrusted/libopendp.so".len())
