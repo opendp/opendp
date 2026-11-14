@@ -82,10 +82,7 @@ fn accepts_native_versioned_plan() {
 fn refuses_python_and_callback_variants_before_polars_deserialization() {
     for name in ["PythonScan", "PipeWithSchema", "Scan", "Sink"] {
         let bad = root_with(Value::Array(vec![slot(name)]));
-        assert!(
-            preflight(&encoded(&bad)).is_err(),
-            "{name}"
-        );
+        assert!(preflight(&encoded(&bad)).is_err(), "{name}");
     }
     for name in FORBIDDEN_VARIANTS {
         let callback = Value::Map(vec![(Value::String((*name).into()), Value::Nil)]);
@@ -158,8 +155,7 @@ fn checks_dangerous_tags_under_unknown_nested_variants() {
         string("GroupBy"),
         Value::Map(vec![(string("apply"), Value::Bool(true))]),
     )]));
-    assert!(format!("{:?}", preflight(&group_by).unwrap_err())
-        .contains("group-by callbacks"));
+    assert!(format!("{:?}", preflight(&group_by).unwrap_err()).contains("group-by callbacks"));
 
     let scan = nested(Value::Map(vec![(
         string("Scan"),
@@ -181,8 +177,7 @@ fn checks_dangerous_tags_under_unknown_nested_variants() {
             ),
         ]),
     )]));
-    assert!(format!("{:?}", preflight(&scan).unwrap_err())
-        .contains("forbidden construct: Scan"));
+    assert!(format!("{:?}", preflight(&scan).unwrap_err()).contains("forbidden construct: Scan"));
 }
 
 fn plugin_plan(symbol: &str, kwargs: Value, flags: Value) -> Vec<u8> {
