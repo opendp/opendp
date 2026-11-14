@@ -49,8 +49,8 @@ For plans received from untrusted clients, use
 :py:meth:`~opendp.context.Context.deserialize_polars_plan` rather than calling
 ``polars.LazyFrame.deserialize`` directly. OpenDP checks and sanitizes the
 serialized DSL before Polars can unpickle Python callbacks or load native
-plugins. Pickled callbacks are rejected, only OpenDP's supported DP expression
-shims are allowed, and library paths are replaced with the OpenDP library
+plugins. Pickled callbacks are rejected, only OpenDP's supported DP plugins
+are allowed, and library paths are replaced with the OpenDP library
 loaded by the server.
 
 Context Serialization
