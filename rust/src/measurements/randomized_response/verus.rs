@@ -326,4 +326,34 @@ pub proof fn lemma_make_randomized_response_bool_returns_valid(
     }
 }
 
+/// Compose the *production* Bernoulli prefix-event law with the
+/// randomized-response MaxDivergence proof. The only stochastic premise is
+/// that the raw 64-bit entropy source has the ideal uniform CDF, including
+/// an input-independent error channel. Numerical privacy-map conversion
+/// and dynamic Measurement assembly remain separate obligations.
+pub proof fn lemma_dyadic53_randomized_response_valid(
+    numerator: u64, q: real, factor: real,
+)
+    requires
+        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
+        0real <= q <= 1real,
+        factor >= 1real,
+        numerator < 9_007_199_254_740_992u64 ==>
+            crate::bernoulli_proof::dyadic53_mass(numerator)
+                <= factor * (1real - crate::bernoulli_proof::dyadic53_mass(numerator)),
+    ensures
+        rr_valid_measurement(
+            crate::bernoulli_proof::dyadic53_mass(numerator), q, factor),
+{
+    crate::bernoulli_proof::lemma_bernoulli_probability(numerator);
+    let p = crate::bernoulli_proof::dyadic53_mass(numerator);
+    assert(p == (numerator as real) / 9_007_199_254_740_992real);
+    assert(1real / 2real <= p <= 1real) by(nonlinear_arith);
+    if p < 1real {
+        assert(numerator < 9_007_199_254_740_992u64);
+        assert(p <= factor * (1real - p));
+    }
+    lemma_make_randomized_response_bool_returns_valid(p, q, factor);
+}
+
 } // verus!
