@@ -167,6 +167,58 @@ fn only_approved_local_scans_can_be_deserialized() {
     assert!(sanitize_serialized_dslplan(&python, "opendp", &[path]).is_err());
 }
 
+fn plugin_plan(symbol: &str, kwargs: Value, flags: Value) -> Vec<u8> {
+    let string = |s: &str| Value::String(s.into());
+    let plugin = Value::Map(vec![
+        (string("lib"), string("/untrusted/libopendp.so")),
+        (string("symbol"), string(symbol)),
+        (string("kwargs"), kwargs),
+        (string("flags"), flags),
+    ]);
+    let expr = Value::Map(vec![(string("FfiPlugin"), plugin)]);
+    let node = Value::Map(vec![(
+        string("Select"),
+        Value::Map(vec![(string("expr"), Value::Array(vec![expr]))]),
+    )]);
+    encoded(&root_with(Value::Array(vec![Value::Map(vec![
+        (string("value"), node),
+        (string("version"), Value::from(1)),
+    ])])))
+}
+
+#[test]
+fn validates_and_rebinds_native_plugin_symbols() {
+    let raw = plugin_plan("noise", Value::Binary(vec![]), Value::Bool(false));
+    validate_serialized_dslplan(&raw).unwrap();
+
+    let trusted_lib = "/server/libopendp.so";
+    let rewritten = sanitize_serialized_dslplan(&raw, trusted_lib, &[]).unwrap();
+    assert!(!rewritten
+        .windows(b"/untrusted/libopendp.so".len())
+        .any(|chunk| chunk == b"/untrusted/libopendp.so"));
+    assert!(rewritten
+        .windows(trusted_lib.len())
+        .any(|chunk| chunk == trusted_lib.as_bytes()));
+
+    let unknown = plugin_plan("unknown_symbol", Value::Binary(vec![]), Value::Nil);
+    assert!(validate_serialized_dslplan(&unknown).is_err());
+
+    let pickled = plugin_plan("noise", Value::Binary(vec![1]), Value::Nil);
+    assert!(validate_serialized_dslplan(&pickled).is_err());
+
+    // Client-supplied plugin flags are validated later when OpenDP builds
+    // the executable measurement. Preflight only restricts symbol and kwargs.
+    let unusual_flags = plugin_plan("noise", Value::Array(vec![]), Value::String("flags".into()));
+    validate_serialized_dslplan(&unusual_flags).unwrap();
+}
+
+#[test]
+fn rejects_malformed_plan_buffers() {
+    for raw in [&b""[..], &b"not a Polars plan"[..], &b"DSL_VERSION"[..]] {
+        assert!(validate_serialized_dslplan(raw).is_err());
+    }
+}
+
 #[test]
 fn refuses_bad_header_duplicates_trailing_bytes_and_unknown_structure() {
     let mut bytes = Vec::new();
