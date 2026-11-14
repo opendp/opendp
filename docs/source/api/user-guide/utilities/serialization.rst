@@ -52,10 +52,10 @@ pickled plugin arguments are rejected. Only OpenDP's supported DP plugins
 are allowed, and library paths are replaced with the OpenDP library loaded
 by the server.
 
-File scans are rejected by default. To read public files on the server,
-pass their paths in ``allowed_files`` when deserializing. The plan may only
-reference those exact files. A server can also check
-``len(serialized_plan)`` to set its own request-size limit.
+File scans are rejected in untrusted plans. Public key sets and other
+public data must be supplied as in-memory sources within the serialized
+query. The server may check ``len(serialized_plan)`` to set its own
+request-size limit.
 
 For locally created, trusted plans, ``deserialize(..., trusted=True)``
 skips the security checks and permits ordinary Polars features, including
