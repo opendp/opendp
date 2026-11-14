@@ -497,31 +497,26 @@ class Context(object):
 
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
         """
-        Given a serialized Polars plan, wraps it with a LazyFrameQuery.
-        See the :ref:`serialization documentation <lazyframe-serialization>`
-        for context and full example.
+        Deserialize a Polars plan into a query bound to this context.
+
+        Deprecated: use ``context.query().deserialize(serialized_plan)`` instead.
+        See the :ref:`serialization documentation <lazyframe-serialization>`.
 
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
         """
-        import io
-        from pathlib import Path
+        from warnings import warn
 
-        from opendp._data import sanitize_polars_plan
-        from opendp._lib import lib_path
-
-        # Replace any submitted plugin paths with this process's OpenDP binary.
-        # Validate and rewrite an immutable snapshot before Polars deserializes it.
-        trusted_lib = str(Path(lib_path).resolve(strict=True))
-        serialized_plan = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
-        pl = import_optional_dependency("polars")
-
-        new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
         if not isinstance(new_query, LazyFrameQuery):
             raise ValueError("'data' of context must be a LazyFrame")
 
-        new_query.polars_plan = new_plan
-        return new_query
+        warn(
+            "Context.deserialize_polars_plan is deprecated; "
+            "use context.query().deserialize(serialized_plan) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return new_query.deserialize(serialized_plan)
 
     @staticmethod
     def compositor(
