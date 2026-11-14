@@ -1,9 +1,29 @@
 import sys
 import re
+import os
 from contextlib import contextmanager
 import pytest
 
 from opendp._lib import install_names
+
+
+def unsupported_native_carrier_error(carrier):
+    """Identify the limited debug dispatch error without skipping test behavior."""
+    import opendp.prelude as dp
+
+    try:
+        dp.absolute_distance(T=carrier)
+    except dp.OpenDPException as error:
+        # Full-type release checks must exercise the successful mechanism path.
+        assert not os.environ.get("OPENDP_TEST_RELEASE")
+        assert carrier in ("i64", "u64")
+        assert error.variant == "Type"
+        assert error.message is not None
+        assert error.message.startswith(
+            f"No match for concrete type {carrier}. You've got a debug binary!"
+        )
+        return error.message
+    return None
 
 
 def ids(struct):
