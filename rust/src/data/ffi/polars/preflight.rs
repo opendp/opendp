@@ -313,7 +313,7 @@ fn check_file_scan(scan: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()
         };
         // Reject glob expansion and path aliases. The caller supplies canonical
         // absolute paths, and each serialized path must match one of them.
-        if !allowed_files.iter().any(|allowed| allowed == path) {
+        if !allowed_files.iter().any(|allowed| allowed.as_str() == path) {
             return Err(invalid("file scan path is not allowed"));
         }
     }
