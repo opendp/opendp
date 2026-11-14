@@ -11,6 +11,21 @@ use crate::kernel;
 
 verus! {
 
+/// This wrapper invokes the same two executable kernels as production.
+/// It verifies the deterministic complete path from one entropy result
+/// (including an arbitrary failure) to randomized response.
+pub fn rr_from_entropy_word(
+    truth: bool, numerator: u64, entropy: Result<u64, ()>,
+) -> (output: Result<bool, ()>)
+    ensures output == match entropy {
+        Ok(bits) => Ok(truth ^ !((bits >> 11) < numerator)),
+        Err(err) => Err(err),
+    },
+{
+    let honest = crate::dyadic53::from_word(numerator, entropy);
+    kernel::release_result(truth, honest)
+}
+
 /// Call the *production* kernel, imported verbatim into the verifier.
 pub fn rr_kernel(truth: bool, honest: bool) -> (output: bool)
     ensures output == (truth ^ !honest),

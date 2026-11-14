@@ -28,3 +28,19 @@ pub fn numerator_from_bits(bits: u64) -> u64 {
 pub fn success(numerator: u64, bits: u64) -> bool {
     (bits >> 11) < numerator
 }
+
+/// Map one entropy word to Bernoulli output without observing or changing
+/// the error. Verified and executed from the same source.
+#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
+#[cfg_attr(verus_only, verus_spec(result =>
+    ensures result == match sample {
+        Ok(bits) => Ok(success(numerator, bits)),
+        Err(err) => Err(err),
+    },
+))]
+pub fn from_word<E>(numerator: u64, sample: Result<u64, E>) -> Result<bool, E> {
+    match sample {
+        Ok(bits) => Ok(success(numerator, bits)),
+        Err(err) => Err(err),
+    }
+}

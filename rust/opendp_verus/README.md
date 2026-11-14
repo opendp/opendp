@@ -64,3 +64,9 @@ by 11 bits and compared with the numerator. The native integer functions in
 `traits/samplers/bernoulli/dyadic53.rs` are imported and checked directly by
 Verus. Uniform entropy, the float/bit correspondence and numeric privacy-map
 rounding are still outstanding parts of full-stack verification.
+
+The actual sampler now delegates all deterministic error propagation and
+Bernoulli postprocessing to `dyadic53::from_word`, which is a shared
+Verus-checked executable function. The proof calls `from_word` and
+`release_result` together, verifying the complete deterministic path from
+an entropy word (or an error) to the returned randomized-response bit.

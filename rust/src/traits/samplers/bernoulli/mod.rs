@@ -18,8 +18,11 @@ pub(crate) mod dyadic53;
 /// Every 53-bit value has exactly 2^11 preimages; there is no rejection loop.
 pub(crate) fn sample_bernoulli_dyadic53(numerator: u64) -> Fallible<bool> {
     let mut bytes = [0u8; 8];
-    fill_bytes(&mut bytes)?;
-    Ok(dyadic53::success(numerator, u64::from_ne_bytes(bytes)))
+    let sample = match fill_bytes(&mut bytes) {
+        Ok(()) => Ok(u64::from_ne_bytes(bytes)),
+        Err(err) => Err(err),
+    };
+    dyadic53::from_word(numerator, sample)
 }
 
 /// Sample from `Bernoulli(p=0.5)`.
