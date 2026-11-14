@@ -172,8 +172,9 @@ fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> Fallible<bool> {
     match value {
         Value::Map(fields) => {
             let mut rewritten = false;
+            let fields_len = fields.len();
             for (key, child) in fields {
-                if key.as_str() == Some("FfiPlugin") {
+                if fields_len == 1 && key.as_str() == Some("FfiPlugin") {
                     let Value::Map(plugin) = child else {
                         return Err(invalid("invalid FfiPlugin"));
                     };
