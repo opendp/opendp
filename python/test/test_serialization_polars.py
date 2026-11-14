@@ -231,7 +231,8 @@ def test_serialized_plan_rebinds_untrusted_native_plugin(tmp_path):
     assert str(fake_lib).encode() in serialized
     assert str(fake_lib).encode() not in sanitized
     assert str(lib_path).encode() in sanitized
-    assert isinstance(context.deserialize_polars_plan(serialized).polars_plan, pl.LazyFrame)
+    restored = context.deserialize_polars_plan(serialized)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
 @pytest.mark.parametrize(
