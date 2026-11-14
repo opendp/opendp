@@ -189,16 +189,8 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         #[cfg(feature = "ffi")]
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
-            function,
+            function: FunctionExpr::FfiPlugin { lib, .. },
         } => {
-            let lib = if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
-                path.into()
-            } else if let FunctionExpr::FfiPlugin { lib, .. } = function {
-                lib
-            } else {
-                unreachable!("plugin expressions are always an FfiPlugin")
-            };
-
             Expr::Function {
                 input: input_exprs,
                 function: FunctionExpr::FfiPlugin {
