@@ -122,9 +122,9 @@ polars = [
     "dep:serde",
     "dep:serde-pickle",
     "dep:chrono",
+    "dep:rmpv",
 ]
 polars-ffi = [
-    "dep:rmpv",
     "polars",
     "ffi",
     "dep:polars-python",
