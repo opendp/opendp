@@ -54,7 +54,6 @@ if TYPE_CHECKING:  # pragma: no cover
 _KEY_SIZE_THRESHOLD_MB = 2**10
 
 
-
 def _resolve_signed(signed: bool | None) -> bool:
     if signed is None:
         warn(
@@ -805,7 +804,9 @@ class LazyFrameQuery:
         # Snapshot the input so validation and deserialization see the same bytes.
         trusted_lib = str(Path(lib_path).resolve(strict=True))
         sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
-        plan = import_optional_dependency("polars").LazyFrame.deserialize(io.BytesIO(sanitized))
+        plan = import_optional_dependency("polars").LazyFrame.deserialize(
+            io.BytesIO(sanitized)
+        )
         return LazyFrameQuery(plan, object.__getattribute__(self, "_query"))
 
     def __getattribute__(self, name):
@@ -814,7 +815,9 @@ class LazyFrameQuery:
         if name == "deserialize":
             return object.__getattribute__(self, name)
         if name == "__setstate__":
-            raise AttributeError("Use LazyFrameQuery.deserialize() to load a Polars plan")
+            raise AttributeError(
+                "Use LazyFrameQuery.deserialize() to load a Polars plan"
+            )
 
         # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
