@@ -272,12 +272,12 @@ def test_deserialize_file_allowlist(tmp_path, monkeypatch):
         context.query().deserialize(serialized, allowed_files=[tmp_path / "*.parquet"])
 
 
-def test_deserialize_rejects_non_parquet_scan(tmp_path):
+def test_deserialize_allows_approved_csv_scan(tmp_path):
     keys = tmp_path / "keys.csv"
     pl.DataFrame({"age": [1]}).write_csv(keys)
     serialized = pl.scan_csv(keys).serialize()
-    with pytest.raises(dp.OpenDPException, match="only local Parquet"):
-        context.query().deserialize(serialized, allowed_files=[keys])
+    restored = context.query().deserialize(serialized, allowed_files=[keys])
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
 def test_ffi_plan_loader_preflights_callbacks():
