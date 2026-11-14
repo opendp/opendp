@@ -16,8 +16,8 @@ use std::collections::HashSet;
 use std::io::{self, Read};
 
 use polars::prelude::DslPlan;
-use rmpv::{Value, ValueRef};
 use rmpv::decode::value_ref::BorrowRead;
+use rmpv::{Value, ValueRef};
 
 use crate::error::Fallible;
 
@@ -139,8 +139,8 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
         .ok_or_else(|| invalid("missing plugin symbol"))?;
     let expected = shim_flags(symbol).ok_or_else(|| invalid("unsupported native plugin"))?;
     match field("kwargs") {
-        Some(ValueRef::Binary(bytes)) if bytes.is_empty() => {},
-        Some(ValueRef::Array(values)) if values.is_empty() => {},
+        Some(ValueRef::Binary(bytes)) if bytes.is_empty() => {}
+        Some(ValueRef::Array(values)) if values.is_empty() => {}
         _ => return Err(invalid("plugin keyword arguments are forbidden")),
     }
     let Some(ValueRef::Map(options)) = field("flags") else {
@@ -208,9 +208,9 @@ fn rebind_plugins(value: &mut Value, trusted_lib: &str) -> bool {
             }
             rewritten
         }
-        Value::Array(values) => values
-            .iter_mut()
-            .fold(false, |changed, child| rebind_plugins(child, trusted_lib) | changed),
+        Value::Array(values) => values.iter_mut().fold(false, |changed, child| {
+            rebind_plugins(child, trusted_lib) | changed
+        }),
         _ => false,
     }
 }
@@ -437,10 +437,9 @@ mod tests {
 
         // Polars deserializes every slot, not just nodes reachable from the
         // root. An IR wrapper must not conceal an eagerly-unpickled slot.
-        let mut payload = rmpv::decode::read_value(
-            &mut std::io::Cursor::new(&serialized[HEADER_LENGTH..]),
-        )
-        .unwrap();
+        let mut payload =
+            rmpv::decode::read_value(&mut std::io::Cursor::new(&serialized[HEADER_LENGTH..]))
+                .unwrap();
         let Value::Map(root) = &mut payload else {
             panic!("expected struct map");
         };
@@ -479,10 +478,7 @@ mod tests {
                 Value::String("value".into()),
                 Value::Map(vec![(
                     Value::String("GroupBy".into()),
-                    Value::Map(vec![(
-                        Value::String("apply".into()),
-                        Value::Bool(true),
-                    )]),
+                    Value::Map(vec![(Value::String("apply".into()), Value::Bool(true))]),
                 )]),
             ),
             (Value::String("version".into()), Value::from(1)),
