@@ -1,13 +1,21 @@
-//! Ownership-safe scratch views for R. The legacy slice API remains unchanged.
+//! Rust-owned scratch allocations exposed through borrowed FfiSlice views.
 
 use std::any::Any;
 
 use super::*;
 
+#[cfg(feature = "polars")]
+#[path = "owned_polars.rs"]
+mod owned_polars;
+
 /// Opaque owner of an FfiSlice header and its scratch allocations.
 ///
 /// The source AnyObject is borrowed, not retained: it must outlive this owner
-/// and every use of the view. All view pointers are read-only. Child AnyObjects
+/// and every use of the view. View pointers are read-only, except for the
+/// owner-allocated ArrowArray/ArrowSchema scratch headers: Arrow C consumers may
+/// move/release their payloads and mark the headers released. These headers use
+/// interior mutability; the borrowed source is never mutated. The owner must
+/// still free the header boxes, even after payload consumption. Child AnyObjects
 /// and pointer arrays belong to this owner and must not be freed separately.
 pub struct FfiSliceOwner {
     view: FfiSlice,
@@ -51,6 +59,14 @@ impl FfiSliceOwner {
             }
             TypeContents::VEC(element_id) => {
                 let element = Type::of_id(element_id)?;
+                #[cfg(feature = "polars")]
+                if element == Type::of::<Expr>() {
+                    owner.polars_vector(obj.downcast_ref::<Vec<Expr>>()?);
+                    return Ok(owner);
+                } else if element == Type::of::<Bound>() {
+                    owner.polars_vector(obj.downcast_ref::<Vec<Bound>>()?);
+                    return Ok(owner);
+                }
                 if element == Type::of::<String>() {
                     let pointers = obj
                         .downcast_ref::<Vec<String>>()?
@@ -66,9 +82,10 @@ impl FfiSliceOwner {
                             .collect(),
                     );
                 } else {
-                    // Only these legacy vector paths borrow without allocating.
+                    // Numeric vectors borrow the source allocation directly.
                     fn borrowed_vec<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-                        borrowed_legacy(obj)
+                        let values = obj.downcast_ref::<Vec<T>>()?;
+                        Ok(FfiSlice::new(values.as_ptr() as *mut c_void, values.len()))
                     }
                     owner.view = dispatch!(
                         borrowed_vec,
@@ -84,7 +101,14 @@ impl FfiSliceOwner {
                 let types = ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>()?;
                 match types.len() {
                     2 => {
-                        if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
+                        if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                            let (profile, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+                            let profile = owner.keep(AnyObject::new(profile.clone()));
+                            owner.pointers(vec![
+                                profile.cast::<c_void>(),
+                                (delta as *const f64).cast(),
+                            ]);
+                        } else if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
                             // Legacy erased output payload: the candidate is an AnyObject,
                             // despite the public type descriptor saying ExtrinsicObject.
                             tuple2::<f64, AnyObject>(obj, &mut owner)?;
@@ -132,13 +156,24 @@ impl FfiSliceOwner {
                     dispatch!(hashmap, [(key, @hashable), (value, @primitives)], (obj, &mut owner))?;
                 }
             }
-            TypeContents::PLAIN("BitVector" | "ExtrinsicObject") => {
-                owner.view = borrowed_legacy(obj)?;
+            #[cfg(feature = "polars")]
+            TypeContents::PLAIN(
+                "Expr" | "LazyFrame" | "ExprPlan" | "Bound" | "Bounds" | "Margin" | "Series"
+                | "DataFrame",
+            ) => owner.polars_plain(obj)?,
+            TypeContents::PLAIN("BitVector") => {
+                let bits = obj.downcast_ref::<BitVector>()?;
+                owner.view = FfiSlice::new(bits.as_bitptr().pointer() as *mut c_void, bits.len());
+            }
+            TypeContents::PLAIN("ExtrinsicObject") => {
+                let value = obj.downcast_ref::<ExtrinsicObject>()?;
+                owner.view = FfiSlice::new(value as *const ExtrinsicObject as *mut c_void, 1);
             }
             _ => {
-                // Explicitly gate the fallback: never call an allocating legacy path.
+                // Plain values borrow the original AnyObject without scratch allocation.
                 fn borrowed_plain<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-                    borrowed_legacy(obj)
+                    let value = obj.downcast_ref::<T>()?;
+                    Ok(FfiSlice::new(value as *const T as *mut c_void, 1))
                 }
                 owner.view = dispatch!(
                     borrowed_plain,
@@ -169,12 +204,6 @@ impl FfiSliceOwner {
         }
         Ok(owner)
     }
-}
-
-// Consume the temporary legacy header, but only for the explicitly gated,
-// nonallocating paths above. The data continues to borrow from obj.
-fn borrowed_legacy(obj: &AnyObject) -> Fallible<FfiSlice> {
-    opendp_data__object_as_slice(obj).into()
 }
 
 fn tuple2<T0: 'static, T1: 'static>(obj: &AnyObject, owner: &mut FfiSliceOwner) -> Fallible<()> {
@@ -220,11 +249,42 @@ fn hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
     Ok(())
 }
 
+/// Transfer an independent AnyFunction clone to the binding that receives it.
+/// Functions are owned handles, not copied values, so no scratch view is involved.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__clone_function(
+    obj: *const AnyObject,
+) -> FfiResult<*mut AnyFunction> {
+    let obj = try_as_ref!(obj);
+    let TypeContents::GENERIC {
+        name: "Function",
+        args,
+    } = &obj.type_.contents
+    else {
+        return err!(FFI, "expected Function object").into();
+    };
+    let [input, output] = try_!(parse_type_args(args, "Function"));
+    fn clone_function<I: 'static + Clone, O: 'static>(
+        obj: &AnyObject,
+    ) -> Fallible<AnyFunction> {
+        Ok(obj.downcast_ref::<Function<I, O>>()?.clone().into_any())
+    }
+    dispatch!(
+        clone_function,
+        [(input, @primitives), (output, @primitives)],
+        (obj)
+    )
+    .into()
+}
+
 /// Create a scratch view owner, borrowing obj until the owner is freed.
 /// Strings use C strings (embedded NUL is an error); tuples use field pointer
 /// arrays. Maps use pointers to owned key/value vector AnyObjects.
 /// Vec<AnyObject> uses an array of borrowed AnyObject pointers, NOT contiguous
-/// AnyObjects. Other primitive data is borrowed directly from obj.
+/// AnyObjects. With Polars enabled, Vec<Expr>, Vec<Bound>, and Bounds likewise
+/// use pointer arrays, but their child AnyObjects are owned scratch clones.
+/// Polars fields, serialization, and Arrow views retain the legacy layouts.
+/// Other primitive data is borrowed directly from obj.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_as_slice_owned(
     obj: *const AnyObject,
@@ -232,9 +292,10 @@ pub extern "C" fn opendp_data__object_as_slice_owned(
     FfiSliceOwner::from_object(try_as_ref!(obj)).into()
 }
 
-/// Borrow the owner's read-only header. Do not pass it to slice_free.
-/// The header and everything it references expire when owner is freed;
-/// the source AnyObject must also remain alive throughout their use.
+/// Borrow the owner's view; never free the view separately.
+/// Arrow consumers may mutate only owner-allocated Arrow headers.
+/// The view expires when its owner is freed, and its source AnyObject must
+/// remain alive until host-language conversion finishes.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__slice_owner_view(
     owner: *const FfiSliceOwner,
@@ -291,6 +352,16 @@ mod tests {
             let result: Fallible<()> = opendp_data__slice_owner_free(self.0).into();
             assert!(result.is_ok());
         }
+    }
+
+    #[test]
+    fn owned_function_clone_survives_source_destruction() -> Fallible<()> {
+        let source = AnyObject::new(Function::new(|value: &i32| value + 1));
+        let function: AnyFunction = Fallible::from(opendp_data__clone_function(&source))?;
+        drop(source);
+        let answer = function.eval(&AnyObject::new(41_i32))?;
+        assert_eq!(*answer.downcast_ref::<i32>()?, 42);
+        Ok(())
     }
 
     #[test]
@@ -479,6 +550,20 @@ mod tests {
             assert_eq!(value_view.view().len, map.len());
             // Reverse declaration order frees nested scratch before the map owner.
         }
+        Ok(())
+    }
+
+    #[test]
+    fn profile_tuple_owns_child_and_borrows_delta() -> Fallible<()> {
+        let obj = AnyObject::new((PrivacyProfile::new(|_| Ok(0.25)), 1e-7_f64));
+        let owner = TestOwner::new(&obj)?;
+        let pointers = owner.pointers::<c_void>();
+        let child = unsafe { &*pointers[0].cast::<AnyObject>() };
+        assert_eq!(child.downcast_ref::<PrivacyProfile>()?.delta(0.)?, 0.25);
+        let (profile, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+        assert_eq!(pointers[1], (delta as *const f64).cast());
+        drop(owner);
+        assert_eq!(profile.delta(0.)?, 0.25);
         Ok(())
     }
 

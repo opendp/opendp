@@ -26,8 +26,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_measure_free",
     "_domain_free",
     // data
-    "object_as_slice",
-    "ffislice_of_anyobjectptrs",
     "slice_as_object",
     "str_free",
     "slice_free",
