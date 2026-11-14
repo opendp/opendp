@@ -20,13 +20,12 @@ def test_private_np_mean():
     )
     assert trans.map(2) == 2
 
+
 @pytest.mark.parametrize("norm", [None, 1.0])
 def test_private_np_mean_requires_num_columns(norm):
     from opendp.extras.numpy._make_np_mean import make_private_np_mean
 
-    domain = dp.numpy.array2_domain(
-        norm=1.0, p=2, size=1, nan=False, T=float
-    )
+    domain = dp.numpy.array2_domain(norm=1.0, p=2, size=1, nan=False, T=float)
     assert domain.member(np.zeros((1, 1)))
     assert domain.member(np.zeros((1, 2)))
 

@@ -41,13 +41,12 @@ def test_private_np_sum():
     print("meas(data)", meas(data))
     assert meas.map(1) == 0.5
 
+
 @pytest.mark.parametrize("size", [None, 1])
 def test_np_sum_requires_num_columns(size):
     from opendp.extras.numpy._make_np_sum import make_np_sum, make_private_np_sum
 
-    domain = dp.numpy.array2_domain(
-        norm=1.0, p=2, size=size, nan=False, T=float
-    )
+    domain = dp.numpy.array2_domain(norm=1.0, p=2, size=size, nan=False, T=float)
     assert domain.member(np.zeros((size or 1, 1)))
     assert domain.member(np.zeros((size or 1, 2)))
 
