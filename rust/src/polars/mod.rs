@@ -190,24 +190,22 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
             function: FunctionExpr::FfiPlugin { lib, .. },
-        } => {
-            Expr::Function {
-                input: input_exprs,
-                function: FunctionExpr::FfiPlugin {
-                    flags: KW::function_options(),
-                    lib,
-                    symbol: KW::NAME.into(),
-                    kwargs: if KW::SHIM {
-                        Default::default()
-                    } else {
-                        serde_pickle::to_vec(&kwargs_new, Default::default())
-                            .expect("pickling does not fail")
-                            .as_slice()
-                            .into()
-                    },
+        } => Expr::Function {
+            input: input_exprs,
+            function: FunctionExpr::FfiPlugin {
+                flags: KW::function_options(),
+                lib,
+                symbol: KW::NAME.into(),
+                kwargs: if KW::SHIM {
+                    Default::default()
+                } else {
+                    serde_pickle::to_vec(&kwargs_new, Default::default())
+                        .expect("pickling does not fail")
+                        .as_slice()
+                        .into()
                 },
-            }
-        }
+            },
+        },
         // handle the case where the expression is an AnonymousFunction from Rust
         Expr::AnonymousFunction { .. } => Expr::AnonymousFunction {
             input: input_exprs,
