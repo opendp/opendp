@@ -4,13 +4,6 @@
 //! deserializes some Python callbacks eagerly; it is therefore unsafe to call
 //! `DslPlan::deserialize_versioned` and then inspect the resulting plan.
 //!
-//! The preflight does not deserialize into any Polars types. It rejects known
-//! executable variants/callbacks, checks for duplicate MessagePack string keys,
-//! limits input size and nesting, and requires the exact DSL header produced by
-//! this build. The approved bytes are passed unchanged to Polars afterwards.
-//!
-//! This guard is specific to versioned DslPlan serialization. The compact
-//! Expr serialization format must not be passed to this validator.
 
 use std::collections::HashSet;
 use std::io::{self, Read};
