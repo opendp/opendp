@@ -16,8 +16,6 @@ The members of this module will then be accessible at ``dp.polars``.
 
 from __future__ import annotations
 
-import os
-
 from dataclasses import asdict, dataclass, field, replace
 from deprecated import deprecated
 from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
@@ -55,9 +53,6 @@ if TYPE_CHECKING:  # pragma: no cover
 # Exposed as global for testing.
 _KEY_SIZE_THRESHOLD_MB = 2**10
 
-
-def _get_opendp_polars_lib_path():
-    return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
 
 def _resolve_signed(signed: bool | None) -> bool:
@@ -147,7 +142,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="noise",
             args=(self.expr, scale),
             is_elementwise=True,
@@ -225,7 +220,7 @@ class DPExpr(object):
 
         signed = _resolve_signed(signed)
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_len",
             args=(self.expr, scale, signed),
             returns_scalar=True,
@@ -275,7 +270,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -329,7 +324,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_null_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -379,7 +374,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_n_unique",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -426,7 +421,7 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_sum",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -480,7 +475,7 @@ class DPExpr(object):
             )
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_mean",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -527,7 +522,7 @@ class DPExpr(object):
         from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_quantile",
             args=(self.expr, lit(alpha), lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -572,7 +567,7 @@ class DPExpr(object):
         from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=_get_opendp_polars_lib_path(),
+            plugin_path=lib_path,
             function_name="dp_median",
             args=(self.expr, lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -625,7 +620,7 @@ def dp_len(scale: float | None = None, signed: bool | None = None):
     from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
     return register_plugin_function(
-        plugin_path=_get_opendp_polars_lib_path(),
+        plugin_path=lib_path,
         function_name="dp_frame_len",
         args=(scale, _resolve_signed(signed)),
         returns_scalar=True,
