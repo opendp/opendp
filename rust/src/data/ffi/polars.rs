@@ -9,38 +9,9 @@ use crate::{
     core::{FfiResult, FfiSlice},
     domains::BitVector,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
-    ffi::util::{self, c_bool},
+    ffi::util,
     polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
 };
-
-#[bootstrap(
-    name = "validate_polars_plan",
-    arguments(serialized_plan(rust_type = "BitVector", hint = "bytes")),
-    returns(c_type = "FfiResult<bool *>", hint = "bool")
-)]
-/// Reject unsafe serialized Polars plans before invoking Polars' deserializer.
-///
-/// This does not execute any user-supplied Python objects. Python callers must
-/// invoke this before `pl.LazyFrame.deserialize` on externally supplied bytes.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__validate_polars_plan(
-    serialized_plan: *const FfiSlice,
-) -> FfiResult<*mut c_bool> {
-    let serialized_plan = try_as_ref!(serialized_plan);
-    // BitVector uses a bit count; serialized plans consist of whole bytes.
-    if serialized_plan.ptr.is_null() || serialized_plan.len % 8 != 0 {
-        return err!(FFI, "Invalid serialized Polars plan buffer").into();
-    }
-    let len = serialized_plan.len / 8;
-    if len > preflight::MAX_PLAN_BYTES {
-        return err!(FFI, "Serialized Polars plan exceeds the size limit").into();
-    }
-    // SAFETY: Python's BitVector converter copies the bytes into an owned FFI
-    // buffer that remains alive for this call.
-    let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
-    try_!(preflight::validate_serialized_dslplan(bytes));
-    FfiResult::Ok(util::into_raw(util::from_bool(true)))
-}
 
 #[bootstrap(
     name = "sanitize_polars_plan",
