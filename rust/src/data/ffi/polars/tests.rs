@@ -148,7 +148,7 @@ fn serialized_scan(path: &str, scan_type: &str) -> Vec<u8> {
 }
 
 #[test]
-fn only_approved_parquet_scans_can_be_deserialized() {
+fn only_approved_local_scans_can_be_deserialized() {
     let path = "/public/keys.parquet".to_string();
     let bytes = serialized_scan(&path, "Parquet");
     assert!(validate_serialized_dslplan(&bytes).is_err());
@@ -162,7 +162,10 @@ fn only_approved_parquet_scans_can_be_deserialized() {
     assert!(sanitize_serialized_dslplan(&alias, "opendp", &[path.clone()]).is_err());
 
     let csv = serialized_scan(&path, "Csv");
-    assert!(sanitize_serialized_dslplan(&csv, "opendp", &[path]).is_err());
+    sanitize_serialized_dslplan(&csv, "opendp", &[path.clone()]).unwrap();
+
+    let python = serialized_scan(&path, "PythonDataset");
+    assert!(sanitize_serialized_dslplan(&python, "opendp", &[path]).is_err());
 }
 
 #[test]
