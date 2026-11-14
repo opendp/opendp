@@ -131,6 +131,10 @@ def test_serialized_plan_preflight_allows_opendp_query():
     assert validate_polars_plan(serialized) is True
     restored = context.deserialize_polars_plan(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
+    renamed = pl.LazyFrame({"value": [1]}).select(
+        pl.col("value").name.prefix("renamed_")
+    )
+    assert validate_polars_plan(renamed.serialize()) is True
 
 
 @pytest.mark.parametrize(
