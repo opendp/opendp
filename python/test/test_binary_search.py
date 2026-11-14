@@ -139,6 +139,17 @@ def test_binary_search_forwards_untranslated_rust_errors():
         _call_rust_search(lambda _: True, "i32", search)
 
 
+def test_binary_search_preserves_independent_python_error():
+    original = RuntimeError("error outside the callback")
+
+    def search(_):
+        raise original
+
+    with pytest.raises(RuntimeError) as error:
+        _call_rust_search(lambda _: True, "i32", search)
+    assert error.value is original
+
+
 def test_exponential_bounds_search():
     assert dp.exponential_bounds_search(lambda x: x > 0, int) == (0, 1)
     assert dp.exponential_bounds_search(lambda x: x > 0, float) == (0.0, 0.5)
