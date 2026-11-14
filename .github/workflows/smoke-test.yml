@@ -226,6 +226,12 @@ jobs:
           NOT_SYNTH="not contingency and not synthetic"
           NOT_IBIS="not ibis"
           NOT_POLARS="not lazyframe and not polars and not pca and not rst"
+
+          # Run environment-independent subprocess checks only once, with all extras installed.
+          if [[ "${{ matrix.python-version }}" != '3.13' || "${{ matrix.extra-install }}" != 'ibis,mbi' ]]; then
+            export PYTEST_ADDOPTS="--ignore=test/test_subprocesses.py"
+          fi
+
           case "${{ matrix.extra-install }}" in
             PLACEHOLDER)          pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
             numpy)                pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
