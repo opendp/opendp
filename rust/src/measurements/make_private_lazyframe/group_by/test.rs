@@ -714,11 +714,16 @@ fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
     for (margin, epsilon) in [
         (Margin::by(["A"]), 2.0),
         (Margin::by(["A"]).with_max_groups(1), 2.0),
-        (Margin::by(["A"]).with_max_groups(1).with_invariant_keys(), 1.0),
+        (
+            Margin::by(["A"]).with_max_groups(1).with_invariant_keys(),
+            1.0,
+        ),
     ] {
-        let domain =
-            LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<String>::default())])?
-                .with_margin(margin.clone())?;
+        let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+            "A",
+            AtomDomain::<String>::default(),
+        )])?
+        .with_margin(margin.clone())?;
 
         if margin.invariant.is_none() {
             // These datasets have disjoint group keys, despite each having one group.
