@@ -557,6 +557,58 @@ mod tests {
         assert!(format!("{error:?}").contains("group-by callbacks"));
     }
 
+    fn serialized_scan(path: &str, scan_type: &str) -> Vec<u8> {
+        let string = |value: &str| Value::String(value.into());
+        let node = Value::Map(vec![(
+            string("Scan"),
+            Value::Map(vec![
+                (
+                    string("sources"),
+                    Value::Map(vec![(
+                        string("Paths"),
+                        Value::Array(vec![Value::Map(vec![(
+                            string("Local"),
+                            string(path),
+                        )])]),
+                    )]),
+                ),
+                (
+                    string("unified_scan_args"),
+                    Value::Map(vec![
+                        (string("cloud_options"), Value::Nil),
+                        (string("deletion_files"), Value::Nil),
+                    ]),
+                ),
+                (
+                    string("scan_type"),
+                    Value::Map(vec![(string(scan_type), Value::Map(vec![]))]),
+                ),
+            ]),
+        )]);
+        encoded(&root_with(Value::Array(vec![Value::Map(vec![
+            (string("value"), node),
+            (string("version"), Value::from(1)),
+        ])])))
+    }
+
+    #[test]
+    fn only_approved_parquet_scans_can_be_deserialized() {
+        let path = "/public/keys.parquet".to_string();
+        let bytes = serialized_scan(&path, "Parquet");
+        assert!(validate_serialized_dslplan(&bytes).is_err());
+        assert!(sanitize_serialized_dslplan(&bytes, "opendp", &[]).is_err());
+        sanitize_serialized_dslplan(&bytes, "opendp", &[path.clone()]).unwrap();
+
+        let other = vec!["/public/other.parquet".to_string()];
+        assert!(sanitize_serialized_dslplan(&bytes, "opendp", &other).is_err());
+
+        let alias = serialized_scan("/public/../public/keys.parquet", "Parquet");
+        assert!(sanitize_serialized_dslplan(&alias, "opendp", &[path.clone()]).is_err());
+
+        let csv = serialized_scan(&path, "Csv");
+        assert!(sanitize_serialized_dslplan(&csv, "opendp", &[path]).is_err());
+    }
+
     #[test]
     fn refuses_bad_header_duplicates_trailing_bytes_and_unknown_structure() {
         let mut bytes = Vec::new();
