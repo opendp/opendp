@@ -145,6 +145,10 @@ def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
     with pytest.raises(TypeError):
         original.deserialize(io.BytesIO(raw))
 
+    # Bypass through Polars' state-restoration method must also be unavailable.
+    with pytest.raises(AttributeError, match="LazyFrameQuery.deserialize"):
+        original.__setstate__(raw)
+
 
 def test_deprecated_context_deserialize_polars_plan():
     serialized = query.polars_plan.serialize()
