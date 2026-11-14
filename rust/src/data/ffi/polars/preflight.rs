@@ -373,11 +373,21 @@ mod tests {
                 "{name}"
             );
         }
-        let bad = root_with(Value::Map(vec![(
-            Value::String("apply".into()),
-            Value::Array(vec![Value::Bool(true)]),
-        )]));
-        assert!(validate_serialized_dslplan(&encoded(&bad)).is_err());
+        let bad = root_with(Value::Array(vec![Value::Map(vec![
+            (
+                Value::String("value".into()),
+                Value::Map(vec![(
+                    Value::String("GroupBy".into()),
+                    Value::Map(vec![(
+                        Value::String("apply".into()),
+                        Value::Bool(true),
+                    )]),
+                )]),
+            ),
+            (Value::String("version".into()), Value::from(1)),
+        ])]));
+        let error = validate_serialized_dslplan(&encoded(&bad)).unwrap_err();
+        assert!(format!("{error:?}").contains("group-by callbacks"));
     }
 
     #[test]
