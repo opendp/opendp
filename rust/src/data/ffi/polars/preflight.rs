@@ -139,7 +139,8 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
         .ok_or_else(|| invalid("missing plugin symbol"))?;
     let expected = shim_flags(symbol).ok_or_else(|| invalid("unsupported native plugin"))?;
     match field("kwargs") {
-        Some(ValueRef::Binary([])) | Some(ValueRef::Array(ref empty)) if empty.is_empty() => {},
+        Some(ValueRef::Binary(bytes)) if bytes.is_empty() => {},
+        Some(ValueRef::Array(values)) if values.is_empty() => {},
         _ => return Err(invalid("plugin keyword arguments are forbidden")),
     }
     let Some(ValueRef::Map(options)) = field("flags") else {
