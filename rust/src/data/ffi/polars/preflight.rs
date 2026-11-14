@@ -24,7 +24,7 @@ use crate::error::Fallible;
 
 const DSL_MAGIC: &[u8] = b"DSL_VERSION";
 const HEADER_LENGTH: usize = DSL_MAGIC.len() + 4 + 64;
-const MAX_PLAN_BYTES: usize = 64 * 1024 * 1024;
+pub(super) const MAX_PLAN_BYTES: usize = 64 * 1024 * 1024;
 const MAX_NESTING: usize = 128;
 
 // This list is intentionally broader than the set of known code-execution
