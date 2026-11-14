@@ -30,10 +30,7 @@ pub extern "C" fn opendp_data__validate_polars_plan(
     // SAFETY: FFI callers provide an in-bounds byte buffer that lives for the
     // call; the generated Python Vec<u8> converter owns the input allocation.
     let bytes = unsafe {
-        std::slice::from_raw_parts(
-            serialized_plan.ptr as *const u8,
-            serialized_plan.len,
-        )
+        std::slice::from_raw_parts(serialized_plan.ptr as *const u8, serialized_plan.len)
     };
     try_!(preflight::validate_serialized_dslplan(bytes));
     FfiResult::Ok(util::into_raw(util::from_bool(true)))
