@@ -271,14 +271,33 @@ def test_deserialize_allows_approved_csv_scan(tmp_path):
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
-def test_ffi_plan_loader_preflights_callbacks():
+def test_trusted_local_plan_can_scan_file(tmp_path, monkeypatch):
     from opendp._convert import _lazyframe_to_slice
     from opendp._data import slice_as_object
 
-    source = pl.LazyFrame({"value": [1]})
-    malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
-    with pytest.raises(dp.OpenDPException):
-        slice_as_object(_lazyframe_to_slice(malicious), "LazyFrame")
+    source = tmp_path / "keys.csv"
+    pl.DataFrame({"age": [1]}).write_csv(source)
+    plan = pl.scan_csv(source)
+    serialized = plan.serialize()
+
+    # Normal local FFI conversion does not apply remote-plan restrictions.
+    assert slice_as_object(_lazyframe_to_slice(plan), "LazyFrame") is not None
+
+    with pytest.raises(dp.OpenDPException, match="file scans are not allowed"):
+        context.query().deserialize(serialized)
+
+    from opendp import _data
+
+    def unexpected_preflight(*args, **kwargs):
+        pytest.fail("Preflight ran on a trusted plan")
+
+    monkeypatch.setattr(_data, "sanitize_polars_plan", unexpected_preflight)
+    restored = context.query().deserialize(serialized, preflight=False)
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+    with pytest.raises(ValueError, match="allowed_files requires preflight=True"):
+        context.query().deserialize(
+            serialized, preflight=False, allowed_files=[source]
+        )
 
 
 def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
