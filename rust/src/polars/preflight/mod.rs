@@ -6,50 +6,15 @@
 //!
 
 use std::collections::HashSet;
-use std::io::{self, Read};
 
 use polars::prelude::DslPlan;
 use rmpv::ValueRef;
-use rmpv::decode::value_ref::BorrowRead;
 
 use crate::error::Fallible;
 
 const DSL_MAGIC: &[u8] = b"DSL_VERSION";
 const HEADER_LENGTH: usize = DSL_MAGIC.len() + 4 + 64;
 const MAX_NESTING: usize = 128;
-const MAX_PARSE_READS: usize = 1_000_000;
-
-// The borrowed-value parser avoids copying binary payloads, but still
-// allocates for array/map elements. Bound its work *during* decoding so a
-// small message containing millions of scalars cannot exhaust memory.
-struct BoundedReader<'a> {
-    remaining: &'a [u8],
-    reads: usize,
-}
-
-impl Read for BoundedReader<'_> {
-    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
-        if self.reads >= MAX_PARSE_READS {
-            return Err(io::Error::other("MessagePack element limit exceeded"));
-        }
-        self.reads += 1;
-        let len = out.len().min(self.remaining.len());
-        out[..len].copy_from_slice(&self.remaining[..len]);
-        self.remaining = &self.remaining[len..];
-        Ok(len)
-    }
-}
-
-impl<'a> BorrowRead<'a> for BoundedReader<'a> {
-    fn fill_buf(&self) -> &'a [u8] {
-        self.remaining
-    }
-
-    fn consume(&mut self, len: usize) {
-        self.remaining = &self.remaining[len..];
-    }
-}
-
 // Reject executable callbacks and external I/O before Polars deserializes.
 const FORBIDDEN_VARIANTS: &[&str] = &[
     "OpaquePython",
@@ -195,14 +160,10 @@ fn inspect_serialized_dslplan<'a>(
         ));
     }
 
-    let payload = &raw[HEADER_LENGTH..];
-    let mut reader = BoundedReader {
-        remaining: payload,
-        reads: 0,
-    };
-    let mut value = rmpv::decode::read_value_ref_with_max_depth(&mut reader, MAX_NESTING)
+    let mut payload = &raw[HEADER_LENGTH..];
+    let mut value = rmpv::decode::read_value_ref_with_max_depth(&mut payload, MAX_NESTING)
         .map_err(|e| err!(FFI, "Malformed Polars MessagePack: {}", e))?;
-    if !reader.remaining.is_empty() {
+    if !payload.is_empty() {
         return Err(invalid("trailing data"));
     }
 
