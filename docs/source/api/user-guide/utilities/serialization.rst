@@ -51,7 +51,7 @@ plugins. Python callbacks and pickled plugin arguments are rejected.
 Only OpenDP's supported DP plugins are allowed, and library paths are
 replaced with the OpenDP library loaded by the server.
 
-File scans are rejected by default. To read public Parquet files on the server,
+File scans are rejected by default. To read public files on the server,
 pass their paths in ``allowed_files`` when deserializing. The plan may only
 reference those exact files. A server can also check
 ``len(serialized_plan)`` to set its own request-size limit.
