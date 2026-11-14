@@ -47,10 +47,11 @@ Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deser
 
 For plans received from untrusted clients, use
 :py:meth:`~opendp.context.Context.deserialize_polars_plan` rather than calling
-``polars.LazyFrame.deserialize`` directly. OpenDP first inspects the serialized
-DSL as data and rejects Python callbacks, external scans and sinks, or unfamiliar
-Polars serialization formats. A caller cannot use this interface to submit
-arbitrary Polars plans; only the supported data-only subset is accepted.
+``polars.LazyFrame.deserialize`` directly. OpenDP inspects the serialized
+DSL before Polars can unpickle embedded Python callbacks, rejecting unsupported
+plan nodes and serialization versions. This protects the deserialization
+boundary; it does not sandbox arbitrary plan execution, native plugins, or
+external data access.
 
 
 Polars serializations will include the path of the local binary.
