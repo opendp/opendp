@@ -566,10 +566,7 @@ mod tests {
                     string("sources"),
                     Value::Map(vec![(
                         string("Paths"),
-                        Value::Array(vec![Value::Map(vec![(
-                            string("Local"),
-                            string(path),
-                        )])]),
+                        Value::Array(vec![Value::Map(vec![(string("Local"), string(path))])]),
                     )]),
                 ),
                 (
