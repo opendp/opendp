@@ -70,3 +70,9 @@ Bernoulli postprocessing to `dyadic53::from_word`, which is a shared
 Verus-checked executable function. The proof calls `from_word` and
 `release_result` together, verifying the complete deterministic path from
 an entropy word (or an error) to the returned randomized-response bit.
+
+The adjacent `traits/samplers/bernoulli/verus.rs` proof now reduces the
+production Bernoulli success condition to a prefix event on a uniform 64-bit
+word, and derives its exact mass `numerator / 2^53` from the ideal uniform-u64
+CDF. This is a deterministic reduction with a transparent entropy premise;
+it is not yet a machine-checked correctness proof of `fill_bytes`.

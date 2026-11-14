@@ -8,3 +8,6 @@ pub mod dyadic53;
 pub mod kernel;
 #[path = "../../src/measurements/randomized_response/verus.rs"]
 pub mod randomized_response_bool;
+
+#[path = "../../src/traits/samplers/bernoulli/verus.rs"]
+pub mod bernoulli_proof;

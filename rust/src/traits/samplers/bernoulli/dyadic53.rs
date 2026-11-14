@@ -23,10 +23,10 @@ pub fn numerator_from_bits(bits: u64) -> u64 {
 /// truncating the lowest 11 bits produces a uniform 53-bit integer.
 #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
 #[cfg_attr(verus_only, verus_spec(result =>
-    ensures result == ((bits >> 11) < numerator),
+    ensures result == ((bits / 2048u64) < numerator),
 ))]
 pub fn success(numerator: u64, bits: u64) -> bool {
-    (bits >> 11) < numerator
+    (bits / 2048u64) < numerator
 }
 
 /// Map one entropy word to Bernoulli output without observing or changing
