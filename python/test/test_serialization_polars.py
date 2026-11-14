@@ -15,8 +15,9 @@ def test_deserialize_polars_plan_error():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
     )
-    with pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"):
-        context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"):
+            context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
 
 
 # member() will warn if instance is not even of the carrier type,
@@ -139,6 +140,8 @@ def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
     assert restored is not original
     assert restored.polars_plan is not original.polars_plan
     assert restored._query is original._query
+    assert restored._query._d_in == context.d_in
+    assert restored._query._d_out == context.d_mids[0]
 
     # Polars supports deserializing directly from a stream, but the OpenDP
     # entry point intentionally accepts binary plan bytes only.
@@ -155,6 +158,8 @@ def test_deprecated_context_deserialize_polars_plan():
     with pytest.warns(DeprecationWarning, match="context.query\\(\\).deserialize"):
         restored = context.deserialize_polars_plan(serialized)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
+    assert restored._query._d_in == context.d_in
+    assert restored._query._d_out == context.d_mids[0]
 
 
 def _identity_batches(frame):
