@@ -12,7 +12,7 @@ use crate::{
 
 #[bootstrap(
     name = "validate_polars_plan",
-    arguments(serialized_plan(rust_type = "Vec<u8>", hint = "Sequence[int]")),
+    arguments(serialized_plan(rust_type = "BitVector", hint = "bytes")),
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Reject unsafe serialized Polars plans before invoking Polars' deserializer.
@@ -24,14 +24,17 @@ pub extern "C" fn opendp_data__validate_polars_plan(
     serialized_plan: *const FfiSlice,
 ) -> FfiResult<*mut c_bool> {
     let serialized_plan = try_as_ref!(serialized_plan);
-    if serialized_plan.ptr.is_null() || serialized_plan.len > isize::MAX as usize {
+    // BitVector uses a bit count; serialized plans consist of whole bytes.
+    if serialized_plan.ptr.is_null() || serialized_plan.len % 8 != 0 {
         return err!(FFI, "Invalid serialized Polars plan buffer").into();
     }
-    // SAFETY: FFI callers provide an in-bounds byte buffer that lives for the
-    // call; the generated Python Vec<u8> converter owns the input allocation.
-    let bytes = unsafe {
-        std::slice::from_raw_parts(serialized_plan.ptr as *const u8, serialized_plan.len)
-    };
+    let len = serialized_plan.len / 8;
+    if len > preflight::MAX_PLAN_BYTES {
+        return err!(FFI, "Serialized Polars plan exceeds the size limit").into();
+    }
+    // SAFETY: Python's BitVector converter copies the bytes into an owned FFI
+    // buffer that remains alive for this call.
+    let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
     try_!(preflight::validate_serialized_dslplan(bytes));
     FfiResult::Ok(util::into_raw(util::from_bool(true)))
 }
