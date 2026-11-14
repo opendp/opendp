@@ -11,7 +11,7 @@ use vstd::prelude::*;
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures result == (truth ^ !honest),
 ))]
-pub(super) fn release_bool(truth: bool, honest: bool) -> bool {
+pub fn release_bool(truth: bool, honest: bool) -> bool {
     truth ^ !honest
 }
 
@@ -24,7 +24,7 @@ pub(super) fn release_bool(truth: bool, honest: bool) -> bool {
         Err(err) => Err(err),
     },
 ))]
-pub(super) fn release_result<E>(
+pub fn release_result<E>(
     truth: bool,
     sampled: Result<bool, E>,
 ) -> Result<bool, E> {
