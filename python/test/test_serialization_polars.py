@@ -130,9 +130,10 @@ def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
     sanitize = _data.sanitize_polars_plan
     checked = []
 
-    def checked_sanitize(data, trusted_lib):
+    def checked_sanitize(data, trusted_lib, allowed_files):
         checked.append(data)
-        return sanitize(data, trusted_lib)
+        assert allowed_files == []
+        return sanitize(data, trusted_lib, allowed_files)
 
     monkeypatch.setattr(_data, "sanitize_polars_plan", checked_sanitize)
     restored = original.deserialize(raw)
@@ -229,6 +230,56 @@ def test_serialized_plan_preflight_rejects_malformed_bytes():
             sanitize_polars_plan(data, str(lib_path))
 
 
+def test_deserialize_reports_expected_polars_version():
+    from opendp.mod import _EXPECTED_POLARS_VERSION
+
+    serialized = bytearray(query.polars_plan.serialize())
+    serialized[len(b"DSL_VERSION")] ^= 1
+    with pytest.raises(ValueError, match=f"Expected Polars {_EXPECTED_POLARS_VERSION}"):
+        context.query().deserialize(serialized)
+
+
+def test_deserialize_file_allowlist(tmp_path, monkeypatch):
+    keys = tmp_path / "keys.parquet"
+    other = tmp_path / "other.parquet"
+    pl.DataFrame({"age": [1, 2, 3]}).write_parquet(keys)
+    pl.DataFrame({"age": [4]}).write_parquet(other)
+
+    plan = (
+        context.query()
+        .group_by("age")
+        .agg(dp.len(signed=True))
+        .with_keys(pl.scan_parquet(keys))
+    )
+    serialized = plan.polars_plan.serialize()
+
+    real_deserialize = pl.LazyFrame.deserialize
+
+    def reject_polars(*args, **kwargs):
+        pytest.fail("Polars deserialization ran before file authorization")
+
+    monkeypatch.setattr(pl.LazyFrame, "deserialize", reject_polars)
+    with pytest.raises(dp.OpenDPException, match="file scans are not allowed"):
+        context.query().deserialize(serialized)
+    with pytest.raises(dp.OpenDPException, match="file scan path is not allowed"):
+        context.query().deserialize(serialized, allowed_files=[other])
+
+    monkeypatch.setattr(pl.LazyFrame, "deserialize", real_deserialize)
+    restored = context.query().deserialize(serialized, allowed_files=[keys])
+    assert isinstance(restored.polars_plan, pl.LazyFrame)
+
+    with pytest.raises(ValueError, match="Glob characters"):
+        context.query().deserialize(serialized, allowed_files=[tmp_path / "*.parquet"])
+
+
+def test_deserialize_rejects_non_parquet_scan(tmp_path):
+    keys = tmp_path / "keys.csv"
+    pl.DataFrame({"age": [1]}).write_csv(keys)
+    serialized = pl.scan_csv(keys).serialize()
+    with pytest.raises(dp.OpenDPException, match="only local Parquet"):
+        context.query().deserialize(serialized, allowed_files=[keys])
+
+
 def test_ffi_plan_loader_preflights_callbacks():
     from opendp._convert import _lazyframe_to_slice
     from opendp._data import slice_as_object
@@ -245,9 +296,9 @@ def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
     supplied = bytearray(query.polars_plan.serialize())
     sanitize = _data.sanitize_polars_plan
 
-    def mutate_original(snapshot, trusted_lib):
+    def mutate_original(snapshot, trusted_lib, allowed_files):
         assert type(snapshot) is bytes
-        rewritten = sanitize(snapshot, trusted_lib)
+        rewritten = sanitize(snapshot, trusted_lib, allowed_files)
         supplied[:] = b"\x00" * len(supplied)
         return rewritten
 
