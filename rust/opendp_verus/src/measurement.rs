@@ -1,13 +1,13 @@
 //! Generic pairwise validity for pure-DP Measurements with discrete laws.
 //! Each input induces a law on observable outcomes (including errors).
-//! For finite epsilon, MaxDivergence reduces to pointwise domination;
+//! For finite epsilon on countable discrete outcomes, MaxDivergence reduces to pointwise domination;
 //! the separate Option::None outcome represents infinite epsilon.
 //! The output-law semantics must be justified by a sampler-correctness proof.
 use vstd::prelude::*;
 
 verus! {
 
-pub open spec fn valid_max_divergence_measurement<X, Y, DI, ME>(
+pub open spec fn valid_discrete_max_divergence_measurement<X, Y, DI, ME>(
     input_member: spec_fn(X) -> bool,
     input_close: spec_fn(X, X, DI) -> bool,
     output_law: spec_fn(X, Y) -> real,

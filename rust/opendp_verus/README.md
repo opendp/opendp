@@ -2,7 +2,9 @@
 
 The standalone Verus crate proves Boolean randomized response privacy for a
 *specified* probability law, including an input-independent entropy-error
-outcome and every singleton observable `Result<bool, ()>`. It does **not**
+outcome and every singleton observable `Result<bool, ()>`. The proof also
+checks that these three probabilities sum to one, and that the privacy
+inequality holds for all events (all subsets of the three outcomes). It does **not**
 verify that the production sampler realizes that law.
 
 ## Explicit remaining obligations

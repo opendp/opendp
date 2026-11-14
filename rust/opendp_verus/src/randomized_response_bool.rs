@@ -6,7 +6,7 @@
 //! probability q. Whether the actual errors have this law is a separate
 //! sampler contract obligation.
 use vstd::prelude::*;
-use crate::measurement::valid_max_divergence_measurement;
+use crate::measurement::valid_discrete_max_divergence_measurement;
 
 verus! {
 
@@ -59,6 +59,36 @@ pub proof fn lemma_success_law(truth: bool, output: bool, p: real)
     else { if output {} else {} }
 }
 
+/// The three model outcomes form a genuine probability mass function.
+pub proof fn lemma_rr_law_normalized(truth: bool, p: real, q: real)
+    requires
+        0real <= p <= 1real,
+        0real <= q <= 1real,
+    ensures
+        rr_result_mass(truth, Ok(true), p, q) >= 0real,
+        rr_result_mass(truth, Ok(false), p, q) >= 0real,
+        rr_result_mass(truth, Err(()), p, q) >= 0real,
+        rr_result_mass(truth, Ok(true), p, q)
+            + rr_result_mass(truth, Ok(false), p, q)
+            + rr_result_mass(truth, Err(()), p, q) == 1real,
+{
+    if truth {
+        assert((1real - q) * p >= 0real) by(nonlinear_arith)
+            requires 0real <= p <= 1real, 0real <= q <= 1real;
+        assert((1real - q) * (1real - p) >= 0real) by(nonlinear_arith)
+            requires 0real <= p <= 1real, 0real <= q <= 1real;
+    } else {
+        assert((1real - q) * (1real - p) >= 0real) by(nonlinear_arith)
+            requires 0real <= p <= 1real, 0real <= q <= 1real;
+        assert((1real - q) * p >= 0real) by(nonlinear_arith)
+            requires 0real <= p <= 1real, 0real <= q <= 1real;
+    }
+    assert(rr_result_mass(truth, Ok(true), p, q)
+        + rr_result_mass(truth, Ok(false), p, q)
+        + rr_result_mass(truth, Err(()), p, q) == 1real)
+        by(nonlinear_arith);
+}
+
 /// The failure branch propagates *the same* error for either input when the
 /// sampler's result is fixed. The sampler's result law must also be independent
 /// of the private input; this lemma alone cannot establish that property.
@@ -88,7 +118,7 @@ pub open spec fn rr_map(p: real, factor: real, distance: u32) -> Option<real> {
 }
 
 pub open spec fn rr_valid_measurement(p: real, q: real, factor: real) -> bool {
-    valid_max_divergence_measurement::<bool, Result<bool, ()>, u32, ()>(
+    valid_discrete_max_divergence_measurement::<bool, Result<bool, ()>, u32, ()>(
         |_: bool| true,
         |left: bool, right: bool, distance: u32| discrete_close(left, right, distance),
         |truth: bool, outcome: Result<bool, ()>| rr_result_mass(truth, outcome, p, q),
@@ -153,6 +183,51 @@ pub proof fn lemma_result_domination(
                 requires q >= 0real, factor >= 1real;
         }
     }
+}
+
+/// The probability of *any* Boolean-or-error event in the model.
+pub open spec fn rr_event_probability(
+    truth: bool, p: real, q: real,
+    event: spec_fn(Result<bool, ()>) -> bool,
+) -> real {
+    (if event(Ok(true)) { rr_result_mass(truth, Ok(true), p, q) } else { 0real })
+    + (if event(Ok(false)) { rr_result_mass(truth, Ok(false), p, q) } else { 0real })
+    + (if event(Err(())) { rr_result_mass(truth, Err(()), p, q) } else { 0real })
+}
+
+/// Pointwise domination implies domination for every subset of the
+/// three possible observable outcomes. This makes the discrete
+/// MaxDivergence interpretation explicit rather than merely asserted.
+pub proof fn lemma_every_event_domination(
+    p: real, q: real, factor: real,
+    left: bool, right: bool,
+    event: spec_fn(Result<bool, ()>) -> bool,
+)
+    requires
+        1real / 2real <= p < 1real,
+        0real <= q <= 1real,
+        factor >= 1real,
+        p <= factor * (1real - p),
+    ensures
+        rr_event_probability(left, p, q, event)
+            <= factor * rr_event_probability(right, p, q, event),
+{
+    lemma_result_domination(p, q, factor, left, right, Ok(true));
+    lemma_result_domination(p, q, factor, left, right, Ok(false));
+    lemma_result_domination(p, q, factor, left, right, Err(()));
+
+    let a = if event(Ok(true)) { rr_result_mass(left, Ok(true), p, q) } else { 0real };
+    let b = if event(Ok(true)) { rr_result_mass(right, Ok(true), p, q) } else { 0real };
+    let c = if event(Ok(false)) { rr_result_mass(left, Ok(false), p, q) } else { 0real };
+    let d = if event(Ok(false)) { rr_result_mass(right, Ok(false), p, q) } else { 0real };
+    let e = if event(Err(())) { rr_result_mass(left, Err(()), p, q) } else { 0real };
+    let f = if event(Err(())) { rr_result_mass(right, Err(()), p, q) } else { 0real };
+
+    assert(a <= factor * b);
+    assert(c <= factor * d);
+    assert(e <= factor * f);
+    assert(a + c + e <= factor * (b + d + f)) by(nonlinear_arith)
+        requires a <= factor * b, c <= factor * d, e <= factor * f;
 }
 
 /// Every successfully constructed *model* satisfies its Measurement contract.
