@@ -50,8 +50,8 @@ impl<'a> BorrowRead<'a> for BoundedReader<'a> {
     }
 }
 
-// Reject expression variants that deserialize Python callbacks.
-const FORBIDDEN_EXPR_VARIANTS: &[&str] = &[
+// Reject executable callbacks and external I/O before Polars deserializes.
+const FORBIDDEN_VARIANTS: &[&str] = &[
     "OpaquePython",
     "AnonymousFunction",
     "PipeWithDtype",
@@ -62,10 +62,11 @@ const FORBIDDEN_EXPR_VARIANTS: &[&str] = &[
     "Map",
     "MapFieldNames",
     "SubPlan",
+    "PythonScan",
+    "PipeWithSchema",
+    "Sink",
+    "SinkMultiple",
 ];
-
-// Reject callbacks and external I/O before Polars deserializes the plan.
-const FORBIDDEN_PLAN_VARIANTS: &[&str] = &["PythonScan", "PipeWithSchema", "Sink", "SinkMultiple"];
 
 fn invalid(message: &str) -> crate::error::Error {
     err!(
@@ -223,30 +224,8 @@ fn inspect_serialized_dslplan<'a>(
         return Err(invalid("unrecognized serialized plan structure"));
     }
 
-    // SlotMap encodes each node as {value: Option<Node>, version: u32}.
-    // Inspect every node, including those not reachable from the root.
-    let nodes = root
-        .iter()
-        .find(|(key, _)| key.as_str() == Some("dsl_plans"))
-        .map(|(_, value)| value)
-        .ok_or_else(|| invalid("missing plan nodes"))?;
-    let ValueRef::Array(slots) = nodes else {
-        return Err(invalid("invalid plan node collection"));
-    };
-    for slot in slots {
-        let ValueRef::Map(fields) = slot else {
-            return Err(invalid("invalid plan slot"));
-        };
-        let node = fields
-            .iter()
-            .find(|(key, _)| key.as_str() == Some("value"))
-            .map(|(_, value)| value)
-            .ok_or_else(|| invalid("missing plan slot value"))?;
-        if !matches!(node, ValueRef::Nil) {
-            check_plan_node(node, allowed_files)?;
-        }
-    }
-    let rewritten = check_value(&mut value, 0, trusted_lib)?;
+    // Check every map and array, including unreachable slots and nested nodes.
+    let rewritten = check_value(&mut value, 0, trusted_lib, allowed_files)?;
     Ok((value, rewritten))
 }
 
@@ -322,70 +301,12 @@ fn check_file_scan(scan: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()
     Ok(())
 }
 
-/// Check the serialized plan variant without constructing any Polars objects.
-fn check_plan_node(node: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()> {
-    let ValueRef::Map(variant) = node else {
-        return Err(invalid("invalid plan node"));
-    };
-    if variant.len() != 1 {
-        return Err(invalid("expected a single plan node variant"));
-    }
-    let (tag, payload) = &variant[0];
-    let Some(name) = tag.as_str() else {
-        return Err(invalid("non-string plan node variant"));
-    };
-    if FORBIDDEN_PLAN_VARIANTS.contains(&name) {
-        return Err(err!(
-            FFI,
-            "Serialized Polars plan contains a forbidden plan node: {}",
-            name
-        ));
-    }
-    if name == "Scan" {
-        return check_file_scan(payload, allowed_files);
-    }
-    if name == "GroupBy" {
-        let ValueRef::Map(fields) = payload else {
-            return Err(invalid("invalid GroupBy plan node"));
-        };
-        if fields
-            .iter()
-            .any(|(key, value)| key.as_str() == Some("apply") && !matches!(value, ValueRef::Nil))
-        {
-            return Err(invalid("group-by callbacks are unsupported"));
-        }
-    }
-    // These variants embed plan nodes directly. The other supported variants
-    // reference the node table, whose entries are all inspected above.
-    if matches!(name, "Union" | "HConcat" | "ExtContext") {
-        let ValueRef::Map(fields) = payload else {
-            return Err(invalid("invalid nested plan node"));
-        };
-        let nested = if name == "ExtContext" {
-            "contexts"
-        } else {
-            "inputs"
-        };
-        let children = fields
-            .iter()
-            .find(|(key, _)| key.as_str() == Some(nested))
-            .map(|(_, value)| value)
-            .ok_or_else(|| invalid("missing nested plan nodes"))?;
-        let ValueRef::Array(children) = children else {
-            return Err(invalid("invalid nested plan nodes"));
-        };
-        for child in children {
-            check_plan_node(child, allowed_files)?;
-        }
-    }
-    Ok(())
-}
-
 /// Inspect inert MessagePack data and rebind approved plugin paths in one pass.
 fn check_value<'a>(
     value: &mut ValueRef<'a>,
     depth: usize,
     trusted_lib: Option<&'a str>,
+    allowed_files: &[String],
 ) -> Fallible<bool> {
     if depth > MAX_NESTING {
         return Err(invalid("plan nesting limit exceeded"));
@@ -420,20 +341,33 @@ fn check_value<'a>(
                             rewritten = true;
                         }
                     }
-                    if FORBIDDEN_EXPR_VARIANTS.contains(&name) {
+                    if FORBIDDEN_VARIANTS.contains(&name) {
                         return Err(err!(
                             FFI,
                             "Serialized Polars plan contains a forbidden construct: {}",
                             name
                         ));
                     }
+                    if name == "Scan" {
+                        check_file_scan(child, allowed_files)?;
+                    }
+                    if name == "GroupBy" {
+                        let ValueRef::Map(fields) = child else {
+                            return Err(invalid("invalid GroupBy plan node"));
+                        };
+                        if fields.iter().any(|(key, value)| {
+                            key.as_str() == Some("apply") && !matches!(value, ValueRef::Nil)
+                        }) {
+                            return Err(invalid("group-by callbacks are unsupported"));
+                        }
+                    }
                 }
-                rewritten |= check_value(child, depth + 1, trusted_lib)?;
+                rewritten |= check_value(child, depth + 1, trusted_lib, allowed_files)?;
             }
         }
         ValueRef::Array(values) => {
             for child in values {
-                rewritten |= check_value(child, depth + 1, trusted_lib)?;
+                rewritten |= check_value(child, depth + 1, trusted_lib, allowed_files)?;
             }
         }
         ValueRef::Ext(_, _) => return Err(invalid("MessagePack extensions are unsupported")),
