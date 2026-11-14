@@ -16,10 +16,10 @@ use std::collections::HashSet;
 use std::io::{self, Read};
 
 use polars::prelude::DslPlan;
-use rmpv::decode::value_ref::BorrowRead;
-use rmpv::ValueRef;
 #[cfg(test)]
 use rmpv::Value;
+use rmpv::ValueRef;
+use rmpv::decode::value_ref::BorrowRead;
 
 use crate::error::Fallible;
 
@@ -59,7 +59,6 @@ impl<'a> BorrowRead<'a> for BoundedReader<'a> {
         self.remaining = &self.remaining[len..];
     }
 }
-
 
 // This list is intentionally broader than the set of known code-execution
 // paths. False-positive rejection is preferable to running a Python callback.
@@ -213,7 +212,11 @@ fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
         return Err(invalid("non-string plan node variant"));
     };
     if !ALLOWED_PLAN_NODES.contains(&name) {
-        return Err(err!(FFI, "Unsupported serialized Polars plan node: {}", name));
+        return Err(err!(
+            FFI,
+            "Unsupported serialized Polars plan node: {}",
+            name
+        ));
     }
     if matches!(name, "Union" | "HConcat" | "ExtContext") {
         let ValueRef::Map(fields) = payload else {
