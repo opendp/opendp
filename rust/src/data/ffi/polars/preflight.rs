@@ -311,6 +311,52 @@ mod tests {
         ])
     }
 
+    fn slot(variant: &str) -> Value {
+        Value::Map(vec![
+            (
+                Value::String("value".into()),
+                Value::Map(vec![(Value::String(variant.into()), Value::Nil)]),
+            ),
+            (Value::String("version".into()), Value::from(1)),
+        ])
+    }
+
+    #[test]
+    fn inspects_every_node_behind_ir_wrapper() {
+        use std::sync::Arc;
+
+        let wrapped = DslPlan::IR {
+            dsl: Arc::new(DslPlan::default()),
+            version: 0,
+            node: None,
+        };
+        let mut serialized = Vec::new();
+        wrapped
+            .serialize_versioned(&mut serialized, Default::default())
+            .unwrap();
+        validate_serialized_dslplan(&serialized).unwrap();
+
+        // Polars deserializes every slot, not just nodes reachable from the
+        // root. An IR wrapper must not conceal an eagerly-unpickled slot.
+        let mut payload = rmpv::decode::read_value(
+            &mut std::io::Cursor::new(&serialized[HEADER_LENGTH..]),
+        )
+        .unwrap();
+        let Value::Map(root) = &mut payload else {
+            panic!("expected struct map");
+        };
+        let Value::Array(slots) = &mut root
+            .iter_mut()
+            .find(|(name, _)| name.as_str() == Some("dsl_plans"))
+            .unwrap()
+            .1
+        else {
+            panic!("expected node slot map");
+        };
+        slots.push(slot("PythonScan"));
+        assert!(validate_serialized_dslplan(&encoded(&payload)).is_err());
+    }
+
     #[test]
     fn accepts_native_versioned_plan() {
         let mut bytes = Vec::new();
@@ -323,10 +369,7 @@ mod tests {
     #[test]
     fn refuses_python_and_callback_variants_before_polars_deserialization() {
         for name in FORBIDDEN_VARIANTS {
-            let bad = root_with(Value::Array(vec![Value::Map(vec![(
-                Value::String((*name).into()),
-                Value::Nil,
-            )])]));
+            let bad = root_with(Value::Array(vec![slot(name)]));
             assert!(
                 validate_serialized_dslplan(&encoded(&bad)).is_err(),
                 "{name}"
