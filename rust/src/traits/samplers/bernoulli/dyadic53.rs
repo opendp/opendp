@@ -15,7 +15,7 @@ pub fn numerator_from_bits(bits: u64) -> u64 {
     if bits == 0x3ff0_0000_0000_0000 {
         1u64 << 53
     } else {
-        (1u64 << 52) | (bits & 0x000f_ffff_ffff_ffff)
+        (1u64 << 52) + (bits % (1u64 << 52))
     }
 }
 
