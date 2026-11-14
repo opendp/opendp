@@ -1,6 +1,6 @@
 //! Data-only preflight for untrusted, serialized Polars DSL plans.
 //!
-//! The Polars 1.36.1 DSL is a versioned header followed by MessagePack. Polars
+//! The Polars DSL is a versioned header followed by MessagePack. Polars
 //! deserializes some Python callbacks eagerly; it is therefore unsafe to call
 //! `DslPlan::deserialize_versioned` and then inspect the resulting plan.
 //!
@@ -69,27 +69,13 @@ const FORBIDDEN_EXPR_VARIANTS: &[&str] = &[
     "SubPlan",
 ];
 
-// Only these Polars 1.36.1 plan node variants can cross the untrusted
-// serialization boundary. Nested plan nodes must be checked as well.
-const ALLOWED_PLAN_NODES: &[&str] = &[
-    "Filter",
-    "Cache",
-    "DataFrameScan",
-    "Select",
-    "GroupBy",
-    "Join",
-    "HStack",
-    "MatchToSchema",
-    "MapFunction",
-    "Distinct",
-    "Sort",
-    "Slice",
-    "Union",
-    "HConcat",
-    "ExtContext",
-    "Pivot",
-    "MergeSorted",
-    "IR",
+// Reject callbacks and external I/O before Polars deserializes the plan.
+const FORBIDDEN_PLAN_VARIANTS: &[&str] = &[
+    "PythonScan",
+    "Scan",
+    "PipeWithSchema",
+    "Sink",
+    "SinkMultiple",
 ];
 
 fn invalid(message: &str) -> crate::error::Error {
@@ -221,8 +207,7 @@ fn inspect_serialized_dslplan<'a>(
     }
 
     // SlotMap encodes each node as {value: Option<Node>, version: u32}.
-    // Checking each enum tag against an allowlist is stronger than trying to
-    // anticipate every future executable plan variant.
+    // Inspect every node, including those not reachable from the root.
     let nodes = root
         .iter()
         .find(|(key, _)| key.as_str() == Some("dsl_plans"))
@@ -260,10 +245,10 @@ fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
     let Some(name) = tag.as_str() else {
         return Err(invalid("non-string plan node variant"));
     };
-    if !ALLOWED_PLAN_NODES.contains(&name) {
+    if FORBIDDEN_PLAN_VARIANTS.contains(&name) {
         return Err(err!(
             FFI,
-            "Unsupported serialized Polars plan node: {}",
+            "Serialized Polars plan contains a forbidden plan node: {}",
             name
         ));
     }
