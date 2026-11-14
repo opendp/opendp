@@ -1,6 +1,10 @@
 # Randomized response: verified model, unfinished runtime bridge
 
-The standalone Verus crate proves Boolean randomized response privacy for a
+The Verus Cargo harness imports the actual production kernel and in-tree
+proof modules. The harness itself contains no proof implementation. Verus
+proves the executable `kernel::release_bool` and `kernel::release_result`
+functions, including exact error propagation, while the remaining
+probabilistic semantics are still conditional. The in-tree model proof proves Boolean randomized response privacy for a
 *specified* probability law, including an input-independent entropy-error
 outcome and every singleton observable `Result<bool, ()>`. The proof also
 checks that these three probabilities sum to one, and that the privacy
@@ -32,3 +36,14 @@ through its original sampler path, which is **not** within this proof scope.
 For `constant_time=false`, it uses the rational sampler.
 
 CI separately runs the standalone Verus verifier and native Rust tests.
+
+
+## Source integration
+
+- `rust/src/measurements/randomized_response/kernel.rs`: executed in production
+  and verified directly using attribute-based Verus annotations.
+- `rust/src/measurements/randomized_response/verus.rs`: operator proof using
+  the production kernel's verified contract.
+- `rust/src/core/verus/measurement.rs`: generic discrete-law Measurement spec.
+- `rust/opendp_verus`: minimal Cargo verification harness only; no duplicate
+  executable implementation or duplicate proof definitions.

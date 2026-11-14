@@ -1,6 +1,8 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
+mod kernel;
+
 use std::collections::HashSet;
 use dashu::rational::RBig;
 
@@ -72,7 +74,7 @@ pub fn make_randomized_response_bool(
             DiscreteDistance,
             MaxDivergence,
             Function::new_fallible(move |truth: &bool| {
-                Ok(*truth ^ !sample_bernoulli_float(prob, true)?)
+                kernel::release_result(*truth, sample_bernoulli_float(prob, true))
             }),
             PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
         );
@@ -86,8 +88,7 @@ pub fn make_randomized_response_bool(
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &bool| {
-            let honest = sample_bernoulli_rational(rational_prob.clone())?;
-            Ok(*truth ^ !honest)
+            kernel::release_result(*truth, sample_bernoulli_rational(rational_prob.clone()))
         }),
         PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
     )

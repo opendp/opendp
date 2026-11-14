@@ -7,14 +7,23 @@
 //! sampler contract obligation.
 use vstd::prelude::*;
 use crate::measurement::valid_discrete_max_divergence_measurement;
+use crate::kernel;
 
 verus! {
 
-/// Same executable deterministic kernel as the native RR callback.
+/// Call the *production* kernel, imported verbatim into the verifier.
 pub fn rr_kernel(truth: bool, honest: bool) -> (output: bool)
     ensures output == (truth ^ !honest),
 {
-    truth ^ !honest
+    kernel::release_bool(truth, honest)
+}
+
+pub fn rr_fallible_kernel_exec(
+    truth: bool, sample: Result<bool, ()>,
+) -> (output: Result<bool, ()>)
+    ensures output == rr_fallible_kernel(truth, sample),
+{
+    kernel::release_result(truth, sample)
 }
 
 pub open spec fn rr_fallible_kernel(
