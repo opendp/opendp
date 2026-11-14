@@ -811,11 +811,12 @@ class LazyFrameQuery:
             raise TypeError("allowed_files must be a sequence of file paths")
         permitted = []
         for file in allowed_files or ():
-            path = Path(file).resolve(strict=True)
-            if not path.is_file():
-                raise ValueError(f"Allowed path is not a file: {path}")
+            path = Path(file)
             if any(char in str(path) for char in "*?[]{}"):
                 raise ValueError(f"Glob characters are not allowed in file paths: {path}")
+            path = path.resolve(strict=True)
+            if not path.is_file():
+                raise ValueError(f"Allowed path is not a file: {path}")
             permitted.append(str(path))
 
         # Snapshot the input so validation and deserialization see the same bytes.
