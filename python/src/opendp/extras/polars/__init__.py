@@ -784,7 +784,11 @@ class LazyFrameQuery:
         self._query = query
         # do not initialize super() because inheritance is only used to mimic the API surface
 
-    def deserialize(self, serialized_plan: bytes) -> LazyFrameQuery:
+    def deserialize(
+        self,
+        serialized_plan: bytes,
+        allowed_files: Sequence[str] | None = None,
+    ) -> LazyFrameQuery:
         """Deserialize an untrusted binary Polars plan into this query.
 
         OpenDP validates the serialized plan and rebinds supported DP plugins
@@ -792,6 +796,8 @@ class LazyFrameQuery:
         Returns a new query without modifying this one.
 
         :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
+        :param allowed_files: Optional list of server-side Parquet files the plan may read.
+            File scans are rejected by default.
         """
         import io
         from pathlib import Path
@@ -801,9 +807,30 @@ class LazyFrameQuery:
         if not isinstance(serialized_plan, (bytes, bytearray, memoryview)):
             raise TypeError("serialized_plan must be binary Polars plan bytes")
 
+        if isinstance(allowed_files, (str, bytes, Path)):
+            raise TypeError("allowed_files must be a sequence of file paths")
+        permitted = []
+        for file in allowed_files or ():
+            path = Path(file).resolve(strict=True)
+            if not path.is_file():
+                raise ValueError(f"Allowed path is not a file: {path}")
+            if any(char in str(path) for char in "*?[]{}"):
+                raise ValueError(f"Glob characters are not allowed in file paths: {path}")
+            permitted.append(str(path))
+
         # Snapshot the input so validation and deserialization see the same bytes.
         trusted_lib = str(Path(lib_path).resolve(strict=True))
-        sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib)
+        try:
+            sanitized = sanitize_polars_plan(bytes(serialized_plan), trusted_lib, permitted)
+        except OpenDPException as error:
+            if "Cannot deserialize Polars plan." not in str(error):
+                raise
+            from opendp.mod import _EXPECTED_POLARS_VERSION
+
+            raise ValueError(
+                f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
+            ) from error
+
         plan = import_optional_dependency("polars").LazyFrame.deserialize(
             io.BytesIO(sanitized)
         )
