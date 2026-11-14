@@ -788,7 +788,7 @@ class LazyFrameQuery:
         self,
         serialized_plan: bytes,
         allowed_files: Sequence[str] | None = None,
-        preflight: bool = True,
+        trusted: bool = False,
     ) -> LazyFrameQuery:
         """Deserialize a binary Polars plan into this query.
 
@@ -797,10 +797,10 @@ class LazyFrameQuery:
         Returns a new query without modifying this one.
 
         :param serialized_plan: The bytes returned by ``query.polars_plan.serialize()``
-        :param allowed_files: Server-side files the plan may read when preflight is enabled.
+        :param allowed_files: Server-side files an untrusted plan may read.
             File scans are rejected by default.
-        :param preflight: Validate and sanitize untrusted plans before deserialization.
-            Set to False only for plans from trusted sources, as Polars
+        :param trusted: Set to True only for locally constructed, trusted plans.
+            Skips security checks against malicious serialized plans; Polars
             deserialization can execute Python callbacks and load native plugins.
         """
         import io
@@ -811,7 +811,7 @@ class LazyFrameQuery:
 
         # Snapshot mutable inputs so the loader observes the validated bytes.
         serialized_plan = bytes(serialized_plan)
-        if preflight:
+        if not trusted:
             from opendp._data import sanitize_polars_plan
 
             if isinstance(allowed_files, (str, bytes, Path)):
@@ -840,7 +840,7 @@ class LazyFrameQuery:
                     f"{error} Expected Polars {_EXPECTED_POLARS_VERSION} on the client."
                 ) from error
         elif allowed_files is not None:
-            raise ValueError("allowed_files requires preflight=True")
+            raise ValueError("allowed_files requires trusted=False")
 
         plan = import_optional_dependency("polars").LazyFrame.deserialize(
             io.BytesIO(serialized_plan)
