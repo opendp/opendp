@@ -50,6 +50,29 @@ const FORBIDDEN_VARIANTS: &[&str] = &[
     "SinkMultiple",
 ];
 
+// Only these Polars 1.36.1 plan node variants can cross the untrusted
+// serialization boundary. Nested plan nodes must be checked as well.
+const ALLOWED_PLAN_NODES: &[&str] = &[
+    "Filter",
+    "Cache",
+    "DataFrameScan",
+    "Select",
+    "GroupBy",
+    "Join",
+    "HStack",
+    "MatchToSchema",
+    "MapFunction",
+    "Distinct",
+    "Sort",
+    "Slice",
+    "Union",
+    "HConcat",
+    "ExtContext",
+    "Pivot",
+    "MergeSorted",
+    "IR",
+];
+
 // These are callback slots in other (otherwise admissible) constructs.
 // Null callbacks are fine, but a non-null callback must never reach Polars.
 const FORBIDDEN_NON_NULL_FIELDS: &[&str] = &["apply", "callback", "scan_fn", "schema_fn"];
@@ -111,7 +134,72 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
         return Err(invalid("unrecognized serialized plan structure"));
     }
 
-    check_value(&value, 0)
+    check_value(&value, 0)?;
+
+    // SlotMap encodes each node as {value: Option<Node>, version: u32}.
+    // Checking each enum tag against an allowlist is stronger than trying to
+    // anticipate every future executable plan variant.
+    let nodes = root
+        .iter()
+        .find(|(key, _)| key.as_str() == Some("dsl_plans"))
+        .map(|(_, value)| value)
+        .ok_or_else(|| invalid("missing plan nodes"))?;
+    let ValueRef::Array(slots) = nodes else {
+        return Err(invalid("invalid plan node collection"));
+    };
+    for slot in slots {
+        let ValueRef::Map(fields) = slot else {
+            return Err(invalid("invalid plan slot"));
+        };
+        let node = fields
+            .iter()
+            .find(|(key, _)| key.as_str() == Some("value"))
+            .map(|(_, value)| value)
+            .ok_or_else(|| invalid("missing plan slot value"))?;
+        if !matches!(node, ValueRef::Nil) {
+            check_plan_node(node)?;
+        }
+    }
+    Ok(())
+}
+
+/// Check the serialized plan variant without constructing any Polars objects.
+fn check_plan_node(node: &ValueRef<'_>) -> Fallible<()> {
+    let ValueRef::Map(variant) = node else {
+        return Err(invalid("invalid plan node"));
+    };
+    if variant.len() != 1 {
+        return Err(invalid("expected a single plan node variant"));
+    }
+    let (tag, payload) = &variant[0];
+    let Some(name) = tag.as_str() else {
+        return Err(invalid("non-string plan node variant"));
+    };
+    if !ALLOWED_PLAN_NODES.contains(&name) {
+        return Err(err!(FFI, "Unsupported serialized Polars plan node: {}", name));
+    }
+    if matches!(name, "Union" | "HConcat" | "ExtContext") {
+        let ValueRef::Map(fields) = payload else {
+            return Err(invalid("invalid nested plan node"));
+        };
+        let nested = if name == "ExtContext" {
+            "contexts"
+        } else {
+            "inputs"
+        };
+        let children = fields
+            .iter()
+            .find(|(key, _)| key.as_str() == Some(nested))
+            .map(|(_, value)| value)
+            .ok_or_else(|| invalid("missing nested plan nodes"))?;
+        let ValueRef::Array(children) = children else {
+            return Err(invalid("invalid nested plan nodes"));
+        };
+        for child in children {
+            check_plan_node(child)?;
+        }
+    }
+    Ok(())
 }
 
 /// Traverse inert MessagePack data. Do not instantiate any Polars/Serde types.
