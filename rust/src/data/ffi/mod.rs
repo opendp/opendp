@@ -268,14 +268,12 @@ pub extern "C" fn opendp_data__slice_as_object(
         if raw.ptr.is_null() {
             return fallible!(FFI, "Invalid serialized Polars plan buffer");
         }
-        // Copy untrusted FFI bytes once, so validation and deserialization
-        // consume the exact same snapshot.
-        let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) }.to_vec();
+        let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
         // Native FFI inputs are supplied by the trusted local caller.
         // Remote serialized plans must first use LazyFrameQuery.deserialize,
         // which rebinds all plugin libraries before Polars can load them.
-        crate::polars::preflight::validate_serialized_dslplan(&bytes)?;
-        DslPlan::deserialize_versioned(bytes.as_slice())
+        crate::polars::preflight::validate_serialized_dslplan(bytes)?;
+        DslPlan::deserialize_versioned(bytes)
             .map_err(
             |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
         )
