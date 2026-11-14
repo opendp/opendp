@@ -29,33 +29,35 @@ const MAX_NESTING: usize = 128;
 // paths. False-positive rejection is preferable to running a Python callback.
 // Audit ALL callback-bearing variants before updating the pinned Polars build.
 const FORBIDDEN_VARIANTS: &[&str] = &[
-    "PythonScan",     // eagerly deserializes scan_fn/schema_fn
-    "OpaquePython",   // eagerly deserializes PythonFunction
+    "PythonScan",        // eagerly deserializes scan_fn/schema_fn
+    "OpaquePython",      // eagerly deserializes PythonFunction
     "AnonymousFunction", // lazily deserializes Python UDFs
-    "Python",         // PlanCallback::Python (including nested function options)
-    "RenameAlias",    // callback applied to a column name
-    "PipeWithDtype",  // expression callback
-    "PipeWithSchema", // plan callback
-    "FoldHorizontal", // function expression callback
+    "Python",            // PlanCallback::Python (including nested function options)
+    "RenameAlias",       // callback applied to a column name
+    "PipeWithDtype",     // expression callback
+    "PipeWithSchema",    // plan callback
+    "FoldHorizontal",    // function expression callback
     "ReduceHorizontal",
     "CumFoldHorizontal",
     "CumReduceHorizontal",
-    "Map",            // RollingFunction::Map callback
-    "MapFieldNames",  // struct-field callback
-    "SubPlan",        // an independently supplied nested plan
-    "Scan",           // user-controlled external sources and providers
-    "Sink",           // user-controlled output destination
+    "Map",           // RollingFunction::Map callback
+    "MapFieldNames", // struct-field callback
+    "SubPlan",       // an independently supplied nested plan
+    "Scan",          // user-controlled external sources and providers
+    "Sink",          // user-controlled output destination
     "SinkMultiple",
 ];
 
 // These are callback slots in other (otherwise admissible) constructs.
 // Null callbacks are fine, but a non-null callback must never reach Polars.
-const FORBIDDEN_NON_NULL_FIELDS: &[&str] = &[
-    "apply", "callback", "scan_fn", "schema_fn",
-];
+const FORBIDDEN_NON_NULL_FIELDS: &[&str] = &["apply", "callback", "scan_fn", "schema_fn"];
 
 fn invalid(message: &str) -> crate::error::Error {
-    err!(FFI, "Unsafe or unsupported serialized Polars plan: {}", message)
+    err!(
+        FFI,
+        "Unsafe or unsupported serialized Polars plan: {}",
+        message
+    )
 }
 
 /// Validate a versioned serialized DslPlan *before* Polars deserializes it.
@@ -83,7 +85,7 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
 
     let payload = &raw[HEADER_LENGTH..];
     let mut cursor = Cursor::new(payload);
-    let value = rmpv::decode::read_value(&mut cursor)
+    let value = rmpv::decode::read_value_with_max_depth(&mut cursor, MAX_NESTING)
         .map_err(|e| err!(FFI, "Malformed Polars MessagePack: {}", e))?;
     if cursor.position() != payload.len() as u64 {
         return Err(invalid("trailing data"));
@@ -192,7 +194,10 @@ mod tests {
                 Value::String((*name).into()),
                 Value::Nil,
             )])]));
-            assert!(validate_serialized_dslplan(&encoded(&bad)).is_err(), "{name}");
+            assert!(
+                validate_serialized_dslplan(&encoded(&bad)).is_err(),
+                "{name}"
+            );
         }
         let bad = root_with(Value::Map(vec![(
             Value::String("apply".into()),
