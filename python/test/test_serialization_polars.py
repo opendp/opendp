@@ -133,7 +133,9 @@ def test_serialized_plan_preflight_allows_opendp_query():
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
-@pytest.mark.parametrize("kind", ["plan_callback", "expression_callback"])
+@pytest.mark.parametrize(
+    "kind", ["plan_callback", "expression_callback", "group_callback", "rename_callback"]
+)
 def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
     from opendp._data import validate_polars_plan
 
@@ -142,12 +144,18 @@ def test_serialized_plan_preflight_rejects_python_udfs(monkeypatch, kind):
         malicious = source.map_batches(
             _identity_batches, schema={"value": pl.Int64}
         )
-    else:
+    elif kind == "expression_callback":
         malicious = source.select(
             pl.col("value").map_elements(
                 _identity_element, return_dtype=pl.Int64
             )
         )
+    elif kind == "group_callback":
+        malicious = source.group_by("value").map_groups(
+            _identity_batches, schema={"value": pl.Int64}
+        )
+    else:
+        malicious = source.select(pl.col("value").name.map(_identity_element))
     serialized = malicious.serialize()
     with pytest.raises(dp.OpenDPException):
         validate_polars_plan(serialized)
@@ -167,3 +175,14 @@ def test_serialized_plan_preflight_rejects_malformed_bytes():
     for data in [b"", b"not a Polars plan", b"DSL_VERSION"]:
         with pytest.raises(dp.OpenDPException):
             validate_polars_plan(data)
+
+
+
+def test_ffi_plan_loader_preflights_callbacks():
+    from opendp._convert import _lazyframe_to_slice
+    from opendp._data import slice_as_object
+
+    source = pl.LazyFrame({"value": [1]})
+    malicious = source.map_batches(_identity_batches, schema={"value": pl.Int64})
+    with pytest.raises(dp.OpenDPException):
+        slice_as_object(_lazyframe_to_slice(malicious), "LazyFrame")
