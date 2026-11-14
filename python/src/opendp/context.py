@@ -77,6 +77,7 @@ from opendp.typing import _ELEMENTARY_TYPES, RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import Bound, LazyFrameQuery, Margin
 from dataclasses import replace
+from deprecated.sphinx import deprecated
 
 __all__ = [
     "space_of",
@@ -495,27 +496,21 @@ class Context(object):
     d_mids     = {self.d_mids},
     d_out      = {self.d_out})"""
 
+    @deprecated(
+        version="0.16.0",
+        reason="Use context.query().deserialize(serialized_plan) instead.",
+    )
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
-        """
-        Deserialize a Polars plan into a query bound to this context.
+        """Deserialize a Polars plan into a query bound to this context.
 
-        Deprecated: use ``context.query().deserialize(serialized_plan)`` instead.
         See the :ref:`serialization documentation <lazyframe-serialization>`.
 
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
         """
-        from warnings import warn
-
         new_query = self.query()
         if not isinstance(new_query, LazyFrameQuery):
             raise ValueError("'data' of context must be a LazyFrame")
 
-        warn(
-            "Context.deserialize_polars_plan is deprecated; "
-            "use context.query().deserialize(serialized_plan) instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
         return new_query.deserialize(serialized_plan)
 
     @staticmethod
