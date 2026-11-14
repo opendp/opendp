@@ -130,10 +130,9 @@ def test_lazyframequery_deserialize_is_safe_entrypoint(monkeypatch):
     sanitize = _data.sanitize_polars_plan
     checked = []
 
-    def checked_sanitize(data, trusted_lib, allowed_files):
+    def checked_sanitize(data, trusted_lib):
         checked.append(data)
-        assert allowed_files == []
-        return sanitize(data, trusted_lib, allowed_files)
+        return sanitize(data, trusted_lib)
 
     monkeypatch.setattr(_data, "sanitize_polars_plan", checked_sanitize)
     restored = original.deserialize(raw)
@@ -230,44 +229,40 @@ def test_deserialize_reports_expected_polars_version():
         context.query().deserialize(serialized)
 
 
-def test_deserialize_file_allowlist(tmp_path, monkeypatch):
-    keys = tmp_path / "keys.parquet"
-    other = tmp_path / "other.parquet"
-    pl.DataFrame({"age": [1, 2, 3]}).write_parquet(keys)
-    pl.DataFrame({"age": [4]}).write_parquet(other)
+@pytest.mark.parametrize("format", ["parquet", "csv"])
+def test_untrusted_deserialize_rejects_file_scans(tmp_path, monkeypatch, format):
+    keys = tmp_path / f"keys.{format}"
+    frame = pl.DataFrame({"age": [1, 2, 3]})
+    if format == "parquet":
+        frame.write_parquet(keys)
+        scan = pl.scan_parquet(keys)
+    else:
+        frame.write_csv(keys)
+        scan = pl.scan_csv(keys)
 
     plan = (
         context.query()
         .group_by("age")
         .agg(dp.len(signed=True))
-        .with_keys(pl.scan_parquet(keys))
+        .with_keys(scan)
     )
-    serialized = plan.polars_plan.serialize()
-
-    real_deserialize = pl.LazyFrame.deserialize
 
     def reject_polars(*args, **kwargs):
-        pytest.fail("Polars deserialization ran before file authorization")
+        pytest.fail("Polars deserialized a file scan before preflight")
 
     monkeypatch.setattr(pl.LazyFrame, "deserialize", reject_polars)
-    with pytest.raises(dp.OpenDPException, match="file scans are not allowed"):
-        context.query().deserialize(serialized)
-    with pytest.raises(dp.OpenDPException, match="file scan path is not allowed"):
-        context.query().deserialize(serialized, allowed_files=[other])
-
-    monkeypatch.setattr(pl.LazyFrame, "deserialize", real_deserialize)
-    restored = context.query().deserialize(serialized, allowed_files=[keys])
-    assert isinstance(restored.polars_plan, pl.LazyFrame)
-
-    with pytest.raises(ValueError, match="Glob characters"):
-        context.query().deserialize(serialized, allowed_files=[tmp_path / "*.parquet"])
+    with pytest.raises(dp.OpenDPException, match="forbidden construct: Scan"):
+        context.query().deserialize(plan.polars_plan.serialize())
 
 
-def test_deserialize_allows_approved_csv_scan(tmp_path):
-    keys = tmp_path / "keys.csv"
-    pl.DataFrame({"age": [1]}).write_csv(keys)
-    serialized = pl.scan_csv(keys).serialize()
-    restored = context.query().deserialize(serialized, allowed_files=[keys])
+def test_untrusted_deserialize_allows_in_memory_public_keys():
+    plan = (
+        context.query()
+        .group_by("age")
+        .agg(dp.len(signed=True))
+        .with_keys(pl.LazyFrame({"age": [1, 2, 3]}))
+    )
+    restored = context.query().deserialize(plan.polars_plan.serialize())
     assert isinstance(restored.polars_plan, pl.LazyFrame)
 
 
@@ -294,10 +289,6 @@ def test_trusted_local_plan_can_scan_file(tmp_path, monkeypatch):
     monkeypatch.setattr(_data, "sanitize_polars_plan", unexpected_preflight)
     restored = context.query().deserialize(serialized, trusted=True)
     assert isinstance(restored.polars_plan, pl.LazyFrame)
-    with pytest.raises(ValueError, match="allowed_files requires trusted=False"):
-        context.query().deserialize(
-            serialized, trusted=True, allowed_files=[source]
-        )
 
 
 def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
@@ -306,9 +297,9 @@ def test_deserialize_polars_plan_uses_same_bytes_after_validation(monkeypatch):
     supplied = bytearray(query.polars_plan.serialize())
     sanitize = _data.sanitize_polars_plan
 
-    def mutate_original(snapshot, trusted_lib, allowed_files):
+    def mutate_original(snapshot, trusted_lib):
         assert type(snapshot) is bytes
-        rewritten = sanitize(snapshot, trusted_lib, allowed_files)
+        rewritten = sanitize(snapshot, trusted_lib)
         supplied[:] = b"\x00" * len(supplied)
         return rewritten
 
