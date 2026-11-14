@@ -7,6 +7,7 @@
 use vstd::prelude::*;
 
 /// One sampled Boolean, postprocessed according to randomized response.
+#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures result == (truth ^ !honest),
 ))]

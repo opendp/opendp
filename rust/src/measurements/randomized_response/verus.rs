@@ -57,6 +57,39 @@ pub open spec fn rr_result_mass(
     }
 }
 
+/// Push forward an exact Bernoulli(p) result through the *real* executable
+/// release_bool function. dual_spec generates its spec from production code.
+/// XOR is an involution, so the unique honest bit yielding a given released
+/// output is release_bool(truth, output).
+pub open spec fn rr_pushforward_mass(
+    truth: bool, outcome: Result<bool, ()>, p: real, q: real,
+) -> real {
+    match outcome {
+        Ok(value) => (1real - q)
+            * (if kernel::release_bool(truth, value) { p } else { 1real - p }),
+        Err(_) => q,
+    }
+}
+
+/// The sampler's Bernoulli law transported through the production postprocessor
+/// agrees with the canonical randomized-response law, for every observable
+/// success or entropy-error outcome.
+pub proof fn lemma_pushforward_matches_rr(
+    truth: bool, outcome: Result<bool, ()>, p: real, q: real,
+)
+    ensures
+        rr_pushforward_mass(truth, outcome, p, q)
+            == rr_result_mass(truth, outcome, p, q),
+{
+    match outcome {
+        Ok(value) => {
+            if truth { if value {} else {} }
+            else { if value {} else {} }
+        }
+        Err(_) => {}
+    }
+}
+
 /// Derive the successful output law from the Bernoulli post-expectation.
 pub proof fn lemma_success_law(truth: bool, output: bool, p: real)
     ensures
@@ -130,7 +163,7 @@ pub open spec fn rr_valid_measurement(p: real, q: real, factor: real) -> bool {
     valid_discrete_max_divergence_measurement::<bool, Result<bool, ()>, u32, ()>(
         |_: bool| true,
         |left: bool, right: bool, distance: u32| discrete_close(left, right, distance),
-        |truth: bool, outcome: Result<bool, ()>| rr_result_mass(truth, outcome, p, q),
+        |truth: bool, outcome: Result<bool, ()>| rr_pushforward_mass(truth, outcome, p, q),
         |distance: u32| Ok(rr_map(p, factor, distance)),
     )
 }
@@ -257,8 +290,8 @@ pub proof fn lemma_make_randomized_response_bool_returns_valid(
         implies match rr_map(p, factor, distance) {
             None => true,
             Some(cost) => forall|outcome: Result<bool, ()>|
-                rr_result_mass(left, outcome, p, q)
-                    <= cost * rr_result_mass(right, outcome, p, q),
+                rr_pushforward_mass(left, outcome, p, q)
+                    <= cost * rr_pushforward_mass(right, outcome, p, q),
         } by {
         if distance == 0 {
             assert(left == right);
@@ -268,8 +301,10 @@ pub proof fn lemma_make_randomized_response_bool_returns_valid(
             assert(1real / 2real <= p < 1real);
             assert(p <= factor * (1real - p));
             assert forall|outcome: Result<bool, ()>|
-                rr_result_mass(left, outcome, p, q)
-                    <= factor * rr_result_mass(right, outcome, p, q) by {
+                rr_pushforward_mass(left, outcome, p, q)
+                    <= factor * rr_pushforward_mass(right, outcome, p, q) by {
+                lemma_pushforward_matches_rr(left, outcome, p, q);
+                lemma_pushforward_matches_rr(right, outcome, p, q);
                 lemma_result_domination(p, q, factor, left, right, outcome);
             }
         }

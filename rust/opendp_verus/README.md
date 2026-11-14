@@ -47,3 +47,10 @@ CI separately runs the standalone Verus verifier and native Rust tests.
 - `rust/src/core/verus/measurement.rs`: generic discrete-law Measurement spec.
 - `rust/opendp_verus`: minimal Cargo verification harness only; no duplicate
   executable implementation or duplicate proof definitions.
+
+The main Measurement theorem is now stated over `rr_pushforward_mass`:
+the output distribution obtained by applying the *production* `release_bool`
+function (with Verus-generated dual spec) to an assumed Bernoulli sampler.
+The earlier `rr_result_mass` formula is only a derived lemma, not an
+independently assumed mechanism law. This still requires verifying that
+OpenDP's sampler satisfies the Bernoulli distributional contract.
