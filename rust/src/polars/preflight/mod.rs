@@ -86,20 +86,6 @@ fn check_ffi_plugin(plugin: &ValueRef<'_>) -> Fallible<()> {
     Ok(())
 }
 
-/// Validate a versioned serialized DslPlan *before* Polars deserializes it.
-///
-/// Requiring the exact header prevents a new Polars schema or minor version
-/// from silently introducing a new Python-object deserialization path. This
-/// check cannot be bypassed by POLARS_SKIP_DSL_HASH_VERIFICATION.
-/// Reject plans containing unsupported callbacks, plugins or file accesses.
-///
-/// This validation must run before passing untrusted bytes to Polars.
-pub fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
-    inspect_serialized_dslplan(raw, None, &[]).map(|_| ())
-}
-
-// Rebind plugin paths in MessagePack before Polars can load a shared library.
-// The borrowed value tree can be rewritten without copying the entire payload.
 /// Validate a plan and replace approved plugin library paths with a trusted path.
 ///
 /// Only local file scans named in `allowed_files` may be deserialized.
@@ -111,7 +97,7 @@ pub fn sanitize_serialized_dslplan(
     if trusted_lib.is_empty() {
         return Err(invalid("server plugin library path is not configured"));
     }
-    let (value, rewritten) = inspect_serialized_dslplan(raw, Some(trusted_lib), allowed_files)?;
+    let (value, rewritten) = inspect_serialized_dslplan(raw, trusted_lib, allowed_files)?;
     if !rewritten {
         return Ok(raw.to_vec());
     }
@@ -123,7 +109,7 @@ pub fn sanitize_serialized_dslplan(
 
 fn inspect_serialized_dslplan<'a>(
     raw: &'a [u8],
-    trusted_lib: Option<&'a str>,
+    trusted_lib: &'a str,
     allowed_files: &[String],
 ) -> Fallible<(ValueRef<'a>, bool)> {
     if raw.len() < HEADER_LENGTH || !raw.starts_with(DSL_MAGIC) {
@@ -266,7 +252,7 @@ fn check_file_scan(scan: &ValueRef<'_>, allowed_files: &[String]) -> Fallible<()
 fn check_value<'a>(
     value: &mut ValueRef<'a>,
     depth: usize,
-    trusted_lib: Option<&'a str>,
+    trusted_lib: &'a str,
     allowed_files: &[String],
 ) -> Fallible<bool> {
     if depth > MAX_NESTING {
@@ -289,18 +275,16 @@ fn check_value<'a>(
                 if is_variant {
                     if name == "FfiPlugin" {
                         check_ffi_plugin(child)?;
-                        if let Some(trusted_lib) = trusted_lib {
-                            let ValueRef::Map(plugin) = child else {
-                                return Err(invalid("invalid FfiPlugin"));
-                            };
-                            let path = plugin
-                                .iter_mut()
-                                .find(|(name, _)| name.as_str() == Some("lib"))
-                                .map(|(_, value)| value)
-                                .ok_or_else(|| invalid("missing plugin library"))?;
-                            *path = ValueRef::from(trusted_lib);
-                            rewritten = true;
-                        }
+                        let ValueRef::Map(plugin) = child else {
+                            return Err(invalid("invalid FfiPlugin"));
+                        };
+                        let path = plugin
+                            .iter_mut()
+                            .find(|(name, _)| name.as_str() == Some("lib"))
+                            .map(|(_, value)| value)
+                            .ok_or_else(|| invalid("missing plugin library"))?;
+                        *path = ValueRef::from(trusted_lib);
+                        rewritten = true;
                     }
                     if FORBIDDEN_VARIANTS.contains(&name) {
                         return Err(err!(
