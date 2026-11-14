@@ -348,7 +348,9 @@ pub proof fn lemma_dyadic53_randomized_response_valid(
     crate::bernoulli_proof::lemma_bernoulli_probability(numerator);
     let p = crate::bernoulli_proof::dyadic53_mass(numerator);
     assert(p == (numerator as real) / 9_007_199_254_740_992real);
-    assert(1real / 2real <= p <= 1real) by(nonlinear_arith);
+    assert((numerator as real) >= 4_503_599_627_370_496real);
+    assert((numerator as real) <= 9_007_199_254_740_992real);
+    assert(1real / 2real <= p <= 1real);
     if p < 1real {
         assert(numerator < 9_007_199_254_740_992u64);
         assert(p <= factor * (1real - p));
