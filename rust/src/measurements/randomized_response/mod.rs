@@ -4,7 +4,6 @@ mod ffi;
 mod kernel;
 
 use std::collections::HashSet;
-use dashu::rational::RBig;
 
 use opendp_derive::bootstrap;
 
@@ -13,7 +12,7 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{sample_bernoulli_float, sample_bernoulli_rational};
+use crate::traits::samplers::{sample_bernoulli_float, sample_bernoulli_dyadic53};
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -43,13 +42,12 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
-/// * `constant_time` - When true, preserves the existing floating-point sampler path.
-///   The experimental distributional proof concerns only the rational path when false.
+/// * `constant_time` - Both values use one fixed-size uniform-byte draw.
 ///
 /// # Verification status
-/// The Verus model theorem in `rust/opendp_verus` is conditional on a correct
-/// sampler law, input-independent entropy errors and conservative f64 rounding.
-/// It is not yet a machine-checked guarantee about this executable constructor.
+/// Verus checks the production XOR kernel and the fixed-width Bernoulli
+/// decision. Raw entropy, the f64 bit interpretation, numeric rounding, and
+/// constructor assembly remain explicit verification obligations.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
@@ -66,29 +64,18 @@ pub fn make_randomized_response_bool(
         prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?.inf_ln()?
     };
 
-    if constant_time {
-        // Preserve the existing API. Only the non-constant-time rational
-        // path has the standalone distributional model proof.
-        return Measurement::new(
-            AtomDomain::default(),
-            DiscreteDistance,
-            MaxDivergence,
-            Function::new_fallible(move |truth: &bool| {
-                kernel::release_result(*truth, sample_bernoulli_float(prob, true))
-            }),
-            PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
-        );
-    }
-
-    // A finite f64 probability has an exact dyadic rational representation.
-    let rational_prob = RBig::try_from(prob)
-        .map_err(|_| err!(MakeMeasurement, "invalid probability"))?;
+    // For any accepted binary64 probability, p = numerator / 2^53 exactly.
+    // The conversion depends only on the public constructor parameter.
+    let numerator = crate::traits::samplers::dyadic53_numerator(prob.to_bits());
+    // Both constant_time settings use the same fixed-size entropy path,
+    // with no private-input-dependent sampling branches.
+    let _ = constant_time;
     Measurement::new(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &bool| {
-            kernel::release_result(*truth, sample_bernoulli_rational(rational_prob.clone()))
+            kernel::release_result(*truth, sample_bernoulli_dyadic53(numerator))
         }),
         PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
     )

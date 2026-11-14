@@ -54,3 +54,13 @@ function (with Verus-generated dual spec) to an assumed Bernoulli sampler.
 The earlier `rr_result_mass` formula is only a derived lemma, not an
 independently assumed mechanism law. This still requires verifying that
 OpenDP's sampler satisfies the Bernoulli distributional contract.
+
+## Fixed-width Bernoulli specialization
+
+The Boolean RR path no longer allocates an arbitrary-precision rational or
+uses rejection sampling. For all valid p in [0.5, 1], a binary64 value is an
+integer numerator over 2^53. A single uniform 64-bit entropy sample is shifted
+by 11 bits and compared with the numerator. The native integer functions in
+`traits/samplers/bernoulli/dyadic53.rs` are imported and checked directly by
+Verus. Uniform entropy, the float/bit correspondence and numeric privacy-map
+rounding are still outstanding parts of full-stack verification.

@@ -2,6 +2,8 @@
 //! beside the corresponding production OpenDP modules.
 #[path = "../../src/core/verus/measurement.rs"]
 pub mod measurement;
+#[path = "../../src/traits/samplers/bernoulli/dyadic53.rs"]
+pub mod dyadic53;
 #[path = "../../src/measurements/randomized_response/kernel.rs"]
 pub mod kernel;
 #[path = "../../src/measurements/randomized_response/verus.rs"]

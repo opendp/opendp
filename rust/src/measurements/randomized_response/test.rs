@@ -54,3 +54,31 @@ fn test_bool_certified_constructor() -> Fallible<()> {
     assert!(make_randomized_response_bool(0.75, true)?.invoke(&true).is_ok());
     Ok(())
 }
+
+#[test]
+fn test_bool_dyadic_53_numerator() {
+    use crate::traits::samplers::dyadic53_numerator;
+    let to_num = |p: f64| dyadic53_numerator(p.to_bits());
+    assert_eq!(to_num(0.5), 1u64 << 52);
+    assert_eq!(to_num(0.75), 3u64 << 51);
+    assert_eq!(to_num(1.0), 1u64 << 53);
+    assert_eq!(to_num(f64::from_bits(0.5f64.to_bits() + 1)), (1u64 << 52) + 1);
+    assert_eq!(to_num(f64::from_bits(1.0f64.to_bits() - 1)), (1u64 << 53) - 1);
+}
+
+#[test]
+fn test_bool_dyadic_53_extremes() -> Fallible<()> {
+    use crate::traits::samplers::dyadic53_numerator;
+    let success = |n, b| ((b >> 11) < n);
+    let max = (1u64 << 53) - 1;
+    assert!(!success(0, 0));
+    assert!(success(1u64 << 53, u64::MAX));
+    assert!(success(1, 0));
+    assert!(!success(1, 1u64 << 11));
+    assert!(success(max, (max - 1) << 11));
+    assert!(!success(max, max << 11));
+    let deterministic = make_randomized_response_bool(1.0, false)?;
+    assert_eq!(deterministic.invoke(&true)?, true);
+    assert_eq!(deterministic.invoke(&false)?, false);
+    Ok(())
+}

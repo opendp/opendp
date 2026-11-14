@@ -8,12 +8,16 @@ on:
       - 'rust/src/core/mod.rs'
       - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'
+      - 'rust/src/traits/samplers/bernoulli/**'
+      - 'rust/src/traits/samplers/mod.rs'
       - '.github/workflows/verified-randomized-response-alerus.yml'
   pull_request:
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'
       - 'rust/src/measurements/randomized_response/**'
+      - 'rust/src/traits/samplers/bernoulli/**'
+      - 'rust/src/traits/samplers/mod.rs'
       - '.github/workflows/verified-randomized-response-alerus.yml'
   workflow_dispatch:
 

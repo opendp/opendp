@@ -12,6 +12,16 @@ use super::{fill_bytes, sample_geometric_buffer, sample_uniform_ubig_below};
 #[cfg(test)]
 mod test;
 
+pub(crate) mod dyadic53;
+
+/// Sample exactly Bernoulli(numerator/2^53) assuming a uniform 64-bit source.
+/// Every 53-bit value has exactly 2^11 preimages; there is no rejection loop.
+pub(crate) fn sample_bernoulli_dyadic53(numerator: u64) -> Fallible<bool> {
+    let mut bytes = [0u8; 8];
+    fill_bytes(&mut bytes)?;
+    Ok(dyadic53::success(numerator, u64::from_ne_bytes(bytes)))
+}
+
 /// Sample from `Bernoulli(p=0.5)`.
 ///
 /// # Proof Definition
