@@ -265,14 +265,14 @@ pub extern "C" fn opendp_data__slice_as_object(
     pub fn deserialize_raw_dslplan(
         raw: &FfiSlice
     ) -> Fallible<DslPlan> {
-        if raw.ptr.is_null() || raw.len > isize::MAX as usize {
+        if raw.ptr.is_null() || raw.len > polars::preflight::MAX_PLAN_BYTES {
             return fallible!(FFI, "Invalid serialized Polars plan buffer");
         }
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
-        // Serialized plans may contain Python callbacks that Polars unpickles
-        // eagerly. This data-only preflight must run first.
-        polars::preflight::validate_serialized_dslplan(slice)?;
-        DslPlan::deserialize_versioned(slice)
+        // Copy untrusted FFI bytes once, so validation and deserialization
+        // consume the exact same snapshot.
+        let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) }.to_vec();
+        polars::preflight::validate_serialized_dslplan(&bytes)?;
+        DslPlan::deserialize_versioned(bytes.as_slice())
             .map_err(
             |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
         )
