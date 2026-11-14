@@ -9,7 +9,7 @@ use crate::{
     domains::BitVector,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
     ffi::util,
-    polars::{preflight, ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
+    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery, preflight},
 };
 
 #[bootstrap(
