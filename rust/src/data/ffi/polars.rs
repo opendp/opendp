@@ -19,7 +19,11 @@ use crate::{
         serialized_plan(rust_type = "BitVector", hint = "bytes"),
         trusted_lib(c_type = "char *", rust_type = "String")
     ),
-    returns(c_type = "FfiResult<AnyObject *>", rust_type = "BitVector", hint = "bytes")
+    returns(
+        c_type = "FfiResult<AnyObject *>",
+        rust_type = "BitVector",
+        hint = "bytes"
+    )
 )]
 /// Validate a serialized plan and rebind approved OpenDP shims to a server-owned library.
 #[unsafe(no_mangle)]
