@@ -1,6 +1,11 @@
 use super::*;
 use rmpv::Value;
 
+// The sanitizer is the only entry point for untrusted serialized plans.
+fn preflight(raw: &[u8]) -> Fallible<Vec<u8>> {
+    sanitize_serialized_dslplan(raw, "/trusted/libopendp.so", &[])
+}
+
 fn encoded(body: &Value) -> Vec<u8> {
     let mut header = Vec::new();
     DslPlan::default()
@@ -43,7 +48,7 @@ fn inspects_every_node_behind_ir_wrapper() {
     wrapped
         .serialize_versioned(&mut serialized, Default::default())
         .unwrap();
-    validate_serialized_dslplan(&serialized).unwrap();
+    preflight(&serialized).unwrap();
 
     // Polars deserializes every slot, not just nodes reachable from the
     // root. An IR wrapper must not conceal an eagerly-unpickled slot.
@@ -61,7 +66,7 @@ fn inspects_every_node_behind_ir_wrapper() {
         panic!("expected node slot map");
     };
     slots.push(slot("PythonScan"));
-    assert!(validate_serialized_dslplan(&encoded(&payload)).is_err());
+    assert!(preflight(&encoded(&payload)).is_err());
 }
 
 #[test]
@@ -70,7 +75,7 @@ fn accepts_native_versioned_plan() {
     DslPlan::default()
         .serialize_versioned(&mut bytes, Default::default())
         .unwrap();
-    validate_serialized_dslplan(&bytes).unwrap();
+    preflight(&bytes).unwrap();
 }
 
 #[test]
@@ -78,7 +83,7 @@ fn refuses_python_and_callback_variants_before_polars_deserialization() {
     for name in ["PythonScan", "PipeWithSchema", "Scan", "Sink"] {
         let bad = root_with(Value::Array(vec![slot(name)]));
         assert!(
-            validate_serialized_dslplan(&encoded(&bad)).is_err(),
+            preflight(&encoded(&bad)).is_err(),
             "{name}"
         );
     }
@@ -95,7 +100,7 @@ fn refuses_python_and_callback_variants_before_polars_deserialization() {
             (Value::String("value".into()), select),
             (Value::String("version".into()), Value::from(1)),
         ])]));
-        let error = validate_serialized_dslplan(&encoded(&bad)).unwrap_err();
+        let error = preflight(&encoded(&bad)).unwrap_err();
         assert!(
             format!("{error:?}").contains("forbidden construct"),
             "{name}"
@@ -111,7 +116,7 @@ fn refuses_python_and_callback_variants_before_polars_deserialization() {
         ),
         (Value::String("version".into()), Value::from(1)),
     ])]));
-    let error = validate_serialized_dslplan(&encoded(&bad)).unwrap_err();
+    let error = preflight(&encoded(&bad)).unwrap_err();
     assert!(format!("{error:?}").contains("group-by callbacks"));
 }
 
@@ -150,8 +155,7 @@ fn serialized_scan(path: &str, scan_type: &str) -> Vec<u8> {
 fn only_approved_local_scans_can_be_deserialized() {
     let path = "/public/keys.parquet".to_string();
     let bytes = serialized_scan(&path, "Parquet");
-    assert!(validate_serialized_dslplan(&bytes).is_err());
-    assert!(sanitize_serialized_dslplan(&bytes, "opendp", &[]).is_err());
+    assert!(preflight(&bytes).is_err());
     sanitize_serialized_dslplan(&bytes, "opendp", &[path.clone()]).unwrap();
 
     let other = vec!["/public/other.parquet".to_string()];
@@ -187,18 +191,18 @@ fn checks_dangerous_tags_under_unknown_nested_variants() {
     // Unknown structure does not stop traversal, even if it has no known
     // input/children fields.
     let harmless = nested(Value::Map(vec![(string("Filter"), Value::Nil)]));
-    validate_serialized_dslplan(&harmless).unwrap();
+    preflight(&harmless).unwrap();
 
     for tag in ["PythonScan", "OpaquePython", "Sink"] {
         let dangerous = nested(Value::Map(vec![(string(tag), Value::Nil)]));
-        assert!(validate_serialized_dslplan(&dangerous).is_err(), "{tag}");
+        assert!(preflight(&dangerous).is_err(), "{tag}");
     }
 
     let group_by = nested(Value::Map(vec![(
         string("GroupBy"),
         Value::Map(vec![(string("apply"), Value::Bool(true))]),
     )]));
-    assert!(format!("{:?}", validate_serialized_dslplan(&group_by).unwrap_err())
+    assert!(format!("{:?}", preflight(&group_by).unwrap_err())
         .contains("group-by callbacks"));
 
     let scan = nested(Value::Map(vec![(
@@ -221,7 +225,7 @@ fn checks_dangerous_tags_under_unknown_nested_variants() {
             ),
         ]),
     )]));
-    assert!(format!("{:?}", validate_serialized_dslplan(&scan).unwrap_err())
+    assert!(format!("{:?}", preflight(&scan).unwrap_err())
         .contains("file scans are not allowed"));
 }
 
@@ -247,7 +251,7 @@ fn plugin_plan(symbol: &str, kwargs: Value, flags: Value) -> Vec<u8> {
 #[test]
 fn validates_and_rebinds_native_plugin_symbols() {
     let raw = plugin_plan("noise", Value::Binary(vec![]), Value::Bool(false));
-    validate_serialized_dslplan(&raw).unwrap();
+    preflight(&raw).unwrap();
 
     let trusted_lib = "/server/libopendp.so";
     let rewritten = sanitize_serialized_dslplan(&raw, trusted_lib, &[]).unwrap();
@@ -263,21 +267,21 @@ fn validates_and_rebinds_native_plugin_symbols() {
     );
 
     let unknown = plugin_plan("unknown_symbol", Value::Binary(vec![]), Value::Nil);
-    assert!(validate_serialized_dslplan(&unknown).is_err());
+    assert!(preflight(&unknown).is_err());
 
     let pickled = plugin_plan("noise", Value::Binary(vec![1]), Value::Nil);
-    assert!(validate_serialized_dslplan(&pickled).is_err());
+    assert!(preflight(&pickled).is_err());
 
     // Client-supplied plugin flags are validated later when OpenDP builds
     // the executable measurement. Preflight only restricts symbol and kwargs.
     let unusual_flags = plugin_plan("noise", Value::Array(vec![]), Value::String("flags".into()));
-    validate_serialized_dslplan(&unusual_flags).unwrap();
+    preflight(&unusual_flags).unwrap();
 }
 
 #[test]
 fn rejects_malformed_plan_buffers() {
     for raw in [&b""[..], &b"not a Polars plan"[..], &b"DSL_VERSION"[..]] {
-        assert!(validate_serialized_dslplan(raw).is_err());
+        assert!(preflight(raw).is_err());
     }
 }
 
@@ -289,7 +293,7 @@ fn refuses_bad_header_duplicates_trailing_bytes_and_unknown_structure() {
         .unwrap();
     let mut bad_header = bytes.clone();
     bad_header[DSL_MAGIC.len()] ^= 1;
-    let version_error = validate_serialized_dslplan(&bad_header).unwrap_err();
+    let version_error = preflight(&bad_header).unwrap_err();
     let version_message = format!("{version_error:?}");
     assert!(version_message.contains("client"));
     assert!(version_message.contains("server"));
@@ -297,12 +301,12 @@ fn refuses_bad_header_duplicates_trailing_bytes_and_unknown_structure() {
 
     let mut bad_schema = bytes.clone();
     bad_schema[DSL_MAGIC.len() + 4] ^= 1;
-    let schema_error = validate_serialized_dslplan(&bad_schema).unwrap_err();
+    let schema_error = preflight(&bad_schema).unwrap_err();
     assert!(format!("{schema_error:?}").contains("serialization schema"));
 
     let mut trailing = bytes.clone();
     trailing.push(0);
-    assert!(validate_serialized_dslplan(&trailing).is_err());
+    assert!(preflight(&trailing).is_err());
 
     let duplicate = Value::Map(vec![
         (Value::String("root".into()), Value::Nil),
@@ -310,7 +314,7 @@ fn refuses_bad_header_duplicates_trailing_bytes_and_unknown_structure() {
         (Value::String("dataframes".into()), Value::Nil),
         (Value::String("dsl_plans".into()), Value::Nil),
     ]);
-    assert!(validate_serialized_dslplan(&encoded(&duplicate)).is_err());
+    assert!(preflight(&encoded(&duplicate)).is_err());
 
-    assert!(validate_serialized_dslplan(&encoded(&Value::Nil)).is_err());
+    assert!(preflight(&encoded(&Value::Nil)).is_err());
 }
