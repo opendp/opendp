@@ -51,6 +51,6 @@ fn test_bool_certified_constructor() -> Fallible<()> {
         assert!(measurement.invoke(&false).is_ok());
     }
     assert!(make_randomized_response_bool(f64::NAN, false).is_err());
-    assert!(make_randomized_response_bool(0.75, true).is_err());
+    assert!(make_randomized_response_bool(0.75, true)?.invoke(&true).is_ok());
     Ok(())
 }

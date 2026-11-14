@@ -1,21 +1,22 @@
-//! Mechanized model validity for Boolean randomized response.
-//! The exact Bernoulli sampler and the directed-rounded f64 logarithm
-//! require native-to-Verus correspondence; neither is silently assumed
-//! as an axiom inside this proof.
+//! Boolean randomized response privacy over the entire observable Result law.
+//!
+//! This is a *conditional* model theorem. It proves the privacy guarantee for
+//! the law stated below; it does not prove that OpenDP's fallible RNG realizes
+//! that law. The error atom models entropy failure with input-independent
+//! probability q. Whether the actual errors have this law is a separate
+//! sampler contract obligation.
 use vstd::prelude::*;
 use crate::measurement::valid_measurement;
-use crate::alerus_bridge::{rr_mass, lemma_rr_event_expectation};
 
 verus! {
 
-/// Checked executable XOR kernel, identical to the native callback.
+/// Same executable deterministic kernel as the native RR callback.
 pub fn rr_kernel(truth: bool, honest: bool) -> (output: bool)
     ensures output == (truth ^ !honest),
 {
     truth ^ !honest
 }
 
-/// An entropy failure must be independent of the private Boolean.
 pub open spec fn rr_fallible_kernel(
     truth: bool, sample: Result<bool, ()>,
 ) -> Result<bool, ()> {
@@ -25,60 +26,94 @@ pub open spec fn rr_fallible_kernel(
     }
 }
 
-pub open spec fn rr_failed(sample: Result<bool, ()>) -> bool {
-    match sample { Err(_) => true, Ok(_) => false }
+pub open spec fn rr_mass(truth: bool, output: bool, p: real) -> real {
+    if truth == output { p } else { 1real - p }
 }
 
-pub proof fn lemma_error_independent(
-    left: bool, right: bool, sample: Result<bool, ()>,
+/// Bernoulli(p) expectation, the post-expectation shape used by Alerus.
+pub open spec fn bernoulli_expectation(
+    p: real, post: spec_fn(bool) -> real,
+) -> real {
+    p * post(true) + (1real - p) * post(false)
+}
+
+/// The output law after XOR, with an input-independent entropy-error atom.
+/// q is the probability of Err; success is (1-q), followed by Bernoulli(p).
+pub open spec fn rr_result_mass(
+    truth: bool, outcome: Result<bool, ()>, p: real, q: real,
+) -> real {
+    match outcome {
+        Ok(value) => (1real - q) * rr_mass(truth, value, p),
+        Err(_) => q,
+    }
+}
+
+/// Derive the successful output law from the Bernoulli post-expectation.
+pub proof fn lemma_success_law(truth: bool, output: bool, p: real)
+    ensures
+        bernoulli_expectation(
+            p, |honest: bool| if (truth ^ !honest) == output { 1real } else { 0real },
+        ) == rr_mass(truth, output, p),
+{
+    if truth { if output {} else {} }
+    else { if output {} else {} }
+}
+
+/// The failure branch propagates *the same* error for either input when the
+/// sampler's result is fixed. The sampler's result law must also be independent
+/// of the private input; this lemma alone cannot establish that property.
+pub proof fn lemma_error_propagates(
+    truth: bool, sample: Result<bool, ()>,
 )
     ensures
-        match rr_fallible_kernel(left, sample) {
-            Err(_) => true,
-            Ok(_) => false,
-        } == rr_failed(sample),
-        match rr_fallible_kernel(right, sample) {
-            Err(_) => true,
-            Ok(_) => false,
-        } == rr_failed(sample),
+        match sample {
+            Err(_) => rr_fallible_kernel(truth, sample) == Err(()),
+            Ok(honest) => rr_fallible_kernel(truth, sample) == Ok(truth ^ !honest),
+        },
 {
 }
 
-pub open spec fn discrete_close(left: bool, right: bool, d: u32) -> bool {
-    left == right || d > 0
+/// DiscreteDistance: identical inputs have distance zero, any distinct input
+/// pair is close only at positive distance.
+pub open spec fn discrete_close(left: bool, right: bool, distance: u32) -> bool {
+    left == right || distance > 0
 }
 
-/// The None cost represents infinite privacy loss. A finite cost represents
-/// exp(epsilon), so no floating-point log or real exponential is axiomatized.
-pub open spec fn rr_map(p: real, factor: real, d: u32) -> Option<real> {
-    if d == 0 { Some(1real) }
+/// Some(factor) represents exp(epsilon); None represents infinite epsilon.
+/// This deliberately avoids axiomatizing floating-point ln/exp.
+pub open spec fn rr_map(p: real, factor: real, distance: u32) -> Option<real> {
+    if distance == 0 { Some(1real) }
     else if p == 1real { None }
     else { Some(factor) }
 }
 
-pub open spec fn rr_output_close(
-    p: real, left: bool, right: bool, cost: Option<real>,
+/// A pointwise pure-DP relation on the full result law.
+pub open spec fn max_divergence_bound<Y>(
+    left: spec_fn(Y) -> real,
+    right: spec_fn(Y) -> real,
+    bound: Option<real>,
 ) -> bool {
-    match cost {
+    match bound {
         None => true,
-        Some(factor) =>
-            rr_mass(left, true, p) <= factor * rr_mass(right, true, p)
-            && rr_mass(left, false, p) <= factor * rr_mass(right, false, p),
+        Some(factor) => forall|outcome: Y|
+            #[trigger] left(outcome) <= factor * right(outcome),
     }
 }
 
-pub open spec fn rr_valid_measurement(p: real, factor: real) -> bool {
-    valid_measurement::<bool, u32, Option<real>, ()>(
+pub open spec fn rr_valid_measurement(p: real, q: real, factor: real) -> bool {
+    valid_measurement::<bool, Result<bool, ()>, u32, Option<real>, ()>(
         |_: bool| true,
-        |left: bool, right: bool, d: u32| discrete_close(left, right, d),
-        |left: bool, right: bool, cost: Option<real>|
-            rr_output_close(p, left, right, cost),
-        |d: u32| Ok(rr_map(p, factor, d)),
+        |left: bool, right: bool, distance: u32| discrete_close(left, right, distance),
+        |truth: bool, outcome: Result<bool, ()>| rr_result_mass(truth, outcome, p, q),
+        |left: spec_fn(Result<bool, ()>) -> real,
+         right: spec_fn(Result<bool, ()>) -> real,
+         bound: Option<real>| max_divergence_bound(left, right, bound),
+        |distance: u32| Ok(rr_map(p, factor, distance)),
     )
 }
 
-/// For a finite privacy budget, dominate every singleton output event.
-pub proof fn lemma_rr_event_domination(
+/// The unscaled Bernoulli RR success law obeys pointwise domination.
+pub proof fn lemma_success_domination(
     p: real, factor: real, left: bool, right: bool, output: bool,
 )
     requires
@@ -90,67 +125,86 @@ pub proof fn lemma_rr_event_domination(
 {
     if left == right {
         if output == left {
-            assert(p >= 0real);
             assert(p <= factor * p) by(nonlinear_arith)
                 requires p >= 0real, factor >= 1real;
         } else {
-            assert(1real - p >= 0real);
             assert(1real - p <= factor * (1real - p)) by(nonlinear_arith)
                 requires 1real - p >= 0real, factor >= 1real;
         }
     } else if output == left {
-        assert(rr_mass(left, output, p) == p);
-        assert(rr_mass(right, output, p) == 1real - p);
     } else {
         assert(1real - p <= p);
-        assert(p >= 0real);
         assert(p <= factor * p) by(nonlinear_arith)
             requires p >= 0real, factor >= 1real;
     }
 }
 
-/// Establishes a valid Measurement *model*, including zero distance,
-/// finite privacy bounds, p=1 (infinite bound), and all Boolean events.
-///
-/// Native adapter obligations: the Alerus Bernoulli law is realized by the
-/// production sampler, and exp(rounded_epsilon) >= factor >= p/(1-p).
-pub proof fn lemma_make_randomized_response_bool_returns_valid(
-    p: real, factor: real,
+/// Lift success domination to the observable Result law, including Err.
+pub proof fn lemma_result_domination(
+    p: real, q: real, factor: real,
+    left: bool, right: bool, outcome: Result<bool, ()>,
 )
     requires
-        1real / 2real <= p <= 1real,
+        1real / 2real <= p < 1real,
+        0real <= q <= 1real,
         factor >= 1real,
-        p < 1real ==> p <= factor * (1real - p),
-    ensures rr_valid_measurement(p, factor),
+        p <= factor * (1real - p),
+    ensures
+        rr_result_mass(left, outcome, p, q)
+            <= factor * rr_result_mass(right, outcome, p, q),
 {
-    assert forall|left: bool, right: bool, d: u32|
-        #[trigger] discrete_close(left, right, d)
-        implies rr_output_close(p, left, right, rr_map(p, factor, d)) by {
-        if d == 0 {
-            assert(left == right);
-            assert(rr_map(p, factor, d) == Some(1real));
-            assert(rr_mass(left, true, p) == rr_mass(right, true, p));
-            assert(rr_mass(left, false, p) == rr_mass(right, false, p));
-        } else if p == 1real {
-            assert(rr_map(p, factor, d) == None);
-        } else {
-            assert(1real / 2real <= p < 1real);
-            assert(p <= factor * (1real - p));
-            lemma_rr_event_domination(p, factor, left, right, true);
-            lemma_rr_event_domination(p, factor, left, right, false);
+    match outcome {
+        Ok(output) => {
+            lemma_success_domination(p, factor, left, right, output);
+            let a = rr_mass(left, output, p);
+            let b = rr_mass(right, output, p);
+            assert((1real - q) * a <= factor * ((1real - q) * b))
+                by(nonlinear_arith)
+                requires
+                    a <= factor * b,
+                    1real - q >= 0real;
+        }
+        Err(_) => {
+            assert(q <= factor * q) by(nonlinear_arith)
+                requires q >= 0real, factor >= 1real;
         }
     }
 }
 
-/// Connect the Bernoulli post-expectation to the RR event law.
-pub proof fn lemma_alerus_rr_mass(truth: bool, output: bool, p: real)
-    ensures
-        crate::alerus_bridge::bernoulli_expectation(
-            p, |honest: bool|
-                crate::alerus_bridge::rr_event_indicator(truth, output, honest),
-        ) == rr_mass(truth, output, p),
+/// Every successfully constructed *model* satisfies its Measurement contract.
+/// Alerus/native sampling correspondence and floating-point factor bounds
+/// are not yet proven; they are explicit preconditions, not hidden axioms.
+pub proof fn lemma_make_randomized_response_bool_returns_valid(
+    p: real, q: real, factor: real,
+)
+    requires
+        1real / 2real <= p <= 1real,
+        0real <= q <= 1real,
+        factor >= 1real,
+        p < 1real ==> p <= factor * (1real - p),
+    ensures rr_valid_measurement(p, q, factor),
 {
-    lemma_rr_event_expectation(truth, output, p);
+    assert forall|left: bool, right: bool, distance: u32|
+        #[trigger] discrete_close(left, right, distance)
+        implies max_divergence_bound(
+            |outcome: Result<bool, ()>| rr_result_mass(left, outcome, p, q),
+            |outcome: Result<bool, ()>| rr_result_mass(right, outcome, p, q),
+            rr_map(p, factor, distance),
+        ) by {
+        if distance == 0 {
+            assert(left == right);
+        } else if p == 1real {
+            assert(rr_map(p, factor, distance) == None);
+        } else {
+            assert(1real / 2real <= p < 1real);
+            assert(p <= factor * (1real - p));
+            assert forall|outcome: Result<bool, ()>|
+                rr_result_mass(left, outcome, p, q)
+                    <= factor * rr_result_mass(right, outcome, p, q) by {
+                lemma_result_domination(p, q, factor, left, right, outcome);
+            }
+        }
+    }
 }
 
 } // verus!

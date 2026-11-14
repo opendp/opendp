@@ -1,25 +1,32 @@
-# Verified Boolean randomized response (experimental)
+# Randomized response: verified model, unfinished runtime bridge
 
-This branch contains only the new Verus proof companion and native
-randomized-response Measurement integration. It deliberately leaves out the
-old Lean/SampCert tree from the earlier alerus branch.
+The standalone Verus crate proves Boolean randomized response privacy for a
+*specified* probability law, including an input-independent entropy-error
+outcome and every singleton observable `Result<bool, ()>`. It does **not**
+verify that the production sampler realizes that law.
 
-- measurement.rs: generic fallible-map Measurement validity predicate.
-- alerus_bridge.rs: expectation calculation for the Bernoulli-XOR kernel.
-- randomized_response_bool.rs: executable Boolean kernel, input-independent
-  error channel, complete Boolean event domination and constructor model.
-- The native constructor goes through an operator-specific certified bridge.
+## Explicit remaining obligations
 
-The following **remain trusted**, and must be closed before the result is
-claimed as a fully mechanized production privacy proof:
-1. Correspondence from Alerus's Bernoulli expectation-preservation rule to
-   OpenDP's production rational Bernoulli sampler.
-2. Correspondence of the exact rational input probability and the numeric
-   directed-rounding privacy-map constant to the real model, in particular
-   exp(epsilon) >= p/(1-p).
-3. An input-independent entropy failure channel.
+1. **Sampler law:** for any fixed non-private rational probability `p`,
+   `sample_bernoulli_rational` must have an input-independent error
+   probability `q`, conditional on success it produces Bernoulli(p).
+   The proof models only one error atom; a production-level proof must also
+   account for the full error payload distribution.
+2. **Randomness foundation:** Alerus's Bernoulli expectation-preservation
+   theorem relies on a trusted `rand_ubig` contract; the current
+   `alerus_bridge` *did not* use that theorem, so it has been removed.
+   We need a sound bridge from a uniform source to the actual fallible
+   OpenDP sampler, not a second manually specified sampler model.
+3. **Numeric bound:** native `f64` privacy constant must satisfy
+   `exp(privacy_constant) >= p/(1-p)` for all accepted `p < 1`.
+   The Verus theorem instead assumes a real factor satisfying this bound.
+4. **Constructor correspondence:** the native closure and dynamic
+   `Measurement` wrapping must realize the kernel and privacy map analyzed
+   by Verus. The premature `new_certified` marker was removed until this
+   obligation is actually discharged.
 
-The proof uses factor = exp(epsilon) symbolically and represents infinity
-separately; it does not incorrectly treat floating-point log as exact.
-The Boolean constructor rejects constant_time=true for the experimental
-verified path. Categorical randomized response is left unchanged.
+The `make_randomized_response_bool` constructor retains `constant_time=true`
+through its original sampler path, which is **not** within this proof scope.
+For `constant_time=false`, it uses the rational sampler.
+
+CI separately runs the standalone Verus verifier and native Rust tests.
