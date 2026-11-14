@@ -2,7 +2,6 @@ use std::ffi::c_char;
 
 use opendp_derive::bootstrap;
 
-pub(super) mod preflight;
 use polars::lazy::frame::LazyFrame;
 
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
     domains::BitVector,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
     ffi::util,
-    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
+    polars::{preflight, ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
 };
 
 #[bootstrap(
