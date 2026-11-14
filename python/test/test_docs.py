@@ -244,7 +244,7 @@ The members of this module will then be accessible at ``{expected_ns}``.
 def test_extras_docstring_installs(py_path):
     actual = get_docstring(py_path)
     namespace = get_namespace(py_path)
-    if "sklearn" in namespace:
+    if "sklearn" in namespace or "scipy" in namespace:
         extra = "scikit-learn"
     elif "numpy" in namespace:
         extra = "numpy"

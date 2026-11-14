@@ -5,11 +5,15 @@ from importlib.util import find_spec
 
 import opendp.prelude as dp
 
+collect_ignore = []
 if find_spec("sklearn") is None:
-    collect_ignore = [  # pragma: no cover
+    collect_ignore += [  # pragma: no cover
         "src/opendp/extras/sklearn/_estimator.py",
         "src/opendp/extras/sklearn/linear_model/_logistic_regression.py",
+        "src/opendp/extras/sklearn/cluster",
     ]
+if find_spec("scipy") is None:
+    collect_ignore.append("src/opendp/extras/scipy")  # pragma: no cover
 
 
 @pytest.fixture(autouse=True)
