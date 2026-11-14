@@ -8,8 +8,7 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::CheckAtom;
-use crate::traits::samplers::Shuffle;
-use std::cmp::Ordering;
+use crate::traits::samplers::{Shuffle, sample_uniform_uint_below};
 
 #[doc(hidden)]
 pub trait IsMetricOrdered: Metric {
@@ -73,41 +72,33 @@ where
         input_domain.with_size(size),
         MO::default(),
         Function::new_fallible(move |arg: &Vec<TA>| {
-            Ok(match arg.len().cmp(&size) {
-                Ordering::Less | Ordering::Equal => {
-                    // number of records to impute. Checked to ensure the subtraction cannot underflow
-                    let padding = size.checked_sub(arg.len()).ok_or_else(|| {
-                        err!(
-                            FailedFunction,
-                            "input length must not exceed the target size"
-                        )
-                    })?;
-                    let mut data = Vec::new();
-                    // checked allocation: fails with an error instead of panicking
-                    // (capacity overflow) or aborting (failed allocation)
-                    data.try_reserve_exact(size).map_err(|_| {
-                        err!(
-                            FailedFunction,
-                            "failed to allocate memory to resize dataset to length {size}"
-                        )
-                    })?;
-                    data.extend(arg.iter().cloned());
-                    data.extend((0..padding).map(|_| constant.clone()));
-                    // Randomize the order only when converting unordered input to ordered output.
-                    if MO::ORDERED && !MI::ORDERED {
-                        data.shuffle()?;
+            // Reserve the full output vector up front, so that allocation failure
+            // depends only on the fixed target size, not on the length of the input.
+            let mut data = Vec::new();
+            data.try_reserve_exact(size)
+                .map_err(|_| err!(FailedFunction, "failed to allocate output vector"))?;
+
+            data.extend(arg.iter().take(size).cloned());
+
+            if arg.len() < size {
+                // Impute missing records.
+                data.extend((arg.len()..size).map(|_| constant.clone()));
+            } else if arg.len() > size && !MI::ORDERED {
+                // Uniformly sample without replacement using reservoir sampling.
+                for (i, value) in arg.iter().enumerate().skip(size) {
+                    let j = sample_uniform_uint_below(i + 1)?;
+                    if j < size {
+                        data[j] = value.clone();
                     }
-                    data
                 }
-                Ordering::Greater => {
-                    let mut data = arg.clone();
-                    // if input metric is not ordered, then shuffle so that the slice is a random draw from the data
-                    if !MI::ORDERED {
-                        data.shuffle()?;
-                    }
-                    data[..size].to_vec()
-                }
-            })
+            }
+
+            // Randomize the order only when converting unordered input to ordered output.
+            if !MI::ORDERED && MO::ORDERED {
+                data.shuffle()?;
+            }
+
+            Ok(data)
         }),
         // Consider when a dataset has zero records and is resized to length 1.
         // The resulting dataset will be `vec![constant]`
