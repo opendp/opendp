@@ -14,7 +14,7 @@ use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, I
 use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "idealized-numerics"),
     arguments(bounds(rust_type = "(T, T)"), ddof(default = 1)),
     generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")

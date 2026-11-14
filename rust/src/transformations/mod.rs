@@ -33,9 +33,9 @@ mod sum;
 #[cfg(feature = "contrib")]
 pub use sum::*;
 
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "idealized-numerics"))]
 mod sum_of_squared_deviations;
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "idealized-numerics"))]
 pub use sum_of_squared_deviations::*;
 
 #[cfg(feature = "contrib")]
@@ -53,9 +53,9 @@ mod mean;
 #[cfg(feature = "contrib")]
 pub use mean::*;
 
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "idealized-numerics"))]
 mod variance;
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "idealized-numerics"))]
 pub use variance::*;
 
 #[cfg(feature = "contrib")]

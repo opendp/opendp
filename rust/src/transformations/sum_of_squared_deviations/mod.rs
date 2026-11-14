@@ -17,7 +17,7 @@ use crate::traits::{
 use super::UncheckedSum;
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "idealized-numerics"),
     arguments(bounds(rust_type = "(T, T)")),
     generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
