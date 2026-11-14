@@ -41,3 +41,16 @@ fn test_cat_extremes() -> Fallible<()> {
     assert_eq!(m_rr.map(&1)?, f64::INFINITY);
     Ok(())
 }
+
+#[test]
+fn test_bool_certified_constructor() -> Fallible<()> {
+    for prob in [0.5, 0.75, 1.0] {
+        let measurement = make_randomized_response_bool(prob, false)?;
+        assert_eq!(measurement.map(&0)?, 0.0);
+        assert!(measurement.invoke(&true).is_ok());
+        assert!(measurement.invoke(&false).is_ok());
+    }
+    assert!(make_randomized_response_bool(f64::NAN, false).is_err());
+    assert!(make_randomized_response_bool(0.75, true).is_err());
+    Ok(())
+}

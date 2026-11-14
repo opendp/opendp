@@ -239,6 +239,18 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
     }
 }
 
+/// Proof-backed operator parts before dynamic closure erasure.
+///
+/// Implementations are an audited native bridge from Verus proofs to the
+/// actual sampler and privacy map, not an assumption about arbitrary closures.
+pub(crate) trait CertifiedMeasurementParts<DI: Domain, MI: Metric, MO: Measure, TO> {
+    fn into_parts(
+        self,
+        input_domain: &DI,
+        output_measure: &MO,
+    ) -> Fallible<(Function<DI::Carrier, TO>, PrivacyMap<MI, MO>)>;
+}
+
 /// A randomized mechanism with certain privacy characteristics.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
@@ -274,6 +286,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
 {
+    /// Legacy constructor. Validity of the privacy map remains a caller obligation.
     pub fn new(
         input_domain: DI,
         input_metric: MI,
@@ -281,14 +294,29 @@ where
         function: Function<DI::Carrier, TO>,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
+        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
+    }
+
+    /// Construct a Measurement from a proof-backed operator-specific adapter.
+    pub(crate) fn new_certified<P: CertifiedMeasurementParts<DI, MI, MO, TO>>(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        certified: P,
+    ) -> Fallible<Self> {
+        let (function, privacy_map) = certified.into_parts(&input_domain, &output_measure)?;
+        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
+    }
+
+    fn construct(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        function: Function<DI::Carrier, TO>,
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
-        Ok(Self {
-            input_domain,
-            function,
-            input_metric,
-            output_measure,
-            privacy_map,
-        })
+        Ok(Self { input_domain, function, input_metric, output_measure, privacy_map })
     }
 
     #[allow(dead_code)]

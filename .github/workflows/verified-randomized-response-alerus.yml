@@ -1,0 +1,60 @@
+name: Verify randomized response (Verus / Alerus)
+
+on:
+  push:
+    branches: [verified-randomized-response-alerus]
+    paths:
+      - 'rust/opendp_verus/**'
+      - 'rust/src/core/mod.rs'
+      - 'rust/src/measurements/randomized_response/**'
+      - '.github/workflows/verified-randomized-response-alerus.yml'
+  pull_request:
+    paths:
+      - 'rust/opendp_verus/**'
+      - 'rust/src/core/mod.rs'
+      - 'rust/src/measurements/randomized_response/**'
+      - '.github/workflows/verified-randomized-response-alerus.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: verified-randomized-response-alerus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+          components: rustc-dev,llvm-tools
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust/opendp_verus -> target
+          cache-on-failure: true
+      - name: Install pinned Verus
+        run: |
+          curl -fLsS --retry 3 -o verus.zip 'https://github.com/verus-lang/verus/releases/download/release%2F0.2026.11.02.8bf68ee/verus-0.2026.11.02.8bf68ee-x86-linux.zip'
+          unzip -q verus.zip
+          echo "$GITHUB_WORKSPACE/verus-x86-linux" >> "$GITHUB_PATH"
+      - name: Verify randomized response
+        working-directory: rust/opendp_verus
+        run: cargo verus verify
+
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+          cache-on-failure: true
+      - name: Test OpenDP Boolean randomized response
+        working-directory: rust
+        run: cargo test --no-default-features --features contrib measurements::randomized_response --lib

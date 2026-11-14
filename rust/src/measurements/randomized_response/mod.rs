@@ -2,15 +2,16 @@
 mod ffi;
 
 use std::collections::HashSet;
+use dashu::rational::RBig;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{CertifiedMeasurementParts, Function, Measurement, PrivacyMap};
 use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::sample_bernoulli_float;
+use crate::traits::samplers::{sample_bernoulli_float, sample_bernoulli_rational};
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -40,7 +41,7 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
-/// * `constant_time` - Set to true to enable constant time. Slower.
+/// * `constant_time` - Not supported by this proof-backed rational-sampler path.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
@@ -50,24 +51,50 @@ pub fn make_randomized_response_bool(
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     }
 
+    if constant_time {
+        return fallible!(MakeMeasurement,
+            "constant-time sampling is not supported by the certified constructor");
+    }
     let privacy_constant = if prob == 1.0 {
         f64::INFINITY
     } else {
-        // d_out = min(d_in, 1) * ln(p / p')
-        //             where p' = 1 - p
-        //       = min(d_in, 1) * ln(p / (1 - p))
         prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?.inf_ln()?
     };
-
-    Measurement::new(
+    let rational_prob = RBig::try_from(prob)
+        .map_err(|_| err!(MakeMeasurement, "invalid probability"))?;
+    Measurement::new_certified(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
-        }),
-        PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
+        CertifiedRandomizedResponseBool { rational_prob, privacy_constant },
     )
+}
+
+/// Trusted native adapter for the Verus Boolean RR model.
+/// Remaining obligations: Alerus sampler realization, outward-rounded
+/// log privacy constant, and input-independent entropy errors.
+struct CertifiedRandomizedResponseBool {
+    rational_prob: RBig,
+    privacy_constant: f64,
+}
+
+impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
+    for CertifiedRandomizedResponseBool
+{
+    fn into_parts(
+        self,
+        _input_domain: &AtomDomain<bool>,
+        _output_measure: &MaxDivergence,
+    ) -> Fallible<(Function<bool, bool>, PrivacyMap<DiscreteDistance, MaxDivergence>)> {
+        let CertifiedRandomizedResponseBool { rational_prob, privacy_constant } = self;
+        Ok((
+            Function::new_fallible(move |truth: &bool| {
+                let honest = sample_bernoulli_rational(rational_prob.clone())?;
+                Ok(*truth ^ !honest)
+            }),
+            PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
+        ))
+    }
 }
 
 #[bootstrap(
