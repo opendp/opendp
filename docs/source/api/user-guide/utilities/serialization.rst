@@ -44,17 +44,24 @@ perhaps on a remote server.
 The ``polars_plan`` is a Polars ``LazyFrame``. The binary plan is produced by `Polars serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
 
 For plans received from untrusted clients, use
-:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` rather than calling
-``polars.LazyFrame.deserialize`` directly. OpenDP checks and sanitizes the
-serialized DSL before Polars can unpickle Python callbacks or load native
-plugins. Python callbacks and pickled plugin arguments are rejected.
-Only OpenDP's supported DP plugins are allowed, and library paths are
-replaced with the OpenDP library loaded by the server.
+:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize` with its default
+``preflight=True``, rather than calling ``polars.LazyFrame.deserialize``
+directly. OpenDP checks and sanitizes the serialized DSL before Polars can
+unpickle Python callbacks or load native plugins. Python callbacks and
+pickled plugin arguments are rejected. Only OpenDP's supported DP plugins
+are allowed, and library paths are replaced with the OpenDP library loaded
+by the server.
 
 File scans are rejected by default. To read public files on the server,
 pass their paths in ``allowed_files`` when deserializing. The plan may only
 reference those exact files. A server can also check
 ``len(serialized_plan)`` to set its own request-size limit.
+
+For locally created, trusted plans, ``deserialize(..., preflight=False)``
+skips the security checks and permits ordinary Polars features, including
+local file scans and Python callbacks. Never disable preflight for plans
+from untrusted clients. The regular OpenDP FFI data conversion path also
+assumes its caller is trusted.
 
 Context Serialization
 ---------------------
