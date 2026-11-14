@@ -16,6 +16,8 @@ use std::collections::HashSet;
 use std::io::Cursor;
 
 use polars::prelude::DslPlan;
+use rmpv::ValueRef;
+#[cfg(test)]
 use rmpv::Value;
 
 use crate::error::Fallible;
@@ -85,7 +87,7 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
 
     let payload = &raw[HEADER_LENGTH..];
     let mut cursor = Cursor::new(payload);
-    let value = rmpv::decode::read_value_with_max_depth(&mut cursor, MAX_NESTING)
+    let value = rmpv::decode::read_value_ref_with_max_depth(&mut cursor, MAX_NESTING)
         .map_err(|e| err!(FFI, "Malformed Polars MessagePack: {}", e))?;
     if cursor.position() != payload.len() as u64 {
         return Err(invalid("trailing data"));
@@ -93,7 +95,7 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
 
     // Polars' versioned DSL encodes SerializableDslPlan as a struct-map.
     // Refuse formats that do not match this expected top-level structure.
-    let Value::Map(root) = &value else {
+    let ValueRef::Map(root) = &value else {
         return Err(invalid("expected a serialized plan map"));
     };
     let mut fields = HashSet::new();
@@ -113,12 +115,12 @@ pub(crate) fn validate_serialized_dslplan(raw: &[u8]) -> Fallible<()> {
 }
 
 /// Traverse inert MessagePack data. Do not instantiate any Polars/Serde types.
-fn check_value(value: &Value, depth: usize) -> Fallible<()> {
+fn check_value(value: &ValueRef<'_>, depth: usize) -> Fallible<()> {
     if depth > MAX_NESTING {
         return Err(invalid("plan nesting limit exceeded"));
     }
     match value {
-        Value::Map(pairs) => {
+        ValueRef::Map(pairs) => {
             let mut seen = HashSet::new();
             for (key, child) in pairs {
                 if let Some(name) = key.as_str() {
@@ -132,7 +134,7 @@ fn check_value(value: &Value, depth: usize) -> Fallible<()> {
                             name
                         ));
                     }
-                    if FORBIDDEN_NON_NULL_FIELDS.contains(&name) && !matches!(child, Value::Nil) {
+                    if FORBIDDEN_NON_NULL_FIELDS.contains(&name) && !matches!(child, ValueRef::Nil) {
                         return Err(err!(
                             FFI,
                             "Serialized Polars plan contains a callback in field {}",
@@ -144,12 +146,12 @@ fn check_value(value: &Value, depth: usize) -> Fallible<()> {
                 check_value(child, depth + 1)?;
             }
         }
-        Value::Array(values) => {
+        ValueRef::Array(values) => {
             for child in values {
                 check_value(child, depth + 1)?;
             }
         }
-        Value::Ext(_, _) => return Err(invalid("MessagePack extensions are unsupported")),
+        ValueRef::Ext(_, _) => return Err(invalid("MessagePack extensions are unsupported")),
         _ => {}
     }
     Ok(())
