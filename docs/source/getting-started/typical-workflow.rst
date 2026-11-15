@@ -3,8 +3,8 @@ Typical Workflow
 
 .. note::
 
-    The rest of this tutorial will focus exclusively on the Context API in Python,
-    but OpenDP also offers a lower-level Framework API for both Python and R.
+    This overview uses the Context API in Python to coordinate privacy accounting.
+    OpenDP also offers a lower-level Framework API for Python and R.
     See :doc:`../api/user-guide/api-comparison/index` for more details.
 
 A differentially private analysis in OpenDP typically has the following steps:
@@ -21,7 +21,8 @@ A differentially private analysis in OpenDP typically has the following steps:
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release.
 
-We'll illustrate these steps by releasing a differentially private mean of a small vector of random numbers.
+The following examples illustrate how to configure privacy protection with the Context API.
+The next sections show how to apply it to different kinds of analyses.
 
 1. Identify the Unit of Privacy
 -------------------------------
@@ -127,34 +128,10 @@ Since the privacy loss budget is at most ε = 1, and we are partitioning our bud
 5. Submit DP Queries
 --------------------
 
-You can now create differentially private releases.
-Here's a differentially private count:
+Once the Context is set up, you can submit differentially private queries.
+OpenDP provides different interfaces for different kinds of analyses:
 
-.. tab-set::
+* :doc:`tabular-data/index` uses Polars to release private statistics from tabular data.
+* :doc:`statistical-modeling/index` introduces private model fitting with scikit-learn-style estimators.
 
-    .. tab-item:: Python
-        :sync: context
-
-        .. literalinclude:: code/typical-workflow-context.rst
-            :language: python
-            :dedent:
-            :start-after: count
-            :end-before: /count
-
-Here's a differentially private mean:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: context
-
-        .. literalinclude:: code/typical-workflow-context.rst
-            :language: python
-            :dedent:
-            :start-after: mean
-            :end-before: /mean
-
-Other features
---------------
-
-The OpenDP Library supports more statistics, like the variance, various ways to compute histograms and quantiles, and PCA. The library also supports other mechanisms like the Gaussian Mechanism, which provides tighter privacy accounting when releasing a large number of queries, the Thresholded Laplace Mechanism, for releasing counts on data sets with unknown key sets, and variations of randomized response.
+The following tutorials demonstrate how to construct and release these analyses.
