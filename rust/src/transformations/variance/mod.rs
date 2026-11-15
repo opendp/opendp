@@ -11,8 +11,9 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
+use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul};
 #[allow(deprecated)]
-use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
+use super::make_sum_of_squared_deviations;
 
 #[bootstrap(
     features("contrib"),
@@ -41,7 +42,6 @@ use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_square
 ///
 /// # Generics
 /// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
-#[allow(deprecated)]
 pub fn make_variance<S>(
     input_domain: VectorDomain<AtomDomain<S::Item>>,
     input_metric: SymmetricDistance,
@@ -87,13 +87,14 @@ where
         .inf_div(&_4)?
         .inf_mul(&size_)?;
 
-    make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul(
-            AtomDomain::new_non_nan(),
-            AbsoluteDistance::default(),
-            constant,
-            (S::Item::zero(), upper_var_bound),
-        )?
+    #[allow(deprecated)]
+    let ssd = make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?;
+    ssd >> make_lipschitz_float_mul(
+        AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
+        constant,
+        (S::Item::zero(), upper_var_bound),
+    )?
 }
 
 #[cfg(test)]
