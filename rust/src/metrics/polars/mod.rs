@@ -10,7 +10,7 @@ use crate::{
     transformations::traits::UnboundedMetric,
 };
 
-use super::{ChangeOneDistance, IntDistance, MicrodataMetric, SymmetricDistance};
+use super::{IntDistance, MicrodataMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;

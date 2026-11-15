@@ -7,7 +7,7 @@ use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
 use crate::combinators::{CompositionMeasure, make_composition};
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, PrivacyMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
@@ -75,12 +75,12 @@ where
         .iter()
         .map(|expr| {
             // Grouping keys must be stable; preserve the normalized expression.
-            let t_key = expr.clone().make_stable(
+            let t_key: Transformation<_, _, _, L01InfDistance<SymmetricDistance>> = expr.clone().make_stable(
                 WildExprDomain {
                     columns: middle_domain.series_domains.clone(),
                     context: Context::RowByRow,
                 },
-                L0PInfDistance(middle_metric.0.clone()),
+                L01InfDistance(middle_metric.0.clone()),
             )?;
 
             let series_domain = &t_key.output_domain.column;

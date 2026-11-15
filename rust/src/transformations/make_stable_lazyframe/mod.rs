@@ -157,16 +157,9 @@ impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDi
         >,
     > {
         // matching errors only when the plan unambiguously contains a mis-specified truncation
-        let (input, truncations, bounds) =
-            truncate::match_truncations(self.clone(), &input_metric.0.identifier)?;
+        let truncations = truncate::match_truncations(self.clone(), &input_metric.0.identifier)?.1;
         if !truncations.is_empty() {
-            return truncate::make_stable_truncate(
-                input_domain,
-                input_metric,
-                input,
-                truncations,
-                bounds,
-            );
+            return truncate::make_stable_truncate(input_domain, input_metric, self);
         }
 
         match &self {
