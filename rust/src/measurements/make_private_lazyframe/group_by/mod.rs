@@ -7,7 +7,7 @@ use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
 use crate::combinators::{CompositionMeasure, make_composition};
-use crate::core::{Function, Measurement, PrivacyMap, Transformation};
+use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
@@ -16,6 +16,7 @@ use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
+use crate::transformations::make_stable_expr;
 use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
@@ -75,12 +76,13 @@ where
         .iter()
         .map(|expr| {
             // Grouping keys must be stable; preserve the normalized expression.
-            let t_key: Transformation<_, _, _, L01InfDistance<SymmetricDistance>> = expr.clone().make_stable(
+            let t_key = make_stable_expr::<_, L01InfDistance<SymmetricDistance>>(
                 WildExprDomain {
                     columns: middle_domain.series_domains.clone(),
                     context: Context::RowByRow,
                 },
                 L01InfDistance(middle_metric.0.clone()),
+                expr.clone(),
             )?;
 
             let series_domain = &t_key.output_domain.column;
