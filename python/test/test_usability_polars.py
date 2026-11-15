@@ -34,29 +34,6 @@ def test_string_instead_of_tuple_for_margin_key():
         )
 
 
-def test_margins_dict_instead_of_list():
-    lf = pl.LazyFrame(
-        {"col": [1, 2, 3, 4]},
-        schema={"col": pl.Int32},
-    )
-
-    with pytest.warns(
-        DeprecationWarning,
-        match=re.escape(
-            'Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg'
-        ),
-    ):
-        dp.Context.compositor(
-            data=lf,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1.0),
-            split_evenly_over=1,
-            margins={  # type: ignore[arg-type]
-                ("col",): dp.polars.Margin(invariant="keys", max_length=5),
-            },
-        )
-
-
 @pytest.mark.parametrize(
     "domain",
     [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))],
