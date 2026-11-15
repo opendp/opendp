@@ -169,8 +169,12 @@ fn test_r_core_vector_transformations_remain_supported() {
             "{name} should remain supported in R"
         );
 
-        let python_code =
-            python::generate_function("transformations", &function, &python_typemap, &HashMap::new());
+        let python_code = python::generate_function(
+            "transformations",
+            &function,
+            &python_typemap,
+            &HashMap::new(),
+        );
         assert!(
             python_code.contains("@deprecated("),
             "{name} should remain deprecated in Python"
