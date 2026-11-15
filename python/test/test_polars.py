@@ -1076,7 +1076,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
     with pytest.raises(
         dp.OpenDPException,
-        match="max_groups must be known when the metric is not sensitive to ordering",
+        match="max_groups must be known for floating-point sums",
     ):
         dp.m.make_private_lazyframe(
             lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
