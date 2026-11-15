@@ -3,8 +3,8 @@ Typical Workflow
 
 .. note::
 
-    The rest of this tutorial will focus exclusively on the Context API in Python,
-    but OpenDP also offers a lower-level Framework API for both Python and R.
+    This tutorial uses the Context API in Python and R.
+    OpenDP also offers a lower-level Framework API for both languages.
     See :doc:`../api/user-guide/api-comparison/index` for more details.
 
 A differentially private analysis in OpenDP typically has the following steps:
@@ -43,6 +43,14 @@ then the unit of privacy corresponds to one row contribution.
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: unit-of-privacy
+            :end-before: /unit-of-privacy
+
 The privacy unit specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
 Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
@@ -74,6 +82,14 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: privacy-loss
+            :end-before: /privacy-loss
+
 The privacy loss specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
 
 3. Collect Public Information
@@ -95,6 +111,14 @@ Frequently we'll specify bounds on data, based on prior knowledge of the domain.
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
+            :start-after: public-info
+            :end-before: /public-info
+
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
             :start-after: public-info
             :end-before: /public-info
 
@@ -121,6 +145,15 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
         ``dp.Context.compositor`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``context``, in the form of measurements.
 
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: mediate
+            :end-before: /mediate
+
+
 Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
 
 
@@ -141,6 +174,14 @@ Here's a differentially private count:
             :start-after: count
             :end-before: /count
 
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
+            :start-after: count
+            :end-before: /count
+
 Here's a differentially private mean:
 
 .. tab-set::
@@ -151,6 +192,14 @@ Here's a differentially private mean:
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
+            :start-after: mean
+            :end-before: /mean
+
+    .. tab-item:: R
+        :sync: context-r
+
+        .. literalinclude:: code/typical-workflow-context.R
+            :language: r
             :start-after: mean
             :end-before: /mean
 
