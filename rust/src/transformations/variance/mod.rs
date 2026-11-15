@@ -11,6 +11,7 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
+#[allow(deprecated)]
 use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
 
 #[bootstrap(
@@ -40,6 +41,7 @@ use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_square
 ///
 /// # Generics
 /// * `S` - Summation algorithm to use on data type `T`. One of `Sequential<T>` or `Pairwise<T>`.
+#[allow(deprecated)]
 pub fn make_variance<S>(
     input_domain: VectorDomain<AtomDomain<S::Item>>,
     input_metric: SymmetricDistance,

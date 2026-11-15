@@ -10,6 +10,7 @@ use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
+#[allow(deprecated)]
 use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
@@ -28,6 +29,7 @@ use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 /// # Generics
 /// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
 /// * `T` - Atomic Input Type and Output Type.
+#[allow(deprecated)]
 pub fn make_mean<MI, T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,

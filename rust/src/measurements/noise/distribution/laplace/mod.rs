@@ -1,5 +1,3 @@
-use core::f64;
-
 use dashu::{base::Signed, rational::RBig};
 use opendp_derive::{bootstrap, proven};
 
