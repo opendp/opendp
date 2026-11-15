@@ -9,8 +9,8 @@ use crate::{
     domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     metrics::{
-        Bounds, ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
-        SymmetricDistance, SymmetricIdDistance,
+        Bounds, ChangeOneDistance, ChangeOneIdDistance, FrameDistance, SymmetricDistance,
+        SymmetricIdDistance,
     },
     polars::get_disabled_features_message,
 };
@@ -157,9 +157,16 @@ impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDi
         >,
     > {
         // matching errors only when the plan unambiguously contains a mis-specified truncation
-        let truncations = truncate::match_truncations(self.clone(), &input_metric.0.identifier)?.1;
+        let (input, truncations, bounds) =
+            truncate::match_truncations(self.clone(), &input_metric.0.identifier)?;
         if !truncations.is_empty() {
-            return truncate::make_stable_truncate(input_domain, input_metric, self);
+            return truncate::make_stable_truncate(
+                input_domain,
+                input_metric,
+                input,
+                truncations,
+                bounds,
+            );
         }
 
         match &self {
@@ -241,52 +248,45 @@ where
     }
 }
 
-macro_rules! impl_plan_bounded_dp {
-    ($ty:ty) => {
-        impl<MO: UnboundedMetric> StableDslPlan<$ty, FrameDistance<MO>> for DslPlan
-        where
-            DslPlan: StableDslPlan<<$ty as BoundedMetric>::UnboundedMetric, FrameDistance<MO>>,
+impl<MO: UnboundedMetric> StableDslPlan<ChangeOneDistance, FrameDistance<MO>> for DslPlan
+where
+    DslPlan: StableDslPlan<SymmetricDistance, FrameDistance<MO>>,
+{
+    fn make_stable(
+        self,
+        input_domain: DslPlanDomain,
+        input_metric: ChangeOneDistance,
+    ) -> Fallible<Transformation<DslPlanDomain, ChangeOneDistance, DslPlanDomain, FrameDistance<MO>>>
+    {
+        let mut middle_domain = input_domain.clone();
+        if let Some(prev_margin) = middle_domain
+            .margins
+            .iter_mut()
+            .find(|m| m.by == HashSet::new())
         {
-            fn make_stable(
-                self,
-                input_domain: DslPlanDomain,
-                input_metric: $ty,
-            ) -> Fallible<Transformation<DslPlanDomain, $ty, DslPlanDomain, FrameDistance<MO>>>
-            {
-                let mut middle_domain = input_domain.clone();
-                if let Some(prev_margin) = middle_domain
-                    .margins
-                    .iter_mut()
-                    .find(|m| m.by == HashSet::new())
-                {
-                    prev_margin.invariant = Some(Invariant::Lengths);
-                } else {
-                    middle_domain
-                        .margins
-                        .push(Margin::select().with_invariant_lengths());
-                }
-                let middle_metric = input_metric.to_unbounded();
-
-                Transformation::new(
-                    input_domain.clone(),
-                    input_metric.clone(),
-                    middle_domain.clone(),
-                    middle_metric.clone(),
-                    Function::new(Clone::clone),
-                    StabilityMap::new_from_constant(2),
-                )? >> self.make_stable(middle_domain, middle_metric)?
-            }
+            prev_margin.invariant = Some(Invariant::Lengths);
+        } else {
+            middle_domain
+                .margins
+                .push(Margin::select().with_invariant_lengths());
         }
-    };
-}
+        let middle_metric = input_metric.to_unbounded();
 
-impl_plan_bounded_dp!(HammingDistance);
-impl_plan_bounded_dp!(ChangeOneDistance);
+        Transformation::new(
+            input_domain.clone(),
+            input_metric,
+            middle_domain.clone(),
+            middle_metric.clone(),
+            Function::new(Clone::clone),
+            StabilityMap::new_from_constant(2),
+        )? >> self.make_stable(middle_domain, middle_metric)?
+    }
+}
 
 impl<MO: UnboundedMetric> StableDslPlan<ChangeOneIdDistance, FrameDistance<MO>> for DslPlan
 where
     DslPlan:
-        StableDslPlan<<ChangeOneIdDistance as BoundedMetric>::UnboundedMetric, FrameDistance<MO>>,
+        StableDslPlan<SymmetricIdDistance, FrameDistance<MO>>,
 {
     fn make_stable(
         self,

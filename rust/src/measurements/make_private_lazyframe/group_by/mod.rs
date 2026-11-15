@@ -13,7 +13,7 @@ use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
@@ -50,11 +50,10 @@ pub(crate) fn make_private_group_by<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>
-        + StableExpr<L01InfDistance<MI::EventMetric>, L01InfDistance<MI::EventMetric>>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>
+        + StableExpr<L01InfDistance<SymmetricDistance>, L01InfDistance<SymmetricDistance>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
 {
     let is_truncated = input_metric.0.identifier().is_some();
 

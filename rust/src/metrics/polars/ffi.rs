@@ -9,8 +9,7 @@ use crate::{
         util,
     },
     metrics::{
-        Bounds, ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
-        SymmetricIdDistance,
+        Bounds, ChangeOneIdDistance, FrameDistance, SymmetricDistance, SymmetricIdDistance,
     },
     transformations::traits::UnboundedMetric,
 };
@@ -83,7 +82,7 @@ pub extern "C" fn opendp_metrics__frame_distance(
         monomorphize,
         [(
             M,
-            [SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance]
+            [SymmetricDistance, SymmetricIdDistance]
         )],
         (inner_metric)
     )
@@ -110,7 +109,7 @@ pub extern "C" fn opendp_metrics___frame_distance_get_inner_metric(
         monomorphize,
         [(
             M,
-            [SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance]
+            [SymmetricDistance, SymmetricIdDistance]
         )],
         (metric)
     )

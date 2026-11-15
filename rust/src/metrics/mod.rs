@@ -693,7 +693,6 @@ pub trait MicrodataMetric: 'static + Metric<Distance = IntDistance> {
     /// The identifier column if defined.
     fn identifier(&self) -> Option<polars_plan::dsl::Expr>;
 
-    type EventMetric: EventLevelMetric;
 }
 impl MicrodataMetric for SymmetricDistance {
     const SIZED: bool = false;
@@ -702,7 +701,6 @@ impl MicrodataMetric for SymmetricDistance {
     fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
         None
     }
-    type EventMetric = SymmetricDistance;
 }
 impl MicrodataMetric for InsertDeleteDistance {
     const SIZED: bool = false;
@@ -711,7 +709,6 @@ impl MicrodataMetric for InsertDeleteDistance {
     fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
         None
     }
-    type EventMetric = InsertDeleteDistance;
 }
 impl MicrodataMetric for ChangeOneDistance {
     const SIZED: bool = true;
@@ -720,7 +717,6 @@ impl MicrodataMetric for ChangeOneDistance {
     fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
         None
     }
-    type EventMetric = ChangeOneDistance;
 }
 impl MicrodataMetric for HammingDistance {
     const SIZED: bool = true;
@@ -729,7 +725,6 @@ impl MicrodataMetric for HammingDistance {
     fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
         None
     }
-    type EventMetric = HammingDistance;
 }
 
 pub trait EventLevelMetric: MicrodataMetric + Default {}

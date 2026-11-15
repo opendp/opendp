@@ -98,7 +98,6 @@ impl MicrodataMetric for SymmetricIdDistance {
     fn identifier(&self) -> Option<Expr> {
         Some(self.identifier.clone())
     }
-    type EventMetric = SymmetricDistance;
 }
 impl MicrodataMetric for ChangeOneIdDistance {
     const SIZED: bool = true;
@@ -106,7 +105,6 @@ impl MicrodataMetric for ChangeOneIdDistance {
     fn identifier(&self) -> Option<Expr> {
         Some(self.identifier.clone())
     }
-    type EventMetric = ChangeOneDistance;
 }
 
 impl<M: UnboundedMetric> Metric for FrameDistance<M> {

@@ -11,8 +11,8 @@ use crate::{
         util::{self, AnyDomainPtr, Type},
     },
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
-        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, SymmetricDistance,
+        SymmetricIdDistance,
     },
 };
 
@@ -186,66 +186,27 @@ impl<F: 'static + Frame> MetricSpace for (FrameDomain<F>, AnyMetric) {
             let metric = metric.downcast_ref::<M>()?;
             (domain.clone(), metric.clone()).check_space()
         }
+
         let F = Type::of::<F>();
         let M = metric.type_.clone();
 
-        fn in_set<T>() -> Option<()> {
-            Some(())
-        }
-
-        // unbounded metrics
-        if dispatch!(
-            in_set,
-            [(
-                M,
-                [SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance]
-            )]
-        )
-        .is_some()
-        {
-            return dispatch!(
-                monomorphize_dataset,
-                [
-                    (F, [F]),
-                    (
-                        M,
-                        [SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance]
-                    )
-                ],
-                (domain, metric)
-            );
-        }
-
-        // multi-metrics
-        if let Some(_) = dispatch!(in_set, [(M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])])
-        {
-            return dispatch!(monomorphize_dataset, [
+        dispatch!(
+            monomorphize_dataset,
+            [
                 (F, [F]),
-                (M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])
-            ], (domain, metric));
-        }
-
-        // bounded metrics
-        if dispatch!(
-            in_set,
-            [(M, [ChangeOneDistance, ChangeOneIdDistance, HammingDistance])]
-        )
-        .is_some()
-        {
-            return dispatch!(
-                monomorphize_dataset,
-                [
-                    (F, [F]),
-                    (M, [ChangeOneDistance, ChangeOneIdDistance, HammingDistance])
-                ],
-                (domain, metric)
-            );
-        }
-
-        fallible!(
-            MetricSpace,
-            "invalid metric type: {}",
-            metric.type_.to_string()
+                (
+                    M,
+                    [
+                        SymmetricDistance,
+                        SymmetricIdDistance,
+                        FrameDistance<SymmetricDistance>,
+                        FrameDistance<SymmetricIdDistance>,
+                        ChangeOneDistance,
+                        ChangeOneIdDistance
+                    ]
+                )
+            ],
+            (domain, metric)
         )
     }
 }
