@@ -1457,7 +1457,9 @@ def test_arithmetic():
     ],
 )
 def test_polars_rejects_ordered_metrics(privacy_unit):
-    with pytest.raises(ValueError, match="Ordered metrics are not supported for Polars"):
+    with pytest.raises(
+        ValueError, match="Ordered metrics are not supported for Polars"
+    ):
         dp.Context.compositor(
             data=pl.LazyFrame({"value": [1, 2, 3]}),
             privacy_unit=privacy_unit,
