@@ -3,8 +3,8 @@ Typical Workflow
 
 .. note::
 
-    This overview uses the Context API in Python to coordinate privacy accounting.
-    OpenDP also offers a lower-level Framework API for Python and R.
+    The Context API is the recommended interface for privacy accounting
+    in Python. OpenDP also offers a lower-level Framework API for Python and R.
     See :doc:`../api/user-guide/api-comparison/index` for more details.
 
 A differentially private analysis in OpenDP typically has the following steps:
@@ -21,8 +21,8 @@ A differentially private analysis in OpenDP typically has the following steps:
     :width: 60%
     :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release.
 
-The following examples illustrate how to configure privacy protection with the Context API.
-The next sections show how to apply it to different kinds of analyses.
+The steps below outline the decisions involved in a differentially private analysis.
+The next sections demonstrate how to apply them to different kinds of analyses.
 
 1. Identify the Unit of Privacy
 -------------------------------
@@ -88,17 +88,6 @@ The next step is to identify public information about the data set. This could i
 
 Frequently we'll specify bounds on data, based on prior knowledge of the domain.
 
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: context
-
-        .. literalinclude:: code/typical-workflow-context.rst
-            :language: python
-            :dedent:
-            :start-after: public-info
-            :end-before: /public-info
-
 A data invariant is information about your data set that you are explicitly choosing not to protect, typically because it is already public or non-sensitive. Be careful, if an invariant does contain sensitive information, then you risk violating the privacy of individuals in your data set.
 
 On the other hand, using public information significantly improves the utility of your results.
@@ -106,32 +95,23 @@ On the other hand, using public information significantly improves the utility o
 4. Mediate Access to Data
 -------------------------
 
-Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set.
+Once the privacy parameters are determined, OpenDP can mediate access to the
+sensitive data, so that queries adhere to the specified privacy guarantees.
 
-.. tab-set::
+In Python, :py:meth:`~opendp.context.Context.compositor` binds the private data
+to a privacy unit and privacy loss, and allocates the privacy budget across
+queries. The resulting Context mediates queries through ``context.query()``.
 
-    .. tab-item:: Python
-        :sync: context
-
-        .. literalinclude:: code/typical-workflow-context.rst
-            :language: python
-            :dedent:
-            :start-after: mediate
-            :end-before: /mediate
-
-        ``dp.Context.compositor`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``context``, in the form of measurements.
-
-Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
+The data supplied to the Context depends on the analysis interface.
+The following sections demonstrate the appropriate setup for each kind of analysis.
 
 
 5. Submit DP Queries
 --------------------
 
-Once the Context is set up, you can submit differentially private queries.
+Once a Context is set up, you can submit differentially private queries.
 OpenDP provides different interfaces for different kinds of analyses:
 
 * :doc:`tabular-data/index` uses Polars to release private statistics from tabular data.
 * :doc:`statistical-modeling/index` introduces private model fitting with scikit-learn-style estimators.
 
-The following tutorials demonstrate how to construct and release these analyses.
