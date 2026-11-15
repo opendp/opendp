@@ -21,22 +21,3 @@
     # /privacy-loss
 
 
-    # public-info
-    >>> bounds = (0.0, 100.0)
-
-    # /public-info
-
-
-    # mediate
-    >>> from random import randint
-    >>> data = [float(randint(0, 100)) for _ in range(100)]
-
-    >>> context = dp.Context.compositor(
-    ...     data=data,
-    ...     privacy_unit=privacy_unit,
-    ...     privacy_loss=privacy_loss,
-    ...     split_evenly_over=3,
-    ... )
-
-    # /mediate
-
