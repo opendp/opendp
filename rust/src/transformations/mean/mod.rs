@@ -58,11 +58,11 @@ where
     #[allow(deprecated)]
     let sum = make_sum::<MI, T>(input_domain, input_metric)?;
     sum >> make_lipschitz_float_mul(
-            AtomDomain::new_non_nan(),
-            AbsoluteDistance::default(),
-            size_.recip(),
-            sum_bounds,
-        )?
+        AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
+        size_.recip(),
+        sum_bounds,
+    )?
 }
 
 #[cfg(test)]
