@@ -2,7 +2,7 @@ use polars::{df, prelude::len};
 
 use crate::{
     core::Transformation,
-    metrics::{FrameDistance, SymmetricDistance, L0PInfDistance, L2Distance},
+    metrics::{FrameDistance, L0PInfDistance, L2Distance, SymmetricDistance},
     transformations::{StableExpr, test_helper::get_test_data},
 };
 

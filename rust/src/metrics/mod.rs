@@ -692,7 +692,6 @@ pub trait MicrodataMetric: 'static + Metric<Distance = IntDistance> {
     #[cfg(feature = "polars")]
     /// The identifier column if defined.
     fn identifier(&self) -> Option<polars_plan::dsl::Expr>;
-
 }
 impl MicrodataMetric for SymmetricDistance {
     const SIZED: bool = false;

@@ -1,5 +1,5 @@
 use crate::{
-    metrics::{SymmetricDistance, L0PInfDistance, L2Distance},
+    metrics::{L0PInfDistance, L2Distance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 

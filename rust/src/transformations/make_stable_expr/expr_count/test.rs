@@ -2,9 +2,7 @@ use super::*;
 
 use crate::{
     domains::{LazyFrameDomain, Margin, OptionDomain},
-    metrics::{
-        FrameDistance, L0PInfDistance, L1Distance, L2Distance, SymmetricDistance,
-    },
+    metrics::{FrameDistance, L0PInfDistance, L1Distance, L2Distance, SymmetricDistance},
 };
 
 use polars::{

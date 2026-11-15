@@ -285,8 +285,7 @@ where
 
 impl<MO: UnboundedMetric> StableDslPlan<ChangeOneIdDistance, FrameDistance<MO>> for DslPlan
 where
-    DslPlan:
-        StableDslPlan<SymmetricIdDistance, FrameDistance<MO>>,
+    DslPlan: StableDslPlan<SymmetricIdDistance, FrameDistance<MO>>,
 {
     fn make_stable(
         self,

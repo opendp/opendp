@@ -2,7 +2,7 @@ use polars::prelude::{col, lit};
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
-    metrics::{SymmetricDistance, L0PInfDistance, L2Distance},
+    metrics::{L0PInfDistance, L2Distance, SymmetricDistance},
     transformations::StableExpr,
 };
 
