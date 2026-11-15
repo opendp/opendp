@@ -11,9 +11,9 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
-use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul};
 #[allow(deprecated)]
 use super::make_sum_of_squared_deviations;
+use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul};
 
 #[bootstrap(
     features("contrib"),
