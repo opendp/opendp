@@ -10,8 +10,9 @@ use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
+use super::{MakeSum, make_lipschitz_float_mul};
 #[allow(deprecated)]
-use super::{MakeSum, make_lipschitz_float_mul, make_sum};
+use super::make_sum;
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 #[deprecated(since = "0.17.0", note = "Use Polars instead.")]
@@ -29,7 +30,6 @@ use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 /// # Generics
 /// * `MI` - Input Metric. One of `SymmetricDistance` or `InsertDeleteDistance`
 /// * `T` - Atomic Input Type and Output Type.
-#[allow(deprecated)]
 pub fn make_mean<MI, T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
@@ -55,8 +55,9 @@ where
     let size_ = T::exact_int_cast(size)?;
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
-    make_sum::<MI, T>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul(
+    #[allow(deprecated)]
+    let sum = make_sum::<MI, T>(input_domain, input_metric)?;
+    sum >> make_lipschitz_float_mul(
             AtomDomain::new_non_nan(),
             AbsoluteDistance::default(),
             size_.recip(),
