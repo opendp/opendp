@@ -81,7 +81,7 @@ where
                     columns: middle_domain.series_domains.clone(),
                     context: Context::RowByRow,
                 },
-                L01InfDistance(middle_metric.0.clone()),
+                L0PInfDistance::<1, SymmetricDistance>(middle_metric.0.clone()),
                 expr.clone(),
             )?;
 
