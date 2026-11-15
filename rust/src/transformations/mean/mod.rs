@@ -10,9 +10,9 @@ use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
-use super::{MakeSum, make_lipschitz_float_mul};
 #[allow(deprecated)]
 use super::make_sum;
+use super::{MakeSum, make_lipschitz_float_mul};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 #[deprecated(since = "0.17.0", note = "Use Polars instead.")]
