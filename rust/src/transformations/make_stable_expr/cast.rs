@@ -17,13 +17,21 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
 
     from == to
         || is_integer_widening_cast(from, to)
-        || matches!(
-            (from, to),
+        || match (from, to) {
+            (Array(from, from_width), Array(to, to_width))
+                if from_width == to_width =>
+            {
+                is_null_preserving_cast(from, to)
+            }
+            (Categorical(_, _) | Enum(_, _), String) => true,
+            _ => matches!(
+                (from, to),
             (Float32, Float64)
                 | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, Float64)
                 | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, String)
                 | (Float32 | Float64 | Boolean, String)
-        )
+            ),
+        }
 }
 
 fn integer_bounds(dtype: &DataType) -> Option<(i128, i128)> {
