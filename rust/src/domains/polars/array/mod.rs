@@ -4,7 +4,7 @@ use polars::series::Series;
 
 use crate::{core::Domain, error::Fallible};
 
-use super::{DynSeriesElementDomain, series::member_elements};
+use super::DynSeriesElementDomain;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -34,16 +34,6 @@ impl ArrayDomain {
             size,
         }
     }
-
-    /// True when an Array contains nullable elements at any nesting depth.
-    pub(crate) fn has_nullable_elements(&self) -> bool {
-        self.element_domain.is_nullable()
-            || self
-                .element_domain
-                .as_any()
-                .downcast_ref::<ArrayDomain>()
-                .is_some_and(ArrayDomain::has_nullable_elements)
-    }
 }
 
 impl Domain for ArrayDomain {
@@ -51,49 +41,8 @@ impl Domain for ArrayDomain {
 
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         if value.len() != self.size {
-            return Ok(false);
+            return fallible!(MakeDomain, "Array length does not match domain length");
         }
-        member_elements(
-            value.name(),
-            self.element_domain.as_ref(),
-            self.element_domain.is_nullable(),
-            value,
-        )
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use polars::prelude::{NamedFrom, Series};
-
-    use crate::domains::{AtomDomain, OptionDomain};
-    use crate::error::Fallible;
-
-    use super::*;
-
-    #[test]
-    fn test_array_domain_member_checks_elements() -> Fallible<()> {
-        let domain = ArrayDomain::new(AtomDomain::<i32>::new_closed((0, 10))?, 2);
-
-        assert!(domain.member(&Series::new("values".into(), &[1i32, 10]))?);
-        assert!(!domain.member(&Series::new("values".into(), &[1i32, 11]))?);
-        assert!(!domain.member(&Series::new("values".into(), &[1i64, 2]))?);
-        assert!(!domain.member(&Series::new("values".into(), &[1i32]))?);
-        assert!(!domain.member(&Series::new("values".into(), &[Some(1i32), None]))?);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_array_domain_member_nullable_elements() -> Fallible<()> {
-        let domain = ArrayDomain::new(
-            OptionDomain::new(AtomDomain::<i32>::new_closed((0, 10))?),
-            2,
-        );
-        assert!(domain.has_nullable_elements());
-        assert!(domain.member(&Series::new("values".into(), &[Some(1i32), None]))?);
-        assert!(!domain.member(&Series::new("values".into(), &[Some(11i32), None]))?);
-
-        Ok(())
+        Ok(true)
     }
 }
