@@ -78,8 +78,10 @@ pub proof fn lemma_release_expectation<E>(
 
     assert(threshold == (numerator as nat) * 2048nat);
     assert((numerator as nat) <= 9_007_199_254_740_992nat);
-    assert(threshold <= 18_446_744_073_709_551_616nat)
-        by(nonlinear_arith);
+    assert((numerator as nat) * 2048nat
+        <= 18_446_744_073_709_551_616nat) by(nonlinear_arith)
+        requires (numerator as nat) <= 9_007_199_254_740_992nat;
+    assert(threshold <= 18_446_744_073_709_551_616nat);
     assert(0real <= payoff(Ok(truth)) <= 1real);
     assert(0real <= payoff(Ok(!truth)) <= 1real);
     assert(word_expectation(prefix)
@@ -142,12 +144,21 @@ pub proof fn lemma_bool_rr_dp<E>(
         assert(0real <= b <= 1real);
         assert(1real / 2real <= p < 1real);
         if left == right {
-            let value = success * (p * a + (1real - p) * b) + err;
-            assert(p * a >= 0real) by(nonlinear_arith);
-            assert((1real - p) * b >= 0real) by(nonlinear_arith);
-            assert(value >= 0real) by(nonlinear_arith);
+            let xa = p * a;
+            let xb = (1real - p) * b;
+            let value = success * (xa + xb) + err;
+            assert(xa >= 0real) by(nonlinear_arith)
+                requires p >= 0real, a >= 0real;
+            assert(xb >= 0real) by(nonlinear_arith)
+                requires 1real - p >= 0real, b >= 0real;
+            assert(value >= 0real) by(nonlinear_arith)
+                requires success >= 0real, err >= 0real, xa >= 0real, xb >= 0real;
+            assert(value <= factor * value) by(nonlinear_arith)
+                requires value >= 0real, factor >= 1real;
             assert(release_expectation(left, numerator, word_expectation, payoff)
                 == release_expectation(right, numerator, word_expectation, payoff));
+            assert(release_expectation(right, numerator, word_expectation, payoff)
+                == value);
         } else {
             assert(right == !left);
             assert(1real - p <= p);
@@ -155,16 +166,28 @@ pub proof fn lemma_bool_rr_dp<E>(
                 requires 0real <= p, 1real - p <= p, factor >= 1real;
             let vl = p * a + (1real - p) * b;
             let vr = (1real - p) * a + p * b;
+            let one = p * a;
+            let two = (1real - p) * b;
+            let bound_one = factor * (1real - p) * a;
+            let bound_two = factor * p * b;
+            assert(one <= bound_one) by(nonlinear_arith)
+                requires a >= 0real, p <= factor * (1real - p);
+            assert(two <= bound_two) by(nonlinear_arith)
+                requires b >= 0real, 1real - p <= factor * p;
             assert(vl <= factor * vr) by(nonlinear_arith)
                 requires
-                    0real <= a, 0real <= b,
-                    p <= factor * (1real - p),
-                    1real - p <= factor * p;
+                    one <= bound_one, two <= bound_two,
+                    vl == one + two,
+                    vr == (1real - p) * a + p * b;
             assert(success * vl + err <= factor * (success * vr + err))
                 by(nonlinear_arith)
                 requires
                     0real <= success, 0real <= err, factor >= 1real,
                     vl <= factor * vr;
+            assert(release_expectation(left, numerator, word_expectation, payoff)
+                == success * vl + err);
+            assert(release_expectation(right, numerator, word_expectation, payoff)
+                == success * vr + err);
         }
     }
 }
