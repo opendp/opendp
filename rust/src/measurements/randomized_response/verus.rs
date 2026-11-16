@@ -168,10 +168,10 @@ pub proof fn lemma_error_propagates(
 /// floating-point arithmetic as exact real arithmetic.
 pub proof fn lemma_native_map_is_zero_at_zero(cost: u64)
     ensures
-        operator::BoolRR { numerator: 4_503_599_627_370_496u64, privacy_cost: cost }
+        (operator::BoolRR { numerator: 4_503_599_627_370_496u64, privacy_cost: cost })
             .map(0u32, 0u64) == 0u64,
         forall|d: u32| d > 0 ==>
-            operator::BoolRR { numerator: 4_503_599_627_370_496u64, privacy_cost: cost }
+            (operator::BoolRR { numerator: 4_503_599_627_370_496u64, privacy_cost: cost })
                 .map(d, 0u64) == cost,
 {
 }
