@@ -7,7 +7,10 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{StableExpr, cast::is_null_preserving_cast};
+use super::{
+    StableExpr,
+    cast::{has_unsafe_temporal_cast, is_null_preserving_cast, is_safe_categorical_cast},
+};
 
 #[cfg(test)]
 mod test;
@@ -113,25 +116,3 @@ where
         )?
 }
 
-/// Mutable categorical mappings must not be created or decoded as physical
-/// codes. Logical String and fixed Enum conversions are safe.
-fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
-    match (from, to) {
-        (DataType::Categorical(..), DataType::String | DataType::Enum(..)) => true,
-        (DataType::Categorical(..), _) | (_, DataType::Categorical(..)) => from == to,
-        _ => true,
-    }
-}
-
-fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
-    use DataType::*;
-
-    match (from, to) {
-        (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
-        (Datetime(TimeUnit::Milliseconds | TimeUnit::Microseconds, _), String) => true,
-        (from, Date) if from.is_primitive_numeric() => true,
-        // Millisecond/microsecond timestamps can produce invalid Date values.
-        (Datetime(unit, _), Date) => !matches!(unit, TimeUnit::Nanoseconds),
-        _ => false,
-    }
-}
