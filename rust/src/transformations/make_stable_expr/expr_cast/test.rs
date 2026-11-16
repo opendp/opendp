@@ -215,10 +215,7 @@ fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
 
     // Identity, logical String/Enum, and String -> fixed Enum are supported.
     let enum_categories = FrozenCategories::new(["A", "B"])?;
-    let fixed_enum = DataType::Enum(
-        enum_categories.clone(),
-        enum_categories.mapping().clone(),
-    );
+    let fixed_enum = DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone());
     for (column, to) in [
         ("category", categorical),
         ("category", DataType::String),
@@ -265,8 +262,16 @@ fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
     ])?;
 
     for (column, to, allowed) in [
-        ("text", DataType::Datetime(TimeUnit::Nanoseconds, None), false),
-        ("text", DataType::Datetime(TimeUnit::Microseconds, None), true),
+        (
+            "text",
+            DataType::Datetime(TimeUnit::Nanoseconds, None),
+            false,
+        ),
+        (
+            "text",
+            DataType::Datetime(TimeUnit::Microseconds, None),
+            true,
+        ),
         ("text", DataType::Date, true),
         ("days", DataType::Date, false),
         ("ms", DataType::String, false),
@@ -320,10 +325,7 @@ fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
 #[test]
 fn test_make_expr_cast_rejects_all_array_casts() -> Fallible<()> {
     let input_domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new(
-            "array",
-            ArrayDomain::new(AtomDomain::<i32>::default(), 2),
-        ),
+        SeriesDomain::new("array", ArrayDomain::new(AtomDomain::<i32>::default(), 2)),
         SeriesDomain::new("scalar", AtomDomain::<i32>::default()),
     ])?;
 
