@@ -40,3 +40,14 @@ impl<P: Copy> BoolRR<P> {
         if distance == 0 { zero } else { self.privacy_cost }
     }
 }
+
+// The production invocation is a single entropy call followed by the
+// executable, Verus-checked deterministic release method. The RNG itself
+// remains the explicit probabilistic trust boundary.
+#[cfg(not(verus_only))]
+impl BoolRR<f64> {
+    pub fn invoke(&self, truth: bool) -> crate::error::Fallible<bool> {
+        self.release(truth, crate::traits::samplers::sample_uniform_u64())
+    }
+}
+

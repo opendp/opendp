@@ -13,7 +13,7 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{sample_bernoulli_float, sample_uniform_u64};
+use crate::traits::samplers::sample_bernoulli_float;
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -76,7 +76,7 @@ pub fn make_randomized_response_bool(
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &bool| {
-            operator.release(*truth, sample_uniform_u64())
+            operator.invoke(*truth)
         }),
         PrivacyMap::new(move |d| map_operator.map(*d, 0.0)),
     )

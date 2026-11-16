@@ -92,4 +92,43 @@ pub open spec fn uniform_word_expectation_rule<E>(
             ) + error_expectation(err_post)
 }
 
+
+/// The exact mathematical value of any accepted binary64 probability bit
+/// pattern. Accepted probabilities lie in [1/2, 1], so the only nontrivial
+/// exponent is 1022 and every value has denominator 2^53.
+pub open spec fn accepted_binary64_value(bits: u64) -> real {
+    if bits == 0x3ff0_0000_0000_0000u64 {
+        1real
+    } else {
+        ((4_503_599_627_370_496nat
+            + (bits - 0x3fe0_0000_0000_0000u64) as nat) as real)
+            / 9_007_199_254_740_992real
+    }
+}
+
+/// The *production* bit decoder gives the exact numerator, not a rounded
+/// conversion of p to a rational. No rational sampler model is involved.
+/// The separately audited IEEE-to-bits operation is the remaining boundary
+/// connecting the input f64 to this bit-level statement.
+pub proof fn lemma_accepted_binary64_bits(bits: u64)
+    requires
+        0x3fe0_0000_0000_0000u64 <= bits
+            <= 0x3ff0_0000_0000_0000u64,
+    ensures
+        accepted_binary64_value(bits)
+            == dyadic53::numerator_from_bits(bits) as real
+                / 9_007_199_254_740_992real,
+{
+    if bits == 0x3ff0_0000_0000_0000u64 {
+    } else {
+        assert(bits < 0x3ff0_0000_0000_0000u64);
+        assert(bits - 0x3fe0_0000_0000_0000u64
+            < 4_503_599_627_370_496u64);
+        assert(0x3fe0_0000_0000_0000u64
+            % 4_503_599_627_370_496u64 == 0u64) by(compute);
+        assert(bits % 4_503_599_627_370_496u64
+            == bits - 0x3fe0_0000_0000_0000u64);
+    }
+}
+
 } // verus!
