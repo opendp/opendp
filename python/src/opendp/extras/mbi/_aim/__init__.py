@@ -276,8 +276,6 @@ def _make_aim_marginal(
     from opendp.extras.mbi._gem import GemPlusModel
     from opendp.extras.numpy import NPArrayDDomain
 
-    model = cast(MarkovRandomField, model)
-
     cardinalities = {
         c: d.cast(NPArrayDDomain).shape
         for c, d in input_domain.cast(TypedDictDomain).items()
