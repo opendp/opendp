@@ -47,7 +47,7 @@ def make_expr_strptime(
     inferred_dtype = (
         col(series_domain.name)
         .str.strptime(to_type, strptime_options, ambiguous)
-        .to_field(Schema({"input": DataType.String}))
+        .to_field(Schema({series_domain.name: DataType.String}))
         .dtype
     )  # `\label{inferred-dtype}`
     if inferred_dtype != to_type:
