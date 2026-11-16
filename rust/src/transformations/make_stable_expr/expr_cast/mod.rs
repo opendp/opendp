@@ -68,8 +68,8 @@ where
     let from_dtype = data_column.dtype();
     // Array casts require separate reasoning about element nullability and
     // categorical encodings. Do not support them, including identity casts.
-    if matches!(from_dtype, DataType::Array(_, _))
-        || matches!(to_type_dtype, DataType::Array(_, _))
+    if matches!(&from_dtype, DataType::Array(_, _))
+        || matches!(&to_type_dtype, DataType::Array(_, _))
     {
         return fallible!(MakeTransformation, "Array casts are not supported");
     }
