@@ -118,3 +118,34 @@ fn test_bool_rr_exact_odds_parts() {
     assert_eq!(dyadic53_odds_parts((1u64 << 53) - 1), Some(((1u64 << 53) - 1, 1)));
     assert_eq!(dyadic53_odds_parts(1u64 << 53), None);
 }
+
+#[test]
+fn test_bool_constructor_ieee_boundaries() -> Fallible<()> {
+    use crate::traits::samplers::dyadic53_checked_numerator;
+
+    let accepted = [
+        0.5,
+        f64::from_bits(0.5f64.to_bits() + 1),
+        0.75,
+        f64::from_bits(1.0f64.to_bits() - 1),
+        1.0,
+    ];
+    for p in accepted {
+        assert!(dyadic53_checked_numerator(p.to_bits()).is_some());
+        let measurement = make_randomized_response_bool(p, false)?;
+        assert_eq!(measurement.map(&0)?, 0.0);
+        assert!(measurement.map(&1)?.is_finite() || p == 1.0);
+    }
+
+    let rejected = [
+        f64::from_bits(0.5f64.to_bits() - 1),
+        f64::from_bits(1.0f64.to_bits() + 1),
+        0.0, -0.0, -1.0, f64::INFINITY, f64::NEG_INFINITY,
+        f64::NAN, f64::from_bits(u64::MAX),
+    ];
+    for p in rejected {
+        assert_eq!(dyadic53_checked_numerator(p.to_bits()), None);
+        assert!(make_randomized_response_bool(p, false).is_err());
+    }
+    Ok(())
+}
