@@ -290,3 +290,24 @@ fn permute_and_flip_pmf(scores: &[f64], scale: f64) -> Vec<f64> {
 
     (1..=n).map(mass).collect()
 }
+
+#[test]
+fn test_top_k_mask_additional_edge_cases() -> Fallible<()> {
+    // Synthetic threshold wins ties at zero noise.
+    assert_eq!(top_k_mask(&[1_i32, 3, 3], 3, 2., 0., true)?, vec![false; 3]);
+
+    // k greater than candidate count.
+    assert_eq!(
+        top_k_mask(&[1_i32, 5, 3], 100, 2., 0., true)?,
+        vec![false, true, false]
+    );
+
+    // All scores equal.
+    assert_eq!(top_k_mask(&[5_i32, 5, 5], 3, 0., 0., true)?, vec![false; 3]);
+
+    // Negative zero is rejected.
+    assert!(top_k_mask(&[1_i32], 1, -0.0, 1., true).is_err());
+    assert!(top_k_mask(&[1_i32], 1, 1., -0.0, true).is_err());
+
+    Ok(())
+}
