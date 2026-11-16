@@ -53,46 +53,65 @@ impl PartialEq for SeriesDomain {
 
 impl Domain for SeriesDomain {
     type Carrier = Series;
+
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
-        if &self.name != &value.name() {
-            return Ok(false);
-        }
+        member_elements(&self.name, self.element_domain.as_ref(), self.nullable, value)
+    }
+}
 
-        macro_rules! atom_member {
-            ($ty:ty, $polars_ty:ty) => {{
-                let atom_domain = self.atom_domain::<<$ty as ToOwned>::Owned>()?;
+// Also used to validate the contents of a single fixed-width Array.
+pub(crate) fn member_elements(
+    name: &PlSmallStr,
+    element_domain: &dyn DynSeriesElementDomain,
+    nullable: bool,
+    value: &Series,
+) -> Fallible<bool> {
+    if name != value.name() || element_domain.dtype() != *value.dtype() {
+        return Ok(false);
+    }
 
-                let chunked = value.0.unpack::<$polars_ty>()?;
-                if !self.nullable && chunked.null_count() > 0 {
-                    return Ok(false);
-                }
+    macro_rules! atom_member {
+        ($ty:ty, $polars_ty:ty) => {{
+            let domain = element_domain.as_any();
+            let atom_domain = domain
+                .downcast_ref::<AtomDomain<<$ty as ToOwned>::Owned>>()
+                .or_else(|| {
+                    domain
+                        .downcast_ref::<OptionDomain<AtomDomain<<$ty as ToOwned>::Owned>>>()
+                        .map(|domain| &domain.element_domain)
+                })
+                .ok_or_else(|| err!(FailedCast, "domain downcast failed"))?;
 
-                for arr in chunked.downcast_iter() {
-                    for v in arr.values_iter() {
-                        if !atom_domain.member(&v.to_owned())? {
-                            return Ok(false);
-                        }
+            let chunked = value.0.unpack::<$polars_ty>()?;
+            if !nullable && chunked.null_count() > 0 {
+                return Ok(false);
+            }
+
+            for arr in chunked.downcast_iter() {
+                for v in arr.values_iter() {
+                    if !atom_domain.member(&v.to_owned())? {
+                        return Ok(false);
                     }
                 }
-                Ok(true)
-            }};
-        }
+            }
+            Ok(true)
+        }};
+    }
 
-        match self.dtype() {
-            DataType::UInt8 => atom_member!(u8, UInt8Type),
-            DataType::UInt16 => atom_member!(u16, UInt16Type),
-            DataType::UInt32 => atom_member!(u32, UInt32Type),
-            DataType::UInt64 => atom_member!(u64, UInt64Type),
-            DataType::Int8 => atom_member!(i8, Int8Type),
-            DataType::Int16 => atom_member!(i16, Int16Type),
-            DataType::Int32 => atom_member!(i32, Int32Type),
-            DataType::Int64 => atom_member!(i64, Int64Type),
-            DataType::Float32 => atom_member!(f32, Float32Type),
-            DataType::Float64 => atom_member!(f64, Float64Type),
-            DataType::Boolean => atom_member!(bool, BooleanType),
-            DataType::String => atom_member!(str, StringType),
-            _ => return fallible!(NotImplemented, "unsupported dtype: {:?}", self.dtype()),
-        }
+    match element_domain.dtype() {
+        DataType::UInt8 => atom_member!(u8, UInt8Type),
+        DataType::UInt16 => atom_member!(u16, UInt16Type),
+        DataType::UInt32 => atom_member!(u32, UInt32Type),
+        DataType::UInt64 => atom_member!(u64, UInt64Type),
+        DataType::Int8 => atom_member!(i8, Int8Type),
+        DataType::Int16 => atom_member!(i16, Int16Type),
+        DataType::Int32 => atom_member!(i32, Int32Type),
+        DataType::Int64 => atom_member!(i64, Int64Type),
+        DataType::Float32 => atom_member!(f32, Float32Type),
+        DataType::Float64 => atom_member!(f64, Float64Type),
+        DataType::Boolean => atom_member!(bool, BooleanType),
+        DataType::String => atom_member!(str, StringType),
+        _ => return fallible!(NotImplemented, "unsupported dtype: {:?}", element_domain.dtype()),
     }
 }
 
