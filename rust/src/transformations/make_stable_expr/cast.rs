@@ -1,4 +1,56 @@
+use polars::chunked_array::cast::CastOptions;
 use polars::prelude::{DataType, TimeUnit};
+
+use crate::error::*;
+
+// What a cast can do to private values, assuming the source domain is valid.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum CastEffect {
+    NullPreserving,
+    MayIntroduceNull,
+}
+
+// Reject casts whose failures or mutable encodings can depend on private data.
+// Strict casts must be null-preserving, whereas non-strict casts may add nulls.
+pub(super) fn classify_private_cast(
+    from: &DataType,
+    to: &DataType,
+    options: CastOptions,
+) -> Fallible<CastEffect> {
+    if matches!(from, DataType::Array(_, _)) || matches!(to, DataType::Array(_, _)) {
+        return fallible!(MakeTransformation, "Array casts are not supported");
+    }
+    if !is_safe_categorical_cast(from, to) {
+        return fallible!(
+            MakeTransformation,
+            "Casting to or from mutable Categorical encodings is unsafe. Cast to String or fixed Enum instead."
+        );
+    }
+    if has_unsafe_temporal_cast(from, to) {
+        return fallible!(
+            MakeTransformation,
+            "This temporal cast can produce data-dependent failures on private values."
+        );
+    }
+
+    if is_null_preserving_cast(from, to) {
+        return Ok(CastEffect::NullPreserving);
+    }
+    if matches!(options, CastOptions::Strict) {
+        return fallible!(
+            MakeTransformation,
+            "strict cast from {} to {} may fail on private values",
+            from,
+            to
+        );
+    }
+    Ok(CastEffect::MayIntroduceNull)
+}
+
+pub(super) fn is_numeric_or_boolean(dtype: &DataType) -> bool {
+    dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
+}
+
 
 // Integer casts that preserve every value and do not increase Lp distances.
 pub(super) fn is_integer_widening_cast(from: &DataType, to: &DataType) -> bool {
@@ -19,7 +71,10 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
         || is_integer_widening_cast(from, to)
         || matches!(
             (from, to),
-            (DataType::Categorical(_, _) | DataType::Enum(_, _), DataType::String)
+            (
+                DataType::Categorical(_, _) | DataType::Enum(_, _),
+                DataType::String
+            )
         )
         || matches!(
             (from, to),
@@ -32,7 +87,10 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
 
 // A temporal operand can trigger Polars' implicit type-coercion rules.
 pub(super) fn is_temporal_dtype(dtype: &DataType) -> bool {
-    matches!(dtype, DataType::Date | DataType::Datetime(_, _) | DataType::Time)
+    matches!(
+        dtype,
+        DataType::Date | DataType::Datetime(_, _) | DataType::Time
+    )
 }
 
 /// Mutable categorical mappings must not be created or decoded as physical
@@ -97,6 +155,52 @@ mod test {
                 "{from:?} -> {to:?}"
             );
         }
+    }
+
+    #[test]
+    fn test_private_cast_classification() -> Fallible<()> {
+        use CastEffect::*;
+
+        for (from, to, expected) in [
+            (DataType::Int32, DataType::Int64, NullPreserving),
+            (DataType::Int64, DataType::Float64, NullPreserving),
+            (DataType::String, DataType::Int64, MayIntroduceNull),
+            (
+                DataType::Date,
+                DataType::Datetime(TimeUnit::Nanoseconds, None),
+                MayIntroduceNull,
+            ),
+        ] {
+            assert_eq!(
+                classify_private_cast(&from, &to, CastOptions::NonStrict)?,
+                expected
+            );
+        }
+
+        assert!(classify_private_cast(
+            &DataType::String,
+            &DataType::Int64,
+            CastOptions::Strict,
+        )
+        .is_err());
+        for (from, to) in [
+            (
+                DataType::String,
+                DataType::Datetime(TimeUnit::Nanoseconds, None),
+            ),
+            (
+                DataType::Datetime(TimeUnit::Microseconds, None),
+                DataType::String,
+            ),
+            (DataType::Int32, DataType::Date),
+            (
+                DataType::Array(Box::new(DataType::Int32), 2),
+                DataType::Array(Box::new(DataType::Int32), 2),
+            ),
+        ] {
+            assert!(classify_private_cast(&from, &to, CastOptions::NonStrict).is_err());
+        }
+        Ok(())
     }
 
     #[test]
