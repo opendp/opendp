@@ -7,7 +7,10 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{StableExpr, cast::is_temporal_dtype};
+use super::{
+    StableExpr,
+    cast::{is_numeric_or_boolean, is_temporal_dtype},
+};
 
 #[cfg(test)]
 mod test;
@@ -93,7 +96,10 @@ where
     // between identical temporal dtypes, avoiding implicit conversions.
     if (is_temporal_dtype(&left_series.dtype()) || is_temporal_dtype(&right_series.dtype()))
         && (left_series.dtype() != right_series.dtype()
-            || !matches!(op, Eq | EqValidity | NotEq | NotEqValidity | Lt | LtEq | Gt | GtEq))
+            || !matches!(
+                op,
+                Eq | EqValidity | NotEq | NotEqValidity | Lt | LtEq | Gt | GtEq
+            ))
     {
         return fallible!(
             MakeTransformation,
@@ -112,6 +118,29 @@ where
         return fallible!(
             MakeTransformation,
             "ordering comparisons between Enum and String are not stable"
+        );
+    }
+
+    // Outside numeric promotion, Polars can insert casts that have not been
+    // certified by the explicit-cast constructor. Enum/String equality is
+    // handled without a coercion by Polars' binary type checker.
+    let left_dtype = left_series.dtype();
+    let right_dtype = right_series.dtype();
+    let enum_string_equality = matches!(op, Eq | EqValidity | NotEq | NotEqValidity)
+        && matches!(
+            (&left_dtype, &right_dtype),
+            (DataType::Enum(_, _), DataType::String)
+                | (DataType::String, DataType::Enum(_, _))
+        );
+    if left_dtype != right_dtype
+        && !(is_numeric_or_boolean(&left_dtype) && is_numeric_or_boolean(&right_dtype))
+        && !enum_string_equality
+    {
+        return fallible!(
+            MakeTransformation,
+            "implicit coercion between {} and {} is not supported; cast explicitly",
+            left_dtype,
+            right_dtype
         );
     }
 
