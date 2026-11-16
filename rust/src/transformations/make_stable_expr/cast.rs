@@ -1,22 +1,10 @@
-use polars::chunked_array::cast::CastOptions;
 use polars::prelude::{DataType, TimeUnit};
 
 use crate::error::*;
 
-// What a cast can do to private values, assuming the source domain is valid.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum CastEffect {
-    NullPreserving,
-    MayIntroduceNull,
-}
-
-// Reject casts whose failures or mutable encodings can depend on private data.
-// Strict casts must be null-preserving, whereas non-strict casts may add nulls.
-pub(super) fn classify_private_cast(
-    from: &DataType,
-    to: &DataType,
-    options: CastOptions,
-) -> Fallible<CastEffect> {
+// Reject private casts that can fail on individual values or expose mutable
+// categorical encodings. Return whether a non-strict cast may introduce nulls.
+pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<bool> {
     if matches!(from, DataType::Array(_, _)) || matches!(to, DataType::Array(_, _)) {
         return fallible!(MakeTransformation, "Array casts are not supported");
     }
@@ -32,25 +20,12 @@ pub(super) fn classify_private_cast(
             "This temporal cast can produce data-dependent failures on private values."
         );
     }
-
-    if is_null_preserving_cast(from, to) {
-        return Ok(CastEffect::NullPreserving);
-    }
-    if matches!(options, CastOptions::Strict) {
-        return fallible!(
-            MakeTransformation,
-            "strict cast from {} to {} may fail on private values",
-            from,
-            to
-        );
-    }
-    Ok(CastEffect::MayIntroduceNull)
+    Ok(!is_null_preserving_cast(from, to))
 }
 
 pub(super) fn is_numeric_or_boolean(dtype: &DataType) -> bool {
     dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
 }
-
 
 // Integer casts that preserve every value and do not increase Lp distances.
 pub(super) fn is_integer_widening_cast(from: &DataType, to: &DataType) -> bool {
@@ -83,14 +58,6 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
                 | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, String)
                 | (Float32 | Float64 | Boolean, String)
         )
-}
-
-// A temporal operand can trigger Polars' implicit type-coercion rules.
-pub(super) fn is_temporal_dtype(dtype: &DataType) -> bool {
-    matches!(
-        dtype,
-        DataType::Date | DataType::Datetime(_, _) | DataType::Time
-    )
 }
 
 /// Mutable categorical mappings must not be created or decoded as physical
@@ -158,73 +125,41 @@ mod test {
     }
 
     #[test]
-    fn test_private_cast_classification() -> Fallible<()> {
-        use CastEffect::*;
-
-        for (from, to, expected) in [
-            (DataType::Int32, DataType::Int64, NullPreserving),
-            (DataType::Int64, DataType::Float64, NullPreserving),
-            (DataType::String, DataType::Int64, MayIntroduceNull),
-            (
-                DataType::Date,
-                DataType::Datetime(TimeUnit::Nanoseconds, None),
-                MayIntroduceNull,
-            ),
-        ] {
-            assert_eq!(
-                classify_private_cast(&from, &to, CastOptions::NonStrict)?,
-                expected
-            );
-        }
-
-        assert!(classify_private_cast(
-            &DataType::String,
-            &DataType::Int64,
-            CastOptions::Strict,
-        )
-        .is_err());
-        for (from, to) in [
-            (
-                DataType::String,
-                DataType::Datetime(TimeUnit::Nanoseconds, None),
-            ),
-            (
-                DataType::Datetime(TimeUnit::Microseconds, None),
-                DataType::String,
-            ),
-            (DataType::Int32, DataType::Date),
-            (
-                DataType::Array(Box::new(DataType::Int32), 2),
-                DataType::Array(Box::new(DataType::Int32), 2),
-            ),
-        ] {
-            assert!(classify_private_cast(&from, &to, CastOptions::NonStrict).is_err());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_null_preserving_cast() {
+    fn test_private_cast_safety() -> Fallible<()> {
         use DataType::*;
 
-        for (from, to, expected) in [
-            (Int64, Float64, true),
-            (UInt64, Float64, true),
-            (Int64, String, true),
-            (Float64, String, true),
-            (Boolean, String, true),
-            (Float32, Float64, true),
-            (Boolean, Boolean, true),
-            (Int32, Int64, true),
-            (Int64, Int32, false),
-            (Float64, Int64, false),
-            (String, Int64, false),
+        for (from, to, may_introduce_null) in [
+            (Int64, Float64, false),
+            (UInt64, Float64, false),
+            (Int64, String, false),
+            (Float64, String, false),
+            (Boolean, String, false),
+            (Float32, Float64, false),
+            (Boolean, Boolean, false),
+            (Int32, Int64, false),
+            (Int64, Int32, true),
+            (Float64, Int64, true),
+            (String, Int64, true),
+            (Date, Datetime(TimeUnit::Nanoseconds, None), true),
         ] {
             assert_eq!(
-                is_null_preserving_cast(&from, &to),
-                expected,
+                check_private_cast(&from, &to)?,
+                may_introduce_null,
                 "{from:?} -> {to:?}"
             );
         }
+
+        for (from, to) in [
+            (String, Datetime(TimeUnit::Nanoseconds, None)),
+            (Datetime(TimeUnit::Microseconds, None), String),
+            (Int32, Date),
+            (
+                Array(Box::new(Int32), 2),
+                Array(Box::new(Int32), 2),
+            ),
+        ] {
+            assert!(check_private_cast(&from, &to).is_err(), "{from:?} -> {to:?}");
+        }
+        Ok(())
     }
 }
