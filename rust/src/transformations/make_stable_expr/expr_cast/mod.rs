@@ -66,6 +66,13 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
+    // Array casts require separate reasoning about element nullability and
+    // categorical encodings. Do not support them, including identity casts.
+    if matches!(from_dtype, DataType::Array(_, _))
+        || matches!(to_type_dtype, DataType::Array(_, _))
+    {
+        return fallible!(MakeTransformation, "Array casts are not supported");
+    }
     // Mutable categorical mappings can make cast outputs depend on other rows,
     // expose physical category codes, or raise when the mapping fills up.
     if !is_safe_categorical_cast(&from_dtype, &to_type_dtype) {
@@ -84,28 +91,6 @@ where
         );
     }
 
-    // Array nulls and nulls within an Array are distinct. The Series nullable
-    // flag describes only outer nulls, so it cannot account for cast failures
-    // inside fixed-size Arrays.
-    if let (DataType::Array(_, _), DataType::Array(_, _)) = (&from_dtype, &to_type_dtype) {
-        if !is_null_preserving_cast(&from_dtype, &to_type_dtype) {
-            return fallible!(
-                MakeTransformation,
-                "Array element casts must preserve non-null values."
-            );
-        }
-        if from_dtype != to_type_dtype
-            && data_column.element_domain::<crate::domains::ArrayDomain>()?.has_nullable_elements()
-        {
-            return fallible!(
-                MakeTransformation,
-                "Casting Arrays with nullable elements is not supported."
-            );
-        }
-    }
-
-    // Identity casts must preserve existing element-domain constraints,
-    // particularly nullable elements within Arrays.
     if from_dtype != to_type_dtype {
         data_column.set_dtype(to_type_dtype.clone())?;
         // Non-strict casts may introduce nulls, even from non-null inputs.
@@ -128,34 +113,13 @@ where
         )?
 }
 
-/// Only identity casts and decoding to logical String/fixed Enum are safe for
-/// mutable categoricals. In particular, numeric -> Categorical interprets
-/// integers as data-dependent codes, and String -> Categorical can exhaust a
-/// finite mapping even with non-strict casting.
+/// Mutable categorical mappings must not be created or decoded as physical
+/// codes. Logical String and fixed Enum conversions are safe.
 fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
-    use DataType::*;
-
-    if from == to {
-        return true;
-    }
-
     match (from, to) {
-        (Categorical(_, _), String | Enum(_, _)) => true,
-        (Array(from, from_size), Array(to, to_size)) if from_size == to_size => {
-            is_safe_categorical_cast(from, to)
-        }
-        _ => !contains_categorical(from) && !contains_categorical(to),
-    }
-}
-
-fn contains_categorical(dtype: &DataType) -> bool {
-    match dtype {
-        DataType::Categorical(_, _) => true,
-        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
-        DataType::Struct(fields) => fields
-            .iter()
-            .any(|field| contains_categorical(&field.dtype)),
-        _ => false,
+        (DataType::Categorical(..), DataType::String | DataType::Enum(..)) => true,
+        (DataType::Categorical(..), _) | (_, DataType::Categorical(..)) => from == to,
+        _ => true,
     }
 }
 
@@ -166,10 +130,8 @@ fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
         (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
         (Datetime(TimeUnit::Milliseconds | TimeUnit::Microseconds, _), String) => true,
         (from, Date) if from.is_primitive_numeric() => true,
-        // Millisecond/microsecond timestamps span dates outside Chrono's
-        // representable range, even after the conversion to i32 day counts.
+        // Millisecond/microsecond timestamps can produce invalid Date values.
         (Datetime(unit, _), Date) => !matches!(unit, TimeUnit::Nanoseconds),
-        (Array(from, _), Array(to, _)) => has_unsafe_temporal_cast(from, to),
         _ => false,
     }
 }
