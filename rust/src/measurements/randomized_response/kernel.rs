@@ -18,6 +18,7 @@ pub fn release_bool(truth: bool, honest: bool) -> bool {
 /// Preserve every observable sampler outcome, including its exact error.
 /// The error value and the success/failure decision are never inspected
 /// or modified as a function of the private truth.
+#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures result == match sampled {
         Ok(honest) => Ok(truth ^ !honest),
