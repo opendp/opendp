@@ -18,18 +18,16 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
     from == to
         || is_integer_widening_cast(from, to)
         || match (from, to) {
-            (Array(from, from_width), Array(to, to_width))
-                if from_width == to_width =>
-            {
+            (Array(from, from_width), Array(to, to_width)) if from_width == to_width => {
                 is_null_preserving_cast(from, to)
             }
             (Categorical(_, _) | Enum(_, _), String) => true,
             _ => matches!(
                 (from, to),
-            (Float32, Float64)
-                | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, Float64)
-                | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, String)
-                | (Float32 | Float64 | Boolean, String)
+                (Float32, Float64)
+                    | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, Float64)
+                    | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, String)
+                    | (Float32 | Float64 | Boolean, String)
             ),
         }
 }
@@ -91,6 +89,16 @@ mod test {
             (Int64, Int32, false),
             (Float64, Int64, false),
             (String, Int64, false),
+            (
+                Array(Box::new(Int32), 2),
+                Array(Box::new(Int64), 2),
+                true,
+            ),
+            (
+                Array(Box::new(String), 2),
+                Array(Box::new(Int64), 2),
+                false,
+            ),
         ] {
             assert_eq!(
                 is_null_preserving_cast(&from, &to),
