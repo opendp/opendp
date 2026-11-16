@@ -144,3 +144,55 @@ fake_function <- function(
 ";
     assert_eq!(actual_code, expected_code);
 }
+
+#[test]
+fn test_r_core_vector_transformations_remain_supported() {
+    let hierarchy: HashMap<String, Vec<String>> =
+        serde_json::from_str(&include_str!("type_hierarchy.json")).unwrap();
+    let python_typemap: HashMap<String, String> =
+        serde_json::from_str(&include_str!("python_typemap.json")).unwrap();
+
+    for name in [
+        "make_clamp",
+        "make_impute_constant",
+        "make_count",
+        "make_sum",
+        "make_mean",
+        "make_variance",
+    ] {
+        let mut function = make_function(make_argument(), make_argument());
+        function.name = name.to_string();
+
+        let r_code = r::r::generate_r_function("transformations", &function, &hierarchy);
+        assert!(
+            !r_code.contains(".Deprecated("),
+            "{name} should remain supported in R"
+        );
+
+        let python_code = python::generate_function(
+            "transformations",
+            &function,
+            &python_typemap,
+            &HashMap::new(),
+        );
+        assert!(
+            python_code.contains("@deprecated("),
+            "{name} should remain deprecated in Python"
+        );
+    }
+
+    for (module, name) in [
+        ("transformations", "make_resize"),
+        ("transformations", "make_count_by"),
+        ("measurements", "make_sum"),
+    ] {
+        let mut function = make_function(make_argument(), make_argument());
+        function.name = name.to_string();
+
+        let r_code = r::r::generate_r_function(module, &function, &hierarchy);
+        assert!(
+            r_code.contains(".Deprecated("),
+            "{module}::{name} should remain deprecated"
+        );
+    }
+}
