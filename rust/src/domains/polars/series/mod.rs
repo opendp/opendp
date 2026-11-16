@@ -66,7 +66,7 @@ pub(crate) fn member_elements(
     nullable: bool,
     value: &Series,
 ) -> Fallible<bool> {
-    if name != value.name() || element_domain.dtype() != *value.dtype() {
+    if name != value.name() || &element_domain.dtype() != value.dtype() {
         return Ok(false);
     }
 
@@ -88,8 +88,8 @@ pub(crate) fn member_elements(
             }
 
             for arr in chunked.downcast_iter() {
-                for v in arr.values_iter() {
-                    if !atom_domain.member(&v.to_owned())? {
+                for value in arr.iter().flatten() {
+                    if !atom_domain.member(&value.to_owned())? {
                         return Ok(false);
                     }
                 }
