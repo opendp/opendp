@@ -112,6 +112,35 @@ where
         );
     }
 
+    // Localizing a parsed datetime can raise on nonexistent wall-clock times
+    // (DST gaps), even with strict=false and ambiguous="null".
+    if matches!(to_type_lit, DataType::Datetime(_, Some(_))) {
+        return fallible!(
+            MakeTransformation,
+            "str.strptime does not support timezone-aware Datetime output because localization may fail depending on private data"
+        );
+    }
+
+    // Polars infers a UTC timezone when the format contains an offset (e.g.
+    // %z), even when the requested dtype has no timezone. Reject such formats
+    // rather than certify a different dtype or execute timezone-aware parsing.
+    let inferred_dtype = col(series_domain.name.clone())
+        .str()
+        .strptime(to_type.clone(), strptime_options.clone(), ambiguous.clone())
+        .to_field(&Schema::from_iter([Field::new(
+            series_domain.name.clone(),
+            DataType::String,
+        )]))?
+        .dtype;
+    if inferred_dtype != *to_type_lit {
+        return fallible!(
+            MakeTransformation,
+            "str.strptime inferred output dtype {} differs from the requested {}. Timezone-aware parsing is not supported.",
+            inferred_dtype,
+            to_type_lit
+        );
+    }
+
     series_domain.set_dtype(to_type_lit.clone())?;
     series_domain.nullable = true;
 
