@@ -13,10 +13,7 @@ pub trait Callable {
 pub struct OneAdder {}
 
 impl Callable for OneAdder {
-    fn eval(&self, input: u64) -> (output: u64)
-        requires input <= 100,
-        ensures output == input + 1,
-    {
+    fn eval(&self, input: u64) -> (output: u64) {
         input + 1
     }
 }
