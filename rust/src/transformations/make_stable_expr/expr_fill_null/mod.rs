@@ -6,7 +6,7 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::StableExpr;
+use super::{StableExpr, cast::is_numeric_or_boolean};
 
 #[cfg(test)]
 mod test;
@@ -90,8 +90,9 @@ where
 
     let data_dtype = data_domain.column.dtype();
     let fill_dtype = fill_domain.column.dtype();
-    let is_numeric = |dtype: &DataType| dtype.is_primitive_numeric() || *dtype == DataType::Boolean;
-    if data_dtype != fill_dtype && !(is_numeric(&data_dtype) && is_numeric(&fill_dtype)) {
+    if data_dtype != fill_dtype
+        && !(is_numeric_or_boolean(&data_dtype) && is_numeric_or_boolean(&fill_dtype))
+    {
         return fallible!(
             MakeTransformation,
             "fill_null with different input and filler types is only supported for numeric data"
@@ -107,10 +108,18 @@ where
     };
     let output_nan = can_be_nan(&data_domain.column)?
         || (data_domain.column.nullable && can_be_nan(&fill_domain.column)?);
+    let output_dtype = super::infer_output_dtype(&expr, &input_domain)?;
+    // A change of dtype is only certified for numeric promotion, including
+    // promotion introduced by Polars' dynamic-literal handling.
+    if data_dtype != fill_dtype && !is_numeric_or_boolean(&output_dtype) {
+        return fallible!(
+            MakeTransformation,
+            "fill_null implicitly coerced numeric operands to unsupported dtype {}",
+            output_dtype
+        );
+    }
     let mut output_domain = data_domain.clone();
-    output_domain
-        .column
-        .set_dtype(super::infer_output_dtype(&expr, &input_domain)?)?;
+    output_domain.column.set_dtype(output_dtype)?;
     output_domain.column.nullable = false;
     if !output_nan && output_domain.column.dtype().is_float() {
         output_domain.column.set_non_nan()?;
