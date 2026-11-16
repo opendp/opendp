@@ -588,6 +588,37 @@ fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
 }
 
 #[test]
+fn test_binary_rejects_unvalidated_implicit_coercion() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new(
+            "enum_a",
+            EnumDomain::new(Series::new("".into(), vec!["a", "b"]))?,
+        ),
+        SeriesDomain::new(
+            "enum_b",
+            EnumDomain::new(Series::new("".into(), vec!["b", "c"]))?,
+        ),
+        SeriesDomain::new("text", AtomDomain::<String>::default()),
+        SeriesDomain::new("number", AtomDomain::<i64>::default()),
+    ])?
+    .row_by_row();
+
+    for expr in [
+        col("enum_a").eq(col("enum_b")),
+        col("enum_a").eq(col("number")),
+        col("text").eq(col("number")),
+    ] {
+        assert!(
+            expr.clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{expr:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
     let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "x",
@@ -621,8 +652,7 @@ fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
 #[test]
 fn test_mixed_temporal_comparisons_are_rejected() -> Fallible<()> {
     let nanoseconds = DataType::Datetime(TimeUnit::Nanoseconds, None);
-    let ns = Series::new("ns".into(), [1_577_836_800_000_000_000_i64; 2])
-        .cast(&nanoseconds)?;
+    let ns = Series::new("ns".into(), [1_577_836_800_000_000_000_i64; 2]).cast(&nanoseconds)?;
 
     // Year 3000 fits in Date and Datetime(ms/us), but not Datetime(ns).
     let inputs = [
