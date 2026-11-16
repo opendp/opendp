@@ -23,10 +23,6 @@ pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<boo
     Ok(!is_null_preserving_cast(from, to))
 }
 
-pub(super) fn is_numeric_or_boolean(dtype: &DataType) -> bool {
-    dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
-}
-
 // Integer casts that preserve every value and do not increase Lp distances.
 pub(super) fn is_integer_widening_cast(from: &DataType, to: &DataType) -> bool {
     let (Some((in_min, in_max)), Some((out_min, out_max))) =
