@@ -5,7 +5,7 @@
 //! The only probabilistic premise describes the production entropy call.
 //! Rounding the f64 privacy map and closure erasure remain separate tasks.
 use vstd::prelude::*;
-use crate::operator;
+use crate::{operator, dyadic53};
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
     lemma_bernoulli_probability, dyadic53_mass, uniform_word_expectation_rule,
@@ -229,6 +229,93 @@ pub proof fn lemma_bool_rr_dp<E>(
                 == success * vr + err);
         }
     }
+}
+
+
+/// Convert an integer odds bound directly into the factor inequality used
+/// by the executable randomized-response proof. The denominator is fixed
+/// at 2^53, so this needs no second distribution or exponential model.
+///
+/// The numeric primitive responsible for the constructor's f64 privacy
+/// constant must establish `numerator <= factor * complement`, where
+/// `factor = exp(privacy_constant)`. That connection is a separate
+/// numerical specification obligation.
+pub proof fn lemma_odds_bound_sufficient(numerator: u64, factor: real)
+    requires
+        4_503_599_627_370_496u64 <= numerator,
+        numerator < 9_007_199_254_740_992u64,
+        factor >= 1real,
+        numerator as real <= factor
+            * (9_007_199_254_740_992u64 - numerator) as real,
+    ensures
+        numerator as real / 9_007_199_254_740_992real
+            <= factor * (1real
+                - numerator as real / 9_007_199_254_740_992real),
+{
+    let n = numerator as real;
+    let complement = (9_007_199_254_740_992u64 - numerator) as real;
+    let denominator = 9_007_199_254_740_992real;
+    assert(complement == denominator - n);
+    assert(n <= factor * complement);
+    assert(n / denominator <= factor * (complement / denominator))
+        by(nonlinear_arith)
+        requires
+            denominator > 0real,
+            n <= factor * complement;
+    assert(complement / denominator == 1real - n / denominator)
+        by(nonlinear_arith)
+        requires complement == denominator - n, denominator > 0real;
+}
+
+/// A constructor-level privacy theorem for the same checked numerator
+/// decoder and exact odds parts executed by the public constructor.
+/// Verus does not yet prove the native f64->factor bound or Arc erasure.
+pub proof fn lemma_validated_bool_rr_privacy<E>(
+    bits: u64,
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
+    success: real,
+    factor: real,
+    left: bool,
+    right: bool,
+    distance: u32,
+    payoff: spec_fn(Result<bool, E>) -> real,
+)
+    requires
+        0x3fe0_0000_0000_0000u64 <= bits <= 0x3ff0_0000_0000_0000u64,
+        factor >= 1real,
+        dyadic53::numerator_from_bits(bits) < 9_007_199_254_740_992u64 ==>
+            dyadic53::numerator_from_bits(bits) as real <= factor
+                * (9_007_199_254_740_992u64
+                    - dyadic53::numerator_from_bits(bits)) as real,
+        left == right || distance > 0,
+        bounded_payoff(payoff),
+        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+    ensures
+        distance == 0 ==>
+            release_expectation(left, dyadic53::numerator_from_bits(bits),
+                word_expectation, payoff)
+            <= release_expectation(right, dyadic53::numerator_from_bits(bits),
+                word_expectation, payoff),
+        distance > 0 && dyadic53::numerator_from_bits(bits)
+                < 9_007_199_254_740_992u64 ==>
+            release_expectation(left, dyadic53::numerator_from_bits(bits),
+                word_expectation, payoff)
+            <= factor * release_expectation(
+                right, dyadic53::numerator_from_bits(bits),
+                word_expectation, payoff),
+{
+    crate::bernoulli_proof::lemma_checked_binary64_probability(bits);
+    let numerator = dyadic53::numerator_from_bits(bits);
+    assert(4_503_599_627_370_496u64 <= numerator
+        <= 9_007_199_254_740_992u64);
+    if numerator < 9_007_199_254_740_992u64 {
+        lemma_odds_bound_sufficient(numerator, factor);
+    }
+    lemma_bool_rr_dp(
+        numerator, word_expectation, error_expectation, success,
+        factor, left, right, distance, payoff,
+    );
 }
 
 } // verus!
