@@ -74,9 +74,43 @@ where
             "Casting to or from mutable Categorical encodings is unsafe. Cast to String or fixed Enum instead."
         );
     }
-    data_column.set_dtype(to_type_dtype.clone())?;
-    // Non-strict casts may introduce nulls, even from non-null inputs.
-    data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
+    // Polars' non-strict timestamp parser still panics on dates outside the
+    // nanosecond timestamp range. Numeric-to-Date casts can also construct
+    // logical dates that Chrono cannot represent.
+    if has_unsafe_temporal_cast(&from_dtype, &to_type_dtype) {
+        return fallible!(
+            MakeTransformation,
+            "This temporal cast can produce data-dependent failures on private values."
+        );
+    }
+
+    // Array nulls and nulls within an Array are distinct. The Series nullable
+    // flag describes only outer nulls, so it cannot account for cast failures
+    // inside fixed-size Arrays.
+    if let (DataType::Array(_, _), DataType::Array(_, _)) = (&from_dtype, &to_type_dtype) {
+        if !is_null_preserving_cast(&from_dtype, &to_type_dtype) {
+            return fallible!(
+                MakeTransformation,
+                "Array element casts must preserve non-null values."
+            );
+        }
+        if from_dtype != to_type_dtype
+            && data_column.element_domain::<crate::domains::ArrayDomain>()?.has_nullable_elements()
+        {
+            return fallible!(
+                MakeTransformation,
+                "Casting Arrays with nullable elements is not supported."
+            );
+        }
+    }
+
+    // Identity casts must preserve existing element-domain constraints,
+    // particularly nullable elements within Arrays.
+    if from_dtype != to_type_dtype {
+        data_column.set_dtype(to_type_dtype.clone())?;
+        // Non-strict casts may introduce nulls, even from non-null inputs.
+        data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
+    }
 
     t_prior
         >> Transformation::new(
@@ -121,6 +155,17 @@ fn contains_categorical(dtype: &DataType) -> bool {
         DataType::Struct(fields) => fields
             .iter()
             .any(|field| contains_categorical(&field.dtype)),
+        _ => false,
+    }
+}
+
+fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
+    use DataType::*;
+
+    match (from, to) {
+        (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
+        (from, Date) if from.is_primitive_numeric() => true,
+        (Array(from, _), Array(to, _)) => has_unsafe_temporal_cast(from, to),
         _ => false,
     }
 }
