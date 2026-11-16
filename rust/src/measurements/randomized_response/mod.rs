@@ -53,13 +53,14 @@ pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
-    // number of categories t is 2, and probability is bounded below by 1/t
-    if !(0.5f64..=1.0).contains(&prob) {
+    // For positive binary64 numbers the bit encoding is monotone.
+    // The checked decoder excludes NaN and every value outside [0.5, 1].
+    // Accepted probabilities are exactly numerator / 2^53.
+    let Some(numerator) =
+        crate::traits::samplers::dyadic53_checked_numerator(prob.to_bits())
+    else {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
-    }
-
-    // The accepted binary64 probability is exactly numerator / 2^53.
-    let numerator = crate::traits::samplers::dyadic53_numerator(prob.to_bits());
+    };
     // The exact integer complement is verified by Verus. Both integers are
     // representable exactly as binary64, before directed numeric operations.
     let privacy_constant = match crate::traits::samplers::dyadic53_odds_parts(numerator) {

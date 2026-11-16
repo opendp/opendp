@@ -19,6 +19,28 @@ pub fn numerator_from_bits(bits: u64) -> u64 {
     }
 }
 
+
+/// Validate the exact binary64 encoding before decoding the Bernoulli
+/// numerator. The positive f64 interval [0.5, 1] is precisely this
+/// contiguous interval of IEEE-754 bit patterns; NaNs, negatives, and
+/// out-of-range inputs are rejected without floating-point comparisons.
+#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
+#[cfg_attr(verus_only, verus_spec(result =>
+    ensures result == if 0x3fe0_0000_0000_0000u64 <= bits
+        && bits <= 0x3ff0_0000_0000_0000u64 {
+        Some(numerator_from_bits(bits))
+    } else {
+        None
+    },
+))]
+pub fn checked_numerator_from_bits(bits: u64) -> Option<u64> {
+    if bits < 0x3fe0_0000_0000_0000u64 || bits > 0x3ff0_0000_0000_0000u64 {
+        None
+    } else {
+        Some(numerator_from_bits(bits))
+    }
+}
+
 /// Turn uniform 64 bits into Bernoulli(numerator/2^53):
 /// truncating the lowest 11 bits produces a uniform 53-bit integer.
 #[cfg_attr(verus_only, verus_verify(dual_spec, open))]

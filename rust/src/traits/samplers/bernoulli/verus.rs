@@ -131,4 +131,29 @@ pub proof fn lemma_accepted_binary64_bits(bits: u64)
     }
 }
 
+
+/// The production checked decoder enforces the domain of the constructor.
+/// On success it reconstructs exactly the accepted binary64 probability.
+pub proof fn lemma_checked_binary64_probability(bits: u64)
+    ensures
+        match dyadic53::checked_numerator_from_bits(bits) {
+            None => bits < 0x3fe0_0000_0000_0000u64
+                || bits > 0x3ff0_0000_0000_0000u64,
+            Some(numerator) => {
+                &&& 4_503_599_627_370_496u64 <= numerator
+                &&& numerator <= 9_007_199_254_740_992u64
+                &&& accepted_binary64_value(bits) ==
+                    numerator as real / 9_007_199_254_740_992real
+            },
+        },
+{
+    match dyadic53::checked_numerator_from_bits(bits) {
+        None => {},
+        Some(numerator) => {
+            lemma_accepted_binary64_bits(bits);
+            assert(numerator == dyadic53::numerator_from_bits(bits));
+        },
+    }
+}
+
 } // verus!
