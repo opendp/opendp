@@ -56,18 +56,22 @@ we must first prove that the transformation on line \ref{strp-trans} is a valid 
     then all possible choices of input dataset would fail,
     resulting in data-independent errors.
 
-    Line \ref{non-strict} disables raising an error when conversion fails.
-    Conversion cannot be ambiguous because line \ref{format} requires the format to be specified,
-    but even if parsing were to be ambiguous, line \ref{ambiguous} configures the parsing of ambiguous values to not raise.
+    Line \ref{non-strict} disables raising an error for ordinary parse failures.
+    Line \ref{ambiguous} replaces the ambiguity option with the constant \\texttt{null}.
+    Line \ref{to-type-check} rejects timezone-aware and nanosecond datetimes.
+    In particular, the accepted datetime types do not localize wall-clock values
+    into timezones, which could raise on nonexistent times during DST transitions.
+    Line \ref{inferred-dtype} additionally rejects formats that would implicitly
+    produce a timezone-aware output.
 
-    Therefore, all errors that may be encountered while parsing result in null values,
-    so no error can be raised by the strptime transformation.
+    Therefore, ordinary parse failures produce null values,
+    without raising data-dependent errors.
 \end{proof}
 
 \begin{proof}
     \textbf{Appropriate Output Domain}
     Line \ref{out-series} constructs a series domain whose elements are of type \texttt{to\_type} or null.
-    Each string in the input data may either parse into \texttt{to\_type} or fail and by \ref{non-strict} and \ref{ambiguous} evaluate to null.
+    Each string in the input data may either parse into \texttt{to\_type} or fail and by \ref{non-strict} evaluate to null.
 
     Therefore the output domain is the same as the input domain,
     but where the active column domain's data type is nullable values of type \texttt{to\_type}.
