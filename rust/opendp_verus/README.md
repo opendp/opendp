@@ -89,3 +89,10 @@ and logarithm. The directed numeric library and closure-erasure correctness
 are **not yet verified**, and `fill_bytes` is still the probabilistic trust
 boundary. A passing Verus proof therefore does not yet certify the returned
 `Measurement`.
+
+The concrete operator now owns both the integer numerator and the privacy
+cost. The production `Function` and `PrivacyMap` callbacks capture the same
+copied instance, and `operator.rs` provides Verus-checked methods for both
+observable operations. The numeric value in `privacy_cost` is still computed
+using directed floating-point routines whose soundness is an outstanding
+verification obligation.

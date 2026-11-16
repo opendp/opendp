@@ -10,11 +10,12 @@ use crate::traits::samplers::dyadic53;
 use super::kernel;
 
 #[derive(Clone, Copy)]
-pub struct BoolRR {
+pub struct BoolRR<P: Copy> {
     pub numerator: u64,
+    pub privacy_cost: P,
 }
 
-impl BoolRR {
+impl<P: Copy> BoolRR<P> {
     /// Apply one fallible entropy word to the private Boolean. The actual
     /// constructor calls this method, with entropy supplied by fill_bytes.
     #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
@@ -28,14 +29,13 @@ impl BoolRR {
         let honest = dyadic53::from_word(self.numerator, entropy);
         kernel::release_result(truth, honest)
     }
-}
-
-/// The same privacy-map selection as is installed in the returned Measurement.
-/// The privacy cost itself is calculated once from the public numerator.
-#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
-#[cfg_attr(verus_only, verus_spec(result =>
-    ensures result == (if distance == 0 { zero } else { cost }),
-))]
-pub fn privacy_map<T: Copy>(distance: u32, zero: T, cost: T) -> T {
-    if distance == 0 { zero } else { cost }
+    /// The map installed in OpenDP's returned Measurement reads the same
+    /// concrete operator state as its function callback.
+    #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures result == (if distance == 0 { zero } else { self.privacy_cost }),
+    ))]
+    pub fn map(&self, distance: u32, zero: P) -> P {
+        if distance == 0 { zero } else { self.privacy_cost }
+    }
 }

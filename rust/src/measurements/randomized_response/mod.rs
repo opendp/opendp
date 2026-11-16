@@ -72,8 +72,8 @@ pub fn make_randomized_response_bool(
             .inf_ln()?
     };
 
-    let operator = operator::BoolRR { numerator };
-    let map_constant = privacy_constant;
+    let operator = operator::BoolRR { numerator, privacy_cost: privacy_constant };
+    let map_operator = operator;
     let _ = constant_time; // Both settings use one fixed-size entropy draw.
 
     Measurement::new(
@@ -83,7 +83,7 @@ pub fn make_randomized_response_bool(
         Function::new_fallible(move |truth: &bool| {
             operator.release(*truth, sample_uniform_u64())
         }),
-        PrivacyMap::new(move |d| operator::privacy_map(*d, 0.0, map_constant)),
+        PrivacyMap::new(move |d| map_operator.map(*d, 0.0)),
     )
 }
 

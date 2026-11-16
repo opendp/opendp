@@ -92,12 +92,12 @@ fn test_bool_rr_integer_odds_and_operator() -> Fallible<()> {
         (1.0, 1u64 << 53),
         (f64::from_bits(1.0f64.to_bits() - 1), (1u64 << 53) - 1),
     ] {
-        let operator = BoolRR { numerator };
+        let operator = BoolRR { numerator, privacy_cost: 5.0f64 };
         assert_eq!(operator.release(true, Ok::<u64, ()>(0)), Ok(true));
         assert_eq!(operator.release(false, Ok::<u64, ()>(0)), Ok(false));
         assert_eq!(operator.release(true, Err::<u64, usize>(73)), Err(73));
-        assert_eq!(operator::privacy_map(0u32, 0.0, 5.0), 0.0);
-        assert_eq!(operator::privacy_map(2u32, 0.0, 5.0), 5.0);
+        assert_eq!(operator.map(0u32, 0.0), 0.0);
+        assert_eq!(operator.map(2u32, 0.0), 5.0);
 
         let measurement = make_randomized_response_bool(prob, false)?;
         assert_eq!(measurement.map(&0)?, 0.0);
