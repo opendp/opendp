@@ -9,7 +9,7 @@ use crate::metrics::MicrodataMetric;
 
 use super::{
     StableExpr,
-    cast::{has_unsafe_temporal_cast, is_null_preserving_cast, is_safe_categorical_cast},
+    cast::{CastEffect, classify_private_cast},
 };
 
 #[cfg(test)]
@@ -69,35 +69,12 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
-    // Array casts require separate reasoning about element nullability and
-    // categorical encodings. Do not support them, including identity casts.
-    if matches!(&from_dtype, DataType::Array(_, _))
-        || matches!(&to_type_dtype, DataType::Array(_, _))
-    {
-        return fallible!(MakeTransformation, "Array casts are not supported");
-    }
-    // Mutable categorical mappings can make cast outputs depend on other rows,
-    // expose physical category codes, or raise when the mapping fills up.
-    if !is_safe_categorical_cast(&from_dtype, &to_type_dtype) {
-        return fallible!(
-            MakeTransformation,
-            "Casting to or from mutable Categorical encodings is unsafe. Cast to String or fixed Enum instead."
-        );
-    }
-    // Polars' non-strict timestamp parser still panics on dates outside the
-    // nanosecond timestamp range. Numeric and broad-range datetime-to-Date
-    // casts can also construct dates that Chrono cannot represent.
-    if has_unsafe_temporal_cast(&from_dtype, &to_type_dtype) {
-        return fallible!(
-            MakeTransformation,
-            "This temporal cast can produce data-dependent failures on private values."
-        );
-    }
+    let effect = classify_private_cast(&from_dtype, &to_type_dtype, options)?;
 
     if from_dtype != to_type_dtype {
         data_column.set_dtype(to_type_dtype.clone())?;
         // Non-strict casts may introduce nulls, even from non-null inputs.
-        data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
+        data_column.nullable |= matches!(effect, CastEffect::MayIntroduceNull);
     }
 
     t_prior
@@ -115,4 +92,3 @@ where
             StabilityMap::new(Clone::clone),
         )?
 }
-
