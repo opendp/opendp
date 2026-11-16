@@ -63,7 +63,7 @@ pub proof fn lemma_rr_wp_from_uniform<E>(
             assert(0real <= post(Err(err)) <= 1real);
         }
     };
-    assert forall|entropy: Result<u64, E>| before(entropy) == prefix(entropy) by {
+    assert forall|entropy: Result<u64, E>| #[trigger] before(entropy) == prefix(entropy) by {
         match entropy {
             Ok(word) => {
                 lemma_success_is_prefix(numerator, word);
@@ -184,7 +184,7 @@ pub proof fn lemma_valid_rr_measurement_wp<E>(
 {
     assert forall|left: bool, right: bool, distance: u32,
                   post: spec_fn(Result<bool, E>) -> real|
-        #[trigger] (left == right || distance > 0)
+        (left == right || distance > 0)
         && wp::bounded_post(post)
         implies match rr_factor_map(numerator, factor, distance) {
             None => true,
