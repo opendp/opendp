@@ -1,5 +1,5 @@
 use crate::core::Domain;
-use crate::domains::{ArrayDomain, AtomDomain, CategoricalDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{ArrayDomain, AtomDomain, CategoricalDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -146,7 +146,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         DataType::Float32,
         DataType::Float64,
         DataType::String,
-        DataType::Date,
         DataType::Datetime(TimeUnit::Microseconds, None),
         DataType::Time,
         DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
@@ -203,7 +202,6 @@ fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
 
     Ok(())
 }
-
 
 #[test]
 fn test_make_expr_cast_rejects_mutable_categorical_destinations() -> Fallible<()> {
@@ -336,6 +334,129 @@ fn test_make_expr_cast_rejects_non_strict_categorical_capacity_errors() -> Falli
         )
         .is_err()
     );
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_nanosecond_timestamp_parsing() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "value",
+        AtomDomain::<String>::default(),
+    )])?;
+
+    // Polars 1.36.1 calls timestamp_nanos_opt().unwrap() when parsing an
+    // otherwise valid date outside the nanosecond timestamp range.
+    for timezone in [None, Some("UTC".into())] {
+        let dtype = DataType::Datetime(TimeUnit::Nanoseconds, timezone);
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col("value").cast(dtype),
+            )
+            .is_err()
+        );
+    }
+
+    // Millisecond and microsecond timestamp parsing does not use that panic path.
+    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
+        make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("value").cast(DataType::Datetime(unit, None)),
+        )?;
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_numeric_to_date() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("days", AtomDomain::<i32>::default()),
+        SeriesDomain::new("other", AtomDomain::<i64>::default()),
+        SeriesDomain::new("string", AtomDomain::<String>::default()),
+    ])?;
+
+    // Int32 -> Date is a physical reinterpretation with no Chrono range
+    // check. Extreme i32 values produce non-null but invalid dates.
+    for column in ["days", "other"] {
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col(column).cast(DataType::Date),
+            )
+            .is_err()
+        );
+    }
+
+    // A parsed date is checked by Polars, with invalid strings becoming null.
+    make_expr_cast(
+        input_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("string").cast(DataType::Date),
+    )?;
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_array_element_nullability() -> Fallible<()> {
+    let string_array = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "values",
+        ArrayDomain::new(AtomDomain::<String>::default(), 2),
+    )])?;
+
+    // "invalid" becomes a null *inside* the Array. Marking the containing
+    // Series nullable does not cover this possible result.
+    assert!(
+        make_expr_cast(
+            string_array.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
+        )
+        .is_err()
+    );
+
+    let int_array = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "values",
+        ArrayDomain::new(AtomDomain::<i32>::default(), 2),
+    )])?;
+    let widen = make_expr_cast(
+        int_array.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
+    )?;
+    assert!(!widen.output_domain.column.nullable);
+
+    // Identity casts preserve domain constraints, including inner nullability.
+    let nullable_inner = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "values",
+        ArrayDomain::new(OptionDomain::new(AtomDomain::<i32>::default()), 2),
+    )])?;
+    let identity = make_expr_cast(
+        nullable_inner.clone().row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("values").cast(DataType::Array(Box::new(DataType::Int32), 2)),
+    )?;
+    assert!(
+        identity
+            .output_domain
+            .column
+            .element_domain::<ArrayDomain>()?
+            .has_nullable_elements()
+    );
+
+    // A non-identity cast would erase this property when resetting the dtype.
+    assert!(
+        make_expr_cast(
+            nullable_inner.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
+        )
+        .is_err()
+    );
+
     Ok(())
 }
 
