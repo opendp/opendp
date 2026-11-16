@@ -2,6 +2,12 @@
 //! OpenDP and the Verus harness. Neither file contains a reference copy.
 #[cfg(verus_only)]
 use vstd::prelude::*;
+#[cfg(verus_only)]
+use crate::{dyadic53, kernel};
+#[cfg(not(verus_only))]
+use crate::traits::samplers::dyadic53;
+#[cfg(not(verus_only))]
+use super::kernel;
 
 #[derive(Clone, Copy)]
 pub struct BoolRR {
@@ -19,8 +25,8 @@ impl BoolRR {
         },
     ))]
     pub fn release<E>(&self, truth: bool, entropy: Result<u64, E>) -> Result<bool, E> {
-        let honest = super::dyadic53::from_word(self.numerator, entropy);
-        super::kernel::release_result(truth, honest)
+        let honest = dyadic53::from_word(self.numerator, entropy);
+        kernel::release_result(truth, honest)
     }
 }
 
