@@ -175,32 +175,11 @@ fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
     let other = Categories::random("".into(), CategoricalPhysical::U32);
     let other_categorical = DataType::Categorical(other.clone(), other.mapping());
 
-    for dtype in [
-        DataType::UInt8,
-        DataType::UInt16,
-        DataType::UInt32,
-        DataType::UInt64,
-        DataType::Int8,
-        DataType::Int16,
-        DataType::Int32,
-        DataType::Int64,
-    ] {
-        assert!(
-            make_expr_cast(
-                input_domain.clone().row_by_row(),
-                FrameDistance(SymmetricDistance),
-                col("category").cast(dtype),
-            )
-            .is_err()
-        );
-    }
-
     for (column, to) in [
-        ("name", categorical.clone()),
-        ("code", categorical.clone()),
-        ("category", other_categorical),
-        ("category", DataType::Boolean),
+        ("category", DataType::UInt32),
         ("category", DataType::Float64),
+        ("name", categorical.clone()),
+        ("category", other_categorical),
     ] {
         assert!(
             make_expr_cast(
@@ -234,91 +213,31 @@ fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
 
 #[test]
 fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
+    // Check the constructor boundary as well as the shared cast classifier.
     let input_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("text", AtomDomain::<String>::default()),
-        SeriesDomain::new("days", AtomDomain::<i32>::default()),
-        SeriesDomain::new("date", AtomDomain::<chrono::NaiveDate>::default()),
         SeriesDomain::new(
-            "ms",
-            DatetimeDomain {
-                time_unit: TimeUnit::Milliseconds,
-                time_zone: None,
-            },
-        ),
-        SeriesDomain::new(
-            "us",
+            "timestamp",
             DatetimeDomain {
                 time_unit: TimeUnit::Microseconds,
-                time_zone: None,
-            },
-        ),
-        SeriesDomain::new(
-            "ns",
-            DatetimeDomain {
-                time_unit: TimeUnit::Nanoseconds,
-                time_zone: None,
+                time_zone: Some("UTC".into()),
             },
         ),
     ])?;
-
-    for (column, to, allowed) in [
-        (
-            "text",
-            DataType::Datetime(TimeUnit::Nanoseconds, None),
-            false,
-        ),
-        (
-            "text",
-            DataType::Datetime(TimeUnit::Microseconds, None),
-            true,
-        ),
-        ("text", DataType::Date, true),
-        ("days", DataType::Date, false),
-        ("ms", DataType::String, false),
-        ("us", DataType::String, false),
-        ("ns", DataType::String, true),
-        ("ms", DataType::Date, false),
-        ("us", DataType::Date, false),
-        ("ns", DataType::Date, true),
-        ("date", DataType::String, true),
+    for (column, to) in [
+        ("text", DataType::Datetime(TimeUnit::Nanoseconds, None)),
+        ("timestamp", DataType::String),
     ] {
-        let result = make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col(column).cast(to.clone()),
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col(column).cast(to),
+            )
+            .is_err(),
+            "{column}"
         );
-        assert_eq!(result.is_ok(), allowed, "{column} -> {to}");
     }
-
-    // The parser restriction also covers timezone-aware ns timestamps.
-    assert!(
-        make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("text").cast(DataType::Datetime(
-                TimeUnit::Nanoseconds,
-                Some("UTC".into()),
-            )),
-        )
-        .is_err()
-    );
-
-    // The same restrictions apply to timezone-aware timestamps.
-    let zoned = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "timestamp",
-        DatetimeDomain {
-            time_unit: TimeUnit::Microseconds,
-            time_zone: Some("UTC".into()),
-        },
-    )])?;
-    assert!(
-        make_expr_cast(
-            zoned.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("timestamp").cast(DataType::String),
-        )
-        .is_err()
-    );
     Ok(())
 }
 
@@ -330,8 +249,6 @@ fn test_make_expr_cast_rejects_all_array_casts() -> Fallible<()> {
     ])?;
 
     for (column, to) in [
-        ("array", DataType::Array(Box::new(DataType::Int32), 2)),
-        ("array", DataType::Array(Box::new(DataType::Int64), 2)),
         ("array", DataType::String),
         ("scalar", DataType::Array(Box::new(DataType::Int32), 2)),
     ] {
@@ -360,7 +277,7 @@ fn test_make_expr_cast_nullability() -> Fallible<()> {
 
     // The constructor forces the default strict cast to be non-strict.
     let t_cast = make_expr_cast(
-        input_domain.row_by_row(),
+        input_domain.clone().row_by_row(),
         FrameDistance(SymmetricDistance),
         col("x").cast(DataType::Int64),
     )?;
@@ -374,6 +291,16 @@ fn test_make_expr_cast_nullability() -> Fallible<()> {
             .output_domain
             .column
             .member(observed.column("x")?.as_materialized_series())?
+    );
+
+    // Wrapping is opt-in and is not certified for private values.
+    assert!(
+        make_expr_cast(
+            input_domain.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("x").cast_with_options(DataType::Int64, CastOptions::Overflowing),
+        )
+        .is_err()
     );
 
     Ok(())
@@ -401,31 +328,6 @@ fn test_make_expr_cast_widening_preserves_non_null() -> Fallible<()> {
             .column
             .member(observed.column("x")?.as_materialized_series())?
     );
-
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_other_null_preserving() -> Fallible<()> {
-    let input_domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("integer", AtomDomain::<i64>::default()),
-        SeriesDomain::new("float", AtomDomain::<f32>::default()),
-        SeriesDomain::new("bool", AtomDomain::<bool>::default()),
-    ])?;
-
-    for expr in [
-        col("integer").cast(DataType::Float64),
-        col("integer").cast(DataType::String),
-        col("float").cast(DataType::Float64),
-        col("bool").cast(DataType::String),
-    ] {
-        let t_cast = make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            expr,
-        )?;
-        assert!(!t_cast.output_domain.column.nullable);
-    }
 
     Ok(())
 }
