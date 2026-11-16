@@ -9,6 +9,7 @@ use crate::traits::samplers::dyadic53;
 #[cfg(not(verus_only))]
 use super::kernel;
 
+#[cfg_attr(verus_only, verifier::verify)]
 #[derive(Clone, Copy)]
 pub struct BoolRR<P: Copy> {
     pub numerator: u64,
