@@ -1,4 +1,4 @@
-use polars::prelude::DataType;
+use polars::prelude::{DataType, TimeUnit};
 
 // Integer casts that preserve every value and do not increase Lp distances.
 pub(super) fn is_integer_widening_cast(from: &DataType, to: &DataType) -> bool {
@@ -28,6 +28,34 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
                 | (Int8 | Int16 | Int32 | Int64 | UInt32 | UInt64, String)
                 | (Float32 | Float64 | Boolean, String)
         )
+}
+
+// A temporal operand can trigger Polars' implicit type-coercion rules.
+pub(super) fn is_temporal_dtype(dtype: &DataType) -> bool {
+    matches!(dtype, DataType::Date | DataType::Datetime(_, _) | DataType::Time)
+}
+
+/// Mutable categorical mappings must not be created or decoded as physical
+/// codes. Logical String and fixed Enum conversions are safe.
+pub(super) fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
+    match (from, to) {
+        (DataType::Categorical(..), DataType::String | DataType::Enum(..)) => true,
+        (DataType::Categorical(..), _) | (_, DataType::Categorical(..)) => from == to,
+        _ => true,
+    }
+}
+
+pub(super) fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
+    use DataType::*;
+
+    match (from, to) {
+        (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
+        (Datetime(TimeUnit::Milliseconds | TimeUnit::Microseconds, _), String) => true,
+        (from, Date) if from.is_primitive_numeric() => true,
+        // Millisecond/microsecond timestamps can produce invalid Date values.
+        (Datetime(unit, _), Date) => !matches!(unit, TimeUnit::Nanoseconds),
+        _ => false,
+    }
 }
 
 fn integer_bounds(dtype: &DataType) -> Option<(i128, i128)> {
