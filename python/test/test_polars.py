@@ -400,11 +400,7 @@ def test_onceframe_lazy():
 def test_mechanisms(measure):
     lf_domain, lf = example_lf()
 
-    with pytest.warns(DeprecationWarning):
-        if measure == dp.max_divergence():
-            expr = pl.len().dp.laplace(0.0)
-        else:
-            expr = pl.len().dp.gaussian(0.0)
+    expr = pl.len().dp.noise(0.0)
 
     plan = seed(lf.collect_schema()).select(expr)
     m_lf = dp.m.make_private_lazyframe(

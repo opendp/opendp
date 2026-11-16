@@ -186,21 +186,6 @@ def test_make_composition():
     print("Invocation:", composed.invoke([22, 12]))
 
 
-def test_deprecated_composition():
-    input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
-    m_lap = dp.m.make_laplace(*input_space, 1.0)
-
-    with pytest.deprecated_call():
-        dp.c.make_basic_composition([m_lap] * 2)
-
-    with pytest.deprecated_call():
-        input_space >> dp.c.then_sequential_composition(
-            m_lap.output_measure,
-            1,
-            [1.0] * 2,
-        )
-
-
 @pytest.mark.skip(reason="long-running process to detect potential memory leaks")
 def test_make_composition_leak():
 
