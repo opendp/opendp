@@ -60,16 +60,11 @@ pub fn make_randomized_response_bool(
 
     // The accepted binary64 probability is exactly numerator / 2^53.
     let numerator = crate::traits::samplers::dyadic53_numerator(prob.to_bits());
-    let denominator = 9_007_199_254_740_992u64;
-
-    // The two integers are exactly representable as f64. In particular,
-    // the complement is computed exactly, rather than rounding (1.0 - prob).
-    let privacy_constant = if numerator == denominator {
-        f64::INFINITY
-    } else {
-        (numerator as f64)
-            .inf_div(&((denominator - numerator) as f64))?
-            .inf_ln()?
+    // The exact integer complement is verified by Verus. Both integers are
+    // representable exactly as binary64, before directed numeric operations.
+    let privacy_constant = match crate::traits::samplers::dyadic53_odds_parts(numerator) {
+        None => f64::INFINITY,
+        Some((n, complement)) => (n as f64).inf_div(&(complement as f64))?.inf_ln()?,
     };
 
     let operator = operator::BoolRR { numerator, privacy_cost: privacy_constant };

@@ -44,3 +44,27 @@ pub fn from_word<E>(numerator: u64, sample: Result<u64, E>) -> Result<bool, E> {
         Err(err) => Err(err),
     }
 }
+
+/// Return the exact likelihood-ratio numerator and denominator.
+/// The only exceptional case is p = 1, for which epsilon is infinite.
+#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
+#[cfg_attr(verus_only, verus_spec(result =>
+    requires
+        4_503_599_627_370_496u64 <= numerator,
+        numerator <= 9_007_199_254_740_992u64,
+    ensures
+        match result {
+            None => numerator == 9_007_199_254_740_992u64,
+            Some((n, complement)) =>
+                n == numerator
+                && complement == 9_007_199_254_740_992u64 - numerator
+                && complement > 0u64,
+        },
+))]
+pub fn odds_parts(numerator: u64) -> Option<(u64, u64)> {
+    if numerator == 9_007_199_254_740_992u64 {
+        None
+    } else {
+        Some((numerator, 9_007_199_254_740_992u64 - numerator))
+    }
+}

@@ -96,3 +96,8 @@ copied instance, and `operator.rs` provides Verus-checked methods for both
 observable operations. The numeric value in `privacy_cost` is still computed
 using directed floating-point routines whose soundness is an outstanding
 verification obligation.
+
+The production numerical path now obtains the exact odds parts from
+`dyadic53::odds_parts`, which Verus checks including the nonzero denominator
+and the infinite-privacy case. The subsequent directed `f64` division and
+logarithm still require their own verified rounding contracts.

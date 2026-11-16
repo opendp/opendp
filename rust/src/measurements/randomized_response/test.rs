@@ -108,3 +108,13 @@ fn test_bool_rr_integer_odds_and_operator() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_bool_rr_exact_odds_parts() {
+    use crate::traits::samplers::dyadic53_odds_parts;
+
+    assert_eq!(dyadic53_odds_parts(1u64 << 52), Some((1u64 << 52, 1u64 << 52)));
+    assert_eq!(dyadic53_odds_parts(3u64 << 51), Some((3u64 << 51, 1u64 << 51)));
+    assert_eq!(dyadic53_odds_parts((1u64 << 53) - 1), Some(((1u64 << 53) - 1, 1)));
+    assert_eq!(dyadic53_odds_parts(1u64 << 53), None);
+}
