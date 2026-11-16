@@ -167,7 +167,7 @@ fn test_strptime_rejects_timezone_aware_parsing() -> Fallible<()> {
     // even with strict=false and ambiguous="null".
     let local_tz = DataType::Datetime(
         TimeUnit::Microseconds,
-        Some(TimeZone::opt_try_new("Europe/Warsaw")?),
+        TimeZone::opt_try_new(Some("Europe/Warsaw"))?,
     );
     let cases = [
         (local_tz, "%Y-%m-%d %H:%M"),
