@@ -1,5 +1,5 @@
 library(opendp)
-enable_features("contrib")
+enable_features("contrib", "idealized-numerics")
 
 
 INT_DATA <- c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L)

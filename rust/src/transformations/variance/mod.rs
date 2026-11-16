@@ -16,7 +16,7 @@ use super::make_sum_of_squared_deviations;
 use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul};
 
 #[bootstrap(
-    features("contrib"),
+    features("contrib", "idealized-numerics"),
     arguments(bounds(rust_type = "(T, T)"), ddof(default = 1)),
     generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
