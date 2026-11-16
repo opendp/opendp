@@ -6,7 +6,7 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{StableExpr, cast::is_numeric_or_boolean};
+use super::StableExpr;
 
 #[cfg(test)]
 mod test;
@@ -90,6 +90,9 @@ where
 
     let data_dtype = data_domain.column.dtype();
     let fill_dtype = fill_domain.column.dtype();
+    let is_numeric_or_boolean = |dtype: &DataType| {
+        dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
+    };
     if data_dtype != fill_dtype
         && !(is_numeric_or_boolean(&data_dtype) && is_numeric_or_boolean(&fill_dtype))
     {
