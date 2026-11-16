@@ -66,11 +66,12 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
-    // Integer casts expose the data-dependent physical encoding of categorical values.
-    if matches!(from_dtype, DataType::Categorical(_, _)) && to_type_dtype.is_integer() {
+    // Mutable categorical mappings can make cast outputs depend on other rows,
+    // expose physical category codes, or raise when the mapping fills up.
+    if !is_safe_categorical_cast(&from_dtype, &to_type_dtype) {
         return fallible!(
             MakeTransformation,
-            "Casting Categorical to an integer exposes data-dependent encodings. Cast to Enum first."
+            "Casting to or from mutable Categorical encodings is unsafe. Cast to String or fixed Enum instead."
         );
     }
     data_column.set_dtype(to_type_dtype.clone())?;
@@ -91,4 +92,36 @@ where
             }),
             StabilityMap::new(Clone::clone),
         )?
+}
+
+/// Only identity casts and decoding to logical String/fixed Enum are safe for
+/// mutable categoricals. In particular, numeric -> Categorical interprets
+/// integers as data-dependent codes, and String -> Categorical can exhaust a
+/// finite mapping even with non-strict casting.
+fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
+    use DataType::*;
+
+    if from == to {
+        return true;
+    }
+
+    match (from, to) {
+        (Categorical(_, _), String | Enum(_, _)) => true,
+        (Array(from, _), Array(to, _))
+        | (Array(from, _), List(to))
+        | (List(from), Array(to, _))
+        | (List(from), List(to)) => is_safe_categorical_cast(from, to),
+        _ => !contains_categorical(from) && !contains_categorical(to),
+    }
+}
+
+fn contains_categorical(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Categorical(_, _) => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(&field.dtype)),
+        _ => false,
+    }
 }
