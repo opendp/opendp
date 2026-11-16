@@ -159,6 +159,10 @@ pub open spec fn rr_factor_map(numerator: u64, factor: real, distance: u32) -> O
     else { Some(factor) }
 }
 
+pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bool {
+    left == right || distance > 0
+}
+
 pub proof fn lemma_valid_rr_measurement_wp<E>(
     numerator: u64,
     sample_wp: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
@@ -176,34 +180,44 @@ pub proof fn lemma_valid_rr_measurement_wp<E>(
     ensures
         wp::valid_wp_max_divergence::<bool, Result<bool, E>, u32>(
             |_: bool| true,
-            |left: bool, right: bool, distance: u32| left == right || distance > 0,
+            |left: bool, right: bool, distance: u32| rr_discrete_close(left, right, distance),
             |truth: bool, post: spec_fn(Result<bool, E>) -> real|
                 rr_wp(truth, numerator, sample_wp, post),
             |distance: u32| rr_factor_map(numerator, factor, distance),
         ),
 {
-    assert forall|left: bool, right: bool, distance: u32,
-                  post: spec_fn(Result<bool, E>) -> real|
-        (left == right || distance > 0)
-        && wp::bounded_post(post)
+    assert forall|left: bool, right: bool, distance: u32|
+        #[trigger] rr_discrete_close(left, right, distance)
         implies match rr_factor_map(numerator, factor, distance) {
             None => true,
-            Some(cost) => rr_wp(left, numerator, sample_wp, post)
-                <= cost * rr_wp(right, numerator, sample_wp, post),
+            Some(cost) => forall|post: spec_fn(Result<bool, E>) -> real|
+                wp::bounded_post(post) ==>
+                    #[trigger] rr_wp(left, numerator, sample_wp, post)
+                    <= cost * rr_wp(right, numerator, sample_wp, post),
         } by {
         if distance == 0 {
             assert(left == right);
-            assert(rr_wp(left, numerator, sample_wp, post)
-                == rr_wp(right, numerator, sample_wp, post));
-            lemma_rr_wp_from_uniform(right, numerator, sample_wp, error_wp, success, post);
-            assert(rr_wp(right, numerator, sample_wp, post) >= 0real)
-                by(nonlinear_arith);
+            assert forall|post: spec_fn(Result<bool, E>) -> real|
+                wp::bounded_post(post) ==>
+                    #[trigger] rr_wp(left, numerator, sample_wp, post)
+                    <= rr_wp(right, numerator, sample_wp, post) by {
+                lemma_rr_wp_from_uniform(right, numerator, sample_wp, error_wp, success, post);
+                assert(rr_wp(left, numerator, sample_wp, post)
+                    == rr_wp(right, numerator, sample_wp, post));
+                assert(rr_wp(right, numerator, sample_wp, post) >= 0real)
+                    by(nonlinear_arith);
+            }
         } else if numerator == 9_007_199_254_740_992u64 {
         } else {
-            lemma_rr_wp_domination(
-                numerator, sample_wp, error_wp, success,
-                factor, left, right, post,
-            );
+            assert forall|post: spec_fn(Result<bool, E>) -> real|
+                wp::bounded_post(post) ==>
+                    #[trigger] rr_wp(left, numerator, sample_wp, post)
+                        <= factor * rr_wp(right, numerator, sample_wp, post) by {
+                lemma_rr_wp_domination(
+                    numerator, sample_wp, error_wp, success,
+                    factor, left, right, post,
+                );
+            }
         }
     }
 }

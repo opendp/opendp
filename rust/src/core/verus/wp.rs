@@ -22,13 +22,14 @@ pub open spec fn valid_wp_max_divergence<X, Y, DI>(
     wp: spec_fn(X, spec_fn(Y) -> real) -> real,
     factor_map: spec_fn(DI) -> Option<real>,
 ) -> bool {
-    forall|left: X, right: X, distance: DI, post: spec_fn(Y) -> real|
+    forall|left: X, right: X, distance: DI|
         member(left) && member(right)
             && #[trigger] close(left, right, distance)
-            && bounded_post(post)
         ==> match factor_map(distance) {
             None => true,
-            Some(factor) => #[trigger] wp(left, post) <= factor * wp(right, post),
+            Some(factor) => forall|post: spec_fn(Y) -> real|
+                bounded_post(post)
+                ==> #[trigger] wp(left, post) <= factor * wp(right, post),
         }
 }
 
