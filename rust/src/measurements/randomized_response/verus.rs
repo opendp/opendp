@@ -147,12 +147,15 @@ pub proof fn lemma_bool_rr_dp<E>(
             let xa = p * a;
             let xb = (1real - p) * b;
             let value = success * (xa + xb) + err;
-            assert(xa >= 0real) by(nonlinear_arith)
+            assert(p * a >= 0real) by(nonlinear_arith)
                 requires p >= 0real, a >= 0real;
-            assert(xb >= 0real) by(nonlinear_arith)
+            assert((1real - p) * b >= 0real) by(nonlinear_arith)
                 requires 1real - p >= 0real, b >= 0real;
-            assert(value >= 0real) by(nonlinear_arith)
+            assert(xa >= 0real);
+            assert(xb >= 0real);
+            assert(success * (xa + xb) + err >= 0real) by(nonlinear_arith)
                 requires success >= 0real, err >= 0real, xa >= 0real, xb >= 0real;
+            assert(value >= 0real);
             assert(value <= factor * value) by(nonlinear_arith)
                 requires value >= 0real, factor >= 1real;
             assert(release_expectation(left, numerator, word_expectation, payoff)
@@ -170,15 +173,21 @@ pub proof fn lemma_bool_rr_dp<E>(
             let two = (1real - p) * b;
             let bound_one = factor * (1real - p) * a;
             let bound_two = factor * p * b;
-            assert(one <= bound_one) by(nonlinear_arith)
+            assert(p * a <= factor * (1real - p) * a) by(nonlinear_arith)
                 requires a >= 0real, p <= factor * (1real - p);
-            assert(two <= bound_two) by(nonlinear_arith)
+            assert((1real - p) * b <= factor * p * b) by(nonlinear_arith)
                 requires b >= 0real, 1real - p <= factor * p;
-            assert(vl <= factor * vr) by(nonlinear_arith)
+            assert(one <= bound_one);
+            assert(two <= bound_two);
+            let upper = bound_one + bound_two;
+            assert(vl <= upper) by(nonlinear_arith)
+                requires one <= bound_one, two <= bound_two, vl == one + two,
+                    upper == bound_one + bound_two;
+            assert(upper == factor * vr) by(nonlinear_arith)
                 requires
-                    one <= bound_one, two <= bound_two,
-                    vl == one + two,
+                    upper == factor * (1real - p) * a + factor * p * b,
                     vr == (1real - p) * a + p * b;
+            assert(vl <= factor * vr);
             assert(success * vl + err <= factor * (success * vr + err))
                 by(nonlinear_arith)
                 requires
