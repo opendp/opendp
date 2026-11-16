@@ -35,7 +35,7 @@ pub(super) fn is_integer_widening_cast(from: &DataType, to: &DataType) -> bool {
 }
 
 // A non-null input must never become null; numeric precision need not be preserved.
-pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
+fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
     use DataType::*;
 
     from == to
@@ -58,7 +58,7 @@ pub(super) fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
 
 /// Mutable categorical mappings must not be created or decoded as physical
 /// codes. Logical String and fixed Enum conversions are safe.
-pub(super) fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
+fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
     match (from, to) {
         (DataType::Categorical(..), DataType::String | DataType::Enum(..)) => true,
         (DataType::Categorical(..), _) | (_, DataType::Categorical(..)) => from == to,
@@ -66,7 +66,7 @@ pub(super) fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
     }
 }
 
-pub(super) fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
+fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
     use DataType::*;
 
     match (from, to) {
