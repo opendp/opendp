@@ -28,13 +28,13 @@ pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync
         fallible!(FailedFunction, "bounds check is not implemented")
     }
     fn check_member(&self, bounds: Option<Bounds<Self>>, nan: bool) -> Fallible<bool> {
+        if self.is_null() {
+            return Ok(nan);
+        }
         if let Some(bounds) = bounds {
             if !self.is_bounded(bounds)? {
                 return Ok(false);
             }
-        }
-        if !nan && self.is_null() {
-            return Ok(false);
         }
         Ok(true)
     }
