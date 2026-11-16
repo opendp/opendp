@@ -374,6 +374,74 @@ fn test_make_expr_cast_rejects_nanosecond_timestamp_parsing() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_expr_cast_rejects_unsafe_datetime_string_formatting() -> Fallible<()> {
+    // Polars converts physical timestamps through Chrono when formatting.
+    // The complete i64 range is valid in DatetimeDomain, but millisecond and
+    // microsecond timestamps can exceed Chrono's representable calendar range.
+    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
+        for timezone in [None, Some("UTC".into())] {
+            let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+                "timestamp",
+                DatetimeDomain {
+                    time_unit: unit,
+                    time_zone: timezone,
+                },
+            )])?;
+
+            assert!(
+                make_expr_cast(
+                    input_domain.row_by_row(),
+                    FrameDistance(SymmetricDistance),
+                    col("timestamp").cast(DataType::String),
+                )
+                .is_err()
+            );
+        }
+    }
+
+    // Any nanosecond timestamp fits in Chrono's calendar range.
+    let ns_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "timestamp",
+        DatetimeDomain {
+            time_unit: TimeUnit::Nanoseconds,
+            time_zone: None,
+        },
+    )])?;
+    make_expr_cast(
+        ns_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("timestamp").cast(DataType::String),
+    )?;
+
+    Ok(())
+}
+
+#[test]
+fn test_polars_datetime_string_cast_panics_on_out_of_range_value() -> Fallible<()> {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
+        let dtype = DataType::Datetime(unit, None);
+        let ordinary = Series::new("timestamp".into(), &[0i64]).cast(&dtype)?;
+        let extreme = Series::new("timestamp".into(), &[i64::MAX]).cast(&dtype)?;
+
+        // This documents why constructor-level validation is necessary:
+        // CastOptions::NonStrict does not turn the panic into a null.
+        assert!(
+            catch_unwind(AssertUnwindSafe(|| ordinary
+                .cast_with_options(&DataType::String, CastOptions::NonStrict)))
+            .is_ok()
+        );
+        assert!(
+            catch_unwind(AssertUnwindSafe(|| extreme
+                .cast_with_options(&DataType::String, CastOptions::NonStrict)))
+            .is_err()
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn test_make_expr_cast_rejects_numeric_to_date() -> Fallible<()> {
     let input_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("days", AtomDomain::<i32>::default()),
