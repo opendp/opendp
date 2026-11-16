@@ -1,3 +1,5 @@
+#![allow(deprecated)] // The FFI retains deprecated constructors for compatibility.
+
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 

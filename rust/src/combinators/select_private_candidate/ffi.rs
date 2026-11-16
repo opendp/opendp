@@ -1,5 +1,3 @@
-use core::f64;
-
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,

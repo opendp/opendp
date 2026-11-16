@@ -11,7 +11,9 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfCast, InfDiv, InfMul, InfPowI, InfSub};
 
-use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
+#[allow(deprecated)]
+use super::make_sum_of_squared_deviations;
+use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul};
 
 #[bootstrap(
     features("contrib"),
@@ -85,13 +87,14 @@ where
         .inf_div(&_4)?
         .inf_mul(&size_)?;
 
-    make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul(
-            AtomDomain::new_non_nan(),
-            AbsoluteDistance::default(),
-            constant,
-            (S::Item::zero(), upper_var_bound),
-        )?
+    #[allow(deprecated)]
+    let ssd = make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?;
+    ssd >> make_lipschitz_float_mul(
+        AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
+        constant,
+        (S::Item::zero(), upper_var_bound),
+    )?
 }
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+#![allow(deprecated)] // The FFI retains deprecated constructors for compatibility.
+
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},
