@@ -13,6 +13,41 @@ use crate::bernoulli_proof::{
 
 verus! {
 
+/// Small, reusable real-number facts keep the RR proof out of nonlinear SMT.
+proof fn nonnegative_product(x: real, y: real)
+    requires x >= 0real, y >= 0real,
+    ensures x * y >= 0real,
+{
+    assert(x * y >= 0real) by(nonlinear_arith)
+        requires x >= 0real, y >= 0real;
+}
+
+proof fn multiply_inequality(x: real, y: real, weight: real)
+    requires x <= y, weight >= 0real,
+    ensures x * weight <= y * weight,
+{
+    assert(x * weight <= y * weight) by(nonlinear_arith)
+        requires x <= y, weight >= 0real;
+}
+
+proof fn distribute(x: real, y: real, z: real)
+    ensures x * (y + z) == x * y + x * z,
+{
+    assert(x * (y + z) == x * y + x * z) by(nonlinear_arith);
+}
+
+proof fn mul_associative(x: real, y: real, z: real)
+    ensures x * (y * z) == (x * y) * z,
+{
+    assert(x * (y * z) == (x * y) * z) by(nonlinear_arith);
+}
+
+proof fn mul_rotate(x: real, y: real, z: real)
+    ensures x * (y * z) == y * (x * z),
+{
+    assert(x * (y * z) == y * (x * z)) by(nonlinear_arith);
+}
+
 pub open spec fn bounded_payoff<E>(f: spec_fn(Result<bool, E>) -> real) -> bool {
     forall|outcome: Result<bool, E>| 0real <= #[trigger] f(outcome) <= 1real
 }
@@ -147,52 +182,47 @@ pub proof fn lemma_bool_rr_dp<E>(
             let xa = p * a;
             let xb = (1real - p) * b;
             let value = success * (xa + xb) + err;
-            assert(p * a >= 0real) by(nonlinear_arith)
-                requires p >= 0real, a >= 0real;
-            assert((1real - p) * b >= 0real) by(nonlinear_arith)
-                requires 1real - p >= 0real, b >= 0real;
-            assert(xa >= 0real);
-            assert(xb >= 0real);
-            assert(success * (xa + xb) + err >= 0real) by(nonlinear_arith)
-                requires success >= 0real, err >= 0real, xa >= 0real, xb >= 0real;
+            nonnegative_product(p, a);
+            nonnegative_product(1real - p, b);
+            assert(xa + xb >= 0real);
+            nonnegative_product(success, xa + xb);
             assert(value >= 0real);
-            assert(value <= factor * value) by(nonlinear_arith)
-                requires value >= 0real, factor >= 1real;
+            multiply_inequality(1real, factor, value);
             assert(release_expectation(left, numerator, word_expectation, payoff)
                 == release_expectation(right, numerator, word_expectation, payoff));
             assert(release_expectation(right, numerator, word_expectation, payoff)
                 == value);
+            assert(release_expectation(left, numerator, word_expectation, payoff)
+                <= factor * release_expectation(right, numerator, word_expectation, payoff));
         } else {
             assert(right == !left);
             assert(1real - p <= p);
-            assert(1real - p <= factor * p) by(nonlinear_arith)
-                requires 0real <= p, 1real - p <= p, factor >= 1real;
-            let vl = p * a + (1real - p) * b;
-            let vr = (1real - p) * a + p * b;
+            assert(p <= factor * p) by(nonlinear_arith)
+                requires p >= 0real, factor >= 1real;
+            assert(1real - p <= factor * p);
             let one = p * a;
             let two = (1real - p) * b;
-            let bound_one = factor * (1real - p) * a;
-            let bound_two = factor * p * b;
-            assert(p * a <= factor * (1real - p) * a) by(nonlinear_arith)
-                requires a >= 0real, p <= factor * (1real - p);
-            assert((1real - p) * b <= factor * p * b) by(nonlinear_arith)
-                requires b >= 0real, 1real - p <= factor * p;
-            assert(one <= bound_one);
-            assert(two <= bound_two);
-            let upper = bound_one + bound_two;
-            assert(vl <= upper) by(nonlinear_arith)
-                requires one <= bound_one, two <= bound_two, vl == one + two,
-                    upper == bound_one + bound_two;
-            assert(upper == factor * vr) by(nonlinear_arith)
-                requires
-                    upper == factor * (1real - p) * a + factor * p * b,
-                    vr == (1real - p) * a + p * b;
+            let target_one = (1real - p) * a;
+            let target_two = p * b;
+            let vl = one + two;
+            let vr = target_one + target_two;
+
+            multiply_inequality(p, factor * (1real - p), a);
+            multiply_inequality(1real - p, factor * p, b);
+            mul_associative(factor, 1real - p, a);
+            mul_associative(factor, p, b);
+            assert(one <= factor * target_one);
+            assert(two <= factor * target_two);
+            distribute(factor, target_one, target_two);
             assert(vl <= factor * vr);
-            assert(success * vl + err <= factor * (success * vr + err))
-                by(nonlinear_arith)
-                requires
-                    0real <= success, 0real <= err, factor >= 1real,
-                    vl <= factor * vr;
+
+            multiply_inequality(vl, factor * vr, success);
+            mul_rotate(success, factor, vr);
+            assert(success * vl <= factor * (success * vr));
+            multiply_inequality(1real, factor, err);
+            distribute(factor, success * vr, err);
+            assert(success * vl + err <= factor * (success * vr + err));
+
             assert(release_expectation(left, numerator, word_expectation, payoff)
                 == success * vl + err);
             assert(release_expectation(right, numerator, word_expectation, payoff)
