@@ -427,11 +427,11 @@ fn test_polars_datetime_string_cast_panics_on_out_of_range_value() -> Fallible<(
 
         // This documents why constructor-level validation is necessary:
         // CastOptions::NonStrict does not turn the panic into a null.
-        assert!(
+        assert!(matches!(
             catch_unwind(AssertUnwindSafe(|| ordinary
-                .cast_with_options(&DataType::String, CastOptions::NonStrict)))
-            .is_ok()
-        );
+                .cast_with_options(&DataType::String, CastOptions::NonStrict))),
+            Ok(Ok(_))
+        ));
         assert!(
             catch_unwind(AssertUnwindSafe(|| extreme
                 .cast_with_options(&DataType::String, CastOptions::NonStrict)))
@@ -502,6 +502,19 @@ fn test_make_expr_cast_rejects_numeric_to_date() -> Fallible<()> {
         input_domain.row_by_row(),
         FrameDistance(SymmetricDistance),
         col("string").cast(DataType::Date),
+    )?;
+
+    // A Date domain carries representable calendar dates; converting those
+    // values to String is safe even though malformed physical Date values
+    // outside the domain can panic in Polars.
+    let date_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "date",
+        AtomDomain::<chrono::NaiveDate>::default(),
+    )])?;
+    make_expr_cast(
+        date_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("date").cast(DataType::String),
     )?;
     Ok(())
 }
