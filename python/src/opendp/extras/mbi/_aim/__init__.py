@@ -276,6 +276,9 @@ def _make_aim_marginal(
     from opendp.extras.mbi._gem import GemPlusModel
     from opendp.extras.numpy import NPArrayDDomain
 
+    if not isinstance(model, GemPlusModel):
+        model = cast(MarkovRandomField, model)
+
     cardinalities = {
         c: d.cast(NPArrayDDomain).shape
         for c, d in input_domain.cast(TypedDictDomain).items()
@@ -374,11 +377,12 @@ def _make_aim_select(
     d_out,
     d_measure,
     queries: list[Count],
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
     max_size: float,
 ) -> Optional[Measurement]:
     """Make a measurement that selects a set of marginal query that will minimize error."""
     import mbi
+    from opendp.extras.mbi._gem import GemPlusModel
 
     # factor to convert scale -> half-distribution expectation
     if output_measure == max_divergence():
@@ -386,7 +390,9 @@ def _make_aim_select(
     elif output_measure == zero_concentrated_divergence():
         to_mu = sqrt(2 / pi)
 
-    model = cast(mbi.MarkovRandomField, model)
+    if not isinstance(model, GemPlusModel):
+        model = cast(mbi.MarkovRandomField, model)
+
     queries = [replace(q, by=tuple(q.by)) for q in queries]
 
     def is_small(clique: tuple[str, ...]) -> bool:
@@ -437,14 +443,17 @@ def _make_aim_scores(
     input_metric: Metric,
     queries: Sequence[Count],
     expectations: dict[tuple[str, ...], float],
-    model,  # MarkovRandomField
+    model,  # MarkovRandomField | GemPlusModel
 ) -> Transformation:
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
     import numpy as np
     from mbi import MarkovRandomField  # type: ignore[import-not-found]
+    from opendp.extras.mbi._gem import GemPlusModel
 
-    model = cast(MarkovRandomField, model)
+    if not isinstance(model, GemPlusModel):
+        model = cast(MarkovRandomField, model)
+
     queries = tuple(replace(q, by=tuple(q.by)) for q in queries)
     expectations = dict(expectations)
 
