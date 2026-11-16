@@ -225,6 +225,20 @@ fn test_make_expr_cast_rejects_mutable_categorical_destinations() -> Fallible<()
         assert!(result.is_err(), "{column} -> Categorical must be rejected");
     }
 
+    // A fixed Enum has public codes and cannot grow at execution time.
+    let enum_categories = FrozenCategories::new(["A", "B"])?;
+    let enum_dtype = DataType::Enum(
+        enum_categories.clone(),
+        enum_categories.mapping().clone(),
+    );
+    let enum_cast = make_expr_cast(
+        input_domain.clone().row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("name").cast(enum_dtype.clone()),
+    )?;
+    assert_eq!(enum_cast.output_domain.column.dtype(), enum_dtype);
+    assert!(enum_cast.output_domain.column.nullable);
+
     // A categorical no-op is safe, as are casts to fixed Enum and String.
     let cat_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "category",
@@ -276,7 +290,7 @@ fn test_make_expr_cast_rejects_nested_categorical_casts() -> Fallible<()> {
     // guard alone does not protect the physical codes of nested categoricals.
     assert!(
         make_expr_cast(
-            cat_array.row_by_row(),
+            cat_array.clone().row_by_row(),
             FrameDistance(SymmetricDistance),
             col("values").cast(DataType::Array(Box::new(DataType::UInt32), 2)),
         )
@@ -290,6 +304,13 @@ fn test_make_expr_cast_rejects_nested_categorical_casts() -> Fallible<()> {
         )
         .is_err()
     );
+
+    // Reading logical strings from a categorical Array is still safe.
+    make_expr_cast(
+        cat_array.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("values").cast(DataType::Array(Box::new(DataType::String), 2)),
+    )?;
     Ok(())
 }
 
