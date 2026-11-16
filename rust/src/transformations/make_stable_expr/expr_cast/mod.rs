@@ -75,8 +75,8 @@ where
         );
     }
     // Polars' non-strict timestamp parser still panics on dates outside the
-    // nanosecond timestamp range. Numeric-to-Date casts can also construct
-    // logical dates that Chrono cannot represent.
+    // nanosecond timestamp range. Numeric and broad-range datetime-to-Date
+    // casts can also construct dates that Chrono cannot represent.
     if has_unsafe_temporal_cast(&from_dtype, &to_type_dtype) {
         return fallible!(
             MakeTransformation,
@@ -165,6 +165,9 @@ fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
     match (from, to) {
         (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
         (from, Date) if from.is_primitive_numeric() => true,
+        // Millisecond/microsecond timestamps span dates outside Chrono's
+        // representable range, even after the conversion to i32 day counts.
+        (Datetime(unit, _), Date) => !matches!(unit, TimeUnit::Nanoseconds),
         (Array(from, _), Array(to, _)) => has_unsafe_temporal_cast(from, to),
         _ => false,
     }
