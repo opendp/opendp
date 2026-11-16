@@ -107,10 +107,9 @@ fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
 
     match (from, to) {
         (Categorical(_, _), String | Enum(_, _)) => true,
-        (Array(from, _), Array(to, _))
-        | (Array(from, _), List(to))
-        | (List(from), Array(to, _))
-        | (List(from), List(to)) => is_safe_categorical_cast(from, to),
+        (Array(from, from_size), Array(to, to_size)) if from_size == to_size => {
+            is_safe_categorical_cast(from, to)
+        }
         _ => !contains_categorical(from) && !contains_categorical(to),
     }
 }
