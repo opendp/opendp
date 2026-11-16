@@ -76,6 +76,7 @@ pub open spec fn uniform_word_expectation_rule<E>(
     success_probability: real,
 ) -> bool {
     &&& 0real <= success_probability <= 1real
+    &&& error_expectation(|_: E| 1real) == 1real - success_probability
     &&& forall|err_post: spec_fn(E) -> real|
         (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
             ==> 0real <= #[trigger] error_expectation(err_post)
