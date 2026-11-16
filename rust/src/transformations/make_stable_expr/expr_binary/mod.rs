@@ -7,7 +7,7 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::StableExpr;
+use super::{StableExpr, cast::is_temporal_dtype};
 
 #[cfg(test)]
 mod test;
@@ -87,6 +87,20 @@ where
             op
         );
     }
+    // Polars can implicitly cast between temporal dtypes when evaluating binary
+    // expressions. For example, upcasting a microsecond timestamp to
+    // nanoseconds may overflow and introduce nulls. Permit only comparisons
+    // between identical temporal dtypes, avoiding implicit conversions.
+    if (is_temporal_dtype(&left_series.dtype()) || is_temporal_dtype(&right_series.dtype()))
+        && (left_series.dtype() != right_series.dtype()
+            || !matches!(op, Eq | EqValidity | NotEq | NotEqValidity | Lt | LtEq | Gt | GtEq))
+    {
+        return fallible!(
+            MakeTransformation,
+            "temporal binary expressions require identical dtypes and a comparison operator"
+        );
+    }
+
     // Comparing Enum with private strings can fail when a string is not a category.
     // That error depends on the data, so reject these ordering comparisons.
     if matches!(op, Lt | LtEq | Gt | GtEq)
