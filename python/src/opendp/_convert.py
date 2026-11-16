@@ -129,6 +129,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(type_name, str):
         type_name = RuntimeType.parse(type_name)
 
+    if c_type == AnyObjectPtr and type_name == "AnyQueryable":
+        return _queryable_to_object(value)
+
     if isinstance(value, c_type):
         return value
 
@@ -450,6 +453,32 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
     raise UnknownTypeException(type_name)  # pragma: no cover
+
+
+def _queryable_to_object(value):
+    from opendp._data import object_as_slice, object_type, slice_as_object, slice_free
+    from opendp.extras.polars import OnceFrame
+
+    if isinstance(value, OnceFrame):
+        pointer = value.queryable
+    elif isinstance(value, Queryable):
+        pointer = value.value
+    elif isinstance(value, ctypes.POINTER(AnyObject)):
+        pointer = value
+    else:
+        raise TypeError("Expected a Queryable or OnceFrame")
+    if object_type(pointer) != "AnyQueryable":
+        raise TypeError("Expected an AnyQueryable pointer")
+
+    # The slice borrows pointer's payload; clone it before freeing the descriptor.
+    borrowed = object_as_slice(pointer)
+    try:
+        cloned = slice_as_object(borrowed, "AnyQueryable")
+        # Do not retain generated metadata pointing to the borrowed slice.
+        cloned.__dict__.pop("__opendp_dict__", None)
+        return cloned
+    finally:
+        slice_free(borrowed)
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:

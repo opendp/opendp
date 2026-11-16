@@ -758,9 +758,10 @@ class LazyFrameQuery:
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
-    def __init__(self, polars_plan, query):
+    def __init__(self, polars_plan, query, measurement_adapter=None):
         self.polars_plan = polars_plan
         self._query = query
+        self._measurement_adapter = measurement_adapter
         # do not initialize super() because inheritance is only used to mimic the API surface
 
     def __getattribute__(self, name):
@@ -776,6 +777,7 @@ class LazyFrameQuery:
 
         polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
+        adapter = object.__getattribute__(self, "_measurement_adapter")
         attr = getattr(polars_plan, name, None)
 
         # If not a valid attribute on self.polars_plan, then don't re-route
@@ -791,10 +793,10 @@ class LazyFrameQuery:
                 if pl is not None:
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
                     if isinstance(out, pl.lazyframe.frame.LazyFrame):
-                        return LazyFrameQuery(out, query)
+                        return LazyFrameQuery(out, query, adapter)
 
                     if isinstance(out, pl.lazyframe.group_by.LazyGroupBy):
-                        return LazyGroupByQuery(out, query)
+                        return LazyGroupByQuery(out, query, adapter)
 
                 return out
 
@@ -938,6 +940,7 @@ class LazyFrameQuery:
         return LazyFrameQuery(
             keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
             self._query,
+            self._measurement_adapter,
         )
 
     def truncate_per_group(
@@ -1020,8 +1023,12 @@ class LazyFrameQuery:
         return self.filter(ranks.over(input_metric.identifier) < k)
 
     def resolve(self) -> Measurement:
-        """Resolve the query into a measurement."""
+        """Resolve the query and apply its optional measurement adapter."""
+        native = object.__getattribute__(self, "_resolve_polars")()
+        adapter = object.__getattribute__(self, "_measurement_adapter")
+        return native if adapter is None else adapter(native)
 
+    def _resolve_polars(self) -> Measurement:
         # access attributes of self without getting intercepted by Self.__getattribute__
         polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
@@ -1148,7 +1155,8 @@ class LazyFrameQuery:
         """
         from opendp.accuracy import summarize_polars_measurement
 
-        return summarize_polars_measurement(self.resolve(), alpha)
+        native = object.__getattribute__(self, "_resolve_polars")()
+        return summarize_polars_measurement(native, alpha)
 
     def contingency_table(
         self,
@@ -1211,9 +1219,10 @@ class LazyGroupByQuery:
     but only supports APIs documented below.
     """
 
-    def __init__(self, lgb_plan, query):
+    def __init__(self, lgb_plan, query, measurement_adapter=None):
         self._lgb_plan = lgb_plan
         self._query = query
+        self._measurement_adapter = measurement_adapter
 
     def agg(
         self,
@@ -1227,7 +1236,7 @@ class LazyGroupByQuery:
         :param named_aggs: named/aliased expressions to apply in the aggregation context
         """
         polars_plan = self._lgb_plan.agg(*aggs, **named_aggs)
-        return LazyFrameQuery(polars_plan, self._query)
+        return LazyFrameQuery(polars_plan, self._query, self._measurement_adapter)
 
 
 @dataclass

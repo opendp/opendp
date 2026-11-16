@@ -34,6 +34,7 @@ use polars_plan::{
 use serde::{Deserialize, Serialize};
 
 pub mod accuracy;
+pub(crate) mod split;
 
 #[cfg(test)]
 mod test;
@@ -504,13 +505,21 @@ pub enum OnceFrameAnswer {
 
 pub(crate) struct ExtractLazyFrame;
 
+/// Consume the plan before handing it to a trusted external executor.
+pub(crate) struct TakeLazyFrame;
+
 pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
 
 impl From<LazyFrame> for OnceFrame {
     fn from(value: LazyFrame) -> Self {
         let mut state = Some(value);
         Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
-            let Some(lazyframe) = state.clone() else {
+            let lazyframe = if matches!(&query, Query::Internal(q) if q.is::<TakeLazyFrame>()) {
+                state.take()
+            } else {
+                state.clone()
+            };
+            let Some(lazyframe) = lazyframe else {
                 return fallible!(FailedFunction, "OnceFrame has been exhausted");
             };
             Ok(match query {
@@ -524,7 +533,7 @@ impl From<LazyFrame> for OnceFrame {
                     }
                 }),
                 Query::Internal(q_internal) => Answer::Internal({
-                    if q_internal.downcast_ref::<ExtractLazyFrame>().is_some() {
+                    if q_internal.is::<ExtractLazyFrame>() || q_internal.is::<TakeLazyFrame>() {
                         Box::new(lazyframe)
                     } else {
                         return fallible!(FailedFunction, "Unrecognized internal query");
@@ -536,6 +545,25 @@ impl From<LazyFrame> for OnceFrame {
 }
 
 impl OnceFrame {
+    /// Construct a one-shot collector. The collector must shuffle the final output.
+    pub fn with_collector(collector: impl FnOnce() -> Fallible<DataFrame> + 'static) -> Self {
+        let mut collector = Some(collector);
+        Self::new_raw(
+            move |_self: &Self, query: Query<OnceFrameQuery>| match query {
+                Query::External(OnceFrameQuery::Collect) => {
+                    let collect = collector
+                        .take()
+                        .ok_or_else(|| err!(FailedFunction, "OnceFrame has been exhausted"))?;
+                    Ok(Answer::External(OnceFrameAnswer::Collect(collect()?)))
+                }
+                Query::Internal(_) => fallible!(
+                    FailedFunction,
+                    "Collector-backed OnceFrame has no LazyFrame"
+                ),
+            },
+        )
+    }
+
     pub fn collect(mut self) -> Fallible<DataFrame> {
         if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
             self.eval_query(Query::External(&OnceFrameQuery::Collect))?

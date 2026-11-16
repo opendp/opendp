@@ -263,12 +263,26 @@ pub(crate) fn score_candidates<TIA: PartialOrd>(
 
     let (mut lt, mut le) = (0u64, 0u64);
 
-    zip(hist_ro, hist_lo).map(move |(ro, lo)| {
+    let counts = zip(hist_ro, hist_lo).map(move |(ro, lo)| {
         // cumsum the right-open histogram to get the total number of records less than the candidate
         lt += ro;
         // cumsum the left-open histogram to get the total number of records lt or equal to the candidate
         le += lo;
+        (lt, le)
+    });
+    score_candidate_counts(n, counts, alpha_num, alpha_den, size_limit)
+}
 
+/// Shared exact arithmetic for raw-data and histogram-backed candidate scores.
+/// Counts and prefixes are not truncated: only the two strict tails are clipped.
+pub(crate) fn score_candidate_counts(
+    n: u64,
+    counts: impl Iterator<Item = (u64, u64)>,
+    alpha_num: u64,
+    alpha_den: u64,
+    size_limit: u64,
+) -> impl Iterator<Item = u64> {
+    counts.map(move |(lt, le)| {
         let gt = n - le;
 
         // ensures the score calculation won't overflow

@@ -63,6 +63,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "make_private_expr",
     "onceframe_collect",
     "onceframe_lazy",
+    "onceframe_split",
+    "onceframe_with_collector",
     "summarize_polars_measurement",
     "change_one_id_distance",
     "_change_one_id_distance_get_identifier",

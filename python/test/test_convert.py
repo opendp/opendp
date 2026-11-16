@@ -37,6 +37,33 @@ def test_data_object(val_type, val_in):
     assert val_out == val_in
 
 
+def test_queryable_callback_return_clones_owned_pointer():
+    import gc
+    import opendp.prelude as dp
+    from opendp._internal import _new_pure_function
+
+    calls = []
+
+    def transition(query, internal):
+        assert not internal
+        calls.append(query)
+        return len(calls)
+
+    original = dp.new_queryable(transition, Q="i32", A="i32")
+    pointer = original.value
+    identity = _new_pure_function(lambda _: original, TO="AnyQueryable")
+    cloned = identity(0)
+    assert isinstance(cloned, dp.Queryable)
+    assert type(pointer) is AnyObjectPtr
+    assert cloned(1) == 1
+    assert original(2) == 2
+    del original, pointer, identity
+    gc.collect()
+    assert cloned(3) == 3
+    with pytest.raises(TypeError, match="Queryable or OnceFrame"):
+        py_to_c(5, AnyObjectPtr, "AnyQueryable")
+
+
 def test_data_object_int_to_float():
     val_in = 123
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name="f64")
