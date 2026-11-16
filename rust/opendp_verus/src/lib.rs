@@ -15,3 +15,6 @@ pub mod randomized_response_bool;
 
 #[path = "../../src/traits/samplers/bernoulli/verus.rs"]
 pub mod bernoulli_proof;
+
+#[path = "../../src/measurements/randomized_response/wp.rs"]
+pub mod rr_wp_proof;
