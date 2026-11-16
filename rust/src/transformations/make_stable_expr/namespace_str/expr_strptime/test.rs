@@ -154,3 +154,77 @@ fn test_strptime_nano_panic() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_strptime_rejects_timezone_aware_parsing() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "timestamp",
+        AtomDomain::<String>::default(),
+    )])?;
+    let data = df!("timestamp" => ["2021-03-28 01:30", "2021-03-28 02:30"])?.lazy();
+
+    // Polars raises on a nonexistent local time during DST transitions,
+    // even with strict=false and ambiguous="null".
+    let local_tz = DataType::Datetime(
+        TimeUnit::Microseconds,
+        Some(TimeZone::opt_try_new("Europe/Warsaw")?),
+    );
+    let cases = [
+        (local_tz, "%Y-%m-%d %H:%M"),
+        // The format itself can infer UTC despite an unspecified timezone.
+        (
+            DataType::Datetime(TimeUnit::Microseconds, None),
+            "%Y-%m-%d %H:%M:%S%z",
+        ),
+        (DataType::Datetime(TimeUnit::Milliseconds, None), "%+"),
+    ];
+    for (dtype, format) in cases {
+        let expr = col("timestamp").str().strptime(
+            dtype,
+            StrptimeOptions {
+                format: Some(format.into()),
+                strict: false,
+                exact: true,
+                cache: true,
+            },
+            lit("null"),
+        );
+        assert!(
+            make_stable_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                data.clone().select([expr]),
+            )
+            .is_err(),
+            "unexpectedly accepted timezone-aware parsing with format {format}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_strptime_naive_datetime_remains_supported() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "timestamp",
+        AtomDomain::<String>::default(),
+    )])?;
+    let data = df!("timestamp" => ["2021-03-28 02:30", "invalid"])?.lazy();
+    let expr = col("timestamp").str().strptime(
+        DataType::Datetime(TimeUnit::Microseconds, None),
+        StrptimeOptions {
+            format: Some("%Y-%m-%d %H:%M".into()),
+            strict: false,
+            exact: true,
+            cache: true,
+        },
+        lit("null"),
+    );
+    let t = make_stable_lazyframe(
+        domain,
+        FrameDistance(SymmetricDistance),
+        data.clone().select([expr]),
+    )?;
+    let out = t.invoke(&data)?.collect()?;
+    assert_eq!(out.column("timestamp")?.null_count(), 1);
+    Ok(())
+}
