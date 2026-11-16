@@ -12,7 +12,7 @@ def make_expr_strptime(
             pass
         case _:
             raise ValueError("expected str.strptime expression")
-    input, ambiguous = inputs
+    input, _ = inputs
 
     t_prior = input.make_stable(input_domain, input_metric)  # `\label{t-prior}`
     middle_domain, middle_metric = t_prior.output_space()
@@ -26,11 +26,7 @@ def make_expr_strptime(
     # never raise on error
     strptime_options.strict = False  # `\label{non-strict}`
 
-    try:  # `\label{ambiguous}`
-        ambig_value = literal_value_of(ambiguous)
-    except Exception:
-        ambig_value = None
-    ambiguous = lit(ambig_value if ambig_value in {"earliestlatest"} else "null")
+    ambiguous = lit("null")  # `\label{ambiguous}`
 
     output_domain = middle_domain.clone()
     series_domain = output_domain.column
@@ -39,12 +35,23 @@ def make_expr_strptime(
     if series_domain.dtype() != DataType.String:  # `\label{string-check}`
         raise ValueError("str.strptime input dtype must be String")
 
+    # Reject nanoseconds, timezone-aware datetimes, and other output types.
     if to_type not in {
         DataType.Time,
-        DataType.Datetime,
         DataType.Date,
+        DataType.Datetime("ms", None),
+        DataType.Datetime("us", None),
     }:  # `\label{to-type-check}`
-        raise ValueError("str.strptime output dtype must be Time, Datetime or Date")
+        raise ValueError("str.strptime output dtype is unsupported")
+
+    inferred_dtype = (
+        col(series_domain.name)
+        .str.strptime(to_type, strptime_options, ambiguous)
+        .to_field(Schema({"input": DataType.String}))
+        .dtype
+    )  # `\label{inferred-dtype}`
+    if inferred_dtype != to_type:
+        raise ValueError("str.strptime inferred a different output dtype")
 
     # in Rust, this assigns to the series domain in output_domain
     series_domain.set_dtype(to_type)  # `\label{out-series}`
