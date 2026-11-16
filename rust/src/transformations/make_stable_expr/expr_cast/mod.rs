@@ -7,10 +7,7 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{
-    StableExpr,
-    cast::{CastEffect, classify_private_cast},
-};
+use super::{StableExpr, cast::check_private_cast};
 
 #[cfg(test)]
 mod test;
@@ -42,9 +39,12 @@ where
         return fallible!(MakeTransformation, "expected cast expression");
     };
 
-    // Strict casting makes the transformation unstable: errors tell you things about private data.
-    // Could throw an error if strict, but it is the default, so for ease-of-use it is forced to be non-strict.
-    // It is also ok for overflow to wraparound.
+    // Overflowing casts may invalidate optimizer assumptions about sortedness.
+    if matches!(options, CastOptions::Overflowing) {
+        return fallible!(MakeTransformation, "overflowing casts are not supported");
+    }
+    // Strict casting can fail on private data. Replace the default strict
+    // behavior with non-strict casting, which returns null on conversion failure.
     if matches!(options, CastOptions::Strict) {
         options = CastOptions::NonStrict;
     }
@@ -69,12 +69,12 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
-    let effect = classify_private_cast(&from_dtype, &to_type_dtype, options)?;
+    let may_introduce_null = check_private_cast(&from_dtype, &to_type_dtype)?;
 
     if from_dtype != to_type_dtype {
         data_column.set_dtype(to_type_dtype.clone())?;
         // Non-strict casts may introduce nulls, even from non-null inputs.
-        data_column.nullable |= matches!(effect, CastEffect::MayIntroduceNull);
+        data_column.nullable |= may_introduce_null;
     }
 
     t_prior
