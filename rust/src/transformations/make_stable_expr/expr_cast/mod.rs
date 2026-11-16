@@ -164,6 +164,7 @@ fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
 
     match (from, to) {
         (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
+        (Datetime(TimeUnit::Milliseconds | TimeUnit::Microseconds, _), String) => true,
         (from, Date) if from.is_primitive_numeric() => true,
         // Millisecond/microsecond timestamps span dates outside Chrono's
         // representable range, even after the conversion to i32 day counts.
