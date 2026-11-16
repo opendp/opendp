@@ -8,6 +8,11 @@ use vstd::prelude::*;
 #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures
+        result == if bits == 0x3ff0_0000_0000_0000u64 {
+            9_007_199_254_740_992u64
+        } else {
+            4_503_599_627_370_496u64 + (bits % 4_503_599_627_370_496u64)
+        },
         result >= 4_503_599_627_370_496u64,
         result <= 9_007_199_254_740_992u64,
 ))]
