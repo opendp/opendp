@@ -1,20 +1,11 @@
-//! Verification-only Cargo harness. Proofs and executable kernels live
-//! beside the corresponding production OpenDP modules.
-#[path = "../../src/core/verus/wp.rs"]
-pub mod wp;
-#[path = "../../src/core/verus/measurement.rs"]
-pub mod measurement;
+//! Verus harness compiling production OpenDP source, not parallel code.
 #[path = "../../src/traits/samplers/bernoulli/dyadic53.rs"]
 pub mod dyadic53;
 #[path = "../../src/measurements/randomized_response/kernel.rs"]
 pub mod kernel;
 #[path = "../../src/measurements/randomized_response/operator.rs"]
 pub mod operator;
-#[path = "../../src/measurements/randomized_response/verus.rs"]
-pub mod randomized_response_bool;
-
 #[path = "../../src/traits/samplers/bernoulli/verus.rs"]
 pub mod bernoulli_proof;
-
-#[path = "../../src/measurements/randomized_response/wp.rs"]
-pub mod rr_wp_proof;
+#[path = "../../src/measurements/randomized_response/verus.rs"]
+pub mod randomized_response_bool;

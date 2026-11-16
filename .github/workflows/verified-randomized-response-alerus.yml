@@ -1,4 +1,4 @@
-name: Verify randomized response (Verus / wp)
+name: Verify randomized response (Verus / expectations)
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'
-      - 'rust/src/core/verus/**'
       - 'rust/src/traits/samplers/mod.rs'
       - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'

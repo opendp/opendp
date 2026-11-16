@@ -51,4 +51,44 @@ pub proof fn lemma_bernoulli_probability(numerator: u64)
         by(nonlinear_arith);
 }
 
+/// A payoff on the actual output of sample_uniform_u64(). This expresses
+/// exactly the only distributional rule needed for Boolean RR.
+pub open spec fn prefix_post<E>(
+    threshold: nat, below: real, above: real,
+    err_post: spec_fn(E) -> real,
+) -> spec_fn(Result<u64, E>) -> real {
+    |sample: Result<u64, E>| match sample {
+        Ok(word) => if (word as nat) < threshold { below } else { above },
+        Err(err) => err_post(err),
+    }
+}
+
+/// The one probabilistic boundary: expectation preservation for the
+/// *production* sample_uniform_u64() call. No Verus code proves this
+/// contract from fill_bytes yet. The two expectation functionals must be
+/// the semantics of that actual call and its observable errors.
+///
+/// The rule states the distribution of a uniform 64-bit prefix event,
+/// including an arbitrary input-independent error payload.
+pub open spec fn uniform_word_expectation_rule<E>(
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
+    success_probability: real,
+) -> bool {
+    &&& 0real <= success_probability <= 1real
+    &&& forall|err_post: spec_fn(E) -> real|
+        (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
+            ==> 0real <= #[trigger] error_expectation(err_post)
+    &&& forall|threshold: nat, below: real, above: real, err_post: spec_fn(E) -> real|
+        threshold <= 18_446_744_073_709_551_616nat
+        && 0real <= below <= 1real
+        && 0real <= above <= 1real
+        && (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
+        ==> #[trigger] word_expectation(prefix_post(threshold, below, above, err_post))
+            == success_probability * (
+                threshold as real / 18_446_744_073_709_551_616real * below
+                + (1real - threshold as real / 18_446_744_073_709_551_616real) * above
+            ) + error_expectation(err_post)
+}
+
 } // verus!
