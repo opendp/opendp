@@ -1072,7 +1072,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
     with pytest.raises(
         dp.OpenDPException,
-        match="max_groups must be known when the metric is not sensitive to ordering",
+        match="max_groups must be known for floating-point sums",
     ):
         dp.m.make_private_lazyframe(
             lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
@@ -1447,14 +1447,28 @@ def test_arithmetic():
 
 @pytest.mark.parametrize(
     "privacy_unit",
-    [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)],
-    ids=ids,
+    [
+        dp.unit_of(changes=1, ordered=True),
+        dp.unit_of(contributions=1, ordered=True),
+    ],
 )
-def test_private_lazyframe_bounded_dp(privacy_unit):
+def test_polars_rejects_ordered_metrics(privacy_unit):
+    with pytest.raises(
+        ValueError, match="Ordered metrics are not supported for Polars"
+    ):
+        dp.Context.compositor(
+            data=pl.LazyFrame({"value": [1, 2, 3]}),
+            privacy_unit=privacy_unit,
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+        )
+
+
+def test_private_lazyframe_bounded_dp():
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
-        privacy_unit=privacy_unit,
+        privacy_unit=dp.unit_of(changes=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
         margins=[dp.polars.Margin(by=(), max_length=300)],

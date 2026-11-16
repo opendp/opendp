@@ -2,10 +2,7 @@ use super::*;
 
 use crate::{
     domains::{LazyFrameDomain, Margin, OptionDomain},
-    metrics::{
-        FrameDistance, InsertDeleteDistance, L0PInfDistance, L1Distance, L2Distance,
-        SymmetricDistance,
-    },
+    metrics::{FrameDistance, L0PInfDistance, L1Distance, L2Distance, SymmetricDistance},
 };
 
 use polars::{
@@ -119,8 +116,8 @@ fn test_select_make_expr_count_row_by_row() -> Fallible<()> {
     assert!(
         col("data")
             .count()
-            .make_stable(expr_domain, FrameDistance(InsertDeleteDistance))
-            .map(|_: Transformation<_, _, _, FrameDistance<InsertDeleteDistance>>| ())
+            .make_stable(expr_domain, FrameDistance(SymmetricDistance))
+            .map(|_: Transformation<_, _, _, FrameDistance<SymmetricDistance>>| ())
             .is_err()
     );
 
@@ -136,13 +133,13 @@ fn test_expr_count_invariant() -> Fallible<()> {
 
     let t_count: Transformation<_, _, _, L2Distance<f64>> = col("data").count().make_stable(
         lf_domain.clone().select(),
-        L0PInfDistance(InsertDeleteDistance),
+        L0PInfDistance(SymmetricDistance),
     )?;
     assert_eq!(t_count.map(&(10, 10, 1))?, 0.);
 
     let t_len: Transformation<_, _, _, L2Distance<f64>> = col("data").len().make_stable(
         lf_domain.clone().select(),
-        L0PInfDistance(InsertDeleteDistance),
+        L0PInfDistance(SymmetricDistance),
     )?;
 
     assert_eq!(t_len.map(&(10, 10, 1))?, 0.);
@@ -150,7 +147,7 @@ fn test_expr_count_invariant() -> Fallible<()> {
     let t_null_count: Transformation<_, _, _, L2Distance<f64>> =
         col("data").null_count().make_stable(
             lf_domain.clone().select(),
-            L0PInfDistance(InsertDeleteDistance),
+            L0PInfDistance(SymmetricDistance),
         )?;
 
     assert_ne!(t_null_count.map(&(10, 10, 1))?, 0.);

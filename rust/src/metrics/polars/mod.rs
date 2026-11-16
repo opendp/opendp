@@ -10,7 +10,7 @@ use crate::{
     transformations::traits::UnboundedMetric,
 };
 
-use super::{ChangeOneDistance, IntDistance, MicrodataMetric, SymmetricDistance};
+use super::{IntDistance, MicrodataMetric};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -98,7 +98,6 @@ impl MicrodataMetric for SymmetricIdDistance {
     fn identifier(&self) -> Option<Expr> {
         Some(self.identifier.clone())
     }
-    type EventMetric = SymmetricDistance;
 }
 impl MicrodataMetric for ChangeOneIdDistance {
     const SIZED: bool = true;
@@ -106,7 +105,6 @@ impl MicrodataMetric for ChangeOneIdDistance {
     fn identifier(&self) -> Option<Expr> {
         Some(self.identifier.clone())
     }
-    type EventMetric = ChangeOneDistance;
 }
 
 impl<M: UnboundedMetric> Metric for FrameDistance<M> {

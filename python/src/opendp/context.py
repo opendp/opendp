@@ -1199,6 +1199,15 @@ def _normalize_compositor(
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
 
+    if isinstance(domain, LazyFrameDomain) and str(input_metric.type) in {
+        "InsertDeleteDistance",
+        "HammingDistance",
+        "FrameDistance<InsertDeleteDistance>",
+    }:
+        raise ValueError(
+            "Ordered metrics are not supported for Polars. Use ordered=False."
+        )
+
     _check_sized_contributions(domain, input_metric, d_in)
 
     if split_evenly_over is not None and split_by_weights is not None:
