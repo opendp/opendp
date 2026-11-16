@@ -176,8 +176,14 @@ fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
     let other_categorical = DataType::Categorical(other.clone(), other.mapping());
 
     for dtype in [
-        DataType::UInt8, DataType::UInt16, DataType::UInt32, DataType::UInt64,
-        DataType::Int8, DataType::Int16, DataType::Int32, DataType::Int64,
+        DataType::UInt8,
+        DataType::UInt16,
+        DataType::UInt32,
+        DataType::UInt64,
+        DataType::Int8,
+        DataType::Int16,
+        DataType::Int32,
+        DataType::Int64,
     ] {
         assert!(
             make_expr_cast(
@@ -237,15 +243,24 @@ fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
         SeriesDomain::new("date", AtomDomain::<chrono::NaiveDate>::default()),
         SeriesDomain::new(
             "ms",
-            DatetimeDomain { time_unit: TimeUnit::Milliseconds, time_zone: None },
+            DatetimeDomain {
+                time_unit: TimeUnit::Milliseconds,
+                time_zone: None,
+            },
         ),
         SeriesDomain::new(
             "us",
-            DatetimeDomain { time_unit: TimeUnit::Microseconds, time_zone: None },
+            DatetimeDomain {
+                time_unit: TimeUnit::Microseconds,
+                time_zone: None,
+            },
         ),
         SeriesDomain::new(
             "ns",
-            DatetimeDomain { time_unit: TimeUnit::Nanoseconds, time_zone: None },
+            DatetimeDomain {
+                time_unit: TimeUnit::Nanoseconds,
+                time_zone: None,
+            },
         ),
     ])?;
 
