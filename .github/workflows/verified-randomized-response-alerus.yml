@@ -1,11 +1,12 @@
-name: Verify randomized response (Verus / Alerus)
+name: Verify randomized response (Verus / wp)
 
 on:
   push:
-    branches: [verified-randomized-response-alerus]
+    branches: [verified-randomized-response-alerus, verified-randomized-response-wp]
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'
+      - 'rust/src/core/verus/**'
       - 'rust/src/traits/samplers/mod.rs'
       - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'
@@ -23,7 +24,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: verified-randomized-response-alerus-${{ github.ref }}
+  group: verified-randomized-response-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

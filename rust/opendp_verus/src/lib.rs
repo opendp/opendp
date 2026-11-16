@@ -1,5 +1,7 @@
 //! Verification-only Cargo harness. Proofs and executable kernels live
 //! beside the corresponding production OpenDP modules.
+#[path = "../../src/core/verus/wp.rs"]
+pub mod wp;
 #[path = "../../src/core/verus/measurement.rs"]
 pub mod measurement;
 #[path = "../../src/traits/samplers/bernoulli/dyadic53.rs"]
