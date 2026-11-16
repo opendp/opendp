@@ -691,10 +691,7 @@ fn test_same_type_temporal_comparisons_remain_supported() -> Fallible<()> {
             col("L").lt(col("R")),
             col("L").eq_missing(col("R")),
         ] {
-            let t = expr.make_stable(
-                domain.clone(),
-                FrameDistance(SymmetricDistance),
-            )?;
+            let t = expr.make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
             assert!(!t.output_domain.column.nullable, "{dtype}");
         }
         assert!(
