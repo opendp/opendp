@@ -1,5 +1,5 @@
 use crate::core::Domain;
-use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{ArrayDomain, AtomDomain, CategoricalDomain, LazyFrameDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -134,7 +134,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         AtomDomain::<f64>::default(),
     )])?;
 
-    let categories = Categories::global();
     let enum_categories = FrozenCategories::new(["a", "b"].into_iter()).unwrap();
     for dtype in [
         DataType::Boolean,
@@ -150,7 +149,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         DataType::Date,
         DataType::Datetime(TimeUnit::Microseconds, None),
         DataType::Time,
-        DataType::Categorical(categories.clone(), categories.mapping()),
         DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
         DataType::Array(Box::new(DataType::Float32), 2),
     ] {
@@ -167,8 +165,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
 
 #[test]
 fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
-    use crate::domains::CategoricalDomain;
-
     let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "category",
         CategoricalDomain::default(),
@@ -205,6 +201,120 @@ fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
         )?;
     }
 
+    Ok(())
+}
+
+
+#[test]
+fn test_make_expr_cast_rejects_mutable_categorical_destinations() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("name", AtomDomain::<String>::default()),
+        SeriesDomain::new("code", AtomDomain::<u32>::default()),
+    ])?;
+    let categories = Categories::global();
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+
+    // Inserting strings into a mapping can raise a data-dependent error once
+    // its finite capacity is reached. Casting integers decodes mutable codes.
+    for column in ["name", "code"] {
+        let result = make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col(column).cast(dtype.clone()),
+        );
+        assert!(result.is_err(), "{column} -> Categorical must be rejected");
+    }
+
+    // A categorical no-op is safe, as are casts to fixed Enum and String.
+    let cat_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+    make_expr_cast(
+        cat_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("category").cast(dtype),
+    )?;
+
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_categorical_remapping() -> Fallible<()> {
+    let cat_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+    let categories = Categories::random("".into(), CategoricalPhysical::U32);
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    assert!(
+        make_expr_cast(
+            cat_domain.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("category").cast(dtype),
+        )
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_nested_categorical_casts() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+
+    let cat_array = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "values",
+        ArrayDomain::new(CategoricalDomain::default(), 2),
+    )])?;
+    let string_array = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "values",
+        ArrayDomain::new(AtomDomain::<String>::default(), 2),
+    )])?;
+
+    // Polars recursively casts Array elements, so a top-level categorical
+    // guard alone does not protect the physical codes of nested categoricals.
+    assert!(
+        make_expr_cast(
+            cat_array.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("values").cast(DataType::Array(Box::new(DataType::UInt32), 2)),
+        )
+        .is_err()
+    );
+    assert!(
+        make_expr_cast(
+            string_array.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("values").cast(DataType::Array(Box::new(categorical), 2)),
+        )
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_non_strict_categorical_capacity_errors() -> Fallible<()> {
+    let categories = Categories::random("".into(), CategoricalPhysical::U8);
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "value",
+        AtomDomain::<String>::default(),
+    )])?;
+
+    // Non-strict casting does not prevent a failure when a mutable mapping
+    // runs out of category IDs. The constructor must reject this cast.
+    let values = (0..256).map(|i| i.to_string()).collect::<Vec<_>>();
+    let series = Series::new("value".into(), values);
+    assert!(series.cast_with_options(&dtype, CastOptions::NonStrict).is_err());
+    assert!(
+        make_expr_cast(
+            input_domain.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("value").cast(dtype),
+        )
+        .is_err()
+    );
     Ok(())
 }
 
