@@ -1,19 +1,35 @@
-//! Verify whether Verus can check Arc<dyn Fn> construction and invocation.
-//! This isolated probe is compiled only in the Verus harness, not production.
+//! Probe Verus's ability to prove dispatch through a single-trait Arc.
+//! This is verification-only, not a new OpenDP runtime abstraction.
 use vstd::prelude::*;
 use std::sync::Arc;
 
 verus! {
-pub fn make_arc_callback<F: Fn(&u64) -> u64 + 'static>(
-    f: F,
-) -> (out: Arc<dyn Fn(&u64) -> u64>) {
-    Arc::new(f)
+pub trait Callable {
+    fn eval(&self, input: u64) -> (output: u64)
+        requires input <= 100,
+        ensures output == input + 1;
 }
 
-pub fn invoke_arc_callback(
-    callback: &Arc<dyn Fn(&u64) -> u64>,
-    input: &u64,
-) -> (out: u64) {
-    callback(input)
+pub struct OneAdder {}
+
+impl Callable for OneAdder {
+    fn eval(&self, input: u64) -> (output: u64)
+        requires input <= 100,
+        ensures output == input + 1,
+    {
+        input + 1
+    }
+}
+
+pub fn make_arc_callback() -> (out: Arc<dyn Callable>) {
+    Arc::new(OneAdder {})
+}
+
+pub fn invoke_arc_callback(callback: &Arc<dyn Callable>, input: u64)
+    -> (output: u64)
+    requires input <= 100,
+    ensures output == input + 1,
+{
+    callback.eval(input)
 }
 }
