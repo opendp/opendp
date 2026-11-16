@@ -61,3 +61,39 @@ impl Domain for ArrayDomain {
         )
     }
 }
+
+#[cfg(test)]
+mod test {
+    use polars::prelude::{NamedFrom, Series};
+
+    use crate::domains::{AtomDomain, OptionDomain};
+    use crate::error::Fallible;
+
+    use super::*;
+
+    #[test]
+    fn test_array_domain_member_checks_elements() -> Fallible<()> {
+        let domain = ArrayDomain::new(AtomDomain::<i32>::new_closed((0, 10))?, 2);
+
+        assert!(domain.member(&Series::new("values".into(), &[1i32, 10]))?);
+        assert!(!domain.member(&Series::new("values".into(), &[1i32, 11]))?);
+        assert!(!domain.member(&Series::new("values".into(), &[1i64, 2]))?);
+        assert!(!domain.member(&Series::new("values".into(), &[1i32]))?);
+        assert!(!domain.member(&Series::new("values".into(), &[Some(1i32), None]))?);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_domain_member_nullable_elements() -> Fallible<()> {
+        let domain = ArrayDomain::new(
+            OptionDomain::new(AtomDomain::<i32>::new_closed((0, 10))?),
+            2,
+        );
+        assert!(domain.has_nullable_elements());
+        assert!(domain.member(&Series::new("values".into(), &[Some(1i32), None]))?);
+        assert!(!domain.member(&Series::new("values".into(), &[Some(11i32), None]))?);
+
+        Ok(())
+    }
+}
