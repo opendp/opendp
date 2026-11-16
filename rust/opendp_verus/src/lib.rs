@@ -10,5 +10,3 @@ pub mod bernoulli_proof;
 #[path = "../../src/measurements/randomized_response/verus.rs"]
 pub mod randomized_response_bool;
 
-#[path = "../../src/core/verus/erasure_probe.rs"]
-pub mod erasure_probe;

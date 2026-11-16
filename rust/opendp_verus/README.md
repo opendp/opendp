@@ -62,3 +62,19 @@ obstacle is checking the higher-order erasure bridge in Verus.
 No separate probability-mass-function implementation, duplicate
 randomizer, trusted `new_certified` marker, or new runtime crate was
 introduced. Native and Verus CI exercise the shared production source.
+
+
+## Constructor erasure research finding
+
+The current pinned Verus rejects `Arc<dyn Fn(&TI) -> Fallible<TO>>`
+as an unsupported multi-trait object (the `Fn` hierarchy).
+A verification-only probe established that dispatch through a
+**single-trait** `Arc<dyn Callable>` with an inherited Verus method
+contract is supported. This probe was removed after verification:
+it does **not** prove anything about production `Arc<dyn Fn>`.
+
+A sound approach needs either a reusable, verified single-trait
+callback abstraction in OpenDP core or a narrow, justified
+standard-library/trait-object erasure contract. We should not
+introduce a `new_certified` marker or a direct postulate about
+`Measurement` validity merely to hide this obligation.
