@@ -7,10 +7,7 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{
-    StableExpr,
-    cast::{is_numeric_or_boolean, is_temporal_dtype},
-};
+use super::{StableExpr, cast::is_numeric_or_boolean};
 
 #[cfg(test)]
 mod test;
@@ -90,11 +87,17 @@ where
             op
         );
     }
+    let is_temporal = |dtype: &DataType| {
+        matches!(
+            dtype,
+            DataType::Date | DataType::Datetime(_, _) | DataType::Time
+        )
+    };
     // Polars can implicitly cast between temporal dtypes when evaluating binary
     // expressions. For example, upcasting a microsecond timestamp to
     // nanoseconds may overflow and introduce nulls. Permit only comparisons
     // between identical temporal dtypes, avoiding implicit conversions.
-    if (is_temporal_dtype(&left_series.dtype()) || is_temporal_dtype(&right_series.dtype()))
+    if (is_temporal(&left_series.dtype()) || is_temporal(&right_series.dtype()))
         && (left_series.dtype() != right_series.dtype()
             || !matches!(
                 op,
@@ -129,8 +132,7 @@ where
     let enum_string_equality = matches!(op, Eq | EqValidity | NotEq | NotEqValidity)
         && matches!(
             (&left_dtype, &right_dtype),
-            (DataType::Enum(_, _), DataType::String)
-                | (DataType::String, DataType::Enum(_, _))
+            (DataType::Enum(_, _), DataType::String) | (DataType::String, DataType::Enum(_, _))
         );
     if left_dtype != right_dtype
         && !(is_numeric_or_boolean(&left_dtype) && is_numeric_or_boolean(&right_dtype))
