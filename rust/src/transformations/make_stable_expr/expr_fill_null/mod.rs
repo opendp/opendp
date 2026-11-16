@@ -108,18 +108,10 @@ where
     };
     let output_nan = can_be_nan(&data_domain.column)?
         || (data_domain.column.nullable && can_be_nan(&fill_domain.column)?);
-    let output_dtype = super::infer_output_dtype(&expr, &input_domain)?;
-    // A change of dtype is only certified for numeric promotion, including
-    // promotion introduced by Polars' dynamic-literal handling.
-    if data_dtype != fill_dtype && !is_numeric_or_boolean(&output_dtype) {
-        return fallible!(
-            MakeTransformation,
-            "fill_null implicitly coerced numeric operands to unsupported dtype {}",
-            output_dtype
-        );
-    }
     let mut output_domain = data_domain.clone();
-    output_domain.column.set_dtype(output_dtype)?;
+    output_domain
+        .column
+        .set_dtype(super::infer_output_dtype(&expr, &input_domain)?)?;
     output_domain.column.nullable = false;
     if !output_nan && output_domain.column.dtype().is_float() {
         output_domain.column.set_non_nan()?;
