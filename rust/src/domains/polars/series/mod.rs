@@ -373,6 +373,9 @@ pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
     /// Returns the datatype of rows of members in the domain.
     fn dtype(&self) -> DataType;
 
+    /// Whether this element domain permits null values.
+    fn is_nullable(&self) -> bool;
+
     /// This method makes it possible to downcast a trait object of Self
     /// (dyn DynSeriesElementDomain) to its concrete type.
     ///
@@ -390,6 +393,9 @@ pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
 impl<D: 'static + SeriesElementDomain> DynSeriesElementDomain for D {
     fn dtype(&self) -> DataType {
         D::dtype(&self)
+    }
+    fn is_nullable(&self) -> bool {
+        D::NULLABLE
     }
     fn as_any(&self) -> &dyn Any {
         self
