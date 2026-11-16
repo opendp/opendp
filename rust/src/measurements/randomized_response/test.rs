@@ -81,3 +81,30 @@ fn test_bool_dyadic_53_extremes() -> Fallible<()> {
     assert_eq!(deterministic.invoke(&false)?, false);
     Ok(())
 }
+
+#[test]
+fn test_bool_rr_integer_odds_and_operator() -> Fallible<()> {
+    use super::operator::BoolRR;
+
+    for (prob, numerator) in [
+        (0.5, 1u64 << 52),
+        (0.75, 3u64 << 51),
+        (1.0, 1u64 << 53),
+        (f64::from_bits(1.0f64.to_bits() - 1), (1u64 << 53) - 1),
+    ] {
+        let operator = BoolRR { numerator };
+        assert_eq!(operator.release(true, Ok::<u64, ()>(0)), Ok(true));
+        assert_eq!(operator.release(false, Ok::<u64, ()>(0)), Ok(false));
+        assert_eq!(operator.release(true, Err::<u64, usize>(73)), Err(73));
+        assert_eq!(operator::privacy_map(0u32, 0.0, 5.0), 0.0);
+        assert_eq!(operator::privacy_map(2u32, 0.0, 5.0), 5.0);
+
+        let measurement = make_randomized_response_bool(prob, false)?;
+        assert_eq!(measurement.map(&0)?, 0.0);
+        if prob < 1.0 {
+            let factor = (numerator as f64) / ((1u64 << 53) - numerator) as f64;
+            assert!(measurement.map(&1)?.exp() >= factor * (1.0 - 1e-12));
+        }
+    }
+    Ok(())
+}

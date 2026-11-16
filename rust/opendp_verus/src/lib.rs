@@ -6,6 +6,8 @@ pub mod measurement;
 pub mod dyadic53;
 #[path = "../../src/measurements/randomized_response/kernel.rs"]
 pub mod kernel;
+#[path = "../../src/measurements/randomized_response/operator.rs"]
+pub mod operator;
 #[path = "../../src/measurements/randomized_response/verus.rs"]
 pub mod randomized_response_bool;
 

@@ -6,6 +6,7 @@ on:
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'
+      - 'rust/src/traits/samplers/mod.rs'
       - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'
       - 'rust/src/traits/samplers/bernoulli/**'

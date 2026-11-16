@@ -2,6 +2,7 @@
 mod ffi;
 
 mod kernel;
+mod operator;
 
 use std::collections::HashSet;
 
@@ -12,7 +13,7 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::{sample_bernoulli_float, sample_bernoulli_dyadic53};
+use crate::traits::samplers::{sample_bernoulli_float, sample_uniform_u64};
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
@@ -57,27 +58,32 @@ pub fn make_randomized_response_bool(
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     }
 
-    let privacy_constant = if prob == 1.0 {
+    // The accepted binary64 probability is exactly numerator / 2^53.
+    let numerator = crate::traits::samplers::dyadic53_numerator(prob.to_bits());
+    let denominator = 9_007_199_254_740_992u64;
+
+    // The two integers are exactly representable as f64. In particular,
+    // the complement is computed exactly, rather than rounding (1.0 - prob).
+    let privacy_constant = if numerator == denominator {
         f64::INFINITY
     } else {
-        // The proof still requires a verified f64-to-real upper bound here.
-        prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?.inf_ln()?
+        (numerator as f64)
+            .inf_div(&((denominator - numerator) as f64))?
+            .inf_ln()?
     };
 
-    // For any accepted binary64 probability, p = numerator / 2^53 exactly.
-    // The conversion depends only on the public constructor parameter.
-    let numerator = crate::traits::samplers::dyadic53_numerator(prob.to_bits());
-    // Both constant_time settings use the same fixed-size entropy path,
-    // with no private-input-dependent sampling branches.
-    let _ = constant_time;
+    let operator = operator::BoolRR { numerator };
+    let map_constant = privacy_constant;
+    let _ = constant_time; // Both settings use one fixed-size entropy draw.
+
     Measurement::new(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &bool| {
-            kernel::release_result(*truth, sample_bernoulli_dyadic53(numerator))
+            operator.release(*truth, sample_uniform_u64())
         }),
-        PrivacyMap::new(move |d| if *d == 0 { 0.0 } else { privacy_constant }),
+        PrivacyMap::new(move |d| operator::privacy_map(*d, 0.0, map_constant)),
     )
 }
 

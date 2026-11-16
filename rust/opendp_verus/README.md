@@ -76,3 +76,16 @@ production Bernoulli success condition to a prefix event on a uniform 64-bit
 word, and derives its exact mass `numerator / 2^53` from the ideal uniform-u64
 CDF. This is a deterministic reduction with a transparent entropy premise;
 it is not yet a machine-checked correctness proof of `fill_bytes`.
+
+## Concrete executable operator
+
+`rust/src/measurements/randomized_response/operator.rs` defines the exact
+`BoolRR::release` used by the production callback. The Verus harness imports
+this file and proves that a fallible entropy word yields the intended Boolean
+and preserves each error. The callback uses the same `privacy_map` selection.
+The production constructor now computes the privacy odds from an exact integer
+complement `2^53 - numerator` before applying OpenDP's directed division
+and logarithm. The directed numeric library and closure-erasure correctness
+are **not yet verified**, and `fill_bytes` is still the probabilistic trust
+boundary. A passing Verus proof therefore does not yet certify the returned
+`Measurement`.

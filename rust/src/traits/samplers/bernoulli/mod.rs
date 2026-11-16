@@ -14,15 +14,13 @@ mod test;
 
 pub(crate) mod dyadic53;
 
-/// Sample exactly Bernoulli(numerator/2^53) assuming a uniform 64-bit source.
-/// Every 53-bit value has exactly 2^11 preimages; there is no rejection loop.
-pub(crate) fn sample_bernoulli_dyadic53(numerator: u64) -> Fallible<bool> {
+/// Read one 64-bit entropy word. Distributional semantics (including
+/// errors and freshness) belong to the `fill_bytes` entropy contract.
+/// The mechanism's deterministic Bernoulli conversion is verified separately.
+pub(crate) fn sample_uniform_u64() -> Fallible<u64> {
     let mut bytes = [0u8; 8];
-    let sample = match fill_bytes(&mut bytes) {
-        Ok(()) => Ok(u64::from_ne_bytes(bytes)),
-        Err(err) => Err(err),
-    };
-    dyadic53::from_word(numerator, sample)
+    fill_bytes(&mut bytes)?;
+    Ok(u64::from_ne_bytes(bytes))
 }
 
 /// Sample from `Bernoulli(p=0.5)`.

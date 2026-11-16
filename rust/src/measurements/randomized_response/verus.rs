@@ -9,6 +9,7 @@ use vstd::prelude::*;
 use crate::measurement::valid_discrete_max_divergence_measurement;
 use crate::dyadic53;
 use crate::kernel;
+use crate::operator;
 
 verus! {
 
@@ -23,8 +24,8 @@ pub fn rr_from_entropy_word(
         Err(err) => Err(err),
     },
 {
-    let honest = crate::dyadic53::from_word(numerator, entropy);
-    kernel::release_result(truth, honest)
+    let operator = operator::BoolRR { numerator };
+    operator.release(truth, entropy)
 }
 
 /// Call the *production* kernel, imported verbatim into the verifier.
@@ -158,6 +159,17 @@ pub proof fn lemma_error_propagates(
             Err(_) => rr_fallible_kernel(truth, sample) == Err(()),
             Ok(honest) => rr_fallible_kernel(truth, sample) == Ok(truth ^ !honest),
         },
+{
+}
+
+
+/// The same executable privacy-map selection that production installs.
+/// Its generic return type permits Verus to verify the map without treating
+/// floating-point arithmetic as exact real arithmetic.
+pub proof fn lemma_native_map_is_zero_at_zero(cost: real)
+    ensures
+        operator::privacy_map(0u32, 0real, cost) == 0real,
+        forall|d: u32| d > 0 ==> operator::privacy_map(d, 0real, cost) == cost,
 {
 }
 
