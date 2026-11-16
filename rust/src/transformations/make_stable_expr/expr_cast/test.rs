@@ -1,7 +1,6 @@
 use crate::core::Domain;
 use crate::domains::{
-    ArrayDomain, AtomDomain, CategoricalDomain, DatetimeDomain, LazyFrameDomain, OptionDomain,
-    SeriesDomain,
+    ArrayDomain, AtomDomain, CategoricalDomain, DatetimeDomain, LazyFrameDomain, SeriesDomain,
 };
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
@@ -152,7 +151,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         DataType::Datetime(TimeUnit::Microseconds, None),
         DataType::Time,
         DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
-        DataType::Array(Box::new(DataType::Float32), 2),
     ] {
         let cast = make_expr_cast(
             input_domain.clone().row_by_row(),
@@ -206,167 +204,53 @@ fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
     Ok(())
 }
 
+
 #[test]
-fn test_make_expr_cast_rejects_mutable_categorical_destinations() -> Fallible<()> {
+fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
     let input_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("name", AtomDomain::<String>::default()),
         SeriesDomain::new("code", AtomDomain::<u32>::default()),
+        SeriesDomain::new("category", CategoricalDomain::default()),
     ])?;
     let categories = Categories::global();
-    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
-
-    // Inserting strings into a mapping can raise a data-dependent error once
-    // its finite capacity is reached. Casting integers decodes mutable codes.
-    for column in ["name", "code"] {
-        let result = make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col(column).cast(dtype.clone()),
-        );
-        assert!(result.is_err(), "{column} -> Categorical must be rejected");
-    }
-
-    // A fixed Enum has public codes and cannot grow at execution time.
-    let enum_categories = FrozenCategories::new(["A", "B"])?;
-    let enum_dtype = DataType::Enum(
-        enum_categories.clone(),
-        enum_categories.mapping().clone(),
-    );
-    let enum_cast = make_expr_cast(
-        input_domain.clone().row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("name").cast(enum_dtype.clone()),
-    )?;
-    assert_eq!(enum_cast.output_domain.column.dtype(), enum_dtype);
-    assert!(enum_cast.output_domain.column.nullable);
-
-    // A categorical no-op is safe, as are casts to fixed Enum and String.
-    let cat_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "category",
-        CategoricalDomain::default(),
-    )])?;
-    make_expr_cast(
-        cat_domain.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("category").cast(dtype),
-    )?;
-
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_rejects_categorical_remapping() -> Fallible<()> {
-    let cat_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "category",
-        CategoricalDomain::default(),
-    )])?;
-    let categories = Categories::random("".into(), CategoricalPhysical::U32);
-    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
-    assert!(
-        make_expr_cast(
-            cat_domain.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("category").cast(dtype),
-        )
-        .is_err()
-    );
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_rejects_nested_categorical_casts() -> Fallible<()> {
-    let categories = Categories::global();
     let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let other = Categories::random("".into(), CategoricalPhysical::U32);
+    let other_categorical = DataType::Categorical(other.clone(), other.mapping());
 
-    let cat_array = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "values",
-        ArrayDomain::new(CategoricalDomain::default(), 2),
-    )])?;
-    let string_array = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "values",
-        ArrayDomain::new(AtomDomain::<String>::default(), 2),
-    )])?;
-
-    // Polars recursively casts Array elements, so a top-level categorical
-    // guard alone does not protect the physical codes of nested categoricals.
-    assert!(
-        make_expr_cast(
-            cat_array.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("values").cast(DataType::Array(Box::new(DataType::UInt32), 2)),
-        )
-        .is_err()
-    );
-    assert!(
-        make_expr_cast(
-            string_array.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("values").cast(DataType::Array(Box::new(categorical), 2)),
-        )
-        .is_err()
-    );
-
-    // Reading logical strings from a categorical Array is still safe.
-    make_expr_cast(
-        cat_array.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("values").cast(DataType::Array(Box::new(DataType::String), 2)),
-    )?;
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_rejects_non_strict_categorical_capacity_errors() -> Fallible<()> {
-    let categories = Categories::random("".into(), CategoricalPhysical::U8);
-    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
-    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "value",
-        AtomDomain::<String>::default(),
-    )])?;
-
-    // Non-strict casting does not prevent a failure when a mutable mapping
-    // runs out of category IDs. The constructor must reject this cast.
-    let values = (0..256).map(|i| i.to_string()).collect::<Vec<_>>();
-    let series = Series::new("value".into(), values);
-    assert!(series.cast_with_options(&dtype, CastOptions::NonStrict).is_err());
-    assert!(
-        make_expr_cast(
-            input_domain.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("value").cast(dtype),
-        )
-        .is_err()
-    );
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_rejects_nanosecond_timestamp_parsing() -> Fallible<()> {
-    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "value",
-        AtomDomain::<String>::default(),
-    )])?;
-
-    // Polars 1.36.1 calls timestamp_nanos_opt().unwrap() when parsing an
-    // otherwise valid date outside the nanosecond timestamp range.
-    for timezone in [None, Some("UTC".into())] {
-        let dtype = DataType::Datetime(TimeUnit::Nanoseconds, timezone);
+    for (column, to) in [
+        ("name", categorical.clone()),
+        ("code", categorical.clone()),
+        ("category", other_categorical),
+        ("category", DataType::Boolean),
+        ("category", DataType::Float64),
+    ] {
         assert!(
             make_expr_cast(
                 input_domain.clone().row_by_row(),
                 FrameDistance(SymmetricDistance),
-                col("value").cast(dtype),
+                col(column).cast(to.clone()),
             )
-            .is_err()
+            .is_err(),
+            "{column} -> {to}"
         );
     }
 
-    // Millisecond and microsecond timestamp parsing does not use that panic path.
-    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
+    // Identity, logical String/Enum, and String -> fixed Enum are supported.
+    let enum_categories = FrozenCategories::new(["A", "B"])?;
+    let fixed_enum = DataType::Enum(
+        enum_categories.clone(),
+        enum_categories.mapping().clone(),
+    );
+    for (column, to) in [
+        ("category", categorical),
+        ("category", DataType::String),
+        ("category", fixed_enum.clone()),
+        ("name", fixed_enum),
+    ] {
         make_expr_cast(
             input_domain.clone().row_by_row(),
             FrameDistance(SymmetricDistance),
-            col("value").cast(DataType::Datetime(unit, None)),
+            col(column).cast(to),
         )?;
     }
 
@@ -374,208 +258,91 @@ fn test_make_expr_cast_rejects_nanosecond_timestamp_parsing() -> Fallible<()> {
 }
 
 #[test]
-fn test_make_expr_cast_rejects_unsafe_datetime_string_formatting() -> Fallible<()> {
-    // Polars converts physical timestamps through Chrono when formatting.
-    // The complete i64 range is valid in DatetimeDomain, but millisecond and
-    // microsecond timestamps can exceed Chrono's representable calendar range.
-    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
-        for timezone in [None, Some("UTC".into())] {
-            let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-                "timestamp",
-                DatetimeDomain {
-                    time_unit: unit,
-                    time_zone: timezone,
-                },
-            )])?;
-
-            assert!(
-                make_expr_cast(
-                    input_domain.row_by_row(),
-                    FrameDistance(SymmetricDistance),
-                    col("timestamp").cast(DataType::String),
-                )
-                .is_err()
-            );
-        }
-    }
-
-    // Any nanosecond timestamp fits in Chrono's calendar range.
-    let ns_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "timestamp",
-        DatetimeDomain {
-            time_unit: TimeUnit::Nanoseconds,
-            time_zone: None,
-        },
-    )])?;
-    make_expr_cast(
-        ns_domain.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("timestamp").cast(DataType::String),
-    )?;
-
-    Ok(())
-}
-
-#[test]
-fn test_polars_datetime_string_cast_panics_on_out_of_range_value() -> Fallible<()> {
-    use std::panic::{AssertUnwindSafe, catch_unwind};
-
-    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
-        let dtype = DataType::Datetime(unit, None);
-        let ordinary = Series::new("timestamp".into(), &[0i64]).cast(&dtype)?;
-        let extreme = Series::new("timestamp".into(), &[i64::MAX]).cast(&dtype)?;
-
-        // This documents why constructor-level validation is necessary:
-        // CastOptions::NonStrict does not turn the panic into a null.
-        assert!(matches!(
-            catch_unwind(AssertUnwindSafe(|| ordinary
-                .cast_with_options(&DataType::String, CastOptions::NonStrict))),
-            Ok(Ok(_))
-        ));
-        assert!(
-            catch_unwind(AssertUnwindSafe(|| extreme
-                .cast_with_options(&DataType::String, CastOptions::NonStrict)))
-            .is_err()
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_rejects_numeric_to_date() -> Fallible<()> {
+fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
     let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("text", AtomDomain::<String>::default()),
         SeriesDomain::new("days", AtomDomain::<i32>::default()),
-        SeriesDomain::new("other", AtomDomain::<i64>::default()),
-        SeriesDomain::new("string", AtomDomain::<String>::default()),
+        SeriesDomain::new("date", AtomDomain::<chrono::NaiveDate>::default()),
+        SeriesDomain::new(
+            "ms",
+            DatetimeDomain { time_unit: TimeUnit::Milliseconds, time_zone: None },
+        ),
+        SeriesDomain::new(
+            "us",
+            DatetimeDomain { time_unit: TimeUnit::Microseconds, time_zone: None },
+        ),
+        SeriesDomain::new(
+            "ns",
+            DatetimeDomain { time_unit: TimeUnit::Nanoseconds, time_zone: None },
+        ),
     ])?;
 
-    // Int32 -> Date is a physical reinterpretation with no Chrono range
-    // check. Extreme i32 values produce non-null but invalid dates.
-    for column in ["days", "other"] {
+    for (column, to, allowed) in [
+        ("text", DataType::Datetime(TimeUnit::Nanoseconds, None), false),
+        ("text", DataType::Datetime(TimeUnit::Microseconds, None), true),
+        ("text", DataType::Date, true),
+        ("days", DataType::Date, false),
+        ("ms", DataType::String, false),
+        ("us", DataType::String, false),
+        ("ns", DataType::String, true),
+        ("ms", DataType::Date, false),
+        ("us", DataType::Date, false),
+        ("ns", DataType::Date, true),
+        ("date", DataType::String, true),
+    ] {
+        let result = make_expr_cast(
+            input_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col(column).cast(to.clone()),
+        );
+        assert_eq!(result.is_ok(), allowed, "{column} -> {to}");
+    }
+
+    // The same restrictions apply to timezone-aware timestamps.
+    let zoned = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "timestamp",
+        DatetimeDomain {
+            time_unit: TimeUnit::Microseconds,
+            time_zone: Some("UTC".into()),
+        },
+    )])?;
+    assert!(
+        make_expr_cast(
+            zoned.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("timestamp").cast(DataType::String),
+        )
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_all_array_casts() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new(
+            "array",
+            ArrayDomain::new(AtomDomain::<i32>::default(), 2),
+        ),
+        SeriesDomain::new("scalar", AtomDomain::<i32>::default()),
+    ])?;
+
+    for (column, to) in [
+        ("array", DataType::Array(Box::new(DataType::Int32), 2)),
+        ("array", DataType::Array(Box::new(DataType::Int64), 2)),
+        ("array", DataType::String),
+        ("scalar", DataType::Array(Box::new(DataType::Int32), 2)),
+    ] {
         assert!(
             make_expr_cast(
                 input_domain.clone().row_by_row(),
                 FrameDistance(SymmetricDistance),
-                col(column).cast(DataType::Date),
+                col(column).cast(to.clone()),
             )
-            .is_err()
+            .is_err(),
+            "{column} -> {to}"
         );
     }
-
-    // Millisecond/microsecond Datetime domains admit times well outside the
-    // calendar range Chrono can format, even when the resulting day count
-    // fits into i32.
-    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
-        let datetime_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-            "timestamp",
-            DatetimeDomain {
-                time_unit: unit,
-                time_zone: None,
-            },
-        )])?;
-        assert!(
-            make_expr_cast(
-                datetime_domain.row_by_row(),
-                FrameDistance(SymmetricDistance),
-                col("timestamp").cast(DataType::Date),
-            )
-            .is_err()
-        );
-    }
-
-    // Every i64 nanosecond timestamp lies within Chrono's calendar range.
-    let ns_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "timestamp",
-        DatetimeDomain {
-            time_unit: TimeUnit::Nanoseconds,
-            time_zone: None,
-        },
-    )])?;
-    make_expr_cast(
-        ns_domain.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("timestamp").cast(DataType::Date),
-    )?;
-
-    // A parsed date is checked by Polars, with invalid strings becoming null.
-    make_expr_cast(
-        input_domain.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("string").cast(DataType::Date),
-    )?;
-
-    // A Date domain carries representable calendar dates; converting those
-    // values to String is safe even though malformed physical Date values
-    // outside the domain can panic in Polars.
-    let date_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "date",
-        AtomDomain::<chrono::NaiveDate>::default(),
-    )])?;
-    make_expr_cast(
-        date_domain.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("date").cast(DataType::String),
-    )?;
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_array_element_nullability() -> Fallible<()> {
-    let string_array = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "values",
-        ArrayDomain::new(AtomDomain::<String>::default(), 2),
-    )])?;
-
-    // "invalid" becomes a null *inside* the Array. Marking the containing
-    // Series nullable does not cover this possible result.
-    assert!(
-        make_expr_cast(
-            string_array.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
-        )
-        .is_err()
-    );
-
-    let int_array = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "values",
-        ArrayDomain::new(AtomDomain::<i32>::default(), 2),
-    )])?;
-    let widen = make_expr_cast(
-        int_array.row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
-    )?;
-    assert!(!widen.output_domain.column.nullable);
-
-    // Identity casts preserve domain constraints, including inner nullability.
-    let nullable_inner = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "values",
-        ArrayDomain::new(OptionDomain::new(AtomDomain::<i32>::default()), 2),
-    )])?;
-    let identity = make_expr_cast(
-        nullable_inner.clone().row_by_row(),
-        FrameDistance(SymmetricDistance),
-        col("values").cast(DataType::Array(Box::new(DataType::Int32), 2)),
-    )?;
-    assert!(
-        identity
-            .output_domain
-            .column
-            .element_domain::<ArrayDomain>()?
-            .has_nullable_elements()
-    );
-
-    // A non-identity cast would erase this property when resetting the dtype.
-    assert!(
-        make_expr_cast(
-            nullable_inner.row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("values").cast(DataType::Array(Box::new(DataType::Int64), 2)),
-        )
-        .is_err()
-    );
-
     Ok(())
 }
 
