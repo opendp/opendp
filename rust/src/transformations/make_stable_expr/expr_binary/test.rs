@@ -617,3 +617,57 @@ fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_implicit_temporal_coercion_can_produce_nulls() -> Fallible<()> {
+    let nanoseconds = DataType::Datetime(TimeUnit::Nanoseconds, None);
+    let ns = Series::new("ns".into(), [1_577_836_800_000_000_000_i64; 2])
+        .cast(&nanoseconds)?;
+
+    // Year 3000 is representable as a date or ms/us timestamp, but not
+    // as a nanosecond timestamp. Polars' implicit cast replaces it with null.
+    let inputs = [
+        Series::new(
+            "us".into(),
+            [1_577_836_800_000_000_i64, 32_503_680_000_000_000_i64],
+        )
+        .cast(&DataType::Datetime(TimeUnit::Microseconds, None))?,
+        Series::new(
+            "ms".into(),
+            [1_577_836_800_000_i64, 32_503_680_000_000_i64],
+        )
+        .cast(&DataType::Datetime(TimeUnit::Milliseconds, None))?,
+        Series::new("date".into(), [18_262_i32, 376_200_i32])
+            .cast(&DataType::Date)?,
+    ];
+
+    for input in inputs {
+        let name = input.name().clone();
+        let mut input_domain =
+            SeriesDomain::new_from_field(Field::new(name.clone(), input.dtype().clone()))?;
+        input_domain.nullable = false;
+        let mut ns_domain =
+            SeriesDomain::new_from_field(Field::new("ns".into(), nanoseconds.clone()))?;
+        ns_domain.nullable = false;
+
+        let domain = LazyFrameDomain::new(vec![input_domain, ns_domain])?.row_by_row();
+        let lf = DataFrame::new(vec![input.into_column(), ns.clone().into_column()])?.lazy();
+
+        let expr = col(name.clone()).eq(col("ns"));
+        let t = expr.clone().make_stable(
+            domain.clone(),
+            FrameDistance(SymmetricDistance),
+        )?;
+        assert!(t.output_domain.column.nullable, "{name}");
+        let output = lf.clone().select([expr]).collect()?;
+        assert_eq!(output.column(&name)?.null_count(), 1, "{name}");
+
+        // Null-safe equality still returns a non-null boolean.
+        let t_validity = col(name).eq_missing(col("ns")).make_stable(
+            domain,
+            FrameDistance(SymmetricDistance),
+        )?;
+        assert!(!t_validity.output_domain.column.nullable);
+    }
+    Ok(())
+}
