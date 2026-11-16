@@ -1,5 +1,8 @@
 use crate::core::Domain;
-use crate::domains::{ArrayDomain, AtomDomain, CategoricalDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{
+    ArrayDomain, AtomDomain, CategoricalDomain, DatetimeDomain, LazyFrameDomain, OptionDomain,
+    SeriesDomain,
+};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -390,6 +393,41 @@ fn test_make_expr_cast_rejects_numeric_to_date() -> Fallible<()> {
             .is_err()
         );
     }
+
+    // Millisecond/microsecond Datetime domains admit times well outside the
+    // calendar range Chrono can format, even when the resulting day count
+    // fits into i32.
+    for unit in [TimeUnit::Milliseconds, TimeUnit::Microseconds] {
+        let datetime_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+            "timestamp",
+            DatetimeDomain {
+                time_unit: unit,
+                time_zone: None,
+            },
+        )])?;
+        assert!(
+            make_expr_cast(
+                datetime_domain.row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col("timestamp").cast(DataType::Date),
+            )
+            .is_err()
+        );
+    }
+
+    // Every i64 nanosecond timestamp lies within Chrono's calendar range.
+    let ns_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "timestamp",
+        DatetimeDomain {
+            time_unit: TimeUnit::Nanoseconds,
+            time_zone: None,
+        },
+    )])?;
+    make_expr_cast(
+        ns_domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("timestamp").cast(DataType::Date),
+    )?;
 
     // A parsed date is checked by Polars, with invalid strings becoming null.
     make_expr_cast(
