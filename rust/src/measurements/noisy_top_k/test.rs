@@ -6,6 +6,55 @@ use std::array::from_fn;
 use super::*;
 
 #[test]
+fn test_top_k_mask_exact_threshold_and_order() -> Fallible<()> {
+    // Synthetic threshold = min(scores) + 3 = 4.
+    assert_eq!(
+        top_k_mask(&[1_i32, 8, 6, 2], 4, 3., 0., false)?,
+        vec![false, true, true, false]
+    );
+    assert_eq!(
+        top_k_mask(&[1_i32, 8, 6, 2], 1, 3., 0., true)?,
+        vec![false, true, false, false]
+    );
+    assert_eq!(
+        top_k_mask(&[1_i32, 8, 6, 2], 0, 3., 0., false)?,
+        vec![false; 4]
+    );
+    Ok(())
+}
+
+#[test]
+fn test_top_k_mask_stops_at_threshold() -> Fallible<()> {
+    assert_eq!(
+        top_k_mask(&[1_i32, 2, 3], 3, 10., 0., false)?,
+        vec![false; 3]
+    );
+    assert_eq!(top_k_mask(&[1_i32], 5, 2., 0., false)?, vec![false]);
+    Ok(())
+}
+
+#[test]
+fn test_top_k_mask_invalid_parameters() {
+    assert!(top_k_mask(&[] as &[i32], 1, 0., 1., false).is_err());
+    assert!(top_k_mask(&[1_i32], 1, -1., 1., false).is_err());
+    assert!(top_k_mask(&[1_i32], 1, f64::NAN, 1., false).is_err());
+    assert!(top_k_mask(&[1_i32], 1, 1., f64::INFINITY, false).is_err());
+    assert!(top_k_mask(&[1_i32], 1, 1., -1., false).is_err());
+}
+
+#[test]
+fn test_top_k_mask_no_duplicate_winners() -> Fallible<()> {
+    for replacement in [false, true] {
+        for _ in 0..100 {
+            let mask = top_k_mask(&[1_i32, 2, 3, 4], 2, 1., 1., replacement)?;
+            assert_eq!(mask.len(), 4);
+            assert!(mask.iter().filter(|&&selected| selected).count() <= 2);
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn test_rnm_gumbel_distribution_varied() -> Fallible<()> {
     let scores: [_; 10] = from_fn(|i| i);
     // trials is high enough that bin-sizes even on low scores are sufficiently high to be significant
