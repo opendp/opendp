@@ -34,6 +34,16 @@ impl ArrayDomain {
             size,
         }
     }
+
+    /// True when an Array contains nullable elements at any nesting depth.
+    pub(crate) fn has_nullable_elements(&self) -> bool {
+        self.element_domain.is_nullable()
+            || self
+                .element_domain
+                .as_any()
+                .downcast_ref::<ArrayDomain>()
+                .is_some_and(ArrayDomain::has_nullable_elements)
+    }
 }
 
 impl Domain for ArrayDomain {
