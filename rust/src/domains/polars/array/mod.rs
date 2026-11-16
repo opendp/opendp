@@ -4,7 +4,7 @@ use polars::series::Series;
 
 use crate::{core::Domain, error::Fallible};
 
-use super::DynSeriesElementDomain;
+use super::{DynSeriesElementDomain, series::member_elements};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -51,8 +51,13 @@ impl Domain for ArrayDomain {
 
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         if value.len() != self.size {
-            return fallible!(MakeDomain, "Array length does not match domain length");
+            return Ok(false);
         }
-        Ok(true)
+        member_elements(
+            value.name(),
+            self.element_domain.as_ref(),
+            self.element_domain.is_nullable(),
+            value,
+        )
     }
 }
