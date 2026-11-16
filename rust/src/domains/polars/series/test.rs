@@ -84,3 +84,15 @@ fn test_series_small_unsigned() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_series_bounded_nullable_skips_null_storage() -> Fallible<()> {
+    let domain = SeriesDomain::new(
+        "A",
+        OptionDomain::new(AtomDomain::<i32>::new_closed((1, 10))?),
+    );
+    // The physical placeholder for None need not satisfy the atom bounds.
+    assert!(domain.member(&Series::new("A".into(), &[None, Some(2i32)]))?);
+    assert!(!domain.member(&Series::new("A".into(), &[None, Some(11i32)]))?);
+    Ok(())
+}
