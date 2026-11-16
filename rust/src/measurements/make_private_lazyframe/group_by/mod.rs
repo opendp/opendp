@@ -17,7 +17,7 @@ use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, Symm
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::make_stable_expr;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{StableDslPlan, StableExpr};
+use crate::transformations::StableDslPlan;
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
@@ -52,8 +52,7 @@ pub(crate) fn make_private_group_by<MI, MO>(
 where
     MI: 'static + UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>
-        + StableExpr<L01InfDistance<SymmetricDistance>, L01InfDistance<SymmetricDistance>>,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
 {
     let is_truncated = input_metric.0.identifier().is_some();

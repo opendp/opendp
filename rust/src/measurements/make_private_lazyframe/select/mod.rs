@@ -35,7 +35,6 @@ where
     Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
-    (DslPlanDomain, FrameDistance<SymmetricDistance>): MetricSpace,
 {
     let is_truncated = input_metric.0.identifier().is_some();
 
