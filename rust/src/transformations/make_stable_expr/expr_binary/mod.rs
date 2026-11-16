@@ -106,9 +106,23 @@ where
     let field = Field::new(expr_output_name(&expr)?, out_dtype.clone());
     let mut series_domain = SeriesDomain::new_from_field(field)?;
 
+    // Polars coerces mixed temporal operands to a common precision. Scaling
+    // dates or timestamps to a finer resolution may overflow and yield null,
+    // even when both input series are non-nullable.
+    let implicit_temporal_cast_may_null = matches!(
+        (left_series.dtype(), right_series.dtype()),
+        (DataType::Date, DataType::Datetime(_, _))
+            | (DataType::Datetime(_, _), DataType::Date)
+    ) || matches!(
+        (left_series.dtype(), right_series.dtype()),
+        (DataType::Datetime(left_unit, _), DataType::Datetime(right_unit, _))
+            if left_unit != right_unit
+    );
+
     // division or remainder by zero may introduce null values
     series_domain.nullable = left_series.nullable
         || right_series.nullable
+        || implicit_temporal_cast_may_null
         || matches!(op, FloorDivide | TrueDivide | Divide | Modulus);
 
     // these ops eliminate all nulls, regardless of the input
