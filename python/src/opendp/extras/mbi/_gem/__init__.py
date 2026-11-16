@@ -170,15 +170,8 @@ if importlib.util.find_spec("mbi") is not None:
         stddev is stddev * sqrt(k). All estimates of a clique, measured or derived,
         are combined into one by a weighted average with weight 1/stddev (MGCB25).
         """
-        estimates: dict[frozenset, list] = {}
-        non_marginal_queries = []  # size or partial queries
-
-        def add(clique, table, stddev):
-            # put the cells in domain order, so estimates of a clique line up
-            order = tuple(a for a in domain.attributes if a in clique)
-            axes = [clique.index(a) for a in order]
-            values = jnp.transpose(table, axes).flatten()
-            estimates.setdefault(frozenset(clique), []).append((values, stddev))
+        estimates: dict[tuple[str, ...], list] = {}
+        non_marginal_queries = []
 
         for m in measurements:
             clique = tuple(m.clique)
@@ -186,31 +179,29 @@ if importlib.util.find_spec("mbi") is not None:
                 non_marginal_queries.append(m)
                 continue
 
-            # mbi stores a marginal's cells in clique order
             sizes = tuple(domain[a] for a in clique)
-            table = jnp.reshape(jnp.asarray(m.noisy_measurement), sizes)
-            add(clique, table, m.stddev)
+            clique_table = jnp.reshape(jnp.asarray(m.noisy_measurement), sizes)
+            order = tuple(a for a in domain.attributes if a in clique)
+            axes = [clique.index(a) for a in order]
+            table = jnp.transpose(clique_table, axes)
 
-            for r in range(len(clique) - 1, 0, -1):
-                for keep in combinations(range(len(clique)), r):
-                    dropped = tuple(i for i in range(len(clique)) if i not in keep)
-                    cells_summed = prod(sizes[i] for i in dropped)
-                    add(
-                        tuple(clique[i] for i in keep),
-                        table.sum(axis=dropped),
-                        m.stddev * sqrt(cells_summed),
-                    )
+            for r in range(len(order), 0, -1):
+                for keep in combinations(range(len(order)), r):
+                    dropped = tuple(i for i in range(len(order)) if i not in keep)
+                    cells_summed = prod(table.shape[i] for i in dropped)
+                    sub_clique = tuple(order[i] for i in keep)
+                    values = table.sum(axis=dropped).flatten()
+                    stddev = m.stddev * sqrt(cells_summed)
+                    estimates.setdefault(sub_clique, []).append((values, stddev))
 
         averaged_marginal_queries = []
 
         for key, group in estimates.items():
-            clique = tuple(a for a in domain.attributes if a in key)
             weights = [1 / stddev for _, stddev in group]
             values = sum(w * v for w, (v, _) in zip(weights, group)) / sum(weights)
-            # stddev of a 1/stddev-weighted average of n estimates
             stddev = sqrt(len(group)) / sum(weights)
             averaged_marginal_queries.append(
-                LinearMeasurement(values, clique, stddev=stddev)
+                LinearMeasurement(values, key, stddev=stddev)
             )
 
         return non_marginal_queries + averaged_marginal_queries

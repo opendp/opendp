@@ -273,6 +273,7 @@ def _make_aim_marginal(
     """Create an interactive measurement that computes one step of the AIM algorithm."""
     import numpy as np  # type: ignore[import-not-found]
     from mbi import MarkovRandomField, LinearMeasurement  # type: ignore[import-not-found]
+    from opendp.extras.mbi._gem import GemPlusModel
     from opendp.extras.numpy import NPArrayDDomain
 
     model = cast(MarkovRandomField, model)
@@ -308,7 +309,7 @@ def _make_aim_marginal(
 
     def function(
         qbl: Queryable,
-    ) -> tuple[Marginals, MarkovRandomField, bool, tuple[str, ...]]:
+    ) -> tuple[Marginals, MarkovRandomField | GemPlusModel, bool, tuple[str, ...]]:
         # SELECT a query that best reduces the error
         selected_clique = qbl(m_select)
 
