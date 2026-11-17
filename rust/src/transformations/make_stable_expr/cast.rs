@@ -151,7 +151,10 @@ mod test {
             (Int32, Date),
             (Array(Box::new(Int32), 2), Array(Box::new(Int32), 2)),
         ] {
-            assert!(check_private_cast(&from, &to).is_err(), "{from:?} -> {to:?}");
+            assert!(
+                check_private_cast(&from, &to).is_err(),
+                "{from:?} -> {to:?}"
+            );
         }
         Ok(())
     }
