@@ -990,6 +990,22 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
         _dataframe_exports_free(ctypes.c_void_p(raw.contents.ptr), count, consumed)
 
 
+class _ArrowArray(ctypes.Structure):
+    # The Arrow C data interface, used by Polars SeriesExport.
+    _fields_ = [
+        ("length", ctypes.c_int64),
+        ("null_count", ctypes.c_int64),
+        ("offset", ctypes.c_int64),
+        ("n_buffers", ctypes.c_int64),
+        ("n_children", ctypes.c_int64),
+        ("buffers", ctypes.c_void_p),
+        ("children", ctypes.c_void_p),
+        ("dictionary", ctypes.c_void_p),
+        ("release", ctypes.c_void_p),
+        ("private_data", ctypes.c_void_p),
+    ]
+
+
 class _PolarsSeriesExport(ctypes.Structure):
     # polars_ffi::version_0::SeriesExport; shared by Polars 1.36 and 1.37.
     _fields_ = [
@@ -1001,11 +1017,18 @@ class _PolarsSeriesExport(ctypes.Structure):
     ]
 
     def __del__(self):
-        # A Rust import clears the release callback when it consumes the
-        # export. If no import occurred, return the buffers to Polars.
-        if getattr(self, "release", None):
-            callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self.release)
-            callback(ctypes.addressof(self))
+        if not getattr(self, "release", None):
+            return
+        # Polars' SeriesExport release only frees the ArrowArray descriptors,
+        # because importing normally transfers ownership of their contents.
+        # Unimported exports must release each ArrowArray first.
+        arrays = ctypes.cast(self.arrays, ctypes.POINTER(ctypes.c_void_p))
+        for i in range(self.len):
+            ptr = arrays[i]
+            release = ctypes.cast(ptr, ctypes.POINTER(_ArrowArray)).contents.release
+            if release:
+                ctypes.CFUNCTYPE(None, ctypes.c_void_p)(release)(ptr)
+        ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self.release)(ctypes.addressof(self))
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
