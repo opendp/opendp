@@ -93,9 +93,6 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 }
             };
 
-            if !options.args.should_coalesce() {
-                return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
-            }
             // Non-column join expressions can disable coalescing in newer
             // Polars versions, exposing private-side join key columns.
             if !keys_on
