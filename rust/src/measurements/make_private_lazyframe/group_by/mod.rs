@@ -353,7 +353,9 @@ fn contains_categorical(dtype: &DataType) -> bool {
     match dtype {
         DataType::Categorical(_, _) => true,
         DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
-        DataType::Struct(fields) => fields.iter().any(|field| contains_categorical(field.dtype())),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(field.dtype())),
         _ => false,
     }
 }
