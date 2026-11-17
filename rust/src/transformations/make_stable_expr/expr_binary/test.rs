@@ -620,41 +620,8 @@ fn test_binary_rejects_unvalidated_implicit_coercion() -> Fallible<()> {
 }
 
 #[test]
-fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
-    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "x",
-        AtomDomain::<f32>::new_non_nan(),
-    )])?
-    .row_by_row();
-    let data = df!("x" => [1.0f32, 2.0])?.lazy();
-
-    for expr in [
-        col("x") + lit(0.5f64),
-        col("x") + typed_lit(0.5f64),
-        lit(0.5f64) + col("x"),
-        col("x") + lit(1i32),
-        col("x") + typed_lit(1i32),
-    ] {
-        let actual_dtype = data.clone().select([expr.clone()]).collect()?.get_columns()[0]
-            .dtype()
-            .clone();
-        let transformation = expr
-            .clone()
-            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
-        assert_eq!(
-            transformation.output_domain.column.dtype(),
-            actual_dtype,
-            "{expr:?}"
-        );
-    }
-    Ok(())
-}
-
-#[test]
 fn test_mixed_temporal_comparisons_are_rejected() -> Fallible<()> {
     let nanoseconds = DataType::Datetime(TimeUnit::Nanoseconds, None);
-    let ns = Series::new("ns".into(), [1_577_836_800_000_000_000_i64; 2]).cast(&nanoseconds)?;
-
     // Year 3000 fits in Date and Datetime(ms/us), but not Datetime(ns).
     let inputs = [
         Series::new(
@@ -689,16 +656,13 @@ fn test_mixed_temporal_comparisons_are_rejected() -> Fallible<()> {
             );
         }
 
-        // Callers can explicitly cast to ns, which correctly marks the
-        // intermediate domain as nullable before computing the comparison.
+        // Cross-temporal casts also require a separate safety proof.
         let expr = col(name.clone()).cast(nanoseconds.clone()).eq(col("ns"));
-        let t = expr.make_stable(domain, FrameDistance(SymmetricDistance))?;
-        assert!(t.output_domain.column.nullable, "{name}");
-
-        let lf = DataFrame::new(vec![input.into_column(), ns.clone().into_column()])?.lazy();
-        let stable_expr = t.invoke(&lf.logical_plan)?.expr;
-        let output = lf.select([stable_expr]).collect()?;
-        assert_eq!(output.column(&name)?.null_count(), 1, "{name}");
+        assert!(
+            expr.make_stable(domain, FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{name}"
+        );
     }
     Ok(())
 }
@@ -823,6 +787,11 @@ fn test_numeric_dynamic_literal_coercion_matches_optimized_polars() -> Fallible<
     let lf = df!("x" => [Some(f32::MAX), None, Some(f32::MIN), Some(0.0f32)])?.lazy();
 
     for expr in [
+        col("x") + lit(0.5f64),
+        col("x") + typed_lit(0.5f64),
+        lit(0.5f64) + col("x"),
+        col("x") + lit(1i32),
+        col("x") + typed_lit(1i32),
         col("x") + lit(f64::MAX),
         col("x") + typed_lit(f64::MAX),
         lit(f64::MAX) + col("x"),
