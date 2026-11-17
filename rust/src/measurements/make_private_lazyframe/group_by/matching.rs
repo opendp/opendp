@@ -1,10 +1,7 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::{
-    DslPlan, JoinArgs, JoinCoalesce, JoinOptions, JoinType, JoinValidation, MaintainOrderJoin,
-    PlSmallStr, Selector,
-};
-use polars_plan::prelude::GroupbyOptions;
+use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
+use crate::polars::options::{ORDINARY_GROUP_BY_OPTIONS, valid_public_key_join_options};
 use polars_plan::{
     dsl::{Expr, Operator},
     utils::expr_output_name,
@@ -14,46 +11,6 @@ use crate::{measurements::expr_noise::NoisePlugin, polars::match_trusted_plugin}
 
 use super::Fallible;
 
-
-fn validate_key_join_options(options: &JoinOptions) -> Fallible<Arc<JoinOptions>> {
-    // Only called for explicit public-key release. The caller also verifies
-    // should_coalesce(), column-only join keys, and key/output schema disjointness.
-    let args = &options.args;
-    let how = match &args.how {
-        JoinType::Left => JoinType::Left,
-        JoinType::Right => JoinType::Right,
-        _ => return fallible!(MakeMeasurement, "Only left/right public-key joins are supported"),
-    };
-    let coalesce = match args.coalesce {
-        JoinCoalesce::JoinSpecific => JoinCoalesce::JoinSpecific,
-        JoinCoalesce::CoalesceColumns => JoinCoalesce::CoalesceColumns,
-        JoinCoalesce::KeepColumns => {
-            return fallible!(MakeMeasurement, "Public-key joins must coalesce their keys");
-        }
-    };
-    if args.validation != JoinValidation::ManyToMany
-        || args.slice.is_some()
-        || !matches!(args.suffix.as_deref(), None | Some("_right"))
-        || args.maintain_order != MaintainOrderJoin::None
-    {
-        return fallible!(MakeMeasurement, "Unsupported public-key join options: {options:?}");
-    }
-    // Scheduling flags are not part of the privacy analysis. Reconstruct
-    // each field explicitly, so new Polars fields require a code review.
-    Ok(Arc::new(JoinOptions {
-        allow_parallel: options.allow_parallel,
-        force_parallel: options.force_parallel,
-        args: JoinArgs {
-            how,
-            validation: JoinValidation::ManyToMany,
-            suffix: args.suffix.clone(),
-            slice: None,
-            nulls_equal: args.nulls_equal,
-            coalesce,
-            maintain_order: MaintainOrderJoin::None,
-        },
-    }))
-}
 
 #[derive(Clone)]
 pub enum KeySanitizer {
@@ -104,6 +61,9 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                     "predicates are not supported in DP key joins"
                 );
             }
+            if !valid_public_key_join_options(options.as_ref()) {
+                return fallible!(MakeMeasurement, "Unsupported public-key join options: {options:?}");
+            }
             let how = options.as_ref().args.how.clone();
             let (keys, keys_on, input_on) = match how {
                 JoinType::Left => {
@@ -124,12 +84,6 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
 
             if !options.args.should_coalesce() {
                 return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
-            }
-            if options.args.slice.is_some() {
-                return fallible!(
-                    MakeMeasurement,
-                    "DP key joins cannot be sliced because slicing introduces order dependence"
-                );
             }
             // Non-column join expressions can disable coalescing in newer
             // Polars versions, exposing private-side join key columns.
@@ -199,8 +153,6 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 );
             }
 
-            let options = validate_key_join_options(options.as_ref())?;
-
             Some(KeySanitizer::Join {
                 keys,
                 how,
@@ -239,12 +191,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         return Ok(None);
     };
 
-    let ordinary = GroupbyOptions {
-        dynamic: None,
-        rolling: None,
-        slice: None,
-    };
-    if options.as_ref() != &ordinary {
+    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return fallible!(MakeMeasurement, "Unsupported private group-by options: {options:?}");
     }
 
@@ -363,58 +310,3 @@ pub(crate) fn is_threshold_predicate(expr: Expr) -> Option<(String, u32)> {
     Some((name.to_string(), value.to_any_value()?.extract()?))
 }
 
-#[cfg(test)]
-mod join_options_tests {
-    use super::*;
-
-    fn options() -> JoinOptions {
-        JoinOptions {
-            allow_parallel: true,
-            force_parallel: true,
-            args: JoinArgs {
-                how: JoinType::Right,
-                validation: JoinValidation::ManyToMany,
-                suffix: None,
-                slice: None,
-                nulls_equal: true,
-                coalesce: JoinCoalesce::JoinSpecific,
-                maintain_order: MaintainOrderJoin::None,
-            },
-        }
-    }
-
-    #[test]
-    fn reconstructs_and_preserves_valid_public_key_join_choices() {
-        let mut input = options();
-        let output = validate_key_join_options(&input).unwrap();
-        assert!(output.allow_parallel);
-        assert!(output.force_parallel);
-        assert!(matches!(output.args.how, JoinType::Right));
-        assert_eq!(output.args.coalesce, JoinCoalesce::JoinSpecific);
-        assert!(output.args.nulls_equal);
-
-        input.allow_parallel = false;
-        input.force_parallel = false;
-        assert!(!validate_key_join_options(&input).unwrap().allow_parallel);
-        input.args.coalesce = JoinCoalesce::CoalesceColumns;
-        assert_eq!(
-            validate_key_join_options(&input).unwrap().args.coalesce,
-            JoinCoalesce::CoalesceColumns
-        );
-        input.args.coalesce = JoinCoalesce::KeepColumns;
-        assert!(validate_key_join_options(&input).is_err());
-    }
-
-    #[test]
-    fn rejects_unsafe_public_key_join_semantics() {
-        let mut input = options();
-        input.args.slice = Some((0, 1));
-        assert!(validate_key_join_options(&input).is_err());
-        input.args.slice = None;
-        input.args.maintain_order = MaintainOrderJoin::Left;
-        assert!(validate_key_join_options(&input).is_err());
-        input.args.maintain_order = MaintainOrderJoin::None;
-        input.args.suffix = Some("unapproved".into());
-        assert!(validate_key_join_options(&input).is_err());
-    }
-}

@@ -29,7 +29,8 @@ mod test;
 
 mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
-use polars_plan::prelude::{DistinctOptionsDSL, GroupbyOptions, ProjectionOptions};
+use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 
 #[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
@@ -186,11 +187,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Arc::new(GroupbyOptions {
-                dynamic: None,
-                rolling: None,
-                slice: None,
-            }),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
@@ -199,11 +196,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Arc::new(GroupbyOptions {
-                dynamic: None,
-                rolling: None,
-                slice: None,
-            }),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         Ok(match key_sanitizer.clone() {
             Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
