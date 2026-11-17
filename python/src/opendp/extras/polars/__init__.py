@@ -629,7 +629,9 @@ class OnceFrame(object):
 
     def collect(self):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
-        df = self._take_lazy().collect()
+        df = self._take_lazy().collect(
+            optimizations=pl.QueryOptFlags(comm_subexpr_elim=False)
+        )
         return df.sample(n=df.height, shuffle=True)
 
     def lazy(self):
@@ -643,6 +645,8 @@ class OnceFrame(object):
 
         1. The LazyFrame (compute plan) is only ever executed once.
         2. The analyst does not observe ordering of rows in the output.
+        3. Polars common-subexpression elimination is disabled during collection,
+           for example with ``pl.QueryOptFlags(comm_subexpr_elim=False)``.
 
         To ensure that row ordering is not observed:
 
