@@ -169,4 +169,3 @@ fn test_stable_group_by_categorical() -> Fallible<()> {
     assert_eq!(t.invoke(&lf)?.collect()?.height(), 2);
     Ok(())
 }
-

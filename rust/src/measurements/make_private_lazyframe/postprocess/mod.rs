@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use polars::prelude::DslPlan;
 use polars_plan::prelude::ProjectionOptions;
-use crate::polars::options::valid_projection_options;
 
 use crate::combinators::CompositionMeasure;
 use crate::core::{Metric, MetricSpace};
@@ -12,6 +11,7 @@ use crate::{
     error::*,
 };
 
+use crate::polars::options::valid_projection_options;
 use super::PrivateDslPlan;
 
 #[cfg(test)]

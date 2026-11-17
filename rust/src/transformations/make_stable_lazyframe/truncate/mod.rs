@@ -7,12 +7,12 @@ use crate::metrics::{
     Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
     SymmetricIdDistance,
 };
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
 use matching::Truncation;
 use opendp_derive::proven;
 use polars::prelude::*;
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 
 use super::StableDslPlan;
 use super::group_by::{Resize, check_infallible, materialize_grouping_keys};

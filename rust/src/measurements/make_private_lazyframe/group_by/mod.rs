@@ -13,6 +13,7 @@ use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::StableDslPlan;
@@ -30,7 +31,6 @@ mod test;
 mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 
 #[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
