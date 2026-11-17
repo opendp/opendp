@@ -47,6 +47,15 @@ where
     let left_series = &t_left.output_domain.column;
     let right_series = &t_right.output_domain.column;
 
+    if matches!(left_series.dtype(), DataType::Array(..))
+        || matches!(right_series.dtype(), DataType::Array(..))
+    {
+        return fallible!(
+            MakeTransformation,
+            "binary operations on arrays are not supported"
+        );
+    }
+
     if matches!(left_series.dtype(), DataType::Categorical(_, _))
         || matches!(right_series.dtype(), DataType::Categorical(_, _))
     {
