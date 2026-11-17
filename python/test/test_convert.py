@@ -169,3 +169,39 @@ def test_extras_object(val_in, type_name):
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
     assert val_out == val_in
+
+
+def test_polars_native_series_ffi_roundtrip():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    for dtype in [pl.Enum(["A", "B", "C"]), pl.Categorical]:
+        series = pl.Series("group", ["B", "A", None, "B"], dtype=dtype)
+        obj = py_to_c(series, c_type=AnyObjectPtr, type_name="Series")
+        result = c_to_py(obj)
+        pl_testing.assert_series_equal(result, series)
+
+
+def test_polars_native_dataframe_ffi_roundtrip():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    enum_dtype = pl.Enum(["A", "B", "C"])
+    df = pl.DataFrame(
+        {
+            "category": pl.Series("category", ["B", "A", None], dtype=enum_dtype),
+            "id": [0, 1, 2],
+        }
+    )
+    obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
+    result = c_to_py(obj)
+    pl_testing.assert_frame_equal(result, df)
+
+
+def test_polars_unconsumed_series_export_cleanup():
+    pl = pytest.importorskip("polars")
+    from opendp._convert import _PolarsSeriesExport
+
+    series = pl.Series("group", ["A"], dtype=pl.Enum(["A", "B"]))
+    export = _PolarsSeriesExport()
+    series._s._export(ctypes.addressof(export))
+    assert export.release is not None
+    del export

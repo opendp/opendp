@@ -38,7 +38,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "debias_randomized_response_bitvec",
     "as_array",
     // polars
-    "new_arrow_array",
+    "_series_export_free",
+    "_dataframe_exports_free",
     "series_domain",
     "_series_domain_get_element_domain",
     "_series_domain_get_name",
@@ -47,7 +48,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "enum_domain",
     "array_domain",
     "datetime_domain",
-    "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
     "_lazyframe_domain_get_columns",
