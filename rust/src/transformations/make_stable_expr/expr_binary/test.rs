@@ -1,3 +1,4 @@
+use crate::core::Domain;
 use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
@@ -730,6 +731,100 @@ fn test_same_type_temporal_comparisons_remain_supported() -> Fallible<()> {
                 .is_err(),
             "{dtype}"
         );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_numeric_binary_coercion_matches_optimized_polars() -> Fallible<()> {
+    // Include mixed signed/unsigned boundaries, float extremes, NaNs, and nulls.
+    // Verify the certified domain against the values and dtype that Polars
+    // actually produces after its implicit casts and optimizer rewrites.
+    let cases = [
+        (
+            Series::new("L".into(), [i64::MIN, i64::MAX, -1, 0]),
+            Series::new("R".into(), [u64::MAX, u64::MAX, 0, 1]),
+        ),
+        (
+            Series::new("L".into(), [0u64, 1, u64::MAX, u64::MAX]),
+            Series::new("R".into(), [i64::MIN, i64::MAX, -1, 0]),
+        ),
+        (
+            Series::new("L".into(), [u32::MAX, 0, 42, 1]),
+            Series::new("R".into(), [-1i64, i64::MAX, i64::MIN, 0]),
+        ),
+        (
+            Series::new("L".into(), [f32::MIN, f32::MAX, f32::NAN, f32::INFINITY]),
+            Series::new("R".into(), [f64::MAX, -f64::MAX, f64::NAN, f64::INFINITY]),
+        ),
+        (
+            Series::new("L".into(), [Some(i64::MAX), None, Some(-1), Some(0)]),
+            Series::new("R".into(), [Some(u64::MAX), Some(0), None, Some(1)]),
+        ),
+        (
+            Series::new("L".into(), [Some(f32::MAX), None, Some(f32::MIN), Some(0.0)]),
+            Series::new("R".into(), [Some(f64::MAX), Some(0.0), None, Some(f64::MIN)]),
+        ),
+    ];
+
+    for (left, right) in cases {
+        let mut left_domain =
+            SeriesDomain::new_from_field(Field::new("L".into(), left.dtype().clone()))?;
+        left_domain.nullable = left.has_nulls();
+        let mut right_domain =
+            SeriesDomain::new_from_field(Field::new("R".into(), right.dtype().clone()))?;
+        right_domain.nullable = right.has_nulls();
+        let domain = LazyFrameDomain::new(vec![left_domain, right_domain])?.row_by_row();
+        let lf = DataFrame::new(vec![left.into_column(), right.into_column()])?.lazy();
+
+        for expr in [
+            col("L") + col("R"),
+            col("L").eq(col("R")),
+            col("L").eq_missing(col("R")),
+        ] {
+            let t = expr
+                .clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+            let expected = lf.clone().select([expr.clone()]).collect()?;
+            let observed = lf.clone().select([t.invoke(&lf.logical_plan)?.expr]).collect()?;
+            assert_eq!(observed, expected, "{expr:?}");
+            let output = expected.get_columns()[0].as_materialized_series();
+            assert_eq!(t.output_domain.column.dtype(), output.dtype().clone(), "{expr:?}");
+            assert!(t.output_domain.column.member(output)?, "{expr:?}");
+            assert!(t.output_domain.column.nullable || !output.has_nulls(), "{expr:?}");
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_numeric_dynamic_literal_coercion_matches_optimized_polars() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "x",
+        OptionDomain::new(AtomDomain::<f32>::default()),
+    )])?
+    .row_by_row();
+    let lf = df!("x" => [Some(f32::MAX), None, Some(f32::MIN), Some(0.0f32)])?.lazy();
+
+    for expr in [
+        col("x") + lit(f64::MAX),
+        col("x") + typed_lit(f64::MAX),
+        lit(f64::MAX) + col("x"),
+        col("x") + lit(i64::MAX),
+        col("x") + typed_lit(u64::MAX),
+        col("x").eq(typed_lit(f64::MAX)),
+        col("x").eq_missing(lit(f64::MAX)),
+    ] {
+        let t = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        let expected = lf.clone().select([expr.clone()]).collect()?;
+        let observed = lf.clone().select([t.invoke(&lf.logical_plan)?.expr]).collect()?;
+        assert_eq!(observed, expected, "{expr:?}");
+        let output = expected.get_columns()[0].as_materialized_series();
+        assert_eq!(t.output_domain.column.dtype(), output.dtype().clone(), "{expr:?}");
+        assert!(t.output_domain.column.member(output)?, "{expr:?}");
+        assert!(t.output_domain.column.nullable || !output.has_nulls(), "{expr:?}");
     }
     Ok(())
 }
