@@ -1,26 +1,65 @@
-use polars::prelude::{DataType, TimeUnit};
+use polars::prelude::DataType;
 
 use crate::error::*;
 
-// Reject private casts that can fail on individual values or expose mutable
-// categorical encodings. Return whether a non-strict cast may introduce nulls.
+// Restrict private casts to reviewed dtype pairs. Unsupported casts must be
+// rejected rather than relying on Polars' non-strict behavior to be infallible.
+// Return whether a non-null input may produce null.
 pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<bool> {
-    if matches!(from, DataType::Array(_, _)) || matches!(to, DataType::Array(_, _)) {
-        return fallible!(MakeTransformation, "Array casts are not supported");
-    }
-    if !is_safe_categorical_cast(from, to) {
+    use DataType::*;
+
+    let allowed = match (from, to) {
+        // Identity is safe only for dtypes whose representation is supported.
+        (left, right) if left == right => matches!(
+            left,
+            Boolean
+                | UInt8
+                | UInt16
+                | UInt32
+                | UInt64
+                | Int8
+                | Int16
+                | Int32
+                | Int64
+                | Float32
+                | Float64
+                | String
+                | Date
+                | Datetime(_, _)
+                | Time
+                | Categorical(_, _)
+                | Enum(_, _)
+        ),
+        (from, to) if is_numeric_coercion(from, to) => true,
+        (from, String) if from.is_primitive_numeric() || matches!(from, Boolean) => true,
+        (String, to) if to.is_primitive_numeric() => true,
+        (Categorical(_, _), String | Enum(_, _))
+        | (Enum(_, _), String)
+        | (String, Enum(_, _)) => true,
+        // In particular, no cross-temporal, physical categorical, or nested
+        // conversions have an established data-independent failure guarantee.
+        _ => false,
+    };
+
+    if !allowed {
         return fallible!(
             MakeTransformation,
-            "Casting to or from mutable Categorical encodings is unsafe. Cast to String or fixed Enum instead."
+            "casting from {} to {} is not supported for private data",
+            from,
+            to
         );
     }
-    if has_unsafe_temporal_cast(from, to) {
-        return fallible!(
-            MakeTransformation,
-            "This temporal cast can produce data-dependent failures on private values."
-        );
-    }
+
     Ok(!is_null_preserving_cast(from, to))
+}
+
+// The only mixed-dtype implicit promotions currently certified for binary
+// expressions and fill_null are between primitive numeric/boolean columns.
+pub(super) fn is_numeric_coercion(from: &DataType, to: &DataType) -> bool {
+    let numeric = |dtype: &DataType| {
+        dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
+    };
+    numeric(from) && numeric(to)
 }
 
 // Integer casts that preserve every value and do not increase Lp distances.
@@ -56,29 +95,6 @@ fn is_null_preserving_cast(from: &DataType, to: &DataType) -> bool {
         )
 }
 
-/// Mutable categorical mappings must not be created or decoded as physical
-/// codes. Logical String and fixed Enum conversions are safe.
-fn is_safe_categorical_cast(from: &DataType, to: &DataType) -> bool {
-    match (from, to) {
-        (DataType::Categorical(..), DataType::String | DataType::Enum(..)) => true,
-        (DataType::Categorical(..), _) | (_, DataType::Categorical(..)) => from == to,
-        _ => true,
-    }
-}
-
-fn has_unsafe_temporal_cast(from: &DataType, to: &DataType) -> bool {
-    use DataType::*;
-
-    match (from, to) {
-        (String, Datetime(TimeUnit::Nanoseconds, _)) => true,
-        (Datetime(TimeUnit::Milliseconds | TimeUnit::Microseconds, _), String) => true,
-        (from, Date) if from.is_primitive_numeric() => true,
-        // Millisecond/microsecond timestamps can produce invalid Date values.
-        (Datetime(unit, _), Date) => !matches!(unit, TimeUnit::Nanoseconds),
-        _ => false,
-    }
-}
-
 fn integer_bounds(dtype: &DataType) -> Option<(i128, i128)> {
     use DataType::*;
 
@@ -96,6 +112,7 @@ fn integer_bounds(dtype: &DataType) -> Option<(i128, i128)> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use polars::prelude::{Field, TimeUnit};
 
     #[test]
     fn test_integer_widening_cast() {
@@ -136,7 +153,8 @@ mod test {
             (Int64, Int32, true),
             (Float64, Int64, true),
             (String, Int64, true),
-            (Date, Datetime(TimeUnit::Nanoseconds, None), true),
+            (UInt8, Float64, true),
+            (Boolean, Int64, true),
         ] {
             assert_eq!(
                 check_private_cast(&from, &to)?,
@@ -148,8 +166,13 @@ mod test {
         for (from, to) in [
             (String, Datetime(TimeUnit::Nanoseconds, None)),
             (Datetime(TimeUnit::Microseconds, None), String),
+            (Date, Datetime(TimeUnit::Nanoseconds, None)),
+            (Datetime(TimeUnit::Nanoseconds, None), Date),
             (Int32, Date),
+            (Float64, Time),
+            (Float64, Datetime(TimeUnit::Microseconds, None)),
             (Array(Box::new(Int32), 2), Array(Box::new(Int32), 2)),
+            (List(Box::new(Int32)), List(Box::new(Int32))),
         ] {
             assert!(
                 check_private_cast(&from, &to).is_err(),
@@ -158,4 +181,38 @@ mod test {
         }
         Ok(())
     }
+    #[test]
+    fn test_private_cast_allowlist_matrix() -> Fallible<()> {
+        use DataType::*;
+
+        let numeric = [
+            Boolean, UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32,
+            Int64, Float32, Float64,
+        ];
+        for from in &numeric {
+            for to in &numeric {
+                assert!(is_numeric_coercion(from, to));
+                check_private_cast(from, to)?;
+            }
+            check_private_cast(from, &String)?;
+        }
+        for to in numeric.iter().filter(|to| to.is_primitive_numeric()) {
+            check_private_cast(&String, to)?;
+        }
+        assert!(!is_numeric_coercion(&String, &Int64));
+        assert!(!is_numeric_coercion(&Date, &Int32));
+
+        // Unsupported families must stay rejected even for identity casts.
+        for dtype in [
+            Null,
+            Binary,
+            List(Box::new(Int32)),
+            Array(Box::new(Int32), 2),
+            Struct(vec![Field::new("x".into(), Int32)]),
+        ] {
+            assert!(check_private_cast(&dtype, &dtype).is_err(), "{dtype:?}");
+        }
+        Ok(())
+    }
+
 }
