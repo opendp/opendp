@@ -107,7 +107,11 @@ pub fn make_stable_truncate(
                         predicates: vec![],
                         apply: None,
                         maintain_order: false,
-                        options: Arc::new(GroupbyOptions::default()),
+                        options: Arc::new(GroupbyOptions {
+                            dynamic: None,
+                            rolling: None,
+                            slice: None,
+                        }),
                     };
                     #[cfg(not(patch_polars))]
                     let output = DslPlan::GroupBy {
@@ -116,7 +120,11 @@ pub fn make_stable_truncate(
                         aggs: aggs.clone(),
                         apply: None,
                         maintain_order: false,
-                        options: Arc::new(GroupbyOptions::default()),
+                        options: Arc::new(GroupbyOptions {
+                            dynamic: None,
+                            rolling: None,
+                            slice: None,
+                        }),
                     };
                     output
                 }

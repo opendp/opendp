@@ -127,7 +127,12 @@ fn match_group_by_truncation(
     else {
         return None;
     };
-    if apply.is_some() || options.as_ref() != &GroupbyOptions::default() {
+    let allowed_options = GroupbyOptions {
+        dynamic: None,
+        rolling: None,
+        slice: None,
+    };
+    if apply.is_some() || options.as_ref() != &allowed_options {
         return None;
     }
 
