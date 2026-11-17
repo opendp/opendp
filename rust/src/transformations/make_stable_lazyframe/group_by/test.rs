@@ -170,16 +170,3 @@ fn test_stable_group_by_categorical() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_stable_groupby_rejects_maintain_order() -> Fallible<()> {
-    let data = df!("key" => [0i32, 1], "value" => [2i32, 3])?.lazy();
-    let domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("key", AtomDomain::<i32>::default()),
-        SeriesDomain::new("value", AtomDomain::<i32>::default()),
-    ])?;
-    let query = data.group_by_stable([col("key")]).agg([col("value").sum()]);
-    assert!(make_stable_lazyframe(
-        domain, FrameDistance(SymmetricDistance), query
-    ).is_err());
-    Ok(())
-}

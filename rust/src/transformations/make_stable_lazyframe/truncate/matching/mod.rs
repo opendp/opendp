@@ -10,7 +10,7 @@ use crate::{
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
-use polars_plan::prelude::GroupbyOptions;
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 
 use polars::prelude::{
     BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
@@ -127,12 +127,7 @@ fn match_group_by_truncation(
     else {
         return None;
     };
-    let allowed_options = GroupbyOptions {
-        dynamic: None,
-        rolling: None,
-        slice: None,
-    };
-    if apply.is_some() || options.as_ref() != &allowed_options {
+    if apply.is_some() || options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return None;
     }
 
