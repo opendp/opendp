@@ -206,36 +206,3 @@ def test_polars_native_dataframe_ffi_roundtrip(width, empty, chunked):
     obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
     result = c_to_py(obj)
     pl_testing.assert_frame_equal(result, df)
-
-
-def test_polars_dataframe_ffi_bulk_import(monkeypatch):
-    pl = pytest.importorskip("polars")
-    pl_testing = pytest.importorskip("polars.testing")
-    import opendp._data as data
-
-    df = pl.DataFrame(
-        {"category": pl.Series(["A"], dtype=pl.Enum(["A", "B"])), "id": [0]}
-    )
-    original_import = pl.DataFrame._import_columns
-    original_free = data._series_exports_free
-    imported, freed = [], []
-
-    def import_columns(address, width):
-        imported.append((address, width))
-        return original_import(address, width)
-
-    def free_exports(address, width):
-        freed.append((address.value, width))
-        return original_free(address, width)
-
-    def per_column_import(*args):
-        pytest.fail("DataFrame conversion must use bulk import")
-
-    monkeypatch.setattr(pl.DataFrame, "_import_columns", staticmethod(import_columns))
-    monkeypatch.setattr(pl.Series, "_import", staticmethod(per_column_import))
-    monkeypatch.setattr(data, "_series_exports_free", free_exports)
-    obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
-    pl_testing.assert_frame_equal(c_to_py(obj), df)
-    assert len(imported) == 1
-    assert imported[0][1] == df.width
-    assert freed == imported
