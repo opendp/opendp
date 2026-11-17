@@ -1,6 +1,6 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{DataFrame, DataType, Field, NamedFrom, col, lit};
+use polars::prelude::{DataFrame, DataType, Field, IntoColumn, NamedFrom, col, lit};
 use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
