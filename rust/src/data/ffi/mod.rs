@@ -1007,7 +1007,7 @@ pub extern "C" fn opendp_data___dataframe_exports_free(
     };
     for (index, column) in columns.iter().enumerate() {
         let mut export =
-            unsafe { Box::from_raw(column.ptr.cast::<std::mem::ManuallyDrop<SeriesExport>>()) };
+            unsafe { Box::from_raw(column.ptr.cast_mut().cast::<std::mem::ManuallyDrop<SeriesExport>>()) };
         if index >= consumed {
             unsafe { std::mem::ManuallyDrop::drop(&mut export) };
         }
