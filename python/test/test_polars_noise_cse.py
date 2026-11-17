@@ -8,14 +8,27 @@ from opendp.extras.polars import Margin
 pl = pytest.importorskip("polars")
 
 
-@pytest.mark.parametrize("use_lazyframe", [False, True])
-def test_independent_noise_for_imputed_public_keys(use_lazyframe):
-    """CSE must not merge the noise draws for two absent-group imputations."""
+@pytest.mark.parametrize(
+    "collection_mode",
+    [
+        "onceframe",
+        "lazy_without_cse",
+        pytest.param(
+            "lazy_with_cse",
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason="Polars CSE currently merges independent DP noise draws",
+            ),
+        ),
+    ],
+)
+def test_independent_noise_for_imputed_public_keys(collection_mode):
+    """Imputed public keys need independent noise across groups and aggregates."""
     data = pl.LazyFrame(
         {"key": [1], "x": [0.25], "y": [0.75]},
         schema_overrides={"key": pl.Int32},
     )
-    public_keys = pl.LazyFrame({"key": pl.Series([1, 2], dtype=pl.Int32)})
+    public_keys = pl.LazyFrame({"key": pl.Series([1, 2, 3], dtype=pl.Int32)})
     domain = dp.with_margin(
         dp.lazyframe_domain(
             [
@@ -43,20 +56,24 @@ def test_independent_noise_for_imputed_public_keys(use_lazyframe):
         global_scale=1.0,
     )
 
-    pairs = []
     for _ in range(4):
         onceframe = measurement(data)
-        if use_lazyframe:
-            result = onceframe.lazy().collect(
-                optimizations=pl.QueryOptFlags(comm_subexpr_elim=False)
-            )
-        else:
+        if collection_mode == "onceframe":
             result = onceframe.collect()
-        absent = result.filter(pl.col("key") == 2)
-        assert absent.height == 1
-        pairs.append((absent["sum_x"][0], absent["sum_y"][0]))
+        else:
+            # Explicitly re-enable CSE for the xfail, bypassing the OnceFrame guard.
+            result = onceframe.lazy().collect(
+                optimizations=pl.QueryOptFlags(
+                    comm_subexpr_elim=collection_mode == "lazy_with_cse"
+                )
+            )
 
-    # Exact equality of independent continuous draws is negligibly likely.
-    assert all(x != y for x, y in pairs), (
-        f"Missing-group noise reused (via lazyframe={use_lazyframe}): {pairs}"
-    )
+        absent = result.filter(pl.col("key").is_in([2, 3])).sort("key")
+        assert absent["key"].to_list() == [2, 3]
+        draws = absent["sum_x"].to_list() + absent["sum_y"].to_list()
+
+        # All four noise draws must be independent: across keys and columns.
+        # Strict xfail makes a future CSE fix visible as an XPASS failure.
+        assert len(set(draws)) == 4, (
+            f"Missing-group noise reused (via {collection_mode}): {draws}"
+        )
