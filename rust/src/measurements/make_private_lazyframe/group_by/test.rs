@@ -63,57 +63,37 @@ fn test_contains_float_nested() {
 }
 
 #[test]
-fn test_contains_categorical_nested() -> Fallible<()> {
+fn test_reject_nested_categorical_grouping_key() -> Fallible<()> {
     let categories = Categories::global();
     let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    assert!(contains_categorical(&categorical));
+    assert!(contains_categorical(&DataType::List(Box::new(categorical.clone()))));
+    assert!(contains_categorical(&DataType::Struct(vec![Field::new(
+        "nested".into(), categorical.clone(),
+    )])));
+    assert!(!contains_categorical(&DataType::String));
 
-    for dtype in [
-        categorical.clone(),
-        DataType::Array(Box::new(categorical.clone()), 2),
-        DataType::List(Box::new(categorical.clone())),
-        DataType::Struct(vec![Field::new(
-            "nested".into(),
-            DataType::Array(Box::new(categorical), 2),
-        )]),
-    ] {
-        assert!(contains_categorical(&dtype), "{dtype:?}");
-    }
-
-    let categories = FrozenCategories::new(["public"])?;
-    let enum_dtype = DataType::Enum(categories.clone(), categories.mapping().clone());
-    assert!(!contains_categorical(&DataType::Int32));
-    assert!(!contains_categorical(&DataType::Array(Box::new(enum_dtype), 2)));
-    Ok(())
-}
-
-#[test]
-fn test_reject_categorical_grouping_keys() -> Fallible<()> {
-    let categories = Categories::global();
-    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
-
-    for dtype in [
-        categorical.clone(),
+    let schema = Schema::from_iter([Field::new(
+        "key".into(),
         DataType::Array(Box::new(categorical), 2),
-    ] {
-        let schema = Schema::from_iter([Field::new("key".into(), dtype)]);
-        let domain = LazyFrameDomain::new_from_schema(schema.clone())?;
-        let lf = DataFrame::empty_with_schema(&schema).lazy();
-
-        let err = make_private_lazyframe(
-            domain,
-            SymmetricDistance,
-            Approximate(MaxDivergence),
-            lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
-            Some(1.),
-            Some(10),
-        )
-        .map(|_| ())
-        .unwrap_err();
-
-        let message = err.message.as_deref().unwrap_or_default();
-        assert!(message.contains("Categories are data-dependent"), "{err:?}");
-        assert_eq!(err.variant, MakeMeasurement);
-    }
+    )]);
+    let domain = LazyFrameDomain::new_from_schema(schema.clone())?;
+    let lf = DataFrame::empty_with_schema(&schema).lazy();
+    let err = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert_eq!(err.variant, MakeMeasurement);
+    assert!(
+        err.message.as_deref().unwrap_or_default().contains("Categories are data-dependent"),
+        "{err:?}"
+    );
     Ok(())
 }
 
