@@ -48,7 +48,7 @@ class MST(Algorithm):
 
     ..
 
-        >>> import pytest  # `pip install opendp[mbi]` is necessary
+        >>> import pytest  # `pip install 'opendp[mbi]'` is necessary
         >>> _ = pytest.importorskip("mbi")
 
     .. code:: pycon

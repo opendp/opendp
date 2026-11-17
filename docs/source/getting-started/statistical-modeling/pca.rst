@@ -11,6 +11,12 @@ Any functions that have not completed the proof-writing and vetting
 process may still be accessed if you opt-in to “contrib”. Please contact
 us if you are interested in proof-writing. Thank you!
 
+..
+
+    >>> import pytest  # `pip install 'opendp[sklearn]'` is necessary
+    >>> _ = pytest.importorskip("sklearn")
+
+
 .. tab-set::
 
     .. tab-item:: Python
