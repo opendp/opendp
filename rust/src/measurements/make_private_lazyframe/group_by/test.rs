@@ -63,6 +63,61 @@ fn test_contains_float_nested() {
 }
 
 #[test]
+fn test_contains_categorical_nested() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+
+    for dtype in [
+        categorical.clone(),
+        DataType::Array(Box::new(categorical.clone()), 2),
+        DataType::List(Box::new(categorical.clone())),
+        DataType::Struct(vec![Field::new(
+            "nested".into(),
+            DataType::Array(Box::new(categorical), 2),
+        )]),
+    ] {
+        assert!(contains_categorical(&dtype), "{dtype:?}");
+    }
+
+    let categories = FrozenCategories::new(["public"])?;
+    let enum_dtype = DataType::Enum(categories.clone(), categories.mapping().clone());
+    assert!(!contains_categorical(&DataType::Int32));
+    assert!(!contains_categorical(&DataType::Array(Box::new(enum_dtype), 2)));
+    Ok(())
+}
+
+#[test]
+fn test_reject_categorical_grouping_keys() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+
+    for dtype in [
+        categorical.clone(),
+        DataType::Array(Box::new(categorical), 2),
+    ] {
+        let schema = Schema::from_iter([Field::new("key".into(), dtype)]);
+        let domain = LazyFrameDomain::new_from_schema(schema.clone())?;
+        let lf = DataFrame::empty_with_schema(&schema).lazy();
+
+        let err = make_private_lazyframe(
+            domain,
+            SymmetricDistance,
+            Approximate(MaxDivergence),
+            lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+            Some(1.),
+            Some(10),
+        )
+        .map(|_| ())
+        .unwrap_err();
+
+        let message = err.message.as_deref().unwrap_or_default();
+        assert!(message.contains("Categories are data-dependent"), "{err:?}");
+        assert_eq!(err.variant, MakeMeasurement);
+    }
+    Ok(())
+}
+
+#[test]
 fn test_cast_float_grouping_keys_allowed() -> Fallible<()> {
     let domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("key", AtomDomain::<f64>::default())])?;
