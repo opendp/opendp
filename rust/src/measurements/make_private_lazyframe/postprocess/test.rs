@@ -77,7 +77,10 @@ fn test_postprocess_rejects_noncanonical_projection_options() -> Fallible<()> {
     use std::sync::Arc;
 
     let (domain, lf) = lazyframe_select_postprocess_query()?;
-    let options = ProjectionOptions { duplicate_check: false, ..ProjectionOptions::default() };
+    let options = ProjectionOptions {
+        duplicate_check: false,
+        ..ProjectionOptions::default()
+    };
     for query in [
         DslPlan::Select {
             input: Arc::new(lf.logical_plan.clone()),
@@ -90,15 +93,17 @@ fn test_postprocess_rejects_noncanonical_projection_options() -> Fallible<()> {
             options,
         },
     ] {
-        assert!(make_private_lazyframe(
-            domain.clone(),
-            FrameDistance(SymmetricDistance),
-            MaxDivergence,
-            LazyFrame::from(query),
-            None,
-            None,
-        ).is_err());
+        assert!(
+            make_private_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                MaxDivergence,
+                LazyFrame::from(query),
+                None,
+                None,
+            )
+            .is_err()
+        );
     }
     Ok(())
 }
-

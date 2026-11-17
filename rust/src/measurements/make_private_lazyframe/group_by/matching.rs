@@ -11,7 +11,6 @@ use crate::{measurements::expr_noise::NoisePlugin, polars::match_trusted_plugin}
 
 use super::Fallible;
 
-
 #[derive(Clone)]
 pub enum KeySanitizer {
     Filter(Expr),
@@ -62,7 +61,10 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 );
             }
             if !valid_public_key_join_options(options.as_ref()) {
-                return fallible!(MakeMeasurement, "Unsupported public-key join options: {options:?}");
+                return fallible!(
+                    MakeMeasurement,
+                    "Unsupported public-key join options: {options:?}"
+                );
             }
             let how = options.as_ref().args.how.clone();
             let (keys, keys_on, input_on) = match how {
@@ -192,7 +194,10 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
     };
 
     if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
-        return fallible!(MakeMeasurement, "Unsupported private group-by options: {options:?}");
+        return fallible!(
+            MakeMeasurement,
+            "Unsupported private group-by options: {options:?}"
+        );
     }
 
     if apply.is_some() {
@@ -309,4 +314,3 @@ pub(crate) fn is_threshold_predicate(expr: Expr) -> Option<(String, u32)> {
 
     Some((name.to_string(), value.to_any_value()?.extract()?))
 }
-

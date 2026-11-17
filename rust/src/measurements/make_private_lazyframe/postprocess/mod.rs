@@ -11,8 +11,8 @@ use crate::{
     error::*,
 };
 
-use crate::polars::options::valid_projection_options;
 use super::PrivateDslPlan;
+use crate::polars::options::valid_projection_options;
 
 #[cfg(test)]
 mod test;
@@ -21,7 +21,10 @@ mod test;
 // scheduling; shape validation remains mandatory.
 fn validated_projection_options(options: ProjectionOptions) -> Fallible<ProjectionOptions> {
     if !valid_projection_options(options) {
-        return fallible!(MakeMeasurement, "Postprocessing requires duplicate checks and broadcasting");
+        return fallible!(
+            MakeMeasurement,
+            "Postprocessing requires duplicate checks and broadcasting"
+        );
     }
     Ok(options)
 }
