@@ -978,6 +978,17 @@ pub extern "C" fn opendp_data___series_export_free(export: *mut c_void) -> FfiRe
     FfiResult::Ok(std::ptr::null_mut())
 }
 
+// The first three fields of polars_ffi::version_0::SeriesExport
+// (#[repr(C)]). Polars' release callback only deallocates ArrowArray
+// descriptors, so the buffers of unconsumed exports must be released first.
+#[cfg(feature = "polars")]
+#[repr(C)]
+struct SeriesExportArrays {
+    _field: *mut c_void,
+    arrays: *mut *mut polars_arrow::ffi::ArrowArray,
+    len: usize,
+}
+
 #[cfg(feature = "polars")]
 #[bootstrap(
     name = "_dataframe_exports_free",
@@ -1012,6 +1023,10 @@ pub extern "C" fn opendp_data___dataframe_exports_free(
             .cast::<std::mem::ManuallyDrop<SeriesExport>>();
         let mut export = unsafe { Box::from_raw(export_ptr) };
         if index >= consumed {
+            let arrays = unsafe { &*export_ptr.cast::<SeriesExportArrays>() };
+            for &array in unsafe { slice::from_raw_parts(arrays.arrays, arrays.len) } {
+                unsafe { std::ptr::drop_in_place(array) };
+            }
             unsafe { std::mem::ManuallyDrop::drop(&mut export) };
         }
     }
