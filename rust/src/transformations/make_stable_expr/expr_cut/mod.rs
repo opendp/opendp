@@ -69,7 +69,10 @@ where
     // cast when all values are null, but error when a private value is non-null.
     let dtype = middle_domain.column.dtype();
     if !dtype.is_primitive_numeric() {
-        return fallible!(MakeTransformation, "cut requires numeric input, found {dtype}");
+        return fallible!(
+            MakeTransformation,
+            "cut requires numeric input, found {dtype}"
+        );
     }
 
     let mut output_domain = middle_domain.clone();
