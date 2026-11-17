@@ -5,7 +5,6 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
-use crate::polars::literal_value_of;
 
 use super::StableExpr;
 
@@ -42,7 +41,7 @@ where
     let to_type_lit = (to_type.as_literal())
         .ok_or_else(|| err!(MakeTransformation, "output type must be a literal"))?;
 
-    let Ok([input, ambiguous]) = <&[_; 2]>::try_from(inputs.as_slice()) else {
+    let Ok([input, _]) = <&[_; 2]>::try_from(inputs.as_slice()) else {
         return fallible!(
             MakeTransformation,
             "str.strptime must have two arguments, found {}",
@@ -72,11 +71,8 @@ where
     // It is also ok for overflow to wraparound (but may be undesirable for users).
     strptime_options.strict = false;
 
-    // never raise on error
-    let ambiguous = lit(match literal_value_of::<String>(ambiguous) {
-        Ok(Some(a)) if ["earliest", "latest"].contains(&a.as_str()) => a,
-        _ => "null".to_string(),
-    });
+    // Timezone-aware parsing is unsupported, so ambiguity is irrelevant.
+    let ambiguous = lit("null");
 
     let mut output_domain = middle_domain.clone();
     let series_domain = &mut output_domain.column;
@@ -90,24 +86,51 @@ where
         );
     }
 
-    if matches!(to_type_lit, DataType::Datetime(TimeUnit::Nanoseconds, _)) {
-        // Nanoseconds are not supported due to this issue:
-        // https://github.com/pola-rs/polars/issues/19928
-        return fallible!(
-            MakeMeasurement,
-            "Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead."
-        );
+    match to_type_lit {
+        DataType::Datetime(TimeUnit::Nanoseconds, _) => {
+            // Nanoseconds are not supported due to this issue:
+            // https://github.com/pola-rs/polars/issues/19928
+            return fallible!(
+                MakeMeasurement,
+                "Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead."
+            );
+        }
+        // Localizing a parsed datetime can raise on nonexistent wall-clock
+        // times (DST gaps), even with strict=false.
+        DataType::Datetime(_, Some(_)) => {
+            return fallible!(
+                MakeTransformation,
+                "str.strptime does not support timezone-aware Datetime output because localization may fail depending on private data"
+            );
+        }
+        DataType::Time
+        | DataType::Date
+        | DataType::Datetime(TimeUnit::Microseconds | TimeUnit::Milliseconds, None) => {}
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "str.strptime output dtype must be Time, Date, or timezone-naive micro- or milli-second Datetime, found {}",
+                to_type_lit
+            );
+        }
     }
 
-    if !matches!(
-        to_type_lit,
-        DataType::Time
-            | DataType::Datetime(TimeUnit::Microseconds | TimeUnit::Milliseconds, _)
-            | DataType::Date
-    ) {
+    // Polars infers a UTC timezone when the format contains an offset (e.g.
+    // %z), even when the requested dtype has no timezone. Reject such formats
+    // rather than certify a different dtype or execute timezone-aware parsing.
+    let inferred_dtype = col(series_domain.name.clone())
+        .str()
+        .strptime(to_type.clone(), strptime_options.clone(), ambiguous.clone())
+        .to_field(&Schema::from_iter([Field::new(
+            series_domain.name.clone(),
+            DataType::String,
+        )]))?
+        .dtype;
+    if inferred_dtype != *to_type_lit {
         return fallible!(
             MakeTransformation,
-            "str.strptime output dtype must be Time, micro- or milli-second Datetime or Date, found {}",
+            "str.strptime inferred output dtype {} differs from the requested {}. Timezone-aware parsing is not supported.",
+            inferred_dtype,
             to_type_lit
         );
     }
