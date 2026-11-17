@@ -21,7 +21,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     Count,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     Marginals,
     _snapshot_bounds,
 )
@@ -144,7 +144,7 @@ class AIM(Algorithm):
                 raise ValueError("queries must not be empty")
             if not all(isinstance(query, Count) for query in self.queries):
                 raise ValueError("queries must be of type Count")
-            self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
+            self.queries = tuple(Count(q.by, q.weight) for q in self.queries)
 
         if not (0 < self.measure_split <= 1):
             raise ValueError(f"measure_split ({self.measure_split}) must be in (0, 1]")
@@ -184,7 +184,7 @@ class AIM(Algorithm):
             raise ValueError("model must be a MarkovRandomField or a GemPlusModel")
 
         d_in = _snapshot_bounds(d_in)
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         queries = _expand_queries(algorithm.queries, input_domain.columns)
         algorithm = replace(algorithm, queries=queries)
 
@@ -393,7 +393,7 @@ def _make_aim_select(
     if not isinstance(model, GemPlusModel):
         model = cast(mbi.MarkovRandomField, model)
 
-    queries = [replace(q, by=tuple(q.by)) for q in queries]
+    queries = [Count(q.by, q.weight) for q in queries]
 
     def is_small(clique: tuple[str, ...]) -> bool:
         # Gem+ has no junction tree, so the size limit does not apply.
@@ -454,7 +454,7 @@ def _make_aim_scores(
     if not isinstance(model, GemPlusModel):
         model = cast(MarkovRandomField, model)
 
-    queries = tuple(replace(q, by=tuple(q.by)) for q in queries)
+    queries = tuple(Count(q.by, q.weight) for q in queries)
     expectations = dict(expectations)
 
     for value_domain in input_domain.cast(TypedDictDomain).values():

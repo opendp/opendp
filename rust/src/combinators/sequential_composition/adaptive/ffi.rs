@@ -44,20 +44,3 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
     .map(|m| m.into_any_Q().into_any_out())
     .into()
 }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_combinators__make_sequential_composition(
-    input_domain: *const AnyDomain,
-    input_metric: *const AnyMetric,
-    output_measure: *const AnyMeasure,
-    d_in: *const AnyObject,
-    d_mids: *const AnyObject,
-) -> FfiResult<*mut AnyMeasurement> {
-    opendp_combinators__make_adaptive_composition(
-        input_domain,
-        input_metric,
-        output_measure,
-        d_in,
-        d_mids,
-    )
-}

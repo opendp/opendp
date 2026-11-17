@@ -14,7 +14,8 @@ use crate::{
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01InfDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, L01InfDistance, SymmetricDistance,
+        SymmetricIdDistance,
     },
     polars::{OnceFrame, get_disabled_features_message},
     transformations::{
@@ -48,11 +49,10 @@ fn make_private_aggregation<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
@@ -167,8 +167,7 @@ const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ord
 impl<MI> PrivateDslPlan<FrameDistance<MI>, MaxDivergence> for DslPlan
 where
     MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
 {
     fn make_private(
@@ -208,8 +207,7 @@ where
 impl<MI> PrivateDslPlan<FrameDistance<MI>, ZeroConcentratedDivergence> for DslPlan
 where
     MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
 {
     fn make_private(
         self,
@@ -249,13 +247,12 @@ where
 impl<MI, MO> PrivateDslPlan<FrameDistance<MI>, Approximate<MO>> for DslPlan
 where
     MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
     MO: 'static + CompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
-    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, Approximate<MO>>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>
-        + PrivateDslPlan<FrameDistance<MI::EventMetric>, MO>
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, Approximate<MO>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>
+        + PrivateDslPlan<FrameDistance<SymmetricDistance>, MO>
         + PrivateDslPlan<FrameDistance<MI>, MO>,
 {
     fn make_private(
@@ -333,59 +330,52 @@ where
     }
 }
 
-macro_rules! impl_plan_bounded_dp {
-    ($ty:ty) => {
-        impl<MO: 'static + Measure> PrivateDslPlan<$ty, MO> for DslPlan
-        where
-            DslPlan: PrivateDslPlan<<$ty as BoundedMetric>::UnboundedMetric, MO>,
+impl<MO: 'static + Measure> PrivateDslPlan<ChangeOneDistance, MO> for DslPlan
+where
+    DslPlan: PrivateDslPlan<SymmetricDistance, MO>,
+{
+    fn make_private(
+        self,
+        input_domain: DslPlanDomain,
+        input_metric: ChangeOneDistance,
+        output_measure: MO,
+        global_scale: Option<f64>,
+        threshold: Option<u32>,
+    ) -> Fallible<Measurement<DslPlanDomain, ChangeOneDistance, MO, DslPlan>> {
+        let mut middle_domain = input_domain.clone();
+        if let Some(prev_margin) = middle_domain
+            .margins
+            .iter_mut()
+            .find(|m| m.by == HashSet::new())
         {
-            fn make_private(
-                self,
-                input_domain: DslPlanDomain,
-                input_metric: $ty,
-                output_measure: MO,
-                global_scale: Option<f64>,
-                threshold: Option<u32>,
-            ) -> Fallible<Measurement<DslPlanDomain, $ty, MO, DslPlan>> {
-                let mut middle_domain = input_domain.clone();
-                if let Some(prev_margin) = middle_domain
-                    .margins
-                    .iter_mut()
-                    .find(|m| m.by == HashSet::new())
-                {
-                    prev_margin.invariant = Some(Invariant::Lengths);
-                } else {
-                    middle_domain
-                        .margins
-                        .push(Margin::select().with_invariant_lengths());
-                }
-                let middle_metric = input_metric.to_unbounded();
-
-                Transformation::new(
-                    input_domain.clone(),
-                    input_metric.clone(),
-                    middle_domain.clone(),
-                    middle_metric.clone(),
-                    Function::new(Clone::clone),
-                    StabilityMap::new_from_constant(2),
-                )? >> self.make_private(
-                    middle_domain,
-                    middle_metric,
-                    output_measure,
-                    global_scale,
-                    threshold,
-                )?
-            }
+            prev_margin.invariant = Some(Invariant::Lengths);
+        } else {
+            middle_domain
+                .margins
+                .push(Margin::select().with_invariant_lengths());
         }
-    };
-}
+        let middle_metric = input_metric.to_unbounded();
 
-impl_plan_bounded_dp!(HammingDistance);
-impl_plan_bounded_dp!(ChangeOneDistance);
+        Transformation::new(
+            input_domain.clone(),
+            input_metric,
+            middle_domain.clone(),
+            middle_metric.clone(),
+            Function::new(Clone::clone),
+            StabilityMap::new_from_constant(2),
+        )? >> self.make_private(
+            middle_domain,
+            middle_metric,
+            output_measure,
+            global_scale,
+            threshold,
+        )?
+    }
+}
 
 impl<MO: 'static + Measure> PrivateDslPlan<ChangeOneIdDistance, MO> for DslPlan
 where
-    DslPlan: PrivateDslPlan<<ChangeOneIdDistance as BoundedMetric>::UnboundedMetric, MO>,
+    DslPlan: PrivateDslPlan<SymmetricIdDistance, MO>,
 {
     fn make_private(
         self,

@@ -21,7 +21,6 @@ use super::StableExpr;
 /// | input_metric                              |
 /// | ----------------------------------------- |
 /// | `PartitionDistance<SymmetricDistance>`    |
-/// | `PartitionDistance<InsertDeleteDistance>` |
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
@@ -175,26 +174,20 @@ where
         _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
     };
 
-    // 'mng_check: this invariant is used later
-    if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_groups.is_none() {
-        return fallible!(
-            MakeTransformation,
-            "max_groups must be known when the metric is not sensitive to ordering (SymmetricDistance)"
-        );
-    }
+    let max_groups = if pp_relaxation.is_zero() {
+        0
+    } else {
+        margin.max_groups.ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "max_groups must be known for floating-point sums"
+            )
+        })?
+    };
 
     Ok(StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            // max changed groups
-            let mcg = if pp_relaxation.is_zero() {
-                0u32
-            } else if MI::ORDERED {
-                (*l0).min(margin.max_groups.unwrap_or(*l0))
-            } else {
-                margin.max_groups.expect("not none due to 'mng_check above")
-            };
-
-            let mcg_p = norm_map(f64::from(mcg))?;
+            let mcg_p = norm_map(f64::from(max_groups))?;
             let l0_p = norm_map(f64::from(*l0))?;
             let l1_p = f64::inf_cast(pp_map(l1)?)?;
             let l_inf_p = f64::inf_cast(pp_map(l_inf)?)?;

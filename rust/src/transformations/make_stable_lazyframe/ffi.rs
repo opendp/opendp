@@ -11,8 +11,8 @@ use crate::{
         util::{Type, TypeContents, to_str},
     },
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
-        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, SymmetricDistance,
+        SymmetricIdDistance,
     },
     transformations::{
         StableDslPlan,
@@ -61,7 +61,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             }
             dispatch!(
                 monomorphize,
-                [(MI, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])],
+                [(MI, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>])],
                 (
                     input_domain,
                     input_metric,
@@ -75,7 +75,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
         } else {
             err!(FFI, "MI ({:?}) must match MO ({:?}), or FrameDistance<SymmetricIdDistance> -> FrameDistance<SymmetricDistance>", MI.descriptor, MO.descriptor).into()
         }
-    } else if dispatch!(is_in, [(MI, [SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance])], ()).is_some() {
+    } else if dispatch!(is_in, [(MI, [SymmetricDistance, SymmetricIdDistance])], ()).is_some() {
         // MI -> FrameDistance<MI>
         if MI == try_!(MO.get_atom()) {
             fn monomorphize<MI: UnboundedMetric>(
@@ -91,7 +91,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             }
             dispatch!(
                 monomorphize,
-                [(MI, [SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance])],
+                [(MI, [SymmetricDistance, SymmetricIdDistance])],
                 (
                     input_domain,
                     input_metric,
@@ -119,7 +119,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
         }
         dispatch!(
             monomorphize,
-            [(MI, [ChangeOneDistance, HammingDistance, ChangeOneIdDistance])],
+            [(MI, [ChangeOneDistance, ChangeOneIdDistance])],
             (
                 input_domain,
                 input_metric,

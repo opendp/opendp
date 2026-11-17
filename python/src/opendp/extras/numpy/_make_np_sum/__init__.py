@@ -37,6 +37,11 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
         )  # pragma: no cover
 
     input_desc = input_domain.descriptor
+    if input_desc.num_columns is None:  # |\label{columns-check}|
+        raise ValueError(
+            f"input_domain ({input_domain}) must specify num_columns"
+        )  # pragma: no cover
+
     norm = input_desc.norm
     if norm is None:  # |\label{norm-check}|
         raise ValueError(

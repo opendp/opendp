@@ -1,6 +1,6 @@
 """Releases all queries in a fixed workload."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
@@ -11,7 +11,7 @@ from opendp.extras.mbi._utilities import (
     then_noise_marginals,
     make_stable_marginals,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     Count,
     Marginals,
     OnewayType,
@@ -59,7 +59,7 @@ class Fixed(Algorithm):
         if not all(isinstance(q, Count) for q in self.queries):
             raise ValueError("queries must be of type Count")
 
-        self.queries = tuple(replace(q, by=tuple(q.by)) for q in self.queries)
+        self.queries = tuple(Count(q.by, q.weight) for q in self.queries)
 
     def make_marginals(
         self,
@@ -92,7 +92,7 @@ class Fixed(Algorithm):
 
         # Reject unsupported measures before constructing the workload.
         get_associated_metric(output_measure)
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         cliques = [q.by for q in algorithm.queries]
         weights = [q.weight for q in algorithm.queries]
 

@@ -1,3 +1,5 @@
+#![allow(deprecated)] // The FFI retains deprecated constructors for compatibility.
+
 use std::any::TypeId;
 
 use crate::core::MetricSpace;

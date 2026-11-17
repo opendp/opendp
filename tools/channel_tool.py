@@ -21,12 +21,7 @@ from utils import (
     sys,
 )
 
-CHANGELOG_PATH = Path(__file__).parent.parent / "CHANGELOG.md"
 URL_BASE = "https://github.com/opendp/opendp/compare/"
-
-
-def get_changelog_lines():
-    return CHANGELOG_PATH.read_text().splitlines()
 
 
 def ensure_branch(branch):
@@ -124,6 +119,11 @@ def update_version(version):
     with open("VERSION", "w") as f:
         print(version, file=f)
 
+    # robots.txt
+    with open("docs/robots.txt", "a") as f:
+        stem_version = str(version).replace("-dev", "")
+        print(f"Disallow: /en/v{stem_version}/", file=f)
+
     # cargo versions
     # cargo doesn't like build metadata in dependency references, so we strip that for those.
     stripped_version = version.replace(build=None)
@@ -190,72 +190,6 @@ def configure(args):
     update_version(version)
 
 
-def match_first_changelog_header(lines):
-    pattern = rf"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(URL_BASE)}(\S+)\.\.\.\S+\) - \S+$"
-    matcher = re.compile(pattern)
-    for i, line in enumerate(lines):
-        match = matcher.match(line)
-        if match is not None:
-            return i, match
-    raise Exception("Didn't match pattern in CHANGELOG")
-
-
-def changelog(args):
-    log("*** UPDATING CHANGELOG ***")
-    version = get_version()
-    channel = infer_channel(version)
-    date = args.date or datetime.date.today()
-
-    log("Reading CHANGELOG")
-    changelog_lines = get_changelog_lines()
-    i, match = match_first_changelog_header(changelog_lines)
-    heading_version = semver.Version.parse(match.group(1))
-    diff_source = match.group(2)
-
-    if args.prepend:
-        if channel != "dev":
-            raise Exception("Can only prepend on dev channel")
-        # Check that the VERSION file has been bumped above the existing heading version.
-        if version.finalize_version() <= heading_version.finalize_version():
-            raise Exception(
-                f"Prepending new heading, but VERSION {version} hasn't been bumped above heading version {heading_version}"
-            )
-        new_heading_version = heading_version.finalize_version()
-        diff_target = f"v{heading_version.finalize_version()}"
-    else:
-        # Check that the VERSION file matches the existing heading version.
-        if version.finalize_version() != heading_version.finalize_version():
-            raise Exception(
-                f"VERSION {version} isn't compatible with heading version {heading_version}"
-            )
-        new_heading_version = version
-        diff_target = (
-            f"v{version}"
-            if channel == "stable"
-            else (channel if channel != "dev" else "HEAD")
-        )
-        if channel == "dev":
-            date = "TBD"
-
-    log(
-        f"Updating heading to {new_heading_version}, {diff_source}...{diff_target}, {date}"
-    )
-    changelog_lines[i] = (
-        f"## [{new_heading_version}]({URL_BASE}{diff_source}...{diff_target}) - {date}\n"
-    )
-    if args.prepend:
-        # Prepend a new heading for the current version.
-        diff_source = diff_target
-        log(f"Prepending new heading for {version}")
-        changelog_lines[i:i] = [
-            f"## [{version}]({URL_BASE}{diff_source}...HEAD) - TBD\n",
-            "\n",
-            "\n",
-        ]
-
-    CHANGELOG_PATH.write_text("\n".join(changelog_lines))
-
-
 def bump_version(args):
     log("*** BUMPING VERSION NUMBER ***")
     if args.set:
@@ -312,17 +246,6 @@ def _main(argv):
     )
     subparser.add_argument(
         "-i", "--counter", type=int, default=0, help="Intra-date version counter"
-    )
-
-    subparser = subparsers.add_parser("changelog", help="Update the CHANGELOG file")
-    subparser.set_defaults(func=changelog)
-    subparser.add_argument(
-        "-d", "--date", type=datetime.date.fromisoformat, help="Release date"
-    )
-    subparser.add_argument(
-        "--prepend",
-        action="store_true",
-        help="Prepend new empty heading (for dev only)",
     )
 
     subparser = subparsers.add_parser(

@@ -2,7 +2,7 @@ use polars::{df, prelude::len};
 
 use crate::{
     core::Transformation,
-    metrics::{FrameDistance, InsertDeleteDistance, L0PInfDistance, L2Distance},
+    metrics::{FrameDistance, L0PInfDistance, L2Distance, SymmetricDistance},
     transformations::{StableExpr, test_helper::get_test_data},
 };
 
@@ -14,7 +14,7 @@ fn test_select_make_expr_len() -> Fallible<()> {
     let expr_domain = lf_domain.aggregate(["chunk_2_bool", "cycle_5_alpha"]);
 
     let t_sum: Transformation<_, _, _, L2Distance<f64>> =
-        len().make_stable(expr_domain, L0PInfDistance(InsertDeleteDistance))?;
+        len().make_stable(expr_domain, L0PInfDistance(SymmetricDistance))?;
     let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
     assert_eq!(expr_res, len());
 
@@ -31,7 +31,7 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
 
     // Get resulting sum (expression result)
     let t_sum: Transformation<_, _, _, L2Distance<f64>> =
-        len().make_stable(expr_domain, L0PInfDistance(InsertDeleteDistance))?;
+        len().make_stable(expr_domain, L0PInfDistance(SymmetricDistance))?;
     let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf
@@ -79,8 +79,8 @@ fn test_select_make_expr_len_row_by_row() -> Fallible<()> {
 
     assert!(
         len()
-            .make_stable(expr_domain, FrameDistance(InsertDeleteDistance))
-            .map(|_: Transformation<_, _, _, FrameDistance<InsertDeleteDistance>>| ())
+            .make_stable(expr_domain, FrameDistance(SymmetricDistance))
+            .map(|_: Transformation<_, _, _, FrameDistance<SymmetricDistance>>| ())
             .is_err()
     );
 

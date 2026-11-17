@@ -8,10 +8,7 @@ use crate::{
         any::{AnyMetric, AnyObject, Downcast},
         util,
     },
-    metrics::{
-        Bounds, ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
-        SymmetricIdDistance,
-    },
+    metrics::{Bounds, ChangeOneIdDistance, FrameDistance, SymmetricDistance, SymmetricIdDistance},
     transformations::traits::UnboundedMetric,
 };
 
@@ -81,10 +78,7 @@ pub extern "C" fn opendp_metrics__frame_distance(
     let M = inner_metric.type_.clone();
     dispatch!(
         monomorphize,
-        [(
-            M,
-            [SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance]
-        )],
+        [(M, [SymmetricDistance, SymmetricIdDistance])],
         (inner_metric)
     )
     .into()
@@ -108,10 +102,7 @@ pub extern "C" fn opendp_metrics___frame_distance_get_inner_metric(
     let M = try_!(metric.type_.get_atom());
     dispatch!(
         monomorphize,
-        [(
-            M,
-            [SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance]
-        )],
+        [(M, [SymmetricDistance, SymmetricIdDistance])],
         (metric)
     )
     .into()

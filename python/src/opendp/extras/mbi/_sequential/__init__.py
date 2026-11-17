@@ -8,7 +8,7 @@ from opendp._lib import import_optional_dependency
 from opendp.combinators import make_adaptive_composition
 from opendp.extras.mbi._utilities import (
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     get_associated_metric,
     get_cardinalities,
     _snapshot_bounds,
@@ -101,7 +101,7 @@ class Sequential(Algorithm):
             raise ValueError("model must be a MarkovRandomField")
 
         d_in = _snapshot_bounds(d_in)
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         algorithms = algorithm.algorithms
         weights = np.array(algorithm.weights or [1] * len(algorithms))
 

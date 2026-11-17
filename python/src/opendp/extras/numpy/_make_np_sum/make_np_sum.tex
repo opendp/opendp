@@ -21,7 +21,7 @@ and returns a stable Transformation that computes the vector-valued sum with bou
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,escapechar=|,firstline=9,lastline=54]{./__init__.py}
+\lstinputlisting[language=Python,escapechar=|,firstline=9,lastline=69]{./__init__.py}
 
 \subsection*{Postcondition}
 
@@ -35,6 +35,7 @@ By \ref{domain-check}, \texttt{input\_domain} is an \texttt{NPArray2Domain},
 and by \ref{metric-check}, \texttt{input\_metric} is \texttt{SymmetricDistance}.
 Let $R$ denote \texttt{input\_domain.descriptor.norm},
 and let $O$ denote \texttt{input\_domain.descriptor.origin}.
+By \ref{columns-check}, $x$ and $x'$ have the same fixed number of columns.
 By \ref{norm-check}, $R$ is defined, and by \ref{p-check}, the output metric is the $L^p$ metric with $p \in \{1, 2\}$.
 Because this proof is under \texttt{idealized-numerics}, we ignore machine arithmetic issues such as overflow and treat vector addition as associative and commutative.
 

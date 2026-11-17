@@ -6,7 +6,7 @@ use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformati
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
-use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
@@ -31,12 +31,11 @@ pub(crate) fn make_private_select<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
     MO: 'static + CompositionMeasure,
-    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
-    (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
+    (DslPlanDomain, FrameDistance<SymmetricDistance>): MetricSpace,
 {
     let is_truncated = input_metric.0.identifier().is_some();
 

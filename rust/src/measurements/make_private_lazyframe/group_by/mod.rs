@@ -13,10 +13,11 @@ use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
+use crate::transformations::StableDslPlan;
+use crate::transformations::make_stable_expr;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
@@ -50,11 +51,9 @@ pub(crate) fn make_private_group_by<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>
-        + StableExpr<L01InfDistance<MI::EventMetric>, L01InfDistance<MI::EventMetric>>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
 {
     let is_truncated = input_metric.0.identifier().is_some();
 
@@ -76,12 +75,13 @@ where
         .iter()
         .map(|expr| {
             // Grouping keys must be stable; preserve the normalized expression.
-            let t_key = expr.clone().make_stable(
+            let t_key = make_stable_expr::<_, L01InfDistance<SymmetricDistance>>(
                 WildExprDomain {
                     columns: middle_domain.series_domains.clone(),
                     context: Context::RowByRow,
                 },
-                L0PInfDistance(middle_metric.0.clone()),
+                L0PInfDistance::<1, SymmetricDistance>(middle_metric.0.clone()),
+                expr.clone(),
             )?;
 
             let series_domain = &t_key.output_domain.column;

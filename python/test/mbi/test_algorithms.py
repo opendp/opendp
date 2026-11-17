@@ -1,4 +1,5 @@
 from opendp.extras.mbi import (
+    Algorithm,
     Fixed,
     mirror_descent,
     Count,
@@ -7,9 +8,11 @@ from opendp.extras.mbi import (
     Marginals,
     Sequential,
 )
+import math
+import re
+
 import opendp.prelude as dp
 import pytest
-import re
 
 from ..helpers import ids
 
@@ -93,6 +96,89 @@ def test_algorithm_err_elements(algorithm):
         )
 
 
+def test_algorithm_hbc_gates(monkeypatch):
+    import opendp.mod as mod
+    from opendp.extras.mbi._utilities import _check_and_snapshot_algorithm
+
+    class CustomAlgorithm(Algorithm):
+        def make_marginals(self, *args, **kwargs):
+            raise NotImplementedError
+
+    class CustomFixed(Fixed):
+        pass
+
+    fixed = Fixed(queries=[Count(("A",))])
+    overridden = Fixed(queries=[Count(("A",))])
+    overridden.make_marginals = lambda *args, **kwargs: None  # type: ignore[method-assign]
+    overridden_postinit = Fixed(queries=[Count(("A",))])
+    overridden_postinit.__post_init__ = lambda: None  # type: ignore[method-assign]
+
+    custom_estimator = Fixed(
+        queries=[Count(("A",))],
+        estimator=lambda *args, **kwargs: None,
+    )
+    nested = Sequential(
+        algorithms=[
+            AIM(),
+            Sequential(algorithms=[CustomFixed(queries=[Count(("A",))])]),
+        ]
+    )
+    nested_estimator = Sequential(algorithms=[custom_estimator])
+    trusted = [AIM(), MST(), fixed, Sequential(algorithms=[fixed, AIM()])]
+    untrusted = [
+        CustomAlgorithm(),
+        CustomFixed(queries=[Count(("A",))]),
+        overridden,
+        overridden_postinit,
+        custom_estimator,
+        nested,
+        nested_estimator,
+    ]
+
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"honest-but-curious"}
+        )
+        for algorithm in trusted:
+            _check_and_snapshot_algorithm(algorithm)
+        for algorithm in untrusted:
+            with pytest.raises(dp.OpenDPException, match="honest-but-curious"):
+                _check_and_snapshot_algorithm(algorithm)
+
+    for algorithm in untrusted:
+        _check_and_snapshot_algorithm(algorithm)
+
+
+def test_count_normalizes_user_values():
+    class Weight:
+        def __float__(self):
+            return 2.0
+
+        def __mul__(self, other):
+            raise AssertionError("custom weight executed on private data")
+
+    query = Count(["A"], weight=Weight())  # type: ignore[arg-type]
+    assert type(query.weight) is float
+    assert query.weight == 2.0
+
+    class CustomCount(Count):
+        pass
+
+    for algorithm in (
+        AIM(queries=[CustomCount(("A",))]),
+        Fixed(queries=[CustomCount(("A",))]),
+    ):
+        queries = algorithm.queries
+        assert not isinstance(queries, int)
+        assert type(queries[0]) is Count
+
+    with pytest.raises(ValueError, match="by must contain column names"):
+        Count([1])  # type: ignore[arg-type]
+    for weight in [float("nan"), math.inf, 0.0, -1.0]:
+        with pytest.raises(ValueError, match="finite and positive"):
+            Count(("A",), weight=weight)
+
+
 def test_algorithm_configuration_snapshots_lists():
     count = Count(("A",))
     fixed_queries = [count]
@@ -115,7 +201,7 @@ def test_algorithm_configuration_snapshots_lists():
 
 
 def test_algorithm_configuration_can_change_before_capture():
-    from opendp.extras.mbi._utilities import _snapshot_algorithm
+    from opendp.extras.mbi._utilities import _check_and_snapshot_algorithm
 
     count = Count(("A",), weight=1.0)
     first = Fixed(queries=[count])
@@ -123,7 +209,7 @@ def test_algorithm_configuration_can_change_before_capture():
         algorithms=[first, AIM(queries=[Count(("A",))])],
         weights=[1.0, 2.0],
     )
-    captured = _snapshot_algorithm(nested)
+    captured = _check_and_snapshot_algorithm(nested)
 
     count.weight = 3.0
     first.queries[0].weight = 4.0

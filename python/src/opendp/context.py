@@ -21,7 +21,6 @@ from typing import (
     Sequence,
     Type,
     Union,
-    MutableMapping,
 )
 import importlib
 from inspect import signature
@@ -76,7 +75,6 @@ from opendp.mod import (
 from opendp.typing import _ELEMENTARY_TYPES, RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import Bound, LazyFrameQuery, Margin
-from dataclasses import replace
 
 __all__ = [
     "space_of",
@@ -550,16 +548,6 @@ class Context(object):
             domain = domain_of(data, infer=True)
 
         if margins:
-            # allows dictionaries of {[by]: [margin]}
-            if isinstance(margins, MutableMapping):
-                from warnings import warn
-
-                warn(
-                    'Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg',
-                    DeprecationWarning,
-                )
-                margins = [replace(margin, by=by) for by, margin in margins.items()]
-
             for margin in margins:
                 domain = with_margin(domain, margin)
 
@@ -1210,6 +1198,15 @@ def _normalize_compositor(
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
+
+    if isinstance(domain, LazyFrameDomain) and str(input_metric.type) in {
+        "InsertDeleteDistance",
+        "HammingDistance",
+        "FrameDistance<InsertDeleteDistance>",
+    }:
+        raise ValueError(
+            "Ordered metrics are not supported for Polars. Use ordered=False."
+        )
 
     _check_sized_contributions(domain, input_metric, d_in)
 

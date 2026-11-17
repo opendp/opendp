@@ -5,7 +5,7 @@ use crate::{
     domains::{ExprDomain, WildExprDomain},
     error::Fallible,
     ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
-    metrics::{FrameDistance, InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance},
+    metrics::{FrameDistance, SymmetricDistance, SymmetricIdDistance},
     transformations::StableExpr,
 };
 
@@ -39,7 +39,7 @@ pub extern "C" fn opendp_transformations__make_stable_expr(
 
     dispatch!(
         monomorphize,
-        [(M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])],
+        [(M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>])],
         (input_domain, input_metric, expr)
     )
     .into()

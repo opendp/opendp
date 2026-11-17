@@ -56,7 +56,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 @dataclass
 class Count:
-    """Denotes a count query."""
+    """Denotes a count query with finite, positive weight."""
 
     by: tuple[str, ...]
     """Columns to group by."""
@@ -68,7 +68,10 @@ class Count:
     """
 
     def __post_init__(self):
-        self.by = tuple(self.by)
+        if not all(isinstance(col, str) for col in self.by):
+            raise ValueError("by must contain column names as strings")
+        self.by = tuple(str(col) for col in self.by)
+        self.weight = float(self.weight)
         if not isfinite(self.weight) or self.weight <= 0:
             raise ValueError(f"weight ({self.weight}) must be finite and positive")
 
@@ -99,7 +102,12 @@ ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
 @dataclass(kw_only=True)
 class Algorithm(ABC):
-    """Base class for configuration of contingency table algorithms."""
+    """Base class for configuration of contingency table algorithms.
+
+    # Why honest-but-curious?
+    Custom algorithms must return valid Measurements.
+    Custom callbacks must not access external private data or have observable side effects.
+    """
 
     estimator: Callable = mirror_descent
     """Optimizer to use to fit a MarkovRandomField.
@@ -152,8 +160,28 @@ class Algorithm(ABC):
 A = TypeVar("A", bound=Algorithm)
 
 
-def _snapshot_algorithm(algorithm: A) -> A:
+def _check_algorithm_features(algorithm: Algorithm) -> None:
+    from opendp.extras.mbi import AIM, Fixed, MST, Sequential
+    from opendp.mod import assert_features
+
+    # Only the library implementations and the default estimator are trusted.
+    # Extra instance attributes may override methods, including __post_init__,
+    # which runs immediately after this check.
+    if (
+        type(algorithm) not in (AIM, Fixed, MST, Sequential)
+        or vars(algorithm).keys() - type(algorithm).__dataclass_fields__.keys()
+        or algorithm.estimator is not mirror_descent
+    ):
+        assert_features("honest-but-curious")
+
+    if type(algorithm) is Sequential:
+        for child in algorithm.algorithms:
+            _check_algorithm_features(child)
+
+
+def _check_and_snapshot_algorithm(algorithm: A) -> A:
     """Detach and validate configuration before a measurement captures it."""
+    _check_algorithm_features(algorithm)
     snapshot = deepcopy(algorithm)
     snapshot.__post_init__()
     return snapshot
