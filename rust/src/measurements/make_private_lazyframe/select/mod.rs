@@ -7,10 +7,10 @@ use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
+use crate::polars::options::valid_projection_options;
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
-use crate::polars::options::valid_projection_options;
 
 #[cfg(test)]
 mod test;

@@ -4,10 +4,10 @@ use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{Bounds, FrameDistance};
+use crate::polars::options::valid_projection_options;
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
-use crate::polars::options::valid_projection_options;
 
 use super::{StableDslPlan, is_identity, retain_bounds, retain_margins};
 

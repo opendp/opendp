@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
 use crate::polars::options::{ORDINARY_GROUP_BY_OPTIONS, valid_public_key_join_options};
+use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
 use polars_plan::{
     dsl::{Expr, Operator},
     utils::expr_output_name,
