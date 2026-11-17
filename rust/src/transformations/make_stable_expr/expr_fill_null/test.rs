@@ -279,7 +279,10 @@ fn test_fill_null_numeric_coercion_matches_optimized_polars() -> Fallible<()> {
             .make_stable(domain, FrameDistance(SymmetricDistance))?;
 
         let expected = lf.clone().select([expr]).collect()?;
-        let observed = lf.clone().select([t.invoke(&lf.logical_plan)?.expr]).collect()?;
+let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
         assert_eq!(observed, expected);
         let output = expected.get_columns()[0].as_materialized_series();
         assert_eq!(t.output_domain.column.dtype(), output.dtype().clone());
@@ -311,10 +314,17 @@ fn test_fill_null_boundary_literals_match_optimized_polars() -> Fallible<()> {
             .clone()
             .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
         let expected = lf.clone().select([expr.clone()]).collect()?;
-        let observed = lf.clone().select([t.invoke(&lf.logical_plan)?.expr]).collect()?;
+let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
         assert_eq!(observed, expected, "{expr:?}");
         let output = expected.get_columns()[0].as_materialized_series();
-        assert_eq!(t.output_domain.column.dtype(), output.dtype().clone(), "{expr:?}");
+assert_eq!(
+            t.output_domain.column.dtype(),
+            output.dtype().clone(),
+            "{expr:?}"
+        );
         assert!(!t.output_domain.column.nullable, "{expr:?}");
         assert!(!output.has_nulls(), "{expr:?}");
         assert!(t.output_domain.column.member(output)?, "{expr:?}");
