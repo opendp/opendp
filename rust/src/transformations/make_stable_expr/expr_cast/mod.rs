@@ -33,21 +33,20 @@ where
     let Expr::Cast {
         expr: input,
         dtype: to_type,
-        mut options,
+        options,
     } = expr
     else {
         return fallible!(MakeTransformation, "expected cast expression");
     };
 
-    // Overflowing casts may invalidate optimizer assumptions about sortedness.
-    if matches!(options, CastOptions::Overflowing) {
-        return fallible!(MakeTransformation, "overflowing casts are not supported");
-    }
-    // Strict casting can fail on private data. Replace the default strict
-    // behavior with non-strict casting, which returns null on conversion failure.
-    if matches!(options, CastOptions::Strict) {
-        options = CastOptions::NonStrict;
-    }
+    // Strict casting can fail on private data. Replace it with non-strict casting.
+    // Exhaustively match cast modes so new Polars variants require review.
+    let options = match options {
+        CastOptions::Strict | CastOptions::NonStrict => CastOptions::NonStrict,
+        CastOptions::Overflowing => {
+            return fallible!(MakeTransformation, "overflowing casts are not supported");
+        }
+    };
 
     let t_prior = input
         .as_ref()
