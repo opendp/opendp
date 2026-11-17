@@ -4,6 +4,7 @@
 User-agent: *
 Disallow: /en/beta/
 Disallow: /en/nightly/
+Disallow: /en/weekly/
 
 # Path globbing is not universally supported.
 Disallow: /en/v*

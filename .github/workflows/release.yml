@@ -3,12 +3,12 @@
 # INPUTS
 # * channel:  The release channel
 # * sync:     Whether to sync the channel branch from its upstream branch
-# * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
+# * counter:  A number to append to the version, to allow multiple releases per day (for weekly/beta testing only)
 # * dry_run:  Whether to do a dry-run (don't actually publish)
 # * fake:     Whether to do a fake build (to save time, for testing only)
 #
 # EXAMPLES
-# Fake nightly release:  gh workflow run release.yml -f channel=nightly -f sync=true counter=5 -f kind=fake
+# Fake weekly release:  gh workflow run release.yml -f channel=weekly -f sync=true counter=5 -f kind=fake
 # Dry-run beta release:  gh workflow run release.yml -f channel=beta -f sync=true -f kind=dry-run
 # Final stable release:  gh workflow run release.yml -f channel=stable -f sync=true
 name: Release
@@ -37,7 +37,7 @@ on:
         type: choice
         options:
           - dev
-          - nightly
+          - weekly
           - beta
           - stable
         required: true

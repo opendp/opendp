@@ -204,7 +204,7 @@ smv_tag_whitelist = os.environ.get("OPENDP_SMV_TAG_WHITELIST", r"^$")
 
 
 # Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = r"(stable|beta|nightly)"
+smv_branch_whitelist = r"(stable|beta|weekly)"
 
 # Whitelist pattern for remotes (set to None to use local branches only)
 smv_remote_whitelist = r"origin"
