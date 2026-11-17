@@ -835,19 +835,19 @@ fn test_numeric_dynamic_literal_coercion_matches_optimized_polars() -> Fallible<
             .clone()
             .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
         let expected = lf.clone().select([expr.clone()]).collect()?;
-let observed = lf
+        let observed = lf
             .clone()
             .select([t.invoke(&lf.logical_plan)?.expr])
             .collect()?;
         assert_eq!(observed, expected, "{expr:?}");
         let output = expected.get_columns()[0].as_materialized_series();
-assert_eq!(
+        assert_eq!(
             t.output_domain.column.dtype(),
             output.dtype().clone(),
             "{expr:?}"
         );
         assert!(t.output_domain.column.member(output)?, "{expr:?}");
-assert!(
+        assert!(
             t.output_domain.column.nullable || !output.has_nulls(),
             "{expr:?}"
         );
