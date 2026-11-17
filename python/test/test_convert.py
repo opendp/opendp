@@ -171,100 +171,71 @@ def test_extras_object(val_in, type_name):
     assert val_out == val_in
 
 
-def test_polars_native_series_ffi_roundtrip():
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_polars_native_series_ffi_roundtrip(empty, chunked):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
     for dtype in [pl.Enum(["A", "B", "C"]), pl.Categorical]:
-        series = pl.Series("group", ["B", "A", None, "B"], dtype=dtype)
+        series = pl.Series("group", [] if empty else ["B", "A", None], dtype=dtype)
+        if chunked:
+            series = pl.concat([series, series], rechunk=False)
         obj = py_to_c(series, c_type=AnyObjectPtr, type_name="Series")
         result = c_to_py(obj)
         pl_testing.assert_series_equal(result, series)
 
 
-def test_polars_native_dataframe_ffi_roundtrip():
+@pytest.mark.parametrize("width", [0, 1, 4])
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_polars_native_dataframe_ffi_roundtrip(width, empty, chunked):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
-    enum_dtype = pl.Enum(["A", "B", "C"])
     df = pl.DataFrame(
         {
-            "category": pl.Series("category", ["B", "A", None], dtype=enum_dtype),
+            "category": pl.Series(["B", "A", None], dtype=pl.Enum(["A", "B", "C"])),
             "id": [0, 1, 2],
+            "categorical": pl.Series(["B", None, "A"], dtype=pl.Categorical),
+            "nested": [[1, None], [], None],
         }
-    )
+    )[:, :width]
+    if empty:
+        df = df.clear()
+    if chunked:
+        df = pl.concat([df, df], rechunk=False)
     obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
     result = c_to_py(obj)
     pl_testing.assert_frame_equal(result, df)
 
 
-def _track_arrow_release(array_ptr):
-    from opendp._convert import _ArrowArray
-
-    arrow = ctypes.cast(array_ptr, ctypes.POINTER(_ArrowArray)).contents
-    release = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(arrow.release)
-    calls = []
-
-    @ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-    def tracked(ptr):
-        calls.append(ptr)
-        release(ptr)
-
-    arrow.release = ctypes.cast(tracked, ctypes.c_void_p).value
-    return tracked, calls
-
-
-def test_polars_unconsumed_series_export_cleanup():
+def test_polars_dataframe_ffi_bulk_import(monkeypatch):
     pl = pytest.importorskip("polars")
-    from opendp._convert import _PolarsSeriesExport
-
-    series = pl.Series("group", ["A"], dtype=pl.Enum(["A", "B"]))
-    export = _PolarsSeriesExport()
-    series._s._export(ctypes.addressof(export))
-    assert export.release is not None
-
-    array_ptr = ctypes.cast(export.arrays, ctypes.POINTER(ctypes.c_void_p))[0]
-    _callback, calls = _track_arrow_release(array_ptr)
-    del export
-    assert calls == [array_ptr]
-
-
-def test_polars_dataframe_ffi_failed_import_cleanup(monkeypatch):
-    pl = pytest.importorskip("polars")
-    from opendp._data import object_as_slice, slice_free
-    from opendp._convert import _slice_to_dataframe
+    pl_testing = pytest.importorskip("polars.testing")
+    import opendp._data as data
 
     df = pl.DataFrame(
-        {
-            "first": pl.Series(["A"], dtype=pl.Enum(["A", "B"])),
-            "second": pl.Series(["B"], dtype=pl.Enum(["A", "B"])),
-            "unconsumed": pl.Series(["A"], dtype=pl.Enum(["A", "B"])),
-        }
+        {"category": pl.Series(["A"], dtype=pl.Enum(["A", "B"])), "id": [0]}
     )
+    original_import = pl.DataFrame._import_columns
+    original_free = data._series_exports_free
+    imported, freed = [], []
+
+    def import_columns(address, width):
+        imported.append((address, width))
+        return original_import(address, width)
+
+    def free_exports(address, width):
+        freed.append((address.value, width))
+        return original_free(address, width)
+
+    def per_column_import(*args):
+        pytest.fail("DataFrame conversion must use bulk import")
+
+    monkeypatch.setattr(pl.DataFrame, "_import_columns", staticmethod(import_columns))
+    monkeypatch.setattr(pl.Series, "_import", staticmethod(per_column_import))
+    monkeypatch.setattr(data, "_series_exports_free", free_exports)
     obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
-    raw = object_as_slice(obj)
-    try:
-        slices = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
-        # Read only the arrays pointer; do not instantiate _PolarsSeriesExport
-        # here, since its destructor owns Python-origin exports.
-        export_ptr = ctypes.cast(slices[2].ptr, ctypes.POINTER(ctypes.c_void_p))
-        arrays = ctypes.cast(export_ptr[1], ctypes.POINTER(ctypes.c_void_p))
-        array_ptr = arrays[0]
-        _callback, released = _track_arrow_release(array_ptr)
-
-        original_import = pl.Series._import
-        calls = 0
-
-        def import_and_fail(address):
-            nonlocal calls
-            series = original_import(address)
-            calls += 1
-            if calls == 2:
-                raise RuntimeError("interrupted DataFrame import")
-            return series
-
-        monkeypatch.setattr(pl.Series, "_import", staticmethod(import_and_fail))
-        with pytest.raises(RuntimeError, match="interrupted DataFrame import"):
-            _slice_to_dataframe(raw)
-        assert calls == 2
-        assert released == [array_ptr]
-    finally:
-        slice_free(raw)
+    pl_testing.assert_frame_equal(c_to_py(obj), df)
+    assert len(imported) == 1
+    assert imported[0][1] == df.width
+    assert freed == imported

@@ -38,8 +38,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "debias_randomized_response_bitvec",
     "as_array",
     // polars
-    "_series_export_free",
-    "_dataframe_exports_free",
+    "_series_exports_free",
     "series_domain",
     "_series_domain_get_element_domain",
     "_series_domain_get_name",

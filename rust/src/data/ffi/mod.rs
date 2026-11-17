@@ -13,7 +13,9 @@ use crate::metrics::polars::{Bound, Bounds};
 #[cfg(feature = "polars")]
 use ::polars::prelude::*;
 #[cfg(feature = "polars")]
-use ::polars_ffi::version_0::{SeriesExport, export_series, import_series};
+use ::polars_ffi::version_0::{
+    SeriesExport, export_column, export_series, import_df, import_series,
+};
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
@@ -207,12 +209,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         if raw.len != 1 || raw.ptr.is_null() {
             return fallible!(FFI, "Expected a native Polars SeriesExport");
         }
-        // Consume the exported Series exactly once. Clear the caller's memory
-        // so Python-side cleanup cannot release its buffers a second time.
-        let export = unsafe {
-            std::ptr::replace(raw.ptr.cast_mut().cast::<SeriesExport>(), SeriesExport::empty())
-        };
-        unsafe { import_series(export) }
+        // Polars consumes the contents; the caller owns the descriptor storage.
+        unsafe { import_series(raw.ptr.cast::<SeriesExport>().read()) }
             .map_err(|e| err!(FFI, "failed to import Polars Series: {}", e))
     }
 
@@ -227,11 +225,9 @@ pub extern "C" fn opendp_data__slice_as_object(
     pub fn raw_to_dataframe(
         raw: &FfiSlice
     ) -> Fallible<AnyObject> {
-        let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
-        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(|s| s.into_column()))
-        .collect::<Fallible<Vec<Column>>>()?;
-
-        Ok(AnyObject::new(DataFrame::new(series)?))
+        unsafe { import_df(raw.ptr.cast_mut().cast::<SeriesExport>(), raw.len) }
+            .map(AnyObject::new)
+            .map_err(|e| err!(FFI, "failed to import Polars DataFrame: {}", e))
     }
 
     #[cfg(feature = "polars")]
@@ -642,32 +638,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
     #[cfg(feature = "polars")]
     fn dataframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let frame: &DataFrame = obj.downcast_ref::<DataFrame>()?;
-
+        let frame = obj.downcast_ref::<DataFrame>()?;
         let columns = frame
             .get_columns()
             .iter()
-            .map(|column| concrete_series_to_raw(column.as_materialized_series()))
-            .collect::<Fallible<Vec<FfiSlice>>>()?;
-        let columns = columns.into_boxed_slice();
-        let slice = FfiSlice {
-            ptr: columns.as_ptr() as *mut c_void,
-            len: columns.len(),
-        };
-        let _ = Box::into_raw(columns);
-        Ok(slice)
-    }
-
-    #[cfg(feature = "polars")]
-    fn concrete_series_to_raw(series: &Series) -> Fallible<FfiSlice> {
-        // Native Polars FFI retains logical dtype metadata, including Enum.
-        let export = Box::new(std::mem::ManuallyDrop::new(export_series(series)));
-        Ok(FfiSlice::new(Box::into_raw(export).cast(), 1))
+            .map(export_column)
+            .collect::<Box<[_]>>();
+        Ok(FfiSlice::new(Box::into_raw(columns).cast(), frame.width()))
     }
 
     #[cfg(feature = "polars")]
     fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        concrete_series_to_raw(obj.downcast_ref::<Series>()?)
+        let exports = Box::new([export_series(obj.downcast_ref::<Series>()?)]);
+        Ok(FfiSlice::new(Box::into_raw(exports).cast(), 1))
     }
 
     #[cfg(feature = "polars")]
@@ -962,74 +945,31 @@ pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut
 
 #[cfg(feature = "polars")]
 #[bootstrap(
-    name = "_series_export_free",
-    arguments(export(do_not_convert = true, rust_type = b"null", c_type = "void *")),
-    returns(c_type = "FfiResult<void *>")
-)]
-/// Free the descriptor allocation after Python has imported its Series.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data___series_export_free(export: *mut c_void) -> FfiResult<*mut ()> {
-    if export.is_null() {
-        return err!(FFI, "Null Polars SeriesExport").into();
-    }
-    // Polars Series._import has already taken ownership of the contents.
-    // ManuallyDrop ensures this only deallocates the descriptor.
-    drop(unsafe { Box::from_raw(export.cast::<std::mem::ManuallyDrop<SeriesExport>>()) });
-    FfiResult::Ok(std::ptr::null_mut())
-}
-
-// The first three fields of polars_ffi::version_0::SeriesExport
-// (#[repr(C)]). Polars' release callback only deallocates ArrowArray
-// descriptors, so the buffers of unconsumed exports must be released first.
-#[cfg(feature = "polars")]
-#[repr(C)]
-struct SeriesExportArrays {
-    _field: *mut c_void,
-    arrays: *mut *mut polars_arrow::ffi::ArrowArray,
-    len: usize,
-}
-
-#[cfg(feature = "polars")]
-#[bootstrap(
-    name = "_dataframe_exports_free",
+    name = "_series_exports_free",
     arguments(
         exports(do_not_convert = true, rust_type = b"null", c_type = "void *"),
-        len(rust_type = "usize"),
-        consumed(rust_type = "usize")
+        len(rust_type = "usize")
     ),
     returns(c_type = "FfiResult<void *>")
 )]
-/// Release a DataFrame's column descriptors. Consumed columns were moved
-/// into Python Series; remaining exports still own their buffers.
+/// Free descriptor storage after Polars imports a Series or DataFrame.
+/// Partial-import failures retain Polars' native ownership/leak behavior.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_data___dataframe_exports_free(
+pub extern "C" fn opendp_data___series_exports_free(
     exports: *mut c_void,
     len: usize,
-    consumed: usize,
 ) -> FfiResult<*mut ()> {
-    if consumed > len || exports.is_null() {
-        return err!(FFI, "Invalid DataFrame export pointer or consumed count").into();
+    if exports.is_null() {
+        return err!(FFI, "Null Polars SeriesExport buffer").into();
     }
-    let columns = unsafe {
+    // ManuallyDrop has the same layout as SeriesExport. Do not drop contents
+    // moved out by Polars; only reclaim the boxed descriptor array.
+    drop(unsafe {
         Box::from_raw(std::ptr::slice_from_raw_parts_mut(
-            exports.cast::<FfiSlice>(),
+            exports.cast::<std::mem::ManuallyDrop<SeriesExport>>(),
             len,
         ))
-    };
-    for (index, column) in columns.iter().enumerate() {
-        let export_ptr = column
-            .ptr
-            .cast_mut()
-            .cast::<std::mem::ManuallyDrop<SeriesExport>>();
-        let mut export = unsafe { Box::from_raw(export_ptr) };
-        if index >= consumed {
-            let arrays = unsafe { &*export_ptr.cast::<SeriesExportArrays>() };
-            for &array in unsafe { slice::from_raw_parts(arrays.arrays, arrays.len) } {
-                unsafe { std::ptr::drop_in_place(array) };
-            }
-            unsafe { std::mem::ManuallyDrop::drop(&mut export) };
-        }
-    }
+    });
     FfiResult::Ok(std::ptr::null_mut())
 }
 

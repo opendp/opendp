@@ -963,51 +963,24 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
     if not isinstance(val, pl.DataFrame):
         raise ValueError("expected Polars DataFrame")  # pragma: no cover
 
-    slices = list(_series_to_slice(s) for s in val.get_columns())
-    pointers = (FfiSlicePtr * val.width)(*slices)
-    raw = _wrap_in_slice(pointers, val.width)
-    # Keep both the pointer array and its Series exports alive through the FFI call.
-    raw.depends_on(pointers, slices)
-    return raw
+    exports = (_PolarsSeriesExport * val.width)()
+    val._df._export_columns(ctypes.addressof(exports))
+    return _wrap_in_slice(exports, val.width)
 
 
 def _slice_to_dataframe(raw: FfiSlicePtr):
-    from opendp._data import _dataframe_exports_free
+    from opendp._data import _series_exports_free
 
     pl = import_optional_dependency("polars")
-    slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
-    count = raw.contents.len
-    consumed = 0
     try:
-        series = []
-        for i in range(count):
-            # Polars _import moves the SeriesExport before it can raise.
-            consumed += 1
-            series.append(pl.Series._import(slice_array[i].ptr))
-        return pl.DataFrame(series)
+        return pl.DataFrame._import_columns(raw.contents.ptr, raw.contents.len)
     finally:
-        # Free the descriptor array and any Series not yet imported.
-        _dataframe_exports_free(ctypes.c_void_p(raw.contents.ptr), count, consumed)
-
-
-class _ArrowArray(ctypes.Structure):
-    # The Arrow C data interface, used by Polars SeriesExport.
-    _fields_ = [
-        ("length", ctypes.c_int64),
-        ("null_count", ctypes.c_int64),
-        ("offset", ctypes.c_int64),
-        ("n_buffers", ctypes.c_int64),
-        ("n_children", ctypes.c_int64),
-        ("buffers", ctypes.c_void_p),
-        ("children", ctypes.c_void_p),
-        ("dictionary", ctypes.c_void_p),
-        ("release", ctypes.c_void_p),
-        ("private_data", ctypes.c_void_p),
-    ]
+        _series_exports_free(ctypes.c_void_p(raw.contents.ptr), raw.contents.len)
 
 
 class _PolarsSeriesExport(ctypes.Structure):
-    # polars_ffi::version_0::SeriesExport; shared by Polars 1.36 and 1.37.
+    # Descriptor storage only; native Polars imports consume the contents once.
+    # Layout: polars_ffi::version_0::SeriesExport (Polars 1.36 and 1.37).
     _fields_ = [
         ("field", ctypes.c_void_p),
         ("arrays", ctypes.c_void_p),
@@ -1015,20 +988,6 @@ class _PolarsSeriesExport(ctypes.Structure):
         ("release", ctypes.c_void_p),
         ("private_data", ctypes.c_void_p),
     ]
-
-    def __del__(self):
-        if not getattr(self, "release", None):
-            return
-        # Polars' SeriesExport release only frees the ArrowArray descriptors,
-        # because importing normally transfers ownership of their contents.
-        # Unimported exports must release each ArrowArray first.
-        arrays = ctypes.cast(self.arrays, ctypes.POINTER(ctypes.c_void_p))
-        for i in range(self.len):
-            ptr = arrays[i]
-            release = ctypes.cast(ptr, ctypes.POINTER(_ArrowArray)).contents.release
-            if release:
-                ctypes.CFUNCTYPE(None, ctypes.c_void_p)(release)(ptr)
-        ctypes.CFUNCTYPE(None, ctypes.c_void_p)(self.release)(ctypes.addressof(self))
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
@@ -1038,13 +997,11 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
     export = _PolarsSeriesExport()
     val._s._export(ctypes.addressof(export))
-    raw = _wrap_in_slice(ctypes.pointer(export), 1)
-    raw.depends_on(export, val)
-    return raw
+    return _wrap_in_slice(ctypes.pointer(export), 1)
 
 
 def _slice_to_series(raw: FfiSlicePtr):
-    from opendp._data import _series_export_free
+    from opendp._data import _series_exports_free
 
     pl = import_optional_dependency("polars")
     export = raw.contents.ptr
@@ -1053,7 +1010,7 @@ def _slice_to_series(raw: FfiSlicePtr):
         return pl.Series._import(export)
     finally:
         # The Rust allocation of the descriptor is distinct from its buffers.
-        _series_export_free(ctypes.c_void_p(export))
+        _series_exports_free(ctypes.c_void_p(export), 1)
 
 
 def _slice_to_anyobject(raw: FfiSlicePtr):
