@@ -449,7 +449,7 @@ def get_opendp_version():
 
 def unmangle_py_version(py_version):
     """
-    Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
+    Python mangles pre-release versions like "X.Y.Z-weekly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
     the original format, so we need to unmangle for links to work.
     There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
 
@@ -458,7 +458,7 @@ def unmangle_py_version(py_version):
     >>> unmangle_py_version('0.9.0.dev0')
     '0.9.0-dev'
     >>> unmangle_py_version('0.9.0a11111111001')
-    '0.9.0-nightly.11111111.1'
+    '0.9.0-weekly.11111111.1'
     >>> unmangle_py_version('0.9.0b11111111001')
     '0.9.0-beta.11111111.1'
     >>> unmangle_py_version('other')
@@ -472,7 +472,7 @@ def unmangle_py_version(py_version):
         py_tag = match.group(2)
         if not py_tag:
             return base
-        channel = "nightly" if py_tag == "a" else "beta"
+        channel = "weekly" if py_tag == "a" else "beta"
         date = match.group(3)
         counter = int(match.group(4))
         return f"{base}-{channel}.{date}.{counter}"
@@ -497,8 +497,8 @@ def get_docs_ref(version):
     'v0.0.0'
     >>> get_docs_ref('0.0.0-dev')
     'latest'
-    >>> get_docs_ref('0.0.0-nightly')
-    'nightly'
+    >>> get_docs_ref('0.0.0-weekly')
+    'weekly'
     >>> get_docs_ref('0.0.0-surprise')
     'unknown'
     """
@@ -508,11 +508,11 @@ def get_docs_ref(version):
     elif channel == "dev":
         return "latest"  # Will be replaced by the @versioned decorator.
     else:
-        return channel  # For beta & nightly, we don't have tags, just a single branch.
+        return channel  # For beta & weekly, we don't have tags, just a single branch.
 
 
 def get_channel(version):
-    match = re.match(r"^(\d+\.\d+\.\d+)(?:-(dev|nightly|beta)(?:\.(.+))?)?$", version)
+    match = re.match(r"^(\d+\.\d+\.\d+)(?:-(dev|weekly|beta)(?:\.(.+))?)?$", version)
     if match:
         channel = match.group(2)
         return channel or "stable"
