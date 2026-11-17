@@ -33,9 +33,9 @@ pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<boo
         (from, to) if is_numeric_coercion(from, to) => true,
         (from, String) if from.is_primitive_numeric() || matches!(from, Boolean) => true,
         (String, to) if to.is_primitive_numeric() => true,
-        (Categorical(_, _), String | Enum(_, _))
-        | (Enum(_, _), String)
-        | (String, Enum(_, _)) => true,
+        (Categorical(_, _), String | Enum(_, _)) | (Enum(_, _), String) | (String, Enum(_, _)) => {
+            true
+        },
         // In particular, no cross-temporal, physical categorical, or nested
         // conversions have an established data-independent failure guarantee.
         _ => false,
@@ -56,9 +56,8 @@ pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<boo
 // The only mixed-dtype implicit promotions currently certified for binary
 // expressions and fill_null are between primitive numeric/boolean columns.
 pub(super) fn is_numeric_coercion(from: &DataType, to: &DataType) -> bool {
-    let numeric = |dtype: &DataType| {
-        dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
-    };
+    let numeric =
+        |dtype: &DataType| dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean);
     numeric(from) && numeric(to)
 }
 
