@@ -40,6 +40,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     // polars
     "_series_export_free",
     "_dataframe_exports_free",
+    "_shuffle_dataframe",
     "series_domain",
     "_series_domain_get_element_domain",
     "_series_domain_get_name",

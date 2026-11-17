@@ -510,12 +510,29 @@ pub(crate) struct TakeLazyFrame;
 
 pub type OnceFrame = Queryable<OnceFrameQuery, OnceFrameAnswer>;
 
+pub(crate) fn shuffle_dataframe(dataframe: DataFrame) -> Fallible<DataFrame> {
+    use crate::traits::samplers::Shuffle;
+    use polars::prelude::{IdxCa, IdxSize};
+
+    let n = IdxSize::try_from(dataframe.height())
+        .map_err(|_| err!(FailedFunction, "DataFrame is too large to shuffle"))?;
+    let mut indices = Vec::new();
+    indices
+        .try_reserve_exact(n as usize)
+        .map_err(|e| err!(FailedFunction, "Unable to allocate shuffle indices: {}", e))?;
+    indices.extend(0..n);
+    indices.shuffle()?;
+    dataframe
+        .take(&IdxCa::from_vec("".into(), indices))
+        .map_err(Into::into)
+}
+
 impl From<LazyFrame> for OnceFrame {
     fn from(value: LazyFrame) -> Self {
         let mut state = Some(value);
         Self::new_raw(move |_self: &Self, query: Query<OnceFrameQuery>| {
             Ok(match query {
-                // Python owns execution and shuffling in FFI builds.
+                // Python owns lazy execution in FFI builds.
                 #[cfg(feature = "polars-ffi")]
                 Query::External(_) => {
                     return fallible!(
@@ -526,13 +543,10 @@ impl From<LazyFrame> for OnceFrame {
                 #[cfg(not(feature = "polars-ffi"))]
                 Query::External(q_external) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
-                        let Some(lazyframe) = state.clone() else {
+                        let Some(lazyframe) = state.take() else {
                             return fallible!(FailedFunction, "OnceFrame has been exhausted");
                         };
-                        let dataframe = lazyframe.collect()?;
-                        let n = dataframe.height();
-                        let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
-                        state.take();
+                        let dataframe = shuffle_dataframe(lazyframe.collect()?)?;
                         OnceFrameAnswer::Collect(dataframe)
                     }
                 }),
@@ -581,7 +595,7 @@ impl OnceFrame {
     /// To ensure that row ordering is not observed:
     ///
     /// 1. Do not extend the compute plan with order-sensitive computations.
-    /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.sample_n_literal)).
+    /// 2. Shuffle the output once collected with a cryptographically secure uniform permutation.
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
