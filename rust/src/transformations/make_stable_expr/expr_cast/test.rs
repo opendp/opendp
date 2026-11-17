@@ -136,7 +136,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         AtomDomain::<f64>::default(),
     )])?;
 
-    let enum_categories = FrozenCategories::new(["a", "b"].into_iter()).unwrap();
     for dtype in [
         DataType::Boolean,
         DataType::UInt32,
@@ -148,9 +147,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         DataType::Float32,
         DataType::Float64,
         DataType::String,
-        DataType::Datetime(TimeUnit::Microseconds, None),
-        DataType::Time,
-        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
     ] {
         let cast = make_expr_cast(
             input_domain.clone().row_by_row(),
@@ -159,6 +155,25 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         )?;
 
         assert_eq!(cast.output_domain.column.dtype(), dtype);
+    }
+
+    // The dtype classifier does not certify cross-temporal conversions or
+    // arbitrary primitive-to-enum conversions.
+    let enum_categories = FrozenCategories::new(["a", "b"])?;
+    for dtype in [
+        DataType::Datetime(TimeUnit::Microseconds, None),
+        DataType::Time,
+        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
+    ] {
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col("value").cast(dtype.clone()),
+            )
+            .is_err(),
+            "{dtype:?}"
+        );
     }
     Ok(())
 }
