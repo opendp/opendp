@@ -129,9 +129,8 @@ where
     // handled without a coercion by Polars' binary type checker.
     let left_dtype = left_series.dtype();
     let right_dtype = right_series.dtype();
-    let is_numeric_or_boolean = |dtype: &DataType| {
-        dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean)
-    };
+    let is_numeric_or_boolean =
+        |dtype: &DataType| dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean);
     let enum_string_equality = matches!(op, Eq | EqValidity | NotEq | NotEqValidity)
         && matches!(
             (&left_dtype, &right_dtype),
