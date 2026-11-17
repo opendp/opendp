@@ -35,7 +35,7 @@ pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<boo
         (String, to) if to.is_primitive_numeric() => true,
         (Categorical(_, _), String | Enum(_, _)) | (Enum(_, _), String) | (String, Enum(_, _)) => {
             true
-        },
+        }
         // In particular, no cross-temporal, physical categorical, or nested
         // conversions have an established data-independent failure guarantee.
         _ => false,
