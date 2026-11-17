@@ -196,6 +196,22 @@ def test_polars_native_dataframe_ffi_roundtrip():
     pl_testing.assert_frame_equal(result, df)
 
 
+def _track_arrow_release(array_ptr):
+    from opendp._convert import _ArrowArray
+
+    arrow = ctypes.cast(array_ptr, ctypes.POINTER(_ArrowArray)).contents
+    release = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(arrow.release)
+    calls = []
+
+    @ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+    def tracked(ptr):
+        calls.append(ptr)
+        release(ptr)
+
+    arrow.release = ctypes.cast(tracked, ctypes.c_void_p).value
+    return tracked, calls
+
+
 def test_polars_unconsumed_series_export_cleanup():
     pl = pytest.importorskip("polars")
     from opendp._convert import _PolarsSeriesExport
@@ -204,11 +220,17 @@ def test_polars_unconsumed_series_export_cleanup():
     export = _PolarsSeriesExport()
     series._s._export(ctypes.addressof(export))
     assert export.release is not None
+
+    array_ptr = ctypes.cast(export.arrays, ctypes.POINTER(ctypes.c_void_p))[0]
+    callback, calls = _track_arrow_release(array_ptr)
     del export
+    assert calls == [array_ptr]
 
 
 def test_polars_dataframe_ffi_failed_import_cleanup(monkeypatch):
     pl = pytest.importorskip("polars")
+    from opendp._data import object_as_slice, slice_free
+    from opendp._convert import _slice_to_dataframe
 
     df = pl.DataFrame(
         {
@@ -218,19 +240,31 @@ def test_polars_dataframe_ffi_failed_import_cleanup(monkeypatch):
         }
     )
     obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
+    raw = object_as_slice(obj)
+    try:
+        slices = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
+        # Read only the arrays pointer; do not instantiate _PolarsSeriesExport
+        # here, since its destructor owns Python-origin exports.
+        export_ptr = ctypes.cast(slices[2].ptr, ctypes.POINTER(ctypes.c_void_p))
+        arrays = ctypes.cast(export_ptr[1], ctypes.POINTER(ctypes.c_void_p))
+        array_ptr = arrays[0]
+        callback, released = _track_arrow_release(array_ptr)
 
-    original_import = pl.Series._import
-    calls = 0
+        original_import = pl.Series._import
+        calls = 0
 
-    def import_and_fail(address):
-        nonlocal calls
-        series = original_import(address)
-        calls += 1
-        if calls == 2:
-            raise RuntimeError("interrupted DataFrame import")
-        return series
+        def import_and_fail(address):
+            nonlocal calls
+            series = original_import(address)
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("interrupted DataFrame import")
+            return series
 
-    monkeypatch.setattr(pl.Series, "_import", staticmethod(import_and_fail))
-    with pytest.raises(RuntimeError, match="interrupted DataFrame import"):
-        c_to_py(obj)
-    assert calls == 2
+        monkeypatch.setattr(pl.Series, "_import", staticmethod(import_and_fail))
+        with pytest.raises(RuntimeError, match="interrupted DataFrame import"):
+            _slice_to_dataframe(raw)
+        assert calls == 2
+        assert released == [array_ptr]
+    finally:
+        slice_free(raw)
