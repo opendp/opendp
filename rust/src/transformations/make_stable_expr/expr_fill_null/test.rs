@@ -1,6 +1,6 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{DataType, NamedFrom, col, lit};
+use polars::prelude::{DataFrame, DataType, Field, NamedFrom, col, lit};
 use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
@@ -266,13 +266,13 @@ fn test_fill_null_numeric_coercion_matches_optimized_polars() -> Fallible<()> {
     ];
     for (left, right) in cases {
         let mut left_domain =
-            SeriesDomain::new_from_field(polars::prelude::Field::new("L".into(), left.dtype().clone()))?;
+            SeriesDomain::new_from_field(Field::new("L".into(), left.dtype().clone()))?;
         left_domain.nullable = left.has_nulls();
         let mut right_domain =
-            SeriesDomain::new_from_field(polars::prelude::Field::new("R".into(), right.dtype().clone()))?;
+            SeriesDomain::new_from_field(Field::new("R".into(), right.dtype().clone()))?;
         right_domain.nullable = false;
         let domain = LazyFrameDomain::new(vec![left_domain, right_domain])?.row_by_row();
-        let lf = polars::prelude::DataFrame::new(vec![left.into_column(), right.into_column()])?.lazy();
+        let lf = DataFrame::new(vec![left.into_column(), right.into_column()])?.lazy();
         let expr = col("L").fill_null(col("R"));
         let t = expr
             .clone()
