@@ -5,6 +5,7 @@ use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
 use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
+use polars_plan::prelude::ProjectionOptions;
 
 use crate::metrics::SymmetricDistance;
 

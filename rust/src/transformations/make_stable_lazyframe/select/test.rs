@@ -3,6 +3,7 @@ use crate::{
     metrics::{Bound, Bounds, SymmetricDistance},
     transformations::make_stable_lazyframe,
 };
+use polars_plan::prelude::ProjectionOptions;
 
 use super::*;
 

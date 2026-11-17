@@ -1,8 +1,9 @@
 use polars::{
     df,
     lazy::frame::IntoLazy,
-    prelude::{LazyFrame, ProjectionOptions, col, lit},
+    prelude::{LazyFrame, col, lit},
 };
+use polars_plan::prelude::ProjectionOptions;
 
 use crate::{
     domains::{AtomDomain, Margin, SeriesDomain},
