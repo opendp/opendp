@@ -629,10 +629,13 @@ class OnceFrame(object):
 
     def collect(self):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
-        df = self._take_lazy().collect(
-            optimizations=pl.QueryOptFlags(comm_subexpr_elim=False)
+        from opendp._data import _shuffle_dataframe
+
+        return _shuffle_dataframe(
+            self._take_lazy().collect(
+                optimizations=pl.QueryOptFlags(comm_subexpr_elim=False)
+            )
         )
-        return df.sample(n=df.height, shuffle=True)
 
     def lazy(self):
         """Extracts a ``LazyFrame`` from a ``OnceFrame``,

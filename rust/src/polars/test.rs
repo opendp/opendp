@@ -83,3 +83,23 @@ fn test_dp_quantile() -> Fallible<()> {
     assert_eq!(observed, expected);
     Ok(())
 }
+
+#[test]
+fn test_shuffle_dataframe_preserves_rows() -> Fallible<()> {
+    let df = polars::df!(
+        "id" => [0i32, 1, 2, 3],
+        "value" => [10i32, 11, 12, 13]
+    )?;
+    let shuffled = shuffle_dataframe(df.clone())?;
+    assert_eq!(shuffled.schema(), df.schema());
+
+    let ids = shuffled.column("id")?.i32()?;
+    let values = shuffled.column("value")?.i32()?;
+    let mut rows = ids
+        .into_no_null_iter()
+        .zip(values.into_no_null_iter())
+        .collect::<Vec<_>>();
+    rows.sort_unstable();
+    assert_eq!(rows, vec![(0, 10), (1, 11), (2, 12), (3, 13)]);
+    Ok(())
+}
