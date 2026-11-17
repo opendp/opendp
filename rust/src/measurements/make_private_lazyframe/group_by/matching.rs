@@ -60,6 +60,15 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                     "predicates are not supported in DP key joins"
                 );
             }
+            if !options.args.should_coalesce() {
+                return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
+            }
+            if options.args.slice.is_some() {
+                return fallible!(
+                    MakeMeasurement,
+                    "DP key joins cannot be sliced because slicing introduces order dependence"
+                );
+            }
             if !valid_public_key_join_options(options.as_ref()) {
                 return fallible!(
                     MakeMeasurement,
