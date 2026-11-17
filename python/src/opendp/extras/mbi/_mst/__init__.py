@@ -16,7 +16,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     make_stable_marginals,
     Algorithm,
-    _snapshot_algorithm,
+    _check_and_snapshot_algorithm,
     Marginals,
 )
 from opendp.measurements import make_noisy_max
@@ -142,7 +142,7 @@ class MST(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        algorithm = _snapshot_algorithm(self)
+        algorithm = _check_and_snapshot_algorithm(self)
         d_measure = d_out * algorithm.measure_split
         d_select = prior(prior(d_out - d_measure))
 

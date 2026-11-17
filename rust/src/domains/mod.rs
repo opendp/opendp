@@ -664,3 +664,35 @@ mod contrib {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_bounded_float_nan_membership() -> Fallible<()> {
+        let bounds = Some(Bounds::new_closed((0.0_f64, 1.0_f64))?);
+        let with_nan = AtomDomain::<f64>::new(bounds.clone(), Some(NaN::new()));
+        let without_nan = AtomDomain::<f64>::new(bounds, None);
+
+        assert!(with_nan.member(&f64::NAN)?);
+        assert!(!without_nan.member(&f64::NAN)?);
+        assert!(with_nan.member(&0.0)?);
+        assert!(with_nan.member(&0.5)?);
+        assert!(with_nan.member(&1.0)?);
+        assert!(!with_nan.member(&-0.5)?);
+        assert!(!with_nan.member(&1.5)?);
+        assert!(!with_nan.member(&f64::INFINITY)?);
+
+        let bounds = Some(Bounds::new_closed((0.0_f32, 1.0_f32))?);
+        let with_nan = AtomDomain::<f32>::new(bounds.clone(), Some(NaN::new()));
+        let without_nan = AtomDomain::<f32>::new(bounds, None);
+
+        assert!(with_nan.member(&f32::NAN)?);
+        assert!(!without_nan.member(&f32::NAN)?);
+        assert!(with_nan.member(&0.5)?);
+        assert!(!with_nan.member(&1.5)?);
+        assert!(!with_nan.member(&f32::NEG_INFINITY)?);
+        Ok(())
+    }
+}

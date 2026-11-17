@@ -1,5 +1,6 @@
 use super::*;
 use crate::domains::AtomDomain;
+use crate::error::ErrorVariant;
 
 #[test]
 fn test() -> Fallible<()> {
@@ -30,6 +31,41 @@ fn test_ordered_resize_preserves_order() -> Fallible<()> {
         assert_eq!(trans.invoke(&vec![1, 2])?, vec![1, 2, 0]);
         assert_eq!(trans.invoke(&vec![1, 2, 3])?, vec![1, 2, 3]);
         assert_eq!(trans.invoke(&vec![1, 2, 3, 4])?, vec![1, 2, 3]);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_excessive_size_is_fallible() -> Fallible<()> {
+    // Regression for #3006: an excessive target size with a small dataset
+    // must return a FailedFunction error rather than panic or abort.
+    let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        SymmetricDistance,
+        usize::MAX,
+        0,
+    )?;
+    let error = trans.invoke(&vec![1, 2]).unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::FailedFunction);
+    Ok(())
+}
+
+#[test]
+fn test_resize_truncates_via_reservoir_sampling() -> Fallible<()> {
+    let trans = make_resize::<_, SymmetricDistance, SymmetricDistance>(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        SymmetricDistance,
+        3,
+        0,
+    )?;
+    // Regression: unordered truncation samples `size` distinct elements of the input.
+    for _ in 0..16 {
+        let out = trans.invoke(&vec![1, 2, 3, 4, 5])?;
+        assert_eq!(out.len(), 3);
+        assert!(out.iter().all(|v| (1..=5).contains(v)));
+        let mut sorted = out;
+        sorted.sort_unstable();
+        assert!(sorted.windows(2).all(|w| w[0] < w[1]));
     }
     Ok(())
 }

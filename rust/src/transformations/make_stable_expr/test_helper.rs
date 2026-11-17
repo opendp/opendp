@@ -24,7 +24,8 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     .with_margin(
         Margin::by(["chunk_2_bool", "cycle_5_alpha"])
             .with_invariant_keys()
-            .with_max_length(200),
+            .with_max_length(200)
+            .with_max_groups(10),
     )?
     .with_margin(
         Margin::by(["cycle_(..100i32)"])

@@ -1,5 +1,5 @@
 library(opendp)
-enable_features("contrib")
+enable_features("contrib", "idealized-numerics")
 
 
 INT_DATA <- c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L)
@@ -191,9 +191,7 @@ test_that("sum derives its safe integer length without public arguments", {
   expect_named(formals(make_sum), c("input_domain", "input_metric"))
   expect_named(formals(then_sum), "lhs")
   domain <- vector_domain(atom_domain(bounds = c(0L, 1073741824L)))
-  expect_warning({
-    query <- make_sum(domain, insert_delete_distance())
-  }, "Polars or NumPy")
+  query <- make_sum(domain, insert_delete_distance())
   expect_equal(query(arg = c(1073741824L, 1073741824L)), 1073741824L)
   expect_equal(query(arg = c(1L, 2L)), 1L)
   fixed <- vector_domain(atom_domain(bounds = c(0L, 1073741824L)), size = 2L)

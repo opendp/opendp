@@ -5,7 +5,7 @@ import sys
 import pytest
 import math
 
-enable_features("contrib")
+enable_features("contrib", "idealized-numerics")
 
 INT_DATA = list(range(1, 10))
 FLOAT_DATA = list(map(float, INT_DATA))
@@ -327,6 +327,18 @@ def test_sum_of_squared_deviances():
     )
     assert query(FLOAT_DATA) == 60.0
     assert query.check(2, 88.888888 + 1e-4)
+
+
+def test_sos_and_variance_require_idealized_numerics(monkeypatch):
+    import opendp.mod as mod
+
+    monkeypatch.setattr(
+        mod, "GLOBAL_FEATURES", mod.GLOBAL_FEATURES - {"idealized-numerics"}
+    )
+    domain = dp.vector_domain(dp.atom_domain(bounds=(0.0, 10.0)), size=9)
+    for constructor in (dp.t.make_sum_of_squared_deviations, dp.t.make_variance):
+        with pytest.raises(mod.OpenDPException, match="idealized-numerics"):
+            constructor(domain, dp.symmetric_distance())
 
 
 def test_transformation_check_debug():

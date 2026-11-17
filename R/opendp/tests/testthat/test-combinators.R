@@ -107,25 +107,6 @@ test_that("make_adaptive_composition", {
 })
 
 
-test_that("make_sequential_composition", {
-  meas_rr <- make_randomized_response_bool(prob = 0.75)
-
-  expect_warning({
-    meas_sc <- make_sequential_composition(
-      input_domain = meas_rr("input_domain"),
-      input_metric = meas_rr("input_metric"),
-      output_measure = meas_rr("output_measure"),
-      d_mids = c(2, 2),
-      d_in = 1L
-    )
-  })
-
-  sc_qbl <- meas_sc(arg = TRUE)
-  expect_type(sc_qbl(query = meas_rr), "logical")
-  expect_type(sc_qbl(query = meas_rr), "logical")
-  expect_error(sc_qbl(query = meas_rr))
-})
-
 test_that("test_fully_adaptive_composition", {
   max_influence <- 1L
   space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())

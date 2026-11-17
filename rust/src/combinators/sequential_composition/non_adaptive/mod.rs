@@ -120,37 +120,3 @@ where
         }),
     )
 }
-
-/// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
-/// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
-///
-/// # Citations
-/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
-///
-/// All metrics and domains must be equivalent.
-///
-/// **Composition Properties**
-///
-/// * sequential: all measurements are applied to the same dataset
-/// * basic: the composition is the linear sum of the privacy usage of each query
-/// * noninteractive: all mechanisms specified up-front (but each can be interactive)
-/// * compositor: all privacy parameters specified up-front (via the map)
-///
-/// # Arguments
-/// * `measurements` - A vector of Measurements to compose.
-#[deprecated(
-    since = "0.14.0",
-    note = "This function has been renamed: use :py:func:`~opendp.combinators.make_composition` instead."
-)]
-pub fn make_basic_composition<DI, MI, MO, TO>(
-    measurements: Vec<Measurement<DI, MI, MO, TO>>,
-) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
-where
-    DI: 'static + Domain,
-    MI: 'static + Metric,
-    MO: 'static + CompositionMeasure,
-    TO: 'static,
-    (DI, MI): MetricSpace,
-{
-    make_composition(measurements)
-}

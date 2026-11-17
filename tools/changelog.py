@@ -1,11 +1,14 @@
 import argparse
+from datetime import date
 import subprocess
 import re
 from collections import defaultdict
 from pathlib import Path
 
 
-changelog_path = Path(__file__).parent.parent / "CHANGELOG.md"
+root_path = Path(__file__).parent.parent
+changelog_path = root_path / "CHANGELOG.md"
+version_path = root_path / "VERSION"
 
 
 def get_changelog_lines():
@@ -88,6 +91,13 @@ def insert_updates(old_lines, new_lines, i):
     return old_lines[:i] + new_lines + old_lines[i:]
 
 
+def get_header(prev_version):
+    this_version = version_path.read_text().strip().replace("-dev", "")
+    today = date.today()
+    compare_base = "https://github.com/opendp/opendp/compare"
+    return f"## [{this_version}]({compare_base}/v{prev_version}...v{this_version}) - {today}"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Helps generate CHANGELOG entries")
     parser.parse_args()
@@ -95,11 +105,11 @@ def main():
     old_lines = get_changelog_lines()
 
     (i, prev_version) = get_prev_version(old_lines)
-    raw_new_lines = log_until(f"v{prev_version}".replace("-dev", ""))
-    # TODO: I'm not sure where in the process "-dev" is added or removed.
-    new_lines = reformat_log(raw_new_lines)
+    raw_new_lines = log_until(f"v{prev_version}")
+    header = get_header(prev_version)
+    new_lines = [header, ""] + reformat_log(raw_new_lines) + [""]
 
-    updated_changelog = "\n".join(insert_updates(old_lines, new_lines, i))
+    updated_changelog = "\n".join(insert_updates(old_lines, new_lines, i)) + "\n"
 
     changelog_path.write_text(updated_changelog)
 

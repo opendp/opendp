@@ -10,7 +10,9 @@ use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
-use super::{MakeSum, make_lipschitz_float_mul, make_sum};
+#[allow(deprecated)]
+use super::make_sum;
+use super::{MakeSum, make_lipschitz_float_mul};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 #[deprecated(since = "0.17.0", note = "Use Polars instead.")]
@@ -53,13 +55,14 @@ where
     let size_ = T::exact_int_cast(size)?;
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
-    make_sum::<MI, T>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul(
-            AtomDomain::new_non_nan(),
-            AbsoluteDistance::default(),
-            size_.recip(),
-            sum_bounds,
-        )?
+    #[allow(deprecated)]
+    let sum = make_sum::<MI, T>(input_domain, input_metric)?;
+    sum >> make_lipschitz_float_mul(
+        AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
+        size_.recip(),
+        sum_bounds,
+    )?
 }
 
 #[cfg(test)]

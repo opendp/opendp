@@ -323,7 +323,7 @@ fn generate_r_body(module_name: &str, func: &Function) -> String {
         r#"{deprecated}{flag_checker}{type_arg_formatter}{logger}{assert_is_similar}
 {make_call}
 output"#,
-        deprecated = generate_deprecated(func),
+        deprecated = generate_deprecated(module_name, func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         assert_is_similar = generate_assert_is_similar(func),
@@ -577,8 +577,23 @@ output <- {call}"#
     )
 }
 
-// generate call to ".Deprecated()" if needed
-fn generate_deprecated(func: &Function) -> String {
+// Keep the basic vector transformations available in R until a Polars-backed
+// replacement is available. Rust and Python still honor their deprecations.
+fn generate_deprecated(module_name: &str, func: &Function) -> String {
+    if module_name == "transformations"
+        && matches!(
+            func.name.as_str(),
+            "make_clamp"
+                | "make_impute_constant"
+                | "make_count"
+                | "make_sum"
+                | "make_mean"
+                | "make_variance"
+        )
+    {
+        return String::new();
+    }
+
     if let Some(deprecation) = &func.deprecation {
         format!(
             ".Deprecated(msg = \"{}\")\n",

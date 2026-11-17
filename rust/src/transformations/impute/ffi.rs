@@ -1,3 +1,5 @@
+#![allow(deprecated)] // The FFI retains deprecated constructors for compatibility.
+
 use rand::distributions::uniform::SampleUniform;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};

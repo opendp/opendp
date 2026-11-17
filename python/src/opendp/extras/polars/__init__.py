@@ -19,7 +19,6 @@ from __future__ import annotations
 import os
 
 from dataclasses import asdict, dataclass, field, replace
-from deprecated import deprecated
 from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
 from warnings import warn
 
@@ -152,32 +151,6 @@ class DPExpr(object):
             args=(self.expr, scale),
             is_elementwise=True,
         )
-
-    @deprecated(
-        version="0.14.1",
-        reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.",
-    )
-    def laplace(self, scale: float | None = None):
-        """Add Laplace noise to the expression.
-
-        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
-
-        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
-        """
-        return self.noise(scale=scale)
-
-    @deprecated(
-        version="0.14.1",
-        reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.",
-    )
-    def gaussian(self, scale: float | None = None):
-        """Add Gaussian noise to the expression.
-
-        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
-
-        :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``
-        """
-        return self.noise(scale=scale)
 
     def len(self, scale: float | None = None, signed: bool | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
@@ -1191,6 +1164,11 @@ class LazyFrameQuery:
         :param cuts: dictionary of column names and bin edges for numerical columns
         :param table: ContingencyTable from prior release
         :param algorithm: configuration for internal estimation algorithm
+
+        # Why honest-but-curious?
+        Custom algorithms must return valid Measurements.
+        Reused tables must derive only from DP releases and public information.
+        Custom callbacks must not access external private data or have observable side effects.
         """
         from .contingency_table import ContingencyTableQuery
 

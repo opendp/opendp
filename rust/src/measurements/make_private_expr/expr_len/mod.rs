@@ -25,7 +25,6 @@ mod test;
 /// | input_metric                              |
 /// | ----------------------------------------- |
 /// | `PartitionDistance<SymmetricDistance>`    |
-/// | `PartitionDistance<InsertDeleteDistance>` |
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
