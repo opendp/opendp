@@ -244,3 +244,65 @@ fn test_adaptive_failed_postprocessing_child_keeps_sequential_wrapper() -> Falli
     assert!(escaped.borrow_mut().as_mut().unwrap().eval(&()).is_err());
     Ok(())
 }
+
+
+#[test]
+fn test_adaptive_composition_rejects_negative_allocations() -> Fallible<()> {
+    // An unused negative allocation must not cancel a positive privacy cost.
+    for d_mids in [vec![1.0, -1.0], vec![-1.0, 1.0], vec![f64::NAN]] {
+        assert!(
+            make_adaptive_composition::<_, _, _, bool>(
+                AtomDomain::<bool>::default(),
+                DiscreteDistance,
+                MaxDivergence,
+                1,
+                d_mids,
+            )
+            .is_err()
+        );
+    }
+
+    // Both coordinates of an approximate privacy distance must be nonnegative.
+    for d_mids in [
+        vec![(1.0, 0.0), (0.0, -1e-7)],
+        vec![(0.0, 1e-7), (-1.0, 0.0)],
+    ] {
+        assert!(
+            make_adaptive_composition::<_, _, _, bool>(
+                AtomDomain::<bool>::default(),
+                DiscreteDistance,
+                Approximate(MaxDivergence),
+                1,
+                d_mids,
+            )
+            .is_err()
+        );
+    }
+
+    // Zero is a valid allocation.
+    let compositor = make_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MaxDivergence,
+        1,
+        vec![0.0, 1.0],
+    )?;
+    assert_eq!(compositor.map(&1)?, 1.0);
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
+#[test]
+fn test_adaptive_composition_ffi_rejects_negative_allocations() -> Fallible<()> {
+    use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMetric, AnyObject};
+
+    let result = make_adaptive_composition::<_, _, _, AnyObject>(
+        AnyDomain::new(AtomDomain::<bool>::default()),
+        AnyMetric::new(DiscreteDistance),
+        AnyMeasure::new(MaxDivergence),
+        AnyObject::new(1u32),
+        vec![AnyObject::new(1.0f64), AnyObject::new(-1.0f64)],
+    );
+    assert!(result.is_err());
+    Ok(())
+}
