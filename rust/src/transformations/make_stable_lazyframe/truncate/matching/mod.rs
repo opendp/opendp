@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::{
     error::Fallible,
     metrics::Bound,
@@ -7,7 +8,6 @@ use crate::{
     traits::InfAdd,
     transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
 };
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
