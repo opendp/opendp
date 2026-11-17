@@ -167,7 +167,6 @@ jobs:
       matrix:
         python-version:
           - '3.11'
-          - '3.13'
         extra-install:
           - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
           - 'all'

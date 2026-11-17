@@ -1,0 +1,138 @@
+name: Weekly Smoke Test
+
+# This stripped-down version of smoke-test.yml expands the extras matrix for python tests.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  schedule:
+    # 0 = Sunday: Run just once a week.
+    - cron: '0 0 * * 0'
+  # Or run manually:
+  # CLI: gh workflow run weekly-smoke-test.yml
+  # web: https://github.com/opendp/opendp/actions/workflows/weekly-smoke-test.yml
+  workflow_dispatch:
+
+jobs:
+  ci-rust-build:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: rust
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true      # 5.3GiB
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
+          swap-storage: false   # no: having swap is useful
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Enables caching of compilation results via:
+      #   https://github.com/marketplace/actions/sccache-action
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.15.0"  # Ensure sccache binary supports cache v2 API
+
+      - name: Build
+        env:
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_GHA_ENABLED: "true"
+        run: cargo build --verbose --all-features
+
+      - name: Check sccache stats
+        shell: bash
+        run: sccache --show-stats
+
+      - name: Check --no-default-features
+        run: cargo check --verbose --no-default-features --features untrusted,bindings
+
+      - name: Build (dynamic w/ polars)
+        # Allow for pyo3 to run against multiple python versions
+        env:
+          PYO3_BUILD_EXTENSION_MODULE: "1"
+        run: cargo build --verbose --features untrusted,polars-ffi
+
+      - name: Upload (dynamic w/ polars)
+        uses: actions/upload-artifact@v7
+        with:
+          name: dynamic_lib
+          path: rust/target/debug/libopendp.so
+
+      - name: Build (static w/o Polars)
+        run: cargo build --verbose --features untrusted,ffi
+
+      - name: Upload (static w/o Polars)
+        uses: actions/upload-artifact@v7
+        with:
+          name: static_lib
+          path: rust/target/debug/libopendp.a
+
+      - name: Upload Python bindings
+        uses: actions/upload-artifact@v7
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+
+  ci-python-test:
+    needs: ci-rust-build
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      matrix:
+        python-version:
+          - '3.11'
+          - '3.13'
+        extra-install:
+          - 'numpy'
+          - 'scikit-learn'
+          - 'polars'
+          - 'ibis'
+          - 'mbi'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Download dynamic lib
+        uses: actions/download-artifact@v7
+        with:
+          name: dynamic_lib
+          path: python/src/opendp/lib
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v7
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Install package
+        run: python -m pip install -e .[${{ matrix.extra-install }}]
+
+      - name: Test
+        run: pytest -v
