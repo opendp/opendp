@@ -200,28 +200,35 @@ fn test_with_columns_rejects_noncanonical_projection_options() -> Fallible<()> {
     use std::sync::Arc;
 
     let lf = df!("k" => [1i32, 2])?.lazy();
-    let domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("k", AtomDomain::<i32>::default()),
-    ])?;
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("k", AtomDomain::<i32>::default())])?;
     let good = ProjectionOptions::default();
     for options in [
-        ProjectionOptions { should_broadcast: false, ..good },
-        ProjectionOptions { duplicate_check: false, ..good },
+        ProjectionOptions {
+            should_broadcast: false,
+            ..good
+        },
+        ProjectionOptions {
+            duplicate_check: false,
+            ..good
+        },
     ] {
         let query = LazyFrame::from(DslPlan::HStack {
             input: Arc::new(lf.logical_plan.clone()),
             exprs: vec![lit(0i32).alias("new")],
             options,
         });
-        assert!(make_stable_lazyframe(
-            domain.clone(), FrameDistance(SymmetricDistance), query
-        ).is_err());
+        assert!(
+            make_stable_lazyframe(domain.clone(), FrameDistance(SymmetricDistance), query).is_err()
+        );
     }
     // A nonparallel projection has the same logical and stability semantics.
     let serial = LazyFrame::from(DslPlan::HStack {
         input: Arc::new(lf.logical_plan.clone()),
         exprs: vec![lit(0i32).alias("new")],
-        options: ProjectionOptions { run_parallel: false, ..good },
+        options: ProjectionOptions {
+            run_parallel: false,
+            ..good
+        },
     });
     assert!(make_stable_lazyframe(domain, FrameDistance(SymmetricDistance), serial).is_ok());
     Ok(())

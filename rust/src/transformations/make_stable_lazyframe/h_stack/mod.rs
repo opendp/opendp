@@ -41,7 +41,10 @@ where
     };
 
     if !valid_projection_options(options) {
-        return fallible!(MakeTransformation, "Projection requires duplicate checks and broadcasting");
+        return fallible!(
+            MakeTransformation,
+            "Projection requires duplicate checks and broadcasting"
+        );
     }
 
     let t_prior = input

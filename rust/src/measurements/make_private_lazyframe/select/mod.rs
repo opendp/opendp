@@ -40,12 +40,20 @@ where
 {
     let is_truncated = input_metric.0.identifier().is_some();
 
-    let DslPlan::Select { expr, input, options } = plan else {
+    let DslPlan::Select {
+        expr,
+        input,
+        options,
+    } = plan
+    else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
 
     if !valid_projection_options(options) {
-        return fallible!(MakeMeasurement, "Projection requires duplicate checks and broadcasting");
+        return fallible!(
+            MakeMeasurement,
+            "Projection requires duplicate checks and broadcasting"
+        );
     }
 
     let t_prior = input
