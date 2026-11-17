@@ -148,12 +148,8 @@ fn test_cut_nullable_numeric_with_nan_and_infinity() -> Fallible<()> {
     let t_cut = make_stable_lazyframe(
         domain,
         FrameDistance(SymmetricDistance),
-        lf.clone().select([col("data").cut(
-            vec![1.0],
-            None::<Vec<String>>,
-            false,
-            false,
-        )]),
+        lf.clone()
+            .select([col("data").cut(vec![1.0], None::<Vec<String>>, false, false)]),
     )?;
 
     let actual = t_cut
