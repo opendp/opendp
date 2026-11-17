@@ -67,9 +67,12 @@ fn test_reject_nested_categorical_grouping_key() -> Fallible<()> {
     let categories = Categories::global();
     let categorical = DataType::Categorical(categories.clone(), categories.mapping());
     assert!(contains_categorical(&categorical));
-    assert!(contains_categorical(&DataType::List(Box::new(categorical.clone()))));
+    assert!(contains_categorical(&DataType::List(Box::new(
+        categorical.clone()
+    ))));
     assert!(contains_categorical(&DataType::Struct(vec![Field::new(
-        "nested".into(), categorical.clone(),
+        "nested".into(),
+        categorical.clone(),
     )])));
     assert!(!contains_categorical(&DataType::String));
 
@@ -91,7 +94,10 @@ fn test_reject_nested_categorical_grouping_key() -> Fallible<()> {
     .unwrap_err();
     assert_eq!(err.variant, MakeMeasurement);
     assert!(
-        err.message.as_deref().unwrap_or_default().contains("Categories are data-dependent"),
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Categories are data-dependent"),
         "{err:?}"
     );
     Ok(())
