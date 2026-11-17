@@ -1,5 +1,7 @@
 use crate::core::Domain;
-use crate::domains::{ArrayDomain, AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{
+    ArrayDomain, AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain,
+};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
 use polars_plan::plans::typed_lit;
