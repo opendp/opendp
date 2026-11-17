@@ -10,7 +10,7 @@ use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, P
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, L0PInfDistance};
-use crate::traits::Hashable;
+use crate::traits::{Hashable, samplers::Shuffle};
 
 use super::{Sample, ZExpFamily};
 
@@ -107,7 +107,8 @@ where
             input_metric,
             output_measure,
             Function::new_fallible(move |data: &HashMap<TK, IBig>| {
-                data.into_iter()
+                let mut pairs: Vec<_> = data
+                    .iter()
                     // Missing keys and explicit zero values are equivalent under the input metric.
                     .filter(|(_, v)| *v != &IBig::ZERO)
                     // noise output count
@@ -118,7 +119,11 @@ where
                             .map_or(true, |p| p.1.cmp(&threshold) == keep_ordering)
                     })
                     // fail the whole computation if any noise addition failed
-                    .collect()
+                    .collect::<Fallible<_>>()?;
+
+                // Hash collisions can preserve insertion order, even with a random hasher.
+                pairs.shuffle()?;
+                Ok(pairs.into_iter().collect())
             }),
             privacy_map,
         )
