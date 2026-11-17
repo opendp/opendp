@@ -1,5 +1,5 @@
 use crate::core::Domain;
-use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{ArrayDomain, AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
 use polars_plan::plans::typed_lit;
@@ -583,6 +583,31 @@ fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
         assert_eq!(
             observed.column("out")?,
             &Column::new("out".into(), expected)
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_binary_rejects_arrays() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("array", ArrayDomain::new(AtomDomain::<i32>::default(), 2)),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .row_by_row();
+
+    for expr in [
+        col("array") + col("array"),
+        col("array") + col("value"),
+        col("value") + col("array"),
+        col("array").eq(col("array")),
+        col("array").lt(col("array")),
+    ] {
+        assert!(
+            expr.clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{expr:?}"
         );
     }
     Ok(())
