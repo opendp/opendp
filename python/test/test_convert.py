@@ -222,7 +222,7 @@ def test_polars_unconsumed_series_export_cleanup():
     assert export.release is not None
 
     array_ptr = ctypes.cast(export.arrays, ctypes.POINTER(ctypes.c_void_p))[0]
-    callback, calls = _track_arrow_release(array_ptr)
+    _callback, calls = _track_arrow_release(array_ptr)
     del export
     assert calls == [array_ptr]
 
@@ -248,7 +248,7 @@ def test_polars_dataframe_ffi_failed_import_cleanup(monkeypatch):
         export_ptr = ctypes.cast(slices[2].ptr, ctypes.POINTER(ctypes.c_void_p))
         arrays = ctypes.cast(export_ptr[1], ctypes.POINTER(ctypes.c_void_p))
         array_ptr = arrays[0]
-        callback, released = _track_arrow_release(array_ptr)
+        _callback, released = _track_arrow_release(array_ptr)
 
         original_import = pl.Series._import
         calls = 0
