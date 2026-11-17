@@ -33,7 +33,7 @@ where
     let Expr::Cast {
         expr: input,
         dtype: to_type,
-        mut options,
+        options,
     } = expr
     else {
         return fallible!(MakeTransformation, "expected cast expression");
@@ -42,9 +42,12 @@ where
     // Strict casting makes the transformation unstable: errors tell you things about private data.
     // Could throw an error if strict, but it is the default, so for ease-of-use it is forced to be non-strict.
     // It is also ok for overflow to wraparound.
-    if matches!(options, CastOptions::Strict) {
-        options = CastOptions::NonStrict;
-    }
+    // Reconstruct only explicitly supported cast modes; never forward the
+    // serialized option, even if the current enum values appear harmless.
+    let options = match options {
+        CastOptions::Strict | CastOptions::NonStrict => CastOptions::NonStrict,
+        CastOptions::Overflowing => CastOptions::Overflowing,
+    };
 
     let t_prior = input
         .as_ref()

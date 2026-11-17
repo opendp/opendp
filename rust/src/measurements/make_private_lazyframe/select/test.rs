@@ -82,3 +82,36 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_private_select_rejects_noncanonical_projection_options() -> Fallible<()> {
+    use std::sync::Arc;
+
+    let lf = df!("A" => [1i32, 2])?.lazy();
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::select().with_max_length(2))?;
+    let options = ProjectionOptions {
+        should_broadcast: false,
+        ..ProjectionOptions {
+            run_parallel: true,
+            duplicate_check: true,
+            should_broadcast: true,
+        }
+    };
+    let query = LazyFrame::from(DslPlan::Select {
+        input: Arc::new(lf.logical_plan.clone()),
+        expr: vec![len().dp().noise(Some(1.0))],
+        options,
+    });
+    assert!(make_private_lazyframe(
+        domain,
+        FrameDistance(SymmetricDistance),
+        MaxDivergence,
+        query,
+        None,
+        None,
+    ).is_err());
+    Ok(())
+}

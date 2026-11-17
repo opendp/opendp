@@ -10,6 +10,7 @@ use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, Symm
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
+use polars_plan::prelude::ProjectionOptions;
 
 #[cfg(test)]
 mod test;
@@ -39,8 +40,17 @@ where
 {
     let is_truncated = input_metric.0.identifier().is_some();
 
-    let DslPlan::Select { expr, input, .. } = plan.clone() else {
+    let DslPlan::Select { expr, input, options } = plan else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
+    };
+
+    if !options.duplicate_check || !options.should_broadcast {
+        return fallible!(MakeMeasurement, "Projection requires duplicate checks and broadcasting");
+    }
+    let options = ProjectionOptions {
+        run_parallel: options.run_parallel,
+        duplicate_check: true,
+        should_broadcast: true,
     };
 
     let t_prior = input
@@ -104,21 +114,15 @@ where
         middle_metric,
         output_measure,
         Function::new_fallible(move |arg: &DslPlan| {
-            let mut output = plan.clone();
-            if let DslPlan::Select {
-                ref mut input,
-                ref mut expr,
-                ..
-            } = output
-            {
-                *input = Arc::new(arg.clone());
-                *expr = m_select_expr
-                    .invoke(&arg)?
+            Ok(DslPlan::Select {
+                input: Arc::new(arg.clone()),
+                expr: m_select_expr
+                    .invoke(arg)?
                     .into_iter()
                     .map(|e| e.expr)
-                    .collect();
-            };
-            Ok(output)
+                    .collect(),
+                options,
+            })
         }),
         privacy_map,
     )?;
