@@ -205,3 +205,32 @@ def test_polars_unconsumed_series_export_cleanup():
     series._s._export(ctypes.addressof(export))
     assert export.release is not None
     del export
+
+
+def test_polars_dataframe_ffi_failed_import_cleanup(monkeypatch):
+    pl = pytest.importorskip("polars")
+
+    df = pl.DataFrame(
+        {
+            "first": pl.Series(["A"], dtype=pl.Enum(["A", "B"])),
+            "second": pl.Series(["B"], dtype=pl.Enum(["A", "B"])),
+            "unconsumed": pl.Series(["A"], dtype=pl.Enum(["A", "B"])),
+        }
+    )
+    obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
+
+    original_import = pl.Series._import
+    calls = 0
+
+    def import_and_fail(address):
+        nonlocal calls
+        series = original_import(address)
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("interrupted DataFrame import")
+        return series
+
+    monkeypatch.setattr(pl.Series, "_import", staticmethod(import_and_fail))
+    with pytest.raises(RuntimeError, match="interrupted DataFrame import"):
+        c_to_py(obj)
+    assert calls == 2
