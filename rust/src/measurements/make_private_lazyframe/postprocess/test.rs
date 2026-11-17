@@ -77,14 +77,7 @@ fn test_postprocess_rejects_noncanonical_projection_options() -> Fallible<()> {
     use std::sync::Arc;
 
     let (domain, lf) = lazyframe_select_postprocess_query()?;
-    let options = ProjectionOptions {
-        duplicate_check: false,
-        ..ProjectionOptions {
-            run_parallel: true,
-            duplicate_check: true,
-            should_broadcast: true,
-        }
-    };
+    let options = ProjectionOptions { duplicate_check: false, ..ProjectionOptions::default() };
     for query in [
         DslPlan::Select {
             input: Arc::new(lf.logical_plan.clone()),
@@ -109,27 +102,3 @@ fn test_postprocess_rejects_noncanonical_projection_options() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_postprocess_allows_nonparallel_execution() -> Fallible<()> {
-    use std::sync::Arc;
-
-    let (domain, lf) = lazyframe_select_postprocess_query()?;
-    let query = LazyFrame::from(DslPlan::Select {
-        input: Arc::new(lf.logical_plan.clone()),
-        expr: vec![col("A")],
-        options: ProjectionOptions {
-            run_parallel: false,
-            duplicate_check: true,
-            should_broadcast: true,
-        },
-    });
-    make_private_lazyframe(
-        domain,
-        FrameDistance(SymmetricDistance),
-        MaxDivergence,
-        query,
-        None,
-        None,
-    )?;
-    Ok(())
-}

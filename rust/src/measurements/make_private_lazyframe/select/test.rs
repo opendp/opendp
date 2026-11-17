@@ -92,14 +92,7 @@ fn test_private_select_rejects_noncanonical_projection_options() -> Fallible<()>
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
     ])?
     .with_margin(Margin::select().with_max_length(2))?;
-    let options = ProjectionOptions {
-        should_broadcast: false,
-        ..ProjectionOptions {
-            run_parallel: true,
-            duplicate_check: true,
-            should_broadcast: true,
-        }
-    };
+    let options = ProjectionOptions { should_broadcast: false, ..ProjectionOptions::default() };
     let query = LazyFrame::from(DslPlan::Select {
         input: Arc::new(lf.logical_plan.clone()),
         expr: vec![len().dp().noise(Some(1.0))],

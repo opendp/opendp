@@ -203,7 +203,7 @@ fn test_with_columns_rejects_noncanonical_projection_options() -> Fallible<()> {
     let domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("k", AtomDomain::<i32>::default()),
     ])?;
-    let good = ProjectionOptions { run_parallel: true, duplicate_check: true, should_broadcast: true };
+    let good = ProjectionOptions::default();
     for options in [
         ProjectionOptions { should_broadcast: false, ..good },
         ProjectionOptions { duplicate_check: false, ..good },
