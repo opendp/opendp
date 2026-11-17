@@ -245,7 +245,6 @@ fn test_adaptive_failed_postprocessing_child_keeps_sequential_wrapper() -> Falli
     Ok(())
 }
 
-
 #[test]
 fn test_adaptive_composition_rejects_negative_allocations() -> Fallible<()> {
     // An unused negative allocation must not cancel a positive privacy cost.
