@@ -181,13 +181,13 @@ mod test {
         }
         Ok(())
     }
+
     #[test]
     fn test_private_cast_allowlist_matrix() -> Fallible<()> {
         use DataType::*;
 
         let numeric = [
-            Boolean, UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32,
-            Int64, Float32, Float64,
+            Boolean, UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32, Int64, Float32, Float64,
         ];
         for from in &numeric {
             for to in &numeric {
@@ -214,5 +214,4 @@ mod test {
         }
         Ok(())
     }
-
 }
