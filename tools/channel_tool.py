@@ -112,15 +112,17 @@ def update_file(path, load, munge, dump, binary=False):
 
 def update_version(version):
     log(f"Updating version references to {version}")
+
+    root = Path(__file__).parent.parent
     python_version = get_python_version(version)
     r_version = get_r_version(version)
 
     # Main version file
-    with open("VERSION", "w") as f:
+    with open(root / "VERSION", "w") as f:
         print(version, file=f)
 
     # robots.txt
-    with open("docs/robots.txt", "a") as f:
+    with open(root / "docs/robots.txt", "a") as f:
         stem_version = str(version).replace("-dev", "")
         print(f"Disallow: /en/v{stem_version}/", file=f)
 
@@ -135,14 +137,14 @@ def update_version(version):
         toml["build-dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
 
-    update_file("rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
+    update_file(root / "rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
 
     def munge_cargo_opendp_derive(toml):
         toml["dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
 
     update_file(
-        "rust/opendp_derive/Cargo.toml",
+        root / "rust/opendp_derive/Cargo.toml",
         tomlkit.load,
         munge_cargo_opendp_derive,
         tomlkit.dump,
@@ -162,12 +164,15 @@ def update_version(version):
         config.write(f)
 
     update_file(
-        "python/setup.cfg", load_python_config, munge_python_config, dump_python_config
+        root / "python/setup.cfg",
+        load_python_config,
+        munge_python_config,
+        dump_python_config,
     )
 
     # R Package
     log("Updating R/opendp/DESCRIPTION")
-    with ControlEditor(path="R/opendp/DESCRIPTION") as control:
+    with ControlEditor(path=str(root / "R/opendp/DESCRIPTION")) as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
 
