@@ -33,13 +33,13 @@ def ensure_branch(branch):
 
 def initialize(args):
     log("*** INITIALIZING CHANNEL FROM UPSTREAM ***")
-    if args.channel not in ("dev", "nightly", "beta", "stable"):
+    if args.channel not in ("dev", "weekly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     if args.sync:
         channel_to_upstream = {
             "dev": get_current_branch(),
-            "nightly": "main",
-            "beta": "nightly",
+            "weekly": "main",
+            "beta": "weekly",
             "stable": "beta",
         }
         upstream = (
@@ -179,12 +179,12 @@ def update_version(version):
 
 def configure(args):
     log("*** CONFIGURING CHANNEL ***")
-    if args.channel not in ("dev", "nightly", "beta", "stable"):
+    if args.channel not in ("dev", "weekly", "beta", "stable"):
         raise Exception(f"Unknown channel {args.channel}")
     version = get_version()
 
-    if args.channel in ("dev", "nightly", "beta"):
-        # dev/nightly/beta have a tag with the date and a counter
+    if args.channel in ("dev", "weekly", "beta"):
+        # dev/weekly/beta have a tag with the date and a counter
         date = args.date or datetime.date.today()
         counter = infer_counter(version, date, args)
         prerelease = f"{args.channel}.{date.strftime('%Y%m%d')}.{counter}"
@@ -223,8 +223,8 @@ def _main(argv):
     subparser.add_argument(
         "-c",
         "--channel",
-        choices=["dev", "nightly", "beta", "stable"],
-        default="nightly",
+        choices=["dev", "weekly", "beta", "stable"],
+        default="weekly",
         help="Which channel to target",
     )
     subparser.add_argument(
@@ -242,7 +242,7 @@ def _main(argv):
     subparser.add_argument(
         "-c",
         "--channel",
-        choices=["dev", "nightly", "beta", "stable"],
+        choices=["dev", "weekly", "beta", "stable"],
         default="dev",
         help="Which channel to target",
     )

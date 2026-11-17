@@ -118,17 +118,17 @@ pub fn make_proof_link(
 }
 
 fn get_docs_ref(version: &str) -> String {
-    // docs.opendp.org has tags for stable versions, but only a single branch for beta & nightly.
+    // docs.opendp.org has tags for stable versions, but only a single branch for beta & weekly.
     let channel = get_channel(version);
     match channel.as_str() {
         "stable" => format!("v{version}"), // For stable, we have tags.
-        "dev" => "nightly".to_string(),    // Will be replaced by the @versioned decorator.
-        _ => channel, // For beta & nightly, we don't have tags, just a single branch.
+        "dev" => "weekly".to_string(),    // Will be replaced by the @versioned decorator.
+        _ => channel, // For beta & weekly, we don't have tags, just a single branch.
     }
 }
 
 fn get_channel(version: &str) -> String {
-    let re = Regex::new(r"^(\d+\.\d+\.\d+)(?:-(dev|nightly|beta)(?:\.(.+))?)?$").unwrap();
+    let re = Regex::new(r"^(\d+\.\d+\.\d+)(?:-(dev|weekly|beta)(?:\.(.+))?)?$").unwrap();
     if let Some(caps) = re.captures(version) {
         let channel = caps.get(2);
         return channel.map_or("stable", |m| m.as_str()).to_string();

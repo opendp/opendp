@@ -51,7 +51,7 @@ jobs:
           # name the version
           case "$CHANNEL" in
               stable)         VERSION="v$(cat VERSION)" ;;
-              beta|nightly)   VERSION=$CHANNEL ;;
+              beta|weekly)    VERSION=$CHANNEL ;;
               *)              echo "Unknown channel $CHANNEL" >&2 ; exit 1 ;;
           esac
           echo "version=$VERSION" >> $GITHUB_OUTPUT

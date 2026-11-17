@@ -12,9 +12,9 @@ OpenDP uses a number of Github workflows: Some are started automatically
 - [`smoke-test.yml`](smoke-test.yml) runs all tests and static checks. [![smoke-test status](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
 - [`latex.yml`](latex.yml) confirms that the LaTEX documentation builds, if there are changes to source files.
 
-#### Nightly
+#### Weekly
 
-- [`nightly.yml`](nightly.yml) makes a nightly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/nightly.yml). [![nightly status](https://github.com/opendp/opendp/actions/workflows/nightly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/nightly.yml?query=branch%3Amain)
+- [`weekly.yml`](weekly.yml) makes a weekly release. [Past runs](https://github.com/opendp/opendp/actions/workflows/weekly.yml). [![weekly status](https://github.com/opendp/opendp/actions/workflows/weekly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/weekly.yml?query=branch%3Amain)
 - [`docs.rs`](https://docs.rs/crate/opendp/latest) also builds the Rust documentation, separate from the GitHub CI. ![docs.rs status](https://img.shields.io/docsrs/opendp?label=docs.rs)
 
 #### Weekly
@@ -110,7 +110,7 @@ One-off releases can be made with the
 on github, or with the `gh` command line tool. Parameters:
 
 - **Target channel** controls how the release is tagged, and what semantic version is given to the release. There is a git branch with the same name for each channel.
-- The **sync the Channel from upstream?** checkbox is for when you want to update the `nightly`, `beta`, `stable`, or `dev` branches. This replaces the contents of the respective branch with the branch the workflow is run from ("Use workflow from"). In practice, you'll almost always enable this.
+- The **sync the Channel from upstream?** checkbox is for when you want to update the `weekly`, `beta`, `stable`, or `dev` branches. This replaces the contents of the respective branch with the branch the workflow is run from ("Use workflow from"). In practice, you'll almost always enable this.
 - Update the **version counter** accordingly when you want to release multiple nightlies or betas in the same day.
 - **Dry runs** get sent to test-pypi, and don't update the docs
 - **Fake** is for developer convenience when debugging CI: it skips compilation and inserts dummy binaries instead
@@ -162,15 +162,15 @@ on github, or with the `gh` command line tool. Parameters:
         Then on github, make a PR and get it merged.
 
 
-1. We use a release train with nightly, beta and stable channels. Repeatedly run the Release workflow through each channel (see preceding section).
+1. We use a release train with weekly, beta and stable channels. Repeatedly run the Release workflow through each channel (see preceding section).
 
-    1. Wait until `nightly` is updated. It is also possible to update it yourself:
+    1. Wait until `weekly` is updated. It is also possible to update it yourself:
         * Use workflow from: `Branch: main`
-        * Target Channel: `nightly`
+        * Target Channel: `weekly`
         * Sync the channel from Upstream?: `yes`
 
-    1. Once `nightly` is updated, update `beta`.
-        * Use workflow from: `Branch: nightly`
+    1. Once `weekly` is updated, update `beta`.
+        * Use workflow from: `Branch: weekly`
         * Target Channel: `beta`
         * Sync the channel from Upstream?: `yes`
 

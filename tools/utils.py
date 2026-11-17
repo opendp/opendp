@@ -53,7 +53,7 @@ def get_python_version(version):
     # Python (PEP 440) has several annoying quirks that make it not quite compatible with semantic versioning:
     # 1. Python doesn't allow arbitrary tags, only (a|b|rc|post|dev). (You can use (alpha|beta|c|pre|preview|rev|r),
     #    but they'll be mapped to (a|b|rc|rc|rc|post|post) respectively.)
-    #    So "1.2.3-nightly.456" will fail, and "1.2.3-alpha.456" gets mapped to "1.2.3a456" (see #2).
+    #    So "1.2.3-weekly.456" will fail, and "1.2.3-alpha.456" gets mapped to "1.2.3a456" (see #2).
     # 2. Python doesn't allow separators between the main version and the tag, nor within the tag.
     #    So "1.2.3-a.456" gets mapped to "1.2.3a456"
     # 3. HOWEVER, Python treats tags "post" and "dev" differently, and in these cases uses a "." separator between
@@ -61,10 +61,10 @@ def get_python_version(version):
     #    So "1.2.3-dev.456" gets mapped to "1.2.3.dev456".
     # 4. Python requires that all tags have a numeric suffix, and will assume 0 if none is present.
     #    So "1.2.3-dev" gets mapped to "1.2.3.dev0" (by #3 & #4).
-    # We don't use all these variations, only (dev|nightly|beta), but if that ever changes, hopefully we won't
+    # We don't use all these variations, only (dev|weekly|beta), but if that ever changes, hopefully we won't
     # have to look at this whole mess again.
     tag_to_py_tag = {
-        "nightly": "a",
+        "weekly": "a",
         "beta": "b",
         "c": "rc",
         "pre": "rc",
@@ -104,7 +104,7 @@ def infer_channel(version):
     if version.prerelease is None:
         return "stable"
     channel = version.prerelease.split(".", 1)[0]
-    if channel not in ("dev", "nightly", "beta"):
+    if channel not in ("dev", "weekly", "beta"):
         raise Exception(f"Unable to infer channel from version {version}")
     return channel
 

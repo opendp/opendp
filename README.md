@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 
 [![main CI](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/smoke-test.yml?query=branch%3Amain)
-[![nightly CI](https://github.com/opendp/opendp/actions/workflows/nightly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/nightly.yml?query=branch%3Amain)
+[![weekly CI](https://github.com/opendp/opendp/actions/workflows/weekly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/weekly.yml?query=branch%3Amain)
 [![doc-check CI](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml?query=branch%3Amain)
 
 The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
