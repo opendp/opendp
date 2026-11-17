@@ -1,4 +1,7 @@
-# Creates a release on the nightly channel. Intended to right every day before midnight.
+# Actually weekly, but we don't want to use up pypi space so quickly,
+# and it takes us about a week to respond to failures in any case.
+#
+# Even if it just calls release.yml, this is useful to keep separate for the README badge.
 name: Nightly
 on:
   schedule:
