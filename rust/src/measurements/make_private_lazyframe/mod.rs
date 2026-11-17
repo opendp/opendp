@@ -144,7 +144,9 @@ where
         m_lp.output_measure.clone(),
         Function::new_fallible(move |arg: &LazyFrame| {
             let lf = LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
-                .with_optimizations(arg.get_current_optimizations());
+                .with_optimizations(arg.get_current_optimizations())
+                // Noise plugins are randomized; CSE must not merge their draws.
+                .with_comm_subexpr_elim(false);
             Ok(OnceFrame::from(lf))
         }),
         m_lp.privacy_map.clone(),
