@@ -122,7 +122,7 @@ fn get_docs_ref(version: &str) -> String {
     let channel = get_channel(version);
     match channel.as_str() {
         "stable" => format!("v{version}"), // For stable, we have tags.
-        "dev" => "weekly".to_string(),    // Will be replaced by the @versioned decorator.
+        "dev" => "weekly".to_string(),     // Will be replaced by the @versioned decorator.
         _ => channel, // For beta & weekly, we don't have tags, just a single branch.
     }
 }
