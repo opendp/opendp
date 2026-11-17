@@ -90,9 +90,7 @@ where
 
     let data_dtype = data_domain.column.dtype();
     let fill_dtype = fill_domain.column.dtype();
-    if data_dtype != fill_dtype
-        && !is_numeric_coercion(&data_dtype, &fill_dtype)
-    {
+    if data_dtype != fill_dtype && !is_numeric_coercion(&data_dtype, &fill_dtype) {
         return fallible!(
             MakeTransformation,
             "fill_null with different input and filler types is only supported for numeric data"
