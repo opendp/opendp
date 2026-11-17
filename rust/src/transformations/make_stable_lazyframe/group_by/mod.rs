@@ -11,7 +11,7 @@ use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
-use polars_plan::prelude::GroupbyOptions;
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 
 use super::StableDslPlan;
 
@@ -79,20 +79,12 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    // Check options in the stable group-by constructor and reconstruct them.
-    // Explicit fields require review if Polars expands GroupbyOptions.
-    let allowed_options = GroupbyOptions {
-        dynamic: None,
-        rolling: None,
-        slice: None,
-    };
-    if options.as_ref() != &allowed_options {
+    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return fallible!(
             MakeTransformation,
             "Unsupported stable group-by options: {options:?}"
         );
     }
-    let options = Arc::new(allowed_options);
 
     let t_prior = input
         .as_ref()

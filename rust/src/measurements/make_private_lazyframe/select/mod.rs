@@ -10,7 +10,7 @@ use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, Symm
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
-use polars_plan::prelude::ProjectionOptions;
+use crate::polars::options::valid_projection_options;
 
 #[cfg(test)]
 mod test;
@@ -44,14 +44,9 @@ where
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
 
-    if !options.duplicate_check || !options.should_broadcast {
+    if !valid_projection_options(options) {
         return fallible!(MakeMeasurement, "Projection requires duplicate checks and broadcasting");
     }
-    let options = ProjectionOptions {
-        run_parallel: options.run_parallel,
-        duplicate_check: true,
-        should_broadcast: true,
-    };
 
     let t_prior = input
         .as_ref()

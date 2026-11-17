@@ -7,7 +7,7 @@ use crate::metrics::{Bounds, FrameDistance};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
-use polars_plan::prelude::ProjectionOptions;
+use crate::polars::options::valid_projection_options;
 
 use super::{StableDslPlan, is_identity, retain_bounds, retain_margins};
 
@@ -50,15 +50,9 @@ where
         );
     }
 
-    if !options.duplicate_check || !options.should_broadcast {
+    if !valid_projection_options(options) {
         return fallible!(MakeTransformation, "Projection requires duplicate checks and broadcasting");
     }
-    // Parallelism changes scheduling, not the row-wise stability argument.
-    let options = ProjectionOptions {
-        run_parallel: options.run_parallel,
-        duplicate_check: true,
-        should_broadcast: true,
-    };
 
     let t_prior = input
         .as_ref()

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use polars::prelude::DslPlan;
 use polars_plan::prelude::ProjectionOptions;
+use crate::polars::options::valid_projection_options;
 
 use crate::combinators::CompositionMeasure;
 use crate::core::{Metric, MetricSpace};
@@ -19,14 +20,10 @@ mod test;
 // This path permits only column selection and renaming. Parallelism changes
 // scheduling; shape validation remains mandatory.
 fn validated_projection_options(options: ProjectionOptions) -> Fallible<ProjectionOptions> {
-    if !options.duplicate_check || !options.should_broadcast {
+    if !valid_projection_options(options) {
         return fallible!(MakeMeasurement, "Postprocessing requires duplicate checks and broadcasting");
     }
-    Ok(ProjectionOptions {
-        run_parallel: options.run_parallel,
-        duplicate_check: true,
-        should_broadcast: true,
-    })
+    Ok(options)
 }
 
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
