@@ -1,0 +1,10 @@
+opendp.extras.mbi package
+=========================
+
+Module contents
+---------------
+
+.. automodule:: opendp.extras.mbi
+   :members:
+   :undoc-members:
+   :show-inheritance:

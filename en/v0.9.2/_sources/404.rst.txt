@@ -1,0 +1,33 @@
+:orphan:
+
+404
+===
+
+This page doesn't exist.
+The site search might help you find what you're looking for.
+
+.. raw:: html
+
+    <script>
+        (function(){
+            // For demonstration, try "404.html#redirect_demo" 
+            const url = document.location.toString();
+
+            Object.entries({
+                redirect_demo: 'http://example.com',
+                'user/index.html': 'TODO',
+                'user/getting-started.html': 'TODO'
+            }).forEach(([match, newUrl]) => {
+                if (url.includes(match)) {
+                    warnAndRedirect(newUrl);
+                }
+            });
+
+            function warnAndRedirect(url) {
+                document.write("<p><b>Our site structure has changed: Redirecting in five seconds...</b></p>");
+                setTimeout(function() {
+                    document.location = url
+                }, 5000);
+            }
+        })();
+    </script>
