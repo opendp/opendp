@@ -235,7 +235,7 @@ fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
             "timestamp",
             DatetimeDomain {
                 time_unit: TimeUnit::Microseconds,
-                time_zone: Some("UTC".into()),
+                time_zone: None,
             },
         ),
     ])?;
