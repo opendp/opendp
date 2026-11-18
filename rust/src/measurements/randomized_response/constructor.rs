@@ -142,6 +142,9 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
 }
 
 #[cfg(verus_only)]
+type RRMapResult = Result<f64, ()>;
+
+#[cfg(verus_only)]
 type CallbackError = ();
 #[cfg(not(verus_only))]
 type CallbackError = crate::error::Error;
@@ -224,7 +227,7 @@ where
     // building the concrete Fn closures and before any Arc erasure.
     let func = move |truth: &bool| run_bool_rr(&operator, truth);
     #[cfg(verus_only)]
-    let map = #[verus_spec(result: Result<f64, ()> =>
+    let map = #[verus_spec(result: RRMapResult =>
         ensures result == Ok(operator.map(*distance, 0.0f64)),
     )]
     move |distance: &u32| operator.map_callback(distance);
