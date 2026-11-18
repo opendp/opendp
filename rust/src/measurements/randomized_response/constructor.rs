@@ -161,7 +161,7 @@ pub open spec fn adapter_realizes<E>(
                 truth, op, word_expectation, payoff),
     )
     &&& forall|distance: u32|
-        #[trigger] f64_to_bits(callback_cost(op, distance))
+        f64_to_bits(callback_cost(op, distance))
             == f64_to_bits(op.map(distance, 0.0f64))
 }
 
