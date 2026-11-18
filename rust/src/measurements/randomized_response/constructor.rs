@@ -615,8 +615,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                         map, d, Ok(epsilon)));
                     if *d == 0u32 {
                         assert(f64_to_bits(epsilon) == 0u64);
-                        reveal(crate::verified_arithmetic::float_value);
-                        assert(crate::verified_arithmetic::float_value(epsilon) == 0real);
+                        crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
                         crate::verified_arithmetic::real_exp_zero();
                     }
                     assert(crate::measurement_proof::bool_rr_reported_factor(*d, epsilon)
