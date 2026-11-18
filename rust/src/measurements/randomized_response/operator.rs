@@ -72,3 +72,40 @@ impl BoolRR {
 use crate::uniform_word::WordError;
 #[cfg(not(verus_only))]
 use crate::error::Error as WordError;
+
+#[cfg(verus_only)]
+verus! {
+/// Instantiate the one-word EPT preconditions for the actual Boolean RR
+/// postprocessor. The arbitrary output allocation is pulled back along the
+/// verified executable release callback; there is no sampler model substituted
+/// for the production callback.
+pub proof fn lemma_release_callback_preserves_cost(
+    operator: BoolRR,
+    truth: &bool,
+    output_cost: spec_fn(Result<bool, WordError>) -> real,
+)
+    requires
+        forall|out: Result<bool, WordError>|
+            0real <= #[trigger] output_cost(out) < 1real,
+    ensures
+        forall|word: Result<u64, WordError>|
+            0real <= #[trigger] output_cost(operator.release(*truth, word)) < 1real,
+        forall|word: Result<u64, WordError>|
+            #[trigger] call_requires(BoolRR::release_callback, (&operator, truth, word)),
+        forall|word: Result<u64, WordError>, out: Result<bool, WordError>|
+            #[trigger] call_ensures(
+                BoolRR::release_callback, (&operator, truth, word), out)
+            ==> output_cost(operator.release(*truth, word)) == output_cost(out),
+{
+    assert forall|word: Result<u64, WordError>|
+        #[trigger] call_requires(BoolRR::release_callback, (&operator, truth, word))
+    by {}
+    assert forall|word: Result<u64, WordError>, out: Result<bool, WordError>|
+        #[trigger] call_ensures(
+            BoolRR::release_callback, (&operator, truth, word), out)
+        implies output_cost(operator.release(*truth, word)) == output_cost(out)
+    by {
+        assert(out == operator.release(*truth, word));
+    }
+}
+} // verus!
