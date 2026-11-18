@@ -119,7 +119,7 @@ where
 /// separates the verified computation from the (still trusted) Arc dispatch.
 #[cfg_attr(verus_only, verus_verify)]
 #[derive(Clone, Copy)]
-pub(crate) struct OneWordProgram<Op, F> {
+pub struct OneWordProgram<Op, F> {
     pub operator: Op,
     pub postprocess: F,
 }
