@@ -64,15 +64,22 @@ which a normal `Fn(&bool)` invocation cannot provide. The native
 sample_word_then(operator, truth, BoolRR::release_callback)
 ```
 
-The private `trust_bool_rr_closure_forwarding` proof function is also
-`external_body`. It asserts only the execution correspondence of the
-two literal closures above: the `func` law is the already-proved
-one-word postprocessing law, and `map` forwards the actual operator
-map. It **does not assert differential privacy**, but it *does* assert
-a substantive probabilistic correspondence, and it would be unsound
-if invoked on different callbacks. It must be audited together with
-its single callsite. Merely passing Verus is not proof of that
-correspondence.
+The old generic `trust_bool_rr_closure_forwarding<F, P>` lemma
+was removed: its specification could assign a distribution to arbitrary
+callbacks. A single, explicitly unchecked `assume` now appears
+immediately after constructing the **literal RR `func` closure**.
+It identifies that closure's law with the already-proved one-word
+expectation. It does not assume DP directly and cannot be invoked as a
+reusable theorem, but changing the closure to bypass the sampler could
+still invalidate privacy without a Verus error. This one-line forwarding
+relationship remains trusted.
+
+The deterministic `map` closure is different: Verus checks a
+postcondition on its executable body proving that it returns the
+actual `BoolRR::map_callback` result. The native and Verus closures
+contain the same literal expression; the declarations are separate
+only because the pinned Verus compiler requires a verification-only
+closure attribute. No unchecked map specification remains.
 
 This is distinct from the generic constructor's ordinary `Arc<dyn
 Fn>` erasure trust. Future work could formally integrate EPTs for
@@ -90,10 +97,16 @@ Replacing the sampled entropy with `Ok(0)` *inside*
 `sample_word_then` was rejected by Verus and failed native tests
 (commit `d522b57`, restored in `b146c69`).
 
-Earlier experiments showed that modifying an unchecked callback
-adapter could pass Verus while breaking the native distribution. The
-current callback-forwarding code is likewise an explicit trusted
-boundary; its behavior must be reviewed and tested separately.
+Mutating both map-closure bodies to return constant zero failed
+Verus **at the closure's return postcondition**, with 63 obligations
+verified and one failed; four native RR tests also failed (commits
+`8828cb6` / `297e8bc`, restored in `41a6aee`). This shows the
+deterministic map semantics are checked, not merely asserted.
+
+Earlier experiments showed that modifying an unchecked randomized
+callback adapter could pass Verus while breaking the native distribution.
+The remaining RR `func` forwarding law is expressly trusted and must
+be audited against its adjacent literal closure.
 
 The resulting certificate is conditional on these documented
 primitives and trusted Rust forwarding, not a mechanized theorem
