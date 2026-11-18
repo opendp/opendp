@@ -1,28 +1,32 @@
-//! Verification-only experiment: can an ordinary executable Fn closure
-//! carry a tracked proof resource through its invocation?
+//! Verification-only experiment for the ordinary Fn / tracked-credit boundary.
 //!
-//! This deliberately tests the frontend boundary before using ErrorCredit
-//! or making any probability-law claim.
+//! Direct tracked parameters on a closure fail in pinned Verus:
+//! `with` does not support closure (probe commit c3ded5c).
+//!
+//! Try instead a verified named function with a ghost parameter called
+//! from inside an ordinary, statically known Fn closure.
 use vstd::prelude::*;
 
-#[verus_verify]
-pub fn probe_closure_tracked_forwarding(x: u64) {
-    let f =
-        #[verus_spec(result: u64 =>
-            with Tracked(start): Tracked<u64> -> end: Tracked<u64>
-            ensures
-                result == input,
-                end == start,
-        )]
-        |input: u64| input;
+#[verus_spec(result =>
+    with Ghost(expected): Ghost<u64>
+    requires expected == input,
+    ensures result == expected,
+)]
+fn named_passthrough(input: u64) -> u64 {
+    input
+}
 
-    proof_decl! {
-        let tracked credit: u64 = 7;
-    }
-    proof_with! { Tracked(credit) => Tracked(returned_credit) }
+#[verus_verify]
+pub fn probe_named_ghost_call_through_closure(x: u64) {
+    let f =
+        #[verus_spec(result: u64 => ensures result == input)]
+        |input: u64| {
+            proof_with! { Ghost(input) }
+            named_passthrough(input)
+        };
+
     let out = f(x);
     proof! {
         assert(out == x);
-        assert(returned_credit == 7);
     }
 }
