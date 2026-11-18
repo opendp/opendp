@@ -404,6 +404,8 @@ where
                         epsilon, operator.privacy_cost);
                     assert(crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 }
+                assert(crate::verified_arithmetic::finite(epsilon) ==>
+                    crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
                     == operator_factor_map(operator, distance));
                 if distance == 0 {
