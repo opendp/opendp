@@ -83,13 +83,16 @@ in `Function::erase_one_word_program` is only
 implementation is used.
 
 **The erasure itself remains trusted.** Its `external_body` contract
-still equates the erased `Function`'s expectation with the one-word
-law. Although the native closure is now just a named-method call,
-Verus does **not** derive the law of `Arc<dyn Fn>` from its dispatch
-semantics. Altering only this external-body closure can still invalidate
-the claimed distribution without a Verus failure. The separately
-unmechanized soundness of the error-credit model also remains a
-probabilistic trust boundary.
+now records only the one-word *operational provenance* of the installed
+`Function`, rather than postulating its complete expectation law.
+`function_expectation` is defined from that provenance and the
+primitive word expectation, with opaque semantics for ordinary Functions.
+This removes a separate probabilistic assumption from the erasure
+contract, but Verus does **not** prove that the native `Arc<dyn Fn>`
+executes the recorded program. Altering only the closure inside this
+external body can therefore still falsify the privacy claim without a
+Verus failure. The soundness metatheorem for the error-credit model
+is also not mechanized.
 
 ## Falsification
 
@@ -111,6 +114,14 @@ native distribution regression failed. Commit `bb3b770` restored
 the proper return path. This independently tests the newly introduced
 typed program boundary.
 
+Commit `7b15f19` altered **only** the native closure inside
+`Function::erase_one_word_program` to use fixed-word postprocessing.
+Verus **still passed** (70 verified, 0 errors); the native sampling
+regression failed. Commit `8f58d1f` restored the closure.
+This is the decisive negative test for the current unresolved trust
+boundary: the external operational-provenance assertion is not
+checked against the runtime `Arc` erasure code.
+
 
 Commit `07bfc4e` temporarily replaced the already-proved sampled-word
 `Function` with an always-truthful `Function` at the final constructor
@@ -126,14 +137,15 @@ of a zero-cost privacy map that disagreed with the operator's cost.
 - `sample_uniform_u64` is trusted to provide a uniform word on success,
   with errors independent of the private Boolean. The actual RNG backend,
   its failure behavior, and entropy quality are not mechanized.
-- `Function::erase_one_word_program` is an `external_body` with
-  an expectation-preservation postcondition. The constructor now
-  assembles the concrete typed program in verified code, and Verus proves
-  the program's error-credit EPT. **But the external erasure contract
-  still assumes the output law of the installed Function.** Its intended
-  justification is faithful `Arc<dyn Fn>` dispatch plus the EPT
-  metatheorem; neither is proved in Verus. A native-only change inside
-  this adapter remains in the trusted computing base.
+- `Function::erase_one_word_program` is an `external_body`
+  whose remaining trusted postcondition identifies the installed
+  **deterministic one-word program**, not its complete probability law.
+  `function_expectation` now derives the one-word law from this
+  provenance and `uniform_word_expectation`. Verus verifies construction
+  of the typed program and its error-credit EPT, but **not** the
+  correspondence between the `Arc<dyn Fn>` trampoline and the named
+  `program.run`. The native-only mutation `7b15f19` shows that
+  this remaining trust can invalidate privacy without a Verus error.
 - `PrivacyMap::new_from_operator` separately trusts faithful
   `Arc<dyn Fn>` dispatch for the executable map. Its callback implementation
   and total-success behavior are verified before erasure.
@@ -173,17 +185,20 @@ is trusted.
 
 ## Next proof boundary
 
-The concrete `OneWordProgram::run` now satisfies the
-execution-linked credit-transfer specification, and two mutations of
-the actual sampler path were rejected by Verus. Remaining work is to
-justify the **distributional semantics of the erased Function** without
-an `external_body` postcondition that directly asserts expectation
-equality. The smallest intended trust surface is standard Rust closure
-capture and `Arc<dyn Fn>` dispatch of the already-verified
-`OneWordProgram::run`; the probabilistic interpretation additionally
-requires a soundness argument for the adopted credit logic.
+The concrete `OneWordProgram::run` satisfies the one-word
+error-credit EPT and mutations of both sampling layers are rejected
+by Verus. The erased Function's expectation is now a *definition*
+from one-word operational provenance rather than a postulated numeric
+equality. However, the native `Arc<dyn Fn>` forwarding of the named
+program remains a trusted external-body assertion. Mutation `7b15f19`
+confirmed Verus cannot detect a dishonest implementation of that
+forwarding.
 
-Mutating the body of `erase_one_word_program` itself should eventually
-be rejected or lie entirely within an explicitly audited, generic
-Rust-dispatch primitive. The existing verification does **not** yet
-provide that protection.
+To eliminate this last trusted callback correspondence, either verify
+an actual `Arc`/closure dispatch representation or represent one-word
+sampling explicitly in the runtime `Function` and verify its invocation
+there. Both options should be evaluated against the cost of expanding
+the production `Function` abstraction. Separately, a soundness
+argument for the restricted error-credit logic is still necessary.
+Until then this remains a **conditional**, not unconditional,
+end-to-end privacy proof.
