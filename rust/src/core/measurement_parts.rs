@@ -160,6 +160,7 @@ pub uninterp spec fn privacy_map_call_ensures<MI: Metric, MO: Measure>(
 ) -> bool;
 }
 
+#[cfg_attr(verus_only, verus_verify)]
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
