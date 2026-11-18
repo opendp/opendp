@@ -130,12 +130,12 @@ where
     }
 }
 
-/// Proof boundary for concrete one-word sampling callbacks. The caller must first
-/// prove *all* measurement invariants of the real program and map. This
-/// constructor never inspects their implementations or re-proves privacy.
+/// Proof boundary for concrete one-word sampling callbacks.
 ///
-/// The only unchecked operation is ordinary storage of the two callbacks.
-/// The runtime Measurement and legacy Measurement::new remain unchanged.
+/// The caller proves the complete measurement validity predicate before any
+/// callback erasure. The body below is the sole explicitly trusted operation:
+/// ordinary Rust storage of the exact callbacks in an OpenDP Measurement.
+/// Nothing here assumes a mechanism-specific privacy theorem.
 #[cfg_attr(verus_only, verus_verify)]
 impl<DI, MI, MO, TO> Measurement<DI, MI, MO, TO>
 where
@@ -145,12 +145,13 @@ where
     MO: CertifiedMeasure<Result<TO, ()>>,
     (DI, MI): MetricSpace,
 {
-    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         with Ghost(model): Ghost<
             crate::uniform_word::OneWordModel<DI::Carrier, TO>>
         requires crate::measurement_proof::valid_one_word_components(
-            &input_domain, &input_metric, &output_measure, operator, postprocess, map, model),
+            &input_domain, &input_metric, &output_measure,
+            operator, postprocess, map, model),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -162,43 +163,6 @@ where
         },
     ))]
     pub(crate) fn new_certified<Op, F, P>(
-        input_domain: DI,
-        input_metric: MI,
-        output_measure: MO,
-        operator: Op,
-        postprocess: F,
-        map: P,
-    ) -> Fallible<Self>
-    where
-        Op: Copy + 'static,
-        F: Fn(&Op, &DI::Carrier, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
-        P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
-    {
-        #[cfg(verus_only)]
-        proof_with! {Ghost(model)}
-        Self::assemble_unchecked(input_domain, input_metric, output_measure, operator, postprocess, map)
-    }
-
-    /// Audited Rust plumbing only. All mathematical proof obligations are
-    /// preconditions. The trusted fact is that storing the supplied concrete
-    /// callbacks and invoking them through Arc preserves their behavior.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        with Ghost(model): Ghost<
-            crate::uniform_word::OneWordModel<DI::Carrier, TO>>
-        requires crate::measurement_proof::valid_one_word_components(
-            &input_domain, &input_metric, &output_measure, operator, postprocess, map, model),
-        ensures match result {
-            Ok(meas) => {
-                &&& meas.input_domain == input_domain
-                &&& meas.input_metric == input_metric
-                &&& meas.output_measure == output_measure
-                &&& crate::measurement_proof::valid_certified_measurement(&meas)
-            },
-            Err(_) => true,
-        },
-    ))]
-    fn assemble_unchecked<Op, F, P>(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
