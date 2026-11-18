@@ -136,113 +136,100 @@ pub proof fn lemma_bool_rr_dp<E>(
     factor: real,
     left: bool,
     right: bool,
-    distance: u32,
     payoff: spec_fn(Result<bool, E>) -> real,
 )
     requires
-        4_503_599_627_370_496u64 <= op.numerator <= 9_007_199_254_740_992u64,
+        4_503_599_627_370_496u64 <= op.numerator < 9_007_199_254_740_992u64,
         factor >= 1real,
-        op.numerator < 9_007_199_254_740_992u64 ==>
-            op.numerator as real <= factor
-                * (9_007_199_254_740_992u64 - op.numerator) as real,
-        left == right || distance > 0,
+        op.numerator as real <= factor
+            * (9_007_199_254_740_992u64 - op.numerator) as real,
         bounded_payoff(payoff),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
-        distance == 0 ==>
-            release_expectation(left, op, word_expectation, payoff)
-                <= release_expectation(right, op, word_expectation, payoff),
-        distance > 0 && op.numerator < 9_007_199_254_740_992u64 ==>
-            release_expectation(left, op, word_expectation, payoff)
-                <= factor * release_expectation(right, op, word_expectation, payoff),
-        // With p=1 and positive distance, the privacy map is +infinity.
+        release_expectation(left, op, word_expectation, payoff)
+            <= factor * release_expectation(right, op, word_expectation, payoff),
 {
     let numerator = op.numerator;
-    if distance == 0 {
-        assert(left == right);
-    } else if numerator < 9_007_199_254_740_992u64 {
-        lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
-        lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
-        let p = numerator as real / 9_007_199_254_740_992real;
-        // Convert the constructor's integer odds bound where the
-        // finite-cost privacy inequality actually needs it.
-        let n = numerator as real;
-        let denominator = 9_007_199_254_740_992real;
-        let complement = (9_007_199_254_740_992u64 - numerator) as real;
-        assert(complement == denominator - n);
-        assert(n <= factor * complement);
-        assert(n / denominator <= factor * (complement / denominator))
-            by(nonlinear_arith)
-            requires denominator > 0real, n <= factor * complement;
-        assert(complement / denominator == 1real - n / denominator)
-            by(nonlinear_arith)
-            requires complement == denominator - n, denominator > 0real;
-        assert(p <= factor * (1real - p));
-        let on_error = |err: E| payoff(Err(err));
-        let err = error_expectation(on_error);
-        let a = payoff(Ok(left));
-        let b = payoff(Ok(!left));
-        assert forall|e: E| 0real <= #[trigger] on_error(e) <= 1real by {
-            assert(0real <= payoff(Err(e)) <= 1real);
-        }
-        assert(0real <= err);
-        assert(0real <= success);
-        assert(0real <= a <= 1real);
-        assert(0real <= b <= 1real);
-        assert(1real / 2real <= p < 1real);
-        if left == right {
-            let xa = p * a;
-            let xb = (1real - p) * b;
-            let value = success * (xa + xb) + err;
-            nonnegative_product(p, a);
-            nonnegative_product(1real - p, b);
-            assert(xa + xb >= 0real);
-            nonnegative_product(success, xa + xb);
-            assert(value >= 0real);
-            multiply_inequality(1real, factor, value);
-            assert(release_expectation(left, op, word_expectation, payoff)
-                == release_expectation(right, op, word_expectation, payoff));
-            assert(release_expectation(right, op, word_expectation, payoff)
-                == value);
-            assert(release_expectation(left, op, word_expectation, payoff)
-                <= factor * release_expectation(right, op, word_expectation, payoff));
-        } else {
-            assert(right == !left);
-            assert(1real - p <= p);
-            assert(p <= factor * p) by(nonlinear_arith)
-                requires p >= 0real, factor >= 1real;
-            assert(1real - p <= factor * p);
-            let one = p * a;
-            let two = (1real - p) * b;
-            let target_one = (1real - p) * a;
-            let target_two = p * b;
-            let vl = one + two;
-            let vr = target_one + target_two;
-
-            multiply_inequality(p, factor * (1real - p), a);
-            multiply_inequality(1real - p, factor * p, b);
-            mul_associative(factor, 1real - p, a);
-            mul_associative(factor, p, b);
-            assert(one <= factor * target_one);
-            assert(two <= factor * target_two);
-            distribute(factor, target_one, target_two);
-            assert(vl <= factor * vr);
-
-            multiply_inequality(vl, factor * vr, success);
-            mul_rotate(success, factor, vr);
-            assert(success * vl <= factor * (success * vr));
-            multiply_inequality(1real, factor, err);
-            distribute(factor, success * vr, err);
-            assert(success * vl + err <= factor * (success * vr + err));
-
-            assert(release_expectation(left, op, word_expectation, payoff)
-                == success * vl + err);
-            assert(release_expectation(right, op, word_expectation, payoff)
-                == success * vr + err);
-        }
+    lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
+    lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
+    let p = numerator as real / 9_007_199_254_740_992real;
+    // Convert the constructor's integer odds bound where the
+    // finite-cost privacy inequality actually needs it.
+    let n = numerator as real;
+    let denominator = 9_007_199_254_740_992real;
+    let complement = (9_007_199_254_740_992u64 - numerator) as real;
+    assert(complement == denominator - n);
+    assert(n <= factor * complement);
+    assert(n / denominator <= factor * (complement / denominator))
+        by(nonlinear_arith)
+        requires denominator > 0real, n <= factor * complement;
+    assert(complement / denominator == 1real - n / denominator)
+        by(nonlinear_arith)
+        requires complement == denominator - n, denominator > 0real;
+    assert(p <= factor * (1real - p));
+    let on_error = |err: E| payoff(Err(err));
+    let err = error_expectation(on_error);
+    let a = payoff(Ok(left));
+    let b = payoff(Ok(!left));
+    assert forall|e: E| 0real <= #[trigger] on_error(e) <= 1real by {
+        assert(0real <= payoff(Err(e)) <= 1real);
     }
-}
+    assert(0real <= err);
+    assert(0real <= success);
+    assert(0real <= a <= 1real);
+    assert(0real <= b <= 1real);
+    assert(1real / 2real <= p < 1real);
+    if left == right {
+        let xa = p * a;
+        let xb = (1real - p) * b;
+        let value = success * (xa + xb) + err;
+        nonnegative_product(p, a);
+        nonnegative_product(1real - p, b);
+        assert(xa + xb >= 0real);
+        nonnegative_product(success, xa + xb);
+        assert(value >= 0real);
+        multiply_inequality(1real, factor, value);
+        assert(release_expectation(left, op, word_expectation, payoff)
+            == release_expectation(right, op, word_expectation, payoff));
+        assert(release_expectation(right, op, word_expectation, payoff)
+            == value);
+        assert(release_expectation(left, op, word_expectation, payoff)
+            <= factor * release_expectation(right, op, word_expectation, payoff));
+    } else {
+        assert(right == !left);
+        assert(1real - p <= p);
+        assert(p <= factor * p) by(nonlinear_arith)
+            requires p >= 0real, factor >= 1real;
+        assert(1real - p <= factor * p);
+        let one = p * a;
+        let two = (1real - p) * b;
+        let target_one = (1real - p) * a;
+        let target_two = p * b;
+        let vl = one + two;
+        let vr = target_one + target_two;
 
+        multiply_inequality(p, factor * (1real - p), a);
+        multiply_inequality(1real - p, factor * p, b);
+        mul_associative(factor, 1real - p, a);
+        mul_associative(factor, p, b);
+        assert(one <= factor * target_one);
+        assert(two <= factor * target_two);
+        distribute(factor, target_one, target_two);
+        assert(vl <= factor * vr);
+
+        multiply_inequality(vl, factor * vr, success);
+        mul_rotate(success, factor, vr);
+        assert(success * vl <= factor * (success * vr));
+        multiply_inequality(1real, factor, err);
+        distribute(factor, success * vr, err);
+        assert(success * vl + err <= factor * (success * vr + err));
+
+        assert(release_expectation(left, op, word_expectation, payoff)
+            == success * vl + err);
+        assert(release_expectation(right, op, word_expectation, payoff)
+            == success * vr + err);
+}
+}
 
 /// The exact abstract MaxDivergence factor map for the Boolean operator:
 /// identity input pairs cost zero, p=1 is infinite for distinct pairs.
@@ -324,7 +311,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
                 assert(bounded_payoff(payoff));
                 lemma_bool_rr_dp(
                     op, word_expectation, error_expectation, success,
-                    factor, left, right, distance, payoff,
+                    factor, left, right, payoff,
                 );
             }
         }
