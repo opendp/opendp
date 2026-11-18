@@ -23,8 +23,8 @@ fn test_sequential_composition() -> Fallible<()> {
     let mut queryable = root.invoke(&true)?;
 
     // construct the leaf-node queries:
-    let rr_poly_query = make_randomized_response_bool(0.5, false)?.into_poly();
-    let rr_query = make_randomized_response_bool(0.5, false)?;
+    let rr_poly_query = make_randomized_response_bool(0.5)?.into_poly();
+    let rr_query = make_randomized_response_bool(0.5)?;
 
     // pass queries into the SC queryable
     println!(
@@ -101,7 +101,7 @@ fn test_empty_adaptive_composition() -> Fallible<()> {
     assert_eq!(compositor.map(&1)?, 0.0);
 
     let mut queryable = compositor.invoke(&true)?;
-    let rr = make_randomized_response_bool(0.5, false)?;
+    let rr = make_randomized_response_bool(0.5)?;
     let err = queryable.eval(&rr).unwrap_err();
     assert_eq!(err.message.as_deref(), Some("out of queries"));
 
@@ -143,12 +143,12 @@ fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
 
 #[test]
 fn test_adaptive_failed_postprocessing_consumes_budget() -> Fallible<()> {
-    let rr = make_randomized_response_bool(0.75, false)?;
+    let rr = make_randomized_response_bool(0.75)?;
     let budget = rr.map(&1)?;
     let failing = (rr.clone()
         >> Function::new_fallible(|_: &bool| {
             // A constructor called after a private release may fail.
-            make_randomized_response_bool(-1.0, false)?;
+            make_randomized_response_bool(-1.0)?;
             Ok(false)
         }))?;
     let mut qbl = make_adaptive_composition(
@@ -168,7 +168,7 @@ fn test_adaptive_failed_postprocessing_consumes_budget() -> Fallible<()> {
 
 #[test]
 fn test_adaptive_pre_invocation_rejection_preserves_budget() -> Fallible<()> {
-    let rr = make_randomized_response_bool(0.75, false)?;
+    let rr = make_randomized_response_bool(0.75)?;
     let mut qbl = make_adaptive_composition(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
@@ -177,10 +177,7 @@ fn test_adaptive_pre_invocation_rejection_preserves_budget() -> Fallible<()> {
         vec![rr.map(&1)?],
     )?
     .invoke(&true)?;
-    assert!(
-        qbl.eval(&make_randomized_response_bool(0.9, false)?)
-            .is_err()
-    );
+    assert!(qbl.eval(&make_randomized_response_bool(0.9)?).is_err());
     assert!(qbl.eval(&rr).is_ok());
     Ok(())
 }

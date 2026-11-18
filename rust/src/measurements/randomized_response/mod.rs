@@ -10,8 +10,8 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::sample_bernoulli_float;
-use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
+use crate::traits::samplers::{bernoulli_u64_threshold, sample_bernoulli_u64};
+use crate::traits::{ExactIntCast, Hashable, InfCast, InfDiv, InfLn, InfMul, InfSub};
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -25,7 +25,7 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 // In the case of a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
-#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
+#[bootstrap(features("contrib"))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Citations
@@ -40,15 +40,15 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
-/// * `constant_time` - Set to true to enable constant time. Slower.
 pub fn make_randomized_response_bool(
     prob: f64,
-    constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     }
+
+    let threshold = bernoulli_u64_threshold(prob);
 
     let privacy_constant = if prob == 1.0 {
         f64::INFINITY
@@ -63,16 +63,14 @@ pub fn make_randomized_response_bool(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
-        }),
+        Function::new_fallible(move |arg: &bool| Ok(arg ^ !sample_bernoulli_u64(threshold)?)),
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
 
 #[bootstrap(
     features("contrib"),
-    arguments(categories(rust_type = "Vec<T>"), constant_time(default = false)),
+    arguments(categories(rust_type = "Vec<T>")),
     generics(T(example = "$get_first(categories)"))
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
@@ -86,7 +84,7 @@ pub fn make_randomized_response_bool(
 ///
 /// # Utility
 /// If the input is a member of `categories`,
-/// the mechanism returns the truthful category with probability `prob`,
+/// the mechanism returns the truthful category with approximately probability `prob`,
 /// so the expected 0-1 loss is `O(1 - prob)`.
 /// Otherwise, the output is sampled uniformly from `categories`.
 ///
@@ -115,16 +113,25 @@ pub fn make_randomized_response<T: Hashable>(
         );
     }
 
+    // At the uniform boundary, sample directly to retain exact epsilon = 0.
+    let uniform = prob == num_categories.recip();
+    let threshold = bernoulli_u64_threshold(prob);
+
     // d_out = min(d_in, 1) * (p / p').ln()
     //              where p' = the probability of categories off the diagonal
     //                       = (1 - p) / (t - 1)
     //              where t  = num_categories
     //       = min(d_in, 1) * (p / (1 - p) * (t - 1)).ln()
 
-    let privacy_constant = if prob == 1.0 {
+    let privacy_constant = if uniform {
+        0.0
+    } else if prob == 1.0 {
         f64::INFINITY
     } else {
-        prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?
+        // Use the actual, upward-quantized honesty probability.
+        // Integer numerator/complement avoid rounding p up to 1.0.
+        f64::inf_cast(threshold + 1)?
+            .inf_div(&f64::neg_inf_cast(u64::MAX - threshold)?)?
             .inf_mul(&num_categories.inf_sub(&1.0)?)?
             .inf_ln()?
     };
@@ -134,6 +141,9 @@ pub fn make_randomized_response<T: Hashable>(
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &T| {
+            if uniform {
+                return Ok(categories[sample_uniform_uint_below(categories.len())?].clone());
+            }
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
 
@@ -150,7 +160,7 @@ pub fn make_randomized_response<T: Hashable>(
             let lie = &categories[sample];
 
             // return the truth if we chose to be honest and the truth is in the category set
-            let be_honest = sample_bernoulli_float(prob, false)?;
+            let be_honest = sample_bernoulli_u64(threshold)?;
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),

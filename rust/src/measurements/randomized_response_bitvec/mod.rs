@@ -5,12 +5,13 @@ use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::{InfCast, InfDiv, InfLn, InfMul, InfSub, samplers::sample_bernoulli_float};
+use crate::traits::samplers::{bernoulli_u64_threshold, sample_bernoulli_u64};
+use crate::traits::{InfCast, InfDiv, InfLn, InfMul};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
+#[bootstrap(features("contrib"))]
 /// Make a Measurement that implements randomized response on a bit vector.
 ///
 /// This primitive can be useful for implementing RAPPOR.
@@ -21,13 +22,11 @@ mod ffi;
 /// # Arguments
 /// * `input_domain` - BitVectorDomain with max_weight and size
 /// * `input_metric` - DiscreteDistance
-/// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
-/// * `constant_time` - Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
+/// * `f` - Twice the target per-bit flipping probability. Must be in $(0, 1]$.
 pub fn make_randomized_response_bitvec(
     input_domain: BitVectorDomain,
     input_metric: DiscreteDistance,
     f: f64,
-    constant_time: bool,
 ) -> Fallible<Measurement<BitVectorDomain, DiscreteDistance, MaxDivergence, BitVector>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
@@ -46,18 +45,18 @@ pub fn make_randomized_response_bitvec(
         );
     }
 
-    if f <= 0.0 || f > 1.0 {
+    if !(f > 0.0 && f <= 1.0) {
         return fallible!(MakeMeasurement, "f must be in (0, 1]");
-    };
+    }
 
-    // epsilon = 2 * m * ln((2 - f) / f)
-    let epsilon = (2.0f64)
-        .inf_sub(&f)?
-        .inf_div(&f)?
+    // Round the flip probability upward. Compute epsilon from the actual
+    // integer numerator and complement, not the requested f.
+    let threshold = bernoulli_u64_threshold(f / 2.0);
+    let epsilon = f64::inf_cast(u64::MAX - threshold)?
+        .inf_div(&f64::neg_inf_cast(threshold + 1)?)?
         .inf_ln()?
         .inf_mul(&2.0)?
         .inf_mul(&f64::inf_cast(m)?)?;
-    let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
         input_metric,
@@ -65,7 +64,7 @@ pub fn make_randomized_response_bitvec(
         Function::new_fallible(move |arg: &BitVector| {
             let noise_vector = (0..arg.len())
                 .into_iter()
-                .map(|_| sample_bernoulli_float(f_2, constant_time))
+                .map(|_| sample_bernoulli_u64(threshold))
                 .collect::<Fallible<BitVector>>()?;
             // I wanted to avoid cloning here but the closure makes it necessary
             // Shouldn't use much memory anyway given bit-vecs
@@ -97,9 +96,12 @@ pub fn debias_randomized_response_bitvec(answers: Vec<BitVector>, f: f64) -> Fal
     if answers.len() == 0 {
         return fallible!(FailedFunction, "No answers provided");
     }
-    if f <= 0.0 || f > 1.0 {
-        return fallible!(FailedFunction, "f must be in (0, 1]");
+    if !(0.0..1.0).contains(&f) {
+        return fallible!(FailedFunction, "f must be in (0, 1)");
     }
+
+    // Account for the same upward quantization used by the measurement.
+    let flip_prob = (bernoulli_u64_threshold(f / 2.0) as f64 + 1.0) / 18446744073709551616.0;
 
     let n = answers.len() as f64;
     let k = answers[0].len();
@@ -119,7 +121,7 @@ pub fn debias_randomized_response_bitvec(answers: Vec<BitVector>, f: f64) -> Fal
 
     Ok(counts
         .into_iter()
-        .map(|y_i| (y_i - ((f / 2.0) * n)) / (1.0 - f))
+        .map(|y_i| (y_i - flip_prob * n) / (1.0 - 2.0 * flip_prob))
         .collect())
 }
 
@@ -134,7 +136,6 @@ mod test {
             BitVectorDomain::new().with_max_weight(1).with_size(10),
             DiscreteDistance,
             0.5,
-            false,
         )?;
         m_rr.invoke(&bitvec![u8, Lsb0;
             1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -152,8 +153,7 @@ mod test {
         assert!(!domain.member(&bitvec![u8, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0])?);
         assert!(!domain.member(&bitvec![u8, Lsb0; 1, 1, 0, 0, 0, 0, 0, 0])?);
         assert!(
-            make_randomized_response_bitvec(domain.without_size(), DiscreteDistance, 0.5, false)
-                .is_err()
+            make_randomized_response_bitvec(domain.without_size(), DiscreteDistance, 0.5).is_err()
         );
         Ok(())
     }
@@ -164,7 +164,6 @@ mod test {
             BitVectorDomain::new().with_max_weight(1).with_size(4),
             DiscreteDistance,
             1.0,
-            false,
         )?;
         let input = bitvec![u8, Lsb0; 0, 0, 0, 1];
 
@@ -185,6 +184,29 @@ mod test {
             seen_true && seen_false,
             "expected last bit to be randomized"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_randomized_response_bitvec_tiny_f() -> Fallible<()> {
+        let domain = BitVectorDomain::new().with_max_weight(1).with_size(1);
+        let measurement =
+            make_randomized_response_bitvec(domain.clone(), DiscreteDistance, f64::MIN_POSITIVE)?;
+        let epsilon = measurement.map(&1)?;
+        assert!(epsilon.is_finite() && epsilon > 0.0);
+        assert!(measurement.invoke(&bitvec![u8, Lsb0; 1]).is_ok());
+
+        assert!(make_randomized_response_bitvec(domain, DiscreteDistance, f64::NAN).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_debias_rr_bitvec_quantized_flip_probability() -> Fallible<()> {
+        let estimate =
+            debias_randomized_response_bitvec(vec![bitvec![u8, Lsb0; 0]], f64::MIN_POSITIVE)?;
+        assert_eq!(estimate, vec![-2f64.powi(-64)]);
+        assert!(debias_randomized_response_bitvec(vec![bitvec![u8, Lsb0; 0]], 1.0).is_err());
+        assert!(debias_randomized_response_bitvec(vec![bitvec![u8, Lsb0; 0]], f64::NAN).is_err());
         Ok(())
     }
 

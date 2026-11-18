@@ -17,7 +17,7 @@ The mechanism returned by \texttt{make\_randomized\_response} takes in a data se
 
 \begin{itemize}
     \item ...if \texttt{arg} is in \texttt{categories},
-    the mechanism truthfully returns the same value \texttt{arg} with probability \texttt{prob},
+    the mechanism truthfully returns the same value \texttt{arg} with an effective probability rounded upward onto the $2^{-64}$ grid,
     otherwise it lies by selecting one of the other categories uniformly at random.
     \item ...if \texttt{arg} is not in \texttt{categories},
     it returns a category chosen uniformly at random.
@@ -53,11 +53,11 @@ None
 \begin{tcolorbox}
     The proof assumes the following lemma.
     \begin{lemma}
-        \texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_float} satisfy their postconditions.
+        \texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_u64} satisfy their postconditions.
     \end{lemma}
 \end{tcolorbox}
 
-\texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_float} can only fail due to lack of system entropy.
+\texttt{sample\_uniform\_int\_below} and \texttt{sample\_bernoulli\_u64} can only fail due to lack of system entropy.
 This is usually related to the computer's physical environment and not the dataset.
 The rest of this proof is conditioned on the assumption that these functions do not raise an exception.
 
@@ -66,13 +66,13 @@ Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if
 If $x = x'$, then the output distributions on $x$ and $x'$ are identical, and therefore the max-divergence is 0.
 
 Now consider the case where $x \ne x'$.
-For shorthand, we let $p$ represent \texttt{prob}, the probability of returning the input,
+For shorthand, we let $p$ represent the actual probability of returning the input: for nonuniform sampling $p=(\texttt{threshold}+1)/2^{64}$, and for the uniform branch $p=1/t$,
 and $t$ denote the number of categories.
 Note that all categories must be unique as the input data type is a set.
 This means duplicate categories cannot influence the output distribution.
 
 $t$ must be at least two, by pseudocode line \ref{line:num_cats}, as any fewer would not be useful.
-$p$ is restricted to $[1/t, 1.0]$ by pseudocode line \ref{line:range}, as any less would not be useful.
+The effective probability $p$ is in $[1/t, 1.0]$: the requested \texttt{prob} is validated by pseudocode line \ref{line:range}, the sampler rounds upward, and at the uniform boundary a direct uniform draw gives exactly $p=1/t$.
 
 We'll first consider all possible output probabilities,
 and then use this to upper bound the ratio of any two probabilities.
@@ -132,7 +132,7 @@ The terms in the maximum on line \ref{max-terms} cover all combinations of $x$, 
     \item When $y \ne x$ and $y \ne x'$.
 \end{enumerate}
 
-Pseudocode line \ref{line:map} implements this bound with conservative rounding towards positive infinity.
+Pseudocode line \ref{line:map} implements this bound with conservative rounding towards positive infinity, using the integer numerator and complement of the actual quantized probability instead of the requested \texttt{prob}.
 When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p \cdot (t - 1)}{1 - p}\right) \leq \texttt{c}$.
 
 Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{DM}(x, x') \le \din$ with $\din \ge 0$,

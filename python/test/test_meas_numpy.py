@@ -25,8 +25,8 @@ def test_randomized_response_bitvec():
     # roundtrip: bytes -> mech -> numpy
     release = np.frombuffer(m_rr(data), dtype=np.uint8)
     assert np.array_equal(data, release)
-    # epsilon is 2 * m * ln((2 - f) / f)
-    assert m_rr.map(1) == 280.4690942426452
+    # f/2 is below 2^-64, so the flip probability rounds upward to 2^-64.
+    assert m_rr.map(1) == pytest.approx(2 * m * 64 * np.log(2))
 
     sums = dp.m.debias_randomized_response_bitvec([m_rr(data)] * 40, f=f)
     signs = np.packbits((np.array(sums) > 0).astype(int), bitorder="little")

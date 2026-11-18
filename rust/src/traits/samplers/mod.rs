@@ -5,6 +5,7 @@ pub(crate) mod test;
 
 mod bernoulli;
 pub use bernoulli::*;
+pub(crate) use bernoulli::{bernoulli_u64_threshold, sample_bernoulli_u64};
 
 mod cks20;
 pub use cks20::*;

@@ -3,10 +3,7 @@ use std::ffi::c_double;
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt},
     domains::{BitVector, BitVectorDomain},
-    ffi::{
-        any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
-        util::{c_bool, to_bool},
-    },
+    ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
     metrics::DiscreteDistance,
 };
 
@@ -17,12 +14,11 @@ pub extern "C" fn opendp_measurements__make_randomized_response_bitvec(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     f: c_double,
-    constant_time: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<BitVectorDomain>()).clone();
     let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<DiscreteDistance>()).clone();
 
-    make_randomized_response_bitvec(input_domain, input_metric, f, to_bool(constant_time))
+    make_randomized_response_bitvec(input_domain, input_metric, f)
         .into_any()
         .into()
 }

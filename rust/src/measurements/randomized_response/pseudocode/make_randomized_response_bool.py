@@ -1,11 +1,13 @@
 # type: ignore
-def make_randomized_response_bool(prob: f64, constant_time: bool):
+def make_randomized_response_bool(prob: f64):
     input_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
     output_measure = MaxDivergence()
 
     if prob < 0.5 or prob > 1:  # |\label{line:range}|
         raise Exception("probability must be in [0.5, 1]")
+
+    threshold = bernoulli_u64_threshold(prob)
 
     if prob == 1.0:
         c = float("inf")
@@ -19,7 +21,7 @@ def make_randomized_response_bool(prob: f64, constant_time: bool):
             return c
 
     def function(arg: bool) -> bool:  # |\label{line:fn}|
-        sample = not sample_bernoulli_float(prob, constant_time)
+        sample = not sample_bernoulli_u64(threshold)
 
         return arg ^ sample
 
