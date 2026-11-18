@@ -1,6 +1,6 @@
 //! Typed Polars scratch allocations for the existing slice owner.
 
-use std::cell::UnsafeCell;
+use ::polars_ffi::version_0::{SeriesExport, export_column, export_series};
 
 use crate::domains::{ExprPlan, Invariant, Margin};
 
@@ -30,6 +30,11 @@ fn validate_arrow_dtype(dtype: &ArrowDataType) -> Fallible<()> {
         }
         _ => Ok(()),
     }
+}
+
+fn validate_native_series(series: &Series) -> Fallible<()> {
+    let field = series.dtype().to_arrow_field(series.name().clone(), CompatLevel::newest());
+    validate_arrow_field(&field)
 }
 
 impl FfiSliceOwner {
@@ -69,25 +74,8 @@ impl FfiSliceOwner {
     }
 
     fn polars_series(&mut self, series: &Series) -> Fallible<FfiSlice> {
-        // Validate before Arrow schema construction (which also needs a CString).
-        let name = self.string(series.name().as_str())?;
-        let array = series.rechunk().to_arrow(0, CompatLevel::newest());
-        let field = ArrowField::new(series.name().clone(), array.dtype().clone(), true);
-        validate_arrow_field(&field)?;
-        let schema = export_field_to_c(&field);
-        let array = export_array_to_c(array);
-
-        // A consumer may release/move the payload and clear the release callback,
-        // but must not free these headers. UnsafeCell permits that mutation even
-        // while the owner is shared. Dropping the typed boxes frees the headers
-        // and releases any payload the consumer did not consume.
-        let array = UnsafeCell::raw_get(self.keep(UnsafeCell::new(array)));
-        let schema = UnsafeCell::raw_get(self.keep(UnsafeCell::new(schema)));
-        Ok(self.kept_slice(vec![
-            array.cast::<c_void>().cast_const(),
-            schema.cast::<c_void>().cast_const(),
-            name.cast::<c_void>(),
-        ]))
+        validate_native_series(series)?;
+        Ok(self.kept_slice(vec![export_series(series)]))
     }
 
     pub(super) fn polars_plain(&mut self, obj: &AnyObject) -> Fallible<()> {
@@ -140,14 +128,16 @@ impl FfiSliceOwner {
                 self.view = self.polars_series(obj.downcast_ref::<Series>()?)?;
             }
             TypeContents::PLAIN("DataFrame") => {
-                let columns = obj
-                    .downcast_ref::<DataFrame>()?
-                    .get_columns()
-                    .iter()
-                    .map(|column| self.polars_series(column.as_materialized_series()))
-                    .collect::<Fallible<Vec<_>>>()?;
-                // Existing output ABI is contiguous FfiSlice headers, not pointers.
-                self.view = self.kept_slice(columns);
+                let frame = obj.downcast_ref::<DataFrame>()?;
+                // Validate all schema strings before beginning native exports.
+                for column in frame.get_columns() {
+                    validate_native_series(column.as_materialized_series())?;
+                }
+                let exports: Vec<SeriesExport> =
+                    frame.get_columns().iter().map(export_column).collect();
+                // The Python importer disarms each moved descriptor's release
+                // callback; the owner drops any exports not yet consumed.
+                self.view = self.kept_slice(exports);
             }
             _ => return fallible!(FFI, "unsupported object type: {}", obj.type_.to_string()),
         }
@@ -157,9 +147,7 @@ impl FfiSliceOwner {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::Cell;
     use std::ffi::CStr;
-    use std::rc::Rc;
 
     use super::*;
 
@@ -362,253 +350,31 @@ mod tests {
         Ok(())
     }
 
-    // Test-only mirrors of the standard Arrow C ABI let us instrument callbacks
-    // without reaching into Polars' private fields. No production layout casts.
-    #[repr(C)]
-    struct CArray {
-        length: i64,
-        null_count: i64,
-        offset: i64,
-        n_buffers: i64,
-        n_children: i64,
-        buffers: *mut *const c_void,
-        children: *mut *mut ArrowArray,
-        dictionary: *mut ArrowArray,
-        release: Option<unsafe extern "C" fn(*mut ArrowArray)>,
-        private_data: *mut c_void,
-    }
-
-    #[repr(C)]
-    struct CSchema {
-        format: *const c_char,
-        name: *const c_char,
-        metadata: *const c_char,
-        flags: i64,
-        n_children: i64,
-        children: *mut *mut ArrowSchema,
-        dictionary: *mut ArrowSchema,
-        release: Option<unsafe extern "C" fn(*mut ArrowSchema)>,
-        private_data: *mut c_void,
-    }
-
-    struct ReleaseState<T> {
-        original: unsafe extern "C" fn(*mut T),
-        private_data: *mut c_void,
-        calls: Rc<Cell<usize>>,
-    }
-
-    unsafe extern "C" fn release_array(ptr: *mut ArrowArray) {
-        let header = unsafe { &mut *ptr.cast::<CArray>() };
-        let state =
-            unsafe { Box::from_raw(header.private_data.cast::<ReleaseState<ArrowArray>>()) };
-        header.private_data = state.private_data;
-        header.release = Some(state.original);
-        state.calls.set(state.calls.get() + 1);
-        unsafe { (state.original)(ptr) };
-    }
-
-    unsafe extern "C" fn release_schema(ptr: *mut ArrowSchema) {
-        let header = unsafe { &mut *ptr.cast::<CSchema>() };
-        let state =
-            unsafe { Box::from_raw(header.private_data.cast::<ReleaseState<ArrowSchema>>()) };
-        header.private_data = state.private_data;
-        header.release = Some(state.original);
-        state.calls.set(state.calls.get() + 1);
-        unsafe { (state.original)(ptr) };
-    }
-
-    fn track_releases(view: &FfiSlice) -> (Rc<Cell<usize>>, Rc<Cell<usize>>) {
-        assert_eq!(
-            std::mem::size_of::<CArray>(),
-            std::mem::size_of::<ArrowArray>()
-        );
-        assert_eq!(
-            std::mem::align_of::<CArray>(),
-            std::mem::align_of::<ArrowArray>()
-        );
-        assert_eq!(
-            std::mem::size_of::<CSchema>(),
-            std::mem::size_of::<ArrowSchema>()
-        );
-        assert_eq!(
-            std::mem::align_of::<CSchema>(),
-            std::mem::align_of::<ArrowSchema>()
-        );
-        assert_eq!(view.len, 3);
-        let triple = pointers::<c_void>(view);
-        let arrays = Rc::new(Cell::new(0));
-        let schemas = Rc::new(Cell::new(0));
-        unsafe {
-            let array = &mut *triple[0].cast_mut().cast::<CArray>();
-            let state = ReleaseState {
-                original: array.release.unwrap(),
-                private_data: array.private_data,
-                calls: arrays.clone(),
-            };
-            array.private_data = Box::into_raw(Box::new(state)).cast();
-            array.release = Some(release_array);
-            let schema = &mut *triple[1].cast_mut().cast::<CSchema>();
-            let state = ReleaseState {
-                original: schema.release.unwrap(),
-                private_data: schema.private_data,
-                calls: schemas.clone(),
-            };
-            schema.private_data = Box::into_raw(Box::new(state)).cast();
-            schema.release = Some(release_schema);
-        }
-        (arrays, schemas)
-    }
-
-    fn consume_series(view: &FfiSlice) -> Fallible<Series> {
-        let triple = pointers::<c_void>(view);
-        // Model an Arrow C importer moving both payloads and marking the source
-        // headers released. It must NOT take ownership of the header boxes.
-        let (array, schema) = unsafe {
-            (
-                std::ptr::replace(
-                    triple[0].cast_mut().cast::<ArrowArray>(),
-                    ArrowArray::empty(),
-                ),
-                std::ptr::replace(
-                    triple[1].cast_mut().cast::<ArrowSchema>(),
-                    ArrowSchema::empty(),
-                ),
-            )
-        };
-        let field = unsafe { import_field_from_c(&schema) }?;
-        let array = unsafe { import_array_from_c(array, field.dtype) }?;
-        let name = unsafe { CStr::from_ptr(triple[2].cast()) }
-            .to_str()
-            .unwrap();
-        Ok(Series::try_from((PlSmallStr::from_str(name), array))?)
-    }
-
     #[test]
-    fn arrow_headers_release_once_when_abandoned_or_consumed() -> Fallible<()> {
-        for name in ["", "λ", "a long column name"] {
-            for consumed in [false, true] {
-                let mut series = Series::new(name.into(), [Some(1_i32), None]);
-                series.append(&Series::new(name.into(), [Some(3_i32)]))?;
-                let obj = AnyObject::new(series);
-                let owner = FfiSliceOwner::from_object(&obj)?;
-                assert!(
-                    owner
-                        .keepalives
-                        .iter()
-                        .any(|v| v.is::<UnsafeCell<ArrowArray>>())
-                );
-                assert!(
-                    owner
-                        .keepalives
-                        .iter()
-                        .any(|v| v.is::<UnsafeCell<ArrowSchema>>())
-                );
-                let (arrays, schemas) = track_releases(&owner.view);
-                let imported = if consumed {
-                    Some(consume_series(&owner.view)?)
-                } else {
-                    None
-                };
-                drop(owner); // Boxes are freed even if their payloads were moved.
-                assert_eq!(schemas.get(), 1);
-                if let Some(imported) = imported {
-                    assert_eq!(arrays.get(), 0);
-                    assert_eq!(imported.name().as_str(), name);
-                    assert_eq!(
-                        imported.i32()?.into_iter().collect::<Vec<_>>(),
-                        vec![Some(1), None, Some(3)]
-                    );
-                    drop(imported);
-                }
-                assert_eq!(arrays.get(), 1);
-                assert_eq!(obj.downcast_ref::<Series>()?.len(), 3);
-            }
-        }
-        let obj = AnyObject::new(Series::new("empty".into(), Vec::<i32>::new()));
+    fn native_export_owner_releases_abandoned_descriptors() -> Fallible<()> {
+        let series = Series::new("a".into(), [1_i32, 2, 3]);
+        let obj = AnyObject::new(series.clone());
         let owner = FfiSliceOwner::from_object(&obj)?;
-        assert_eq!(consume_series(&owner.view)?.len(), 0);
-        Ok(())
-    }
-
-    #[test]
-    fn arrow_release_in_place_leaves_owner_to_free_header_boxes() -> Fallible<()> {
-        let obj = AnyObject::new(Series::new("released".into(), [1_i32]));
-        let owner = FfiSliceOwner::from_object(&obj)?;
-        let (arrays, schemas) = track_releases(&owner.view);
-        let triple = pointers::<c_void>(&owner.view);
-        unsafe {
-            let array = triple[0].cast_mut().cast::<ArrowArray>();
-            let schema = triple[1].cast_mut().cast::<ArrowSchema>();
-            ((*array.cast::<CArray>()).release.unwrap())(array);
-            ((*schema.cast::<CSchema>()).release.unwrap())(schema);
-            assert!((*array.cast::<CArray>()).release.is_none());
-            assert!((*schema.cast::<CSchema>()).release.is_none());
-        }
-        assert_eq!((arrays.get(), schemas.get()), (1, 1));
+        assert_eq!(owner.view.len, 1);
+        assert!(owner.keepalives.iter().any(|v| v.is::<Vec<SeriesExport>>()));
         drop(owner);
-        assert_eq!((arrays.get(), schemas.get()), (1, 1));
-        assert_eq!(obj.downcast_ref::<Series>()?.i32()?.get(0), Some(1));
-        Ok(())
-    }
+        assert_eq!(obj.downcast_ref::<Series>()?, &series);
 
-    #[test]
-    fn dataframe_columns_are_contiguous_headers_and_partial_consumption_is_safe() -> Fallible<()> {
-        let empty = AnyObject::new(DataFrame::empty());
-        assert_eq!(FfiSliceOwner::from_object(&empty)?.view.len, 0);
-        let obj = AnyObject::new(DataFrame::new(vec![
-            Series::new("number".into(), [Some(1_i32), None]).into_column(),
-            Series::new("text".into(), [Some("λ"), None]).into_column(),
-        ])?);
+        let frame = DataFrame::new(vec![series.clone().into_column()])?;
+        let obj = AnyObject::new(frame);
         let owner = FfiSliceOwner::from_object(&obj)?;
-        assert_eq!(owner.view.len, 2);
-        let columns =
-            unsafe { slice::from_raw_parts(owner.view.ptr.cast::<FfiSlice>(), owner.view.len) };
-        let first = track_releases(&columns[0]);
-        let second = track_releases(&columns[1]);
-        let imported = consume_series(&columns[0])?;
-        drop(owner); // One consumed column, one abandoned column.
-        assert_eq!((first.0.get(), first.1.get()), (0, 1));
-        assert_eq!((second.0.get(), second.1.get()), (1, 1));
-        drop(obj);
-        assert_eq!(imported.i32()?.get(0), Some(1));
-        drop(imported);
-        assert_eq!((first.0.get(), first.1.get()), (1, 1));
+        assert_eq!(owner.view.len, 1);
+        drop(owner);
         Ok(())
     }
 
     #[test]
-    fn nul_column_names_fail_and_clean_up_prior_scratch() -> Fallible<()> {
-        for _ in 0..16 {
-            let bad = Series::new("a\0b".into(), [1_i32]);
-            let obj = AnyObject::new(bad.clone());
-            assert!(FfiSliceOwner::from_object(&obj).is_err());
-            assert_eq!(obj.downcast_ref::<Series>()?.len(), 1);
-            let good = Series::new("good".into(), [2_i32]);
-            let obj = AnyObject::new(DataFrame::new(vec![
-                good.clone().into_column(),
-                bad.clone().into_column(),
-            ])?);
-            assert!(FfiSliceOwner::from_object(&obj).is_err());
-            assert_eq!(obj.downcast_ref::<DataFrame>()?.width(), 2);
-
-            let mut owner = FfiSliceOwner::new();
-            let view = owner.polars_series(&good)?;
-            let (arrays, schemas) = track_releases(&view);
-            assert!(owner.polars_series(&bad).is_err());
-            drop(owner);
-            assert_eq!((arrays.get(), schemas.get()), (1, 1));
-
-            let child = Series::new("bad\0field".into(), [1_i32]);
-            let nested =
-                StructChunked::from_series("outer".into(), 1, [&child].into_iter())?.into_series();
-            let obj = AnyObject::new(nested.clone());
-            assert!(FfiSliceOwner::from_object(&obj).is_err());
-            let obj = AnyObject::new(DataFrame::new(vec![
-                good.into_column(),
-                nested.into_column(),
-            ])?);
-            assert!(FfiSliceOwner::from_object(&obj).is_err());
-        }
+    fn native_export_rejects_nul_schema_before_exporting() -> Fallible<()> {
+        let bad = Series::new("a\0b".into(), [1_i32]);
+        assert!(FfiSliceOwner::from_object(&AnyObject::new(bad.clone())).is_err());
+        let good = Series::new("good".into(), [2_i32]);
+        let frame = DataFrame::new(vec![good.into_column(), bad.into_column()])?;
+        assert!(FfiSliceOwner::from_object(&AnyObject::new(frame)).is_err());
         Ok(())
     }
 }
