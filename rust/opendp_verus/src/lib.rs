@@ -1,3 +1,4 @@
+#![feature(proc_macro_hygiene)]
 //! Verus harness compiling production OpenDP source, not parallel code.
 // These are the production OpenDP core types and constructor source,
 // imported directly; no parallel Measurement or callback model is defined.
