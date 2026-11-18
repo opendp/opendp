@@ -7,9 +7,7 @@ use crate::{dyadic53, operator, verified_arithmetic};
 #[cfg(not(verus_only))]
 use super::operator;
 #[cfg(not(verus_only))]
-use crate::traits::samplers::{dyadic53, OneWordProgram};
-#[cfg(verus_only)]
-use crate::uniform_word::OneWordProgram;
+use crate::traits::samplers::dyadic53;
 
 #[cfg(verus_only)]
 use crate::verified_arithmetic::{
@@ -204,12 +202,8 @@ where
         assert(crate::measurement_parts::exact_word_postprocessing(
             operator, operator::BoolRR::release_callback, release_model));
     }
-    // All privacy properties are proved on these concrete components,
-    // before anything is stored in Function or PrivacyMap.
-    let program = OneWordProgram {
-        operator,
-        postprocess: operator::BoolRR::release_callback,
-    };
+    // All privacy properties are proved on these concrete callbacks,
+    // before either is erased into the ordinary OpenDP Measurement.
     #[cfg(verus_only)]
     proof! {
         assert forall|d: &u32|
@@ -221,19 +215,20 @@ where
                 implies out == Ok(operator.map(*d, 0.0f64)) by {}
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
-            &program, operator::BoolRR::map_callback, release_model);
+            operator, operator::BoolRR::release_callback,
+            operator::BoolRR::map_callback, release_model);
     }
     #[cfg(verus_only)]
     let measurement = {
         proof_with! { Ghost(release_model) }
         Measurement::new_certified(
-            input_domain, input_metric, output_measure,
-            program, operator::BoolRR::map_callback)
+            input_domain, input_metric, output_measure, operator,
+            operator::BoolRR::release_callback, operator::BoolRR::map_callback)
     }?;
     #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(
-        input_domain, input_metric, output_measure,
-        program, operator::BoolRR::map_callback,
+        input_domain, input_metric, output_measure, operator,
+        operator::BoolRR::release_callback, operator::BoolRR::map_callback,
     )?;
     Ok(Some(measurement))
 }
@@ -357,7 +352,8 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     domain: &DI,
     metric: &DiscreteDistance,
     measure: &MaxDivergence,
-    program: &OneWordProgram<operator::BoolRR, F>,
+    op: operator::BoolRR,
+    postprocess: F,
     map: P,
     model: crate::uniform_word::OneWordModel<bool, bool>,
 )
@@ -366,22 +362,21 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         F: Fn(&operator::BoolRR, &bool, Result<u64, ()>) -> Result<bool, ()>,
         P: Fn(&operator::BoolRR, &u32) -> Result<f64, ()>,
     requires
-        well_formed_bool_rr(program.operator),
+        well_formed_bool_rr(op),
         crate::measurement_parts::exact_word_postprocessing(
-            program.operator, program.postprocess, model),
+            op, postprocess, model),
         forall|truth: bool, word: Result<u64, ()>|
-            #[trigger] model(truth, word) == program.operator.release(truth, word),
-        forall|d: &u32| #[trigger] call_requires(map, (&program.operator, d)),
+            #[trigger] model(truth, word) == op.release(truth, word),
+        forall|d: &u32| #[trigger] call_requires(map, (&op, d)),
         forall|d: &u32, out: Result<f64, ()>|
-            #[trigger] call_ensures(map, (&program.operator, d), out)
-                ==> out == Ok(program.operator.map(*d, 0.0f64)),
+            #[trigger] call_ensures(map, (&op, d), out)
+                ==> out == Ok(op.map(*d, 0.0f64)),
         crate::bernoulli_proof::uniform_word_expectation_rule(
             crate::uniform_word::word_expectation()),
     ensures crate::measurement_proof::valid_one_word_components(
         domain, metric, measure, program, map, model),
 {
     use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
-    let op = program.operator;
     let words = crate::uniform_word::word_expectation();
     let expected = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
         crate::randomized_response_bool::release_expectation(
