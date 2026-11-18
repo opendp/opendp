@@ -12,6 +12,70 @@ pub open spec fn bounded_payoff<Z>(payoff: spec_fn(Z) -> real) -> bool {
     forall|outcome: Z| 0real <= #[trigger] payoff(outcome) <= 1real
 }
 
+/// Generic validity of the actual callable components of a measurement.
+///
+/// This is parameterized by the *semantic implementations* of Domain,
+/// Metric, and Measure, not caller-selected predicates. On all supported
+/// distances the map has an attainable, successful result. Every possible
+/// result is valid and bounds the observable distribution of the function.
+pub open spec fn valid_certified_parts<DI, MI, MO, TO>(
+    domain: &DI,
+    metric: &MI,
+    measure: &MO,
+    function: &crate::Function<DI::Carrier, TO>,
+    privacy_map: &crate::PrivacyMap<MI, MO>,
+) -> bool
+    where
+        DI: crate::CertifiedDomain,
+        MI: crate::CertifiedMetric<DI::Carrier>,
+        MO: crate::CertifiedMeasure<Result<TO, ()>>,
+{
+    &&& forall|input: &DI::Carrier|
+        domain.contains(input) ==>
+            #[trigger] crate::measurement_parts::function_call_requires(function, input)
+    &&& forall|d: &MI::Distance|
+        metric.valid_distance(d) ==>
+            #[trigger] crate::measurement_parts::privacy_map_call_requires(privacy_map, d)
+    &&& forall|d: &MI::Distance|
+        metric.valid_distance(d) ==>
+            exists|cost: MO::Distance|
+                #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+                    privacy_map, d, Ok(cost))
+    &&& forall|d: &MI::Distance, output: Result<MO::Distance, ()>|
+        metric.valid_distance(d)
+            && #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+                privacy_map, d, output)
+        ==> match output {
+            Err(_) => false,
+            Ok(cost) => {
+                &&& measure.valid_cost(&cost)
+                &&& forall|left: &DI::Carrier, right: &DI::Carrier|
+                    domain.contains(left) && domain.contains(right)
+                        && metric.close(left, right, d)
+                    ==> measure.dominates(
+                        |payoff: spec_fn(Result<TO, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, left, payoff),
+                        |payoff: spec_fn(Result<TO, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, right, payoff),
+                        &cost)
+            },
+        }
+}
+
+/// The same generic contract about the installed OpenDP measurement.
+pub open spec fn valid_certified_measurement<DI, MI, MO, TO>(
+    meas: &crate::Measurement<DI, MI, MO, TO>,
+) -> bool
+    where
+        DI: crate::CertifiedDomain,
+        MI: crate::CertifiedMetric<DI::Carrier>,
+        MO: crate::CertifiedMeasure<Result<TO, ()>>,
+{
+    valid_certified_parts(
+        &meas.input_domain, &meas.input_metric, &meas.output_measure,
+        &meas.function, &meas.privacy_map)
+}
+
 /// The source operator and the erased callback have the same output law
 /// whenever these expectations agree for all postconditions.
 pub open spec fn realizes_expectation<X, Z>(
