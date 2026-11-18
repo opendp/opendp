@@ -65,7 +65,8 @@ pub fn rr_effect_in_band(
     let Ghost(output_cost) = payoff;
     proof_with! { Tracked(start_credit), Ghost(output_cost) => Tracked(end_credit) }
     let sampled = crate::effect_callback::sample_bool_rr_with_effect(op, truth);
-    (sampled, Tracked(end_credit))
+    let tracked returned_credit = end_credit;
+    (sampled, Tracked(returned_credit))
 }
 
 pub fn probe_rr_effect_in_fn(
