@@ -37,6 +37,12 @@ verus! {
 pub uninterp spec fn uniform_word_expectation(
     payoff: spec_fn(Result<u64, WordError>) -> real,
 ) -> real;
+pub open spec fn word_expectation() ->
+    spec_fn(spec_fn(Result<u64, WordError>) -> real) -> real
+{
+    |payoff: spec_fn(Result<u64, WordError>) -> real|
+        uniform_word_expectation(payoff)
+}
 
 /// Trusted distributional law of sample_uniform_u64, including the
 /// input-independent error path. This statement is about entropy, not DP.
@@ -44,7 +50,7 @@ pub uninterp spec fn uniform_word_expectation(
 #[verifier::external_body]
 pub proof fn lemma_uniform_word_expectation_rule()
     ensures crate::bernoulli_proof::uniform_word_expectation_rule(
-        uniform_word_expectation),
+        word_expectation()),
 {
 }
 }

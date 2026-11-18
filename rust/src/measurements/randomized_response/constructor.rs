@@ -168,7 +168,7 @@ where
         assert(well_formed_bool_rr(operator));
         crate::uniform_word::lemma_uniform_word_expectation_rule();
         lemma_built_bool_rr_valid(
-            operator, crate::uniform_word::uniform_word_expectation);
+            operator, crate::uniform_word::word_expectation());
     }
     let measurement = Measurement::new_certified(
         input_domain,
