@@ -183,6 +183,11 @@ where
             operator, crate::uniform_word::word_expectation());
     }
     #[cfg(verus_only)]
+    proof_decl! {
+        let ghost release_model =
+            |truth: bool, word: Result<u64, ()>| operator.release(truth, word);
+    }
+    #[cfg(verus_only)]
     proof! {
         // The deterministic postprocessor has a unique return value for
         // every input/entropy pair, including every observable error.
@@ -198,11 +203,6 @@ where
         }
         assert(crate::measurement_parts::exact_word_postprocessing(
             operator, operator::BoolRR::release_callback, release_model));
-    }
-    #[cfg(verus_only)]
-    proof_decl! {
-        let ghost release_model =
-            |truth: bool, word: Result<u64, ()>| operator.release(truth, word);
     }
     #[cfg(verus_only)]
     let measurement = {
