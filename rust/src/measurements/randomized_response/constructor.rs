@@ -1,5 +1,5 @@
-//! Shared production/Verus assembly of the Boolean randomized-response
-//! operator. The outer OpenDP constructor only performs the audited erasure.
+//! Production Boolean randomized-response construction, imported directly by
+//! Verus. The actual Measurement::new_certified call is verified here.
 #[cfg(verus_only)]
 use vstd::prelude::*;
 #[cfg(verus_only)]

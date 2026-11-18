@@ -76,11 +76,15 @@ impl<TI, TO> Function<TI, TO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         #[cfg(not(verus_only))]
-        {         Self {
-            function: Arc::new(function),
-        } }
+        {
+            Self {
+                function: Arc::new(function),
+            }
+        }
         #[cfg(verus_only)]
-        { unimplemented!() }
+        {
+            unimplemented!()
+        }
     }
 
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
@@ -143,7 +147,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
         #[cfg(not(verus_only))]
-        { PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in)))) }
+        {
+            PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+        }
         #[cfg(verus_only)]
         { unimplemented!() }
     }
@@ -153,7 +159,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         #[cfg(not(verus_only))]
-        { PrivacyMap(Arc::new(map)) }
+        {
+            PrivacyMap(Arc::new(map))
+        }
         #[cfg(verus_only)]
         { unimplemented!() }
     }

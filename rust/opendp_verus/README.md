@@ -1,79 +1,63 @@
 # Verus proof of Boolean randomized response
 
-> **Work in progress on `verified-rr-measurement-contract`: not an
-> end-to-end certified Measurement constructor.** The current production
-> `make_randomized_response_bool` constructs the actual `Function` and
-> `PrivacyMap` and passes both directly to `Measurement::new_certified`.
-> However, `core/mod.rs` is not yet imported into the Verus harness,
-> `new_certified` has no mechanically enforced validity precondition, and
-> the real production constructor's call is not verified. The executable operator theorem is now unconditional on any
-> callback-adapter correspondence. **The returned Measurement is still not
-> machine-certified until real closure erasure and constructor validity are
-> proved at the production call site.**
+**Status: incomplete measurement certification.** This proof checks the
+production Boolean RR operator and its privacy bound, and now verifies the
+production call through `Measurement::new_certified`. It **does not yet**
+enforce the full measurement-validity precondition at that call. A successful
+Verus run here must not be described as a certified OpenDP Measurement.
 
-## Required acceptance criteria
+## Verified executable path
 
-1. Specify `valid_measurement` in terms of the actual domain, metric,
-   measure, function and privacy-map fields. The specification must cover
-   observable errors and conservative finite/infinite privacy accounting.
-2. Verify the production `Measurement::new_certified` body with that
-   validity predicate as a precondition and preserved on successful return.
-   Merely verifying an identically named transfer lemma is insufficient.
-3. Verify the actual `make_randomized_response_bool` call to that
-   constructor. This must discharge the precondition for the real
-   `Function::new_fallible` and `PrivacyMap::new` callbacks, not free
-   ghost callbacks constrained by `adapter_realizes`.
-4. If `Arc<dyn Fn>` erasure and dispatch remain trusted, specify their
-   preservation of actual callback semantics *once*, without trusting the
-   privacy guarantee or mapping itself.
-5. Demonstrate failing verification when the callback always returns the
-   truthful bit while its privacy map remains finite, or when a privacy
-   map understates its actual cost. Include those checks in the CI review
-   process. Ordinary Rust compilation cannot enforce Verus preconditions.
+- `dyadic53.rs` validates IEEE-754 probability bits and implements an exact
+  Bernoulli event on a uniform 64-bit word.
+- `BoolRR::release` and `BoolRR::invoke` are compiled from the same source
+  by OpenDP and Verus. The latter calls the production `sample_uniform_u64`.
+- `upper_log_odds_u53` and `build_bool_rr` construct a conservative privacy
+  cost using the explicitly trusted numerical primitives.
+- `build_bool_rr_measurement` constructs the **actual** operator and calls
+  `Measurement::new_certified`. Its proof invokes
+  `lemma_built_bool_rr_valid` on that exact operator before erasure, not on a
+  separate rebuilt copy. The lemma proves MaxDivergence for bounded payoffs
+  on `Result<bool, E>`, including observable failures.
+- `core/measurement.rs` and `core/measurement_parts.rs` are shared
+  production source. Verus verifies the ordinary constructor's common
+  `construct` body and the `new_certified` assembly. The latter accepts
+  fallible function and privacy-map closures and erases them internally.
 
-## Current partial proof
+## What is not yet proved
 
-`make_randomized_response_bool` calls `constructor::build_bool_rr`, which is
-verified from the **same executable Rust source**, then creates actual
-callback objects and passes them to `Measurement::new_certified`.
-The latter step is not yet verified.
+1. The **full validity predicate** must be attached as a required
+   precondition to the real `Measurement::new_certified`. It must refer to the
+   actual input domain, metric, output measure, function distribution, and
+   returned privacy map, including errors and infinite privacy loss.
+2. `Function::new_fallible` and `PrivacyMap::new_fallible` must have narrow,
+   generic, auditable contracts preserving the **actual** callbacks through
+   `Arc<dyn Fn>` erasure. Currently their allocation is external to Verus
+   and has no proved behavioral preservation postcondition.
+3. The proof of Boolean RR's operator distribution and numeric cost must
+   discharge the constructor's full predicate **for the installed callbacks**
+   rather than for separately supplied ghost functions. No
+   `adapter_realizes` assumption or invented proof marker is acceptable.
+4. The outer `make_randomized_response_bool` must be included in verification
+   to check `AtomDomain<bool>`, `DiscreteDistance`, and `MaxDivergence`
+   descriptors and validation against their production semantics.
+5. Negative verification tests must reject an always-truthful callback with
+   finite privacy cost and a map that understates privacy loss.
 
-## Checked by Verus
+## Explicit trust boundary
 
-- Accepted IEEE-754 bit patterns decode to the exact Bernoulli probability
-  `n / 2^53`; the uniform-word comparison implements that Bernoulli event.
-- If the numerical computation returns `Ok(epsilon)`, then
-  `exp(epsilon) >= n / (2^53 - n)` for `n < 2^53`.
-- Under the entropy contract, the concrete `BoolRR::release` obeys pure DP
-  for **all bounded payoffs** on `Result<bool, E>`, including observable errors.
-- The two-outcome domination inequality is proved once, separately
-  from RR's entropy and adjacency specifications.
-- `verify_built_bool_rr` executes the production builder and proves the
-  privacy contract for the *actual* `BoolRR::release` and `BoolRR::map`
-  using the generic semantic-transfer theorem in
-  `core/verus/measurement.rs`. There is no conditional adapter
-  implication or independently chosen callback semantics.
-- The native closure erasure and the actual `Measurement::new_certified`
-  constructor are **not yet covered** by the proof.
+- The law of `sample_uniform_u64` (uniform word on successful draws,
+  input-independent errors) is trusted. `uniform_word.rs` defines a
+  canonical expectation functional and an external proof of its law. Verus
+  does **not** itself prove that this functional is the operational
+  probabilistic semantics of the native RNG call; that is part of the
+  trusted entropy primitive.
+- Native numerical primitives must satisfy their specified exact cast,
+  conservative division/logarithm, and infinity contracts. Mathematical
+  exponential/logarithm facts are trusted. Dashu and panic handling remain
+  outside verification.
+- `Arc<dyn Fn>` allocation and dynamic dispatch remain external, and
+  preserving the behavioral semantics through them is **not yet established**.
 
-
-## Trusted boundary
-
-1. `sample_uniform_u64` / `fill_bytes` has the stated uniform-word law,
-   including input-independent failures.
-2. The numeric primitives implement their specified exact integer cast,
-   upward-rounded `inf_div` and `inf_ln`, and positive infinity. The
-   mathematical `exp`/`ln` facts are trusted. The exact binary64 real
-   interpretation remains defined but opaque to ordinary proof callers;
-   a proved lemma supplies bitwise congruence. Dashu and panic handling
-   are not verified.
-3. `Function::new_fallible`, `PrivacyMap::new`, and their
-   `Arc<dyn Fn>` storage preserve callback semantics, including errors.
-   This is still a **missing proof boundary** for a complete Measurement,
-   not an assumption imported by the operator-validity theorem.
-
-Verus does **not** verify the actual `Measurement` object's trait-object
-dispatch. The current theorem establishes validity of the executable operator and its
-own privacy map under the entropy/numerical contracts, without a callback
-correspondence premise. It does not yet certify the erased `Measurement`
-object. The bridge to the real `new_certified` constructor is still missing.
+Neither the trusted primitives nor a correct field-assembly proof substitute
+for verification of a complete OpenDP Measurement.
