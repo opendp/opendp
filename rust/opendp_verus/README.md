@@ -45,7 +45,50 @@ is not assumed when they are assembled into a `Measurement`.
   shared source. The privacy theorem applies to both Boolean inputs, so
   it does not require an assumption about general `CheckAtom` membership.
 
+## Concrete one-word sampler: EPT milestone
+
+The production `sample_word_then` now has a verified **error-credit
+transport** contract. An arbitrary cost function on entropy results,
+bounded in `[0, 1)`, is assigned to the exact result of
+`sample_uniform_u64()`. The production `postprocess` invocation must
+preserve that cost according to its verified return specification.
+
+- `rust/opendp_verus/src/one_word_credit.rs` contains the minimal linear
+  `vstd::resource` credit used in this argument. There is no general
+  Alerus dependency, thin-air rule, recursion, or rejection sampler.
+- `sample_uniform_u64` is the **only** function with the trusted
+  probabilistic credit-transfer rule. `sample_word_then` executes and
+  verifies the ordinary call followed by the ordinary postprocessor.
+  Ghost arguments are supplied with `proof_with!` and erased natively.
+- `BoolRR::release_callback` has a verified lemma showing that pulling
+  back an arbitrary strictly bounded output payoff gives a valid input
+  allocation for the generic one-word rule. The first-stage contract
+  therefore applies to the actual deterministic Boolean RR callback.
+- The *interpretation* of the resource judgment as an expectation theorem
+  depends on the soundness of the probabilistic error-credit model.
+  The adapted credit calculus has **not** itself been given a mechanized
+  soundness proof here. Verus checks the conditional EPT judgment, not
+  an independent operational-probability semantics of the Rust RNG.
+  Arbitrary payoffs in `[0, 1]` can be scaled into `[0, 1)` when
+  applying the EPT metatheorem.
+
+The trusted erasure contract in `Function::new_from_one_word_operator`
+remains separate and **has not** been discharged by this milestone.
+The existing `function_expectation` equality still depends on that
+contract when constructing a `Measurement`.
+
 ## Falsification
+
+Commit `d522b57` changed only the executable
+`sample_word_then` callback input from the sampled `entropy` to
+`Ok(0u64)`, leaving the entropy draw in place. Verus rejected the
+claim `call_ensures(postprocess, (operator, input, entropy), output)`
+at `uniform_word.rs:100`, exactly where the output must be linked to
+the random word. The native regression also failed. Commit
+`b146c69` restored the production call and both CI jobs passed.
+This is a negative test of *execution-linked* credit transport, not
+a test of the `Arc<dyn Fn>` erasure claim.
+
 
 Commit `07bfc4e` temporarily replaced the already-proved sampled-word
 `Function` with an always-truthful `Function` at the final constructor
