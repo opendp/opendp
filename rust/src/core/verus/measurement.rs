@@ -1,9 +1,5 @@
-//! Generic semantic transfer theorem for valid measurements.
-//!
-//! This theorem is not a constructor contract or a model of erased Rust
-//! callbacks. It can transfer an already-established privacy guarantee across
-//! independently established equalities of function and map semantics. The
-//! equivalence premises must never be used to assume a mechanism is private.
+//! Generic semantic validity contracts for certified measurements.
+//! Concrete callback validity must hold before ordinary Rust callback storage.
 use vstd::prelude::*;
 
 verus! {
