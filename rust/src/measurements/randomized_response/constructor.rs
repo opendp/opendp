@@ -155,7 +155,7 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
             &&& measurement.input_domain == input_domain
             &&& measurement.input_metric == input_metric
             &&& measurement.output_measure == output_measure
-            &&& crate::measurement_proof::valid_bool_rr_measurement(&measurement)
+            &&& crate::measurement_proof::valid_certified_measurement(&measurement)
             &&& forall|truth: &bool|
                 #[trigger] crate::measurement_parts::function_call_requires(
                     &measurement.function, truth)
