@@ -304,15 +304,10 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)):  # type: ignore[misc]
     _type_ = FfiSlice
-    _dependencies: MutableMapping = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        FfiSlicePtr._dependencies.setdefault(id(self), []).extend(args)
-
-    def __del__(self, _dependencies=_dependencies):
-        """Release dependencies even after this module's globals are cleared."""
-        _dependencies.pop(id(self), None)
+        """Keep borrowed backing storage alive for as long as this view exists."""
+        self.__dict__.setdefault("_keepalive", []).extend(args)
 
 
 class _OwnedFfiSliceOwner(ctypes.c_void_p):
