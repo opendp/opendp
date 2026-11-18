@@ -339,10 +339,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     /// Only Arc allocation/dispatch in new_fallible remains external.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
+        requires forall|d: &MI::Distance| #[trigger]
+            call_requires(map, (&operator, d)),
         ensures
             forall|d: &MI::Distance|
-                #[trigger] privacy_map_call_requires(&result, d)
-                    == call_requires(map, (&operator, d)),
+                #[trigger] privacy_map_call_requires(&result, d),
             forall|d: &MI::Distance, out: Fallible<MO::Distance>|
                 #[trigger] privacy_map_call_ensures(&result, d, out)
                     == call_ensures(map, (&operator, d), out),
