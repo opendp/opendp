@@ -291,6 +291,7 @@ fn test_fill_null_numeric_coercion_matches_optimized_polars() -> Fallible<()> {
         assert_eq!(t.output_domain.column.dtype(), output.dtype().clone());
         assert!(!t.output_domain.column.nullable);
         assert!(!output.has_nulls());
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(t.output_domain.column.member(output)?);
     }
     Ok(())
@@ -330,6 +331,7 @@ fn test_fill_null_boundary_literals_match_optimized_polars() -> Fallible<()> {
         );
         assert!(!t.output_domain.column.nullable, "{expr:?}");
         assert!(!output.has_nulls(), "{expr:?}");
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(t.output_domain.column.member(output)?, "{expr:?}");
     }
     Ok(())

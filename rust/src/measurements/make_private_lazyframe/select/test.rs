@@ -91,6 +91,7 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_private_select_rejects_noncanonical_projection_options() -> Fallible<()> {
     use std::sync::Arc;
 

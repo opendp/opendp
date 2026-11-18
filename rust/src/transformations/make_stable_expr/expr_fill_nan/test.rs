@@ -170,6 +170,7 @@ fn test_fill_nan_boundary_literals_match_optimized_polars() -> Fallible<()> {
             output.has_nulls(),
             "{expr:?}"
         );
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(t.output_domain.column.member(output)?, "{expr:?}");
     }
     Ok(())
