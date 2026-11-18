@@ -61,10 +61,19 @@ of a zero-cost privacy map that disagreed with the operator's cost.
 - `sample_uniform_u64` is trusted to provide a uniform word on success,
   with errors independent of the private Boolean. The actual RNG backend,
   its failure behavior, and entropy quality are not mechanized.
-- The generic `Function::new_from_one_word_operator` and
-  `PrivacyMap::new_from_operator` `external_body` contracts trust
-  faithful `Arc<dyn Fn>` dispatch and one-word expectation preservation.
-  **Neither assumes differential privacy.**
+- `Function::new_from_one_word_operator` is an `external_body` with
+  an expectation-preservation postcondition. **This is substantially more
+  trust than Arc dispatch:** it assumes the distribution of the erased
+  executable callback is the prescribed one-word law. A native-only change
+  to this adapter can invalidate privacy without invalidating Verus.
+  The bounded-postcondition proof does not justify this assumption.
+- `PrivacyMap::new_from_operator` separately trusts faithful
+  `Arc<dyn Fn>` dispatch for the executable map. Its callback implementation
+  and total-success behavior are verified before erasure.
+- The production `BoolRR::invoke` duplicate was removed: the installed
+  Function's actual native sampling path is `sample_word_then` followed
+  by `BoolRR::release_callback`. Native sampling regression tests cover
+  this erased path; they do not discharge its expectation theorem.
 - Numerical upward rounding for division and logarithm, exact integer
   casts and positive infinity are trusted primitives. Mathematical
   exponential/logarithm facts are external. Panic behavior is not proved.
@@ -94,3 +103,16 @@ The proof is conditional on these stated primitives. It is not a proof of
 the native entropy source, the full Rust runtime, or arbitrary OpenDP
 measurements. No caller-supplied privacy witness or certification token
 is trusted.
+
+## Next proof boundary
+
+For an actual end-to-end certificate, the expectation of the installed
+`Function` must be **derived**, not stipulated. A sound replacement should
+(a) justify the probabilistic behavior of the shared executable
+`sample_word_then` using the trusted `sample_uniform_u64` rule (e.g.
+Alerus-style expectation-preserving reasoning), and (b) prove or narrowly
+trust that the `Arc<dyn Fn>` trampoline executes that verified program.
+Importing an Alerus-style ghost model without a sound connection to the
+native closure **does not** close the gap. The acceptance test is that
+replacing the closure's entropy with a fixed word must cause **Verus**
+verification to fail, not merely the native statistical tests.
