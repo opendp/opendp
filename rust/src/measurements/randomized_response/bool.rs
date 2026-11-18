@@ -83,6 +83,19 @@ mod tests {
     use crate::core::Domain;
 
     #[test]
+    fn public_boolean_rr_uses_expected_privacy_map() {
+        let infinite = make_randomized_response_bool(1.0, false).unwrap();
+        assert_eq!(infinite.map(&0).unwrap(), 0.0);
+        assert_eq!(infinite.map(&1).unwrap(), f64::INFINITY);
+
+        let finite = make_randomized_response_bool(0.75, true).unwrap();
+        assert_eq!(finite.map(&0).unwrap(), 0.0);
+        assert!(finite.map(&1).unwrap().is_finite());
+
+        assert!(make_randomized_response_bool(0.49, false).is_err());
+    }
+
+    #[test]
     fn boolean_non_null_domain_matches_default() {
         let domain = AtomDomain::<bool>::new_non_nan();
         assert_eq!(domain, AtomDomain::<bool>::default());
