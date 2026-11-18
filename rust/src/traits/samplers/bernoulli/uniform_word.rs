@@ -90,9 +90,8 @@ where
     X: Copy,
     F: Fn(&Op, X, Result<u64, WordError>) -> Result<Y, WordError>,
 {
-    #[cfg_attr(verus_only, verus_spec(with
-        Tracked(start), Ghost(word_cost) => Tracked(draw_credit)
-    ))]
+    #[cfg(verus_only)]
+    proof_with! {Tracked(start), Ghost(word_cost) => Tracked(draw_credit)}
     let entropy = sample_uniform_u64();
     let output = postprocess(operator, input, entropy);
     #[cfg(verus_only)]
@@ -104,7 +103,7 @@ where
                 amount: output_cost(output)
             }));
         }
-        #[verus_spec(with |= Tracked(draw_credit))]
+        proof_with!(|= Tracked(draw_credit));
         output
     }
     #[cfg(not(verus_only))]
