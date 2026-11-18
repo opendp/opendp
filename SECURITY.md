@@ -1,13 +1,6 @@
-
-## Security
-
-If you believe you have found a security vulnerability in any OpenDP repository, please report it to us as described below.
-
 ## Reporting Security Issues
 
-**Please do not report security vulnerabilities through public GitHub issues.**
-
-Instead, please report them to us via email at security@opendp.org.
+Issues should be filed for privacy-guarantee bugs so they can be resolved in the open. If you are concerned about describing the bug publicly, email [security@opendp.org](mailto:security@opendp.org).
 
 You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 
