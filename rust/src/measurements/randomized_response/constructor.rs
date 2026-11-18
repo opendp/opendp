@@ -345,6 +345,8 @@ where
                     &privacy_map, &distance, Ok(epsilon))
                 implies {
                     &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+                    &&& (crate::verified_arithmetic::finite(epsilon)
+                        || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64)
                     &&& match crate::measurement_proof::bool_rr_reported_factor(
                         distance, epsilon) {
                         None => true,
@@ -360,6 +362,15 @@ where
                 }
             by {
                 assert(epsilon == operator.map(distance, 0.0f64));
+                if distance == 0 {
+                    assert(f64_to_bits(epsilon) == 0u64);
+                    assert(crate::verified_arithmetic::finite(epsilon));
+                } else if operator.numerator == 9_007_199_254_740_992u64 {
+                    assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
+                } else {
+                    assert(crate::verified_arithmetic::finite(operator.privacy_cost));
+                    assert(crate::verified_arithmetic::finite(epsilon));
+                }
                 assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
                     == operator_factor_map(operator, distance));
                 if distance == 0 {

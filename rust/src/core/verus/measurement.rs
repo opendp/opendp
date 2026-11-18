@@ -132,6 +132,8 @@ pub open spec fn bool_rr_pair_valid_parts<MI, MO>(
             privacy_map, &distance, Ok(epsilon))
         ==> {
             &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+            &&& (crate::verified_arithmetic::finite(epsilon)
+                || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64)
             &&& match bool_rr_reported_factor(distance, epsilon) {
                 None => true,
                 Some(factor) => factor >= 1real
