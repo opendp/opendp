@@ -190,6 +190,34 @@ where
             assert(call_requires(operator::BoolRR::map_callback, (&operator, d)));
         }
     }
+    // The *returned* Function delegates to the actual invoking method for
+    // every Boolean input. A distributional statement requires the separate
+    // one-word sampling semantics; call_ensures alone cannot provide one.
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|truth: &bool| #[trigger]
+            crate::measurement_parts::function_call_requires(
+                &measurement.function, truth)
+        by {
+            assert(crate::measurement_parts::function_call_requires(
+                &measurement.function, truth)
+                == call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
+            assert(call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
+        }
+        assert forall|truth: &bool, value: Result<bool, ()>|
+            crate::measurement_parts::function_call_ensures(
+                &measurement.function, truth, value)
+                && operator.numerator == 9_007_199_254_740_992u64
+                && value.is_ok()
+            implies value == Ok(*truth)
+        by {
+            assert(crate::measurement_parts::function_call_ensures(
+                &measurement.function, truth, value)
+                == call_ensures(operator::BoolRR::invoke_callback, (&operator, truth), value));
+            assert(call_ensures(operator::BoolRR::invoke_callback, (&operator, truth), value));
+            assert(value == Ok(*truth));
+        }
+    }
     // This statement is about the *returned erased PrivacyMap*, not just
     // the operator's pre-erasure cost. A wrong method would fail verification.
     #[cfg(verus_only)]
