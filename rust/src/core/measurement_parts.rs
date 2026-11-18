@@ -335,9 +335,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
-    /// Erase a named operator privacy-map method. The only trusted
-    /// obligation is exact forwarding of possible outcomes, including errors.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
+    /// Erase a named operator map through the verified closure adapter.
+    /// Only Arc allocation/dispatch in new_fallible remains external.
+    #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         ensures
             forall|d: &MI::Distance|
@@ -355,10 +355,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         Op: Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
-        #[cfg(not(verus_only))]
-        { Self::new_fallible(move |d| map(&operator, d)) }
-        #[cfg(verus_only)]
-        { unimplemented!() }
+        Self::new_fallible(move |d| map(&operator, d))
     }
 
     #[cfg_attr(verus_only, verus_verify(external_body))]
