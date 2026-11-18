@@ -60,20 +60,31 @@ where
         })
     }
 
-    /// Constructor for a function/privacy-map pair whose *actual* semantics
-    /// have been proved to satisfy the measurement validity contract.
+    /// The certification boundary is deliberately *before* callback erasure.
+    /// Verus must require the full measurement-validity contract of the two
+    /// concrete closures at every call site. This method only packages those
+    /// callbacks into the ordinary OpenDP Measurement.
     ///
-    /// This native body still needs to be imported into the Verus harness,
-    /// with the full validity predicate as a precondition. Until then, the
-    /// name alone does not certify callers; see opendp_verus/README.md.
-    pub(crate) fn new_certified(
+    /// IMPORTANT: the native method has not yet been imported and verified
+    /// with that precondition. Until then its name conveys no certification.
+    pub(crate) fn new_certified<F, P>(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        function: Function<DI::Carrier, TO>,
-        privacy_map: PrivacyMap<MI, MO>,
-    ) -> Fallible<Self> {
-        Self::new(input_domain, input_metric, output_measure, function, privacy_map)
+        function: F,
+        privacy_map: P,
+    ) -> Fallible<Self>
+    where
+        F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
+        P: Fn(&MI::Distance) -> MO::Distance + 'static,
+    {
+        Self::new(
+            input_domain,
+            input_metric,
+            output_measure,
+            Function::new_fallible(function),
+            PrivacyMap::new(privacy_map),
+        )
     }
 
     #[allow(dead_code)]

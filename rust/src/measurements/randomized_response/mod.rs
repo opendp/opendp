@@ -60,16 +60,12 @@ pub fn make_randomized_response_bool(
     };
     let _ = constant_time; // Both settings use one fixed-size entropy draw.
 
-    let function = Function::new_fallible(move |truth: &bool| operator.invoke(*truth));
-    let privacy_map =
-        PrivacyMap::new(move |distance: &u32| operator.map(*distance, 0.0));
-
     Measurement::new_certified(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        function,
-        privacy_map,
+        move |truth: &bool| operator.invoke(*truth),
+        move |distance: &u32| operator.map(*distance, 0.0),
     )
 }
 
