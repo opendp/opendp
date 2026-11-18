@@ -1,80 +1,55 @@
-# Boolean randomized response: verified kernel and constructor input
+# Verified Boolean randomized response
 
-The public `make_randomized_response_bool` constructor now uses the
-**Verus-verified** production `dyadic53::checked_numerator_from_bits`.
-For every accepted IEEE-754 encoding, Verus proves that the decoded
-numerator represents the exact `f64` value in the range `[0.5, 1.0]`.
-The native constructor is built around `BoolRR<f64>`, and its function
-callback calls `BoolRR::invoke` (one entropy draw followed by the
-verified `BoolRR::release`). Its privacy callback invokes the same
-operator's `BoolRR::map` on a copy of the operator.
+The production `make_randomized_response_bool` constructor now uses
+`Measurement::new_certified` with a private `CertifiedBoolRR` adapter.
+This follows the pattern established by
+`Transformation::new_certified` on `verified-stable-lazyframe`.
 
-## Verified theorem
+## What Verus proves
 
-`lemma_validated_bool_rr_privacy` connects the public constructor's
-checked binary64 bits, exact integer odds, the production Boolean RR
-postprocessor, and an arbitrary bounded payoff on `Result<bool, E>`.
+- The production binary64 bit decoder validates the probability interval and
+  derives the exact dyadic Bernoulli numerator.
+- The production integer sampler and `BoolRR::release` implement the expected
+  Boolean response for each entropy word, preserving every error payload.
+- Under the uniform-word expectation contract and an exact odds bound,
+  `lemma_bool_rr_dp` proves pure-DP expectation domination for every bounded
+  payoff on `Result<bool, E>`.
+- `lemma_rr_operator_valid_measurement` lifts the operator theorem to the
+  measurement-level relational expectation specification.
+- `core/verus/measurement.rs::lemma_new_certified` transfers that guarantee
+  from the concrete operator to erased callbacks, **provided** the callback
+  expectation and privacy map realize the verified operator's semantics.
+- `lemma_bool_rr_new_certified` specializes this erasure theorem to Boolean
+  randomized response.
 
-For every valid accepted bit pattern and every input pair at the
-specified discrete distance, it proves the pure-DP relational expectation
-inequality under these two *explicit* premises:
+The proof does **not** model a second implementation of the sampler or require
+the Alerus library. The existing `Arc<dyn Fn>` representation is unchanged.
 
-1. `uniform_word_expectation_rule` describes the law of the **actual**
-   `sample_uniform_u64` call, including its input-independent error
-   payloads.
-2. The real factor corresponding to the reported privacy cost satisfies
-   `numerator <= factor * (2^53 - numerator)` for finite costs.
+## Native certification boundary
 
-Verus proves the exact decoder, integer complement, prefix-event
-counting, `BoolRR::release` and `BoolRR::map`, the odds implication,
-and the output expectation inequality. A `p=1` operator has infinite
-privacy cost for positive distances.
+`CertifiedMeasurementParts` is a private-to-the-crate adapter interface.
+The only Boolean RR implementation is for the private `CertifiedBoolRR`
+wrapper, which is created only after the public constructor has checked its
+input bits and computed its privacy cost. It installs the same `BoolRR`
+state in both callbacks via `Function::new_fallible` and `PrivacyMap::new`.
 
-## Why this is not yet a theorem about the returned Measurement
+Verus currently cannot verify OpenDP's `Arc<dyn Fn>` dispatch itself.
+The adapter's equality-of-expectations and privacy-map correspondence are
+therefore **trusted obligations**, just as in
+`Transformation::new_certified`. A trait implementation alone does not
+supply a proof of validity for arbitrary callbacks.
 
-We have **not** proved the formula
+## Remaining work for fully checked constructor validity
 
-```text
-make_randomized_response_bool(p) = Ok(m)  ==>  ValidMeasurement(m)
-```
+1. Connect the uniform-word expectation contract to the actual fallible
+   `sample_uniform_u64` and `fill_bytes` entropy source.
+2. Verify directed rounding for the production `inf_div` and `inf_ln`
+   operations and connect the returned binary64 privacy cost to the
+   real likelihood-ratio factor in the theorem.
+3. Either mechanically verify the standard-library callback-erasure
+   correspondence or retain this small, explicitly trusted native adapter.
 
-in Verus. Calling a proof about the concrete operator a proof of this
-formula would be an unsound shortcut. The remaining work is precisely:
-
-1. Prove/axiomatize at the entropy boundary that the
-   `sample_uniform_u64` expectation contract represents the actual
-   `fill_bytes` runtime behavior and is fresh across invocations.
-2. Establish the directed-rounding specification of
-   `f64::inf_div` and `f64::inf_ln`, and connect the actual returned
-   `privacy_constant` to the factor used in the DP theorem.
-3. Prove that the captured `BoolRR` and `privacy_cost` survive
-   `Function::new_fallible`, `PrivacyMap::new`, and
-   `Measurement::new` and retain their expected behavior under
-   `Measurement::invoke` and `Measurement::map`.
-   This should be a **generic, reusable** verified erasure theorem
-   over OpenDP's existing core types, not a custom certification marker.
-
-The metric-space check is not a substantive blocker here:
-`(AtomDomain<bool>, DiscreteDistance)::check_space` returns `Ok(())`
-in production. The constructor stores the callbacks unchanged; the
-obstacle is checking the higher-order erasure bridge in Verus.
-
-No separate probability-mass-function implementation, duplicate
-randomizer, trusted `new_certified` marker, or new runtime crate was
-introduced. Native and Verus CI exercise the shared production source.
-
-
-## Constructor erasure research finding
-
-The current pinned Verus rejects `Arc<dyn Fn(&TI) -> Fallible<TO>>`
-as an unsupported multi-trait object (the `Fn` hierarchy).
-A verification-only probe established that dispatch through a
-**single-trait** `Arc<dyn Callable>` with an inherited Verus method
-contract is supported. This probe was removed after verification:
-it does **not** prove anything about production `Arc<dyn Fn>`.
-
-A sound approach needs either a reusable, verified single-trait
-callback abstraction in OpenDP core or a narrow, justified
-standard-library/trait-object erasure contract. We should not
-introduce a `new_certified` marker or a direct postulate about
-`Measurement` validity merely to hide this obligation.
+Thus we have a checked **conditional** privacy proof and a certified
+constructor path, not a soundness theorem for arbitrary real-world entropy
+or floating-point implementations. No `new_certified` method treats a
+certificate marker as proof without the corresponding model assumptions.

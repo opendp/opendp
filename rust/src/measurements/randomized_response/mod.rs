@@ -69,9 +69,11 @@ impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence
 /// * `constant_time` - Both values use one fixed-size uniform-byte draw.
 ///
 /// # Verification status
-/// Verus checks the production XOR kernel and the fixed-width Bernoulli
-/// decision. Raw entropy, the f64 bit interpretation, numeric rounding, and
-/// constructor assembly remain explicit verification obligations.
+/// Verus checks parameter decoding, the production release kernel, and the
+/// conditional expectation-based privacy theorem. The constructor uses a
+/// private certified-parts adapter; Arc callback correspondence is audited.
+/// Entropy semantics and directed-rounded f64 privacy bounds remain explicit
+/// verification obligations.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
