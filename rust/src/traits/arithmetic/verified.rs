@@ -28,6 +28,15 @@ verus! {
         ((f64_to_bits(value) >> 52u64) & 2047u64) != 2047u64
     }
 
+    /// Finite exponent bits cannot encode positive infinity.
+    pub proof fn lemma_finite_bits_not_positive_infinity(bits: u64)
+        requires ((bits >> 52u64) & 2047u64) != 2047u64,
+        ensures bits != 0x7ff0_0000_0000_0000u64,
+    {
+        assert(bits != 0x7ff0_0000_0000_0000u64) by(bit_vector)
+            requires ((bits >> 52u64) & 2047u64) != 2047u64;
+    }
+
     pub open spec fn float_value(value: f64) -> real {
         let bits = f64_to_bits(value);
         let exponent = ((bits >> 52u64) & 2047u64) as nat;

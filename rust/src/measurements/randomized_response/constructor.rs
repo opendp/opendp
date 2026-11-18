@@ -259,9 +259,9 @@ pub fn verify_built_bool_rr<E>(
                         == 0x7ff0_0000_0000_0000u64);
                 } else {
                     assert(verified_arithmetic::finite(op.privacy_cost));
-                    assert(f64_to_bits(op.privacy_cost)
-                        != 0x7ff0_0000_0000_0000u64) by(bit_vector)
-                        requires verified_arithmetic::finite(op.privacy_cost);
+                    let bits = f64_to_bits(op.privacy_cost);
+                    assert(((bits >> 52u64) & 2047u64) != 2047u64);
+                    verified_arithmetic::lemma_finite_bits_not_positive_infinity(bits);
                     assert(f64_to_bits(callback_cost(op, d))
                         == f64_to_bits(op.privacy_cost));
                     assert(f64_to_bits(callback_cost(op, d))
