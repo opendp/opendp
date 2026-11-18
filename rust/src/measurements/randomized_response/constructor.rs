@@ -397,14 +397,8 @@ where
     }
     // This is the genuine certification boundary. Without the previous
     // quantified DP proof, Verus must reject this constructor invocation.
-    // TEMPORARY negative verification test: the following Function is NOT
-    // the proved sampled-word callback. The certified constructor must
-    // reject the attempted substitution rather than reuse its proof.
-    let replacement_function = Function::new_fallible(
-        move |truth: &bool| Ok(*truth));
     let measurement = Measurement::new_certified(
-        input_domain, input_metric, output_measure,
-        replacement_function, privacy_map,
+        input_domain, input_metric, output_measure, function, privacy_map,
     )?;
     Ok(Some(measurement))
 }
