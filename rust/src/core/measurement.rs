@@ -103,8 +103,8 @@ where
     /// The certification boundary is deliberately before callback erasure.
     /// Full measurement validity must be proved at every verified call site.
     ///
-    /// The full validity precondition and the production RR call-site proof
-    /// are still missing; a verified assembly result alone is not privacy.
+    /// The privacy-validity precondition is still missing. The current
+    /// postconditions only establish callback-forwarding and assembly.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         ensures match result {
@@ -112,6 +112,22 @@ where
                 &&& meas.input_domain == input_domain
                 &&& meas.input_metric == input_metric
                 &&& meas.output_measure == output_measure
+                &&& forall|arg: &DI::Carrier|
+                    #[trigger] super::measurement_parts::function_call_requires(
+                        &meas.function, arg)
+                        == call_requires(function, (arg,))
+                &&& forall|arg: &DI::Carrier, out: Fallible<TO>|
+                    #[trigger] super::measurement_parts::function_call_ensures(
+                        &meas.function, arg, out)
+                        == call_ensures(function, (arg,), out)
+                &&& forall|d: &MI::Distance|
+                    #[trigger] super::measurement_parts::privacy_map_call_requires(
+                        &meas.privacy_map, d)
+                        == call_requires(privacy_map, (d,))
+                &&& forall|d: &MI::Distance, out: Fallible<MO::Distance>|
+                    #[trigger] super::measurement_parts::privacy_map_call_ensures(
+                        &meas.privacy_map, d, out)
+                        == call_ensures(privacy_map, (d,), out)
             },
             Err(_) => true,
         },
