@@ -188,19 +188,27 @@ where
         // every input/entropy pair, including every observable error.
         assert forall|truth: &bool, word: Result<u64, ()>| {
             &&& call_requires(operator::BoolRR::release_callback, (&operator, truth, word))
-            &&& (exists|out: Result<bool, ()>|
+            &&& forall|out: Result<bool, ()>|
                 call_ensures(operator::BoolRR::release_callback,
-                    (&operator, truth, word), out))
-            &&& forall|a: Result<bool, ()>, b: Result<bool, ()>|
-                call_ensures(operator::BoolRR::release_callback, (&operator, truth, word), a)
-                    && call_ensures(operator::BoolRR::release_callback, (&operator, truth, word), b)
-                    ==> a == b
+                    (&operator, truth, word), out)
+                    ==> out == operator.release(*truth, word)
         } by {
-            let expected = operator.release(*truth, word);
-            assert(call_ensures(operator::BoolRR::release_callback,
-                (&operator, truth, word), expected));
+            assert(call_requires(operator::BoolRR::release_callback,
+                (&operator, truth, word)));
         }
     }
+    #[cfg(verus_only)]
+    let measurement = Measurement::new_certified(
+        input_domain,
+        input_metric,
+        output_measure,
+        operator,
+        operator::BoolRR::release_callback,
+        operator::BoolRR::map_callback,
+        Ghost(|truth: &bool, word: Result<u64, ()>|
+            operator.release(*truth, word)),
+    )?;
+    #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(
         input_domain,
         input_metric,

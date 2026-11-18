@@ -150,22 +150,17 @@ impl<TI, TO> Function<TI, TO> {
         { unimplemented!() }
     }
 
-    /// Construct a Function whose only random operation is one
-    /// sample_uniform_u64 call followed by the checked postprocessor.
-    ///
-    /// This trusted Arc-erasure contract provides the one-word distribution
-    /// law, but assumes NO mechanism privacy inequality. A callback must
-    /// establish total and single-valued postconditions for every word.
+    /// Erase an exact one-word sampler and deterministic postprocessor.
+    /// Trusted: Arc dispatch preserves the expectation of the executable
+    /// sample_word_then wrapper. The caller must prove its postprocessor's
+    /// actual outputs match the supplied ghost result model.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         requires forall|arg: &TI, word: Result<u64, ()>| {
             &&& call_requires(postprocess, (&operator, arg, word))
-            &&& (exists|out: Fallible<TO>|
-                call_ensures(postprocess, (&operator, arg, word), out))
-            &&& forall|a: Fallible<TO>, b: Fallible<TO>|
-                call_ensures(postprocess, (&operator, arg, word), a)
-                    && call_ensures(postprocess, (&operator, arg, word), b)
-                    ==> a == b
+            &&& forall|output: Fallible<TO>|
+                call_ensures(postprocess, (&operator, arg, word), output)
+                    ==> output == model(arg, word)
         },
         ensures
             forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
@@ -175,12 +170,13 @@ impl<TI, TO> Function<TI, TO> {
                         call_ensures(postprocess, (&operator, arg, word), output),
             forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
                 #[trigger] function_expectation(&result, arg, payoff)
-                    == crate::uniform_word::one_word_expectation(
-                        operator, arg, postprocess, payoff),
+                    == crate::uniform_word::one_word_expectation(arg, model, payoff),
     ))]
     pub(crate) fn new_from_one_word_operator<Op, F>(
         operator: Op,
         postprocess: F,
+        #[cfg(verus_only)]
+        Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>,
     ) -> Self
     where
         Op: Copy + 'static,

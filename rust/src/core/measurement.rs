@@ -112,12 +112,9 @@ where
     #[cfg_attr(verus_only, verus_spec(result =>
         requires forall|arg: &DI::Carrier, word: Result<u64, ()>| {
             &&& call_requires(postprocess, (&operator, arg, word))
-            &&& (exists|out: Fallible<TO>|
-                call_ensures(postprocess, (&operator, arg, word), out))
-            &&& forall|a: Fallible<TO>, b: Fallible<TO>|
-                call_ensures(postprocess, (&operator, arg, word), a)
-                    && call_ensures(postprocess, (&operator, arg, word), b)
-                    ==> a == b
+            &&& forall|out: Fallible<TO>|
+                call_ensures(postprocess, (&operator, arg, word), out)
+                    ==> out == model(arg, word)
         },
         ensures match result {
             Ok(meas) => {
@@ -137,7 +134,7 @@ where
                     #[trigger] super::measurement_parts::function_expectation(
                         &meas.function, arg, payoff)
                         == crate::uniform_word::one_word_expectation(
-                            operator, arg, postprocess, payoff)
+                            arg, model, payoff)
                 &&& forall|d: &MI::Distance|
                     #[trigger] super::measurement_parts::privacy_map_call_requires(
                         &meas.privacy_map, d)
@@ -157,12 +154,18 @@ where
         operator: Op,
         postprocess: F,
         privacy_map: P,
+        #[cfg(verus_only)]
+        Ghost(model): Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>,
     ) -> Fallible<Self>
     where
         Op: Copy + 'static,
         F: Fn(&Op, &DI::Carrier, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
+        #[cfg(verus_only)]
+        let function = Function::new_from_one_word_operator(
+            operator, postprocess, Ghost(model));
+        #[cfg(not(verus_only))]
         let function = Function::new_from_one_word_operator(operator, postprocess);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);
         Self::construct(
