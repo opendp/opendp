@@ -970,6 +970,14 @@ class _PolarsSeriesExport(ctypes.Structure):
     ]
 
 
+def _mark_native_export_consumed(export):
+    export.field = None
+    export.arrays = None
+    export.len = 0
+    export.release = None
+    export.private_data = None
+
+
 class _PolarsExportBuffer:
     """Drop unconsumed native exports via Polars, including Arrow payloads."""
 
@@ -977,21 +985,15 @@ class _PolarsExportBuffer:
         self.exports = exports
         self.import_series = import_series
 
-    def __del__(self, _address=ctypes.addressof):
+    def __del__(
+        self, _address=ctypes.addressof, _mark=_mark_native_export_consumed
+    ):
         for export in self.exports:
             if export.release:
                 # Descriptor-only release does not release unconsumed Arrow data.
                 # Importing then dropping it does, without reproducing the ABI.
                 self.import_series(_address(export))
-                _mark_native_export_consumed(export)
-
-
-def _mark_native_export_consumed(export):
-    export.field = None
-    export.arrays = None
-    export.len = 0
-    export.release = None
-    export.private_data = None
+                _mark(export)
 
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
