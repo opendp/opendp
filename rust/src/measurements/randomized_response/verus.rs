@@ -50,6 +50,41 @@ proof fn mul_rotate(x: real, y: real, z: real)
     assert(x * (y * z) == y * (x * z)) by(nonlinear_arith);
 }
 
+/// Algebraic core: swap two outcome weights, retain the same error mass.
+/// This does not mention Boolean RR, entropy, adjacency, or OpenDP types.
+proof fn two_outcome_domination(
+    p: real, factor: real, a: real, b: real, success: real, error: real,
+)
+    requires
+        0real <= p <= 1real,
+        factor >= 1real,
+        p <= factor * (1real - p),
+        1real - p <= factor * p,
+        a >= 0real, b >= 0real, success >= 0real, error >= 0real,
+    ensures
+        success * (p * a + (1real - p) * b) + error
+            <= factor * (success * ((1real - p) * a + p * b) + error),
+{
+    let left_one = p * a;
+    let left_two = (1real - p) * b;
+    let right_one = (1real - p) * a;
+    let right_two = p * b;
+    let left = left_one + left_two;
+    let right = right_one + right_two;
+    multiply_inequality(p, factor * (1real - p), a);
+    multiply_inequality(1real - p, factor * p, b);
+    mul_associative(factor, 1real - p, a);
+    mul_associative(factor, p, b);
+    assert(left_one <= factor * right_one);
+    assert(left_two <= factor * right_two);
+    distribute(factor, right_one, right_two);
+    assert(left <= factor * right);
+    multiply_inequality(left, factor * right, success);
+    mul_rotate(success, factor, right);
+    multiply_inequality(1real, factor, error);
+    distribute(factor, success * right, error);
+}
+
 /// Expected payoff of calling the *actual* BoolRR::release after one word
 /// from sample_uniform_u64. The `word_expectation` argument is the semantic
 /// expectation functional of that exact executable entropy call.
@@ -199,33 +234,11 @@ pub proof fn lemma_bool_rr_dp<E>(
         assert(p <= factor * p) by(nonlinear_arith)
             requires p >= 0real, factor >= 1real;
         assert(1real - p <= factor * p);
-        let one = p * a;
-        let two = (1real - p) * b;
-        let target_one = (1real - p) * a;
-        let target_two = p * b;
-        let vl = one + two;
-        let vr = target_one + target_two;
-
-        multiply_inequality(p, factor * (1real - p), a);
-        multiply_inequality(1real - p, factor * p, b);
-        mul_associative(factor, 1real - p, a);
-        mul_associative(factor, p, b);
-        assert(one <= factor * target_one);
-        assert(two <= factor * target_two);
-        distribute(factor, target_one, target_two);
-        assert(vl <= factor * vr);
-
-        multiply_inequality(vl, factor * vr, success);
-        mul_rotate(success, factor, vr);
-        assert(success * vl <= factor * (success * vr));
-        multiply_inequality(1real, factor, err);
-        distribute(factor, success * vr, err);
-        assert(success * vl + err <= factor * (success * vr + err));
-
+        two_outcome_domination(p, factor, a, b, success, err);
         assert(release_expectation(left, op, word_expectation, payoff)
-            == success * vl + err);
+            == success * (p * a + (1real - p) * b) + err);
         assert(release_expectation(right, op, word_expectation, payoff)
-            == success * vr + err);
+            == success * ((1real - p) * a + p * b) + err);
     }
 }
 
