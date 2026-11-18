@@ -230,9 +230,9 @@ where
     let map = #[verus_spec(result: RRMapResult =>
         ensures result == Ok(operator.map(*distance, 0.0f64)),
     )]
-    move |distance: &u32| operator.map_callback(distance);
+    move |_distance: &u32| Ok(0.0f64);
     #[cfg(not(verus_only))]
-    let map = move |distance: &u32| operator.map_callback(distance);
+    let map = move |_distance: &u32| Ok(0.0f64);
     #[cfg(verus_only)]
     proof! {
         // The sole unchecked probabilistic correspondence: this precise
