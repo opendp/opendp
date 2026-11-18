@@ -29,6 +29,8 @@ type ArithmeticError = crate::error::Error;
             None => false,
             Some(n) => {
                 &&& op.numerator == n
+                &&& crate::bernoulli_proof::accepted_binary64_value(bits)
+                    == n as real / 9_007_199_254_740_992real
                 &&& n < 9_007_199_254_740_992u64 ==> {
                     &&& verified_arithmetic::real_exp(
                         verified_arithmetic::float_value(op.privacy_cost)) >= 1real
@@ -46,6 +48,10 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR<f64>>, Arithme
     let Some(numerator) = dyadic53::checked_numerator_from_bits(bits) else {
         return Ok(None);
     };
+    #[cfg(verus_only)]
+    proof! {
+        crate::bernoulli_proof::lemma_checked_binary64_probability(bits);
+    }
     let privacy_cost = match dyadic53::odds_parts(numerator) {
         None => positive_infinity_f64(),
         Some((n, complement)) => upper_log_odds_u53(n, complement)?,
