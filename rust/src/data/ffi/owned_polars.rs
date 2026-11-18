@@ -63,7 +63,6 @@ impl FfiSliceOwner {
         view
     }
 
-
     // Retain the actual Vec, including its capacity, rather than reconstructing
     // ownership from the exported data pointer and length.
     fn kept_slice<T: 'static>(&mut self, values: Vec<T>) -> FfiSlice {
