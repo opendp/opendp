@@ -1,12 +1,9 @@
 use crate::domains::{AtomDomain, SeriesDomain};
-#[cfg(not(feature = "polars-ffi"))]
 use crate::domains::{LazyFrameDomain, Margin};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
-#[cfg(not(feature = "polars-ffi"))]
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
-#[cfg(not(feature = "polars-ffi"))]
 use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
 use polars_plan::prelude::ProjectionOptions;

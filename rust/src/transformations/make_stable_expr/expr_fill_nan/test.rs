@@ -4,7 +4,6 @@ use polars::prelude::{DataType, NamedFrom, col, lit};
 use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
-#[cfg(not(feature = "polars-ffi"))]
 use crate::core::Domain;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
