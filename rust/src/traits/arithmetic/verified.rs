@@ -39,7 +39,6 @@ verus! {
 
     pub closed spec fn float_value(value: f64) -> real {
         let bits = f64_to_bits(value);
-        if bits == 0u64 { return 0real; }
         let exponent = ((bits >> 52u64) & 2047u64) as nat;
         let mantissa = (bits & 0x000f_ffff_ffff_ffffu64) as nat;
         let magnitude = if exponent == 0 {
@@ -51,7 +50,16 @@ verus! {
             ((4_503_599_627_370_496nat + mantissa) as real)
                 / pow2((1075nat - exponent) as nat)
         };
-        if (bits >> 63u64) == 0u64 { magnitude } else { -magnitude }
+        if bits == 0u64 { 0real }
+        else if (bits >> 63u64) == 0u64 { magnitude }
+        else { -magnitude }
+    }
+
+    /// The zero bit-pattern denotes exactly mathematical zero.
+    pub proof fn lemma_positive_zero_real(value: f64)
+        requires f64_to_bits(value) == 0u64,
+        ensures float_value(value) == 0real,
+    {
     }
 
     /// Clients of the binary64 interpretation need only bitwise congruence.
