@@ -64,7 +64,7 @@ verus! {
 impl<T: CheckAtom> AtomDomain<T> {
     /// The properties established by new_non_nan(), expressed within
     /// AtomDomain so its private field need not be exposed to callers.
-    pub(crate) open spec fn is_unbounded_nonnull(&self) -> bool {
+    pub closed spec fn is_unbounded_nonnull(&self) -> bool {
         self.bounds.is_none() && !self.nan
     }
 }
