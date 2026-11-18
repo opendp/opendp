@@ -161,7 +161,7 @@ impl<TI, TO> Function<TI, TO> {
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& forall|output: Fallible<TO>|
                 call_ensures(postprocess, (&operator, arg, word), output)
-                    ==> output == model@(*arg, word)
+                    ==> output == model(*arg, word)
         },
         ensures
             forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
