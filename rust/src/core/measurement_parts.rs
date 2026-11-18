@@ -6,6 +6,10 @@
 use super::StabilityMap;
 #[cfg(not(verus_only))]
 use crate::error::*;
+#[cfg(not(verus_only))]
+use crate::traits::samplers::OneWordProgram;
+#[cfg(verus_only)]
+use crate::uniform_word::OneWordProgram;
 #[cfg(verus_only)]
 type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
