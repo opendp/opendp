@@ -14,6 +14,8 @@ use crate::traits::{DistanceConstant, InfCast, InfMul};
 use num::Zero;
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
+#[cfg(verus_only)]
+use vstd::prelude::*;
 
 /// A set which constrains the input or output of a [`Function`].
 ///
@@ -67,6 +69,7 @@ impl<TI, TO> Function<TI, TO> {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         Self {
             function: Arc::new(function),
@@ -125,6 +128,7 @@ impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
 }
 
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
         PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }

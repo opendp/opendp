@@ -9,6 +9,8 @@ type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
 use crate::traits::ProductOrd;
 use std::fmt::Debug;
+#[cfg(verus_only)]
+use vstd::prelude::*;
 
 /// A randomized mechanism with certain privacy characteristics.
 ///
@@ -47,6 +49,21 @@ where
 {
     /// Legacy constructor: callers remain responsible for establishing
     /// the privacy guarantee of arbitrary supplied callbacks.
+    // Temporarily trust only that the legacy constructor stores its supplied
+    // fields on success. No privacy guarantee is assumed.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures match result {
+            Ok(meas) => {
+                &&& meas.input_domain == input_domain
+                &&& meas.input_metric == input_metric
+                &&& meas.output_measure == output_measure
+                &&& meas.function == function
+                &&& meas.privacy_map == privacy_map
+            },
+            Err(_) => true,
+        },
+    ))]
     pub fn new(
         input_domain: DI,
         input_metric: MI,
@@ -71,6 +88,17 @@ where
     ///
     /// IMPORTANT: the native method has not yet been imported and verified
     /// with that precondition. Until then its name conveys no certification.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures match result {
+            Ok(meas) => {
+                &&& meas.input_domain == input_domain
+                &&& meas.input_metric == input_metric
+                &&& meas.output_measure == output_measure
+            },
+            Err(_) => true,
+        },
+    ))]
     pub(crate) fn new_certified<F, P>(
         input_domain: DI,
         input_metric: MI,
