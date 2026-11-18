@@ -113,7 +113,7 @@ pub fn upper_log_odds_u53(
     let quotient = inf_div_up_f64(n, c)?;
     let epsilon = inf_ln_up_f64(quotient)?;
     #[cfg(verus_only)]
-    proof {
+    proof! {
         let a = numerator as real;
         let b = complement as real;
         let q = float_value(quotient);
