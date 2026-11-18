@@ -144,6 +144,7 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
             &&& measurement.input_domain == input_domain
             &&& measurement.input_metric == input_metric
             &&& measurement.output_measure == output_measure
+            &&& crate::measurement_proof::valid_bool_rr_measurement(&measurement)
             &&& forall|truth: &bool|
                 #[trigger] crate::measurement_parts::function_call_requires(
                     &measurement.function, truth)
@@ -314,6 +315,71 @@ where
             assert(call_ensures(operator::BoolRR::map_callback, (&operator, d), value)
                 ==> value == Ok(operator.map(*d, 0.0f64)));
         }
+    }
+    // Transfer the established operator privacy bound across the proved
+    // distributional and map correspondences of the *returned* Measurement.
+    #[cfg(verus_only)]
+    proof! {
+        let expectation = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            crate::measurement_parts::function_expectation(
+                &measurement.function, &truth, payoff);
+        let model = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            crate::randomized_response_bool::release_expectation(
+                truth, operator, crate::uniform_word::word_expectation(), payoff);
+        let member = |_: bool| true;
+        let close = |left: bool, right: bool, d: u32|
+            crate::randomized_response_bool::rr_discrete_close(left, right, d);
+        let factor_map = |d: u32| operator_factor_map(operator, d);
+        assert forall|truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            #[trigger] expectation(truth, payoff) == model(truth, payoff) by {
+            assert(expectation(truth, payoff)
+                == crate::measurement_parts::function_expectation(
+                    &measurement.function, &truth, payoff));
+        }
+        assert(crate::measurement_proof::realizes_expectation(expectation, model));
+        assert(crate::measurement_proof::realizes_privacy_map(factor_map, factor_map));
+        assert(crate::measurement_proof::valid_measurement_expectations(
+            member, close, model, factor_map));
+        crate::measurement_proof::lemma_valid_measurement_from_equivalent_components(
+            member, close, model, factor_map, expectation, factor_map);
+
+        assert forall|left: bool, right: bool, distance: u32, epsilon: f64|
+            (left == right || distance > 0)
+                && crate::measurement_parts::privacy_map_call_ensures(
+                    &measurement.privacy_map, &distance, Ok(epsilon))
+            implies {
+                &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+                &&& match crate::measurement_proof::bool_rr_reported_factor(
+                    distance, epsilon) {
+                    None => true,
+                    Some(factor) => factor >= 1real
+                        && forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_proof::bounded_payoff(payoff) ==>
+                                crate::measurement_parts::function_expectation(
+                                    &measurement.function, &left, payoff)
+                                <= factor *
+                                    crate::measurement_parts::function_expectation(
+                                        &measurement.function, &right, payoff),
+                }
+            }
+        by {
+            assert(epsilon == operator.map(distance, 0.0f64));
+            assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
+                == operator_factor_map(operator, distance));
+            if distance == 0 {
+                assert(left == right);
+                assert(f64_to_bits(epsilon) == 0u64);
+            }
+            assert(close(left, right, distance));
+            assert(match factor_map(distance) {
+                None => true,
+                Some(factor) => factor >= 1real
+                    && forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::measurement_proof::bounded_payoff(payoff) ==>
+                            expectation(left, payoff) <= factor * expectation(right, payoff),
+            });
+        }
+        assert(crate::measurement_proof::valid_bool_rr_measurement(&measurement));
     }
     Ok(Some(measurement))
 }
