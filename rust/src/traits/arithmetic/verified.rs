@@ -39,52 +39,58 @@ verus! {
     { }
 }
 
-/// Exact conversion of nonnegative integers up to 2^53.
-#[cfg_attr(verus_only, verus_verify(external_body))]
-#[cfg_attr(verus_only, verus_spec(result =>
-    requires value <= 9_007_199_254_740_992u64,
-    ensures float_value(result) == value as real,
-))]
+/// The three trusted primitive contracts are specified on the *same
+/// executable function names* that native arithmetic calls use.
+#[cfg(verus_only)]
+verus! {
+    /// Exact IEEE-754 integer cast on its lossless range.
+    #[verifier::external_body]
+    pub fn exact_u53_cast(value: u64) -> (result: f64)
+        requires value <= 9_007_199_254_740_992u64,
+        ensures float_value(result) == value as real,
+    { unimplemented!() }
+
+    /// Existing InfDiv<f64> contract: if Ok, upward rounding.
+    #[verifier::external_body]
+    pub fn inf_div_up_f64(
+        numerator: f64, denominator: f64,
+    ) -> (result: Result<f64, ArithmeticError>)
+        requires
+            float_value(numerator) > 0real,
+            float_value(denominator) > 0real,
+        ensures match result {
+            Ok(q) => float_value(q) >= float_value(numerator) / float_value(denominator),
+            Err(_) => true,
+        },
+    { unimplemented!() }
+
+    /// Existing InfLn<f64> contract: if Ok, upward rounding.
+    #[verifier::external_body]
+    pub fn inf_ln_up_f64(value: f64) -> (result: Result<f64, ArithmeticError>)
+        requires float_value(value) > 0real,
+        ensures match result {
+            Ok(ln) => float_value(ln) >= real_ln(float_value(value)),
+            Err(_) => true,
+        },
+    { unimplemented!() }
+}
+
+#[cfg(not(verus_only))]
 pub fn exact_u53_cast(value: u64) -> f64 {
     value as f64
 }
 
-/// The native f64 InfDiv implementation; trust only the documented
-/// upward-rounding property on successful results and positive operands.
-#[cfg_attr(verus_only, verus_verify(external_body))]
-#[cfg_attr(verus_only, verus_spec(result =>
-    requires float_value(denominator) > 0real,
-        float_value(numerator) > 0real,
-    ensures match result {
-        Ok(q) => float_value(q) >= float_value(numerator) / float_value(denominator),
-        Err(_) => true,
-    },
-))]
+#[cfg(not(verus_only))]
 pub fn inf_div_up_f64(
     numerator: f64,
     denominator: f64,
 ) -> Result<f64, ArithmeticError> {
-    #[cfg(not(verus_only))]
-    { numerator.inf_div(&denominator) }
-    #[cfg(verus_only)]
-    { unreachable!() }
+    numerator.inf_div(&denominator)
 }
 
-/// The native f64 InfLn implementation; trust only upward rounding
-/// on successful results and strictly positive inputs.
-#[cfg_attr(verus_only, verus_verify(external_body))]
-#[cfg_attr(verus_only, verus_spec(result =>
-    requires float_value(value) > 0real,
-    ensures match result {
-        Ok(ln) => float_value(ln) >= real_ln(float_value(value)),
-        Err(_) => true,
-    },
-))]
+#[cfg(not(verus_only))]
 pub fn inf_ln_up_f64(value: f64) -> Result<f64, ArithmeticError> {
-    #[cfg(not(verus_only))]
-    { value.inf_ln() }
-    #[cfg(verus_only)]
-    { unreachable!() }
+    value.inf_ln()
 }
 
 /// Production floating-point log odds, with exactly the same division and
