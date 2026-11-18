@@ -172,7 +172,7 @@ impl<TI, TO> Function<TI, TO> {
         TI: Copy,
         F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
     {
-        let program = crate::uniform_word::OneWordProgram { operator, postprocess };
+        let program = OneWordProgram { operator, postprocess };
         #[cfg(verus_only)]
         proof_with! {Ghost(model)}
         Self::erase_one_word_program(program)
@@ -204,7 +204,7 @@ impl<TI, TO> Function<TI, TO> {
                     == crate::uniform_word::one_word_expectation(*arg, model, payoff),
     ))]
     fn erase_one_word_program<Op, F>(
-        program: crate::uniform_word::OneWordProgram<Op, F>,
+        program: OneWordProgram<Op, F>,
     ) -> Self
     where
         Op: Copy + 'static,
