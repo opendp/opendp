@@ -4,6 +4,10 @@
 #[path = "../../src/core/measurement_parts.rs"]
 pub mod measurement_parts;
 pub use measurement_parts::{Domain, Function, Measure, Metric, PrivacyMap};
+#[path = "../../src/traits/operations/atom_traits.rs"]
+pub mod atom_traits;
+#[path = "../../src/domains/atom_domain.rs"]
+pub mod atom_domain;
 #[path = "../../src/metrics/discrete_distance.rs"]
 pub mod discrete_distance;
 #[path = "../../src/measures/max_divergence.rs"]

@@ -526,12 +526,6 @@ impl<T: CheckAtom, const P: usize> MetricSpace
 mod discrete_distance;
 pub use discrete_distance::DiscreteDistance;
 
-impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
-    fn check_space(&self) -> Fallible<()> {
-        Ok(())
-    }
-}
-
 impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())

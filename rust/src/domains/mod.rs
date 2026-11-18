@@ -81,11 +81,8 @@ mod poly;
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
-#[derive(Clone, PartialEq)]
-pub struct AtomDomain<T: CheckAtom> {
-    pub bounds: Option<Bounds<T>>,
-    nan: bool,
-}
+mod atom_domain;
+pub use atom_domain::AtomDomain;
 
 impl<T: CheckAtom> Debug for AtomDomain<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -96,14 +93,6 @@ impl<T: CheckAtom> Debug for AtomDomain<T> {
             .unwrap_or_default();
         let nan = self.nan.then(|| "nan=true, ").unwrap_or_default();
         write!(f, "AtomDomain({}{}T={})", bounds, nan, type_name!(T))
-    }
-}
-impl<T: CheckAtom> Default for AtomDomain<T> {
-    fn default() -> Self {
-        AtomDomain {
-            bounds: None,
-            nan: T::NULLABLE,
-        }
     }
 }
 impl<T: CheckAtom> AtomDomain<T> {
@@ -155,13 +144,6 @@ impl<T: CheckAtom + PartialOrd + Debug> AtomDomain<T> {
     }
 }
 
-impl<T: CheckAtom> Domain for AtomDomain<T> {
-    type Carrier = T;
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        val.check_member(self.bounds.clone(), self.nan)
-    }
-}
-
 /// # Proof Definition
 /// `NaN(T)` is a marker that can only be constructed by values of `T` that may be NaN.
 ///
@@ -200,11 +182,8 @@ impl<T: HasNull> NaN<T> {
 ///
 /// It is impossible to construct an instance of `Bounds` with inconsistent bounds.
 /// The constructors for this struct return an error if `lower > upper`, or if the bounds both exclude and include a value.
-#[derive(Clone, PartialEq)]
-pub struct Bounds<T> {
-    lower: Bound<T>,
-    upper: Bound<T>,
-}
+// The Bounds type is shared with the Verus implementation of AtomDomain.
+pub use atom_domain::Bounds;
 impl<T: PartialOrd + Debug + CheckNull> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))

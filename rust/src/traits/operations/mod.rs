@@ -23,38 +23,8 @@ pub trait CollectionSize {
     fn size(&self) -> usize;
 }
 
-pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync {
-    fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
-        fallible!(FailedFunction, "bounds check is not implemented")
-    }
-    fn check_member(&self, bounds: Option<Bounds<Self>>, nan: bool) -> Fallible<bool> {
-        if let Some(bounds) = bounds {
-            if !self.is_bounded(bounds)? {
-                return Ok(false);
-            }
-        }
-        if !nan && self.is_null() {
-            return Ok(false);
-        }
-        Ok(true)
-    }
-}
-
-/// Checks if a value is null.
-///
-/// Since [`crate::domains::AtomDomain`] may or may not contain null values,
-/// this trait is necessary for its member check.
-pub trait CheckNull {
-    /// # Proof Definition
-    /// A constant that is true if the type can represent null values.
-    const NULLABLE: bool;
-
-    /// # Proof Definition
-    /// For any `self` of type `Self`, returns true if null.
-    fn is_null(&self) -> bool {
-        Self::NULLABLE
-    }
-}
+mod atom_traits;
+pub use atom_traits::{CheckAtom, CheckNull};
 
 /// Defines an example NaN value inherent to `Self`.
 pub trait HasNull: CheckNull {
@@ -255,7 +225,7 @@ impl_CheckAtom_number!(RBig IBig);
 macro_rules! impl_CheckAtom_simple {
     ($($ty:ty)+) => ($(impl CheckAtom for $ty {})+)
 }
-impl_CheckAtom_simple!(bool String char &str);
+impl_CheckAtom_simple!(String char &str);
 
 macro_rules! impl_CheckNull_for_non_null_able {
     ($($ty:ty),+) => {
@@ -265,7 +235,7 @@ macro_rules! impl_CheckNull_for_non_null_able {
     }
 }
 impl_CheckNull_for_non_null_able!(
-    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize
+    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, String, &str, char, usize, isize
 );
 
 #[cfg(feature = "polars")]

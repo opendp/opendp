@@ -57,3 +57,17 @@ impl DiscreteDistance {
     }
 }
 }
+
+#[cfg(verus_only)]
+use crate::{atom_domain::AtomDomain, atom_traits::CheckAtom, MetricSpace};
+#[cfg(not(verus_only))]
+use crate::{domains::AtomDomain, traits::CheckAtom, core::MetricSpace};
+#[cfg(verus_only)]
+type Fallible<T> = Result<T, ()>;
+#[cfg(not(verus_only))]
+use crate::error::Fallible;
+
+#[cfg_attr(verus_only, verus_verify)]
+impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
+    fn check_space(&self) -> Fallible<()> { Ok(()) }
+}
