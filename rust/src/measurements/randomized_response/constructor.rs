@@ -217,13 +217,8 @@ where
             operator::BoolRR::map_callback, release_model);
     }
     #[cfg(verus_only)]
-    proof_decl! {
-        let ghost false_model =
-            |_truth: bool, _word: Result<u64, ()>| Ok(false);
-    }
-    #[cfg(verus_only)]
     let measurement = {
-        proof_with! { Ghost(false_model) }
+        proof_with! { Ghost(release_model) }
         Measurement::new_certified(
             input_domain, input_metric, output_measure, operator,
             operator::BoolRR::release_callback, operator::BoolRR::map_callback)
