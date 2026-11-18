@@ -228,7 +228,7 @@ pub proof fn lemma_bool_rr_dp<E>(
             == success * vl + err);
         assert(release_expectation(right, op, word_expectation, payoff)
             == success * vr + err);
-}
+    }
 }
 
 /// The exact abstract MaxDivergence factor map for the Boolean operator:
