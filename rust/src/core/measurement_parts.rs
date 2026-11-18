@@ -147,8 +147,15 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         #[cfg(verus_only)]
         { unimplemented!() }
     }
+    /// Erasure of a fallible privacy-map callback. Verus treats only
+    /// allocation and dynamic dispatch as external; no privacy claim is
+    /// attached to this function.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
-        PrivacyMap(Arc::new(map))
+        #[cfg(not(verus_only))]
+        { PrivacyMap(Arc::new(map)) }
+        #[cfg(verus_only)]
+        { unimplemented!() }
     }
 
     /// # Proof Definition

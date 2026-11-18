@@ -125,10 +125,10 @@ where
     ) -> Fallible<Self>
     where
         F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
-        P: Fn(&MI::Distance) -> MO::Distance + 'static,
+        P: Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static,
     {
         let function = Function::new_fallible(function);
-        let privacy_map = PrivacyMap::new(privacy_map);
+        let privacy_map = PrivacyMap::new_fallible(privacy_map);
         Self::construct(
             input_domain, input_metric, output_measure, function, privacy_map,
         )

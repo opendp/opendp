@@ -65,7 +65,7 @@ pub fn make_randomized_response_bool(
         DiscreteDistance,
         MaxDivergence,
         move |truth: &bool| operator.invoke(*truth),
-        move |distance: &u32| operator.map(*distance, 0.0),
+        move |distance: &u32| Ok(operator.map(*distance, 0.0)),
     )
 }
 
