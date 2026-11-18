@@ -118,6 +118,34 @@ existing `assume` into another helper would not close it. The generic
 `new_certified` API remains unchanged; it takes ordinary `func`/`map`
 closures and requires full validity before wrapping them.
 
+## Effect-aware named callback experiment
+
+`rust/opendp_verus/src/effect_callback.rs` is a **verification-only**
+prototype for a named, effect-aware callback. Its runtime signature returns
+`Result<bool, WordError>`, but Verus tracks an erased input/output
+`ErrorCredit` for every call. The precondition allocates the expectation of
+the actual `BoolRR::release` over the production word-law; the postcondition
+returns credit for the *observed result*. The body discharges that contract
+through the verified production `sample_word_then` and
+`BoolRR::release_callback`, without a new assumption.
+
+[Positive verification (`90d3e60`)](https://github.com/opendp/opendp/commit/90d3e60da93d73c43002bc9013d512004c30b454):
+65 obligations verified, 0 errors. An intentional mutation that continued
+to sample but returned `Ok(*truth)` instead was
+[rejected (`219b873`)](https://github.com/opendp/opendp/commit/219b8732351eedbfe3ec14987c61db797a2e11d4):
+64 obligations verified and one failure, specifically at the output-credit
+postcondition. The mutation was subsequently reverted.
+
+**Not end-to-end:** the prototype is a named function in the harness, *not*
+the `Fn` closure installed by `build_bool_rr_measurement`. The native
+`run_bool_rr` wrapper remains `external_body`, and the constructor's
+explicit `callback_expectation` forwarding assumption remains. Verus cannot
+currently attach `with` tracked credits directly to the ordinary `Fn`
+closure, as shown in the frontend probes above. No implication from the
+named EPT certificate to `callback_expectation(&func, ...)` has been proved.
+This module therefore validates the effect-aware *function* contract but
+must not be represented as a verified *closure* contract.
+
 ## Regression and falsification
 
 Replacing the sampled entropy with `Ok(0)` *inside*
