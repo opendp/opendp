@@ -422,6 +422,13 @@ where
         }
         assert(crate::measurement_proof::valid_bool_rr_parts(&function, &privacy_map));
     }
+    // Translate the mechanism-specific proof into the generic certified
+    // contract, using the actual production descriptor semantics.
+    #[cfg(verus_only)]
+    proof! {
+        lemma_bool_rr_satisfies_generic_contract(
+            &input_domain, &input_metric, &output_measure, &function, &privacy_map);
+    }
     // This is the genuine certification boundary. Without the previous
     // quantified DP proof, Verus must reject this constructor invocation.
     let measurement = Measurement::new_certified(
@@ -539,6 +546,94 @@ pub proof fn lemma_built_bool_rr_valid<E>(
         expectation, expectation));
     crate::measurement_proof::lemma_valid_measurement_from_equivalent_components(
         member, close, expectation, model_map, expectation, actual_map);
+}
+
+/// Specialize the general semantic measurement contract to Boolean RR.
+///
+/// The only premises are the established validity of the actual callback
+/// objects and the production's type-based mathematical metric/measure
+/// semantics. In particular, no DP property is assumed for an erased closure.
+pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
+    domain: &DI,
+    metric: &DiscreteDistance,
+    measure: &MaxDivergence,
+    function: &Function<bool, bool>,
+    map: &PrivacyMap<DiscreteDistance, MaxDivergence>,
+)
+    where DI: crate::CertifiedDomain<Carrier = bool>,
+    requires crate::measurement_proof::valid_bool_rr_parts(function, map),
+    ensures crate::measurement_proof::valid_certified_parts(
+        domain, metric, measure, function, map),
+{
+    use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
+    assert forall|input: &bool| domain.contains(input)
+        implies #[trigger] crate::measurement_parts::function_call_requires(function, input)
+    by {
+        assert(crate::measurement_parts::function_call_requires(function, input));
+    }
+    assert forall|d: &u32| metric.valid_distance(d)
+        implies #[trigger] crate::measurement_parts::privacy_map_call_requires(map, d)
+    by {
+        assert(crate::measurement_parts::privacy_map_call_requires(map, d));
+    }
+    assert forall|d: &u32| metric.valid_distance(d)
+        implies exists|cost: f64| #[trigger]
+            crate::measurement_parts::privacy_map_call_ensures(map, d, Ok(cost))
+    by {
+        assert(exists|cost: f64| #[trigger]
+            crate::measurement_parts::privacy_map_call_ensures(map, d, Ok(cost)));
+    }
+    assert forall|d: &u32, output: Result<f64, ()>|
+        metric.valid_distance(d)
+            && #[trigger] crate::measurement_parts::privacy_map_call_ensures(map, d, output)
+        implies match output {
+            Err(_) => false,
+            Ok(cost) => {
+                &&& measure.valid_cost(&cost)
+                &&& forall|left: &bool, right: &bool|
+                    domain.contains(left) && domain.contains(right)
+                        && metric.close(left, right, d)
+                    ==> measure.dominates(
+                        |payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, left, payoff),
+                        |payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, right, payoff),
+                        &cost)
+            },
+        }
+    by {
+        match output {
+            Err(_) => {
+                assert(crate::measurement_parts::privacy_map_call_ensures(map, d, output)
+                    ==> output.is_ok());
+            }
+            Ok(epsilon) => {
+                assert forall|left: &bool, right: &bool|
+                    domain.contains(left) && domain.contains(right)
+                        && metric.close(left, right, d)
+                    implies measure.dominates(
+                        |payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, left, payoff),
+                        |payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_parts::function_expectation(function, right, payoff),
+                        &epsilon)
+                by {
+                    assert(DiscreteDistance::bool_close(*left, *right, *d));
+                    assert(crate::measurement_proof::bool_rr_pair_valid_parts(
+                        function, map, *left, *right, *d));
+                    assert(crate::measurement_parts::privacy_map_call_ensures(
+                        map, d, Ok(epsilon)));
+                    assert(crate::measurement_proof::bool_rr_reported_factor(*d, epsilon)
+                        == MaxDivergence::multiplicative_factor(epsilon));
+                    let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::measurement_parts::function_expectation(function, left, payoff);
+                    let right_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::measurement_parts::function_expectation(function, right, payoff);
+                    assert(measure.dominates(left_law, right_law, &epsilon));
+                }
+            }
+        }
+    }
 }
 
 } // verus!
