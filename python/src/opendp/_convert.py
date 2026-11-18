@@ -959,69 +959,78 @@ def _bound_to_slice(val) -> FfiSlicePtr:
     return _wrap_in_slice(ctypes.pointer(array), 3)
 
 
+class _PolarsSeriesExport(ctypes.Structure):
+    # Polars version_0::SeriesExport; keep in sync with the pinned Polars ABI.
+    _fields_ = [
+        ("field", ctypes.c_void_p),
+        ("arrays", ctypes.c_void_p),
+        ("len", ctypes.c_size_t),
+        ("release", ctypes.c_void_p),
+        ("private_data", ctypes.c_void_p),
+    ]
+
+
+class _PolarsExportBuffer:
+    """Release native descriptors not moved into Rust by the importer."""
+
+    def __init__(self, exports):
+        self.exports = exports
+
+    def __del__(self):
+        for export in self.exports:
+            if export.release:
+                release = ctypes.CFUNCTYPE(None, ctypes.POINTER(_PolarsSeriesExport))(
+                    export.release
+                )
+                release(ctypes.byref(export))
+
+
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.DataFrame):
         raise ValueError("expected Polars DataFrame")  # pragma: no cover
 
-    slices = list(_series_to_slice(s) for s in val.get_columns())
-    raw = _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)
-    # extend the lifetime of each series' slice to that of the frame slice
-    raw.depends_on(slices)
+    exports = (_PolarsSeriesExport * val.width)()
+    raw = _wrap_in_slice(exports, val.width)
+    raw.depends_on(_PolarsExportBuffer(exports))
+    val._df._export_columns(ctypes.addressof(exports))
     return raw
 
 
 def _slice_to_dataframe(raw: FfiSlicePtr):
     pl = import_optional_dependency("polars")
-    slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
-    series = [
-        _slice_to_series(FfiSlicePtr(ffislice))
-        for ffislice in slice_array[0 : raw.contents.len]
-    ]
-    return pl.DataFrame(series)
+    exports = ctypes.cast(raw.contents.ptr, ctypes.POINTER(_PolarsSeriesExport))
+    columns = []
+    for i in range(raw.contents.len):
+        export = exports[i]
+        try:
+            columns.append(pl.Series._import(ctypes.addressof(export)))
+        finally:
+            # Polars moves the export. Never let Rust drop its copied payload.
+            # On native import failure this is conservative (no double-free).
+            export.release = None
+    return pl.DataFrame(columns)
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
-    from opendp._data import new_arrow_array, arrow_array_free
-
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
-    raw = new_arrow_array(val.name)
-    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    array_ptr, schema_ptr = slice_array[0:2]
-
-    # make the conversion through PyArrow's private API
-    # this changes the pointer's memory and is thus unsafe. In particular, `_export_to_c` can go out of bounds
-    # NOTE: consider changing to PyCapsule when available. https://github.com/pola-rs/polars/issues/12530
-    val.to_arrow()._export_to_c(array_ptr, schema_ptr)
-
-    # when freeing the slice, also free up the memory of what's left behind the slice
-    class ArrowArrayFFIBuffer(object):
-        def __init__(self, ptr) -> None:
-            self.ptr = ptr
-
-        def __del__(self) -> None:
-            arrow_array_free(self.ptr)
-
-    raw.depends_on(ArrowArrayFFIBuffer(raw.contents.ptr))
+    exports = (_PolarsSeriesExport * 1)()
+    raw = _wrap_in_slice(exports, 1)
+    raw.depends_on(_PolarsExportBuffer(exports))
+    val._s._export(ctypes.addressof(exports))
     return raw
 
 
 def _slice_to_series(raw: FfiSlicePtr):
     pl = import_optional_dependency("polars")
-    pyarrow = import_optional_dependency("pyarrow")
-    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    array_ptr, schema_ptr, name_ptr = slice_array[0:3]
-
-    arrow_array = pyarrow.Array._import_from_c(array_ptr, schema_ptr)
-    series = pl.from_arrow(arrow_array)
-
-    name_bytes = ctypes.cast(name_ptr, ctypes.c_char_p).value
-    if name_bytes is not None:
-        series = series.rename(name_bytes.decode())
-    return series
+    export = ctypes.cast(raw.contents.ptr, ctypes.POINTER(_PolarsSeriesExport))[0]
+    try:
+        return pl.Series._import(ctypes.addressof(export))
+    finally:
+        export.release = None
 
 
 def _slice_to_anyobject(raw: FfiSlicePtr):
