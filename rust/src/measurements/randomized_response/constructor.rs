@@ -22,9 +22,9 @@ use crate::traits::verified::{
 };
 
 #[cfg(verus_only)]
-use crate::{Domain, Measure, Measurement, Metric, MetricSpace};
+use crate::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 #[cfg(not(verus_only))]
-use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
+use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 
 /// Production floating-point log odds, with exactly the same division and
 /// logarithm used elsewhere in OpenDP. The Verus harness checks this body
@@ -205,27 +205,20 @@ where
         assert(crate::measurement_parts::exact_word_postprocessing(
             operator, operator::BoolRR::release_callback, release_model));
     }
+    // Install the exact one-word sampler and the actual map method.
+    // These are ordinary OpenDP Function/PrivacyMap objects. Their DP
+    // validity will be a precondition of new_certified, not its result.
     #[cfg(verus_only)]
-    let measurement = {
+    let function = {
         proof_with! { Ghost(release_model) }
-        Measurement::new_certified(
-            input_domain,
-            input_metric,
-            output_measure,
-            operator,
-            operator::BoolRR::release_callback,
-            operator::BoolRR::map_callback,
-        )
-    }?;
+        Function::new_from_one_word_operator(
+            operator, operator::BoolRR::release_callback)
+    };
     #[cfg(not(verus_only))]
-    let measurement = Measurement::new_certified(
-        input_domain,
-        input_metric,
-        output_measure,
-        operator,
-        operator::BoolRR::release_callback,
-        operator::BoolRR::map_callback,
-    )?;
+    let function = Function::new_from_one_word_operator(
+        operator, operator::BoolRR::release_callback);
+    let privacy_map = PrivacyMap::new_from_operator(
+        operator, operator::BoolRR::map_callback);
     // The distribution of the *returned erased Function* is the same
     // as the executable RR release under the one-word entropy law.
     // This follows from the generic one-word erasure specification and the
@@ -235,7 +228,7 @@ where
         assert forall|truth: bool,
                        payoff: spec_fn(Result<bool, ()>) -> real|
             #[trigger] crate::measurement_parts::function_expectation(
-                &measurement.function, &truth, payoff)
+                &function, &truth, payoff)
                 == crate::randomized_response_bool::release_expectation(
                     truth, operator, crate::uniform_word::word_expectation(), payoff)
         by {
@@ -247,7 +240,7 @@ where
             }
             assert(before =~= after);
             assert(crate::measurement_parts::function_expectation(
-                &measurement.function, &truth, payoff)
+                &function, &truth, payoff)
                 == crate::uniform_word::one_word_expectation(
                     truth, release_model, payoff));
             assert(crate::uniform_word::one_word_expectation(
@@ -262,31 +255,30 @@ where
     proof! {
         assert forall|d: &u32| #[trigger]
             crate::measurement_parts::privacy_map_call_requires(
-                &measurement.privacy_map, d)
+                &privacy_map, d)
         by {
             assert(crate::measurement_parts::privacy_map_call_requires(
-                &measurement.privacy_map, d)
+                &privacy_map, d)
                 == call_requires(operator::BoolRR::map_callback, (&operator, d)));
             assert(call_requires(operator::BoolRR::map_callback, (&operator, d)));
         }
     }
-    // The *returned* Function delegates to the actual invoking method for
-    // every Boolean input. A distributional statement requires the separate
-    // one-word sampling semantics; call_ensures alone cannot provide one.
+    // The actual Function is callable for every Boolean input and at p=1
+    // cannot successfully return the wrong bit.
     #[cfg(verus_only)]
     proof! {
         assert forall|truth: &bool| #[trigger]
             crate::measurement_parts::function_call_requires(
-                &measurement.function, truth)
+                &function, truth)
         by {
             assert(crate::measurement_parts::function_call_requires(
-                &measurement.function, truth)
+                &function, truth)
                 == call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
             assert(call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
         }
         assert forall|truth: &bool, value: Result<bool, ()>|
             crate::measurement_parts::function_call_ensures(
-                &measurement.function, truth, value)
+                &function, truth, value)
                 && operator.numerator == 9_007_199_254_740_992u64
                 && value.is_ok()
             implies value == Ok(*truth)
@@ -306,11 +298,11 @@ where
     proof! {
         assert forall|d: &u32, value: Result<f64, ()>|
             crate::measurement_parts::privacy_map_call_ensures(
-                &measurement.privacy_map, d, value)
+                &privacy_map, d, value)
                 implies value == Ok(operator.map(*d, 0.0f64))
         by {
             assert(crate::measurement_parts::privacy_map_call_ensures(
-                &measurement.privacy_map, d, value)
+                &privacy_map, d, value)
                 == call_ensures(operator::BoolRR::map_callback, (&operator, d), value));
             assert(call_ensures(operator::BoolRR::map_callback, (&operator, d), value)
                 ==> value == Ok(operator.map(*d, 0.0f64)));
@@ -322,7 +314,7 @@ where
     proof! {
         let expectation = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
             crate::measurement_parts::function_expectation(
-                &measurement.function, &truth, payoff);
+                &function, &truth, payoff);
         let model = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
             crate::randomized_response_bool::release_expectation(
                 truth, operator, crate::uniform_word::word_expectation(), payoff);
@@ -334,7 +326,7 @@ where
             #[trigger] expectation(truth, payoff) == model(truth, payoff) by {
             assert(expectation(truth, payoff)
                 == crate::measurement_parts::function_expectation(
-                    &measurement.function, &truth, payoff));
+                    &function, &truth, payoff));
         }
         assert(crate::measurement_proof::realizes_expectation(expectation, model));
         assert(crate::measurement_proof::realizes_privacy_map(factor_map, factor_map));
@@ -344,13 +336,13 @@ where
             member, close, model, factor_map, expectation, factor_map);
 
         assert forall|left: bool, right: bool, distance: u32|
-            #[trigger] crate::measurement_proof::bool_rr_pair_valid(
-                &measurement, left, right, distance)
+            #[trigger] crate::measurement_proof::bool_rr_pair_valid_parts(
+                &function, &privacy_map, left, right, distance)
         by {
             if left == right || distance > 0 {
                 assert forall|epsilon: f64|
                     #[trigger] crate::measurement_parts::privacy_map_call_ensures(
-                    &measurement.privacy_map, &distance, Ok(epsilon))
+                    &privacy_map, &distance, Ok(epsilon))
                 implies {
                     &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
                     &&& match crate::measurement_proof::bool_rr_reported_factor(
@@ -360,10 +352,10 @@ where
                             && forall|payoff: spec_fn(Result<bool, ()>) -> real|
                                 crate::measurement_proof::bounded_payoff(payoff) ==>
                                     crate::measurement_parts::function_expectation(
-                                        &measurement.function, &left, payoff)
+                                        &function, &left, payoff)
                                     <= factor *
                                         crate::measurement_parts::function_expectation(
-                                            &measurement.function, &right, payoff),
+                                            &function, &right, payoff),
                     }
                 }
             by {
@@ -385,8 +377,13 @@ where
             }
             }
         }
-        assert(crate::measurement_proof::valid_bool_rr_measurement(&measurement));
+        assert(crate::measurement_proof::valid_bool_rr_parts(&function, &privacy_map));
     }
+    // This is the genuine certification boundary. Without the previous
+    // quantified DP proof, Verus must reject this constructor invocation.
+    let measurement = Measurement::new_certified(
+        input_domain, input_metric, output_measure, function, privacy_map,
+    )?;
     Ok(Some(measurement))
 }
 
