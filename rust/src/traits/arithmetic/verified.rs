@@ -37,7 +37,7 @@ verus! {
             requires ((bits >> 52u64) & 2047u64) != 2047u64;
     }
 
-    pub open spec fn float_value(value: f64) -> real {
+    pub closed spec fn float_value(value: f64) -> real {
         let bits = f64_to_bits(value);
         let exponent = ((bits >> 52u64) & 2047u64) as nat;
         let mantissa = (bits & 0x000f_ffff_ffff_ffffu64) as nat;
@@ -51,6 +51,15 @@ verus! {
                 / pow2((1075nat - exponent) as nat)
         };
         if (bits >> 63u64) == 0u64 { magnitude } else { -magnitude }
+    }
+
+    /// Clients of the binary64 interpretation need only bitwise congruence.
+    /// Reveal the exact dyadic definition once, rather than in every proof.
+    pub proof fn lemma_same_bits_same_value(a: f64, b: f64)
+        requires f64_to_bits(a) == f64_to_bits(b),
+        ensures float_value(a) == float_value(b),
+    {
+        reveal(float_value);
     }
 
     /// Mathematical real transcendental functions (not executable libm).

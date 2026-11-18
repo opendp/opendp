@@ -261,8 +261,8 @@ pub fn verify_built_bool_rr<E>(
                         == f64_to_bits(op.privacy_cost));
                     assert(f64_to_bits(callback_cost(op, d))
                         != 0x7ff0_0000_0000_0000u64);
-                    assert(verified_arithmetic::float_value(callback_cost(op, d))
-                        == verified_arithmetic::float_value(op.privacy_cost));
+                    verified_arithmetic::lemma_same_bits_same_value(
+                        callback_cost(op, d), op.privacy_cost);
                 }
             }
             assert(crate::measurement_proof::realizes_privacy_map(
