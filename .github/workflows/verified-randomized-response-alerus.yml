@@ -11,13 +11,12 @@ on:
       - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'
       - 'rust/src/traits/samplers/bernoulli/**'
-      - 'rust/src/traits/samplers/mod.rs'
-      - 'rust/src/traits/arithmetic/**'
       - '.github/workflows/verified-randomized-response-alerus.yml'
   pull_request:
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'
+      - 'rust/src/core/verus/**'
       - 'rust/src/measurements/randomized_response/**'
       - 'rust/src/traits/samplers/bernoulli/**'
       - 'rust/src/traits/samplers/mod.rs'

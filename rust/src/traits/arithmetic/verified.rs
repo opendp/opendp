@@ -133,4 +133,3 @@ pub fn inf_ln_up_f64(value: f64) -> Result<f64, ArithmeticError> {
     #[cfg(verus_only)]
     { unimplemented!() }
 }
-

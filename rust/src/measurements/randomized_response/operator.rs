@@ -50,4 +50,3 @@ impl BoolRR {
         self.release(truth, crate::traits::samplers::sample_uniform_u64())
     }
 }
-
