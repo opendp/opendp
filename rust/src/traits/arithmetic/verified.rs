@@ -147,7 +147,9 @@ pub fn inf_div_up_f64(
 #[cfg_attr(verus_only, verus_spec(result =>
     requires finite(value), float_value(value) > 0real,
     ensures match result {
-        Ok(ln) => finite(ln) && float_value(ln) >= real_ln(float_value(value)),
+        Ok(ln) => finite(ln)
+            && float_value(ln) >= real_ln(float_value(value))
+            && (float_value(value) >= 1real ==> float_value(ln) >= 0real),
         Err(_) => true,
     },
 ))]
