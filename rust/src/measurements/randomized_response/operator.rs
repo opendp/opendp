@@ -71,7 +71,15 @@ impl BoolRR {
                 ==> result == Ok(truth),
     ))]
     pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
-        sample_word_then(self, truth, Self::release)
+        let output = sample_word_then(self, truth, Self::release);
+        #[cfg(verus_only)]
+        proof! {
+            let witness = choose|word: Result<u64, WordError>|
+                call_ensures(Self::release, (self, truth, word), output);
+            assert(call_ensures(Self::release, (self, truth, witness), output));
+            assert(output == self.release(truth, witness));
+        }
+        output
     }
 
     #[cfg_attr(verus_only, verus_verify)]
