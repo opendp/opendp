@@ -118,6 +118,17 @@ pub fn upper_log_odds_u53(
     let n = exact_u53_cast(numerator);
     let c = exact_u53_cast(complement);
     let quotient = inf_div_up_f64(n, c)?;
+    #[cfg(verus_only)]
+    proof! {
+        let a = numerator as real;
+        let b = complement as real;
+        let q = float_value(quotient);
+        assert(b > 0real);
+        assert(a > 0real);
+        assert(q >= a / b);
+        assert(q > 0real) by(nonlinear_arith)
+            requires a > 0real, b > 0real, q >= a / b;
+    }
     let epsilon = inf_ln_up_f64(quotient)?;
     #[cfg(verus_only)]
     proof! {
