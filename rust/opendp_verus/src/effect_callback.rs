@@ -51,8 +51,9 @@ pub fn sample_bool_rr_with_effect(
     proof_with! {
         Tracked(start), Ghost(word_cost), Ghost(output_cost) => Tracked(draw_credit)
     }
-    let output = uniform_word::sample_word_then(
+    let sampled = uniform_word::sample_word_then(
         operator, truth, operator::BoolRR::release_callback);
+    let _ = sampled;
     proof_with! { |= Tracked(draw_credit) }
-    output
+    Ok(*truth) // Deliberately wrong output: must fail the EPT contract.
 }
