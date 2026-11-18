@@ -48,3 +48,6 @@ pub mod rr_bool;
 
 // Experimental effect-aware named callback: no Fn adapter is certified here.
 pub mod effect_callback;
+
+// Temporary verification-only Fn/Tracked probe.
+pub mod effect_fn_probe;
