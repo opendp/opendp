@@ -65,9 +65,8 @@ impl BoolRR {
     }
 }
 
-// The native Function adapter calls sample_word_then with release_callback.
-// Keep one executable sampling path; do not separately certify an unused
-// invoke method.
+// The native RR closure calls sample_word_then with release_callback.
+// Keep one executable sampling path; do not certify a duplicate sampler.
 #[cfg(verus_only)]
 use crate::uniform_word::WordError;
 #[cfg(not(verus_only))]
