@@ -143,6 +143,23 @@ impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
     }
 }
 
+// A narrow model of the erased callback's *possible return values*.
+// This never asserts distributional privacy, nor does it assume that a
+// callback is deterministic. Its only trusted correspondence is forwarding.
+#[cfg(verus_only)]
+verus! {
+pub uninterp spec fn privacy_map_call_requires<MI: Metric, MO: Measure>(
+    map: &PrivacyMap<MI, MO>,
+    d: &MI::Distance,
+) -> bool;
+
+pub uninterp spec fn privacy_map_call_ensures<MI: Metric, MO: Measure>(
+    map: &PrivacyMap<MI, MO>,
+    d: &MI::Distance,
+    value: Result<MO::Distance, ()>,
+) -> bool;
+}
+
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
@@ -157,6 +174,15 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     /// allocation and dynamic dispatch as external; no privacy claim is
     /// attached to this function.
     #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures
+            forall|d: &MI::Distance|
+                #[trigger] privacy_map_call_requires(&result, d)
+                    == call_requires(map, (d,)),
+            forall|d: &MI::Distance, value: Fallible<MO::Distance>|
+                #[trigger] privacy_map_call_ensures(&result, d, value)
+                    == call_ensures(map, (d,), value),
+    ))]
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         #[cfg(not(verus_only))]
         {
@@ -183,6 +209,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        requires privacy_map_call_requires(self, input_distance),
+        ensures privacy_map_call_ensures(self, input_distance, result),
+    ))]
     pub fn eval(&self, input_distance: &MI::Distance) -> Fallible<MO::Distance> {
         (self.0)(input_distance)
     }
