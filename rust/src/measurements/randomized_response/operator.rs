@@ -39,6 +39,15 @@ impl BoolRR {
     pub fn map(&self, distance: u32, zero: f64) -> f64 {
         if distance == 0 { zero } else { self.privacy_cost }
     }
+
+    // Same executable map callback in both native and verified builds.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures result == Ok(self.map(distance, 0.0f64)),
+    ))]
+    pub fn map_callback(&self, distance: u32) -> Result<f64, WordError> {
+        Ok(self.map(distance, 0.0))
+    }
 }
 
 // The actual native invocation is verified from this same executable body.
