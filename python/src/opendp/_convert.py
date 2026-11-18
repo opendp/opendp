@@ -971,18 +971,27 @@ class _PolarsSeriesExport(ctypes.Structure):
 
 
 class _PolarsExportBuffer:
-    """Release native descriptors not moved into Rust by the importer."""
+    """Drop unconsumed native exports via Polars, including Arrow payloads."""
 
-    def __init__(self, exports):
+    def __init__(self, exports, import_series):
         self.exports = exports
+        self.import_series = import_series
 
-    def __del__(self):
+    def __del__(self, _address=ctypes.addressof):
         for export in self.exports:
             if export.release:
-                release = ctypes.CFUNCTYPE(None, ctypes.POINTER(_PolarsSeriesExport))(
-                    export.release
-                )
-                release(ctypes.byref(export))
+                # Descriptor-only release does not release unconsumed Arrow data.
+                # Importing then dropping it does, without reproducing the ABI.
+                self.import_series(_address(export))
+                _mark_native_export_consumed(export)
+
+
+def _mark_native_export_consumed(export):
+    export.field = None
+    export.arrays = None
+    export.len = 0
+    export.release = None
+    export.private_data = None
 
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
@@ -992,7 +1001,7 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
 
     exports = (_PolarsSeriesExport * val.width)()
     raw = _wrap_in_slice(exports, val.width)
-    raw.depends_on(_PolarsExportBuffer(exports))
+    raw.depends_on(_PolarsExportBuffer(exports, pl.Series._import))
     val._df._export_columns(ctypes.addressof(exports))
     return raw
 
@@ -1008,7 +1017,7 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
         finally:
             # Polars moves the export. Never let Rust drop its copied payload.
             # On native import failure this is conservative (no double-free).
-            export.release = None
+            _mark_native_export_consumed(export)
     return pl.DataFrame(columns)
 
 
@@ -1019,7 +1028,7 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
     exports = (_PolarsSeriesExport * 1)()
     raw = _wrap_in_slice(exports, 1)
-    raw.depends_on(_PolarsExportBuffer(exports))
+    raw.depends_on(_PolarsExportBuffer(exports, pl.Series._import))
     val._s._export(ctypes.addressof(exports))
     return raw
 
@@ -1030,7 +1039,7 @@ def _slice_to_series(raw: FfiSlicePtr):
     try:
         return pl.Series._import(ctypes.addressof(export))
     finally:
-        export.release = None
+        _mark_native_export_consumed(export)
 
 
 def _slice_to_anyobject(raw: FfiSlicePtr):
