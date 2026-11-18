@@ -395,6 +395,10 @@ where
                     assert(crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 } else if operator.numerator == 9_007_199_254_740_992u64 {
                     assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
+                    let bits = f64_to_bits(epsilon);
+                    assert(((bits >> 52u64) & 2047u64) == 2047u64)
+                        by(bit_vector) requires bits == 0x7ff0_0000_0000_0000u64;
+                    assert(!crate::verified_arithmetic::finite(epsilon));
                 } else {
                     assert(crate::verified_arithmetic::finite(operator.privacy_cost));
                     assert(crate::verified_arithmetic::float_value(operator.privacy_cost) >= 0real);
