@@ -45,3 +45,7 @@ pub mod rr_constructor;
 // Verify the actual public Boolean constructor body, not a harness copy.
 #[path = "../../src/measurements/randomized_response/bool.rs"]
 pub mod rr_bool;
+
+// Isolated verification-only probe; remove after the bridge decision.
+#[cfg(verus_only)]
+pub mod closure_bridge_experiment;
