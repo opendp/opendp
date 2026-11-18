@@ -142,24 +142,9 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
 }
 
 #[cfg(verus_only)]
-type CallbackError = ();
-#[cfg(not(verus_only))]
-type CallbackError = crate::error::Error;
-
-#[cfg(verus_only)]
 use crate::uniform_word::sample_word_then;
 #[cfg(not(verus_only))]
 use crate::traits::samplers::sample_word_then;
-
-/// The only unchecked call forwarding needed by the RR Fn closure.
-/// The verified sample_word_then implementation contains all randomness.
-#[cfg_attr(verus_only, verus_verify(external_body))]
-fn run_bool_rr(
-    operator: &operator::BoolRR,
-    truth: &bool,
-) -> Result<bool, CallbackError> {
-    sample_word_then(operator, truth, operator::BoolRR::release_callback)
-}
 
 /// Build the actual OpenDP Measurement, including the real certified
 /// constructor call. The public API supplies AtomDomain<bool>,
@@ -222,7 +207,8 @@ where
     }
     // The one-word computation and deterministic map are proved before
     // building the concrete Fn closures and before any Arc erasure.
-    let func = move |truth: &bool| run_bool_rr(&operator, truth);
+    let func = move |truth: &bool|
+        sample_word_then(&operator, truth, operator::BoolRR::release_callback);
     let map = move |distance: &u32| operator.map_callback(distance);
     #[cfg(verus_only)]
     proof! {
