@@ -146,38 +146,6 @@ impl<TI, TO> Function<TI, TO> {
         }
     }
 
-    /// Construct the concrete verified sampler first, before erasing it.
-    /// The ordinary Rust value captures the operator and the postprocessor;
-    /// no probabilistic correspondence is assumed at this stage.
-    #[cfg_attr(verus_only, verus_verify)]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
-        requires exact_word_postprocessing(operator, postprocess, model),
-        ensures
-            forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
-            forall|arg: &TI, output: Fallible<TO>|
-                #[trigger] function_call_ensures(&result, arg, output)
-                    ==> exists|word: Result<u64, ()>|
-                        call_ensures(postprocess, (&operator, arg, word), output),
-            forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
-                #[trigger] function_expectation(&result, arg, payoff)
-                    == crate::uniform_word::one_word_expectation(*arg, model, payoff),
-    ))]
-    pub(crate) fn new_from_one_word_operator<Op, F>(
-        operator: Op,
-        postprocess: F,
-    ) -> Self
-    where
-        Op: Copy + 'static,
-        TI: Copy,
-        F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
-    {
-        let program = OneWordProgram { operator, postprocess };
-        #[cfg(verus_only)]
-        proof_with! {Ghost(model)}
-        Self::erase_one_word_program(program)
-    }
-
     /// Narrow trusted boundary: `Arc<dyn Fn>` invokes the *named*
     /// `OneWordProgram::run` on the same captured program and input.
     ///
@@ -203,7 +171,7 @@ impl<TI, TO> Function<TI, TO> {
                 #[trigger] function_expectation(&result, arg, payoff)
                     == crate::uniform_word::one_word_expectation(*arg, model, payoff),
     ))]
-    fn erase_one_word_program<Op, F>(
+    pub(crate) fn erase_one_word_program<Op, F>(
         program: OneWordProgram<Op, F>,
     ) -> Self
     where
