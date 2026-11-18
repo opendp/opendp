@@ -54,10 +54,16 @@ calculus to distributional expectations is **not mechanized**.
 
 ## Effect-aware Fn experiment
 
-`src/effect_fn_probe.rs` verifies an ordinary `Fn` closure with
-explicit in-band `Tracked<ErrorCredit>` input/output. The RR
-closure uses the production `sample_word_then` and
-`BoolRR::release_callback`, not a duplicate trusted RNG primitive.
+`run_bool_rr_with_effect` is now defined next to the production
+Boolean RR constructor and verifies the actual
+`sample_word_then`/`BoolRR::release_callback` sampling pipeline
+with in-band `Tracked<ErrorCredit>`. The native
+`run_bool_rr` callback delegates to that same named function;
+only the in-band credit arguments and result are erased.
+
+`src/effect_fn_probe.rs` verifies an ordinary effect-aware
+`Fn` closure that calls this **production** function. No
+mechanism-specific sampler or proof model is copied into the harness.
 
 A prior version with the same in-band contract was
 [falsified successfully](https://github.com/opendp/opendp/actions/runs/44420407979):
@@ -84,7 +90,9 @@ the ordinary `Fn(&bool)` has no linear-credit arguments, and its
 still contains one **explicit `assume`** equating that actual
 closure's expectation to the proved one-word release expectation.
 The `run_bool_rr` native forwarding function remains
-`external_body`. The generic `new_certified` interface is unchanged.
+`external_body`, although it now delegates directly to the
+effect-verified production implementation. The generic
+`new_certified` interface is unchanged.
 
 Thus the **effect-aware closure** is verified, but erasing that
 effect-aware interface into the ordinary `Fn` used by the

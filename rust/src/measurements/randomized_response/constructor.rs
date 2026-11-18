@@ -214,7 +214,6 @@ pub(crate) fn run_bool_rr_with_effect(
 /// executable body forwards to the effect-verified implementation above.
 /// Connecting the resulting distribution to callback_expectation remains
 /// outside ordinary Verus's Fn semantics.
-
 #[cfg_attr(verus_only, verus_verify(external_body))]
 fn run_bool_rr(
     operator: &operator::BoolRR,
