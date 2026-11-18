@@ -23,7 +23,7 @@ pub type WordError = crate::error::Error;
 #[cfg_attr(verus_only, verus_spec(result =>
     with
         Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<spec_fn(Result<u64, WordError>) -> real>
+        Ghost(word_cost): Ghost<WordCost>
         -> end: Tracked<crate::one_word_credit::ErrorCredit>
     requires
         start@ =~= (crate::one_word_credit::CreditCarrier::Value {
@@ -62,8 +62,8 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
 #[cfg_attr(verus_only, verus_spec(result =>
     with
         Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<spec_fn(Result<u64, WordError>) -> real>,
-        Ghost(output_cost): Ghost<spec_fn(Result<Y, WordError>) -> real>
+        Ghost(word_cost): Ghost<WordCost>,
+        Ghost(output_cost): Ghost<OutputCost<Y>>
         -> end: Tracked<crate::one_word_credit::ErrorCredit>
     requires
         start@ =~= (crate::one_word_credit::CreditCarrier::Value {
@@ -118,6 +118,10 @@ where
 // This is not an independent or caller-selected probabilistic model.
 #[cfg(verus_only)]
 verus! {
+/// Type aliases keep higher-order cost types outside attribute signatures.
+pub type WordCost = spec_fn(Result<u64, WordError>) -> real;
+pub type OutputCost<Y> = spec_fn(Result<Y, WordError>) -> real;
+
 pub uninterp spec fn uniform_word_expectation(
     payoff: spec_fn(Result<u64, WordError>) -> real,
 ) -> real;
