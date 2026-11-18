@@ -2,9 +2,15 @@
 //!
 //! Kept in one source module so a verifier can import the production
 //! definitions rather than introduce parallel callback representations.
+#[cfg(not(verus_only))]
 use super::StabilityMap;
+#[cfg(not(verus_only))]
 use crate::error::*;
+#[cfg(verus_only)]
+type Fallible<T> = Result<T, ()>;
+#[cfg(not(verus_only))]
 use crate::traits::{DistanceConstant, InfCast, InfMul};
+#[cfg(not(verus_only))]
 use num::Zero;
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
@@ -130,6 +136,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     /// Creates a privacy map from `d_in` to `d_out`
     /// where `d_out = MO.inf_cast(d_in).inf_mul(c) >= d_in * c`,
     /// or returns an error.
+    #[cfg(not(verus_only))]
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
@@ -147,6 +154,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     }
 }
 
+#[cfg(not(verus_only))]
 impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
     pub fn make_chain<MX: 'static + Metric>(
         map1: &PrivacyMap<MX, MO>,

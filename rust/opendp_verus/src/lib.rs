@@ -1,3 +1,12 @@
+// These are the production OpenDP core types and constructor source,
+// imported directly; no parallel Measurement or callback model is defined.
+#[path = "../../src/core/measurement_parts.rs"]
+pub mod measurement_parts;
+pub use measurement_parts::{Domain, Function, Measure, Metric, PrivacyMap};
+#[path = "../../src/core/measurement.rs"]
+pub mod core_measurement;
+pub use core_measurement::{Measurement, MetricSpace};
+
 //! Verus harness compiling production OpenDP source, not parallel code.
 #[path = "../../src/traits/samplers/bernoulli/uniform_word.rs"]
 pub mod uniform_word;

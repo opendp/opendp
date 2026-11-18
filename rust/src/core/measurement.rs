@@ -2,7 +2,11 @@
 //! Extracted unchanged from `core/mod.rs` so the Verus harness can import
 //! the same source rather than a duplicate model.
 use super::{Domain, Function, Measure, Metric, PrivacyMap};
+#[cfg(not(verus_only))]
 use crate::error::*;
+#[cfg(verus_only)]
+type Fallible<T> = Result<T, ()>;
+#[cfg(not(verus_only))]
 use crate::traits::ProductOrd;
 use std::fmt::Debug;
 
@@ -16,7 +20,7 @@ use std::fmt::Debug;
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
-#[readonly::make]
+#[cfg_attr(not(verus_only), readonly::make)]
 pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
     pub input_domain: DI,
     pub input_metric: MI,
@@ -88,6 +92,7 @@ where
     }
 
     #[allow(dead_code)]
+    #[cfg(not(verus_only))]
     pub(crate) fn with_map<MI2: Metric, MO2: Measure>(
         &self,
         input_metric: MI2,
@@ -120,6 +125,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO> {
         self.privacy_map.eval(d_in)
     }
 
+    #[cfg(not(verus_only))]
     pub fn check(&self, d_in: &MI::Distance, d_out: &MO::Distance) -> Fallible<bool>
     where
         MO::Distance: ProductOrd,
