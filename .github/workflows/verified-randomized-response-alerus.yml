@@ -2,7 +2,7 @@ name: Verify randomized response (Verus / expectations)
 
 on:
   push:
-    branches: [verified-randomized-response-alerus, verified-randomized-response-wp]
+    branches: [verified-randomized-response-alerus, verified-randomized-response-wp, verified-rr-measurement-contract]
     paths:
       - 'rust/opendp_verus/**'
       - 'rust/src/core/mod.rs'

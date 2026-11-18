@@ -6,11 +6,10 @@
 > `PrivacyMap` and passes both directly to `Measurement::new_certified`.
 > However, `core/mod.rs` is not yet imported into the Verus harness,
 > `new_certified` has no mechanically enforced validity precondition, and
-> the real production constructor's call is not verified. The existing
-> `verify_built_bool_rr` theorem remains conditional on an assumed
-> adapter correspondence. **Do not describe the resulting Measurement as
-> machine-certified until that assumption is discharged at the actual call
-> site.**
+> the real production constructor's call is not verified. The executable operator theorem is now unconditional on any
+> callback-adapter correspondence. **The returned Measurement is still not
+> machine-certified until real closure erasure and constructor validity are
+> proved at the production call site.**
 
 ## Required acceptance criteria
 
@@ -49,14 +48,14 @@ The latter step is not yet verified.
   for **all bounded payoffs** on `Result<bool, E>`, including observable errors.
 - The two-outcome domination inequality is proved once, separately
   from RR's entropy and adjacency specifications.
-- `verify_built_bool_rr` executes the production builder and composes
-  its numerical and privacy lemmas with the generic
-  `core/verus/measurement.rs::lemma_new_certified`. It handles both finite
-  epsilon and `n = 2^53` (infinite epsilon). Its callback conclusion is
-  conditional on `adapter_realizes` for **that returned operator only**;
-  no universal adapter assumption is required.
-- A successful callback-erasure step preserves privacy **if** the callbacks
-  have the same expectations and privacy map as the verified operator.
+- `verify_built_bool_rr` executes the production builder and proves the
+  privacy contract for the *actual* `BoolRR::release` and `BoolRR::map`
+  using the generic semantic-transfer theorem in
+  `core/verus/measurement.rs`. There is no conditional adapter
+  implication or independently chosen callback semantics.
+- The native closure erasure and the actual `Measurement::new_certified`
+  constructor are **not yet covered** by the proof.
+
 
 ## Trusted boundary
 
@@ -68,11 +67,10 @@ The latter step is not yet verified.
    interpretation remains defined but opaque to ordinary proof callers;
    a proved lemma supplies bitwise congruence. Dashu and panic handling
    are not verified.
-3. `BoolRRParts::into_parts` faithfully forwards through
-   `Function::new_fallible` and `PrivacyMap::new` and their
-   `Arc<dyn Fn>` storage. The map contract now trusts **bit-for-bit
-   forwarding of `BoolRR::map`'s f64 output**, rather than assuming the
-   callback already computes the correct abstract privacy factor.
+3. `Function::new_fallible`, `PrivacyMap::new`, and their
+   `Arc<dyn Fn>` storage preserve callback semantics, including errors.
+   This is still a **missing proof boundary** for a complete Measurement,
+   not an assumption imported by the operator-validity theorem.
 
 Verus does **not** verify the actual `Measurement` object's trait-object
 dispatch. The current theorem establishes validity of the executable operator and its
