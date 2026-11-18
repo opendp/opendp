@@ -176,7 +176,7 @@ where
         output_measure,
         operator,
         operator::BoolRR::invoke_callback,
-        operator::BoolRR::map_callback,
+        operator::BoolRR::zero_map_callback,
     )?;
     // This statement is about the *returned erased PrivacyMap*, not just
     // the operator's pre-erasure cost. A wrong method would fail verification.
