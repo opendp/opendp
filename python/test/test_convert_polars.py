@@ -154,3 +154,19 @@ def test_native_input_exports_are_released_when_conversion_is_abandoned():
             assert raw.contents.len == 1
             del raw
         gc.collect()
+
+
+
+def test_native_output_conversion_can_abort_without_consuming(monkeypatch):
+    from opendp import _convert
+
+    value = pl.Series("numbers", [1, None, 3])
+    obj = py_to_c(value, AnyObjectPtr, "Series")
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            _convert, "_slice_to_series",
+            lambda raw: (_ for _ in ()).throw(ValueError("intentional early failure")),
+        )
+        with pytest.raises(ValueError, match="intentional early failure"):
+            c_to_py(obj)
+    assert c_to_py(obj).equals(value)
