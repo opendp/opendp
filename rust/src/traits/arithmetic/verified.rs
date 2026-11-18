@@ -96,7 +96,8 @@ pub fn inf_ln_up_f64(value: f64) -> Result<f64, ArithmeticError> {
 /// Production floating-point log odds, with exactly the same division and
 /// logarithm used elsewhere in OpenDP. The Verus harness checks this body
 /// using the trusted primitive contracts above.
-#[cfg_attr(verus_only, verus_verify(dual_spec, open))]
+// The outer function is executable, not a dual spec function: its proof
+// consumes executable contracts for the trusted primitives.
 #[cfg_attr(verus_only, verus_spec(result =>
     requires
         4_503_599_627_370_496u64 <= numerator,
