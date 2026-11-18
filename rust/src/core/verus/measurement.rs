@@ -162,6 +162,11 @@ pub open spec fn valid_bool_rr_parts<MI, MO>(
         #[trigger] crate::measurement_parts::function_call_requires(function, truth)
     &&& forall|distance: &u32|
         #[trigger] crate::measurement_parts::privacy_map_call_requires(privacy_map, distance)
+    // A certified map may not evade its privacy obligation by returning Err.
+    // Quantify over *all* possible callback results, not only Ok(epsilon).
+    &&& forall|distance: &u32, output: Result<f64, ()>|
+        #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+            privacy_map, distance, output) ==> output.is_ok()
     &&& forall|left: bool, right: bool, distance: u32|
         #[trigger] bool_rr_pair_valid_parts(
             function, privacy_map, left, right, distance)
