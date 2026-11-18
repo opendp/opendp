@@ -69,6 +69,21 @@ pub open spec fn word_expectation() ->
         uniform_word_expectation(payoff)
 }
 
+/// The weakest preexpectation of one uniform-word draw followed by the
+/// specified deterministic postprocessor. The postprocessor is an actual
+/// executable callback's verified result model, not an arbitrary model of
+/// the entire randomized mechanism.
+pub open spec fn one_word_expectation<X, Y>(
+    input: &X,
+    postprocess: spec_fn(&X, Result<u64, WordError>) -> Result<Y, WordError>,
+    payoff: spec_fn(Result<Y, WordError>) -> real,
+) -> real {
+    word_expectation()(
+        |entropy: Result<u64, WordError>| payoff(postprocess(input, entropy)))
+}
+
+
+
 /// Trusted distributional law of sample_uniform_u64, including the
 /// input-independent error path. This statement is about entropy, not DP.
 /// The executable RNG call itself has no native Verus probabilistic semantics.

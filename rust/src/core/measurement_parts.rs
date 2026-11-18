@@ -73,6 +73,15 @@ impl<TI, TO> Clone for Function<TI, TO> {
 // This is only a *pointwise* contract, not a probability law.
 #[cfg(verus_only)]
 verus! {
+
+/// The actual distributional expectation of the erased executable Function.
+/// This interpretation is opaque until a concrete sampling/erasure
+/// constructor establishes its law from the trusted entropy primitive.
+pub uninterp spec fn function_expectation<TI, TO>(
+    function: &Function<TI, TO>,
+    input: &TI,
+    payoff: spec_fn(Result<TO, ()>) -> real,
+) -> real;
 pub uninterp spec fn function_call_requires<TI, TO>(
     function: &Function<TI, TO>,
     input: &TI,
