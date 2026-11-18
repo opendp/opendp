@@ -55,21 +55,7 @@ where
 {
     /// Legacy constructor: callers remain responsible for establishing
     /// the privacy guarantee of arbitrary supplied callbacks.
-    // Temporarily trust only that the legacy constructor stores its supplied
-    // fields on success. No privacy guarantee is assumed.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures match result {
-            Ok(meas) => {
-                &&& meas.input_domain == input_domain
-                &&& meas.input_metric == input_metric
-                &&& meas.output_measure == output_measure
-                &&& meas.function == function
-                &&& meas.privacy_map == privacy_map
-            },
-            Err(_) => true,
-        },
-    ))]
+    #[cfg_attr(verus_only, verus_verify(external))]
     pub fn new(
         input_domain: DI,
         input_metric: MI,
@@ -116,13 +102,16 @@ where
         F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
         P: Fn(&MI::Distance) -> MO::Distance + 'static,
     {
-        Self::new(
+        (input_domain.clone(), input_metric.clone()).check_space()?;
+        let function = Function::new_fallible(function);
+        let privacy_map = PrivacyMap::new(privacy_map);
+        Ok(Self {
             input_domain,
             input_metric,
             output_measure,
-            Function::new_fallible(function),
-            PrivacyMap::new(privacy_map),
-        )
+            function,
+            privacy_map,
+        })
     }
 
     #[allow(dead_code)]
