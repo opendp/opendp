@@ -126,11 +126,6 @@ pub(crate) struct OneWordProgram<Op, F> {
 
 #[cfg_attr(verus_only, verus_verify)]
 impl<Op, F> OneWordProgram<Op, F> {
-    #[cfg_attr(verus_only, verus_verify)]
-    pub(crate) fn new(operator: Op, postprocess: F) -> Self {
-        Self { operator, postprocess }
-    }
-
     /// The source of the erased closure's result, verified with exactly the
     /// same one-word credit transfer as the generic sampler below.
     #[cfg_attr(verus_only, verus_verify)]
