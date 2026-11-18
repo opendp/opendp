@@ -49,7 +49,7 @@ use super::constructor;
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures match result {
         Ok(measurement) => {
-            &&& crate::measurement_proof::valid_bool_rr_measurement(&measurement)
+            &&& crate::measurement_proof::valid_certified_measurement(&measurement)
             &&& measurement.input_domain.is_unbounded_nonnull()
         },
         Err(_) => true,
