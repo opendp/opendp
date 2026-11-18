@@ -131,21 +131,6 @@ pub open spec fn word_expectation() ->
         uniform_word_expectation(payoff)
 }
 
-/// Ghost model of deterministic postprocessing after one entropy result.
-/// The executable callback must prove every returned value agrees with it.
-pub type OneWordModel<X, Y> =
-    spec_fn(X, Result<u64, WordError>) -> Result<Y, WordError>;
-
-/// The one-word weakest preexpectation, using the *same* uniform entropy
-/// primitive as the production code. No privacy claim is trusted here.
-pub open spec fn one_word_expectation<X, Y>(
-    input: X,
-    model: OneWordModel<X, Y>,
-    payoff: spec_fn(Result<Y, WordError>) -> real,
-) -> real {
-    word_expectation()(|entropy: Result<u64, WordError>| payoff(model(input, entropy)))
-}
-
 /// Trusted distributional law of sample_uniform_u64, including the
 /// input-independent error path. This statement is about entropy, not DP.
 /// The executable RNG call itself has no native Verus probabilistic semantics.

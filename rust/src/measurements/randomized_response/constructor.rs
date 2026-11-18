@@ -201,31 +201,8 @@ where
         assert(well_formed_bool_rr(operator));
         crate::uniform_word::lemma_uniform_word_expectation_rule();
     }
-    #[cfg(verus_only)]
-    proof_decl! {
-        let ghost release_model =
-            |truth: bool, word: Result<u64, ()>| operator.release(truth, word);
-    }
-    #[cfg(verus_only)]
-    proof! {
-        // The deterministic postprocessor has a unique return value for
-        // every input/entropy pair, including every observable error.
-        assert forall|truth: &bool, word: Result<u64, ()>| {
-            &&& call_requires(operator::BoolRR::release_callback, (&operator, truth, word))
-            &&& forall|out: Result<bool, ()>|
-                call_ensures(operator::BoolRR::release_callback,
-                    (&operator, truth, word), out)
-                    ==> out == operator.release(*truth, word)
-        } by {
-            assert(call_requires(operator::BoolRR::release_callback,
-                (&operator, truth, word)));
-        }
-        assert(crate::measurement_parts::exact_word_postprocessing(
-            operator, operator::BoolRR::release_callback, release_model));
-    }
-    // The one-word sampler has its own verified EPT. Construct the RR
-    // callbacks here; verify the deterministic map and isolate the remaining
-    // probabilistic Fn forwarding assumption immediately below.
+    // The one-word sampler has its own verified EPT. Verify the map
+    // closure and isolate the remaining probabilistic Fn assumption here.
     let func = move |truth: &bool| run_bool_rr(&operator, truth);
     // The two configurations have identical native closure bodies; Verus
     // needs its return postcondition attached to the closure expression.
@@ -244,7 +221,8 @@ where
         assume(forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
             #[trigger] crate::measurement_proof::callback_expectation(
                 &func, truth, payoff)
-                == crate::uniform_word::one_word_expectation(*truth, release_model, payoff));
+                == crate::randomized_response_bool::release_expectation(
+                *truth, operator, crate::uniform_word::word_expectation(), payoff));
         // Unlike the randomized result law, ordinary Fn postconditions
         // suffice to verify the deterministic privacy-map closure.
         assert forall|truth: &bool|
@@ -256,7 +234,7 @@ where
                 implies out == Ok(operator.map(*distance, 0.0f64)) by {}
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
-            operator, func, map, release_model);
+            operator, func, map);
     }
     let measurement = Measurement::new_certified(
         input_domain, input_metric, output_measure, func, map,
@@ -310,7 +288,6 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     op: operator::BoolRR,
     func: F,
     map: P,
-    model: crate::uniform_word::OneWordModel<bool, bool>,
 )
     where
         DI: crate::CertifiedDomain<Carrier = bool>,
@@ -323,9 +300,8 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
             #[trigger] crate::measurement_proof::callback_expectation(
                 &func, truth, payoff)
-                == crate::uniform_word::one_word_expectation(*truth, model, payoff),
-        forall|truth: bool, word: Result<u64, ()>|
-            #[trigger] model(truth, word) == op.release(truth, word),
+                == crate::randomized_response_bool::release_expectation(
+                *truth, op, crate::uniform_word::word_expectation(), payoff),
         forall|d: &u32| #[trigger] call_requires(map, (d,)),
         forall|d: &u32, out: Result<f64, ()>|
             #[trigger] call_ensures(map, (d,), out)
@@ -345,14 +321,9 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     assert forall|truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
         #[trigger] actual(truth, payoff) == expected(truth, payoff)
     by {
-        let before = |word: Result<u64, ()>| payoff(model(truth, word));
-        let after = |word: Result<u64, ()>| payoff(op.release(truth, word));
-        assert forall|word: Result<u64, ()>| #[trigger] before(word) == after(word) by {
-            assert(model(truth, word) == op.release(truth, word));
-        }
-        assert(before =~= after);
-        assert(actual(truth, payoff)
-            == crate::uniform_word::one_word_expectation(truth, model, payoff));
+        assert(crate::measurement_proof::callback_expectation(&func, &truth, payoff)
+            == crate::randomized_response_bool::release_expectation(
+                truth, op, crate::uniform_word::word_expectation(), payoff));
     }
     assert forall|input: &bool| domain.contains(input)
         implies #[trigger] call_requires(func, (input,)) by {}

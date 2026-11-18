@@ -47,9 +47,9 @@ The production `sample_word_then` and deterministic
 expectation preservation uses a small Alerus-style linear error-credit
 resource in `one_word_credit.rs`; the randomized-response payoff
 inequality and the reported floating-point cost are proved using the
-real operator. The RR-specific proof then establishes the generic
-`valid_concrete_components` precondition *before* calling
-`new_certified`.
+real operator. The RR-specific proof uses the directly defined release expectation to
+establish the generic `valid_concrete_components` precondition *before*
+calling `new_certified`, without a second ghost postprocessing model.
 
 ## Explicitly trusted callback correspondence
 
@@ -68,8 +68,8 @@ The old generic `trust_bool_rr_closure_forwarding<F, P>` lemma
 was removed: its specification could assign a distribution to arbitrary
 callbacks. A single, explicitly unchecked `assume` now appears
 immediately after constructing the **literal RR `func` closure**.
-It identifies that closure's law with the already-proved one-word
-expectation. It does not assume DP directly and cannot be invoked as a
+It identifies that closure's law with the one-word expectation
+of the actual `BoolRR::release` applied to the production entropy law. It does not assume DP directly and cannot be invoked as a
 reusable theorem, but changing the closure to bypass the sampler could
 still invalidate privacy without a Verus error. This one-line forwarding
 relationship remains trusted.

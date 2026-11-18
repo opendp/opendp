@@ -83,23 +83,6 @@ pub uninterp spec fn function_expectation<TI, TO>(
     payoff: spec_fn(Result<TO, ()>) -> real,
 ) -> real;
 
-/// A deterministic postprocessor must establish an exact result model
-/// for every word, including entropy errors. This is a real verification
-/// obligation on its executable function item; no privacy is assumed.
-pub open spec fn exact_word_postprocessing<Op, X, Y, F>(
-    operator: Op,
-    postprocess: F,
-    model: crate::uniform_word::OneWordModel<X, Y>,
-) -> bool
-    where F: Fn(&Op, &X, Result<u64, ()>) -> Result<Y, ()>,
-{
-    forall|arg: &X, word: Result<u64, ()>| {
-        &&& call_requires(postprocess, (&operator, arg, word))
-        &&& forall|output: Result<Y, ()>|
-            call_ensures(postprocess, (&operator, arg, word), output)
-                ==> output == model((*arg), word)
-    }
-}
 pub uninterp spec fn function_call_requires<TI, TO>(
     function: &Function<TI, TO>,
     input: &TI,
