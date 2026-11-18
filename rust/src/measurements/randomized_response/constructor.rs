@@ -177,8 +177,6 @@ where
     proof! {
         assert(well_formed_bool_rr(operator));
         crate::uniform_word::lemma_uniform_word_expectation_rule();
-        lemma_built_bool_rr_valid(
-            operator, crate::uniform_word::word_expectation());
     }
     #[cfg(verus_only)]
     proof_decl! {
@@ -393,8 +391,6 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         }
         assert(before =~= after);
     }
-    lemma_built_bool_rr_valid(op, words);
-
     assert forall|d: &u32| metric.valid_distance(d) ==>
         #[trigger] call_requires(map, (&op, d)) by {}
 
@@ -466,8 +462,19 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                                 #[trigger] actual(*left, payoff)
                                     <= factor * actual(*right, payoff)
                         by {
-                            assert(expected(*left, payoff)
-                                <= factor * expected(*right, payoff));
+                            if *d == 0 {
+                                assert(*left == *right);
+                            } else {
+                                assert(op.numerator < 9_007_199_254_740_992u64);
+                                assert(factor == verified_arithmetic::real_exp(
+                                    verified_arithmetic::float_value(op.privacy_cost)));
+                                assert(op.numerator as real <= factor *
+                                    (9_007_199_254_740_992u64 - op.numerator) as real);
+                                crate::randomized_response_bool::lemma_bool_rr_dp(
+                                    op, words, factor, *left, *right, payoff);
+                            }
+                            assert(actual(*left, payoff) == expected(*left, payoff));
+                            assert(actual(*right, payoff) == expected(*right, payoff));
                         }
                     }
                 }
