@@ -184,13 +184,11 @@ pub fn verify_built_bool_rr<E>(
 ) -> (result: Result<Option<operator::BoolRR>, ArithmeticError>)
     requires
         crate::bernoulli_proof::uniform_word_expectation_rule(word_expectation),
-        forall|op: operator::BoolRR|
-            #[trigger] adapter_realizes(
-                op, word_expectation, callback_expectation, callback_cost),
     ensures
         match result {
             Ok(Some(op)) =>
-                crate::measurement_proof::valid_measurement_expectations::<
+                adapter_realizes(op, word_expectation, callback_expectation, callback_cost)
+                ==> crate::measurement_proof::valid_measurement_expectations::<
                     bool, Result<bool, E>, u32>(
                     |_: bool| true,
                     |left: bool, right: bool, d: u32|
@@ -206,69 +204,71 @@ pub fn verify_built_bool_rr<E>(
     let result = build_bool_rr(bits);
     if let Ok(Some(op)) = result {
         proof {
-            let n = op.numerator;
-            let callback = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                callback_expectation(op, truth, payoff);
-            let map = |d: u32| callback_factor_map(op, callback_cost, d);
-            assert(adapter_realizes(
-                op, word_expectation, callback_expectation, callback_cost));
-            assert(4_503_599_627_370_496u64 <= n
-                <= 9_007_199_254_740_992u64);
-            let factor = if n == 9_007_199_254_740_992u64 {
-                1real
-            } else {
-                verified_arithmetic::real_exp(
-                    verified_arithmetic::float_value(op.privacy_cost))
-            };
-            if n < 9_007_199_254_740_992u64 {
-                let c: u64 = (9_007_199_254_740_992u64 - n) as u64;
-                assert(c == 9_007_199_254_740_992u64 - n);
-                assert(factor >= 1real);
-                assert(n as real <= factor * c as real);
-            }
-            let member = |_: bool| true;
-            let close = |left: bool, right: bool, d: u32|
-                crate::randomized_response_bool::rr_discrete_close(left, right, d);
-            let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                crate::randomized_response_bool::release_expectation(
-                    truth, op, word_expectation, payoff);
-            let model_map = |d: u32|
-                crate::randomized_response_bool::rr_factor_map(n, factor, d);
-            crate::randomized_response_bool::lemma_rr_operator_valid_measurement(
-                op, word_expectation, factor);
-            assert(crate::measurement_proof::realizes_expectation(
-                callback, expectation));
-            // The factor correspondence follows from bit-for-bit forwarding
-            // and the verified finite/+infinity constructor split.
-            assert forall|d: u32|
-                #[trigger] map(d) == model_map(d)
-            by {
-                assert(f64_to_bits(callback_cost(op, d))
-                    == f64_to_bits(op.map(d, 0.0f64)));
-                if d == 0 {
-                    assert(map(d) == Some(1real));
-                    assert(model_map(d) == Some(1real));
-                } else if n == 9_007_199_254_740_992u64 {
-                    assert(f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64);
-                    assert(f64_to_bits(callback_cost(op, d))
-                        == 0x7ff0_0000_0000_0000u64);
+            if adapter_realizes(
+                op, word_expectation, callback_expectation, callback_cost,
+            ) {
+                let n = op.numerator;
+                let callback = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                    callback_expectation(op, truth, payoff);
+                let map = |d: u32| callback_factor_map(op, callback_cost, d);
+                assert(4_503_599_627_370_496u64 <= n
+                    <= 9_007_199_254_740_992u64);
+                let factor = if n == 9_007_199_254_740_992u64 {
+                    1real
                 } else {
-                    assert(verified_arithmetic::finite(op.privacy_cost));
-                    let bits = f64_to_bits(op.privacy_cost);
-                    assert(((bits >> 52u64) & 2047u64) != 2047u64);
-                    verified_arithmetic::lemma_finite_bits_not_positive_infinity(bits);
-                    assert(f64_to_bits(callback_cost(op, d))
-                        == f64_to_bits(op.privacy_cost));
-                    assert(f64_to_bits(callback_cost(op, d))
-                        != 0x7ff0_0000_0000_0000u64);
-                    verified_arithmetic::lemma_same_bits_same_value(
-                        callback_cost(op, d), op.privacy_cost);
+                    verified_arithmetic::real_exp(
+                        verified_arithmetic::float_value(op.privacy_cost))
+                };
+                if n < 9_007_199_254_740_992u64 {
+                    let c: u64 = (9_007_199_254_740_992u64 - n) as u64;
+                    assert(c == 9_007_199_254_740_992u64 - n);
+                    assert(factor >= 1real);
+                    assert(n as real <= factor * c as real);
                 }
+                let member = |_: bool| true;
+                let close = |left: bool, right: bool, d: u32|
+                    crate::randomized_response_bool::rr_discrete_close(left, right, d);
+                let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                    crate::randomized_response_bool::release_expectation(
+                        truth, op, word_expectation, payoff);
+                let model_map = |d: u32|
+                    crate::randomized_response_bool::rr_factor_map(n, factor, d);
+                crate::randomized_response_bool::lemma_rr_operator_valid_measurement(
+                    op, word_expectation, factor);
+                assert(crate::measurement_proof::realizes_expectation(
+                    callback, expectation));
+                // The factor correspondence follows from bit-for-bit forwarding
+                // and the verified finite/+infinity constructor split.
+                assert forall|d: u32|
+                    #[trigger] map(d) == model_map(d)
+                by {
+                    assert(f64_to_bits(callback_cost(op, d))
+                        == f64_to_bits(op.map(d, 0.0f64)));
+                    if d == 0 {
+                        assert(map(d) == Some(1real));
+                        assert(model_map(d) == Some(1real));
+                    } else if n == 9_007_199_254_740_992u64 {
+                        assert(f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64);
+                        assert(f64_to_bits(callback_cost(op, d))
+                            == 0x7ff0_0000_0000_0000u64);
+                    } else {
+                        assert(verified_arithmetic::finite(op.privacy_cost));
+                        let bits = f64_to_bits(op.privacy_cost);
+                        assert(((bits >> 52u64) & 2047u64) != 2047u64);
+                        verified_arithmetic::lemma_finite_bits_not_positive_infinity(bits);
+                        assert(f64_to_bits(callback_cost(op, d))
+                            == f64_to_bits(op.privacy_cost));
+                        assert(f64_to_bits(callback_cost(op, d))
+                            != 0x7ff0_0000_0000_0000u64);
+                        verified_arithmetic::lemma_same_bits_same_value(
+                            callback_cost(op, d), op.privacy_cost);
+                    }
+                }
+                assert(crate::measurement_proof::realizes_privacy_map(
+                    map, model_map));
+                crate::measurement_proof::lemma_new_certified(
+                    member, close, expectation, model_map, callback, map);
             }
-            assert(crate::measurement_proof::realizes_privacy_map(
-                map, model_map));
-            crate::measurement_proof::lemma_new_certified(
-                member, close, expectation, model_map, callback, map);
         }
     }
     result
