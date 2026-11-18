@@ -22,7 +22,7 @@ pub fn probe_named_ghost_call_through_closure(x: u64) {
         #[verus_spec(result: u64 => ensures result == input)]
         |input: u64| {
             proof_with! { Ghost(input) }
-            named_passthrough(input)
+            crate::closure_bridge_experiment::named_passthrough(input)
         };
 
     let out = f(x);
