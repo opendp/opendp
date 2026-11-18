@@ -100,14 +100,25 @@ where
         )
     }
 
-    /// A verified call site supplies one concrete operator and the exact
-    /// two methods to erase. The method signatures, rather than arbitrary
-    /// closure bodies, identify the probabilistic function and privacy map.
+    /// Construct a measurement whose sampling function consists of one
+    /// uniform-word draw followed by the caller's verified deterministic
+    /// postprocessor. The one-word distributional correspondence is captured
+    /// *before* Arc erasure, rather than inferred from an arbitrary Fn.
     ///
-    /// This is a verified assembly contract, NOT YET a DP certificate.
-    /// Validity of this operator/map pair must become a precondition here.
+    /// TODO: the complete descriptor/metric/privacy validity predicate must
+    /// become a constructor precondition; this method currently establishes
+    /// the exact distributional callback correspondence, not DP by itself.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
+        requires forall|arg: &DI::Carrier, word: Result<u64, ()>| {
+            &&& call_requires(postprocess, (&operator, arg, word))
+            &&& (exists|out: Fallible<TO>|
+                call_ensures(postprocess, (&operator, arg, word), out))
+            &&& forall|a: Fallible<TO>, b: Fallible<TO>|
+                call_ensures(postprocess, (&operator, arg, word), a)
+                    && call_ensures(postprocess, (&operator, arg, word), b)
+                    ==> a == b
+        },
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -116,11 +127,17 @@ where
                 &&& forall|arg: &DI::Carrier|
                     #[trigger] super::measurement_parts::function_call_requires(
                         &meas.function, arg)
-                        == call_requires(invoke, (&operator, arg))
                 &&& forall|arg: &DI::Carrier, out: Fallible<TO>|
                     #[trigger] super::measurement_parts::function_call_ensures(
                         &meas.function, arg, out)
-                        == call_ensures(invoke, (&operator, arg), out)
+                        ==> exists|word: Result<u64, ()>|
+                            call_ensures(postprocess, (&operator, arg, word), out)
+                &&& forall|arg: &DI::Carrier,
+                              payoff: spec_fn(Result<TO, ()>) -> real|
+                    #[trigger] super::measurement_parts::function_expectation(
+                        &meas.function, arg, payoff)
+                        == crate::uniform_word::one_word_expectation(
+                            operator, arg, postprocess, payoff)
                 &&& forall|d: &MI::Distance|
                     #[trigger] super::measurement_parts::privacy_map_call_requires(
                         &meas.privacy_map, d)
@@ -138,15 +155,15 @@ where
         input_metric: MI,
         output_measure: MO,
         operator: Op,
-        invoke: F,
+        postprocess: F,
         privacy_map: P,
     ) -> Fallible<Self>
     where
         Op: Copy + 'static,
-        F: Fn(&Op, &DI::Carrier) -> Fallible<TO> + Copy + 'static,
+        F: Fn(&Op, &DI::Carrier, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
-        let function = Function::new_from_operator(operator, invoke);
+        let function = Function::new_from_one_word_operator(operator, postprocess);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);
         Self::construct(
             input_domain, input_metric, output_measure, function, privacy_map,

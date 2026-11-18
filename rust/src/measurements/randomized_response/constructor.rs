@@ -182,12 +182,31 @@ where
         lemma_built_bool_rr_valid(
             operator, crate::uniform_word::word_expectation());
     }
+    #[cfg(verus_only)]
+    proof! {
+        // The deterministic postprocessor has a unique return value for
+        // every input/entropy pair, including every observable error.
+        assert forall|truth: &bool, word: Result<u64, ()>| {
+            &&& call_requires(operator::BoolRR::release_callback, (&operator, truth, word))
+            &&& (exists|out: Result<bool, ()>|
+                call_ensures(operator::BoolRR::release_callback,
+                    (&operator, truth, word), out))
+            &&& forall|a: Result<bool, ()>, b: Result<bool, ()>|
+                call_ensures(operator::BoolRR::release_callback, (&operator, truth, word), a)
+                    && call_ensures(operator::BoolRR::release_callback, (&operator, truth, word), b)
+                    ==> a == b
+        } by {
+            let expected = operator.release(*truth, word);
+            assert(call_ensures(operator::BoolRR::release_callback,
+                (&operator, truth, word), expected));
+        }
+    }
     let measurement = Measurement::new_certified(
         input_domain,
         input_metric,
         output_measure,
         operator,
-        operator::BoolRR::invoke_callback,
+        operator::BoolRR::release_callback,
         operator::BoolRR::map_callback,
     )?;
     #[cfg(verus_only)]
@@ -223,10 +242,12 @@ where
                 && value.is_ok()
             implies value == Ok(*truth)
         by {
-            assert(crate::measurement_parts::function_call_ensures(
-                &measurement.function, truth, value)
-                == call_ensures(operator::BoolRR::invoke_callback, (&operator, truth), value));
-            assert(call_ensures(operator::BoolRR::invoke_callback, (&operator, truth), value));
+            let word = choose|word: Result<u64, ()>|
+                call_ensures(operator::BoolRR::release_callback,
+                    (&operator, truth, word), value);
+            assert(call_ensures(operator::BoolRR::release_callback,
+                (&operator, truth, word), value));
+            assert(value == operator.release(*truth, word));
             assert(value == Ok(*truth));
         }
     }

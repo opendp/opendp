@@ -167,11 +167,16 @@ impl<TI, TO> Function<TI, TO> {
                     && call_ensures(postprocess, (&operator, arg, word), b)
                     ==> a == b
         },
-        ensures forall|arg: &TI,
-                       payoff: spec_fn(Result<TO, ()>) -> real|
-            #[trigger] function_expectation(&result, arg, payoff)
-                == crate::uniform_word::one_word_expectation(
-                    operator, arg, postprocess, payoff),
+        ensures
+            forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
+            forall|arg: &TI, output: Fallible<TO>|
+                #[trigger] function_call_ensures(&result, arg, output)
+                    ==> exists|word: Result<u64, ()>|
+                        call_ensures(postprocess, (&operator, arg, word), output),
+            forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
+                #[trigger] function_expectation(&result, arg, payoff)
+                    == crate::uniform_word::one_word_expectation(
+                        operator, arg, postprocess, payoff),
     ))]
     pub(crate) fn new_from_one_word_operator<Op, F>(
         operator: Op,
