@@ -9,7 +9,7 @@ use crate::operator;
 use crate::measurement_proof::bounded_payoff;
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
-    lemma_bernoulli_probability, dyadic53_mass, uniform_word_expectation_rule,
+    lemma_bernoulli_probability, uniform_word_expectation_rule,
 };
 
 verus! {
@@ -123,7 +123,7 @@ pub proof fn lemma_release_expectation<E>(
         ) + error_expectation(on_error));
     lemma_bernoulli_probability(numerator);
     assert(threshold as real / 18_446_744_073_709_551_616real
-        == dyadic53_mass(numerator));
+        == numerator as real / 9_007_199_254_740_992real);
 }
 
 /// Pure DP for arbitrary bounded postconditions on the *actual Result* type.

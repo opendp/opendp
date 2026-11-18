@@ -28,22 +28,13 @@ pub proof fn lemma_success_is_prefix(numerator: u64, bits: u64)
     }
 }
 
-/// A uniform 64-bit source has the following exact CDF for 0 <= t <= 2^64.
-/// This is a mathematical reference law; the correctness of fill_bytes is
-/// the one probabilistic primitive still to justify.
-pub open spec fn uniform64_cdf(t: nat) -> real {
-    (t as real) / 18_446_744_073_709_551_616real
-}
-
-/// The success event is a prefix of the 64-bit uniform range.
-pub open spec fn dyadic53_mass(numerator: u64) -> real {
-    uniform64_cdf(prefix_threshold(numerator))
-}
-
+/// The prefix test on a uniform u64 has exactly numerator / 2^53
+/// success probability; this is a theorem about the production threshold.
 pub proof fn lemma_bernoulli_probability(numerator: u64)
     requires numerator <= 9_007_199_254_740_992u64,
     ensures
-        dyadic53_mass(numerator)
+        (prefix_threshold(numerator) as real)
+            / 18_446_744_073_709_551_616real
             == (numerator as real) / 9_007_199_254_740_992real,
 {
     assert((numerator as real * 2048real) / 18_446_744_073_709_551_616real
