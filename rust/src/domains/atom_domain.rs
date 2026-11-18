@@ -18,7 +18,7 @@ use crate::error::*;
 #[derive(Clone, PartialEq)]
 pub struct AtomDomain<T: CheckAtom> {
     pub bounds: Option<Bounds<T>>,
-    nan: bool,
+    pub(super) nan: bool,
 }
 
 #[cfg_attr(verus_only, verus_verify)]
@@ -45,6 +45,6 @@ impl<T: CheckAtom> Domain for AtomDomain<T> {
 #[cfg_attr(verus_only, derive(Debug))]
 #[derive(Clone, PartialEq)]
 pub struct Bounds<T> {
-    lower: Bound<T>,
-    upper: Bound<T>,
+    pub(super) lower: Bound<T>,
+    pub(super) upper: Bound<T>,
 }
