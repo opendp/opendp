@@ -98,6 +98,8 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 // module so Verus can verify precisely the same executable source.
 mod measurement;
 pub use measurement::{Measurement, MetricSpace};
+mod measurement_semantics;
+pub use measurement_semantics::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
 
 /// A data transformation with certain stability characteristics.
 ///
