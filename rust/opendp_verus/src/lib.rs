@@ -20,6 +20,7 @@ pub mod max_divergence;
 pub mod core_measurement;
 pub use core_measurement::{Measurement, MetricSpace};
 
+pub mod one_word_credit;
 #[path = "../../src/traits/samplers/bernoulli/uniform_word.rs"]
 pub mod uniform_word;
 #[path = "../../src/traits/samplers/bernoulli/dyadic53.rs"]
