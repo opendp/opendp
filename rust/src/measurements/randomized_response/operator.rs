@@ -65,47 +65,10 @@ impl BoolRR {
     }
 }
 
-// The actual native invocation is verified from this same executable body.
-// Only the sample_uniform_u64 distribution is outside Verus's scope.
+// The native Function adapter calls sample_word_then with release_callback.
+// Keep one executable sampling path; do not separately certify an unused
+// invoke method.
 #[cfg(verus_only)]
-use crate::uniform_word::{sample_word_then, WordError};
-#[cfg(not(verus_only))]
-use crate::traits::samplers::sample_word_then;
+use crate::uniform_word::WordError;
 #[cfg(not(verus_only))]
 use crate::error::Error as WordError;
-
-impl BoolRR {
-    /// Preserve the deterministic postprocessing of the *actual* entropy
-    /// draw. If p=1 and the draw succeeds, the result must equal truth.
-    #[cfg_attr(verus_only, verus_verify)]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures
-            exists|entropy: Result<u64, WordError>|
-                result == self.release(truth, entropy),
-            self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
-                ==> result == Ok(truth),
-    ))]
-    pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
-        let output = sample_word_then(self, &truth, Self::release_callback);
-        #[cfg(verus_only)]
-        proof! {
-            let witness = choose|word: Result<u64, WordError>|
-                call_ensures(Self::release_callback, (self, &truth, word), output);
-            assert(call_ensures(Self::release_callback, (self, &truth, witness), output));
-            assert(output == self.release(truth, witness));
-        }
-        output
-    }
-
-    #[cfg_attr(verus_only, verus_verify)]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures
-            exists|entropy: Result<u64, WordError>|
-                result == self.release(*truth, entropy),
-            self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
-                ==> result == Ok(*truth),
-    ))]
-    pub fn invoke_callback(&self, truth: &bool) -> Result<bool, WordError> {
-        self.invoke(*truth)
-    }
-}
