@@ -92,7 +92,7 @@ where
                     series_domain.name
                 );
             }
-            if matches!(series_domain.dtype(), DataType::Categorical(_, _)) {
+            if contains_categorical(&series_domain.dtype()) {
                 return fallible!(
                     MakeMeasurement,
                     "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to String or Enum before grouping.",
@@ -351,6 +351,18 @@ fn contains_float(dtype: &DataType) -> bool {
         DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
         DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
         DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
+        _ => false,
+    }
+}
+
+/// Reject data-dependent categorical encodings at any depth in a grouping key.
+fn contains_categorical(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Categorical(_, _) => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(field.dtype())),
         _ => false,
     }
 }

@@ -64,6 +64,47 @@ fn test_contains_float_nested() {
 }
 
 #[test]
+fn test_reject_nested_categorical_grouping_key() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    assert!(contains_categorical(&categorical));
+    assert!(contains_categorical(&DataType::List(Box::new(
+        categorical.clone()
+    ))));
+    assert!(contains_categorical(&DataType::Struct(vec![Field::new(
+        "nested".into(),
+        categorical.clone(),
+    )])));
+    assert!(!contains_categorical(&DataType::String));
+
+    let schema = Schema::from_iter([Field::new(
+        "key".into(),
+        DataType::Array(Box::new(categorical), 2),
+    )]);
+    let domain = LazyFrameDomain::new_from_schema(schema.clone())?;
+    let lf = DataFrame::empty_with_schema(&schema).lazy();
+    let err = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert_eq!(err.variant, MakeMeasurement);
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Categories are data-dependent"),
+        "{err:?}"
+    );
+    Ok(())
+}
+
+#[test]
 fn test_cast_float_grouping_keys_allowed() -> Fallible<()> {
     let domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("key", AtomDomain::<f64>::default())])?;
