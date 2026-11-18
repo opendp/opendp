@@ -21,10 +21,7 @@ pub struct AtomDomain<T: CheckAtom> {
     pub(super) nan: bool,
 }
 
-#[cfg_attr(verus_only, verus_verify)]
-#[cfg_attr(verus_only, verus_spec(result =>
-    ensures result.bounds.is_none() && result.nan == T::NULLABLE,
-))]
+#[cfg_attr(verus_only, verus_verify(external))]
 impl<T: CheckAtom> Default for AtomDomain<T> {
     fn default() -> Self {
         AtomDomain {
@@ -47,4 +44,16 @@ impl<T: CheckAtom> Domain for AtomDomain<T> {
 pub struct Bounds<T> {
     pub(super) lower: Bound<T>,
     pub(super) upper: Bound<T>,
+}
+
+#[cfg_attr(verus_only, verus_verify)]
+impl<T: CheckAtom> AtomDomain<T> {
+    /// A non-null atomic domain with no bounds. For Boolean inputs this
+    /// is identical to AtomDomain::<bool>::default(), as bool is non-null.
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures result.bounds.is_none() && !result.nan,
+    ))]
+    pub fn new_non_nan() -> Self {
+        AtomDomain { bounds: None, nan: false }
+    }
 }

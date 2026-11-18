@@ -113,14 +113,6 @@ impl<T: CheckAtom> AtomDomain<T> {
     }
 }
 
-impl<T: CheckAtom> AtomDomain<T> {
-    pub fn new_non_nan() -> Self {
-        AtomDomain {
-            bounds: None,
-            nan: false,
-        }
-    }
-}
 impl<T: CheckAtom + PartialOrd + Debug> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {

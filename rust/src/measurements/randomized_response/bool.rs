@@ -48,7 +48,7 @@ pub fn make_randomized_response_bool(
     // This is the same executable path imported by the Verus harness.
     let measurement = constructor::build_bool_rr_measurement(
         prob.to_bits(),
-        AtomDomain::default(),
+        AtomDomain::<bool>::new_non_nan(),
         DiscreteDistance,
         MaxDivergence,
     )?;

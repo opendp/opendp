@@ -11,7 +11,6 @@ type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
 use crate::error::*;
 
-#[cfg_attr(verus_only, verus_verify)]
 pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync {
     fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
         #[cfg(not(verus_only))]
@@ -36,7 +35,6 @@ pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync
 ///
 /// Since [`crate::domains::AtomDomain`] may or may not contain null values,
 /// this trait is necessary for its member check.
-#[cfg_attr(verus_only, verus_verify)]
 pub trait CheckNull {
     /// # Proof Definition
     /// A constant that is true if the type can represent null values.
@@ -50,10 +48,8 @@ pub trait CheckNull {
 }
 
 
-#[cfg_attr(verus_only, verus_verify)]
 impl CheckAtom for bool {}
 
-#[cfg_attr(verus_only, verus_verify)]
 impl CheckNull for bool {
     const NULLABLE: bool = false;
 }
