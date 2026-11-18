@@ -9,10 +9,6 @@ type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
 use crate::traits::ProductOrd;
 use std::fmt::Debug;
-#[cfg(not(verus_only))]
-use crate::traits::samplers::OneWordProgram;
-#[cfg(verus_only)]
-use crate::uniform_word::OneWordProgram;
 #[cfg(verus_only)]
 use vstd::prelude::*;
 #[cfg(verus_only)]
@@ -134,7 +130,7 @@ where
     }
 }
 
-/// Proof boundary for a concrete one-word sampler. The caller must first
+/// Proof boundary for concrete one-word sampling callbacks. The caller must first
 /// prove *all* measurement invariants of the real program and map. This
 /// constructor never inspects their implementations or re-proves privacy.
 ///
@@ -154,7 +150,7 @@ where
         with Ghost(model): Ghost<
             crate::uniform_word::OneWordModel<DI::Carrier, TO>>
         requires crate::measurement_proof::valid_one_word_components(
-            &input_domain, &input_metric, &output_measure, &program, map, model),
+            &input_domain, &input_metric, &output_measure, operator, postprocess, map, model),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -169,7 +165,8 @@ where
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        program: OneWordProgram<Op, F>,
+        operator: Op,
+        postprocess: F,
         map: P,
     ) -> Fallible<Self>
     where
@@ -179,7 +176,7 @@ where
     {
         #[cfg(verus_only)]
         proof_with! {Ghost(model)}
-        Self::assemble_unchecked(input_domain, input_metric, output_measure, program, map)
+        Self::assemble_unchecked(input_domain, input_metric, output_measure, operator, postprocess, map)
     }
 
     /// Audited Rust plumbing only. All mathematical proof obligations are
@@ -190,7 +187,7 @@ where
         with Ghost(model): Ghost<
             crate::uniform_word::OneWordModel<DI::Carrier, TO>>
         requires crate::measurement_proof::valid_one_word_components(
-            &input_domain, &input_metric, &output_measure, &program, map, model),
+            &input_domain, &input_metric, &output_measure, operator, postprocess, map, model),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -205,7 +202,8 @@ where
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        program: OneWordProgram<Op, F>,
+        operator: Op,
+        postprocess: F,
         map: P,
     ) -> Fallible<Self>
     where
@@ -215,13 +213,15 @@ where
     {
         #[cfg(not(verus_only))]
         {
-            let operator = program.operator;
+            let map_operator = operator;
             Self::new(
                 input_domain,
                 input_metric,
                 output_measure,
-                Function::new_fallible(move |input| program.run(input)),
-                PrivacyMap::new_fallible(move |d| map(&operator, d)),
+                Function::new_fallible(move |input| {
+                    crate::traits::samplers::sample_word_then(&operator, input, postprocess)
+                }),
+                PrivacyMap::new_fallible(move |d| map(&map_operator, d)),
             )
         }
         #[cfg(verus_only)]
