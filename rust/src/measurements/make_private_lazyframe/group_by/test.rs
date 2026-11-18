@@ -749,10 +749,12 @@ fn test_max_length_overflow() -> Fallible<()> {
 
 #[test]
 fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
+    #[cfg(not(feature = "polars-ffi"))]
     use crate::core::Domain;
     use crate::metrics::{Bound, Bounds};
 
     let x = df!("A" => ["a"])?.lazy();
+    #[cfg(not(feature = "polars-ffi"))]
     let y = df!("A" => ["b"])?.lazy();
     let public = df!("A" => ["a", "b"])?.lazy();
     let grouped = x
@@ -776,6 +778,7 @@ fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
         )])?
         .with_margin(margin.clone())?;
 
+        #[cfg(not(feature = "polars-ffi"))]
         if margin.invariant.is_none() {
             // These datasets have disjoint group keys, despite each having one group.
             assert!(domain.member(&x)? && domain.member(&y)?);
