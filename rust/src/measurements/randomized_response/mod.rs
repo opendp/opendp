@@ -90,7 +90,7 @@ pub fn make_randomized_response_bool(
     // representable exactly as binary64, before directed numeric operations.
     let privacy_constant = match crate::traits::samplers::dyadic53_odds_parts(numerator) {
         None => f64::INFINITY,
-        Some((n, complement)) => (n as f64).inf_div(&(complement as f64))?.inf_ln()?,
+        Some((n, complement)) => crate::traits::arithmetic::upper_log_odds_u53(n, complement)?,
     };
 
     let operator = operator::BoolRR { numerator, privacy_cost: privacy_constant };

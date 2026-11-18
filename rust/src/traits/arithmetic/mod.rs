@@ -1,5 +1,8 @@
 use std::ops::{Add, Div, Mul, Sub};
 
+pub(crate) mod verified;
+pub(crate) use verified::upper_log_odds_u53;
+
 use crate::{
     error::Fallible,
     traits::{ExactIntCast, InfCast},

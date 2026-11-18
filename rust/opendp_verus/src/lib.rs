@@ -13,3 +13,6 @@ pub mod randomized_response_bool;
 
 #[path = "../../src/core/verus/measurement.rs"]
 pub mod measurement_proof;
+
+#[path = "../../src/traits/arithmetic/verified.rs"]
+pub mod verified_arithmetic;
