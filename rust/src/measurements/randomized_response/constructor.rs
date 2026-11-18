@@ -268,7 +268,9 @@ where
     // The actual erased map has an attainable Ok result at every distance.
     #[cfg(verus_only)]
     proof! {
-        assert forall|d: &u32| exists|epsilon: f64| #[trigger]
+        assert forall|d: &u32|
+            #[trigger] crate::measurement_parts::privacy_map_call_requires(&privacy_map, d)
+            && exists|epsilon: f64| #[trigger]
             crate::measurement_parts::privacy_map_call_ensures(
                 &privacy_map, d, Ok(epsilon)) by {
             let epsilon = operator.map(*d, 0.0f64);
