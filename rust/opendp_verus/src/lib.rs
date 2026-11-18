@@ -45,3 +45,6 @@ pub mod rr_constructor;
 // Verify the actual public Boolean constructor body, not a harness copy.
 #[path = "../../src/measurements/randomized_response/bool.rs"]
 pub mod rr_bool;
+
+// Experimental effect-aware named callback: no Fn adapter is certified here.
+pub mod effect_callback;
