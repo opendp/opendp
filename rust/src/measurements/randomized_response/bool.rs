@@ -38,9 +38,9 @@ use super::constructor;
 /// * `constant_time` - Both values use one fixed-size uniform-byte draw.
 ///
 /// # Verification
-/// Verus checks the operator builder and conditional privacy guarantee.
-/// Entropy, numerical primitives, and callback erasure are trusted; see
-/// rust/opendp_verus/README.md.
+/// Verus checks this public constructor through Measurement::new_certified.
+/// The entropy law, numerical primitives and callback erasure have explicitly
+/// documented trust contracts; see rust/opendp_verus/README.md.
 #[cfg_attr(verus_only, verus_verify)]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures match result {
@@ -72,3 +72,17 @@ pub fn make_randomized_response_bool(
     Ok(measurement)
 }
 
+
+#[cfg(all(test, not(verus_only)))]
+mod tests {
+    use super::*;
+    use crate::core::Domain;
+
+    #[test]
+    fn boolean_non_null_domain_matches_default() {
+        let domain = AtomDomain::<bool>::new_non_nan();
+        assert_eq!(domain, AtomDomain::<bool>::default());
+        assert!(domain.member(&false).unwrap());
+        assert!(domain.member(&true).unwrap());
+    }
+}
