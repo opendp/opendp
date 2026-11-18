@@ -43,10 +43,10 @@ impl BoolRR {
     // Same executable map callback in both native and verified builds.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures result == Ok(self.map(distance, 0.0f64)),
+        ensures result == Ok(self.map(*distance, 0.0f64)),
     ))]
-    pub fn map_callback(&self, distance: u32) -> Result<f64, WordError> {
-        Ok(self.map(distance, 0.0))
+    pub fn map_callback(&self, distance: &u32) -> Result<f64, WordError> {
+        Ok(self.map(*distance, 0.0))
     }
 }
 
@@ -70,5 +70,14 @@ impl BoolRR {
     pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
         let entropy = sample_uniform_u64();
         self.release(truth, entropy)
+    }
+
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
+            ==> result == Ok(*truth),
+    ))]
+    pub fn invoke_callback(&self, truth: &bool) -> Result<bool, WordError> {
+        self.invoke(*truth)
     }
 }

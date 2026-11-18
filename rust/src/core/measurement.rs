@@ -100,11 +100,12 @@ where
         )
     }
 
-    /// The certification boundary is deliberately before callback erasure.
-    /// Full measurement validity must be proved at every verified call site.
+    /// A verified call site supplies one concrete operator and the exact
+    /// two methods to erase. The method signatures, rather than arbitrary
+    /// closure bodies, identify the probabilistic function and privacy map.
     ///
-    /// The privacy-validity precondition is still missing. The current
-    /// postconditions only establish callback-forwarding and assembly.
+    /// This is a verified assembly contract, NOT YET a DP certificate.
+    /// Validity of this operator/map pair must become a precondition here.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         ensures match result {
@@ -112,39 +113,28 @@ where
                 &&& meas.input_domain == input_domain
                 &&& meas.input_metric == input_metric
                 &&& meas.output_measure == output_measure
-                &&& forall|arg: &DI::Carrier|
-                    #[trigger] super::measurement_parts::function_call_requires(
-                        &meas.function, arg)
-                        == call_requires(function, (arg,))
                 &&& forall|arg: &DI::Carrier, out: Fallible<TO>|
                     #[trigger] super::measurement_parts::function_call_ensures(
                         &meas.function, arg, out)
-                        == call_ensures(function, (arg,), out)
-                &&& forall|d: &MI::Distance|
-                    #[trigger] super::measurement_parts::privacy_map_call_requires(
-                        &meas.privacy_map, d)
-                        == call_requires(privacy_map, (d,))
+                        == call_ensures(invoke, (&operator, arg), out)
                 &&& forall|d: &MI::Distance, out: Fallible<MO::Distance>|
                     #[trigger] super::measurement_parts::privacy_map_call_ensures(
                         &meas.privacy_map, d, out)
-                        == call_ensures(privacy_map, (d,), out)
+                        == call_ensures(privacy_map, (&operator, d), out)
             },
             Err(_) => true,
         },
     ))]
-    pub(crate) fn new_certified<F, P>(
+    pub(crate) fn new_certified<Op: Copy + 'static>(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        function: F,
-        privacy_map: P,
-    ) -> Fallible<Self>
-    where
-        F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
-        P: Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static,
-    {
-        let function = Function::new_fallible(function);
-        let privacy_map = PrivacyMap::new_fallible(privacy_map);
+        operator: Op,
+        invoke: fn(&Op, &DI::Carrier) -> Fallible<TO>,
+        privacy_map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
+    ) -> Fallible<Self> {
+        let function = Function::new_from_operator(operator, invoke);
+        let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);
         Self::construct(
             input_domain, input_metric, output_measure, function, privacy_map,
         )

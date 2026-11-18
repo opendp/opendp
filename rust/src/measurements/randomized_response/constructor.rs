@@ -170,15 +170,13 @@ where
         lemma_built_bool_rr_valid(
             operator, crate::uniform_word::word_expectation());
     }
-    // Production callback delegates to a method whose numerical behavior
-    // is checked directly by Verus, not a separate specification model.
-    let map_fn = move |distance: &u32| operator.map_callback(*distance);
     let measurement = Measurement::new_certified(
         input_domain,
         input_metric,
         output_measure,
-        move |truth: &bool| operator.invoke(*truth),
-        map_fn,
+        operator,
+        operator::BoolRR::invoke_callback,
+        operator::BoolRR::map_callback,
     )?;
     Ok(Some(measurement))
 }

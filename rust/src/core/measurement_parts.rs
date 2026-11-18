@@ -120,6 +120,24 @@ impl<TI, TO> Function<TI, TO> {
         requires function_call_requires(self, arg),
         ensures function_call_ensures(self, arg, result),
     ))]
+    /// Erase a named method of a concrete operator. This is a narrow
+    /// trusted Arc-dispatch correspondence, not a privacy assumption.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures forall|arg: &TI, out: Fallible<TO>|
+            #[trigger] function_call_ensures(&result, arg, out)
+                == call_ensures(invoke, (&operator, arg), out),
+    ))]
+    pub(crate) fn new_from_operator<Op: Copy + 'static>(
+        operator: Op,
+        invoke: fn(&Op, &TI) -> Fallible<TO>,
+    ) -> Self {
+        #[cfg(not(verus_only))]
+        { Self::new_fallible(move |arg| invoke(&operator, arg)) }
+        #[cfg(verus_only)]
+        { unimplemented!() }
+    }
+
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
     }
@@ -243,6 +261,24 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
+    /// Erase a named operator privacy-map method. The only trusted
+    /// obligation is exact forwarding of possible outcomes, including errors.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures forall|d: &MI::Distance, out: Fallible<MO::Distance>|
+            #[trigger] privacy_map_call_ensures(&result, d, out)
+                == call_ensures(map, (&operator, d), out),
+    ))]
+    pub(crate) fn new_from_operator<Op: Copy + 'static>(
+        operator: Op,
+        map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
+    ) -> Self {
+        #[cfg(not(verus_only))]
+        { Self::new_fallible(move |d| map(&operator, d)) }
+        #[cfg(verus_only)]
+        { unimplemented!() }
+    }
+
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         requires privacy_map_call_requires(self, input_distance),
