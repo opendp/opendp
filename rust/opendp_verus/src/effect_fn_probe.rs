@@ -149,3 +149,29 @@ pub fn probe_rr_fn_in_band(
 }
 
 } // verus!
+
+// Test conversion from the in-band entropy interface to the original
+// ghost-output EPT API, without assuming a second RNG specification.
+#[verus_verify]
+#[verus_spec(result =>
+    with
+        Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
+        Ghost(word_cost): Ghost<crate::uniform_word::WordCost>
+            -> end: Tracked<crate::one_word_credit::ErrorCredit>
+    requires
+        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: crate::uniform_word::uniform_word_expectation(word_cost)
+        }),
+        forall|word: Result<u64, crate::uniform_word::WordError>|
+            0real <= #[trigger] word_cost(word) < 1real,
+    ensures
+        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: word_cost(result)
+        }),
+)]
+pub fn bridge_in_band_to_ghost() -> Result<u64, crate::uniform_word::WordError> {
+    let (word, returned) = crate::effect_fn_probe::draw_word_in_band(
+        Tracked(start), Ghost(word_cost));
+    proof_with! { |= returned }
+    word
+}
