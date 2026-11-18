@@ -53,10 +53,23 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
 {
-    /// Legacy constructor: callers remain responsible for establishing
-    /// the privacy guarantee of arbitrary supplied callbacks.
-    #[cfg_attr(verus_only, verus_verify(external))]
-    pub fn new(
+    /// Common executable assembly for the legacy and proof-gated paths.
+    /// The body is verified; it checks compatibility and returns the exact
+    /// supplied descriptors, function, and privacy map. No privacy is assumed.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures match result {
+            Ok(meas) => {
+                &&& meas.input_domain == input_domain
+                &&& meas.input_metric == input_metric
+                &&& meas.output_measure == output_measure
+                &&& meas.function == function
+                &&& meas.privacy_map == privacy_map
+            },
+            Err(_) => true,
+        },
+    ))]
+    fn construct(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
@@ -66,20 +79,32 @@ where
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
-            function,
             input_metric,
             output_measure,
+            function,
             privacy_map,
         })
     }
 
-    /// The certification boundary is deliberately *before* callback erasure.
-    /// Verus must require the full measurement-validity contract of the two
-    /// concrete closures at every call site. This method only packages those
-    /// callbacks into the ordinary OpenDP Measurement.
+    /// Legacy constructor: callers remain responsible for validity.
+    #[cfg_attr(verus_only, verus_verify(external))]
+    pub fn new(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        function: Function<DI::Carrier, TO>,
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Fallible<Self> {
+        Self::construct(
+            input_domain, input_metric, output_measure, function, privacy_map,
+        )
+    }
+
+    /// The certification boundary is deliberately before callback erasure.
+    /// Full measurement validity must be proved at every verified call site.
     ///
-    /// IMPORTANT: the native method has not yet been imported and verified
-    /// with that precondition. Until then its name conveys no certification.
+    /// The full validity precondition and the production RR call-site proof
+    /// are still missing; a verified assembly result alone is not privacy.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         ensures match result {
@@ -102,16 +127,11 @@ where
         F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
         P: Fn(&MI::Distance) -> MO::Distance + 'static,
     {
-        (input_domain.clone(), input_metric.clone()).check_space()?;
         let function = Function::new_fallible(function);
         let privacy_map = PrivacyMap::new(privacy_map);
-        Ok(Self {
-            input_domain,
-            input_metric,
-            output_measure,
-            function,
-            privacy_map,
-        })
+        Self::construct(
+            input_domain, input_metric, output_measure, function, privacy_map,
+        )
     }
 
     #[allow(dead_code)]
