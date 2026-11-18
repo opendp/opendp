@@ -8,30 +8,13 @@ use std::collections::HashSet;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{CertifiedMeasurementParts, Function, Measurement, PrivacyMap};
+use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::samplers::sample_bernoulli_float;
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
-
-// This is the only trusted callback-erasure adapter for Boolean RR.
-// It forwards to the concrete operator; Verus does not verify Arc<dyn Fn>.
-struct BoolRRParts(operator::BoolRR);
-
-impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
-    for BoolRRParts
-{
-    fn into_parts(self) -> (Function<bool, bool>, PrivacyMap<DiscreteDistance, MaxDivergence>) {
-        let operator = self.0;
-        let map_operator = operator;
-        (
-            Function::new_fallible(move |truth: &bool| operator.invoke(*truth)),
-            PrivacyMap::new(move |distance: &u32| map_operator.map(*distance, 0.0)),
-        )
-    }
-}
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -77,11 +60,16 @@ pub fn make_randomized_response_bool(
     };
     let _ = constant_time; // Both settings use one fixed-size entropy draw.
 
+    let function = Function::new_fallible(move |truth: &bool| operator.invoke(*truth));
+    let privacy_map =
+        PrivacyMap::new(move |distance: &u32| operator.map(*distance, 0.0));
+
     Measurement::new_certified(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        BoolRRParts(operator),
+        function,
+        privacy_map,
     )
 }
 

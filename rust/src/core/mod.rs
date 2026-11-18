@@ -239,16 +239,6 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
     }
 }
 
-/// Parts of a measurement backed by a verified concrete operator.
-///
-/// The native adapter is a small, trusted correspondence boundary: it must
-/// install exactly the verified probabilistic function and privacy map.
-/// Implementing this trait is not, by itself, a machine-checked privacy proof.
-/// The paired semantic obligation is in core/verus/measurement.rs.
-pub(crate) trait CertifiedMeasurementParts<DI: Domain, MI: Metric, MO: Measure, TO> {
-    fn into_parts(self) -> (Function<DI::Carrier, TO>, PrivacyMap<MI, MO>);
-}
-
 /// A randomized mechanism with certain privacy characteristics.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
@@ -303,14 +293,19 @@ where
         })
     }
 
-    /// Bundle callbacks supplied by an audited concrete operator.
-    pub(crate) fn new_certified<P: CertifiedMeasurementParts<DI, MI, MO, TO>>(
+    /// Constructor for a function/privacy-map pair whose *actual* semantics
+    /// have been proved to satisfy the measurement validity contract.
+    ///
+    /// This native body still needs to be imported into the Verus harness,
+    /// with the full validity predicate as a precondition. Until then, the
+    /// name alone does not certify callers; see opendp_verus/README.md.
+    pub(crate) fn new_certified(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        certified: P,
+        function: Function<DI::Carrier, TO>,
+        privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
-        let (function, privacy_map) = certified.into_parts();
         Self::new(input_domain, input_metric, output_measure, function, privacy_map)
     }
 
