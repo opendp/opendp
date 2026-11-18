@@ -5,6 +5,7 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::polars::contains_categorical;
 use crate::transformations::expr_replace::{materialize_lit_list, reject_reserved_replace_name};
 
 use super::StableExpr;
@@ -101,7 +102,7 @@ where
     // check data types
     reject_reserved_replace_name(&middle_domain.column.name)?;
     let input_dtype = middle_domain.column.dtype();
-    if matches!(input_dtype, DataType::Categorical(_, _)) {
+    if contains_categorical(&input_dtype) {
         return fallible!(
             MakeTransformation,
             "replace_strict cannot be applied to categorical data ({}), because it may trigger a data-dependent CategoricalRemappingWarning in Polars",
@@ -136,6 +137,12 @@ where
         &input_domain,
     )?
     .materialize_unknown(false)?;
+    if contains_categorical(&output_dtype) {
+        return fallible!(
+            MakeTransformation,
+            "replace_strict cannot produce categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
+        );
+    }
 
     let new_dtype = new_lit.get_datatype();
     if is_cast_fallible(&new_dtype, &output_dtype) {

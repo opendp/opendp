@@ -244,3 +244,46 @@ fn test_replace_strict_rejects_categorical() -> Fallible<()> {
     );
     Ok(())
 }
+
+#[test]
+fn test_replace_strict_rejects_nested_categorical() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let nested = DataType::Array(Box::new(categorical), 2);
+    let schema = Schema::from_iter([Field::new("data".into(), nested)]);
+    let domain = LazyFrameDomain::new_from_schema(schema)?;
+    let err = make_expr_replace_strict(
+        domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("data").replace_strict(lit(1i32), lit(2i32), Some(lit(3i32)), None::<DataType>),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("categorical"),
+        "{err:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_replace_strict_rejects_categorical_output() -> Fallible<()> {
+    let categories = Categories::global();
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "",
+        OptionDomain::new(AtomDomain::<i32>::default()),
+    )])?;
+    assert!(
+        make_expr_replace_strict(
+            domain.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("").replace_strict(lit(1i32), lit("X"), Some(lit("fallback")), Some(dtype)),
+        )
+        .is_err()
+    );
+    Ok(())
+}

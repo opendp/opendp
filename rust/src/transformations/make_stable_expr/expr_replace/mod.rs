@@ -6,6 +6,7 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::polars::contains_categorical;
 
 use super::StableExpr;
 
@@ -65,7 +66,7 @@ where
 
     reject_reserved_replace_name(&middle_domain.column.name)?;
     let dtype = middle_domain.column.dtype();
-    if matches!(dtype, DataType::Categorical(_, _)) {
+    if contains_categorical(&dtype) {
         return fallible!(
             MakeTransformation,
             "replace cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"

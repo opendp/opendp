@@ -60,3 +60,30 @@ fn test_make_expr_replace_impute_series() -> Fallible<()> {
 fn test_make_expr_replace_wrong_dtype() -> Fallible<()> {
     check_replace(lit("A"), lit(45), None)
 }
+
+#[test]
+fn test_replace_rejects_nested_categorical() -> Fallible<()> {
+    use crate::domains::LazyFrameDomain;
+    use crate::metrics::{FrameDistance, SymmetricDistance};
+
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let nested = DataType::Array(Box::new(categorical), 2);
+    let schema = Schema::from_iter([Field::new("data".into(), nested)]);
+    let domain = LazyFrameDomain::new_from_schema(schema)?;
+    let err = make_expr_replace(
+        domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("data").replace(lit(1i32), lit(2i32)),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("categorical"),
+        "{err:?}"
+    );
+    Ok(())
+}
