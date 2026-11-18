@@ -144,6 +144,18 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
             &&& measurement.input_domain == input_domain
             &&& measurement.input_metric == input_metric
             &&& measurement.output_measure == output_measure
+            &&& forall|truth: &bool|
+                #[trigger] crate::measurement_parts::function_call_requires(
+                    &measurement.function, truth)
+            &&& forall|d: &u32|
+                #[trigger] crate::measurement_parts::privacy_map_call_requires(
+                    &measurement.privacy_map, d)
+            &&& (dyadic53::checked_numerator_from_bits(bits)
+                    == Some(9_007_199_254_740_992u64) ==>
+                forall|truth: &bool, value: Result<bool, ()>|
+                    crate::measurement_parts::function_call_ensures(
+                        &measurement.function, truth, value) && value.is_ok()
+                    ==> value == Ok(*truth))
         },
         _ => true,
     },
