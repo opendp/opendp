@@ -1,6 +1,6 @@
 //! Typed Polars scratch allocations for the existing slice owner.
 
-use ::polars_ffi::version_0::{SeriesExport, export_column, export_series};
+use ::polars_ffi::version_0::{SeriesExport, export_column, export_series, import_series};
 
 use crate::domains::{ExprPlan, Invariant, Margin};
 
@@ -37,7 +37,33 @@ fn validate_native_series(series: &Series) -> Fallible<()> {
     validate_arrow_field(&field)
 }
 
+// Polars' SeriesExport destructor releases its descriptor storage, but an
+// unconsumed Arrow payload also needs to go through Polars' importer.
+// Python zeroes the descriptor after successful import.
+struct NativeExports(Vec<SeriesExport>);
+
+impl Drop for NativeExports {
+    fn drop(&mut self) {
+        for export in &mut self.0 {
+            if !export.is_null() {
+                let owned = std::mem::replace(export, SeriesExport::empty());
+                // Materialize then immediately drop an abandoned export to
+                // release all chunk payloads through Polars' own code.
+                let _ = unsafe { import_series(owned) };
+            }
+        }
+    }
+}
+
 impl FfiSliceOwner {
+    fn native_exports(&mut self, exports: Vec<SeriesExport>) -> FfiSlice {
+        let owned = NativeExports(exports);
+        let view = FfiSlice::new(owned.0.as_ptr() as *mut c_void, owned.0.len());
+        self.keep(owned);
+        view
+    }
+
+
     // Retain the actual Vec, including its capacity, rather than reconstructing
     // ownership from the exported data pointer and length.
     fn kept_slice<T: 'static>(&mut self, values: Vec<T>) -> FfiSlice {
@@ -75,7 +101,7 @@ impl FfiSliceOwner {
 
     fn polars_series(&mut self, series: &Series) -> Fallible<FfiSlice> {
         validate_native_series(series)?;
-        Ok(self.kept_slice(vec![export_series(series)]))
+        Ok(self.native_exports(vec![export_series(series)]))
     }
 
     pub(super) fn polars_plain(&mut self, obj: &AnyObject) -> Fallible<()> {
@@ -137,7 +163,7 @@ impl FfiSliceOwner {
                     frame.get_columns().iter().map(export_column).collect();
                 // The Python importer disarms each moved descriptor's release
                 // callback; the owner drops any exports not yet consumed.
-                self.view = self.kept_slice(exports);
+                self.view = self.native_exports(exports);
             }
             _ => return fallible!(FFI, "unsupported object type: {}", obj.type_.to_string()),
         }
@@ -356,7 +382,7 @@ mod tests {
         let obj = AnyObject::new(series.clone());
         let owner = FfiSliceOwner::from_object(&obj)?;
         assert_eq!(owner.view.len, 1);
-        assert!(owner.keepalives.iter().any(|v| v.is::<Vec<SeriesExport>>()));
+        assert!(owner.keepalives.iter().any(|v| v.is::<NativeExports>()));
         drop(owner);
         assert_eq!(obj.downcast_ref::<Series>()?, &series);
 
