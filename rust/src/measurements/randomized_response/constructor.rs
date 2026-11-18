@@ -178,6 +178,22 @@ where
         operator::BoolRR::invoke_callback,
         operator::BoolRR::map_callback,
     )?;
+    // This statement is about the *returned erased PrivacyMap*, not just
+    // the operator's pre-erasure cost. A wrong method would fail verification.
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|d: &u32, value: Result<f64, ()>|
+            crate::measurement_parts::privacy_map_call_ensures(
+                &measurement.privacy_map, d, value)
+                implies value == Ok(operator.map(*d, 0.0f64))
+        by {
+            assert(crate::measurement_parts::privacy_map_call_ensures(
+                &measurement.privacy_map, d, value)
+                == call_ensures(operator::BoolRR::map_callback, (&operator, d), value));
+            assert(call_ensures(operator::BoolRR::map_callback, (&operator, d), value)
+                ==> value == Ok(operator.map(*d, 0.0f64)));
+        }
+    }
     Ok(Some(measurement))
 }
 
