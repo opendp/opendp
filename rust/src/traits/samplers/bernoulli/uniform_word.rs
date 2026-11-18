@@ -34,6 +34,14 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
 /// Only the distribution of `sample_uniform_u64` is external; the callback
 /// invocation is checked as ordinary Rust code.
 #[cfg_attr(verus_only, verus_verify)]
+#[cfg_attr(verus_only, verus_spec(result =>
+    requires
+        forall|word: Result<u64, WordError>|
+            #[trigger] call_requires(postprocess, (operator, input, word)),
+    ensures
+        exists|word: Result<u64, WordError>|
+            call_ensures(postprocess, (operator, input, word), result),
+))]
 pub(crate) fn sample_word_then<Op, X, Y, F>(
     operator: &Op,
     input: X,

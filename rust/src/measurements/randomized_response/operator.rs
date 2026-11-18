@@ -55,7 +55,7 @@ impl BoolRR {
 #[cfg(verus_only)]
 use crate::uniform_word::{sample_word_then, WordError};
 #[cfg(not(verus_only))]
-use crate::traits::samplers::uniform_word::sample_word_then;
+use crate::traits::samplers::sample_word_then;
 #[cfg(not(verus_only))]
 use crate::error::Error as WordError;
 
