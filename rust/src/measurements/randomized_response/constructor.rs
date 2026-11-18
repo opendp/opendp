@@ -10,9 +10,9 @@ use super::operator;
 use crate::traits::samplers::dyadic53;
 
 #[cfg(verus_only)]
-use crate::verified_arithmetic::{upper_log_odds_u53, ArithmeticError};
+use crate::verified_arithmetic::{upper_log_odds_u53, positive_infinity_f64, ArithmeticError};
 #[cfg(not(verus_only))]
-use crate::traits::upper_log_odds_u53;
+use crate::traits::{upper_log_odds_u53, positive_infinity_f64};
 
 #[cfg(not(verus_only))]
 type ArithmeticError = crate::error::Error;
@@ -47,7 +47,7 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR<f64>>, Arithme
         return Ok(None);
     };
     let privacy_cost = match dyadic53::odds_parts(numerator) {
-        None => f64::INFINITY,
+        None => positive_infinity_f64(),
         Some((n, complement)) => upper_log_odds_u53(n, complement)?,
     };
     Ok(Some(operator::BoolRR { numerator, privacy_cost }))

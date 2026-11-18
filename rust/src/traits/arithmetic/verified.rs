@@ -39,6 +39,22 @@ verus! {
     { }
 }
 
+/// The positive IEEE-754 infinity used when p=1. This small trusted
+/// standard float-constant boundary replaces Verus-unsupported f64::INFINITY
+/// projection, rather than using different constant values by cfg.
+#[cfg(verus_only)]
+verus! {
+    #[verifier::external_body]
+    pub fn positive_infinity_f64() -> (result: f64)
+        ensures f64_to_bits(result) == 0x7ff0_0000_0000_0000u64,
+    { unimplemented!() }
+}
+
+#[cfg(not(verus_only))]
+pub fn positive_infinity_f64() -> f64 {
+    f64::INFINITY
+}
+
 /// The three trusted primitive contracts are specified on the *same
 /// executable function names* that native arithmetic calls use.
 #[cfg(verus_only)]
