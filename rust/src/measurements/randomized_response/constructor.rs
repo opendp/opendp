@@ -173,8 +173,8 @@ type CallbackError = crate::error::Error;
 fn bool_rr_callbacks(
     operator: operator::BoolRR,
 ) -> (
-    impl Fn(&bool) -> Result<bool, CallbackError> + 'static,
-    impl Fn(&u32) -> Result<f64, CallbackError> + 'static,
+    impl Fn(&bool) -> Result<bool, CallbackError> + Copy + 'static,
+    impl Fn(&u32) -> Result<f64, CallbackError> + Copy + 'static,
 ) {
     #[cfg(not(verus_only))]
     {
@@ -309,28 +309,32 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     metric: &DiscreteDistance,
     measure: &MaxDivergence,
     op: operator::BoolRR,
-    postprocess: F,
+    func: F,
     map: P,
     model: crate::uniform_word::OneWordModel<bool, bool>,
 )
     where
         DI: crate::CertifiedDomain<Carrier = bool>,
-        F: Fn(&operator::BoolRR, &bool, Result<u64, ()>) -> Result<bool, ()>,
-        P: Fn(&operator::BoolRR, &u32) -> Result<f64, ()>,
+        F: Fn(&bool) -> Result<bool, ()> + Copy,
+        P: Fn(&u32) -> Result<f64, ()> + Copy,
     requires
         well_formed_bool_rr(op),
-        crate::measurement_parts::exact_word_postprocessing(
-            op, postprocess, model),
+        forall|truth: &bool|
+            #[trigger] call_requires(func, (truth,)),
+        forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            #[trigger] crate::measurement_proof::callback_expectation(
+                &func, truth, payoff)
+                == crate::uniform_word::one_word_expectation(*truth, model, payoff),
         forall|truth: bool, word: Result<u64, ()>|
             #[trigger] model(truth, word) == op.release(truth, word),
-        forall|d: &u32| #[trigger] call_requires(map, (&op, d)),
+        forall|d: &u32| #[trigger] call_requires(map, (d,)),
         forall|d: &u32, out: Result<f64, ()>|
-            #[trigger] call_ensures(map, (&op, d), out)
+            #[trigger] call_ensures(map, (d,), out)
                 ==> out == Ok(op.map(*d, 0.0f64)),
         crate::bernoulli_proof::uniform_word_expectation_rule(
             crate::uniform_word::word_expectation()),
-    ensures crate::measurement_proof::valid_one_word_components(
-        domain, metric, measure, op, postprocess, map, model),
+    ensures crate::measurement_proof::valid_concrete_components(
+        domain, metric, measure, func, map),
 {
     use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
     let words = crate::uniform_word::word_expectation();
@@ -338,7 +342,7 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         crate::randomized_response_bool::release_expectation(
             truth, op, words, payoff);
     let actual = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
-        crate::uniform_word::one_word_expectation(truth, model, payoff);
+        crate::measurement_proof::callback_expectation(&func, &truth, payoff);
     assert forall|truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
         #[trigger] actual(truth, payoff) == expected(truth, payoff)
     by {
@@ -348,13 +352,17 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
             assert(model(truth, word) == op.release(truth, word));
         }
         assert(before =~= after);
+        assert(actual(truth, payoff)
+            == crate::uniform_word::one_word_expectation(truth, model, payoff));
     }
+    assert forall|input: &bool| domain.contains(input)
+        implies #[trigger] call_requires(func, (input,)) by {}
     assert forall|d: &u32| metric.valid_distance(d) ==>
-        #[trigger] call_requires(map, (&op, d)) by {}
+        #[trigger] call_requires(map, (d,)) by {}
 
     assert forall|d: &u32, output: Result<f64, ()>|
         metric.valid_distance(d)
-            && #[trigger] call_ensures(map, (&op, d), output)
+            && #[trigger] call_ensures(map, (d,), output)
         implies match output {
             Err(_) => false,
             Ok(cost) => {
@@ -365,9 +373,9 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                         && metric.close(left, right, d)
                     ==> measure.dominates(
                         |payoff: spec_fn(Result<bool, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*left, model, payoff),
+                            crate::measurement_proof::callback_expectation(&func, left, payoff),
                         |payoff: spec_fn(Result<bool, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*right, model, payoff),
+                            crate::measurement_proof::callback_expectation(&func, right, payoff),
                         &cost)
             },
         }
@@ -405,17 +413,17 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                         && metric.close(left, right, d)
                     implies measure.dominates(
                         |payoff: spec_fn(Result<bool, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*left, model, payoff),
+                            crate::measurement_proof::callback_expectation(&func, left, payoff),
                         |payoff: spec_fn(Result<bool, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*right, model, payoff),
+                            crate::measurement_proof::callback_expectation(&func, right, payoff),
                         &epsilon)
                 by {
                     assert(DiscreteDistance::bool_close(
                         *left, *right, *d));
                     let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::uniform_word::one_word_expectation(*left, model, payoff);
+                        crate::measurement_proof::callback_expectation(&func, left, payoff);
                     let right_law = |payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::uniform_word::one_word_expectation(*right, model, payoff);
+                        crate::measurement_proof::callback_expectation(&func, right, payoff);
                     if let Some(factor) = operator_factor_map(op, *d) {
                         assert(factor >= 1real);
                         assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
@@ -442,9 +450,9 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                     }
                     assert(measure.dominates(left_law, right_law, &epsilon));
                     let displayed_left = |payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::uniform_word::one_word_expectation(*left, model, payoff);
+                        crate::measurement_proof::callback_expectation(&func, left, payoff);
                     let displayed_right = |payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::uniform_word::one_word_expectation(*right, model, payoff);
+                        crate::measurement_proof::callback_expectation(&func, right, payoff);
                     assert(displayed_left =~= left_law);
                     assert(displayed_right =~= right_law);
                     assert(measure.dominates(displayed_left, displayed_right, &epsilon));
