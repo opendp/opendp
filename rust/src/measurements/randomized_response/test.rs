@@ -6,6 +6,7 @@ fn test_bool() -> Fallible<()> {
     let m_rr = make_randomized_response_bool(0.75, false)?;
     assert!(m_rr.invoke(&false).is_ok());
     assert_eq!(m_rr.map(&1)?, 3.0.ln());
+    assert!(make_randomized_response_bool(0.75, true)?.invoke(&true).is_ok());
     Ok(())
 }
 
@@ -39,25 +40,6 @@ fn test_cat_extremes() -> Fallible<()> {
 
     let m_rr = make_randomized_response(categories, 1.)?;
     assert_eq!(m_rr.map(&1)?, f64::INFINITY);
-    Ok(())
-}
-
-#[test]
-fn test_bool_certified_constructor() -> Fallible<()> {
-    for prob in [0.5, 0.75, 1.0] {
-        let measurement = make_randomized_response_bool(prob, false)?;
-        assert_eq!(measurement.map(&0)?, 0.0);
-        assert!(measurement.invoke(&true).is_ok());
-        assert!(measurement.invoke(&false).is_ok());
-        // Arc-backed function and map remain paired after cloning.
-        let cloned = measurement.clone();
-        for distance in [0u32, 1u32, 2u32] {
-            assert_eq!(cloned.map(&distance)?, measurement.map(&distance)?);
-        }
-        assert!(cloned.invoke(&true).is_ok());
-    }
-    assert!(make_randomized_response_bool(f64::NAN, false).is_err());
-    assert!(make_randomized_response_bool(0.75, true)?.invoke(&true).is_ok());
     Ok(())
 }
 
@@ -107,10 +89,6 @@ fn test_bool_rr_integer_odds_and_operator() -> Fallible<()> {
 
         let measurement = make_randomized_response_bool(prob, false)?;
         assert_eq!(measurement.map(&0)?, 0.0);
-        if prob < 1.0 {
-            let factor = (numerator as f64) / ((1u64 << 53) - numerator) as f64;
-            assert!(measurement.map(&1)?.exp() >= factor * (1.0 - 1e-12));
-        }
     }
     Ok(())
 }
@@ -138,9 +116,13 @@ fn test_bool_constructor_ieee_boundaries() -> Fallible<()> {
     ];
     for p in accepted {
         assert!(dyadic53_checked_numerator(p.to_bits()).is_some());
+        let operator = super::constructor::build_bool_rr(p.to_bits())?.unwrap();
         let measurement = make_randomized_response_bool(p, false)?;
+        let cloned = measurement.clone();
         assert_eq!(measurement.map(&0)?, 0.0);
-        assert!(measurement.map(&1)?.is_finite() || p == 1.0);
+        assert_eq!(measurement.map(&1)?, operator.privacy_cost);
+        assert_eq!(cloned.map(&2)?, operator.privacy_cost);
+        assert!(cloned.invoke(&true).is_ok());
     }
 
     let rejected = [
@@ -151,30 +133,8 @@ fn test_bool_constructor_ieee_boundaries() -> Fallible<()> {
     ];
     for p in rejected {
         assert_eq!(dyadic53_checked_numerator(p.to_bits()), None);
+        assert!(super::constructor::build_bool_rr(p.to_bits())?.is_none());
         assert!(make_randomized_response_bool(p, false).is_err());
-    }
-    Ok(())
-}
-
-#[test]
-fn test_shared_bool_rr_builder_matches_public_constructor() -> Fallible<()> {
-    // The verified builder is the one called by the public Measurement API.
-    for prob in [
-        0.5,
-        0.75,
-        f64::from_bits(0.5f64.to_bits() + 1),
-        f64::from_bits(1.0f64.to_bits() - 1),
-        1.0,
-    ] {
-        let operator = super::constructor::build_bool_rr(prob.to_bits())?.unwrap();
-        let measurement = make_randomized_response_bool(prob, false)?;
-        assert_eq!(measurement.map(&0)?, 0.0);
-        assert_eq!(measurement.map(&1)?, operator.privacy_cost);
-        assert_eq!(measurement.map(&2)?, operator.privacy_cost);
-    }
-    for invalid in [0.0, f64::NAN, f64::INFINITY, -1.0] {
-        assert!(super::constructor::build_bool_rr(invalid.to_bits())?.is_none());
-        assert!(make_randomized_response_bool(invalid, false).is_err());
     }
     Ok(())
 }

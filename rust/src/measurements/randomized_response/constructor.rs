@@ -94,7 +94,10 @@ pub fn upper_log_odds_u53(
                 &&& op.numerator == n
                 &&& crate::bernoulli_proof::accepted_binary64_value(bits)
                     == n as real / 9_007_199_254_740_992real
+                &&& n == 9_007_199_254_740_992u64 ==>
+                    f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64
                 &&& n < 9_007_199_254_740_992u64 ==> {
+                    &&& verified_arithmetic::finite(op.privacy_cost)
                     &&& verified_arithmetic::real_exp(
                         verified_arithmetic::float_value(op.privacy_cost)) >= 1real
                     &&& n as real <= verified_arithmetic::real_exp(
