@@ -1,7 +1,8 @@
 # Verified Boolean randomized response
 
-The production `make_randomized_response_bool` constructor now uses
-`Measurement::new_certified` with a private `CertifiedBoolRR` adapter.
+The production `make_randomized_response_bool` constructor first invokes the
+**same executable `constructor::build_bool_rr` verified in the Verus harness**, then
+calls `Measurement::new_certified` with the private `CertifiedBoolRR` adapter.
 This follows the pattern established by
 `Transformation::new_certified` on `verified-stable-lazyframe`.
 
@@ -28,6 +29,13 @@ This follows the pattern established by
   numerical primitive contracts.
 - `lemma_certified_rr_with_computed_epsilon` connects that exact
   likelihood-ratio bound to the certified measurement theorem.
+- **`constructor::verify_built_bool_rr<E>` now executes `build_bool_rr`** and
+  proves its successful output satisfies the measurement validity predicate
+  for the operator's corresponding callbacks, assuming the uniform entropy
+  contract and the single audited `adapter_realizes` contract. Its proof
+  covers both finite cost and the `p = 1` infinite-cost branch.
+- The same builder also verifies rejection of invalid probability encodings
+  and propagation of numerical errors without claiming success on `Err`.
 
 The proof does **not** model a second implementation of the sampler or require
 the Alerus library. The existing `Arc<dyn Fn>` representation is unchanged.
@@ -46,22 +54,26 @@ therefore **trusted obligations**, just as in
 `Transformation::new_certified`. A trait implementation alone does not
 supply a proof of validity for arbitrary callbacks.
 
-## Remaining work for fully checked constructor validity
+## Verified boundary and trusted computing base
 
-1. Connect the uniform-word expectation contract to the actual fallible
-   `sample_uniform_u64` and `fill_bytes` entropy source.
-2. Prove the underlying numerical primitive contracts, if a smaller
-   trusted computing base is ever required. Currently we **trust only**
-   successful-result upward-rounding contracts for `InfDiv<f64>` and
-   `InfLn<f64>`, the exact cast for integers up to `2^53`, and
-   the real-analysis facts `exp(ln(x)) = x` for positive `x`
-   and monotonicity of `exp`. The numeric composition theorem itself
-   is verified; no Dashu implementation or panic machinery is verified.
-3. Either mechanically verify the standard-library callback-erasure
-   correspondence or retain this small, explicitly trusted native adapter.
+The constructor-level theorem is conditional on three narrow boundaries:
 
-Thus we have a checked **conditional** privacy proof and a certified
-constructor path. The floating-point composition is verified under the
-explicit trusted arithmetic contracts; the actual implementation of those
-contracts and the probabilistic entropy source remain outside Verus. No `new_certified` method treats a
-certificate marker as proof without the corresponding model assumptions.
+1. The actual `sample_uniform_u64` / `fill_bytes` implementation satisfies
+   `uniform_word_expectation_rule`, including input-independent failures.
+2. The native numerical primitives implement their small trusted contracts:
+   exact casts through `2^53`, upward-rounded successful `InfDiv<f64>` and
+   `InfLn<f64>`, positive IEEE infinity, and standard `exp`/`ln` real-analysis
+   properties. Dashu and panic handling are deliberately not verified.
+3. `CertifiedBoolRR::into_parts` and OpenDP's `Arc<dyn Fn>` erasure satisfy
+   `adapter_realizes` for the actual operator produced by the builder.
+
+The **public Rust `Measurement` struct and `new_certified` implementation
+are not parsed by Verus**. Consequently there is still no literal verifier
+theorem over the returned concrete Rust `Measurement` value. Instead,
+`verify_built_bool_rr` checks the production operator constructor and proves
+validity of the erased callbacks **relative to** the audited adapter contract.
+This is an end-to-end conditional guarantee under the chosen trust model,
+not a proof of Rust's dynamic callback dispatch or of the entropy source.
+
+No unconditional certification is inferred merely from implementing the
+`CertifiedMeasurementParts` trait.

@@ -155,3 +155,26 @@ fn test_bool_constructor_ieee_boundaries() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_shared_bool_rr_builder_matches_public_constructor() -> Fallible<()> {
+    // The verified builder is the one called by the public Measurement API.
+    for prob in [
+        0.5,
+        0.75,
+        f64::from_bits(0.5f64.to_bits() + 1),
+        f64::from_bits(1.0f64.to_bits() - 1),
+        1.0,
+    ] {
+        let operator = super::constructor::build_bool_rr(prob.to_bits())?.unwrap();
+        let measurement = make_randomized_response_bool(prob, false)?;
+        assert_eq!(measurement.map(&0)?, 0.0);
+        assert_eq!(measurement.map(&1)?, operator.privacy_cost);
+        assert_eq!(measurement.map(&2)?, operator.privacy_cost);
+    }
+    for invalid in [0.0, f64::NAN, f64::INFINITY, -1.0] {
+        assert!(super::constructor::build_bool_rr(invalid.to_bits())?.is_none());
+        assert!(make_randomized_response_bool(invalid, false).is_err());
+    }
+    Ok(())
+}
