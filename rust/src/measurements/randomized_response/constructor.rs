@@ -392,12 +392,17 @@ where
                         by(bit_vector) requires epsilon_bits == 0u64;
                     assert(crate::verified_arithmetic::finite(epsilon));
                     crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
+                    assert(crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 } else if operator.numerator == 9_007_199_254_740_992u64 {
                     assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
                 } else {
                     assert(crate::verified_arithmetic::finite(operator.privacy_cost));
                     assert(crate::verified_arithmetic::float_value(operator.privacy_cost) >= 0real);
                     assert(crate::verified_arithmetic::finite(epsilon));
+                    assert(f64_to_bits(epsilon) == f64_to_bits(operator.privacy_cost));
+                    crate::verified_arithmetic::lemma_same_bits_same_value(
+                        epsilon, operator.privacy_cost);
+                    assert(crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 }
                 assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
                     == operator_factor_map(operator, distance));
