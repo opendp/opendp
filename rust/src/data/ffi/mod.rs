@@ -13,11 +13,7 @@ use crate::metrics::polars::{Bound, Bounds};
 #[cfg(feature = "polars")]
 use ::polars::prelude::*;
 #[cfg(feature = "polars")]
-use polars_arrow::ffi::ArrowArray;
-#[cfg(feature = "polars")]
-use polars_arrow::ffi::{
-    ArrowSchema, export_array_to_c, export_field_to_c, import_array_from_c, import_field_from_c,
-};
+use ::polars_ffi::version_0::{SeriesExport, import_series};
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
@@ -214,27 +210,19 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
 
     #[cfg(feature = "polars")]
-    pub fn raw_to_concrete_series(
-        raw: &FfiSlice
-    ) -> Fallible<Series> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
-        if slice.len() != 3 {
-            return fallible!(FFI, "Series FfiSlice must have length 3, found a length of {}", slice.len());
+    pub fn raw_to_concrete_series(raw: &FfiSlice) -> Fallible<Series> {
+        if raw.len != 1 || raw.ptr.is_null() {
+            return fallible!(FFI, "Expected a native Polars SeriesExport");
         }
-        Ok(unsafe {
-            // consume the arrow array eagerly
-            let array = *Box::from_raw(slice[0] as *mut ArrowArray);
-            let schema = try_as_ref!(slice[1] as *const ArrowSchema);
-            let name = util::to_str(slice[2] as *const c_char)?;
-
-            let field = import_field_from_c(schema)
-                .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
-            let array = import_array_from_c(array, field.dtype)
-                .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
-            Series::try_from((PlSmallStr::from_str(name), array))
-                .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
-        })
+        // Move the descriptor and replace it with an empty, inert value.
+        // The Python exporter can release the buffer if conversion was abandoned.
+        let export = unsafe {
+            std::ptr::replace(raw.ptr.cast::<SeriesExport>(), SeriesExport::empty())
+        };
+        unsafe { import_series(export) }
+            .map_err(|e| err!(FFI, "failed to import Polars Series: {}", e))
     }
+
     #[cfg(feature = "polars")]
     pub fn raw_to_series(
         raw: &FfiSlice
@@ -243,14 +231,25 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
 
     #[cfg(feature = "polars")]
-    pub fn raw_to_dataframe(
-        raw: &FfiSlice
-    ) -> Fallible<AnyObject> {
-        let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
-        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(|s| s.into_column()))
-        .collect::<Fallible<Vec<Column>>>()?;
-
-        Ok(AnyObject::new(DataFrame::new(series)?))
+    pub fn raw_to_dataframe(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 0 && raw.ptr.is_null() {
+            return fallible!(FFI, "Expected native Polars SeriesExports");
+        }
+        let mut columns = Vec::with_capacity(raw.len);
+        for index in 0..raw.len {
+            // Only move the current descriptor. Python owns and cleans up
+            // any exports not reached when an import fails.
+            let export = unsafe {
+                std::ptr::replace(
+                    raw.ptr.cast::<SeriesExport>().add(index),
+                    SeriesExport::empty(),
+                )
+            };
+            let series = unsafe { import_series(export) }
+                .map_err(|e| err!(FFI, "failed to import Polars column {}: {}", index, e))?;
+            columns.push(series.into_column());
+        }
+        Ok(AnyObject::new(DataFrame::new(columns)?))
     }
 
     #[cfg(feature = "polars")]
@@ -511,57 +510,6 @@ pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*m
 pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
     use statrs::function::erf::erfc;
     erfc(value)
-}
-
-#[bootstrap(
-    name = "slice_free",
-    arguments(this(do_not_convert = true)),
-    returns(c_type = "FfiResult<void *>")
-)]
-/// Internal function. Free the memory associated with `this`, an FfiSlicePtr.
-/// Used to clean up after object_as_slice.
-/// Frees the slice, but not what the slice references!
-///
-/// # Arguments
-/// * `this` - A pointer to the FfiSlice to free.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
-    util::into_owned(this).map(|_| ()).into()
-}
-
-#[bootstrap(
-    name = "arrow_array_free",
-    arguments(this(do_not_convert = true, rust_type = b"null", c_type = "void *")),
-    returns(c_type = "FfiResult<void *>")
-)]
-/// Internal function. Free the memory associated with `this`, a slice containing an Arrow array, schema, and name.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<*mut ()> {
-    #[cfg(feature = "polars")]
-    {
-        let parts = unsafe { slice::from_raw_parts(this as *const *const c_void, 3) };
-        // array has already been consumed by the data loader
-        // try_!(util::into_owned(parts[0] as *mut ArrowArray));
-        // the Drop impl calls schema.release
-        try_!(util::into_owned(parts[1] as *mut ArrowSchema));
-        // takes ownership of the memory behind the pointer, which then gets dropped
-        try_!(util::into_owned(parts[2] as *mut c_char));
-
-        // free the array holding the null pointers itself
-        util::into_owned(this as *mut [*mut c_void; 3])
-            .map(|_| ())
-            .into()
-    }
-
-    #[cfg(not(feature = "polars"))]
-    {
-        let _ = this;
-        err!(
-            FFI,
-            "ArrowArray is not available without the 'polars' feature"
-        )
-        .into()
-    }
 }
 
 #[bootstrap(
@@ -881,37 +829,6 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
         .epsilon(delta)
         .map(AnyObject::new)
         .into()
-}
-
-#[cfg(feature = "polars")]
-/// Allocate an empty ArrowArray and ArrowSchema that Rust owns the memory for.
-/// The ArrowArray and ArrowSchema are initialized empty, and are populated by the bindings language.
-///
-/// # Arguments
-/// * `name` - The name of the ArrowArray. A clone of this string owned by Rust will be returned in the slice.
-#[bootstrap(name = "new_arrow_array", arguments(name(rust_type = b"null")))]
-#[unsafe(no_mangle)]
-extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mut FfiSlice> {
-    #[cfg(feature = "polars")]
-    // prepare a pointer to receive the Array struct
-    return FfiResult::Ok(util::into_raw(FfiSlice {
-        ptr: util::into_raw([
-            util::into_raw(ArrowArray::empty()) as *const c_void,
-            util::into_raw(ArrowSchema::empty()) as *const c_void,
-            try_!(into_c_char_p(try_!(util::to_str(name)).to_string())) as *const c_void,
-        ]) as *mut c_void,
-        len: 3,
-    }));
-
-    #[cfg(not(feature = "polars"))]
-    {
-        let _ = name;
-        return err!(
-            FFI,
-            "ArrowArray is only available with the 'polars' feature"
-        )
-        .into();
-    }
 }
 
 /// wrap an AnyObject in an FfiResult::Ok(this)
