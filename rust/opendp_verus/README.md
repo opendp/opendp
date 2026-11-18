@@ -91,6 +91,33 @@ error-credit calculus, numerical division/logarithm rounding and
 selected arithmetic identities, plus the native panic/error model.
 Verus uses `()` for the native error value.
 
+## Concrete Fn / error-credit feasibility probes
+
+The pinned Verus release does not currently admit the direct EPT-to-`Fn`
+encoding tested here. The temporary verification modules were removed
+from the final harness, but the failing commits preserve the exact sources
+and GitHub Actions compiler diagnostics:
+
+* [`c3ded5c`](https://github.com/opendp/opendp/commit/c3ded5cbc08821714f82eb7f25846f8794e14978): adding `with Tracked(start) -> Tracked(end)`
+  directly to an executable closure fails with `with does not support closure`.
+  Invoking the closure via `proof_with!` also fails to resolve a
+  `_VERUS_VERIFIED_f` symbol.
+* [`258a7f6`](https://github.com/opendp/opendp/commit/258a7f67446770ba1b414536206abb07639b7136): a closure invoking a
+  named ghost-parameterized function with `proof_with!` fails to resolve
+  `_VERUS_VERIFIED_proof_with_callee` from `vstd::prelude`.
+* [`243b00b`](https://github.com/opendp/opendp/commit/243b00b64a9a9ad7463aafcdb0f504eeb723a0ff): qualifying the named
+  function path does not resolve the latter frontend error.
+
+These are **frontend experiments**, not a proof that any effect-aware
+closure encoding is impossible. A named function's erased tracked arguments
+alone do not establish the expectation law of a stored `Fn` callback.
+Closing the remaining gap requires both (a) a verified way to attach a
+per-invocation probabilistic contract to the **actual** closure and (b) a
+sound EPT-to-`callback_expectation` correspondence. Merely moving the
+existing `assume` into another helper would not close it. The generic
+`new_certified` API remains unchanged; it takes ordinary `func`/`map`
+closures and requires full validity before wrapping them.
+
 ## Regression and falsification
 
 Replacing the sampled entropy with `Ok(0)` *inside*
