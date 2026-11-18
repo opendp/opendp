@@ -75,7 +75,7 @@ The latter step is not yet verified.
    callback already computes the correct abstract privacy factor.
 
 Verus does **not** verify the actual `Measurement` object's trait-object
-dispatch. The final theorem is about the executable builder's result and
-its callbacks **under the adapter-correspondence premise**, not an
-unconditional Rust `Measurement` validity theorem. The adapter's
-small implementation is audited rather than verified.
+dispatch. The current theorem establishes validity of the executable operator and its
+own privacy map under the entropy/numerical contracts, without a callback
+correspondence premise. It does not yet certify the erased `Measurement`
+object. The bridge to the real `new_certified` constructor is still missing.

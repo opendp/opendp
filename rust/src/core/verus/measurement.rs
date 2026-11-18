@@ -1,10 +1,9 @@
-//! Generic proof that audited callback erasure preserves measurement privacy.
+//! Generic semantic transfer theorem for valid measurements.
 //!
-//! This is a semantic transfer theorem, NOT a model of closure dispatch and NOT
-//! a new probabilistic weakest-preexpectation calculus. The function and map
-//! correspondence premises describe the narrow trusted native adapter.
-//! In particular, equality of expectations is required for arbitrary payoffs,
-//! not merely a pointwise equality of two random executions.
+//! This theorem is not a constructor contract or a model of erased Rust
+//! callbacks. It can transfer an already-established privacy guarantee across
+//! independently established equalities of function and map semantics. The
+//! equivalence premises must never be used to assume a mechanism is private.
 use vstd::prelude::*;
 
 verus! {
@@ -57,7 +56,7 @@ pub open spec fn valid_measurement_expectations<X, Z, D>(
 /// A single paired proof: do not put independent certification markers in
 /// Function and PrivacyMap. The callback correspondence is a *precondition*,
 /// not assumed to hold for arbitrary Arc<dyn Fn> values.
-pub proof fn lemma_new_certified<X, Z, D>(
+pub proof fn lemma_valid_measurement_from_equivalent_components<X, Z, D>(
     member: spec_fn(X) -> bool,
     close: spec_fn(X, X, D) -> bool,
     model_expectation: spec_fn(X, spec_fn(Z) -> real) -> real,
