@@ -30,6 +30,21 @@ impl BoolRR {
             Err(err) => Err(err),
         }
     }
+    /// Complete deterministic postprocessing contract, with the signature
+    /// needed for a generic one-word sampler. This body is executable in
+    /// production and verified against the existing release implementation.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures result == self.release(*truth, entropy),
+    ))]
+    pub fn release_callback(
+        &self,
+        truth: &bool,
+        entropy: Result<u64, WordError>,
+    ) -> Result<bool, WordError> {
+        self.release(*truth, entropy)
+    }
+
     /// The map installed in OpenDP's returned Measurement reads the same
     /// concrete operator state as its function callback.
     #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
@@ -71,12 +86,12 @@ impl BoolRR {
                 ==> result == Ok(truth),
     ))]
     pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
-        let output = sample_word_then(self, truth, Self::release);
+        let output = sample_word_then(self, &truth, Self::release_callback);
         #[cfg(verus_only)]
         proof! {
             let witness = choose|word: Result<u64, WordError>|
-                call_ensures(Self::release, (self, truth, word), output);
-            assert(call_ensures(Self::release, (self, truth, witness), output));
+                call_ensures(Self::release_callback, (self, &truth, word), output);
+            assert(call_ensures(Self::release_callback, (self, &truth, witness), output));
             assert(output == self.release(truth, witness));
         }
         output
