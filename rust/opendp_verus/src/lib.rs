@@ -16,3 +16,6 @@ pub mod measurement_proof;
 
 #[path = "../../src/traits/arithmetic/verified.rs"]
 pub mod verified_arithmetic;
+
+#[path = "../../src/measurements/randomized_response/constructor.rs"]
+pub mod rr_constructor;

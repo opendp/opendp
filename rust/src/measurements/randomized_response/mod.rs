@@ -3,6 +3,7 @@ mod ffi;
 
 mod kernel;
 mod operator;
+mod constructor;
 
 use std::collections::HashSet;
 
@@ -79,22 +80,11 @@ pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
-    // For positive binary64 numbers the bit encoding is monotone.
-    // The checked decoder excludes NaN and every value outside [0.5, 1].
-    // Accepted probabilities are exactly numerator / 2^53.
-    let Some(numerator) =
-        crate::traits::samplers::dyadic53_checked_numerator(prob.to_bits())
-    else {
+    // Parameter validation, exact probability decoding, log-odds
+    // arithmetic and operator assembly are the shared Verus-checked path.
+    let Some(operator) = constructor::build_bool_rr(prob.to_bits())? else {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     };
-    // The exact integer complement is verified by Verus. Both integers are
-    // representable exactly as binary64, before directed numeric operations.
-    let privacy_constant = match crate::traits::samplers::dyadic53_odds_parts(numerator) {
-        None => f64::INFINITY,
-        Some((n, complement)) => crate::traits::upper_log_odds_u53(n, complement)?,
-    };
-
-    let operator = operator::BoolRR { numerator, privacy_cost: privacy_constant };
     let _ = constant_time; // Both settings use one fixed-size entropy draw.
 
     Measurement::new_certified(
