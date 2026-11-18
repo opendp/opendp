@@ -168,7 +168,7 @@ impl<TI, TO> Function<TI, TO> {
         TI: Copy,
         F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
     {
-        let program = crate::uniform_word::OneWordProgram::new(operator, postprocess);
+        let program = crate::uniform_word::OneWordProgram { operator, postprocess };
         #[cfg(verus_only)]
         proof_with! {Ghost(model)}
         Self::erase_one_word_program(program)
