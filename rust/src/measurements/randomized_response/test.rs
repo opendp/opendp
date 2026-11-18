@@ -138,3 +138,25 @@ fn test_bool_constructor_ieee_boundaries() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_bool_rr_native_sampling_law_regression() -> Fallible<()> {
+    // Independent native regression of the erased callback's sampling path.
+    // This is deliberately not a substitute for proving its expectation law.
+    const N: usize = 32_768;
+    for (prob, truth) in [(0.5, false), (0.5, true), (0.75, false), (0.75, true)] {
+        let measurement = make_randomized_response_bool(prob, false)?;
+        let mut matches = 0usize;
+        for _ in 0..N {
+            if measurement.invoke(&truth)? == truth {
+                matches += 1;
+            }
+        }
+        let frequency = matches as f64 / N as f64;
+        assert!(
+            (frequency - prob).abs() < 0.03,
+            "native Boolean RR sampling mismatch for p={prob}, truth={truth}: {frequency}"
+        );
+    }
+    Ok(())
+}
