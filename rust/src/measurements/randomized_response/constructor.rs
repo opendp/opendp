@@ -343,41 +343,45 @@ where
         crate::measurement_proof::lemma_valid_measurement_from_equivalent_components(
             member, close, model, factor_map, expectation, factor_map);
 
-        assert forall|left: bool, right: bool, distance: u32, epsilon: f64|
-            (left == right || distance > 0)
-                && crate::measurement_parts::privacy_map_call_ensures(
+        assert forall|left: bool, right: bool, distance: u32|
+            #[trigger] crate::measurement_proof::bool_rr_pair_valid(
+                &measurement, left, right, distance)
+        by {
+            assert forall|epsilon: f64|
+                crate::measurement_parts::privacy_map_call_ensures(
                     &measurement.privacy_map, &distance, Ok(epsilon))
-            implies {
-                &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
-                &&& match crate::measurement_proof::bool_rr_reported_factor(
-                    distance, epsilon) {
+                implies {
+                    &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+                    &&& match crate::measurement_proof::bool_rr_reported_factor(
+                        distance, epsilon) {
+                        None => true,
+                        Some(factor) => factor >= 1real
+                            && forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                                crate::measurement_proof::bounded_payoff(payoff) ==>
+                                    crate::measurement_parts::function_expectation(
+                                        &measurement.function, &left, payoff)
+                                    <= factor *
+                                        crate::measurement_parts::function_expectation(
+                                            &measurement.function, &right, payoff),
+                    }
+                }
+            by {
+                assert(epsilon == operator.map(distance, 0.0f64));
+                assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
+                    == operator_factor_map(operator, distance));
+                if distance == 0 {
+                    assert(left == right);
+                    assert(f64_to_bits(epsilon) == 0u64);
+                }
+                assert(close(left, right, distance));
+                assert(match factor_map(distance) {
                     None => true,
                     Some(factor) => factor >= 1real
                         && forall|payoff: spec_fn(Result<bool, ()>) -> real|
                             crate::measurement_proof::bounded_payoff(payoff) ==>
-                                crate::measurement_parts::function_expectation(
-                                    &measurement.function, &left, payoff)
-                                <= factor *
-                                    crate::measurement_parts::function_expectation(
-                                        &measurement.function, &right, payoff),
-                }
+                                expectation(left, payoff) <= factor * expectation(right, payoff),
+                });
             }
-        by {
-            assert(epsilon == operator.map(distance, 0.0f64));
-            assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
-                == operator_factor_map(operator, distance));
-            if distance == 0 {
-                assert(left == right);
-                assert(f64_to_bits(epsilon) == 0u64);
-            }
-            assert(close(left, right, distance));
-            assert(match factor_map(distance) {
-                None => true,
-                Some(factor) => factor >= 1real
-                    && forall|payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::measurement_proof::bounded_payoff(payoff) ==>
-                            expectation(left, payoff) <= factor * expectation(right, payoff),
-            });
         }
         assert(crate::measurement_proof::valid_bool_rr_measurement(&measurement));
     }

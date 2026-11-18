@@ -113,13 +113,41 @@ pub open spec fn bool_rr_reported_factor(distance: u32, epsilon: f64)
         crate::verified_arithmetic::float_value(epsilon))) }
 }
 
-/// Concrete privacy validity of the *actual returned Measurement* under
-/// Boolean membership, discrete adjacency and MaxDivergence semantics.
-///
-/// Crucially the quantified privacy map is the measurement's REAL erased
-/// callback. Every successful cost it can return must bound the
-/// measurement's REAL erased function distribution, including error outputs.
-/// The separate descriptor-correctness proof is still required.
+/// A single input-pair obligation. Splitting the distance and epsilon
+/// quantification gives Verus natural triggers on actual map outcomes.
+pub open spec fn bool_rr_pair_valid<DI, MI, MO>(
+    meas: &crate::Measurement<DI, MI, MO, bool>,
+    left: bool,
+    right: bool,
+    distance: u32,
+) -> bool
+    where
+        DI: crate::Domain<Carrier = bool>,
+        MI: crate::Metric<Distance = u32>,
+        MO: crate::Measure<Distance = f64>,
+{
+    left == right || distance > 0 ==> forall|epsilon: f64|
+        #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+            &meas.privacy_map, &distance, Ok(epsilon))
+        ==> {
+            &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+            &&& match bool_rr_reported_factor(distance, epsilon) {
+                None => true,
+                Some(factor) => factor >= 1real
+                    && forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                        bounded_payoff(payoff) ==>
+                            #[trigger] crate::measurement_parts::function_expectation(
+                                &meas.function, &left, payoff)
+                            <= factor *
+                                crate::measurement_parts::function_expectation(
+                                    &meas.function, &right, payoff),
+            }
+        }
+}
+
+/// Concrete privacy validity of the actual returned Measurement under
+/// Boolean membership, discrete adjacency, and MaxDivergence semantics.
+/// Descriptor correctness is still a separate, required proof obligation.
 pub open spec fn valid_bool_rr_measurement<DI, MI, MO>(
     meas: &crate::Measurement<DI, MI, MO, bool>,
 ) -> bool
@@ -134,25 +162,8 @@ pub open spec fn valid_bool_rr_measurement<DI, MI, MO>(
     &&& forall|distance: &u32|
         #[trigger] crate::measurement_parts::privacy_map_call_requires(
             &meas.privacy_map, distance)
-    &&& forall|left: bool, right: bool, distance: u32, epsilon: f64|
-        (left == right || distance > 0)
-            && crate::measurement_parts::privacy_map_call_ensures(
-                &meas.privacy_map, &distance, Ok(epsilon))
-        ==> {
-            &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
-            &&& match bool_rr_reported_factor(distance, epsilon) {
-                None => true,
-                Some(factor) =>
-                    factor >= 1real
-                    && forall|payoff: spec_fn(Result<bool, ()>) -> real|
-                        bounded_payoff(payoff) ==>
-                            #[trigger] crate::measurement_parts::function_expectation(
-                                &meas.function, &left, payoff)
-                            <= factor *
-                                crate::measurement_parts::function_expectation(
-                                    &meas.function, &right, payoff),
-            }
-        }
+    &&& forall|left: bool, right: bool, distance: u32|
+        #[trigger] bool_rr_pair_valid(meas, left, right, distance)
 }
 
 } // verus!
