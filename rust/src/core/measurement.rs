@@ -43,6 +43,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Clone for Measurement<DI, MI, MO, 
     }
 }
 
+#[cfg_attr(verus_only, verus_verify)]
 impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
@@ -139,6 +140,7 @@ where
         )
     }
 
+    #[cfg_attr(verus_only, verus_verify(external))]
     pub fn input_space(&self) -> (DI, MI) {
         (self.input_domain.clone(), self.input_metric.clone())
     }
