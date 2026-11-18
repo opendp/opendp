@@ -65,6 +65,16 @@ where
     let t_prior = input.make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
+    // Polars first casts to Float64. Unsupported source dtypes can pass that
+    // cast when all values are null, but error when a private value is non-null.
+    let dtype = middle_domain.column.dtype();
+    if !dtype.is_primitive_numeric() {
+        return fallible!(
+            MakeTransformation,
+            "cut requires numeric input, found {dtype}"
+        );
+    }
+
     let mut output_domain = middle_domain.clone();
     // Polars sorts breaks before deriving default labels.
     let mut breaks = breaks;
