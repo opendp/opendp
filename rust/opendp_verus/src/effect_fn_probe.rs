@@ -150,28 +150,28 @@ pub fn probe_rr_fn_in_band(
 
 } // verus!
 
-// Test conversion from the in-band entropy interface to the original
-// ghost-output EPT API, without assuming a second RNG specification.
-#[verus_verify]
-#[verus_spec(result =>
-    with
-        Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<crate::uniform_word::WordCost>
-            -> end: Tracked<crate::one_word_credit::ErrorCredit>
+
+verus! {
+
+// Can proof-mode input credits be inserted in an in-band executable argument
+// when using Verus's native macro syntax rather than an attribute rewrite?
+pub fn bridge_proof_input_to_in_band(
+    tracked starting_credit: crate::one_word_credit::ErrorCredit,
+    ghost cost: crate::uniform_word::WordCost,
+) -> (result: (Result<u64, crate::uniform_word::WordError>,
+              Tracked<crate::one_word_credit::ErrorCredit>))
     requires
-        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::uniform_word::uniform_word_expectation(word_cost)
+        starting_credit@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: crate::uniform_word::uniform_word_expectation(cost),
         }),
-        forall|word: Result<u64, crate::uniform_word::WordError>|
-            0real <= #[trigger] word_cost(word) < 1real,
+        forall|out: Result<u64, crate::uniform_word::WordError>|
+            0real <= #[trigger] cost(out) < 1real,
     ensures
-        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: word_cost(result)
+        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: cost(result.0),
         }),
-)]
-pub fn bridge_in_band_to_ghost() -> Result<u64, crate::uniform_word::WordError> {
-    let (word, returned) = crate::effect_fn_probe::draw_word_in_band(
-        Tracked(start), Ghost(word_cost));
-    proof_with! { |= returned }
-    word
+{
+    draw_word_in_band(Tracked(starting_credit), Ghost(cost))
 }
+
+} // verus!
