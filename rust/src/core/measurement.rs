@@ -23,6 +23,7 @@ use vstd::prelude::*;
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[cfg_attr(not(verus_only), readonly::make)]
+#[cfg_attr(verus_only, verifier::reject_recursive_types(TO))]
 #[cfg_attr(verus_only, verus_verify)]
 pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
     pub input_domain: DI,
