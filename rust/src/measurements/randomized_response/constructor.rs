@@ -164,8 +164,14 @@ type RRWithCredit = (
 #[cfg(not(verus_only))]
 type RRWithCredit = Result<bool, CallbackError>;
 
-#[cfg_attr(verus_only, verus_verify)]
-#[cfg_attr(verus_only, verus_spec(result =>
+#[cfg(verus_only)]
+verus! {
+pub(crate) fn run_bool_rr_with_effect(
+    operator: &operator::BoolRR,
+    truth: &bool,
+    credit: Tracked<crate::one_word_credit::ErrorCredit>,
+    payoff: Ghost<crate::uniform_word::OutputCost<bool>>,
+) -> (result: RRWithCredit)
     requires
         operator.numerator <= 9_007_199_254_740_992u64,
         forall|out: Result<bool, CallbackError>|
@@ -178,36 +184,30 @@ type RRWithCredit = Result<bool, CallbackError>;
         result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: payoff@(result.0)
         }),
-))]
+{
+    let ghost word_cost: crate::uniform_word::WordCost =
+        |word: Result<u64, CallbackError>| {
+            payoff@(operator.release(*truth, word))
+        };
+    proof {
+        operator::lemma_release_callback_preserves_cost(*operator, truth, payoff@);
+        assert(crate::uniform_word::uniform_word_expectation(word_cost)
+            == crate::randomized_response_bool::release_expectation(
+                *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
+    }
+    sample_word_then(
+        operator, truth, operator::BoolRR::release_callback,
+        credit, Ghost(word_cost), payoff,
+    )
+}
+} // verus!
+
+#[cfg(not(verus_only))]
 pub(crate) fn run_bool_rr_with_effect(
     operator: &operator::BoolRR,
     truth: &bool,
-    #[cfg(verus_only)] credit: Tracked<crate::one_word_credit::ErrorCredit>,
-    #[cfg(verus_only)] payoff: Ghost<crate::uniform_word::OutputCost<bool>>,
 ) -> RRWithCredit {
-    #[cfg(verus_only)]
-    {
-        proof_decl! {
-            let ghost word_cost: crate::uniform_word::WordCost =
-                |word: Result<u64, CallbackError>| {
-                    payoff@(operator.release(*truth, word))
-                };
-        }
-        proof! {
-            operator::lemma_release_callback_preserves_cost(*operator, truth, payoff@);
-            assert(crate::uniform_word::uniform_word_expectation(word_cost)
-                == crate::randomized_response_bool::release_expectation(
-                    *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
-        }
-        sample_word_then(
-            operator, truth, operator::BoolRR::release_callback,
-            credit, Ghost::new(word_cost), payoff,
-        )
-    }
-    #[cfg(not(verus_only))]
-    {
-        sample_word_then(operator, truth, operator::BoolRR::release_callback)
-    }
+    sample_word_then(operator, truth, operator::BoolRR::release_callback)
 }
 
 /// The plain callback has no per-call credit argument. Its exact native
