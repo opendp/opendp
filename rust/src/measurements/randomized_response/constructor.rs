@@ -22,9 +22,9 @@ use crate::traits::verified::{
 };
 
 #[cfg(verus_only)]
-use crate::{Domain, Function, Measurement, MetricSpace, PrivacyMap};
+use crate::{Domain, CertifiedDomain, Function, Measurement, MetricSpace, PrivacyMap};
 #[cfg(not(verus_only))]
-use crate::core::{Domain, Function, Measurement, MetricSpace, PrivacyMap};
+use crate::core::{Domain, CertifiedDomain, Function, Measurement, MetricSpace, PrivacyMap};
 #[cfg(verus_only)]
 use crate::{discrete_distance::DiscreteDistance, max_divergence::MaxDivergence};
 #[cfg(not(verus_only))]
@@ -172,7 +172,7 @@ pub(crate) fn build_bool_rr_measurement<DI>(
     output_measure: MaxDivergence,
 ) -> Result<Option<Measurement<DI, DiscreteDistance, MaxDivergence, bool>>, ArithmeticError>
 where
-    DI: Domain<Carrier = bool>,
+    DI: CertifiedDomain<Carrier = bool>,
     (DI, DiscreteDistance): MetricSpace,
 {
     let Some(operator) = build_bool_rr(bits)? else {
