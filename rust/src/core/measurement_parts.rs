@@ -150,6 +150,51 @@ impl<TI, TO> Function<TI, TO> {
         { unimplemented!() }
     }
 
+    /// Construct a Function whose *only* random choice is one
+    /// sample_uniform_u64 call, followed by a verified, deterministic
+    /// postprocessor. Unlike new_from_operator, the native implementation
+    /// fixes the sampling structure here, before Arc erasure.
+    ///
+    /// The external specification is the generic one-word probability
+    /// semantics of this exact wrapper, NOT a mechanism privacy guarantee.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        requires forall|arg: &TI, word: Result<u64, ()>| {
+            &&& call_requires(postprocess, (&operator, arg, word))
+            &&& call_ensures(
+                postprocess, (&operator, arg, word), model(arg, word))
+            &&& forall|output: Fallible<TO>|
+                call_ensures(postprocess, (&operator, arg, word), output)
+                    ==> output == model(arg, word)
+        },
+        ensures forall|arg: &TI,
+                       payoff: spec_fn(Result<TO, ()>) -> real|
+            #[trigger] function_expectation(&result, arg, payoff)
+                == crate::uniform_word::one_word_expectation(
+                    arg, model, payoff),
+    ))]
+    pub(crate) fn new_from_one_word_operator<Op, F>(
+        operator: Op,
+        postprocess: F,
+        #[cfg(verus_only)]
+        Ghost(model): Ghost<spec_fn(&TI, Result<u64, ()>) -> Fallible<TO>>,
+    ) -> Self
+    where
+        Op: Copy + 'static,
+        F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
+    {
+        #[cfg(not(verus_only))]
+        {
+            Self::new_fallible(move |arg| {
+                crate::traits::samplers::sample_word_then(&operator, arg, postprocess)
+            })
+        }
+        #[cfg(verus_only)]
+        {
+            unimplemented!()
+        }
+    }
+
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         requires function_call_requires(self, arg),
