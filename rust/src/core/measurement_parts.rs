@@ -142,11 +142,10 @@ impl<TI, TO> Function<TI, TO> {
         }
     }
 
-    /// Erase an exact one-word sampler and deterministic postprocessor.
-    /// Trusted: Arc dispatch preserves the expectation of the executable
-    /// sample_word_then wrapper. The caller must prove its postprocessor's
-    /// actual outputs match the supplied ghost result model.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
+    /// Construct the concrete verified sampler first, before erasing it.
+    /// The ordinary Rust value captures the operator and the postprocessor;
+    /// no probabilistic correspondence is assumed at this stage.
+    #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
         requires exact_word_postprocessing(operator, postprocess, model),
@@ -169,11 +168,48 @@ impl<TI, TO> Function<TI, TO> {
         TI: Copy,
         F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
     {
+        let program = crate::uniform_word::OneWordProgram::new(operator, postprocess);
+        #[cfg(verus_only)]
+        proof_with! {Ghost(model)}
+        Self::erase_one_word_program(program)
+    }
+
+    /// Narrow trusted boundary: `Arc<dyn Fn>` invokes the *named*
+    /// `OneWordProgram::run` on the same captured program and input.
+    ///
+    /// In the current verifier the expectation-preservation postcondition
+    /// is still conditional on this dispatch assertion and the separate
+    /// error-credit soundness argument. Unlike the concrete program, this
+    /// erasure has NOT been verified. Keep the assumption isolated here.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
+        requires exact_word_postprocessing(
+            program.operator, program.postprocess, model),
+        ensures
+            forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
+            forall|arg: &TI, output: Fallible<TO>|
+                #[trigger] function_call_ensures(&result, arg, output)
+                    ==> exists|word: Result<u64, ()>|
+                        call_ensures(
+                            program.postprocess,
+                            (&program.operator, arg, word),
+                            output),
+            forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
+                #[trigger] function_expectation(&result, arg, payoff)
+                    == crate::uniform_word::one_word_expectation(*arg, model, payoff),
+    ))]
+    fn erase_one_word_program<Op, F>(
+        program: crate::uniform_word::OneWordProgram<Op, F>,
+    ) -> Self
+    where
+        Op: Copy + 'static,
+        TI: Copy,
+        F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
+    {
         #[cfg(not(verus_only))]
         {
-            Self::new_fallible(move |arg| {
-                crate::traits::samplers::sample_word_then(&operator, arg, postprocess)
-            })
+            Self::new_fallible(move |arg| program.run(arg))
         }
         #[cfg(verus_only)]
         {
