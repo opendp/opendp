@@ -20,7 +20,7 @@ use crate::rr_constructor as constructor;
 #[cfg(not(verus_only))]
 use super::constructor;
 
-#[cfg_attr(not(verus_only), bootstrap(features("contrib"), arguments(constant_time(default = false))))
+#[cfg_attr(not(verus_only), bootstrap(features("contrib"), arguments(constant_time(default = false)))))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Citations
