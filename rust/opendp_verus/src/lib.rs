@@ -1,5 +1,4 @@
 //! Verus harness compiling production OpenDP source, not parallel code.
-#![cfg_attr(verus_only, feature(proc_macro_hygiene, stmt_expr_attributes))]
 // These are the production OpenDP core types and constructor source,
 // imported directly; no parallel Measurement or callback model is defined.
 #[path = "../../src/core/measurement_parts.rs"]
