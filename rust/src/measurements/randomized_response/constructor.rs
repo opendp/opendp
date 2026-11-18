@@ -176,17 +176,17 @@ fn bool_rr_callbacks(
     impl Fn(&bool) -> Result<bool, CallbackError> + Copy + 'static,
     impl Fn(&u32) -> Result<f64, CallbackError> + Copy + 'static,
 ) {
-    #[cfg(not(verus_only))]
-    {
-        let func = move |truth: &bool| {
-            crate::traits::samplers::sample_word_then(
-                &operator, truth, operator::BoolRR::release_callback)
-        };
-        let map = move |distance: &u32| operator.map_callback(distance);
-        (func, map)
-    }
-    #[cfg(verus_only)]
-    { unimplemented!() }
+    let func = move |truth: &bool| {
+        #[cfg(verus_only)]
+        let result = crate::uniform_word::sample_word_then(
+            &operator, truth, operator::BoolRR::release_callback);
+        #[cfg(not(verus_only))]
+        let result = crate::traits::samplers::sample_word_then(
+            &operator, truth, operator::BoolRR::release_callback);
+        result
+    };
+    let map = move |distance: &u32| operator.map_callback(distance);
+    (func, map)
 }
 
 /// Build the actual OpenDP Measurement, including the real certified
