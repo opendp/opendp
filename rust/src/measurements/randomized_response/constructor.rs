@@ -567,7 +567,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
         implies match output {
             Err(_) => false,
             Ok(cost) => {
-                &&& measure.valid_cost(&cost)
+                &&& <MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(measure, &cost)
                 &&& forall|left: &bool, right: &bool|
                     domain.contains(left) && domain.contains(right)
                         && metric.close(left, right, d)
