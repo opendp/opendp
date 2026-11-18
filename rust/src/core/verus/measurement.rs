@@ -57,6 +57,52 @@ pub open spec fn valid_certified_parts<DI, MI, MO, TO>(
         }
 }
 
+/// Entire validity obligation on *concrete* executable components,
+/// before either callback is erased. This first certified instantiation
+/// uses the shared one-word sampler; domain, metric, measure, and output
+/// are otherwise generic. Its expectation is the proved one-word law,
+/// not a field or postcondition of an already-erased Function.
+pub open spec fn valid_one_word_components<DI, MI, MO, TO, Op, F, P>(
+    domain: &DI,
+    metric: &MI,
+    measure: &MO,
+    program: &crate::uniform_word::OneWordProgram<Op, F>,
+    map: P,
+    model: crate::uniform_word::OneWordModel<DI::Carrier, TO>,
+) -> bool
+    where
+        DI: crate::CertifiedDomain,
+        DI::Carrier: Copy,
+        MI: crate::CertifiedMetric<DI::Carrier>,
+        MO: crate::CertifiedMeasure<Result<TO, ()>>,
+        Op: Copy,
+        F: Fn(&Op, &DI::Carrier, Result<u64, ()>) -> Result<TO, ()>,
+        P: Fn(&Op, &MI::Distance) -> Result<MO::Distance, ()>,
+{
+    &&& crate::measurement_parts::exact_word_postprocessing(
+        program.operator, program.postprocess, model)
+    &&& forall|d: &MI::Distance| metric.valid_distance(d) ==>
+        #[trigger] call_requires(map, (&program.operator, d))
+    &&& forall|d: &MI::Distance, output: Result<MO::Distance, ()>|
+        metric.valid_distance(d)
+            && #[trigger] call_ensures(map, (&program.operator, d), output)
+        ==> match output {
+            Err(_) => false,
+            Ok(cost) => {
+                &&& measure.valid_cost(&cost)
+                &&& forall|left: &DI::Carrier, right: &DI::Carrier|
+                    domain.contains(left) && domain.contains(right)
+                        && metric.close(left, right, d)
+                    ==> measure.dominates(
+                        |payoff: spec_fn(Result<TO, ()>) -> real|
+                            crate::uniform_word::one_word_expectation(*left, model, payoff),
+                        |payoff: spec_fn(Result<TO, ()>) -> real|
+                            crate::uniform_word::one_word_expectation(*right, model, payoff),
+                        &cost)
+            },
+        }
+}
+
 /// The same generic contract about the installed OpenDP measurement.
 pub open spec fn valid_certified_measurement<DI, MI, MO, TO>(
     meas: &crate::Measurement<DI, MI, MO, TO>,
