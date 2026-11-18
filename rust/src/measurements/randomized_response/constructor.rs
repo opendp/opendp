@@ -16,7 +16,7 @@ use crate::verified_arithmetic::{
     real_exp_ln_inverse, real_ln,
 };
 #[cfg(not(verus_only))]
-use crate::traits::arithmetic::verified::{
+use crate::traits::verified::{
     ArithmeticError, exact_u53_cast, inf_div_up_f64, inf_ln_up_f64,
     positive_infinity_f64,
 };
