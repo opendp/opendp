@@ -318,4 +318,144 @@ pub proof fn lemma_validated_bool_rr_privacy<E>(
     );
 }
 
+
+/// The exact abstract MaxDivergence factor map for the Boolean operator:
+/// identity input pairs cost zero, p=1 is infinite for distinct pairs.
+pub open spec fn rr_factor_map(numerator: u64, factor: real, distance: u32) -> Option<real> {
+    if distance == 0 { Some(1real) }
+    else if numerator == 9_007_199_254_740_992u64 { None }
+    else { Some(factor) }
+}
+
+pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bool {
+    left == right || distance > 0
+}
+
+/// Lift the already verified payoff inequality into the generic measurement
+/// contract, *before* any dynamic callback erasure. This invokes the
+/// production BoolRR::release semantics through release_expectation.
+pub proof fn lemma_rr_operator_valid_measurement<E>(
+    numerator: u64,
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
+    success: real,
+    factor: real,
+)
+    requires
+        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
+        factor >= 1real,
+        numerator < 9_007_199_254_740_992u64 ==>
+            numerator as real / 9_007_199_254_740_992real
+                <= factor * (1real - numerator as real / 9_007_199_254_740_992real),
+        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+    ensures
+        crate::measurement_proof::valid_measurement_expectations::<
+            bool, Result<bool, E>, u32,
+        >(
+            |_: bool| true,
+            |left: bool, right: bool, distance: u32|
+                rr_discrete_close(left, right, distance),
+            |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                release_expectation(truth, numerator, word_expectation, payoff),
+            |distance: u32| rr_factor_map(numerator, factor, distance),
+        ),
+{
+    let member = |_: bool| true;
+    let close = |left: bool, right: bool, distance: u32|
+        rr_discrete_close(left, right, distance);
+    let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+        release_expectation(truth, numerator, word_expectation, payoff);
+    let map = |distance: u32| rr_factor_map(numerator, factor, distance);
+
+    assert forall|left: bool, right: bool, distance: u32|
+        member(left) && member(right)
+            && #[trigger] close(left, right, distance)
+        implies match map(distance) {
+            None => true,
+            Some(cost) => cost >= 1real
+                && forall|payoff: spec_fn(Result<bool, E>) -> real|
+                    crate::measurement_proof::bounded_payoff(payoff)
+                    ==> #[trigger] expectation(left, payoff)
+                        <= cost * expectation(right, payoff),
+        } by {
+        if distance == 0 {
+            assert(left == right);
+            assert(map(distance) == Some(1real));
+            assert forall|payoff: spec_fn(Result<bool, E>) -> real|
+                crate::measurement_proof::bounded_payoff(payoff)
+                ==> #[trigger] expectation(left, payoff)
+                    <= expectation(right, payoff) by {
+                assert(expectation(left, payoff) == expectation(right, payoff));
+            }
+        } else if numerator == 9_007_199_254_740_992u64 {
+            assert(map(distance) == None);
+        } else {
+            assert(map(distance) == Some(factor));
+            assert forall|payoff: spec_fn(Result<bool, E>) -> real|
+                crate::measurement_proof::bounded_payoff(payoff)
+                ==> #[trigger] expectation(left, payoff)
+                    <= factor * expectation(right, payoff) by {
+                assert(bounded_payoff(payoff));
+                lemma_bool_rr_dp(
+                    numerator, word_expectation, error_expectation, success,
+                    factor, left, right, distance, payoff,
+                );
+            }
+        }
+    }
+}
+
+/// Same single proof obligation as Transformation::new_certified:
+/// verified pre-erasure privacy + both callback-correspondence contracts.
+/// In particular, neither equality is asserted for arbitrary Arc<dyn Fn>.
+pub proof fn lemma_bool_rr_new_certified<E>(
+    numerator: u64,
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
+    success: real,
+    factor: real,
+    callback_expectation: spec_fn(
+        bool, spec_fn(Result<bool, E>) -> real,
+    ) -> real,
+    callback_map: spec_fn(u32) -> Option<real>,
+)
+    requires
+        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
+        factor >= 1real,
+        numerator < 9_007_199_254_740_992u64 ==>
+            numerator as real / 9_007_199_254_740_992real
+                <= factor * (1real - numerator as real / 9_007_199_254_740_992real),
+        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+        crate::measurement_proof::realizes_expectation(
+            callback_expectation,
+            |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                release_expectation(truth, numerator, word_expectation, payoff),
+        ),
+        crate::measurement_proof::realizes_privacy_map(
+            callback_map,
+            |distance: u32| rr_factor_map(numerator, factor, distance),
+        ),
+    ensures
+        crate::measurement_proof::valid_measurement_expectations::<
+            bool, Result<bool, E>, u32,
+        >(
+            |_: bool| true,
+            |left: bool, right: bool, distance: u32|
+                rr_discrete_close(left, right, distance),
+            callback_expectation,
+            callback_map,
+        ),
+{
+    let member = |_: bool| true;
+    let close = |left: bool, right: bool, distance: u32|
+        rr_discrete_close(left, right, distance);
+    let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+        release_expectation(truth, numerator, word_expectation, payoff);
+    let map = |distance: u32| rr_factor_map(numerator, factor, distance);
+    lemma_rr_operator_valid_measurement(
+        numerator, word_expectation, error_expectation, success, factor);
+    crate::measurement_proof::lemma_new_certified(
+        member, close, expectation, map, callback_expectation, callback_map);
+}
+
 } // verus!
