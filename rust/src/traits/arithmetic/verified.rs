@@ -16,9 +16,33 @@ pub type ArithmeticError = crate::error::Error;
 
 #[cfg(verus_only)]
 verus! {
-    /// Mathematical interpretation of a binary64 value.
-    /// The relationship with IEEE bit patterns is a primitive numeric axiom.
-    pub uninterp spec fn float_value(value: f64) -> real;
+    /// Exact real interpretation of a finite IEEE-754 binary64 number.
+    /// We never use this value on NaNs or infinities.
+    pub open spec fn pow2(exponent: nat) -> real
+        decreases exponent
+    {
+        if exponent == 0 { 1real } else { 2real * pow2(exponent - 1) }
+    }
+
+    pub open spec fn finite(value: f64) -> bool {
+        ((f64_to_bits(value) >> 52u64) & 2047u64) != 2047u64
+    }
+
+    pub open spec fn float_value(value: f64) -> real {
+        let bits = f64_to_bits(value);
+        let exponent = ((bits >> 52u64) & 2047u64) as nat;
+        let mantissa = (bits & 0x000f_ffff_ffff_ffffu64) as nat;
+        let magnitude = if exponent == 0 {
+            (mantissa as real) / pow2(1074nat)
+        } else if exponent >= 1075 {
+            ((4_503_599_627_370_496nat + mantissa) as real)
+                * pow2(exponent - 1075nat)
+        } else {
+            ((4_503_599_627_370_496nat + mantissa) as real)
+                / pow2(1075nat - exponent)
+        };
+        if (bits >> 63u64) == 0u64 { magnitude } else { -magnitude }
+    }
 
     /// Mathematical real transcendental functions (not executable libm).
     pub uninterp spec fn real_ln(value: real) -> real;
@@ -56,7 +80,7 @@ pub fn positive_infinity_f64() -> f64 {
 #[cfg_attr(verus_only, verus_verify(external_body))]
 #[cfg_attr(verus_only, verus_spec(result =>
     requires value <= 9_007_199_254_740_992u64,
-    ensures float_value(result) == value as real,
+    ensures finite(result), float_value(result) == value as real,
 ))]
 pub fn exact_u53_cast(value: u64) -> f64 {
     #[cfg(not(verus_only))]
@@ -68,10 +92,12 @@ pub fn exact_u53_cast(value: u64) -> f64 {
 #[cfg_attr(verus_only, verus_verify(external_body))]
 #[cfg_attr(verus_only, verus_spec(result =>
     requires
+        finite(numerator),
+        finite(denominator),
         float_value(numerator) > 0real,
         float_value(denominator) > 0real,
     ensures match result {
-        Ok(q) => float_value(q) >= float_value(numerator) / float_value(denominator),
+        Ok(q) => finite(q) && float_value(q) >= float_value(numerator) / float_value(denominator),
         Err(_) => true,
     },
 ))]
@@ -86,9 +112,9 @@ pub fn inf_div_up_f64(
 
 #[cfg_attr(verus_only, verus_verify(external_body))]
 #[cfg_attr(verus_only, verus_spec(result =>
-    requires float_value(value) > 0real,
+    requires finite(value), float_value(value) > 0real,
     ensures match result {
-        Ok(ln) => float_value(ln) >= real_ln(float_value(value)),
+        Ok(ln) => finite(ln) && float_value(ln) >= real_ln(float_value(value)),
         Err(_) => true,
     },
 ))]
@@ -111,6 +137,7 @@ pub fn inf_ln_up_f64(value: f64) -> Result<f64, ArithmeticError> {
         complement == 9_007_199_254_740_992u64 - numerator,
     ensures match result {
         Ok(epsilon) => {
+            &&& finite(epsilon)
             &&& real_exp(float_value(epsilon)) >= 1real
             &&& (numerator as real) <= real_exp(float_value(epsilon)) * (complement as real)
         },
