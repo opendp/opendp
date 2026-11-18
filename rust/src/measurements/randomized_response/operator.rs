@@ -41,12 +41,25 @@ impl BoolRR {
     }
 }
 
-// The production invocation is a single entropy call followed by the
-// executable, Verus-checked deterministic release method. The RNG itself
-// remains the explicit probabilistic trust boundary.
+// The actual native invocation is verified from this same executable body.
+// Only the sample_uniform_u64 distribution is outside Verus's scope.
+#[cfg(verus_only)]
+use crate::uniform_word::{sample_uniform_u64, WordError};
 #[cfg(not(verus_only))]
+use crate::traits::samplers::sample_uniform_u64;
+#[cfg(not(verus_only))]
+use crate::error::Error as WordError;
+
 impl BoolRR {
-    pub fn invoke(&self, truth: bool) -> crate::error::Fallible<bool> {
-        self.release(truth, crate::traits::samplers::sample_uniform_u64())
+    /// Preserve the deterministic postprocessing of the *actual* entropy
+    /// draw. If p=1 and the draw succeeds, the result must equal truth.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
+            ==> result == Ok(truth),
+    ))]
+    pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
+        let entropy = sample_uniform_u64();
+        self.release(truth, entropy)
     }
 }

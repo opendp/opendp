@@ -14,14 +14,8 @@ mod test;
 
 pub(crate) mod dyadic53;
 
-/// Read one 64-bit entropy word. Distributional semantics (including
-/// errors and freshness) belong to the `fill_bytes` entropy contract.
-/// The mechanism's deterministic Bernoulli conversion is verified separately.
-pub(crate) fn sample_uniform_u64() -> Fallible<u64> {
-    let mut bytes = [0u8; 8];
-    fill_bytes(&mut bytes)?;
-    Ok(u64::from_ne_bytes(bytes))
-}
+mod uniform_word;
+pub(crate) use uniform_word::sample_uniform_u64;
 
 /// Sample from `Bernoulli(p=0.5)`.
 ///
