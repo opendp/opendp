@@ -125,19 +125,18 @@ where
             Err(_) => true,
         },
     ))]
-    pub(crate) fn new_certified<Op: Copy + 'static>(
+    pub(crate) fn new_certified<Op, F, P>(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
         operator: Op,
-        invoke: fn(&Op, &DI::Carrier) -> Fallible<TO>,
-        privacy_map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
+        invoke: F,
+        privacy_map: P,
     ) -> Fallible<Self>
     where
-        DI::Carrier: 'static,
-        TO: 'static,
-        MI::Distance: 'static,
-        MO::Distance: 'static,
+        Op: Copy + 'static,
+        F: Fn(&Op, &DI::Carrier) -> Fallible<TO> + Copy + 'static,
+        P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
         let function = Function::new_from_operator(operator, invoke);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);

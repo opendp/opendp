@@ -123,13 +123,13 @@ impl<TI, TO> Function<TI, TO> {
             #[trigger] function_call_ensures(&result, arg, out)
                 == call_ensures(invoke, (&operator, arg), out),
     ))]
-    pub(crate) fn new_from_operator<Op: Copy + 'static>(
+    pub(crate) fn new_from_operator<Op, F>(
         operator: Op,
-        invoke: fn(&Op, &TI) -> Fallible<TO>,
+        invoke: F,
     ) -> Self
     where
-        TI: 'static,
-        TO: 'static,
+        Op: Copy + 'static,
+        F: Fn(&Op, &TI) -> Fallible<TO> + Copy + 'static,
     {
         #[cfg(not(verus_only))]
         { Self::new_fallible(move |arg| invoke(&operator, arg)) }
@@ -273,13 +273,13 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             #[trigger] privacy_map_call_ensures(&result, d, out)
                 == call_ensures(map, (&operator, d), out),
     ))]
-    pub(crate) fn new_from_operator<Op: Copy + 'static>(
+    pub(crate) fn new_from_operator<Op, P>(
         operator: Op,
-        map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
+        map: P,
     ) -> Self
     where
-        MI::Distance: 'static,
-        MO::Distance: 'static,
+        Op: Copy + 'static,
+        P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
         #[cfg(not(verus_only))]
         { Self::new_fallible(move |d| map(&operator, d)) }
