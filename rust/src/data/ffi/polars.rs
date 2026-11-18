@@ -1,10 +1,10 @@
 use opendp_derive::bootstrap;
-use polars::lazy::frame::LazyFrame;
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
     core::FfiResult,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
-    polars::{ExtractLazyFrame, TakeLazyFrame},
+    polars::{ExtractLazyFrame, TakeLazyFrame, shuffle_dataframe},
 };
 
 #[bootstrap(
@@ -60,4 +60,20 @@ pub extern "C" fn opendp_data__onceframe_lazy(
 
     let answer: LazyFrame = try_!(queryable.eval_internal(&ExtractLazyFrame));
     Ok(AnyObject::new(answer)).into()
+}
+
+#[bootstrap(
+    name = "_shuffle_dataframe",
+    arguments(dataframe(rust_type = "DataFrame")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Shuffle a collected Polars DataFrame using OpenDP's Shuffle trait.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data___shuffle_dataframe(
+    dataframe: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let dataframe = try_!(try_as_ref!(dataframe).downcast_ref::<DataFrame>());
+    shuffle_dataframe(dataframe.clone())
+        .map(AnyObject::new)
+        .into()
 }

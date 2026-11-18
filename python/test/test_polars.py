@@ -427,7 +427,9 @@ def test_onceframe_failed_collect_exhausts(monkeypatch, failure):
     if failure == "collect":
         monkeypatch.setattr(pl.LazyFrame, "collect", fail)
     else:
-        monkeypatch.setattr(pl.DataFrame, "sample", fail)
+        import opendp._data as data
+
+        monkeypatch.setattr(data, "_shuffle_dataframe", fail)
 
     with pytest.raises(ValueError, match=f"{failure} failed"):
         onceframe.collect()
@@ -443,17 +445,36 @@ def test_onceframe_shuffle(monkeypatch, height):
 
     expected = pl.DataFrame({"A": range(height)})
     monkeypatch.setattr(OnceFrame, "_take_lazy", lambda _: expected.lazy())
-    original_sample = pl.DataFrame.sample
+    import opendp._data as data
+
+    original_shuffle = data._shuffle_dataframe
     calls = []
 
-    def sample(frame, *, n, shuffle):
-        calls.append((n, shuffle))
-        return original_sample(frame, n=n, shuffle=shuffle)
+    def shuffle(frame):
+        calls.append(frame.height)
+        return original_shuffle(frame)
 
-    monkeypatch.setattr(pl.DataFrame, "sample", sample)
+    monkeypatch.setattr(data, "_shuffle_dataframe", shuffle)
     result = OnceFrame(object()).collect()
-    assert calls == [(height, True)]
+    assert calls == [height]
     pl_testing.assert_frame_equal(result.sort("A"), expected)
+
+
+def test_onceframe_shuffle_preserves_enum(monkeypatch):
+    from opendp.extras.polars import OnceFrame
+
+    enum_dtype = pl.Enum(["A", "B", "C"])
+    expected = pl.DataFrame(
+        {
+            "id": [0, 1, 2, 3],
+            "category": pl.Series("category", ["B", "A", None, "B"], dtype=enum_dtype),
+        }
+    )
+    monkeypatch.setattr(OnceFrame, "_take_lazy", lambda _: expected.lazy())
+
+    result = OnceFrame(object()).collect()
+    assert result.schema == expected.schema
+    pl_testing.assert_frame_equal(result.sort("id"), expected)
 
 
 def test_lazyframe_membership_unsupported():
