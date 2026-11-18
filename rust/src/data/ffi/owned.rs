@@ -12,10 +12,9 @@ mod owned_polars;
 ///
 /// The source AnyObject is borrowed, not retained: it must outlive this owner
 /// and every use of the view. View pointers are read-only, except for the
-/// owner-allocated ArrowArray/ArrowSchema scratch headers: Arrow C consumers may
-/// move/release their payloads and mark the headers released. These headers use
-/// interior mutability; the borrowed source is never mutated. The owner must
-/// still free the header boxes, even after payload consumption. Child AnyObjects
+/// native Polars SeriesExport descriptors: Python may move an export and clear
+/// its release callback, leaving the descriptor storage with this owner.
+/// Unconsumed exports are released when the owner is dropped. Child AnyObjects
 /// and pointer arrays belong to this owner and must not be freed separately.
 pub struct FfiSliceOwner {
     view: FfiSlice,
