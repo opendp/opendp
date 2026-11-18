@@ -97,7 +97,7 @@ jobs:
         # macos-15-intel is intel, and will be available until August 2027.
         # https://github.com/actions/runner-images/issues/13046
         # https://cibuildwheel.pypa.io/en/stable/faq/#how
-        os: [ubuntu-latest, windows-latest, macos-15-intel]
+        os: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
 
     steps:
       - name: Free disk space
