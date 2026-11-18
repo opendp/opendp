@@ -165,8 +165,11 @@ Line \ref{line:privacy-map} builds the privacy map of the measurement.
 The measurement for each expression expects data set distances in terms of a triple:
 \begin{itemize}
     \item $L^0$: the greatest number of groups that can be influenced by any one individual.
-    This is bounded above by \texttt{bound.num\_groups} and more loosely by \texttt{margin.max\_groups},
-    but can also be bounded by the $L^1$ distance on line \ref{line:l0-from-l1}.
+    This is bounded above by \texttt{bound.num\_groups} and more loosely by twice \texttt{margin.max\_groups},
+    except when grouping keys are invariant, in which case \texttt{margin.max\_groups} suffices.
+    Each dataset has at most $G$ groups, so a pair with different keys can change up to $2G$ groups.
+    If doubling the group count overflows the distance type, the privacy map returns an error.
+    The bound can also be tightened by the $L^1$ distance on line \ref{line:l0-from-l1}.
     \item $L^\infty$: the greatest number of records that can be added or removed by any one individual in each partition.
     This is bounded above by \texttt{bound.per\_group} and more loosely by twice \texttt{margin.max\_length},
     but can also be bounded by the $L^1$ distance on line \ref{line:li-from-l1}.

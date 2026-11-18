@@ -705,3 +705,55 @@ fn test_max_length_overflow() -> Fallible<()> {
     assert!(measurement.map(&1).is_err());
     Ok(())
 }
+
+#[test]
+fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
+    use crate::core::Domain;
+    use crate::metrics::{Bound, Bounds};
+
+    let x = df!("A" => ["a"])?.lazy();
+    let y = df!("A" => ["b"])?.lazy();
+    let public = df!("A" => ["a", "b"])?.lazy();
+    let grouped = x
+        .clone()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0)).alias("count")]);
+    let plan = public.join(grouped, [col("A")], [col("A")], JoinType::Left.into());
+    let bounds = Bounds::from(2).with_bound(Bound::by([col("A")]).with_per_group(1));
+
+    for (margin, epsilon) in [
+        (Margin::by(["A"]), 2.0),
+        (Margin::by(["A"]).with_max_groups(1), 2.0),
+        (
+            Margin::by(["A"]).with_max_groups(1).with_invariant_keys(),
+            1.0,
+        ),
+    ] {
+        let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+            "A",
+            AtomDomain::<String>::default(),
+        )])?
+        .with_margin(margin.clone())?;
+
+        if margin.invariant.is_none() {
+            // These datasets have disjoint group keys, despite each having one group.
+            assert!(domain.member(&x)? && domain.member(&y)?);
+        }
+        let measurement = make_private_lazyframe(
+            domain,
+            FrameDistance(SymmetricDistance),
+            MaxDivergence,
+            plan.clone(),
+            None,
+            None,
+        )?;
+        assert_eq!(measurement.map(&bounds)?, epsilon);
+
+        // A genuine pairwise bound should still tighten the number of changed groups.
+        let pairwise_bounds = bounds
+            .clone()
+            .with_bound(Bound::by([col("A")]).with_num_groups(1));
+        assert_eq!(measurement.map(&pairwise_bounds)?, 1.0);
+    }
+    Ok(())
+}

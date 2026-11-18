@@ -248,7 +248,14 @@ where
         let bound = d_in.get_bound(&group_by_id);
 
         // incorporate all information into optional bounds
-        let l0 = option_min(bound.num_groups, margin.max_groups);
+        // Each dataset has at most G groups, so their differing keys can span 2G groups.
+        // With invariant keys, both datasets share the same set of at most G groups.
+        let max_changed_groups = if margin.invariant.is_some() {
+            margin.max_groups
+        } else {
+            margin.max_groups.map(|g| g.alerting_mul(&2)).transpose()?
+        };
+        let l0 = option_min(bound.num_groups, max_changed_groups);
         // Each input group has at most k rows, so two groups can differ by 2k rows.
         let max_group_change = margin.max_length.map(|k| k.alerting_mul(&2)).transpose()?;
         let li = option_min(bound.per_group, max_group_change);

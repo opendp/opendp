@@ -155,7 +155,10 @@ def make_private_group_by(
         bound = d_in.get_bound(group_by_id)
 
         # incorporate all information into optional bounds
-        l0 = option_min(bound.num_groups, margin.max_groups)
+        max_groups = margin.max_groups
+        if max_groups is not None and margin.invariant is None:
+            max_groups = max_groups.alerting_mul(2)
+        l0 = option_min(bound.num_groups, max_groups)
         max_length = margin.max_length
         if max_length is not None:
             max_length = max_length.alerting_mul(2)
