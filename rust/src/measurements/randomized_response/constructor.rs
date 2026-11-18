@@ -154,8 +154,67 @@ use crate::uniform_word::sample_word_then;
 #[cfg(not(verus_only))]
 use crate::traits::samplers::sample_word_then;
 
-/// This one-line forwarding body is outside Verus's probabilistic proof.
-/// The EPT of the called sample_word_then is verified separately.
+// Verification-only in-band credit arguments are erased from the native
+// signature. The executable function is shared: native and Verus both
+// delegate to the production sample_word_then/release_callback.
+#[cfg(verus_only)]
+type RRWithCredit = (
+    Result<bool, CallbackError>, Tracked<crate::one_word_credit::ErrorCredit>,
+);
+#[cfg(not(verus_only))]
+type RRWithCredit = Result<bool, CallbackError>;
+
+#[cfg_attr(verus_only, verus_verify)]
+#[cfg_attr(verus_only, verus_spec(result =>
+    requires
+        operator.numerator <= 9_007_199_254_740_992u64,
+        forall|out: Result<bool, CallbackError>|
+            0real <= #[trigger] payoff@(out) < 1real,
+        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: crate::randomized_response_bool::release_expectation(
+                *truth, *operator, crate::uniform_word::word_expectation(), payoff@)
+        }),
+    ensures
+        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: payoff@(result.0)
+        }),
+))]
+pub(crate) fn run_bool_rr_with_effect(
+    operator: &operator::BoolRR,
+    truth: &bool,
+    #[cfg(verus_only)] credit: Tracked<crate::one_word_credit::ErrorCredit>,
+    #[cfg(verus_only)] payoff: Ghost<crate::uniform_word::OutputCost<bool>>,
+) -> RRWithCredit {
+    #[cfg(verus_only)]
+    {
+        proof_decl! {
+            let ghost word_cost: crate::uniform_word::WordCost =
+                |word: Result<u64, CallbackError>| {
+                    payoff@(operator.release(*truth, word))
+                };
+        }
+        proof! {
+            operator::lemma_release_callback_preserves_cost(*operator, truth, payoff@);
+            assert(crate::uniform_word::uniform_word_expectation(word_cost)
+                == crate::randomized_response_bool::release_expectation(
+                    *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
+        }
+        sample_word_then(
+            operator, truth, operator::BoolRR::release_callback,
+            credit, Ghost::new(word_cost), payoff,
+        )
+    }
+    #[cfg(not(verus_only))]
+    {
+        sample_word_then(operator, truth, operator::BoolRR::release_callback)
+    }
+}
+
+/// The plain callback has no per-call credit argument. Its exact native
+/// executable body forwards to the effect-verified implementation above.
+/// Connecting the resulting distribution to callback_expectation remains
+/// outside ordinary Verus's Fn semantics.
+
 #[cfg_attr(verus_only, verus_verify(external_body))]
 fn run_bool_rr(
     operator: &operator::BoolRR,
@@ -163,7 +222,7 @@ fn run_bool_rr(
 ) -> Result<bool, CallbackError> {
     #[cfg(not(verus_only))]
     {
-        sample_word_then(operator, truth, operator::BoolRR::release_callback)
+        run_bool_rr_with_effect(operator, truth)
     }
     #[cfg(verus_only)]
     {

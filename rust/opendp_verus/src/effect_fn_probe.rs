@@ -40,41 +40,6 @@ pub fn probe_generic_fn<F>(
 
 verus! {
 
-pub fn rr_in_band(
-    operator: &crate::operator::BoolRR,
-    truth: &bool,
-    credit: Tracked<crate::one_word_credit::ErrorCredit>,
-    payoff: Ghost<crate::uniform_word::OutputCost<bool>>,
-) -> (result: (Result<bool, crate::uniform_word::WordError>,
-              Tracked<crate::one_word_credit::ErrorCredit>))
-    requires
-        operator.numerator <= 9_007_199_254_740_992u64,
-        forall|out: Result<bool, crate::uniform_word::WordError>|
-            0real <= #[trigger] payoff@(out) < 1real,
-        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::randomized_response_bool::release_expectation(
-                *truth, *operator, crate::uniform_word::word_expectation(), payoff@),
-        }),
-    ensures
-        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: payoff@(result.0),
-        }),
-{
-    let ghost word_cost: crate::uniform_word::WordCost =
-        |word: Result<u64, crate::uniform_word::WordError>|
-            payoff@(operator.release(*truth, word));
-    proof {
-        crate::operator::lemma_release_callback_preserves_cost(*operator, truth, payoff@);
-        assert(crate::uniform_word::uniform_word_expectation(word_cost)
-            == crate::randomized_response_bool::release_expectation(
-                *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
-    }
-    crate::uniform_word::sample_word_then(
-        operator, truth, crate::operator::BoolRR::release_callback,
-        credit, Ghost(word_cost), payoff,
-    )
-}
-
 pub fn probe_rr_fn_in_band(
     operator: crate::operator::BoolRR,
     input: bool,
@@ -114,7 +79,7 @@ pub fn probe_rr_fn_in_band(
                 amount: cost@(out.0),
             }),
         {
-            rr_in_band(&operator, truth, token, cost)
+            crate::rr_constructor::run_bool_rr_with_effect(&operator, truth, token, cost)
         };
     func(&input, credit, payoff)
 }
