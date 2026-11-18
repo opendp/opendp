@@ -17,15 +17,12 @@ use crate::metrics::DiscreteDistance;
 use crate::traits::samplers::sample_bernoulli_float;
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
-/// The sole audited erasure adapter for the verified Boolean operator.
-///
-/// This private wrapper can only be constructed after the public constructor
-/// has validated its parameter and computed its privacy cost. We deliberately
-/// do not certify arbitrary BoolRR values.
-struct CertifiedBoolRR(operator::BoolRR<f64>);
+// This is the only trusted callback-erasure adapter for Boolean RR.
+// It forwards to the concrete operator; Verus does not verify Arc<dyn Fn>.
+struct BoolRRParts(operator::BoolRR<f64>);
 
 impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
-    for CertifiedBoolRR
+    for BoolRRParts
 {
     fn into_parts(
         self,
@@ -69,13 +66,10 @@ impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
 /// * `constant_time` - Both values use one fixed-size uniform-byte draw.
 ///
-/// # Verification status
-/// Verus checks parameter decoding, the production release kernel, and the
-/// conditional expectation-based privacy theorem. The constructor uses a
-/// private certified-parts adapter; Arc callback correspondence is audited.
-/// Verus proves composition of the trusted upward-rounding InfDiv/InfLn
-/// contracts. Entropy semantics and the native callback adapter remain
-/// explicit trusted boundaries.
+/// # Verification
+/// Verus checks the operator builder and conditional privacy guarantee.
+/// Entropy, numerical primitives, and callback erasure are trusted; see
+/// rust/opendp_verus/README.md.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
@@ -91,7 +85,7 @@ pub fn make_randomized_response_bool(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        CertifiedBoolRR(operator),
+        BoolRRParts(operator),
     )
 }
 
