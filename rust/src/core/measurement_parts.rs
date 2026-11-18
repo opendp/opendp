@@ -23,6 +23,7 @@ use vstd::prelude::*;
 ///
 /// # Proof Definition
 /// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
+#[cfg_attr(verus_only, verus_verify)]
 pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
@@ -53,6 +54,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 /// A mathematical function.
+#[cfg_attr(verus_only, verus_verify(external_body))]
 pub struct Function<TI, TO> {
     pub function: Arc<dyn Fn(&TI) -> Fallible<TO>>,
 }
@@ -71,9 +73,12 @@ impl<TI, TO> Function<TI, TO> {
 
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
-        Self {
+        #[cfg(not(verus_only))]
+        {         Self {
             function: Arc::new(function),
-        }
+        } }
+        #[cfg(verus_only)]
+        { unimplemented!() }
     }
 
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
@@ -96,6 +101,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 ///
 /// # Proof Definition
 /// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
+#[cfg_attr(verus_only, verus_verify)]
 pub trait Metric: Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
@@ -107,6 +113,7 @@ pub trait Metric: Clone + PartialEq + Debug {
 /// # Proof Definition
 /// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions.
 
+#[cfg_attr(verus_only, verus_verify)]
 pub trait Measure: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
@@ -117,6 +124,7 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
+#[cfg_attr(verus_only, verus_verify(external_body))]
 pub struct PrivacyMap<MI: Metric, MO: Measure>(
     pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
 );
@@ -130,7 +138,10 @@ impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
-        PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
+        #[cfg(not(verus_only))]
+        { PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in)))) }
+        #[cfg(verus_only)]
+        { unimplemented!() }
     }
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         PrivacyMap(Arc::new(map))
