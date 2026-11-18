@@ -224,7 +224,7 @@ where
     // building the concrete Fn closures and before any Arc erasure.
     let func = move |truth: &bool| run_bool_rr(&operator, truth);
     let map =
-        #[cfg_attr(verus_only, verus_spec(result: Result<f64, ()> =>
+        #[cfg_attr(verus_only, verus_spec(result =>
             ensures result == Ok(operator.map(*distance, 0.0f64)),
         ))]
         move |distance: &u32| operator.map_callback(distance);
