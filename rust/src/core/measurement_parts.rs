@@ -356,7 +356,31 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         Op: Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
-        Self::new_fallible(move |d| map(&operator, d))
+        #[cfg(verus_only)]
+        let adapter = move |d: &MI::Distance| -> (output: Fallible<MO::Distance>)
+            requires call_requires(map, (&operator, d)),
+            ensures call_ensures(map, (&operator, d), output),
+        {
+            map(&operator, d)
+        };
+        #[cfg(not(verus_only))]
+        let adapter = move |d: &MI::Distance| map(&operator, d);
+        let result = Self::new_fallible(adapter);
+        #[cfg(verus_only)]
+        proof! {
+            assert forall|d: &MI::Distance|
+                #[trigger] privacy_map_call_requires(&result, d) by {
+                assert(privacy_map_call_requires(&result, d)
+                    == call_requires(adapter, (d,)));
+            }
+            assert forall|d: &MI::Distance, out: Fallible<MO::Distance>|
+                #[trigger] privacy_map_call_ensures(&result, d, out)
+                    implies call_ensures(map, (&operator, d), out) by {
+                assert(privacy_map_call_ensures(&result, d, out)
+                    == call_ensures(adapter, (d,), out));
+            }
+        }
+        result
     }
 
     #[cfg_attr(verus_only, verus_verify(external_body))]
