@@ -68,6 +68,8 @@ impl MaxDivergence {
     pub open spec fn multiplicative_factor(epsilon: f64) -> Option<real> {
         if f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64 {
             None
+        } else if f64_to_bits(epsilon) == 0u64 {
+            Some(1real)
         } else {
             Some(crate::verified_arithmetic::real_exp(
                 crate::verified_arithmetic::float_value(epsilon)))
