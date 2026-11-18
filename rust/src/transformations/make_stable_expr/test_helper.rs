@@ -2,6 +2,8 @@ use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::*;
 use polars::prelude::*;
 
+pub(crate) mod replace;
+
 pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("chunk_2_bool", AtomDomain::<bool>::default()),
