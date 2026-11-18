@@ -265,6 +265,19 @@ where
             assert(call_requires(operator::BoolRR::map_callback, (&operator, d)));
         }
     }
+    // The actual erased map has an attainable Ok result at every distance.
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|d: &u32| exists|epsilon: f64| #[trigger]
+            crate::measurement_parts::privacy_map_call_ensures(
+                &privacy_map, d, Ok(epsilon)) by {
+            let epsilon = operator.map(*d, 0.0f64);
+            assert(call_ensures(operator::BoolRR::map_callback,
+                (&operator, d), Ok(epsilon)));
+            assert(crate::measurement_parts::privacy_map_call_ensures(
+                &privacy_map, d, Ok(epsilon)));
+        }
+    }
     // The actual Function is callable for every Boolean input and at p=1
     // cannot successfully return the wrong bit.
     #[cfg(verus_only)]
