@@ -347,8 +347,9 @@ where
             #[trigger] crate::measurement_proof::bool_rr_pair_valid(
                 &measurement, left, right, distance)
         by {
-            assert forall|epsilon: f64|
-                crate::measurement_parts::privacy_map_call_ensures(
+            if left == right || distance > 0 {
+                assert forall|epsilon: f64|
+                    #[trigger] crate::measurement_parts::privacy_map_call_ensures(
                     &measurement.privacy_map, &distance, Ok(epsilon))
                 implies {
                     &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
@@ -381,6 +382,7 @@ where
                             crate::measurement_proof::bounded_payoff(payoff) ==>
                                 expectation(left, payoff) <= factor * expectation(right, payoff),
                 });
+            }
             }
         }
         assert(crate::measurement_proof::valid_bool_rr_measurement(&measurement));
