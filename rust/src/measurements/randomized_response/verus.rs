@@ -82,7 +82,7 @@ pub proof fn lemma_release_expectation<E>(
         bounded_payoff(payoff),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
-        release_expectation(truth, op.numerator, word_expectation, payoff)
+        release_expectation(truth, op, word_expectation, payoff)
             == success * (
                 (op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(truth))
                 + (1real - op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(!truth))
@@ -153,11 +153,11 @@ pub proof fn lemma_bool_rr_dp<E>(
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
         distance == 0 ==>
-            release_expectation(left, op.numerator, word_expectation, payoff)
-                <= release_expectation(right, op.numerator, word_expectation, payoff),
+            release_expectation(left, op, word_expectation, payoff)
+                <= release_expectation(right, op, word_expectation, payoff),
         distance > 0 && op.numerator < 9_007_199_254_740_992u64 ==>
-            release_expectation(left, op.numerator, word_expectation, payoff)
-                <= factor * release_expectation(right, op.numerator, word_expectation, payoff),
+            release_expectation(left, op, word_expectation, payoff)
+                <= factor * release_expectation(right, op, word_expectation, payoff),
         // With p=1 and positive distance, the privacy map is +infinity.
 {
     let numerator = op.numerator;
@@ -305,7 +305,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
             |left: bool, right: bool, distance: u32|
                 rr_discrete_close(left, right, distance),
             |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                release_expectation(truth, op.numerator, word_expectation, payoff),
+                release_expectation(truth, op, word_expectation, payoff),
             |distance: u32| rr_factor_map(op.numerator, factor, distance),
         ),
 {
