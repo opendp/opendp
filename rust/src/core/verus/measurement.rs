@@ -57,36 +57,41 @@ pub open spec fn valid_certified_parts<DI, MI, MO, TO>(
         }
 }
 
-/// Entire validity obligation on *concrete* executable components,
-/// before either callback is erased. This first certified instantiation
-/// uses the shared one-word sampler; domain, metric, measure, and output
-/// are otherwise generic. Its expectation is the proved one-word law,
-/// not a field or postcondition of an already-erased Function.
-pub open spec fn valid_one_word_components<DI, MI, MO, TO, Op, F, P>(
+/// Mathematical expectation of an executable, statically typed callback.
+///
+/// Ordinary Verus Fn postconditions do not determine probabilities. A
+/// mechanism must separately establish the distribution of its *actual*
+/// callback from verified probabilistic execution. This uninterpreted
+/// symbol is not permission to assign arbitrary laws to callbacks.
+pub uninterp spec fn callback_expectation<F, X, Y>(
+    func: F,
+    input: &X,
+    payoff: spec_fn(Result<Y, ()>) -> real,
+) -> real
+    where F: Fn(&X) -> Result<Y, ()>;
+
+/// Complete validity predicate for concrete callbacks, before storage or
+/// erasure. Generic in the sampling algorithm and the output measure.
+pub open spec fn valid_concrete_components<DI, MI, MO, TO, F, P>(
     domain: &DI,
     metric: &MI,
     measure: &MO,
-    operator: Op,
-    postprocess: F,
+    func: F,
     map: P,
-    model: crate::uniform_word::OneWordModel<DI::Carrier, TO>,
 ) -> bool
     where
         DI: crate::CertifiedDomain,
-        DI::Carrier: Copy,
         MI: crate::CertifiedMetric<DI::Carrier>,
         MO: crate::CertifiedMeasure<Result<TO, ()>>,
-        Op: Copy,
-        F: Fn(&Op, &DI::Carrier, Result<u64, ()>) -> Result<TO, ()>,
-        P: Fn(&Op, &MI::Distance) -> Result<MO::Distance, ()>,
+        F: Fn(&DI::Carrier) -> Result<TO, ()>,
+        P: Fn(&MI::Distance) -> Result<MO::Distance, ()>,
 {
-    &&& crate::measurement_parts::exact_word_postprocessing(
-        operator, postprocess, model)
-    &&& forall|d: &MI::Distance| metric.valid_distance(d) ==>
-        #[trigger] call_requires(map, (&operator, d))
+    &&& forall|input: &DI::Carrier|
+        domain.contains(input) ==> #[trigger] call_requires(func, (input,))
+    &&& forall|d: &MI::Distance|
+        metric.valid_distance(d) ==> #[trigger] call_requires(map, (d,))
     &&& forall|d: &MI::Distance, output: Result<MO::Distance, ()>|
-        metric.valid_distance(d)
-            && #[trigger] call_ensures(map, (&operator, d), output)
+        metric.valid_distance(d) && #[trigger] call_ensures(map, (d,), output)
         ==> match output {
             Err(_) => false,
             Ok(cost) => {
@@ -96,9 +101,9 @@ pub open spec fn valid_one_word_components<DI, MI, MO, TO, Op, F, P>(
                         && metric.close(left, right, d)
                     ==> measure.dominates(
                         |payoff: spec_fn(Result<TO, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*left, model, payoff),
+                            callback_expectation(func, left, payoff),
                         |payoff: spec_fn(Result<TO, ()>) -> real|
-                            crate::uniform_word::one_word_expectation(*right, model, payoff),
+                            callback_expectation(func, right, payoff),
                         &cost)
             },
         }
