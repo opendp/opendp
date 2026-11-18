@@ -223,9 +223,12 @@ where
         assert(crate::measurement_parts::exact_word_postprocessing(
             operator, operator::BoolRR::release_callback, release_model));
     }
-    // The one-word computation and deterministic map are proved before
-    // building the concrete Fn closures and before any Arc erasure.
+    // The one-word sampler has its own verified EPT. Construct the RR
+    // callbacks here; verify the deterministic map and isolate the remaining
+    // probabilistic Fn forwarding assumption immediately below.
     let func = move |truth: &bool| run_bool_rr(&operator, truth);
+    // The two configurations have identical native closure bodies; Verus
+    // needs its return postcondition attached to the closure expression.
     #[cfg(verus_only)]
     let map = #[verus_spec(result: RRMapResult =>
         ensures result == Ok(operator.map(*distance, 0.0f64)),
