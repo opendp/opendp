@@ -54,6 +54,8 @@ pub trait Domain: Clone + PartialEq + Debug {
 }
 
 /// A mathematical function.
+#[cfg_attr(verus_only, verifier::reject_recursive_types(TI))]
+#[cfg_attr(verus_only, verifier::reject_recursive_types(TO))]
 #[cfg_attr(verus_only, verus_verify(external_body))]
 pub struct Function<TI, TO> {
     pub function: Arc<dyn Fn(&TI) -> Fallible<TO>>,
@@ -124,6 +126,8 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
+#[cfg_attr(verus_only, verifier::reject_recursive_types(MI))]
+#[cfg_attr(verus_only, verifier::reject_recursive_types(MO))]
 #[cfg_attr(verus_only, verus_verify(external_body))]
 pub struct PrivacyMap<MI: Metric, MO: Measure>(
     pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
