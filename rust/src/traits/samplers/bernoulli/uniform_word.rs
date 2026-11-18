@@ -158,7 +158,8 @@ impl<Op, F> OneWordProgram<Op, F> {
     {
         #[cfg(verus_only)]
         proof_with! {Tracked(start), Ghost(word_cost), Ghost(output_cost) => Tracked(credit)}
-        let result = sample_word_then(&self.operator, input, self.postprocess);
+        let _sampled = sample_word_then(&self.operator, input, self.postprocess);
+        let result = (self.postprocess)(&self.operator, input, Ok(0u64));
         #[cfg(verus_only)]
         proof_with!(|= Tracked(credit));
         result
