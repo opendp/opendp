@@ -1,8 +1,11 @@
 # Verus verification of Boolean randomized response
 
 The public production `make_randomized_response_bool` is verified through
-`build_bool_rr_measurement` and the actual `Measurement::new_certified` call. The constructor **requires** validity of
-the concrete `Function` and `PrivacyMap` objects it receives; validity
+`build_bool_rr_measurement` and the actual `Measurement::new_certified` call.
+The certified constructor is now **generic** over domain, metric, privacy
+measure, and output type; it consumes semantic traits defined in
+`core/measurement_semantics.rs`. Its verified precondition requires joint
+privacy validity of the concrete `Function` and `PrivacyMap` objects; validity
 is not assumed when they are assembled into a `Measurement`.
 
 ## Verified
@@ -20,7 +23,9 @@ is not assumed when they are assembled into a `Measurement`.
   negative infinity). A zero input distance reports positive zero.
 - The reported cost bounds the returned function's distribution under the
   Boolean discrete metric and `MaxDivergence`, including errors and the
-  infinite-cost case.
+  infinite-cost case. The generic certified predicate requires the map to be
+  callable and for every returned value at any valid input distance to be
+  successful and a valid bound. A map that always returns `Err` is rejected.
 - The *input* contract of production `Measurement::new_certified` requires
   this privacy validity of the actual callback objects. The constructor's
   verified body preserves them in the returned measurement.
@@ -73,9 +78,17 @@ of a zero-cost privacy map that disagreed with the operator's cost.
   is assumed by the privacy proof, which covers every Boolean input.
   `AtomDomain::<bool>::new_non_nan()` and the relevant metric-space
   check are verified from their production source.
-- The validity predicate and constructor are presently specialized to
-  Boolean input, `DiscreteDistance`, and `MaxDivergence`, rather than
-  generalized to every `Domain`, `Metric`, or privacy `Measure`.
+- The generic certified contract is reusable, but concrete verified semantic
+  implementations currently cover the Boolean domain, `DiscreteDistance`,
+  and `MaxDivergence`. The mechanism-specific RR proof is retained as an
+  intermediate lemma that discharges the generic constructor contract.
+- `new_certified` still accepts erased `Function` and `PrivacyMap` objects,
+  rather than concrete closure arguments. The probabilistic distributional
+  equality at their erasure boundary is still trusted and is not proved by
+  Alerus. This is the principal outstanding certification gap.
+- The native semantic traits are marker bounds while Verus provides their
+  specifications. Only verified constructor call sites may rely on the
+  guarantee; the Rust type system alone does not enforce proofs.
 
 The proof is conditional on these stated primitives. It is not a proof of
 the native entropy source, the full Rust runtime, or arbitrary OpenDP
