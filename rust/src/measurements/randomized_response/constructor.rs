@@ -176,9 +176,6 @@ pub fn verify_built_bool_rr<E>(
     bits: u64,
     Ghost(word_expectation): Ghost<
         spec_fn(spec_fn(Result<u64, E>) -> real) -> real>,
-    Ghost(error_expectation): Ghost<
-        spec_fn(spec_fn(E) -> real) -> real>,
-    Ghost(success): Ghost<real>,
     Ghost(callback_expectation): Ghost<
         spec_fn(operator::BoolRR, bool,
             spec_fn(Result<bool, E>) -> real) -> real>,
@@ -186,8 +183,7 @@ pub fn verify_built_bool_rr<E>(
         spec_fn(operator::BoolRR, u32) -> f64>,
 ) -> (result: Result<Option<operator::BoolRR>, ArithmeticError>)
     requires
-        crate::bernoulli_proof::uniform_word_expectation_rule(
-            word_expectation, error_expectation, success),
+        crate::bernoulli_proof::uniform_word_expectation_rule(word_expectation),
         forall|op: operator::BoolRR|
             #[trigger] adapter_realizes(
                 op, word_expectation, callback_expectation, callback_cost),
@@ -239,7 +235,7 @@ pub fn verify_built_bool_rr<E>(
             let model_map = |d: u32|
                 crate::randomized_response_bool::rr_factor_map(n, factor, d);
             crate::randomized_response_bool::lemma_rr_operator_valid_measurement(
-                op, word_expectation, error_expectation, success, factor);
+                op, word_expectation, factor);
             assert(crate::measurement_proof::realizes_expectation(
                 callback, expectation));
             // The factor correspondence follows from bit-for-bit forwarding

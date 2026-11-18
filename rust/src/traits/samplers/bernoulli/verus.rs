@@ -54,35 +54,52 @@ pub open spec fn prefix_post<E>(
     }
 }
 
-/// The one probabilistic boundary: expectation preservation for the
-/// *production* sample_uniform_u64() call. No Verus code proves this
-/// contract from fill_bytes yet. The two expectation functionals must be
-/// the semantics of that actual call and its observable errors.
+/// Derived probability that the actual entropy call returns a word.
+pub open spec fn success_mass<E>(
+    expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+) -> real {
+    expectation(|sample: Result<u64, E>| match sample {
+        Ok(_) => 1real,
+        Err(_) => 0real,
+    })
+}
+
+/// Derived contribution of an observable error payload.
+pub open spec fn error_mass<E>(
+    expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    payoff: spec_fn(E) -> real,
+) -> real {
+    expectation(|sample: Result<u64, E>| match sample {
+        Ok(_) => 0real,
+        Err(err) => payoff(err),
+    })
+}
+
+/// The one probabilistic boundary: the expectation functional of the
+/// production sample_uniform_u64 call. Error mass and success mass are
+/// derived from this *same* functional, not independently supplied axioms.
 ///
-/// The rule states the distribution of a uniform 64-bit prefix event,
-/// including an arbitrary input-independent error payload.
+/// Conditional on a successful entropy draw, the u64 word is uniform.
+/// Errors (including payloads) are input-independent.
 pub open spec fn uniform_word_expectation_rule<E>(
-    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success_probability: real,
+    expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
 ) -> bool {
-    &&& 0real <= success_probability <= 1real
-    &&& error_expectation(|_: E| 1real) == 1real - success_probability
+    &&& 0real <= success_mass(expectation) <= 1real
+    &&& error_mass(expectation, |_: E| 1real) == 1real - success_mass(expectation)
     &&& forall|err_post: spec_fn(E) -> real|
         (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
-            ==> 0real <= #[trigger] error_expectation(err_post)
+        ==> 0real <= #[trigger] error_mass(expectation, err_post)
     &&& forall|threshold: nat, below: real, above: real, err_post: spec_fn(E) -> real|
         threshold <= 18_446_744_073_709_551_616nat
         && 0real <= below <= 1real
         && 0real <= above <= 1real
         && (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
-        ==> #[trigger] word_expectation(prefix_post(threshold, below, above, err_post))
-            == success_probability * (
+        ==> #[trigger] expectation(prefix_post(threshold, below, above, err_post))
+            == success_mass(expectation) * (
                 threshold as real / 18_446_744_073_709_551_616real * below
                 + (1real - threshold as real / 18_446_744_073_709_551_616real) * above
-            ) + error_expectation(err_post)
+            ) + error_mass(expectation, err_post)
 }
-
 
 /// The exact mathematical value of any accepted binary64 probability bit
 /// pattern. Accepted probabilities lie in [1/2, 1], so the only nontrivial

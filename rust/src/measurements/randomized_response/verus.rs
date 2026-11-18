@@ -10,6 +10,7 @@ use crate::measurement_proof::bounded_payoff;
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
     lemma_bernoulli_probability, uniform_word_expectation_rule,
+    success_mass, error_mass,
 };
 
 verus! {
@@ -70,20 +71,18 @@ pub proof fn lemma_release_expectation<E>(
     truth: bool,
     op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
     payoff: spec_fn(Result<bool, E>) -> real,
 )
     requires
         op.numerator <= 9_007_199_254_740_992u64,
         bounded_payoff(payoff),
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+        uniform_word_expectation_rule(word_expectation),
     ensures
         release_expectation(truth, op, word_expectation, payoff)
-            == success * (
+            == success_mass(word_expectation) * (
                 (op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(truth))
                 + (1real - op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(!truth))
-            ) + error_expectation(|err: E| payoff(Err(err))),
+            ) + error_mass(word_expectation, |err: E| payoff(Err(err))),
 {
     let numerator = op.numerator;
     let threshold = prefix_threshold(numerator);
@@ -117,10 +116,10 @@ pub proof fn lemma_release_expectation<E>(
     assert(0real <= payoff(Ok(truth)) <= 1real);
     assert(0real <= payoff(Ok(!truth)) <= 1real);
     assert(word_expectation(prefix)
-        == success * (
+        == success_mass(word_expectation) * (
             threshold as real / 18_446_744_073_709_551_616real * payoff(Ok(truth))
             + (1real - threshold as real / 18_446_744_073_709_551_616real) * payoff(Ok(!truth))
-        ) + error_expectation(on_error));
+        ) + error_mass(word_expectation, on_error));
     lemma_bernoulli_probability(numerator);
     assert(threshold as real / 18_446_744_073_709_551_616real
         == numerator as real / 9_007_199_254_740_992real);
@@ -131,8 +130,6 @@ pub proof fn lemma_release_expectation<E>(
 pub proof fn lemma_bool_rr_dp<E>(
     op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
     factor: real,
     left: bool,
     right: bool,
@@ -144,14 +141,14 @@ pub proof fn lemma_bool_rr_dp<E>(
         op.numerator as real <= factor
             * (9_007_199_254_740_992u64 - op.numerator) as real,
         bounded_payoff(payoff),
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+        uniform_word_expectation_rule(word_expectation),
     ensures
         release_expectation(left, op, word_expectation, payoff)
             <= factor * release_expectation(right, op, word_expectation, payoff),
 {
     let numerator = op.numerator;
-    lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
-    lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
+    lemma_release_expectation(left, op, word_expectation, payoff);
+    lemma_release_expectation(right, op, word_expectation, payoff);
     let p = numerator as real / 9_007_199_254_740_992real;
     // Convert the constructor's integer odds bound where the
     // finite-cost privacy inequality actually needs it.
@@ -168,7 +165,8 @@ pub proof fn lemma_bool_rr_dp<E>(
         requires complement == denominator - n, denominator > 0real;
     assert(p <= factor * (1real - p));
     let on_error = |err: E| payoff(Err(err));
-    let err = error_expectation(on_error);
+    let err = error_mass(word_expectation, on_error);
+    let success = success_mass(word_expectation);
     let a = payoff(Ok(left));
     let b = payoff(Ok(!left));
     assert forall|e: E| 0real <= #[trigger] on_error(e) <= 1real by {
@@ -249,8 +247,6 @@ pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bo
 pub proof fn lemma_rr_operator_valid_measurement<E>(
     op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
     factor: real,
 )
     requires
@@ -259,7 +255,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
         op.numerator < 9_007_199_254_740_992u64 ==>
             op.numerator as real <= factor
                 * (9_007_199_254_740_992u64 - op.numerator) as real,
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+        uniform_word_expectation_rule(word_expectation),
     ensures
         crate::measurement_proof::valid_measurement_expectations::<
             bool, Result<bool, E>, u32,
@@ -310,7 +306,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
                     <= factor * expectation(right, payoff) by {
                 assert(bounded_payoff(payoff));
                 lemma_bool_rr_dp(
-                    op, word_expectation, error_expectation, success,
+                    op, word_expectation,
                     factor, left, right, payoff,
                 );
             }
