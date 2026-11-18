@@ -143,8 +143,8 @@ pub proof fn lemma_bool_rr_dp<E>(
         4_503_599_627_370_496u64 <= op.numerator <= 9_007_199_254_740_992u64,
         factor >= 1real,
         op.numerator < 9_007_199_254_740_992u64 ==>
-            op.numerator as real / 9_007_199_254_740_992real
-                <= factor * (1real - op.numerator as real / 9_007_199_254_740_992real),
+            op.numerator as real <= factor
+                * (9_007_199_254_740_992u64 - op.numerator) as real,
         left == right || distance > 0,
         bounded_payoff(payoff),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
@@ -164,6 +164,19 @@ pub proof fn lemma_bool_rr_dp<E>(
         lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
         lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
         let p = numerator as real / 9_007_199_254_740_992real;
+        // Convert the integer likelihood-ratio bound from the constructor
+        // only where this (finite-cost) DP inequality needs it.
+        let complement = (9_007_199_254_740_992u64 - numerator) as real;
+        assert(complement == 9_007_199_254_740_992real - numerator as real);
+        assert((numerator as real) <= factor * complement);
+        assert(p <= factor * (complement / 9_007_199_254_740_992real))
+            by(nonlinear_arith)
+            requires 9_007_199_254_740_992real > 0real,
+                numerator as real <= factor * complement;
+        assert(complement / 9_007_199_254_740_992real == 1real - p)
+            by(nonlinear_arith)
+            requires complement == 9_007_199_254_740_992real - numerator as real;
+        assert(p <= factor * (1real - p));
         let on_error = |err: E| payoff(Err(err));
         let err = error_expectation(on_error);
         let a = payoff(Ok(left));
@@ -230,41 +243,6 @@ pub proof fn lemma_bool_rr_dp<E>(
 }
 
 
-/// Convert an integer odds bound directly into the factor inequality used
-/// by the executable randomized-response proof. The denominator is fixed
-/// at 2^53, so this needs no second distribution or exponential model.
-///
-/// The numeric primitive responsible for the constructor's f64 privacy
-/// constant must establish `numerator <= factor * complement`, where
-/// `factor = exp(privacy_constant)`. That connection is a separate
-/// numerical specification obligation.
-pub proof fn lemma_odds_bound_sufficient(numerator: u64, factor: real)
-    requires
-        4_503_599_627_370_496u64 <= numerator,
-        numerator < 9_007_199_254_740_992u64,
-        factor >= 1real,
-        numerator as real <= factor
-            * (9_007_199_254_740_992u64 - numerator) as real,
-    ensures
-        numerator as real / 9_007_199_254_740_992real
-            <= factor * (1real
-                - numerator as real / 9_007_199_254_740_992real),
-{
-    let n = numerator as real;
-    let complement = (9_007_199_254_740_992u64 - numerator) as real;
-    let denominator = 9_007_199_254_740_992real;
-    assert(complement == denominator - n);
-    assert(n <= factor * complement);
-    assert(n / denominator <= factor * (complement / denominator))
-        by(nonlinear_arith)
-        requires
-            denominator > 0real,
-            n <= factor * complement;
-    assert(complement / denominator == 1real - n / denominator)
-        by(nonlinear_arith)
-        requires complement == denominator - n, denominator > 0real;
-}
-
 /// The exact abstract MaxDivergence factor map for the Boolean operator:
 /// identity input pairs cost zero, p=1 is infinite for distinct pairs.
 pub open spec fn rr_factor_map(numerator: u64, factor: real, distance: u32) -> Option<real> {
@@ -291,8 +269,8 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
         4_503_599_627_370_496u64 <= op.numerator <= 9_007_199_254_740_992u64,
         factor >= 1real,
         op.numerator < 9_007_199_254_740_992u64 ==>
-            op.numerator as real / 9_007_199_254_740_992real
-                <= factor * (1real - op.numerator as real / 9_007_199_254_740_992real),
+            op.numerator as real <= factor
+                * (9_007_199_254_740_992u64 - op.numerator) as real,
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
         crate::measurement_proof::valid_measurement_expectations::<

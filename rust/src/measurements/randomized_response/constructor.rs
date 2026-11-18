@@ -229,7 +229,6 @@ pub fn verify_built_bool_rr<E>(
                 assert(c == 9_007_199_254_740_992u64 - n);
                 assert(factor >= 1real);
                 assert(n as real <= factor * c as real);
-                crate::randomized_response_bool::lemma_odds_bound_sufficient(n, factor);
             }
             let member = |_: bool| true;
             let close = |left: bool, right: bool, d: u32|
