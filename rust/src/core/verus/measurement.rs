@@ -108,9 +108,7 @@ pub open spec fn bool_rr_reported_factor(distance: u32, epsilon: f64)
     -> Option<real>
 {
     if distance == 0 { Some(1real) }
-    else if f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64 { None }
-    else { Some(crate::verified_arithmetic::real_exp(
-        crate::verified_arithmetic::float_value(epsilon))) }
+    else { crate::max_divergence::MaxDivergence::multiplicative_factor(epsilon) }
 }
 
 /// Validity of the actual erased function and privacy map for one pair.
@@ -127,7 +125,8 @@ pub open spec fn bool_rr_pair_valid_parts<MI, MO>(
         MI: crate::Metric<Distance = u32>,
         MO: crate::Measure<Distance = f64>,
 {
-    left == right || distance > 0 ==> forall|epsilon: f64|
+    crate::discrete_distance::DiscreteDistance::bool_close(
+        left, right, distance) ==> forall|epsilon: f64|
         #[trigger] crate::measurement_parts::privacy_map_call_ensures(
             privacy_map, &distance, Ok(epsilon))
         ==> {

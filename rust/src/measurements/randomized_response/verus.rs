@@ -251,7 +251,7 @@ pub open spec fn rr_factor_map(numerator: u64, factor: real, distance: u32) -> O
 }
 
 pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bool {
-    left == right || distance > 0
+    crate::discrete_distance::DiscreteDistance::bool_close(left, right, distance)
 }
 
 /// Lift the already verified payoff inequality into the generic measurement

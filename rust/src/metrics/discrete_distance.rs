@@ -46,3 +46,14 @@ impl Metric for DiscreteDistance {
     type Distance = IntDistance;
 }
 
+
+#[cfg(verus_only)]
+verus! {
+impl DiscreteDistance {
+    /// The documented discrete metric: distinct Boolean values are
+    /// one unit apart, identical values are zero apart.
+    pub open spec fn bool_close(left: bool, right: bool, distance: u32) -> bool {
+        left == right || distance > 0u32
+    }
+}
+}

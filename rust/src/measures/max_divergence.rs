@@ -35,3 +35,21 @@ impl Measure for MaxDivergence {
     type Distance = f64;
 }
 
+
+#[cfg(verus_only)]
+verus! {
+impl MaxDivergence {
+    /// The multiplicative interpretation of a reported pure-DP epsilon.
+    /// An unbounded +infinity value imposes no finite factor bound.
+    /// Numeric validity (finite or +infinity, nonnegative) is checked
+    /// separately at the certified constructor.
+    pub open spec fn multiplicative_factor(epsilon: f64) -> Option<real> {
+        if f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64 {
+            None
+        } else {
+            Some(crate::verified_arithmetic::real_exp(
+                crate::verified_arithmetic::float_value(epsilon)))
+        }
+    }
+}
+}
