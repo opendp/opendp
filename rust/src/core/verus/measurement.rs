@@ -66,7 +66,8 @@ pub open spec fn valid_one_word_components<DI, MI, MO, TO, Op, F, P>(
     domain: &DI,
     metric: &MI,
     measure: &MO,
-    program: &crate::uniform_word::OneWordProgram<Op, F>,
+    operator: Op,
+    postprocess: F,
     map: P,
     model: crate::uniform_word::OneWordModel<DI::Carrier, TO>,
 ) -> bool
@@ -80,12 +81,12 @@ pub open spec fn valid_one_word_components<DI, MI, MO, TO, Op, F, P>(
         P: Fn(&Op, &MI::Distance) -> Result<MO::Distance, ()>,
 {
     &&& crate::measurement_parts::exact_word_postprocessing(
-        program.operator, program.postprocess, model)
+        operator, postprocess, model)
     &&& forall|d: &MI::Distance| metric.valid_distance(d) ==>
-        #[trigger] call_requires(map, (&program.operator, d))
+        #[trigger] call_requires(map, (&operator, d))
     &&& forall|d: &MI::Distance, output: Result<MO::Distance, ()>|
         metric.valid_distance(d)
-            && #[trigger] call_ensures(map, (&program.operator, d), output)
+            && #[trigger] call_ensures(map, (&operator, d), output)
         ==> match output {
             Err(_) => false,
             Ok(cost) => {
