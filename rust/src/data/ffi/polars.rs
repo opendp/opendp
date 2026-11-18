@@ -1,11 +1,51 @@
+use std::ffi::c_char;
+
 use opendp_derive::bootstrap;
 use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
-    core::FfiResult,
+    core::{FfiResult, FfiSlice},
+    domains::BitVector,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
-    polars::{ExtractLazyFrame, TakeLazyFrame, shuffle_dataframe},
+    ffi::util,
+    polars::{ExtractLazyFrame, TakeLazyFrame, preflight, shuffle_dataframe},
 };
+
+#[bootstrap(
+    name = "sanitize_polars_plan",
+    arguments(
+        serialized_plan(rust_type = "BitVector", hint = "bytes"),
+        trusted_lib(c_type = "char *", rust_type = "String"),
+        trusted(c_type = "bool", rust_type = "bool")
+    ),
+    returns(
+        c_type = "FfiResult<AnyObject *>",
+        rust_type = "BitVector",
+        hint = "bytes"
+    )
+)]
+/// Rebind OpenDP plugins and validate untrusted serialized plans.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__sanitize_polars_plan(
+    serialized_plan: *const FfiSlice,
+    trusted_lib: *const c_char,
+    trusted: util::c_bool,
+) -> FfiResult<*mut AnyObject> {
+    let serialized_plan = try_as_ref!(serialized_plan);
+    let trusted_lib = try_!(util::to_str(trusted_lib));
+    if serialized_plan.ptr.is_null() || serialized_plan.len % 8 != 0 {
+        return err!(FFI, "Invalid serialized Polars plan buffer").into();
+    }
+    let len = serialized_plan.len / 8;
+    let bytes = unsafe { std::slice::from_raw_parts(serialized_plan.ptr as *const u8, len) };
+    let trusted = util::to_bool(trusted);
+    let sanitized = try_!(preflight::sanitize_serialized_dslplan(
+        bytes,
+        trusted_lib,
+        trusted
+    ));
+    Ok(AnyObject::new(BitVector::from_vec(sanitized))).into()
+}
 
 #[bootstrap(
     name = "_onceframe_take_lazy",

@@ -244,11 +244,6 @@ jobs:
             *)                    echo "unexpected extra-install"; exit 1;;
           esac
 
-      - name: Test replace-binary-path
-        if: matrix.extra-install == 'polars'
-        # Messes with envvars, so can't be run in parallel!
-        run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
-
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
         if: matrix.extra-install == 'all' && matrix.python-version == '3.13'

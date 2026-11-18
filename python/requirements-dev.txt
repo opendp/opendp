@@ -10,6 +10,8 @@ cfgv==3.5.0
     # via pre-commit
 click==8.4.1
     # via black
+cloudpickle==3.1.2
+    # via -r requirements-dev.in
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
