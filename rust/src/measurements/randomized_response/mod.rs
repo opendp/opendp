@@ -1,7 +1,6 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-mod kernel;
 mod operator;
 mod constructor;
 
@@ -24,16 +23,13 @@ struct BoolRRParts(operator::BoolRR);
 impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
     for BoolRRParts
 {
-    fn into_parts(
-        self,
-        _input_domain: &AtomDomain<bool>,
-    ) -> Fallible<(Function<bool, bool>, PrivacyMap<DiscreteDistance, MaxDivergence>)> {
+    fn into_parts(self) -> (Function<bool, bool>, PrivacyMap<DiscreteDistance, MaxDivergence>) {
         let operator = self.0;
         let map_operator = operator;
-        Ok((
+        (
             Function::new_fallible(move |truth: &bool| operator.invoke(*truth)),
             PrivacyMap::new(move |distance: &u32| map_operator.map(*distance, 0.0)),
-        ))
+        )
     }
 }
 

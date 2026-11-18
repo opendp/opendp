@@ -246,10 +246,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// Implementing this trait is not, by itself, a machine-checked privacy proof.
 /// The paired semantic obligation is in core/verus/measurement.rs.
 pub(crate) trait CertifiedMeasurementParts<DI: Domain, MI: Metric, MO: Measure, TO> {
-    fn into_parts(
-        self,
-        input_domain: &DI,
-    ) -> Fallible<(Function<DI::Carrier, TO>, PrivacyMap<MI, MO>)>;
+    fn into_parts(self) -> (Function<DI::Carrier, TO>, PrivacyMap<MI, MO>);
 }
 
 /// A randomized mechanism with certain privacy characteristics.
@@ -313,7 +310,7 @@ where
         output_measure: MO,
         certified: P,
     ) -> Fallible<Self> {
-        let (function, privacy_map) = certified.into_parts(&input_domain)?;
+        let (function, privacy_map) = certified.into_parts();
         Self::new(input_domain, input_metric, output_measure, function, privacy_map)
     }
 

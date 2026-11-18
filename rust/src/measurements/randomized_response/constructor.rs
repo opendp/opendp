@@ -10,12 +10,75 @@ use super::operator;
 use crate::traits::samplers::dyadic53;
 
 #[cfg(verus_only)]
-use crate::verified_arithmetic::{upper_log_odds_u53, positive_infinity_f64, ArithmeticError};
+use crate::verified_arithmetic::{
+    ArithmeticError, exact_u53_cast, inf_div_up_f64, inf_ln_up_f64,
+    positive_infinity_f64, float_value, finite, real_exp, real_exp_monotonic,
+    real_exp_ln_inverse, real_ln,
+};
 #[cfg(not(verus_only))]
-use crate::traits::{upper_log_odds_u53, positive_infinity_f64};
+use crate::traits::arithmetic::verified::{
+    ArithmeticError, exact_u53_cast, inf_div_up_f64, inf_ln_up_f64,
+    positive_infinity_f64,
+};
 
-#[cfg(not(verus_only))]
-type ArithmeticError = crate::error::Error;
+/// Production floating-point log odds, with exactly the same division and
+/// logarithm used elsewhere in OpenDP. The Verus harness checks this body
+/// using the trusted primitive contracts above.
+// The outer function is executable, not a dual spec function: its proof
+// consumes executable contracts for the trusted primitives.
+#[cfg_attr(verus_only, verus_spec(result =>
+    requires
+        4_503_599_627_370_496u64 <= numerator,
+        numerator < 9_007_199_254_740_992u64,
+        complement == 9_007_199_254_740_992u64 - numerator,
+    ensures match result {
+        Ok(epsilon) => {
+            &&& finite(epsilon)
+            &&& real_exp(float_value(epsilon)) >= 1real
+            &&& (numerator as real) <= real_exp(float_value(epsilon)) * (complement as real)
+        },
+        Err(_) => true,
+    },
+))]
+pub fn upper_log_odds_u53(
+    numerator: u64,
+    complement: u64,
+) -> Result<f64, ArithmeticError> {
+    let n = exact_u53_cast(numerator);
+    let c = exact_u53_cast(complement);
+    let quotient = inf_div_up_f64(n, c)?;
+    #[cfg(verus_only)]
+    proof! {
+        let a = numerator as real;
+        let b = complement as real;
+        let q = float_value(quotient);
+        assert(b > 0real);
+        assert(a > 0real);
+        assert(q >= a / b);
+        assert(q > 0real) by(nonlinear_arith)
+            requires a > 0real, b > 0real, q >= a / b;
+    }
+    let epsilon = inf_ln_up_f64(quotient)?;
+    #[cfg(verus_only)]
+    proof! {
+        let a = numerator as real;
+        let b = complement as real;
+        let q = float_value(quotient);
+        let e = float_value(epsilon);
+        assert(b > 0real);
+        assert(a > 0real);
+        assert(q >= a / b);
+        assert(q > 0real) by(nonlinear_arith) requires a > 0real, b > 0real, q >= a / b;
+        real_exp_monotonic(real_ln(q), e);
+        real_exp_ln_inverse(q);
+        assert(real_exp(e) >= q);
+        assert(real_exp(e) * b >= a) by(nonlinear_arith)
+            requires b > 0real, q >= a / b, real_exp(e) >= q;
+        assert(real_exp(e) >= 1real) by(nonlinear_arith)
+            requires a >= b, b > 0real, real_exp(e) * b >= a;
+    }
+    Ok(epsilon)
+}
 
 /// Validate the input IEEE-754 bits, compute a conservatively rounded
 /// privacy cost, and assemble the *actual production* BoolRR value.

@@ -3,11 +3,9 @@
 #[cfg(verus_only)]
 use vstd::prelude::*;
 #[cfg(verus_only)]
-use crate::{dyadic53, kernel};
+use crate::dyadic53;
 #[cfg(not(verus_only))]
 use crate::traits::samplers::dyadic53;
-#[cfg(not(verus_only))]
-use super::kernel;
 
 #[cfg_attr(verus_only, verifier::verify)]
 #[derive(Clone, Copy)]
@@ -27,8 +25,10 @@ impl BoolRR {
         },
     ))]
     pub fn release<E>(&self, truth: bool, entropy: Result<u64, E>) -> Result<bool, E> {
-        let honest = dyadic53::from_word(self.numerator, entropy);
-        kernel::release_result(truth, honest)
+        match dyadic53::from_word(self.numerator, entropy) {
+            Ok(honest) => Ok(truth ^ !honest),
+            Err(err) => Err(err),
+        }
     }
     /// The map installed in OpenDP's returned Measurement reads the same
     /// concrete operator state as its function callback.
