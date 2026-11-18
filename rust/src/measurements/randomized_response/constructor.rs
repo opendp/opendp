@@ -125,25 +125,34 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
     Ok(Some(operator::BoolRR { numerator, privacy_cost }))
 }
 
-/// The single trusted adapter obligation, parameterized by the *actual*
-/// concrete operator returned by build_bool_rr. There is no second RR model.
-/// This corresponds to CertifiedBoolRR::into_parts in production.
+/// Interpret the f64 bits reported by an erased privacy-map callback.
+/// In particular, +infinity represents an unbounded privacy cost.
 #[cfg(verus_only)]
 verus! {
+pub open spec fn callback_factor_map(
+    op: operator::BoolRR,
+    callback_cost: spec_fn(operator::BoolRR, u32) -> f64,
+    distance: u32,
+) -> Option<real> {
+    if distance == 0 { Some(1real) }
+    else if f64_to_bits(callback_cost(op, distance)) == 0x7ff0_0000_0000_0000u64 {
+        None
+    } else {
+        Some(verified_arithmetic::real_exp(
+            verified_arithmetic::float_value(callback_cost(op, distance))))
+    }
+}
+
+/// The audited adapter must forward the exact result of BoolRR::map,
+/// not claim an independently chosen abstract privacy factor.
 pub open spec fn adapter_realizes<E>(
     op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     callback_expectation: spec_fn(
         operator::BoolRR, bool, spec_fn(Result<bool, E>) -> real,
     ) -> real,
-    callback_map: spec_fn(operator::BoolRR, u32) -> Option<real>,
+    callback_cost: spec_fn(operator::BoolRR, u32) -> f64,
 ) -> bool {
-    let factor = if op.numerator == 9_007_199_254_740_992u64 {
-        1real
-    } else {
-        verified_arithmetic::real_exp(
-            verified_arithmetic::float_value(op.privacy_cost))
-    };
     &&& crate::measurement_proof::realizes_expectation(
         |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
             callback_expectation(op, truth, payoff),
@@ -151,12 +160,12 @@ pub open spec fn adapter_realizes<E>(
             crate::randomized_response_bool::release_expectation(
                 truth, op, word_expectation, payoff),
     )
-    &&& crate::measurement_proof::realizes_privacy_map(
-        |d: u32| callback_map(op, d),
-        |d: u32| crate::randomized_response_bool::rr_factor_map(
-            op.numerator, factor, d),
-    )
+    &&& forall|distance: u32|
+        #[trigger] f64_to_bits(callback_cost(op, distance))
+            == f64_to_bits(op.map(distance, 0.0f64))
 }
+
+} // verus!
 
 /// Constructor-level conditional theorem. This *executes the same builder*
 /// called by make_randomized_response_bool before proving the privacy
@@ -175,15 +184,15 @@ pub fn verify_built_bool_rr<E>(
     Ghost(callback_expectation): Ghost<
         spec_fn(operator::BoolRR, bool,
             spec_fn(Result<bool, E>) -> real) -> real>,
-    Ghost(callback_map): Ghost<
-        spec_fn(operator::BoolRR, u32) -> Option<real>>,
+    Ghost(callback_cost): Ghost<
+        spec_fn(operator::BoolRR, u32) -> f64>,
 ) -> (result: Result<Option<operator::BoolRR>, ArithmeticError>)
     requires
         crate::bernoulli_proof::uniform_word_expectation_rule(
             word_expectation, error_expectation, success),
         forall|op: operator::BoolRR|
             #[trigger] adapter_realizes(
-                op, word_expectation, callback_expectation, callback_map),
+                op, word_expectation, callback_expectation, callback_cost),
     ensures
         match result {
             Ok(Some(op)) =>
@@ -195,7 +204,7 @@ pub fn verify_built_bool_rr<E>(
                             left, right, d),
                     |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
                         callback_expectation(op, truth, payoff),
-                    |d: u32| callback_map(op, d),
+                    |d: u32| callback_factor_map(op, callback_cost, d),
                 ),
             _ => true,
         },
@@ -206,9 +215,9 @@ pub fn verify_built_bool_rr<E>(
             let n = op.numerator;
             let callback = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
                 callback_expectation(op, truth, payoff);
-            let map = |d: u32| callback_map(op, d);
+            let map = |d: u32| callback_factor_map(op, callback_cost, d);
             assert(adapter_realizes(
-                op, word_expectation, callback_expectation, callback_map));
+                op, word_expectation, callback_expectation, callback_cost));
             assert(4_503_599_627_370_496u64 <= n
                 <= 9_007_199_254_740_992u64);
             let factor = if n == 9_007_199_254_740_992u64 {
@@ -236,6 +245,30 @@ pub fn verify_built_bool_rr<E>(
                 op, word_expectation, error_expectation, success, factor);
             assert(crate::measurement_proof::realizes_expectation(
                 callback, expectation));
+            // The factor correspondence follows from bit-for-bit forwarding
+            // and the verified finite/+infinity constructor split.
+            assert forall|d: u32|
+                #[trigger] map(d) == model_map(d)
+            by {
+                assert(f64_to_bits(callback_cost(op, d))
+                    == f64_to_bits(op.map(d, 0.0f64)));
+                if d == 0 {
+                    assert(map(d) == Some(1real));
+                    assert(model_map(d) == Some(1real));
+                } else if n == 9_007_199_254_740_992u64 {
+                    assert(f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64);
+                    assert(f64_to_bits(callback_cost(op, d))
+                        == 0x7ff0_0000_0000_0000u64);
+                } else {
+                    assert(verified_arithmetic::finite(op.privacy_cost));
+                    assert(f64_to_bits(callback_cost(op, d))
+                        == f64_to_bits(op.privacy_cost));
+                    assert(f64_to_bits(callback_cost(op, d))
+                        != 0x7ff0_0000_0000_0000u64);
+                    assert(verified_arithmetic::float_value(callback_cost(op, d))
+                        == verified_arithmetic::float_value(op.privacy_cost));
+                }
+            }
             assert(crate::measurement_proof::realizes_privacy_map(
                 map, model_map));
             crate::measurement_proof::lemma_new_certified(

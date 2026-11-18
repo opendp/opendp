@@ -28,8 +28,10 @@ with `Measurement::new_certified(BoolRRParts(operator))`.
    usual mathematical `exp`/`ln` facts are trusted. Dashu and panic
    handling are not verified.
 3. `BoolRRParts::into_parts` faithfully forwards through
-   `Function::new_fallible`, `PrivacyMap::new`, and their
-   `Arc<dyn Fn>` storage.
+   `Function::new_fallible` and `PrivacyMap::new` and their
+   `Arc<dyn Fn>` storage. The map contract now trusts **bit-for-bit
+   forwarding of `BoolRR::map`'s f64 output**, rather than assuming the
+   callback already computes the correct abstract privacy factor.
 
 Verus does **not** verify the actual `Measurement` object's trait-object
 dispatch. The final theorem is about the executable builder's result and
