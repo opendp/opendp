@@ -68,12 +68,40 @@ impl<TI, TO> Clone for Function<TI, TO> {
     }
 }
 
+// Verified code can reason about the exact input/output relation of the
+// closure stored inside Function, without reasoning about Arc allocation.
+// This is only a *pointwise* contract, not a probability law.
+#[cfg(verus_only)]
+verus! {
+pub uninterp spec fn function_call_requires<TI, TO>(
+    function: &Function<TI, TO>,
+    input: &TI,
+) -> bool;
+
+pub uninterp spec fn function_call_ensures<TI, TO>(
+    function: &Function<TI, TO>,
+    input: &TI,
+    value: Result<TO, ()>,
+) -> bool;
+}
+
+#[cfg_attr(verus_only, verus_verify)]
 impl<TI, TO> Function<TI, TO> {
+    #[cfg_attr(verus_only, verus_verify(external))]
     pub fn new(function: impl Fn(&TI) -> TO + 'static) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
     #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        ensures
+            forall|input: &TI|
+                #[trigger] function_call_requires(&result, input)
+                    == call_requires(function, (input,)),
+            forall|input: &TI, value: Fallible<TO>|
+                #[trigger] function_call_ensures(&result, input, value)
+                    == call_ensures(function, (input,), value),
+    ))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         #[cfg(not(verus_only))]
         {
@@ -87,6 +115,11 @@ impl<TI, TO> Function<TI, TO> {
         }
     }
 
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        requires function_call_requires(self, arg),
+        ensures function_call_ensures(self, arg, result),
+    ))]
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
     }
