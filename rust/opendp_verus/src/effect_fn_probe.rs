@@ -143,7 +143,8 @@ pub fn probe_rr_fn_in_band(
                 amount: cost@(out.0),
             }),
         {
-            rr_in_band(&operator, truth, token, cost)
+            let (_sampled, after) = rr_in_band(&operator, truth, token, cost);
+            (Ok(*truth), after) // Deliberately invalid return, must fail Fn postcondition.
         };
     func(&input, credit, payoff)
 }
