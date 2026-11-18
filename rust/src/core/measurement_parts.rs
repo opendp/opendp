@@ -159,6 +159,7 @@ impl<TI, TO> Function<TI, TO> {
     /// semantics of this exact wrapper, NOT a mechanism privacy guarantee.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
+        with Ghost(model): Ghost<spec_fn(&TI, Result<u64, ()>) -> Fallible<TO>>
         requires forall|arg: &TI, word: Result<u64, ()>| {
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& call_ensures(
@@ -176,8 +177,6 @@ impl<TI, TO> Function<TI, TO> {
     pub(crate) fn new_from_one_word_operator<Op, F>(
         operator: Op,
         postprocess: F,
-        #[cfg(verus_only)]
-        Ghost(model): Ghost<spec_fn(&TI, Result<u64, ()>) -> Fallible<TO>>,
     ) -> Self
     where
         Op: Copy + 'static,
