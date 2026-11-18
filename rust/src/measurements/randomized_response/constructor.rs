@@ -175,7 +175,7 @@ where
     proof! {
         assert forall|d: &u32, out: Result<f64, ()>|
             call_ensures(map_fn, (d,), out)
-                ==> out == Ok(operator.map(*d, 0.0f64))
+                implies out == Ok(operator.map(*d, 0.0f64))
         by { }
     }
     let measurement = Measurement::new_certified(
