@@ -119,9 +119,13 @@ impl<TI, TO> Function<TI, TO> {
     /// trusted Arc-dispatch correspondence, not a privacy assumption.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures forall|arg: &TI, out: Fallible<TO>|
-            #[trigger] function_call_ensures(&result, arg, out)
-                == call_ensures(invoke, (&operator, arg), out),
+        ensures
+            forall|arg: &TI|
+                #[trigger] function_call_requires(&result, arg)
+                    == call_requires(invoke, (&operator, arg)),
+            forall|arg: &TI, out: Fallible<TO>|
+                #[trigger] function_call_ensures(&result, arg, out)
+                    == call_ensures(invoke, (&operator, arg), out),
     ))]
     pub(crate) fn new_from_operator<Op, F>(
         operator: Op,
@@ -269,9 +273,13 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     /// obligation is exact forwarding of possible outcomes, including errors.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures forall|d: &MI::Distance, out: Fallible<MO::Distance>|
-            #[trigger] privacy_map_call_ensures(&result, d, out)
-                == call_ensures(map, (&operator, d), out),
+        ensures
+            forall|d: &MI::Distance|
+                #[trigger] privacy_map_call_requires(&result, d)
+                    == call_requires(map, (&operator, d)),
+            forall|d: &MI::Distance, out: Fallible<MO::Distance>|
+                #[trigger] privacy_map_call_ensures(&result, d, out)
+                    == call_ensures(map, (&operator, d), out),
     ))]
     pub(crate) fn new_from_operator<Op, P>(
         operator: Op,

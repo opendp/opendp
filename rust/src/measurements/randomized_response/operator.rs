@@ -48,16 +48,6 @@ impl BoolRR {
     pub fn map_callback(&self, distance: &u32) -> Result<f64, WordError> {
         Ok(self.map(*distance, 0.0))
     }
-
-    // TEMPORARY negative verification test. This method intentionally lies
-    // about privacy cost but has a truthful executable contract.
-    #[cfg_attr(verus_only, verus_verify)]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures result == Ok(0.0f64),
-    ))]
-    pub fn zero_map_callback(&self, _distance: &u32) -> Result<f64, WordError> {
-        Ok(0.0)
-    }
 }
 
 // The actual native invocation is verified from this same executable body.

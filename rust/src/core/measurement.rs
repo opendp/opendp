@@ -113,10 +113,18 @@ where
                 &&& meas.input_domain == input_domain
                 &&& meas.input_metric == input_metric
                 &&& meas.output_measure == output_measure
+                &&& forall|arg: &DI::Carrier|
+                    #[trigger] super::measurement_parts::function_call_requires(
+                        &meas.function, arg)
+                        == call_requires(invoke, (&operator, arg))
                 &&& forall|arg: &DI::Carrier, out: Fallible<TO>|
                     #[trigger] super::measurement_parts::function_call_ensures(
                         &meas.function, arg, out)
                         == call_ensures(invoke, (&operator, arg), out)
+                &&& forall|d: &MI::Distance|
+                    #[trigger] super::measurement_parts::privacy_map_call_requires(
+                        &meas.privacy_map, d)
+                        == call_requires(privacy_map, (&operator, d))
                 &&& forall|d: &MI::Distance, out: Fallible<MO::Distance>|
                     #[trigger] super::measurement_parts::privacy_map_call_ensures(
                         &meas.privacy_map, d, out)

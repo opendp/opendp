@@ -176,8 +176,20 @@ where
         output_measure,
         operator,
         operator::BoolRR::invoke_callback,
-        operator::BoolRR::zero_map_callback,
+        operator::BoolRR::map_callback,
     )?;
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|d: &u32| #[trigger]
+            crate::measurement_parts::privacy_map_call_requires(
+                &measurement.privacy_map, d)
+        by {
+            assert(crate::measurement_parts::privacy_map_call_requires(
+                &measurement.privacy_map, d)
+                == call_requires(operator::BoolRR::map_callback, (&operator, d)));
+            assert(call_requires(operator::BoolRR::map_callback, (&operator, d)));
+        }
+    }
     // This statement is about the *returned erased PrivacyMap*, not just
     // the operator's pre-erasure cost. A wrong method would fail verification.
     #[cfg(verus_only)]
