@@ -57,7 +57,7 @@ pub open spec fn bounded_payoff<E>(f: spec_fn(Result<bool, E>) -> real) -> bool 
 /// expectation functional of that exact executable entropy call.
 pub open spec fn release_expectation<E>(
     truth: bool,
-    op: operator::BoolRR<f64>,
+    op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     payoff: spec_fn(Result<bool, E>) -> real,
 ) -> real {
@@ -71,7 +71,7 @@ pub open spec fn release_expectation<E>(
 /// above entropy is verified executable Rust.
 pub proof fn lemma_release_expectation<E>(
     truth: bool,
-    op: operator::BoolRR<f64>,
+    op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,
@@ -132,7 +132,7 @@ pub proof fn lemma_release_expectation<E>(
 /// Pure DP for arbitrary bounded postconditions on the *actual Result* type.
 /// Unlike a proof over modeled PMF atoms, error values are never erased.
 pub proof fn lemma_bool_rr_dp<E>(
-    op: operator::BoolRR<f64>,
+    op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,
@@ -284,7 +284,7 @@ pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bo
 /// contract, *before* any dynamic callback erasure. This invokes the
 /// production BoolRR::release semantics through release_expectation.
 pub proof fn lemma_rr_operator_valid_measurement<E>(
-    op: operator::BoolRR<f64>,
+    op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,

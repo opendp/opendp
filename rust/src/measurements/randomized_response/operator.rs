@@ -11,12 +11,12 @@ use super::kernel;
 
 #[cfg_attr(verus_only, verifier::verify)]
 #[derive(Clone, Copy)]
-pub struct BoolRR<P: Copy> {
+pub struct BoolRR {
     pub numerator: u64,
-    pub privacy_cost: P,
+    pub privacy_cost: f64,
 }
 
-impl<P: Copy> BoolRR<P> {
+impl BoolRR {
     /// Apply one fallible entropy word to the private Boolean. The actual
     /// constructor calls this method, with entropy supplied by fill_bytes.
     #[cfg_attr(verus_only, verus_verify(dual_spec, open))]
@@ -36,7 +36,7 @@ impl<P: Copy> BoolRR<P> {
     #[cfg_attr(verus_only, verus_spec(result =>
         ensures result == (if distance == 0 { zero } else { self.privacy_cost }),
     ))]
-    pub fn map(&self, distance: u32, zero: P) -> P {
+    pub fn map(&self, distance: u32, zero: f64) -> f64 {
         if distance == 0 { zero } else { self.privacy_cost }
     }
 }
@@ -45,7 +45,7 @@ impl<P: Copy> BoolRR<P> {
 // executable, Verus-checked deterministic release method. The RNG itself
 // remains the explicit probabilistic trust boundary.
 #[cfg(not(verus_only))]
-impl BoolRR<f64> {
+impl BoolRR {
     pub fn invoke(&self, truth: bool) -> crate::error::Fallible<bool> {
         self.release(truth, crate::traits::samplers::sample_uniform_u64())
     }

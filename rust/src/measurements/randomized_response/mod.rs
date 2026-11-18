@@ -19,7 +19,7 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 
 // This is the only trusted callback-erasure adapter for Boolean RR.
 // It forwards to the concrete operator; Verus does not verify Arc<dyn Fn>.
-struct BoolRRParts(operator::BoolRR<f64>);
+struct BoolRRParts(operator::BoolRR);
 
 impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
     for BoolRRParts

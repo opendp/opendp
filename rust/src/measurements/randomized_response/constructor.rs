@@ -44,7 +44,7 @@ type ArithmeticError = crate::error::Error;
         Err(_) => dyadic53::checked_numerator_from_bits(bits).is_some(),
     },
 ))]
-pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR<f64>>, ArithmeticError> {
+pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticError> {
     let Some(numerator) = dyadic53::checked_numerator_from_bits(bits) else {
         return Ok(None);
     };
@@ -65,12 +65,12 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR<f64>>, Arithme
 #[cfg(verus_only)]
 verus! {
 pub open spec fn adapter_realizes<E>(
-    op: operator::BoolRR<f64>,
+    op: operator::BoolRR,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     callback_expectation: spec_fn(
-        operator::BoolRR<f64>, bool, spec_fn(Result<bool, E>) -> real,
+        operator::BoolRR, bool, spec_fn(Result<bool, E>) -> real,
     ) -> real,
-    callback_map: spec_fn(operator::BoolRR<f64>, u32) -> Option<real>,
+    callback_map: spec_fn(operator::BoolRR, u32) -> Option<real>,
 ) -> bool {
     let factor = if op.numerator == 9_007_199_254_740_992u64 {
         1real
@@ -107,15 +107,15 @@ pub fn verify_built_bool_rr<E>(
         spec_fn(spec_fn(E) -> real) -> real>,
     Ghost(success): Ghost<real>,
     Ghost(callback_expectation): Ghost<
-        spec_fn(operator::BoolRR<f64>, bool,
+        spec_fn(operator::BoolRR, bool,
             spec_fn(Result<bool, E>) -> real) -> real>,
     Ghost(callback_map): Ghost<
-        spec_fn(operator::BoolRR<f64>, u32) -> Option<real>>,
-) -> (result: Result<Option<operator::BoolRR<f64>>, ArithmeticError>)
+        spec_fn(operator::BoolRR, u32) -> Option<real>>,
+) -> (result: Result<Option<operator::BoolRR>, ArithmeticError>)
     requires
         crate::bernoulli_proof::uniform_word_expectation_rule(
             word_expectation, error_expectation, success),
-        forall|op: operator::BoolRR<f64>|
+        forall|op: operator::BoolRR|
             #[trigger] adapter_realizes(
                 op, word_expectation, callback_expectation, callback_map),
     ensures
