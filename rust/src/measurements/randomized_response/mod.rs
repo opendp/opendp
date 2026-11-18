@@ -8,13 +8,36 @@ use std::collections::HashSet;
 
 use opendp_derive::bootstrap;
 
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{CertifiedMeasurementParts, Function, Measurement, PrivacyMap};
 use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
 use crate::traits::samplers::sample_bernoulli_float;
 use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
+
+/// The sole audited erasure adapter for the verified Boolean operator.
+///
+/// This private wrapper can only be constructed after the public constructor
+/// has validated its parameter and computed its privacy cost. We deliberately
+/// do not certify arbitrary BoolRR values.
+struct CertifiedBoolRR(operator::BoolRR<f64>);
+
+impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>
+    for CertifiedBoolRR
+{
+    fn into_parts(
+        self,
+        _input_domain: &AtomDomain<bool>,
+    ) -> Fallible<(Function<bool, bool>, PrivacyMap<DiscreteDistance, MaxDivergence>)> {
+        let operator = self.0;
+        let map_operator = operator;
+        Ok((
+            Function::new_fallible(move |truth: &bool| operator.invoke(*truth)),
+            PrivacyMap::new(move |distance: &u32| map_operator.map(*distance, 0.0)),
+        ))
+    }
+}
 
 // There are two constructors:
 // 1. make_randomized_response_bool
@@ -69,17 +92,13 @@ pub fn make_randomized_response_bool(
     };
 
     let operator = operator::BoolRR { numerator, privacy_cost: privacy_constant };
-    let map_operator = operator;
     let _ = constant_time; // Both settings use one fixed-size entropy draw.
 
-    Measurement::new(
+    Measurement::new_certified(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        Function::new_fallible(move |truth: &bool| {
-            operator.invoke(*truth)
-        }),
-        PrivacyMap::new(move |d| map_operator.map(*d, 0.0)),
+        CertifiedBoolRR(operator),
     )
 }
 

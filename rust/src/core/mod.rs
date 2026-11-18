@@ -239,6 +239,19 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
     }
 }
 
+/// Parts of a measurement backed by a verified concrete operator.
+///
+/// The native adapter is a small, trusted correspondence boundary: it must
+/// install exactly the verified probabilistic function and privacy map.
+/// Implementing this trait is not, by itself, a machine-checked privacy proof.
+/// The paired semantic obligation is in core/verus/measurement.rs.
+pub(crate) trait CertifiedMeasurementParts<DI: Domain, MI: Metric, MO: Measure, TO> {
+    fn into_parts(
+        self,
+        input_domain: &DI,
+    ) -> Fallible<(Function<DI::Carrier, TO>, PrivacyMap<MI, MO>)>;
+}
+
 /// A randomized mechanism with certain privacy characteristics.
 ///
 /// The trait bounds provided by the Rust type system guarantee that:
@@ -274,7 +287,32 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
 {
+    /// Legacy constructor: callers remain responsible for establishing
+    /// the privacy guarantee of arbitrary supplied callbacks.
     pub fn new(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        function: Function<DI::Carrier, TO>,
+        privacy_map: PrivacyMap<MI, MO>,
+    ) -> Fallible<Self> {
+        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
+    }
+
+    /// Construct from a proof-backed operator, not arbitrary erased callbacks.
+    /// Verus proves validity before erasure; the operator's private native
+    /// adapter is audited for correspondence with the verified release and map.
+    pub(crate) fn new_certified<P: CertifiedMeasurementParts<DI, MI, MO, TO>>(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        certified: P,
+    ) -> Fallible<Self> {
+        let (function, privacy_map) = certified.into_parts(&input_domain)?;
+        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
+    }
+
+    fn construct(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
