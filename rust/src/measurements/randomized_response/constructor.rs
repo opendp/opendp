@@ -170,7 +170,11 @@ where
         lemma_built_bool_rr_valid(
             operator, crate::uniform_word::word_expectation());
     }
-    let map_fn = move |distance: &u32| operator.map_fallible(*distance);
+    let map_fn =
+        #[cfg_attr(verus_only, verus_spec(out: Result<f64, ()> =>
+            ensures out == Ok(operator.map(*distance, 0.0f64)),
+        ))]
+        move |distance: &u32| operator.map_fallible(*distance);
     #[cfg(verus_only)]
     proof! {
         assert forall|d: &u32, out: Result<f64, ()>|
