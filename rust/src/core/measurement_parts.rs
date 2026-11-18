@@ -78,14 +78,35 @@ impl<TI, TO> Clone for Function<TI, TO> {
 #[cfg(verus_only)]
 verus! {
 
-/// The actual distributional expectation of the erased executable Function.
-/// This interpretation is opaque until a concrete sampling/erasure
-/// constructor establishes its law from the trusted entropy primitive.
-pub uninterp spec fn function_expectation<TI, TO>(
+/// The proof-visible operational provenance of a one-word Function.
+///
+/// This is not a caller-supplied distribution. A successful specialized
+/// erasure records only which deterministic one-word computation is invoked.
+/// Other Functions keep their expectation opaque.
+pub uninterp spec fn function_one_word_model<TI, TO>(
+    function: &Function<TI, TO>,
+) -> Option<crate::uniform_word::OneWordModel<TI, TO>>;
+
+pub uninterp spec fn opaque_function_expectation<TI, TO>(
     function: &Function<TI, TO>,
     input: &TI,
     payoff: spec_fn(Result<TO, ()>) -> real,
 ) -> real;
+
+/// One-word expectations are *defined* from deterministic operational
+/// provenance and the trusted entropy primitive, not asserted as an
+/// independent erasure postcondition. Soundness still requires faithful
+/// Arc dispatch of the recorded program and the error-credit metatheorem.
+pub open spec fn function_expectation<TI, TO>(
+    function: &Function<TI, TO>,
+    input: &TI,
+    payoff: spec_fn(Result<TO, ()>) -> real,
+) -> real {
+    match function_one_word_model(function) {
+        Some(model) => crate::uniform_word::one_word_expectation(*input, model, payoff),
+        None => opaque_function_expectation(function, input, payoff),
+    }
+}
 
 /// A deterministic postprocessor must establish an exact result model
 /// for every word, including entropy errors. This is a real verification
@@ -132,6 +153,7 @@ impl<TI, TO> Function<TI, TO> {
             forall|input: &TI, value: Fallible<TO>|
                 #[trigger] function_call_ensures(&result, input, value)
                     == call_ensures(function, (input,), value),
+            function_one_word_model(&result).is_none(),
     ))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         #[cfg(not(verus_only))]
@@ -149,10 +171,11 @@ impl<TI, TO> Function<TI, TO> {
     /// Narrow trusted boundary: `Arc<dyn Fn>` invokes the *named*
     /// `OneWordProgram::run` on the same captured program and input.
     ///
-    /// In the current verifier the expectation-preservation postcondition
-    /// is still conditional on this dispatch assertion and the separate
-    /// error-credit soundness argument. Unlike the concrete program, this
-    /// erasure has NOT been verified. Keep the assumption isolated here.
+    /// This external body only asserts that the installed closure faithfully
+    /// dispatches the recorded *deterministic* one-word program. The output
+    /// expectation is now defined from its operational model and the RNG
+    /// expectation, not postulated directly by this adapter. The fidelity
+    /// assertion itself is still trusted and must remain explicitly audited.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
@@ -167,9 +190,7 @@ impl<TI, TO> Function<TI, TO> {
                             program.postprocess,
                             (&program.operator, arg, word),
                             output),
-            forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
-                #[trigger] function_expectation(&result, arg, payoff)
-                    == crate::uniform_word::one_word_expectation(*arg, model, payoff),
+            function_one_word_model(&result) == Some(model),
     ))]
     pub(crate) fn erase_one_word_program<Op, F>(
         program: OneWordProgram<Op, F>,
