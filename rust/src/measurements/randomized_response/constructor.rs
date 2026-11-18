@@ -223,7 +223,11 @@ where
     // The one-word computation and deterministic map are proved before
     // building the concrete Fn closures and before any Arc erasure.
     let func = move |truth: &bool| run_bool_rr(&operator, truth);
-    let map = move |distance: &u32| operator.map_callback(distance);
+    let map =
+        #[cfg_attr(verus_only, verus_spec(result: Result<f64, ()> =>
+            ensures result == Ok(operator.map(*distance, 0.0f64)),
+        ))]
+        move |distance: &u32| operator.map_callback(distance);
     #[cfg(verus_only)]
     proof! {
         trust_bool_rr_closure_forwarding(operator, func, map, release_model);
