@@ -12,13 +12,23 @@ does **not** establish privacy of an arbitrary callback pair.
   `BoolRR::map`, numerical log-odds builder and measurement constructor
   are compiled by native OpenDP and the Verus harness.
 - `build_bool_rr_measurement` proves the MaxDivergence bound for the
-  **same** `BoolRR` operator it passes into `new_certified`, with the
-  production function and map method items. The probability argument covers
-  bounded payoffs on `Result<bool, E>`, including observable failures.
-- `new_certified` erases methods of one concrete operator into the ordinary
-  `Function` and `PrivacyMap` fields. Verus checks field assembly and
-  correspondence of method `call_requires` / `call_ensures` with both
-  *returned* erased callbacks.
+  **same** `BoolRR` operator it passes into `new_certified`, with its
+  verified `release_callback` and `map_callback`. The probability argument
+  covers bounded payoffs on `Result<bool, E>`, including observable failures.
+- The verified generic `sample_word_then` calls production entropy once,
+  then runs the proved deterministic postprocessor. The narrowly trusted
+  `Function::new_from_one_word_operator` contract connects the actual
+  stored `Function`'s expectation to this composition, conditioned on
+  `exact_word_postprocessing`, which the RR builder discharges.
+- `build_bool_rr_measurement` now **ensures**
+  `valid_bool_rr_measurement(&measurement)` on success: the *returned*
+  `Function`'s distribution and the *returned* fallible `PrivacyMap`
+  satisfy the concrete Boolean/discrete/MaxDivergence inequality, including
+  zero distance and infinite privacy loss.
+- `new_certified` receives the operator's deterministic postprocessor and
+  its privacy-map method. Verus checks field assembly, verified
+  postprocessor-to-model correspondence, and returned map
+  `call_requires` / `call_ensures` preservation.
 - The actual returned `PrivacyMap` is proved callable for every input
   distance and to return exactly `Ok(BoolRR::map(distance, 0.0))`.
   The returned `Function` is proved callable for every Boolean input;
@@ -35,21 +45,17 @@ This test establishes the map-wiring boundary, *not* the full DP boundary.
 
 ## Work required for full certification
 
-1. Define a single `valid_measurement` predicate over the *actual*
-   domain/metric/measure, probabilistic function behavior and reported
-   privacy map; require it in the real `new_certified` contract, and
-   preserve it for the returned Measurement.
-2. Bridge the executable `BoolRR::invoke` (one `sample_uniform_u64`
-   call followed by verified `BoolRR::release`) to the expectation
-   functional used by the operator's DP proof. A pointwise
-   `call_ensures` is insufficient to establish a **distribution**.
-   That bridge must arise from a generic, narrowly trusted entropy rule
-   and verified postprocessing, never an assumed mechanism privacy theorem.
-3. Verify the production `AtomDomain<bool>`, `DiscreteDistance` and
+1. Extend the concrete `valid_bool_rr_measurement` predicate to the
+   canonical generic `valid_measurement` contract over actual
+   domain/metric/measure semantics. Require it at **the real
+   `Measurement::new_certified` entry**, not only as a postcondition of
+   the Boolean RR builder. No arbitrary caller-selected ghost semantics.
+2. Verify the production `AtomDomain<bool>`, `DiscreteDistance` and
    `MaxDivergence` descriptors and their actual semantics in the
    `make_randomized_response_bool` call graph.
-4. Check that replacing the **function** callback with an always-truthful
-   one while keeping a finite map fails at the certified constructor.
+3. Check that replacing the **function** postprocessor with an
+   always-truthful method while keeping a finite map fails when the
+   certified constructor requires the full measurement contract.
 
 ## Explicit trust boundaries
 
@@ -62,12 +68,13 @@ This test establishes the map-wiring boundary, *not* the full DP boundary.
   logarithm, exact integer casts and positive infinity; mathematical
   `exp` / `ln` facts are trusted. Dashu and panic handling are outside
   the current verification.
-- `Function::new_from_operator` and `PrivacyMap::new_from_operator`
-  are `external_body` **only for generic `Arc<dyn Fn>` erasure and
-  dispatch**. Their contracts preserve the exact methods' possible
-  results and callability. They do **not** assume privacy or a probability
-  law. The operational probabilistic interpretation of the erased
-  `Function` is the remaining essential missing bridge.
+- `Function::new_from_one_word_operator` remains a generic
+  `external_body` trust boundary for preserving the sampled-word
+  distribution through `Arc<dyn Fn>` erasure. Its expectation contract
+  uses **only the trusted uniform-word law and the verified deterministic
+  postprocessor**. It does not assume any mechanism is private.
+  `PrivacyMap::new_from_operator` likewise trusts only the exact
+  forwarding of the executable map callback.
 
 Do not mark `new_certified` as a privacy certification boundary until
 its **actual precondition** is discharged at the production constructor,
