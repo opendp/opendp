@@ -6,10 +6,6 @@
 use super::StabilityMap;
 #[cfg(not(verus_only))]
 use crate::error::*;
-#[cfg(not(verus_only))]
-use crate::traits::samplers::OneWordProgram;
-#[cfg(verus_only)]
-use crate::uniform_word::OneWordProgram;
 #[cfg(verus_only)]
 type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
@@ -78,35 +74,14 @@ impl<TI, TO> Clone for Function<TI, TO> {
 #[cfg(verus_only)]
 verus! {
 
-/// The proof-visible operational provenance of a one-word Function.
-///
-/// This is not a caller-supplied distribution. A successful specialized
-/// erasure records only which deterministic one-word computation is invoked.
-/// Other Functions keep their expectation opaque.
-pub uninterp spec fn function_one_word_model<TI, TO>(
-    function: &Function<TI, TO>,
-) -> Option<crate::uniform_word::OneWordModel<TI, TO>>;
-
-pub uninterp spec fn opaque_function_expectation<TI, TO>(
+/// Mathematical output expectation of an erased Function. The certified
+/// constructor establishes this by a single audited callback-storage helper;
+/// mechanism proofs never reason about Function or Arc before construction.
+pub uninterp spec fn function_expectation<TI, TO>(
     function: &Function<TI, TO>,
     input: &TI,
     payoff: spec_fn(Result<TO, ()>) -> real,
 ) -> real;
-
-/// One-word expectations are *defined* from deterministic operational
-/// provenance and the trusted entropy primitive, not asserted as an
-/// independent erasure postcondition. Soundness still requires faithful
-/// Arc dispatch of the recorded program and the error-credit metatheorem.
-pub open spec fn function_expectation<TI, TO>(
-    function: &Function<TI, TO>,
-    input: &TI,
-    payoff: spec_fn(Result<TO, ()>) -> real,
-) -> real {
-    match function_one_word_model(function) {
-        Some(model) => crate::uniform_word::one_word_expectation(*input, model, payoff),
-        None => opaque_function_expectation(function, input, payoff),
-    }
-}
 
 /// A deterministic postprocessor must establish an exact result model
 /// for every word, including entropy errors. This is a real verification
@@ -153,7 +128,6 @@ impl<TI, TO> Function<TI, TO> {
             forall|input: &TI, value: Fallible<TO>|
                 #[trigger] function_call_ensures(&result, input, value)
                     == call_ensures(function, (input,), value),
-            function_one_word_model(&result).is_none(),
     ))]
     pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         #[cfg(not(verus_only))]
@@ -161,48 +135,6 @@ impl<TI, TO> Function<TI, TO> {
             Self {
                 function: Arc::new(function),
             }
-        }
-        #[cfg(verus_only)]
-        {
-            unimplemented!()
-        }
-    }
-
-    /// Narrow trusted boundary: `Arc<dyn Fn>` invokes the *named*
-    /// `OneWordProgram::run` on the same captured program and input.
-    ///
-    /// This external body only asserts that the installed closure faithfully
-    /// dispatches the recorded *deterministic* one-word program. The output
-    /// expectation is now defined from its operational model and the RNG
-    /// expectation, not postulated directly by this adapter. The fidelity
-    /// assertion itself is still trusted and must remain explicitly audited.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
-        requires exact_word_postprocessing(
-            program.operator, program.postprocess, model),
-        ensures
-            forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
-            forall|arg: &TI, output: Fallible<TO>|
-                #[trigger] function_call_ensures(&result, arg, output)
-                    ==> exists|word: Result<u64, ()>|
-                        call_ensures(
-                            program.postprocess,
-                            (&program.operator, arg, word),
-                            output),
-            function_one_word_model(&result) == Some(model),
-    ))]
-    pub(crate) fn erase_one_word_program<Op, F>(
-        program: OneWordProgram<Op, F>,
-    ) -> Self
-    where
-        Op: Copy + 'static,
-        TI: Copy,
-        F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
-    {
-        #[cfg(not(verus_only))]
-        {
-            Self::new_fallible(move |arg| program.run(arg))
         }
         #[cfg(verus_only)]
         {
@@ -338,32 +270,6 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
-    /// Erase a named operator privacy-map method. The remaining trusted
-    /// obligation is faithful Arc dispatch of the concrete callback.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures
-            forall|d: &MI::Distance|
-                #[trigger] privacy_map_call_requires(&result, d)
-                    == call_requires(map, (&operator, d)),
-            forall|d: &MI::Distance, out: Fallible<MO::Distance>|
-                #[trigger] privacy_map_call_ensures(&result, d, out)
-                    == call_ensures(map, (&operator, d), out),
-    ))]
-    pub(crate) fn new_from_operator<Op, P>(
-        operator: Op,
-        map: P,
-    ) -> Self
-    where
-        Op: Copy + 'static,
-        P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
-    {
-        #[cfg(not(verus_only))]
-        { Self::new_fallible(move |d| map(&operator, d)) }
-        #[cfg(verus_only)]
-        { unimplemented!() }
-    }
-
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
         requires privacy_map_call_requires(self, input_distance),
