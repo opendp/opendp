@@ -242,3 +242,26 @@ def test_hashmap_conversion_error_does_not_free_input_slice(monkeypatch):
         with pytest.raises(ValueError, match="conversion failed"):
             _convert._slice_to_hashmap(raw)
     assert _convert._slice_to_hashmap(raw) == {"a": 1}
+
+
+def test_ffi_slice_dependencies_have_local_lifetimes():
+    import weakref
+
+    class Marker:
+        pass
+
+    from opendp._lib import FfiSlice, FfiSlicePtr
+
+    view = FfiSlicePtr(FfiSlice())
+    marker = Marker()
+    marker_ref = weakref.ref(marker)
+    view.depends_on(marker)
+    del marker
+    gc.collect()
+    assert marker_ref() is not None
+
+    # Dependencies belong to their pointer, not a global id-indexed registry.
+    assert view._keepalive
+    del view
+    gc.collect()
+    assert marker_ref() is None
