@@ -11,6 +11,7 @@ type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
 use crate::error::*;
 
+#[cfg(not(verus_only))]
 pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync {
     fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
         #[cfg(not(verus_only))]
@@ -35,6 +36,7 @@ pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync
 ///
 /// Since [`crate::domains::AtomDomain`] may or may not contain null values,
 /// this trait is necessary for its member check.
+#[cfg(not(verus_only))]
 pub trait CheckNull {
     /// # Proof Definition
     /// A constant that is true if the type can represent null values.
@@ -48,8 +50,19 @@ pub trait CheckNull {
 }
 
 
+#[cfg(not(verus_only))]
 impl CheckAtom for bool {}
 
+#[cfg(not(verus_only))]
 impl CheckNull for bool {
     const NULLABLE: bool = false;
+}
+
+/// Verus needs only the type-level bound to import the production generic
+/// AtomDomain. Its privacy theorem covers both Boolean inputs, so it never
+/// assumes a membership law about arbitrary CheckAtom implementations.
+#[cfg(verus_only)]
+verus! {
+pub trait CheckAtom: Clone + PartialEq + Debug + Send + Sync {}
+impl CheckAtom for bool {}
 }

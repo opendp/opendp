@@ -21,7 +21,7 @@ pub struct AtomDomain<T: CheckAtom> {
     pub(super) nan: bool,
 }
 
-#[cfg_attr(verus_only, verus_verify(external))]
+#[cfg(not(verus_only))]
 impl<T: CheckAtom> Default for AtomDomain<T> {
     fn default() -> Self {
         AtomDomain {
@@ -30,12 +30,26 @@ impl<T: CheckAtom> Default for AtomDomain<T> {
         }
     }
 }
-#[cfg_attr(verus_only, verus_verify)]
+#[cfg(not(verus_only))]
 impl<T: CheckAtom> Domain for AtomDomain<T> {
     type Carrier = T;
     #[cfg_attr(verus_only, verus_verify(external_body))]
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         val.check_member(self.bounds.clone(), self.nan)
+    }
+}
+
+// The Rust Domain::member method is generic over CheckAtom. The Boolean
+// privacy theorem is proved for *all* Boolean values, so member semantics
+// cannot weaken its guarantee. We do not assume membership correctness here.
+#[cfg(verus_only)]
+#[verus_verify]
+impl Domain for AtomDomain<bool> {
+    type Carrier = bool;
+
+    #[verus_verify(external_body)]
+    fn member(&self, _value: &bool) -> Result<bool, ()> {
+        unimplemented!()
     }
 }
 
