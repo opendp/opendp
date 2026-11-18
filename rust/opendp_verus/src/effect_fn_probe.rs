@@ -1,34 +1,38 @@
-//! Verus prototype: encode a linear effect in the ordinary Fn input/output
-//! signature using Tracked wrappers, instead of unsupported closure `with`.
-//! This is verification-only: no production API is changed.
+//! Verus-only probe: put linear effect resources in an ordinary Fn's
+//! argument and result types, avoiding unsupported `with` on closures.
+//! No native/OpenDP measurement contract is changed by this experiment.
 use vstd::prelude::*;
 
-#[verus_verify]
+verus! {
+
 pub fn probe_tracked_fn(x: u64) {
-    let f =
-        #[verus_spec(result: (u64, Tracked<u64>) =>
-            ensures
-                result.0 == input,
-                result.1@ == token@,
-        )]
-        |input: u64, token: Tracked<u64>| (input, token);
+    let f = |input: u64, token: Tracked<u64>| -> (result: (u64, Tracked<u64>))
+        ensures
+            result.0 == input,
+            result.1@ == token@,
+    {
+        (input, token)
+    };
 
-    proof_decl! { let tracked before: u64 = 7u64; }
+    let tracked before: u64 = 7;
     let (output, Tracked(after)) = f(x, Tracked(before));
-    proof! {
-        assert(output == x);
-        assert(after == 7u64);
-        assert(call_requires(f, (x, Tracked(after))));
-    }
+    assert(output == x);
+    assert(after == 7);
 }
 
-#[verus_verify]
-pub fn probe_generic_fn<F>(f: F, x: u64)
-where F: Fn(u64, Tracked<u64>) -> (u64, Tracked<u64>)
+pub fn probe_generic_fn<F>(
+    f: F,
+    x: u64,
+    token: Tracked<u64>,
+) -> (result: (u64, Tracked<u64>))
+    where F: Fn(u64, Tracked<u64>) -> (u64, Tracked<u64>),
+    requires
+        f.requires((x, token)),
+        forall|out: (u64, Tracked<u64>)|
+            f.ensures((x, token), out) ==> out.0 == x,
+    ensures result.0 == x,
 {
-    proof_decl! { let tracked before: u64 = 7u64; }
-    proof! {
-        assert(call_requires(f, (x, Tracked(before))));
-    }
-    let _ = f(x, Tracked(before));
+    f(x, token)
 }
+
+} // verus!
