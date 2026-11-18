@@ -146,6 +146,30 @@ named EPT certificate to `callback_expectation(&func, ...)` has been proved.
 This module therefore validates the effect-aware *function* contract but
 must not be represented as a verified *closure* contract.
 
+### Explicit tracked Fn prototype
+
+A minimal `verus!` harness in `src/effect_fn_probe.rs` verifies an ordinary
+`Fn` taking and returning a `Tracked<u64>` resource and a generic caller
+that relies on its `Fn` contract. This avoids the unsupported `with`
+annotation on closures. The positive version passed
+[CI at `b4124d0`](https://github.com/opendp/opendp/actions/runs/44419115053).
+
+The next probe attempted to adapt the actual effect-verified named RR
+callback into that explicit-resource `Fn`. Verus's `proof_with!` output
+could not be used as an ordinary `Tracked` result: the compiler rejected
+the variable `end_credit` as out of scope, including after an explicit
+tracked binding (failed commits
+[`1a47292`](https://github.com/opendp/opendp/commit/1a472926ef6a84c81db341d2b76d07c1a741ad96) and
+[`54f3c9d`](https://github.com/opendp/opendp/commit/54f3c9d1dc2c1591a92d66f4c5bda90d1f2d0508)).
+The failed adapter was removed. The positive probe tests a language
+capability, **not** the distribution of an ordinary production `Fn`.
+
+In particular, `callback_expectation` remains uninterpreted. An
+effect-aware `Fn` type cannot supply the missing expectation
+interpretation without an independently justified semantic soundness
+theorem, nor can a ghost-rich callback simply be substituted for the
+production `Fn(&bool)` without a verified erasure/forwarding argument.
+
 ## Regression and falsification
 
 Replacing the sampled entropy with `Ok(0)` *inside*
