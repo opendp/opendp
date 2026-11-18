@@ -212,6 +212,13 @@ where
     };
     #[cfg(verus_only)]
     proof! {
+        assert forall|d: &u32|
+            #[trigger] call_requires(
+                operator::BoolRR::map_callback, (&operator, d)) by {}
+        assert forall|d: &u32, out: Result<f64, ()>|
+            #[trigger] call_ensures(
+                operator::BoolRR::map_callback, (&operator, d), out)
+                implies out == Ok(operator.map(*d, 0.0f64)) by {}
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
             &program, operator::BoolRR::map_callback, release_model);
@@ -346,20 +353,28 @@ pub proof fn lemma_built_bool_rr_valid<E>(
 /// The complete pre-erasure proof obligation of new_certified.
 /// No erased Function, PrivacyMap, witness token, or callback adapter occurs
 /// here. The proof uses the actual production operator and two named methods.
-pub proof fn lemma_built_bool_rr_concrete_valid<DI>(
+pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     domain: &DI,
     metric: &DiscreteDistance,
     measure: &MaxDivergence,
-    program: &OneWordProgram<operator::BoolRR,
-        fn(&operator::BoolRR, &bool, Result<u64, ()>) -> Result<bool, ()>>,
-    map: fn(&operator::BoolRR, &u32) -> Result<f64, ()>,
+    program: &OneWordProgram<operator::BoolRR, F>,
+    map: P,
     model: crate::uniform_word::OneWordModel<bool, bool>,
 )
-    where DI: crate::CertifiedDomain<Carrier = bool>,
+    where
+        DI: crate::CertifiedDomain<Carrier = bool>,
+        F: Fn(&operator::BoolRR, &bool, Result<u64, ()>) -> Result<bool, ()>,
+        P: Fn(&operator::BoolRR, &u32) -> Result<f64, ()>,
     requires
         well_formed_bool_rr(program.operator),
         crate::measurement_parts::exact_word_postprocessing(
             program.operator, program.postprocess, model),
+        forall|truth: bool, word: Result<u64, ()>|
+            #[trigger] model(truth, word) == program.operator.release(truth, word),
+        forall|d: &u32| #[trigger] call_requires(map, (&program.operator, d)),
+        forall|d: &u32, out: Result<f64, ()>|
+            #[trigger] call_ensures(map, (&program.operator, d), out)
+                ==> out == Ok(program.operator.map(*d, 0.0f64)),
         crate::bernoulli_proof::uniform_word_expectation_rule(
             crate::uniform_word::word_expectation()),
     ensures crate::measurement_proof::valid_one_word_components(
@@ -448,18 +463,16 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI>(
                 by {
                     assert(crate::randomized_response_bool::rr_discrete_close(
                         *left, *right, *d));
-                    assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
-                        crate::measurement_proof::bounded_payoff(payoff)
-                        implies
-                            #[trigger] actual(*left, payoff) <=
-                                match operator_factor_map(op, *d) {
-                                    None => 0real,
-                                    Some(factor) => factor * actual(*right, payoff),
-                                }
-                    by {
-                        if let Some(factor) = operator_factor_map(op, *d) {
-                            assert(expected(*left, payoff) <=
-                                factor * expected(*right, payoff));
+                    if let Some(factor) = operator_factor_map(op, *d) {
+                        assert(factor >= 1real);
+                        assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                            crate::measurement_proof::bounded_payoff(payoff)
+                            implies
+                                #[trigger] actual(*left, payoff)
+                                    <= factor * actual(*right, payoff)
+                        by {
+                            assert(expected(*left, payoff)
+                                <= factor * expected(*right, payoff));
                         }
                     }
                 }
