@@ -141,6 +141,54 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
     Ok(Some(operator::BoolRR { numerator, privacy_cost }))
 }
 
+#[cfg(verus_only)]
+type CallbackError = ();
+#[cfg(not(verus_only))]
+type CallbackError = crate::error::Error;
+
+/// Ordinary Rust closure capture of the verified one-word sampler and map.
+///
+/// This is a narrow unchecked forwarding boundary: the first closure invokes
+/// exactly sample_word_then with the proved postprocessor; the second invokes
+/// the proved privacy map. No DP property is assumed here. Verus does not
+/// currently interpret arbitrary Fn closure bodies probabilistically.
+#[cfg_attr(verus_only, verus_verify(external_body))]
+#[cfg_attr(verus_only, verus_spec(pair =>
+    with Ghost(model): Ghost<crate::uniform_word::OneWordModel<bool, bool>>
+    requires crate::measurement_parts::exact_word_postprocessing(
+        operator, operator::BoolRR::release_callback, model),
+    ensures
+        forall|truth: &bool|
+            #[trigger] call_requires(pair.0, (truth,)),
+        forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            #[trigger] crate::measurement_proof::callback_expectation(
+                &pair.0, truth, payoff)
+                == crate::uniform_word::one_word_expectation(*truth, model, payoff),
+        forall|d: &u32|
+            #[trigger] call_requires(pair.1, (d,)),
+        forall|d: &u32, output: Result<f64, ()>|
+            #[trigger] call_ensures(pair.1, (d,), output)
+                ==> output == Ok(operator.map(*d, 0.0f64)),
+))]
+fn bool_rr_callbacks(
+    operator: operator::BoolRR,
+) -> (
+    impl Fn(&bool) -> Result<bool, CallbackError> + 'static,
+    impl Fn(&u32) -> Result<f64, CallbackError> + 'static,
+) {
+    #[cfg(not(verus_only))]
+    {
+        let func = move |truth: &bool| {
+            crate::traits::samplers::sample_word_then(
+                &operator, truth, operator::BoolRR::release_callback)
+        };
+        let map = move |distance: &u32| operator.map_callback(distance);
+        (func, map)
+    }
+    #[cfg(verus_only)]
+    { unimplemented!() }
+}
+
 /// Build the actual OpenDP Measurement, including the real certified
 /// constructor call. The public API supplies AtomDomain<bool>,
 /// DiscreteDistance, and MaxDivergence; this shared function performs the
@@ -200,33 +248,19 @@ where
         assert(crate::measurement_parts::exact_word_postprocessing(
             operator, operator::BoolRR::release_callback, release_model));
     }
-    // All privacy properties are proved on these concrete callbacks,
-    // before either is erased into the ordinary OpenDP Measurement.
+    // The one-word computation and deterministic map are proved before
+    // building the concrete Fn closures and before any Arc erasure.
+    #[cfg(verus_only)]
+    proof_with! { Ghost(release_model) }
+    let (func, map) = bool_rr_callbacks(operator);
     #[cfg(verus_only)]
     proof! {
-        assert forall|d: &u32|
-            #[trigger] call_requires(
-                operator::BoolRR::map_callback, (&operator, d)) by {}
-        assert forall|d: &u32, out: Result<f64, ()>|
-            #[trigger] call_ensures(
-                operator::BoolRR::map_callback, (&operator, d), out)
-                implies out == Ok(operator.map(*d, 0.0f64)) by {}
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
-            operator, operator::BoolRR::release_callback,
-            operator::BoolRR::map_callback, release_model);
+            operator, func, map, release_model);
     }
-    #[cfg(verus_only)]
-    let measurement = {
-        proof_with! { Ghost(release_model) }
-        Measurement::new_certified(
-            input_domain, input_metric, output_measure, operator,
-            operator::BoolRR::release_callback, operator::BoolRR::map_callback)
-    }?;
-    #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(
-        input_domain, input_metric, output_measure, operator,
-        operator::BoolRR::release_callback, operator::BoolRR::map_callback,
+        input_domain, input_metric, output_measure, func, map,
     )?;
     Ok(Some(measurement))
 }
