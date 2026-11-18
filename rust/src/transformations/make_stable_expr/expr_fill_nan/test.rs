@@ -130,3 +130,47 @@ fn test_fill_nan_coercion() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_fill_nan_boundary_literals_match_optimized_polars() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("x", OptionDomain::new(AtomDomain::<f32>::default())),
+        SeriesDomain::new("y", AtomDomain::<f64>::new_non_nan()),
+    ])?
+    .row_by_row();
+    let lf = df!(
+        "x" => [Some(f32::NAN), Some(f32::MAX), None, Some(f32::MIN)],
+        "y" => [f64::MAX, f64::MIN, 0.0, -f64::MAX],
+    )?
+    .lazy();
+
+    for expr in [
+        col("x").fill_nan(lit(f64::MAX)),
+        col("x").fill_nan(typed_lit(f64::MAX)),
+        col("x").fill_nan(typed_lit(u64::MAX)),
+        col("x").fill_nan(col("y")),
+    ] {
+        let t = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        let expected = lf.clone().select([expr.clone()]).collect()?;
+        let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
+        assert_eq!(observed, expected, "{expr:?}");
+        let output = expected.get_columns()[0].as_materialized_series();
+        assert_eq!(
+            t.output_domain.column.dtype(),
+            output.dtype().clone(),
+            "{expr:?}"
+        );
+        assert_eq!(
+            t.output_domain.column.nullable,
+            output.has_nulls(),
+            "{expr:?}"
+        );
+        assert!(t.output_domain.column.member(output)?, "{expr:?}");
+    }
+    Ok(())
+}

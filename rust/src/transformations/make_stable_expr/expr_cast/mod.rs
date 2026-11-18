@@ -7,7 +7,7 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::{StableExpr, cast::is_null_preserving_cast};
+use super::{StableExpr, cast::check_private_cast};
 
 #[cfg(test)]
 mod test;
@@ -33,18 +33,20 @@ where
     let Expr::Cast {
         expr: input,
         dtype: to_type,
-        mut options,
+        options,
     } = expr
     else {
         return fallible!(MakeTransformation, "expected cast expression");
     };
 
-    // Strict casting makes the transformation unstable: errors tell you things about private data.
-    // Could throw an error if strict, but it is the default, so for ease-of-use it is forced to be non-strict.
-    // It is also ok for overflow to wraparound.
-    if matches!(options, CastOptions::Strict) {
-        options = CastOptions::NonStrict;
-    }
+    // Strict casting can fail on private data. Replace it with non-strict casting.
+    // Exhaustively match cast modes so new Polars variants require review.
+    let options = match options {
+        CastOptions::Strict | CastOptions::NonStrict => CastOptions::NonStrict,
+        CastOptions::Overflowing => {
+            return fallible!(MakeTransformation, "overflowing casts are not supported");
+        }
+    };
 
     let t_prior = input
         .as_ref()
@@ -66,16 +68,13 @@ where
         .clone();
 
     let from_dtype = data_column.dtype();
-    // Integer casts expose the data-dependent physical encoding of categorical values.
-    if matches!(from_dtype, DataType::Categorical(_, _)) && to_type_dtype.is_integer() {
-        return fallible!(
-            MakeTransformation,
-            "Casting Categorical to an integer exposes data-dependent encodings. Cast to Enum first."
-        );
+    let may_introduce_null = check_private_cast(&from_dtype, &to_type_dtype)?;
+
+    if from_dtype != to_type_dtype {
+        data_column.set_dtype(to_type_dtype.clone())?;
+        // Non-strict casts may introduce nulls, even from non-null inputs.
+        data_column.nullable |= may_introduce_null;
     }
-    data_column.set_dtype(to_type_dtype.clone())?;
-    // Non-strict casts may introduce nulls, even from non-null inputs.
-    data_column.nullable |= !is_null_preserving_cast(&from_dtype, &to_type_dtype);
 
     t_prior
         >> Transformation::new(
