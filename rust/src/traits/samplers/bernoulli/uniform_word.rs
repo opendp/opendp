@@ -12,12 +12,10 @@ pub type WordError = ();
 #[cfg(not(verus_only))]
 pub type WordError = crate::error::Error;
 
-/// The actual native entropy primitive. Its *only* probabilistic assumption
-/// is the Alerus-style error-credit transfer for an arbitrary bounded
-/// allocation on the returned word or error. No postprocessing is trusted.
-///
-/// The RNG implementation itself carries no probabilistic postcondition;
-/// its one trusted expectation transfer is sample_uniform_u64_with_credit.
+/// The actual native entropy primitive. Its implementation obtains one
+/// uniformly modeled word or an error; no probability postcondition is
+/// attached here. The credit transfer is specified only at
+/// sample_uniform_u64_with_credit below.
 #[cfg_attr(verus_only, verus_verify(external_body))]
 pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
     #[cfg(not(verus_only))]
@@ -82,9 +80,9 @@ type SampleWordThenResult<Y> = Result<Y, WordError>;
 /// transports that credit to the observed output. This is the one-word EPT
 /// rule; its interpretation uses the error-credit soundness argument.
 ///
-/// Importantly, the only transfer of an input credit to a sample-dependent
-/// credit occurs at the actual `sample_uniform_u64()` call below. Replacing
-/// that call with a constant word cannot satisfy this verified contract.
+/// The only transfer of an input credit to a sample-dependent credit is
+/// the trusted call to sample_uniform_u64_with_credit below. The verified
+/// postprocessor cannot discard the sample and return an unrelated value.
 #[cfg_attr(verus_only, verus_verify)]
 #[cfg_attr(verus_only, verus_spec(result =>
     requires
@@ -137,9 +135,9 @@ where
     }
 }
 
-// The mathematical expectation functional of the *production* entropy call.
-// Its law is the sole probabilistic primitive assumed by this proof stack.
-// This is not an independent or caller-selected probabilistic model.
+// Mathematical expectation of the actual entropy word. Its distribution
+// (including input-independent errors) is separately constrained below.
+// This is a fixed RNG model, not caller-selected callback semantics.
 #[cfg(verus_only)]
 verus! {
 /// Type aliases keep higher-order cost types outside attribute signatures.
