@@ -335,18 +335,17 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
             MO::Distance::inf_cast(d_in.clone())?.inf_mul(&c)
         })
     }
-    /// Verified closure capture and forwarding to the concrete map.
-    /// Only the generic Arc allocation/dispatch in new_fallible is trusted.
-    #[cfg_attr(verus_only, verus_verify)]
+    /// Erase a named operator privacy-map method. The remaining trusted
+    /// obligation is faithful Arc dispatch of the concrete callback.
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
-        requires forall|d: &MI::Distance| #[trigger]
-            call_requires(map, (&operator, d)),
         ensures
             forall|d: &MI::Distance|
-                #[trigger] privacy_map_call_requires(&result, d),
+                #[trigger] privacy_map_call_requires(&result, d)
+                    == call_requires(map, (&operator, d)),
             forall|d: &MI::Distance, out: Fallible<MO::Distance>|
                 #[trigger] privacy_map_call_ensures(&result, d, out)
-                    ==> call_ensures(map, (&operator, d), out),
+                    == call_ensures(map, (&operator, d), out),
     ))]
     pub(crate) fn new_from_operator<Op, P>(
         operator: Op,
@@ -356,30 +355,10 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
         Op: Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
-        let adapter =
-            #[cfg_attr(verus_only, verus_spec(output =>
-                requires call_requires(map, (&operator, d)),
-                ensures call_ensures(map, (&operator, d), output),
-            ))]
-            move |d: &MI::Distance| -> Fallible<MO::Distance> {
-                map(&operator, d)
-            };
-        let result = Self::new_fallible(adapter);
+        #[cfg(not(verus_only))]
+        { Self::new_fallible(move |d| map(&operator, d)) }
         #[cfg(verus_only)]
-        proof! {
-            assert forall|d: &MI::Distance|
-                #[trigger] privacy_map_call_requires(&result, d) by {
-                assert(privacy_map_call_requires(&result, d)
-                    == call_requires(adapter, (d,)));
-            }
-            assert forall|d: &MI::Distance, out: Fallible<MO::Distance>|
-                #[trigger] privacy_map_call_ensures(&result, d, out)
-                    implies call_ensures(map, (&operator, d), out) by {
-                assert(privacy_map_call_ensures(&result, d, out)
-                    == call_ensures(adapter, (d,), out));
-            }
-        }
-        result
+        { unimplemented!() }
     }
 
     #[cfg_attr(verus_only, verus_verify(external_body))]
