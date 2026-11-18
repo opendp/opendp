@@ -198,6 +198,11 @@ where
         }
     }
     #[cfg(verus_only)]
+    proof_decl! {
+        let ghost release_model =
+            |truth: bool, word: Result<u64, ()>| operator.release(truth, word);
+    }
+    #[cfg(verus_only)]
     let measurement = Measurement::new_certified(
         input_domain,
         input_metric,
@@ -205,8 +210,7 @@ where
         operator,
         operator::BoolRR::release_callback,
         operator::BoolRR::map_callback,
-        Ghost::new(|truth: bool, word: Result<u64, ()>|
-            operator.release(truth, word)),
+        Ghost::new(release_model),
     )?;
     #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(
