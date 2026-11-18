@@ -36,8 +36,14 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
 // It invokes the actual sample_uniform_u64 implementation, adding only an
 // erased in-band credit transfer. No other RNG credit axiom is retained.
 #[cfg(verus_only)]
-#[verus_verify(external_body)]
-#[verus_spec(result =>
+type CreditWordResult = (
+    Result<u64, WordError>, Tracked<crate::one_word_credit::ErrorCredit>,
+);
+#[cfg(not(verus_only))]
+type CreditWordResult = Result<u64, WordError>;
+
+#[cfg_attr(verus_only, verus_verify(external_body))]
+#[cfg_attr(verus_only, verus_spec(result =>
     requires
         credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: uniform_word_expectation(word_cost@)
@@ -48,12 +54,19 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
         result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: word_cost@(result.0)
         }),
-)]
-pub fn sample_uniform_u64_with_credit(
-    credit: Tracked<crate::one_word_credit::ErrorCredit>,
-    word_cost: Ghost<WordCost>,
-) -> (Result<u64, WordError>, Tracked<crate::one_word_credit::ErrorCredit>) {
-    (sample_uniform_u64(), Tracked::assume_new())
+))]
+pub(crate) fn sample_uniform_u64_with_credit(
+    #[cfg(verus_only)] credit: Tracked<crate::one_word_credit::ErrorCredit>,
+    #[cfg(verus_only)] word_cost: Ghost<WordCost>,
+) -> CreditWordResult {
+    #[cfg(verus_only)]
+    {
+        (sample_uniform_u64(), Tracked::assume_new())
+    }
+    #[cfg(not(verus_only))]
+    {
+        sample_uniform_u64()
+    }
 }
 
 #[cfg(verus_only)]
@@ -105,7 +118,7 @@ where
     #[cfg(verus_only)]
     let (entropy, draw_credit) = sample_uniform_u64_with_credit(credit, word_cost);
     #[cfg(not(verus_only))]
-    let entropy = sample_uniform_u64();
+    let entropy = sample_uniform_u64_with_credit();
     let output = postprocess(operator, input, entropy);
     #[cfg(verus_only)]
     {
