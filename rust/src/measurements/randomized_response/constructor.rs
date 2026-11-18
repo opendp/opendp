@@ -152,7 +152,7 @@ type CallbackError = crate::error::Error;
 /// exactly sample_word_then with the proved postprocessor; the second invokes
 /// the proved privacy map. No DP property is assumed here. Verus does not
 /// currently interpret arbitrary Fn closure bodies probabilistically.
-#[cfg_attr(verus_only, verus_verify(external_body))]
+#[cfg_attr(verus_only, verus_verify(external))]
 #[cfg_attr(verus_only, verus_spec(pair =>
     with Ghost(model): Ghost<crate::uniform_word::OneWordModel<bool, bool>>
     requires crate::measurement_parts::exact_word_postprocessing(
