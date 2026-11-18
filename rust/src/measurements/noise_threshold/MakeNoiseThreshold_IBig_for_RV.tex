@@ -91,7 +91,7 @@ which has an associated function \texttt{noise\_threshold\_privacy\_map} called 
     the postcondition claims that either returns an error independently of the input \texttt{v},
     or \texttt{v + Z} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
     The keys are then shuffled on line~\ref{line:shuffle} to ensure that the output is independent of the input ordering.
-    In the Rust implementation, a random hasher is used to ensure that the output ordering is independent of the input ordering.
+    In the Rust implementation, the retained pairs are shuffled before insertion into a new hash map, so hash collisions cannot preserve the input ordering.
     This is consistent with Lemma~\ref{lemma:new-privacy-map}.
 
     Therefore, the privacy guarantee from Lemma~\ref{lemma:new-privacy-map} applies to the returned measurement.

@@ -40,14 +40,19 @@ def test_deserialize_polars_plan_error():
     ids=lambda arg: str(arg),
 )
 def test_serializable_domain(dp_domain, in_value, out_value):
-    assert dp_domain.member(in_value)
-    assert not dp_domain.member(out_value)
-
     serialized = dp.serialize(dp_domain)
     deserialized = dp.deserialize(serialized)
 
-    assert deserialized.member(in_value)
-    assert not deserialized.member(out_value)
+    for domain in [dp_domain, deserialized]:
+        if isinstance(in_value, pl.LazyFrame):
+            for value in [in_value, out_value]:
+                with pytest.raises(
+                    dp.OpenDPException, match="membership is unsupported"
+                ):
+                    domain.member(value)
+        else:
+            assert domain.member(in_value)
+            assert not domain.member(out_value)
 
 
 @pytest.mark.parametrize(

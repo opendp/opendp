@@ -11,6 +11,11 @@ NUM_GROUPS = 100
 TARGET_KEY = 500
 
 
+def _expected_contributed_groups(bound_source):
+    # A margin limits groups per dataset, whereas truncation bounds pairwise changes.
+    return NUM_GROUPS * (2 if bound_source == "margin" else 1)
+
+
 def _data(include_user=True):
     indices = list(range(NUM_GROUPS)) if include_user else []
     return pl.LazyFrame(
@@ -117,9 +122,9 @@ def test_grouping_bounds_follow_materialized_keys(bound_source, key_mode, loss):
         return
 
     summary = query.summarize().row(0, named=True)
-    expected_scale: float = NUM_GROUPS
+    expected_scale: float = _expected_contributed_groups(bound_source)
     if "rho" in loss:
-        expected_scale = math.sqrt(NUM_GROUPS)
+        expected_scale = math.sqrt(expected_scale)
 
     assert summary["scale"] == pytest.approx(expected_scale)
     expected_distribution = "Integer Gaussian" if "rho" in loss else "Integer Laplace"
@@ -136,7 +141,9 @@ def test_grouping_bounds_through_row_filters(bound_source, filter_at, key_mode):
         _missing_contribution_bound(query)
         return
     summary = query.summarize().row(0, named=True)
-    assert summary["scale"] == pytest.approx(math.sqrt(NUM_GROUPS))
+    assert summary["scale"] == pytest.approx(
+        math.sqrt(_expected_contributed_groups(bound_source))
+    )
 
 
 @pytest.mark.parametrize("bound_source", ["truncate", "margin"])
@@ -156,7 +163,9 @@ def test_grouping_calibration_does_not_depend_on_one_users_presence(
         return
     summaries = [query.summarize().to_dicts() for query in queries]
     assert summaries[0] == summaries[1]
-    assert summaries[0][0]["scale"] == pytest.approx(math.sqrt(NUM_GROUPS))
+    assert summaries[0][0]["scale"] == pytest.approx(
+        math.sqrt(_expected_contributed_groups(bound_source))
+    )
 
 
 @pytest.mark.parametrize("bound_source", ["truncate", "margin"])

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::{
     error::Fallible,
     metrics::Bound,
@@ -10,7 +11,6 @@ use crate::{
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
-use polars_plan::prelude::GroupbyOptions;
 
 use polars::prelude::{
     BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
@@ -127,7 +127,7 @@ fn match_group_by_truncation(
     else {
         return None;
     };
-    if apply.is_some() || options.as_ref() != &GroupbyOptions::default() {
+    if apply.is_some() || options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return None;
     }
 

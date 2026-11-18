@@ -6,7 +6,7 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDo
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
 
-use super::StableExpr;
+use super::{StableExpr, cast::is_numeric_coercion};
 
 #[cfg(test)]
 mod test;
@@ -90,8 +90,7 @@ where
 
     let data_dtype = data_domain.column.dtype();
     let fill_dtype = fill_domain.column.dtype();
-    let is_numeric = |dtype: &DataType| dtype.is_primitive_numeric() || *dtype == DataType::Boolean;
-    if data_dtype != fill_dtype && !(is_numeric(&data_dtype) && is_numeric(&fill_dtype)) {
+    if data_dtype != fill_dtype && !is_numeric_coercion(&data_dtype, &fill_dtype) {
         return fallible!(
             MakeTransformation,
             "fill_null with different input and filler types is only supported for numeric data"

@@ -815,12 +815,15 @@ class Domain(ctypes.POINTER(AnyDomain)):  # type: ignore[misc]
         Check if ``val`` is a member of the domain.
 
         :param val: a value to be checked for membership in `self`
+        :raises OpenDPException: if membership checking is unsupported
         """
         try:
             from opendp.domains import _member
 
             return _member(self, val)
         except Exception as e:
+            if isinstance(e, OpenDPException) and e.variant == "NotImplemented":
+                raise
             from warnings import warn
 
             warn(

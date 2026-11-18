@@ -1,16 +1,22 @@
-use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
+use crate::domains::{AtomDomain, SeriesDomain};
+#[cfg(not(feature = "polars-ffi"))]
+use crate::domains::{LazyFrameDomain, Margin};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::polars::PrivacyNamespace;
 use polars::prelude::*;
+use polars_plan::prelude::ProjectionOptions;
 
 use crate::metrics::SymmetricDistance;
 
 use super::*;
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_select_no_margin() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
@@ -34,6 +40,7 @@ fn test_select_no_margin() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_select() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
@@ -80,5 +87,35 @@ fn test_fail_select_invalid_expression() -> Fallible<()> {
 
     assert_eq!(MakeMeasurement, error_variant_res);
 
+    Ok(())
+}
+
+#[test]
+fn test_private_select_rejects_noncanonical_projection_options() -> Fallible<()> {
+    use std::sync::Arc;
+
+    let lf = df!("A" => [1i32, 2])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
+        .with_margin(Margin::select().with_max_length(2))?;
+    let options = ProjectionOptions {
+        should_broadcast: false,
+        ..ProjectionOptions::default()
+    };
+    let query = LazyFrame::from(DslPlan::Select {
+        input: Arc::new(lf.logical_plan.clone()),
+        expr: vec![len().dp().noise(Some(1.0))],
+        options,
+    });
+    assert!(
+        make_private_lazyframe(
+            domain,
+            FrameDistance(SymmetricDistance),
+            MaxDivergence,
+            query,
+            None,
+            None,
+        )
+        .is_err()
+    );
     Ok(())
 }

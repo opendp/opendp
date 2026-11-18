@@ -1,4 +1,4 @@
-use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -96,5 +96,75 @@ fn test_cut_sorts_breaks_before_deriving_enum_labels() -> Fallible<()> {
             .collect::<Vec<_>>(),
         vec![0, 1, 2]
     );
+    Ok(())
+}
+
+#[test]
+fn test_cut_rejects_non_numeric_inputs() -> Fallible<()> {
+    let categories = Categories::global();
+    let enum_categories = FrozenCategories::new(["A", "B"])?;
+
+    for dtype in [
+        DataType::Boolean,
+        DataType::String,
+        DataType::Categorical(categories.clone(), categories.mapping()),
+        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
+        DataType::Array(Box::new(DataType::Int32), 2),
+    ] {
+        let mut series_domain = SeriesDomain::new("data", AtomDomain::<i32>::default());
+        series_domain.set_dtype(dtype.clone())?;
+        series_domain.nullable = true;
+
+        let lf_domain = LazyFrameDomain::new(vec![series_domain])?;
+        assert!(
+            make_expr_cut(
+                lf_domain.row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col("data").cut(vec![0.0], None::<Vec<String>>, false, false),
+            )
+            .is_err(),
+            "cut accepted non-numeric dtype {dtype}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_cut_nullable_numeric_with_nan_and_infinity() -> Fallible<()> {
+    let lf = df![
+        "data" => [
+            Some(f64::NAN),
+            None,
+            Some(f64::NEG_INFINITY),
+            Some(0.5),
+            Some(f64::INFINITY),
+        ],
+    ]?
+    .lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "data",
+        OptionDomain::new(AtomDomain::<f64>::default()),
+    )])?;
+    let t_cut = make_stable_lazyframe(
+        domain,
+        FrameDistance(SymmetricDistance),
+        lf.clone()
+            .select([col("data").cut(vec![1.0], None::<Vec<String>>, false, false)]),
+    )?;
+
+    let actual = t_cut
+        .invoke(&lf)?
+        .with_column(col("data").cast(DataType::String))
+        .collect()?;
+    let expected = df![
+        "data" => [
+            None,
+            None,
+            Some("(-inf, 1]"),
+            Some("(-inf, 1]"),
+            Some("(1, inf]"),
+        ],
+    ]?;
+    assert_eq!(actual, expected);
     Ok(())
 }

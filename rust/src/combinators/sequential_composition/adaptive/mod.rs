@@ -84,6 +84,14 @@ where
     MO::Distance: 'static + ProductOrd + Clone + Debug,
     (DI, MI): MetricSpace,
 {
+    // Reject negative allocations before they can cancel positive privacy loss.
+    let zero = output_measure.compose(vec![])?;
+    for d_mid in &d_mids {
+        if !d_mid.total_ge(&zero)? {
+            return fallible!(MakeMeasurement, "d_mids must be nonnegative: {:?}", d_mid);
+        }
+    }
+
     // we'll iteratively pop from the end
     d_mids.reverse();
 

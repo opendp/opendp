@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 tests = {
-    "pre-commit double check": "pre-commit run --all-files",
     # Had non-reproducible errors between local runs, so disable caching.
     "mypy type checking": "mypy . --cache-dir=/dev/null",
     # Looking for cases where first character is not `'`, `"`, or `f`

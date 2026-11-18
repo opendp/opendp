@@ -3,6 +3,7 @@ use polars::{
     lazy::frame::IntoLazy,
     prelude::{LazyFrame, col, lit},
 };
+use polars_plan::prelude::ProjectionOptions;
 
 use crate::{
     domains::{AtomDomain, Margin, SeriesDomain},
@@ -69,5 +70,41 @@ fn test_make_private_lazyframe_post_invalid() -> Fallible<()> {
         ErrorVariant::MakeTransformation
     );
 
+    Ok(())
+}
+
+#[test]
+fn test_postprocess_rejects_noncanonical_projection_options() -> Fallible<()> {
+    use std::sync::Arc;
+
+    let (domain, lf) = lazyframe_select_postprocess_query()?;
+    let options = ProjectionOptions {
+        duplicate_check: false,
+        ..ProjectionOptions::default()
+    };
+    for query in [
+        DslPlan::Select {
+            input: Arc::new(lf.logical_plan.clone()),
+            expr: vec![col("A")],
+            options,
+        },
+        DslPlan::HStack {
+            input: Arc::new(lf.logical_plan.clone()),
+            exprs: vec![col("A").alias("C")],
+            options,
+        },
+    ] {
+        assert!(
+            make_private_lazyframe(
+                domain.clone(),
+                FrameDistance(SymmetricDistance),
+                MaxDivergence,
+                LazyFrame::from(query),
+                None,
+                None,
+            )
+            .is_err()
+        );
+    }
     Ok(())
 }

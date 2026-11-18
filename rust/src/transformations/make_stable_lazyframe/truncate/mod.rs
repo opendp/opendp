@@ -7,12 +7,12 @@ use crate::metrics::{
     Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
     SymmetricIdDistance,
 };
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
 use matching::Truncation;
 use opendp_derive::proven;
 use polars::prelude::*;
-use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
 use super::group_by::{Resize, check_infallible, materialize_grouping_keys};
@@ -107,7 +107,7 @@ pub fn make_stable_truncate(
                         predicates: vec![],
                         apply: None,
                         maintain_order: false,
-                        options: Arc::new(GroupbyOptions::default()),
+                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
                     };
                     #[cfg(not(patch_polars))]
                     let output = DslPlan::GroupBy {
@@ -116,7 +116,7 @@ pub fn make_stable_truncate(
                         aggs: aggs.clone(),
                         apply: None,
                         maintain_order: false,
-                        options: Arc::new(GroupbyOptions::default()),
+                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
                     };
                     output
                 }

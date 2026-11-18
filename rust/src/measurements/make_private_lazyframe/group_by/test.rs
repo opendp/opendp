@@ -5,6 +5,7 @@ use crate::measurements::{make_private_expr, make_private_lazyframe};
 use crate::measures::MaxDivergence;
 use crate::metrics::{L0PInfDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
+#[cfg(not(feature = "polars-ffi"))]
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
@@ -60,6 +61,47 @@ fn test_contains_float_nested() {
         Box::new(DataType::Int32),
         2
     )));
+}
+
+#[test]
+fn test_reject_nested_categorical_grouping_key() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    assert!(contains_categorical(&categorical));
+    assert!(contains_categorical(&DataType::List(Box::new(
+        categorical.clone()
+    ))));
+    assert!(contains_categorical(&DataType::Struct(vec![Field::new(
+        "nested".into(),
+        categorical.clone(),
+    )])));
+    assert!(!contains_categorical(&DataType::String));
+
+    let schema = Schema::from_iter([Field::new(
+        "key".into(),
+        DataType::Array(Box::new(categorical), 2),
+    )]);
+    let domain = LazyFrameDomain::new_from_schema(schema.clone())?;
+    let lf = DataFrame::empty_with_schema(&schema).lazy();
+    let err = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        lf.group_by(&[col("key")]).agg(&[len().dp().noise(None)]),
+        Some(1.),
+        Some(10),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert_eq!(err.variant, MakeMeasurement);
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Categories are data-dependent"),
+        "{err:?}"
+    );
+    Ok(())
 }
 
 #[test]
@@ -133,6 +175,7 @@ fn test_aggregate() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_stable_keys_puredp() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
@@ -160,6 +203,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_stable_keys_zcdp() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
@@ -187,6 +231,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_stable_keys_delta_empirical() -> Fallible<()> {
     const N: u32 = 2048;
     let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<u32>::default())])?
@@ -224,6 +269,7 @@ fn test_stable_keys_delta_empirical() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_explicit_keys() -> Fallible<()> {
     static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
@@ -638,6 +684,7 @@ fn test_find_len_expr() -> Fallible<()> {
 
 #[test]
 fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
+    #[cfg(not(feature = "polars-ffi"))]
     use crate::core::Domain;
 
     let domain = LazyFrameDomain::new(vec![
@@ -652,9 +699,13 @@ fn test_max_length_bounds_symmetric_change() -> Fallible<()> {
     )?;
 
     let x = df!("A" => ["a", "a", "a"], "B" => [10i32, 10, 10])?.lazy();
+    #[cfg(not(feature = "polars-ffi"))]
     let y = df!("A" => ["a", "a", "a"], "B" => [-10i32, -10, -10])?.lazy();
-    assert!(domain.member(&x)?);
-    assert!(domain.member(&y)?);
+    #[cfg(not(feature = "polars-ffi"))]
+    {
+        assert!(domain.member(&x)?);
+        assert!(domain.member(&y)?);
+    }
 
     let measurement = make_private_lazyframe(
         domain,
@@ -693,5 +744,57 @@ fn test_max_length_overflow() -> Fallible<()> {
     )?;
 
     assert!(measurement.map(&1).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
+    use crate::core::Domain;
+    use crate::metrics::{Bound, Bounds};
+
+    let x = df!("A" => ["a"])?.lazy();
+    let y = df!("A" => ["b"])?.lazy();
+    let public = df!("A" => ["a", "b"])?.lazy();
+    let grouped = x
+        .clone()
+        .group_by([col("A")])
+        .agg([len().dp().noise(Some(1.0)).alias("count")]);
+    let plan = public.join(grouped, [col("A")], [col("A")], JoinType::Left.into());
+    let bounds = Bounds::from(2).with_bound(Bound::by([col("A")]).with_per_group(1));
+
+    for (margin, epsilon) in [
+        (Margin::by(["A"]), 2.0),
+        (Margin::by(["A"]).with_max_groups(1), 2.0),
+        (
+            Margin::by(["A"]).with_max_groups(1).with_invariant_keys(),
+            1.0,
+        ),
+    ] {
+        let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+            "A",
+            AtomDomain::<String>::default(),
+        )])?
+        .with_margin(margin.clone())?;
+
+        if margin.invariant.is_none() {
+            // These datasets have disjoint group keys, despite each having one group.
+            assert!(domain.member(&x)? && domain.member(&y)?);
+        }
+        let measurement = make_private_lazyframe(
+            domain,
+            FrameDistance(SymmetricDistance),
+            MaxDivergence,
+            plan.clone(),
+            None,
+            None,
+        )?;
+        assert_eq!(measurement.map(&bounds)?, epsilon);
+
+        // A genuine pairwise bound should still tighten the number of changed groups.
+        let pairwise_bounds = bounds
+            .clone()
+            .with_bound(Bound::by([col("A")]).with_num_groups(1));
+        assert_eq!(measurement.map(&pairwise_bounds)?, 1.0);
+    }
     Ok(())
 }

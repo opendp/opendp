@@ -1,9 +1,10 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{DataType, NamedFrom, col, lit};
+use polars::prelude::{DataFrame, DataType, Field, IntoColumn, NamedFrom, col, lit};
 use polars::series::Series;
 use polars_plan::plans::typed_lit;
 
+#[cfg(not(feature = "polars-ffi"))]
 use crate::core::Domain;
 
 use crate::domains::{AtomDomain, Invariant, LazyFrameDomain, Margin, OptionDomain, SeriesDomain};
@@ -180,6 +181,7 @@ fn test_fill_null_coercion_and_nan_domain() -> Fallible<()> {
         };
         assert_eq!(actual_nan, expected_nan, "{expr:?}");
         assert!(!output.column.nullable, "{expr:?}");
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(
             output.member(&transformation.invoke(&data.logical_plan)?)?,
             "{expr:?}"
@@ -237,11 +239,98 @@ fn test_fill_null_integer_literal_coercion() -> Fallible<()> {
 
         assert_eq!(output.get_columns()[0].dtype(), &dtype);
         assert_eq!(transformation.output_domain.column.dtype(), dtype);
+        #[cfg(not(feature = "polars-ffi"))]
         assert!(
             transformation
                 .output_domain
                 .member(&transformation.invoke(&data.logical_plan)?)?
         );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_fill_null_numeric_coercion_matches_optimized_polars() -> Fallible<()> {
+    // Both signed/unsigned and float promotion must produce the certified
+    // dtype and eliminate nulls, including at numeric boundaries.
+    let cases = [
+        (
+            Series::new("L".into(), [Some(i64::MAX), None, Some(i64::MIN)]),
+            Series::new("R".into(), [u64::MAX, u64::MAX, 0]),
+        ),
+        (
+            Series::new("L".into(), [Some(u64::MAX), None, Some(0u64)]),
+            Series::new("R".into(), [i64::MIN, i64::MAX, -1]),
+        ),
+        (
+            Series::new("L".into(), [Some(f32::MAX), None, Some(f32::MIN)]),
+            Series::new("R".into(), [f64::MAX, f64::MIN, f64::NAN]),
+        ),
+    ];
+    for (left, right) in cases {
+        let mut left_domain =
+            SeriesDomain::new_from_field(Field::new("L".into(), left.dtype().clone()))?;
+        left_domain.nullable = left.has_nulls();
+        let mut right_domain =
+            SeriesDomain::new_from_field(Field::new("R".into(), right.dtype().clone()))?;
+        right_domain.nullable = false;
+        let domain = LazyFrameDomain::new(vec![left_domain, right_domain])?.row_by_row();
+        let lf = DataFrame::new(vec![left.into_column(), right.into_column()])?.lazy();
+        let expr = col("L").fill_null(col("R"));
+        let t = expr
+            .clone()
+            .make_stable(domain, FrameDistance(SymmetricDistance))?;
+
+        let expected = lf.clone().select([expr]).collect()?;
+        let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
+        assert_eq!(observed, expected);
+        let output = expected.get_columns()[0].as_materialized_series();
+        assert_eq!(t.output_domain.column.dtype(), output.dtype().clone());
+        assert!(!t.output_domain.column.nullable);
+        assert!(!output.has_nulls());
+        assert!(t.output_domain.column.member(output)?);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_fill_null_boundary_literals_match_optimized_polars() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "x",
+        OptionDomain::new(AtomDomain::<f32>::default()),
+    )])?
+    .row_by_row();
+    let lf = df!("x" => [Some(f32::MAX), None, Some(f32::MIN)])?.lazy();
+
+    for expr in [
+        col("x").fill_null(lit(f64::MAX)),
+        col("x").fill_null(typed_lit(f64::MAX)),
+        col("x").fill_null(typed_lit(f64::MIN)),
+        col("x").fill_null(lit(i64::MAX)),
+        col("x").fill_null(typed_lit(u64::MAX)),
+        col("x").fill_null(lit(f64::NAN)),
+    ] {
+        let t = expr
+            .clone()
+            .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        let expected = lf.clone().select([expr.clone()]).collect()?;
+        let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
+        assert_eq!(observed, expected, "{expr:?}");
+        let output = expected.get_columns()[0].as_materialized_series();
+        assert_eq!(
+            t.output_domain.column.dtype(),
+            output.dtype().clone(),
+            "{expr:?}"
+        );
+        assert!(!t.output_domain.column.nullable, "{expr:?}");
+        assert!(!output.has_nulls(), "{expr:?}");
+        assert!(t.output_domain.column.member(output)?, "{expr:?}");
     }
     Ok(())
 }

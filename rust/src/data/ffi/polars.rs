@@ -1,31 +1,31 @@
 use opendp_derive::bootstrap;
-use polars::lazy::frame::LazyFrame;
+use polars::{frame::DataFrame, lazy::frame::LazyFrame};
 
 use crate::{
     core::FfiResult,
     ffi::any::{AnyObject, AnyQueryable, Downcast},
-    polars::{ExtractLazyFrame, OnceFrameAnswer, OnceFrameQuery},
+    polars::{ExtractLazyFrame, TakeLazyFrame, shuffle_dataframe},
 };
 
 #[bootstrap(
-    name = "onceframe_collect",
+    name = "_onceframe_take_lazy",
     arguments(onceframe(c_type = "AnyObject *", rust_type = "AnyQueryable"))
 )]
-/// Internal function. Collects a DataFrame from a OnceFrame, exhausting the OnceFrame.
+/// Internal plan extraction that exhausts a OnceFrame, without executing it.
+///
+/// Does not require honest-but-curious. Callers must follow the privacy
+/// requirements documented on `onceframe_lazy`.
 ///
 /// # Arguments
 /// * `onceframe` - The queryable holding a LazyFrame.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__onceframe_collect(
+pub extern "C" fn opendp_data___onceframe_take_lazy(
     onceframe: *mut AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let queryable = try_!(try_as_mut_ref!(onceframe).downcast_mut::<AnyQueryable>());
 
-    let query = AnyObject::new(OnceFrameQuery::Collect);
-    let answer: OnceFrameAnswer = try_!(try_!(queryable.eval(&query)).downcast());
-    let OnceFrameAnswer::Collect(frame) = answer;
-
-    Ok(AnyObject::new(frame)).into()
+    let answer: LazyFrame = try_!(queryable.eval_internal(&TakeLazyFrame));
+    Ok(AnyObject::new(answer)).into()
 }
 
 #[bootstrap(
@@ -60,4 +60,20 @@ pub extern "C" fn opendp_data__onceframe_lazy(
 
     let answer: LazyFrame = try_!(queryable.eval_internal(&ExtractLazyFrame));
     Ok(AnyObject::new(answer)).into()
+}
+
+#[bootstrap(
+    name = "_shuffle_dataframe",
+    arguments(dataframe(rust_type = "DataFrame")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Shuffle a collected Polars DataFrame using OpenDP's Shuffle trait.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data___shuffle_dataframe(
+    dataframe: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let dataframe = try_!(try_as_ref!(dataframe).downcast_ref::<DataFrame>());
+    shuffle_dataframe(dataframe.clone())
+        .map(AnyObject::new)
+        .into()
 }

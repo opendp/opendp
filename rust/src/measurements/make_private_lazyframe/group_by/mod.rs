@@ -14,6 +14,7 @@ use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::StableDslPlan;
 use crate::transformations::make_stable_expr;
@@ -92,7 +93,7 @@ where
                     series_domain.name
                 );
             }
-            if matches!(series_domain.dtype(), DataType::Categorical(_, _)) {
+            if contains_categorical(&series_domain.dtype()) {
                 return fallible!(
                     MakeMeasurement,
                     "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to String or Enum before grouping.",
@@ -186,7 +187,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Default::default(),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
@@ -195,7 +196,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Default::default(),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         Ok(match key_sanitizer.clone() {
             Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
@@ -237,7 +238,11 @@ where
                         options,
                     }),
                     exprs: fill_null.unwrap(),
-                    options: ProjectionOptions::default(),
+                    options: ProjectionOptions {
+                        run_parallel: true,
+                        duplicate_check: true,
+                        should_broadcast: true,
+                    },
                 }
             }
             None => output,
@@ -248,7 +253,14 @@ where
         let bound = d_in.get_bound(&group_by_id);
 
         // incorporate all information into optional bounds
-        let l0 = option_min(bound.num_groups, margin.max_groups);
+        // Each dataset has at most G groups, so their differing keys can span 2G groups.
+        // With invariant keys, both datasets share the same set of at most G groups.
+        let max_changed_groups = if margin.invariant.is_some() {
+            margin.max_groups
+        } else {
+            margin.max_groups.map(|g| g.alerting_mul(&2)).transpose()?
+        };
+        let l0 = option_min(bound.num_groups, max_changed_groups);
         // Each input group has at most k rows, so two groups can differ by 2k rows.
         let max_group_change = margin.max_length.map(|k| k.alerting_mul(&2)).transpose()?;
         let li = option_min(bound.per_group, max_group_change);
@@ -344,6 +356,18 @@ fn contains_float(dtype: &DataType) -> bool {
         DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
         DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
         DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
+        _ => false,
+    }
+}
+
+/// Reject data-dependent categorical encodings at any depth in a grouping key.
+fn contains_categorical(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Categorical(_, _) => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(field.dtype())),
         _ => false,
     }
 }

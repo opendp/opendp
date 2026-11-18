@@ -1,5 +1,7 @@
 use crate::core::Domain;
-use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{
+    ArrayDomain, AtomDomain, CategoricalDomain, DatetimeDomain, LazyFrameDomain, SeriesDomain,
+};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
@@ -134,8 +136,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         AtomDomain::<f64>::default(),
     )])?;
 
-    let categories = Categories::global();
-    let enum_categories = FrozenCategories::new(["a", "b"].into_iter()).unwrap();
     for dtype in [
         DataType::Boolean,
         DataType::UInt32,
@@ -147,12 +147,6 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
         DataType::Float32,
         DataType::Float64,
         DataType::String,
-        DataType::Date,
-        DataType::Datetime(TimeUnit::Microseconds, None),
-        DataType::Time,
-        DataType::Categorical(categories.clone(), categories.mapping()),
-        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
-        DataType::Array(Box::new(DataType::Float32), 2),
     ] {
         let cast = make_expr_cast(
             input_domain.clone().row_by_row(),
@@ -162,49 +156,127 @@ fn test_make_expr_cast_output_dtype() -> Fallible<()> {
 
         assert_eq!(cast.output_domain.column.dtype(), dtype);
     }
+
+    // The dtype classifier does not certify cross-temporal conversions or
+    // arbitrary primitive-to-enum conversions.
+    let enum_categories = FrozenCategories::new(["a", "b"])?;
+    for dtype in [
+        DataType::Datetime(TimeUnit::Microseconds, None),
+        DataType::Time,
+        DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone()),
+    ] {
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col("value").cast(dtype.clone()),
+            )
+            .is_err(),
+            "{dtype:?}"
+        );
+    }
     Ok(())
 }
 
 #[test]
-fn test_make_expr_cast_categorical_to_integer_rejected() -> Fallible<()> {
-    use crate::domains::CategoricalDomain;
+fn test_make_expr_cast_rejects_unsafe_categorical() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("name", AtomDomain::<String>::default()),
+        SeriesDomain::new("code", AtomDomain::<u32>::default()),
+        SeriesDomain::new("category", CategoricalDomain::default()),
+    ])?;
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let other = Categories::random("".into(), CategoricalPhysical::U32);
+    let other_categorical = DataType::Categorical(other.clone(), other.mapping());
 
-    let input_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "category",
-        CategoricalDomain::default(),
-    )])?;
-
-    for dtype in [
-        DataType::UInt8,
-        DataType::UInt16,
-        DataType::UInt32,
-        DataType::UInt64,
-        DataType::Int8,
-        DataType::Int16,
-        DataType::Int32,
-        DataType::Int64,
+    for (column, to) in [
+        ("category", DataType::UInt32),
+        ("category", DataType::Float64),
+        ("name", categorical.clone()),
+        ("category", other_categorical),
     ] {
-        let result = make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            col("category").cast(dtype),
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col(column).cast(to.clone()),
+            )
+            .is_err(),
+            "{column} -> {to}"
         );
-        assert!(result.is_err());
     }
 
-    // Logical string values and fixed Enum codes remain safe.
-    let categories = FrozenCategories::new(["A", "B"])?;
-    for dtype in [
-        DataType::String,
-        DataType::Enum(categories.clone(), categories.mapping().clone()),
+    // Identity, logical String/Enum, and String -> fixed Enum are supported.
+    let enum_categories = FrozenCategories::new(["A", "B"])?;
+    let fixed_enum = DataType::Enum(enum_categories.clone(), enum_categories.mapping().clone());
+    for (column, to) in [
+        ("category", categorical),
+        ("category", DataType::String),
+        ("category", fixed_enum.clone()),
+        ("name", fixed_enum),
     ] {
         make_expr_cast(
             input_domain.clone().row_by_row(),
             FrameDistance(SymmetricDistance),
-            col("category").cast(dtype),
+            col(column).cast(to),
         )?;
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_temporal_safety() -> Fallible<()> {
+    // Check the constructor boundary as well as the shared cast classifier.
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("text", AtomDomain::<String>::default()),
+        SeriesDomain::new(
+            "timestamp",
+            DatetimeDomain {
+                time_unit: TimeUnit::Microseconds,
+                time_zone: None,
+            },
+        ),
+    ])?;
+    for (column, to) in [
+        ("text", DataType::Datetime(TimeUnit::Nanoseconds, None)),
+        ("timestamp", DataType::String),
+    ] {
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col(column).cast(to),
+            )
+            .is_err(),
+            "{column}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_make_expr_cast_rejects_all_array_casts() -> Fallible<()> {
+    let input_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("array", ArrayDomain::new(AtomDomain::<i32>::default(), 2)),
+        SeriesDomain::new("scalar", AtomDomain::<i32>::default()),
+    ])?;
+
+    for (column, to) in [
+        ("array", DataType::String),
+        ("scalar", DataType::Array(Box::new(DataType::Int32), 2)),
+    ] {
+        assert!(
+            make_expr_cast(
+                input_domain.clone().row_by_row(),
+                FrameDistance(SymmetricDistance),
+                col(column).cast(to.clone()),
+            )
+            .is_err(),
+            "{column} -> {to}"
+        );
+    }
     Ok(())
 }
 
@@ -220,7 +292,7 @@ fn test_make_expr_cast_nullability() -> Fallible<()> {
 
     // The constructor forces the default strict cast to be non-strict.
     let t_cast = make_expr_cast(
-        input_domain.row_by_row(),
+        input_domain.clone().row_by_row(),
         FrameDistance(SymmetricDistance),
         col("x").cast(DataType::Int64),
     )?;
@@ -234,6 +306,16 @@ fn test_make_expr_cast_nullability() -> Fallible<()> {
             .output_domain
             .column
             .member(observed.column("x")?.as_materialized_series())?
+    );
+
+    // Wrapping is opt-in and is not certified for private values.
+    assert!(
+        make_expr_cast(
+            input_domain.row_by_row(),
+            FrameDistance(SymmetricDistance),
+            col("x").cast_with_options(DataType::Int64, CastOptions::Overflowing),
+        )
+        .is_err()
     );
 
     Ok(())
@@ -261,31 +343,6 @@ fn test_make_expr_cast_widening_preserves_non_null() -> Fallible<()> {
             .column
             .member(observed.column("x")?.as_materialized_series())?
     );
-
-    Ok(())
-}
-
-#[test]
-fn test_make_expr_cast_other_null_preserving() -> Fallible<()> {
-    let input_domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("integer", AtomDomain::<i64>::default()),
-        SeriesDomain::new("float", AtomDomain::<f32>::default()),
-        SeriesDomain::new("bool", AtomDomain::<bool>::default()),
-    ])?;
-
-    for expr in [
-        col("integer").cast(DataType::Float64),
-        col("integer").cast(DataType::String),
-        col("float").cast(DataType::Float64),
-        col("bool").cast(DataType::String),
-    ] {
-        let t_cast = make_expr_cast(
-            input_domain.clone().row_by_row(),
-            FrameDistance(SymmetricDistance),
-            expr,
-        )?;
-        assert!(!t_cast.output_domain.column.nullable);
-    }
 
     Ok(())
 }

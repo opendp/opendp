@@ -169,3 +169,40 @@ def test_extras_object(val_in, type_name):
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
     assert val_out == val_in
+
+
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_polars_native_series_ffi_roundtrip(empty, chunked):
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    for dtype in [pl.Enum(["A", "B", "C"]), pl.Categorical]:
+        series = pl.Series("group", [] if empty else ["B", "A", None], dtype=dtype)
+        if chunked:
+            series = pl.concat([series, series], rechunk=False)
+        obj = py_to_c(series, c_type=AnyObjectPtr, type_name="Series")
+        result = c_to_py(obj)
+        pl_testing.assert_series_equal(result, series)
+
+
+@pytest.mark.parametrize("width", [0, 1, 4])
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_polars_native_dataframe_ffi_roundtrip(width, empty, chunked):
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    df = pl.DataFrame(
+        {
+            "category": pl.Series(["B", "A", None], dtype=pl.Enum(["A", "B", "C"])),
+            "id": [0, 1, 2],
+            "categorical": pl.Series(["B", None, "A"], dtype=pl.Categorical),
+            "nested": [[1, None], [], None],
+        }
+    )[:, :width]
+    if empty:
+        df = df.clear()
+    if chunked:
+        df = pl.concat([df, df], rechunk=False)
+    obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
+    result = c_to_py(obj)
+    pl_testing.assert_frame_equal(result, df)

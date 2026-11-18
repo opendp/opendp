@@ -3,6 +3,7 @@ use crate::{
     metrics::{Bound, Bounds, SymmetricDistance},
     transformations::make_stable_lazyframe,
 };
+use polars_plan::prelude::ProjectionOptions;
 
 use super::*;
 
@@ -153,5 +154,24 @@ fn test_select_reject_literal_only() -> Fallible<()> {
             .is_err()
         );
     }
+    Ok(())
+}
+
+#[test]
+fn test_select_rejects_noncanonical_projection_options() -> Fallible<()> {
+    use std::sync::Arc;
+
+    let lf = df!("k" => [1i32, 2])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("k", AtomDomain::<i32>::default())])?;
+    let options = ProjectionOptions {
+        should_broadcast: false,
+        ..ProjectionOptions::default()
+    };
+    let query = LazyFrame::from(DslPlan::Select {
+        input: Arc::new(lf.logical_plan.clone()),
+        expr: vec![col("k")],
+        options,
+    });
+    assert!(make_stable_lazyframe(domain, FrameDistance(SymmetricDistance), query).is_err());
     Ok(())
 }

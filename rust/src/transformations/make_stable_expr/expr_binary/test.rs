@@ -1,4 +1,7 @@
-use crate::domains::{AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::core::Domain;
+use crate::domains::{
+    ArrayDomain, AtomDomain, EnumDomain, LazyFrameDomain, OptionDomain, SeriesDomain,
+};
 use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
 use polars_plan::plans::typed_lit;
@@ -588,13 +591,227 @@ fn test_enum_string_equality_with_unknown_categories() -> Fallible<()> {
 }
 
 #[test]
-fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
+fn test_binary_rejects_arrays() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("array", ArrayDomain::new(AtomDomain::<i32>::default(), 2)),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .row_by_row();
+
+    for expr in [
+        col("array") + col("array"),
+        col("array") + col("value"),
+        col("value") + col("array"),
+        col("array").eq(col("array")),
+        col("array").lt(col("array")),
+    ] {
+        assert!(
+            expr.clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{expr:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_binary_rejects_unvalidated_implicit_coercion() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new(
+            "enum_a",
+            EnumDomain::new(Series::new("".into(), vec!["a", "b"]))?,
+        ),
+        SeriesDomain::new(
+            "enum_b",
+            EnumDomain::new(Series::new("".into(), vec!["b", "c"]))?,
+        ),
+        SeriesDomain::new("text", AtomDomain::<String>::default()),
+        SeriesDomain::new("number", AtomDomain::<i64>::default()),
+    ])?
+    .row_by_row();
+
+    for expr in [
+        col("enum_a").eq(col("enum_b")),
+        col("enum_a").eq(col("number")),
+        col("text").eq(col("number")),
+    ] {
+        assert!(
+            expr.clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{expr:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_mixed_temporal_comparisons_are_rejected() -> Fallible<()> {
+    let nanoseconds = DataType::Datetime(TimeUnit::Nanoseconds, None);
+    // Year 3000 fits in Date and Datetime(ms/us), but not Datetime(ns).
+    let inputs = [
+        Series::new(
+            "us".into(),
+            [1_577_836_800_000_000_i64, 32_503_680_000_000_000_i64],
+        )
+        .cast(&DataType::Datetime(TimeUnit::Microseconds, None))?,
+        Series::new("ms".into(), [1_577_836_800_000_i64, 32_503_680_000_000_i64])
+            .cast(&DataType::Datetime(TimeUnit::Milliseconds, None))?,
+        Series::new("date".into(), [18_262_i32, 376_200_i32]).cast(&DataType::Date)?,
+    ];
+
+    for input in inputs {
+        let name = input.name().clone();
+        let mut input_domain =
+            SeriesDomain::new_from_field(Field::new(name.clone(), input.dtype().clone()))?;
+        input_domain.nullable = false;
+        let mut ns_domain =
+            SeriesDomain::new_from_field(Field::new("ns".into(), nanoseconds.clone()))?;
+        ns_domain.nullable = false;
+        let domain = LazyFrameDomain::new(vec![input_domain, ns_domain])?.row_by_row();
+
+        for expr in [
+            col(name.clone()).eq(col("ns")),
+            col(name.clone()).eq_missing(col("ns")),
+            col(name.clone()).lt(col("ns")),
+        ] {
+            assert!(
+                expr.make_stable(domain.clone(), FrameDistance(SymmetricDistance))
+                    .is_err(),
+                "{name}"
+            );
+        }
+
+        // Cross-temporal casts also require a separate safety proof.
+        let expr = col(name.clone()).cast(nanoseconds.clone()).eq(col("ns"));
+        assert!(
+            expr.make_stable(domain, FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{name}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_same_type_temporal_comparisons_remain_supported() -> Fallible<()> {
+    for dtype in [
+        DataType::Date,
+        DataType::Datetime(TimeUnit::Nanoseconds, None),
+        DataType::Time,
+    ] {
+        let mut left = SeriesDomain::new_from_field(Field::new("L".into(), dtype.clone()))?;
+        left.nullable = false;
+        let mut right = SeriesDomain::new_from_field(Field::new("R".into(), dtype.clone()))?;
+        right.nullable = false;
+        let domain = LazyFrameDomain::new(vec![left, right])?.row_by_row();
+
+        for expr in [
+            col("L").eq(col("R")),
+            col("L").neq(col("R")),
+            col("L").lt(col("R")),
+            col("L").eq_missing(col("R")),
+        ] {
+            let t = expr.make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+            assert!(!t.output_domain.column.nullable, "{dtype}");
+        }
+        assert!(
+            (col("L") + col("R"))
+                .make_stable(domain, FrameDistance(SymmetricDistance))
+                .is_err(),
+            "{dtype}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn test_numeric_binary_coercion_matches_optimized_polars() -> Fallible<()> {
+    // Include mixed signed/unsigned boundaries, float extremes, NaNs, and nulls.
+    // Verify the certified domain against the values and dtype that Polars
+    // actually produces after its implicit casts and optimizer rewrites.
+    let cases = [
+        (
+            Series::new("L".into(), [i64::MIN, i64::MAX, -1, 0]),
+            Series::new("R".into(), [u64::MAX, u64::MAX, 0, 1]),
+        ),
+        (
+            Series::new("L".into(), [0u64, 1, u64::MAX, u64::MAX]),
+            Series::new("R".into(), [i64::MIN, i64::MAX, -1, 0]),
+        ),
+        (
+            Series::new("L".into(), [u32::MAX, 0, 42, 1]),
+            Series::new("R".into(), [-1i64, i64::MAX, i64::MIN, 0]),
+        ),
+        (
+            Series::new("L".into(), [f32::MIN, f32::MAX, f32::NAN, f32::INFINITY]),
+            Series::new("R".into(), [f64::MAX, -f64::MAX, f64::NAN, f64::INFINITY]),
+        ),
+        (
+            Series::new("L".into(), [Some(i64::MAX), None, Some(-1), Some(0)]),
+            Series::new("R".into(), [Some(u64::MAX), Some(0), None, Some(1)]),
+        ),
+        (
+            Series::new(
+                "L".into(),
+                [Some(f32::MAX), None, Some(f32::MIN), Some(0.0)],
+            ),
+            Series::new(
+                "R".into(),
+                [Some(f64::MAX), Some(0.0), None, Some(f64::MIN)],
+            ),
+        ),
+    ];
+
+    for (left, right) in cases {
+        let mut left_domain =
+            SeriesDomain::new_from_field(Field::new("L".into(), left.dtype().clone()))?;
+        left_domain.nullable = left.has_nulls();
+        let mut right_domain =
+            SeriesDomain::new_from_field(Field::new("R".into(), right.dtype().clone()))?;
+        right_domain.nullable = right.has_nulls();
+        let domain = LazyFrameDomain::new(vec![left_domain, right_domain])?.row_by_row();
+        let lf = DataFrame::new(vec![left.into_column(), right.into_column()])?.lazy();
+
+        for expr in [
+            col("L") + col("R"),
+            col("L").eq(col("R")),
+            col("L").eq_missing(col("R")),
+        ] {
+            let t = expr
+                .clone()
+                .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+            let expected = lf.clone().select([expr.clone()]).collect()?;
+            let observed = lf
+                .clone()
+                .select([t.invoke(&lf.logical_plan)?.expr])
+                .collect()?;
+            assert_eq!(observed, expected, "{expr:?}");
+            let output = expected.get_columns()[0].as_materialized_series();
+            assert_eq!(
+                t.output_domain.column.dtype(),
+                output.dtype().clone(),
+                "{expr:?}"
+            );
+            assert!(t.output_domain.column.member(output)?, "{expr:?}");
+            assert!(
+                t.output_domain.column.nullable || !output.has_nulls(),
+                "{expr:?}"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_numeric_dynamic_literal_coercion_matches_optimized_polars() -> Fallible<()> {
     let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
         "x",
-        AtomDomain::<f32>::new_non_nan(),
+        OptionDomain::new(AtomDomain::<f32>::default()),
     )])?
     .row_by_row();
-    let data = df!("x" => [1.0f32, 2.0])?.lazy();
+    let lf = df!("x" => [Some(f32::MAX), None, Some(f32::MIN), Some(0.0f32)])?.lazy();
 
     for expr in [
         col("x") + lit(0.5f64),
@@ -602,16 +819,32 @@ fn test_binary_coercion_with_dynamic_literals() -> Fallible<()> {
         lit(0.5f64) + col("x"),
         col("x") + lit(1i32),
         col("x") + typed_lit(1i32),
+        col("x") + lit(f64::MAX),
+        col("x") + typed_lit(f64::MAX),
+        lit(f64::MAX) + col("x"),
+        col("x") + lit(i64::MAX),
+        col("x") + typed_lit(u64::MAX),
+        col("x").eq(typed_lit(f64::MAX)),
+        col("x").eq_missing(lit(f64::MAX)),
     ] {
-        let actual_dtype = data.clone().select([expr.clone()]).collect()?.get_columns()[0]
-            .dtype()
-            .clone();
-        let transformation = expr
+        let t = expr
             .clone()
             .make_stable(domain.clone(), FrameDistance(SymmetricDistance))?;
+        let expected = lf.clone().select([expr.clone()]).collect()?;
+        let observed = lf
+            .clone()
+            .select([t.invoke(&lf.logical_plan)?.expr])
+            .collect()?;
+        assert_eq!(observed, expected, "{expr:?}");
+        let output = expected.get_columns()[0].as_materialized_series();
         assert_eq!(
-            transformation.output_domain.column.dtype(),
-            actual_dtype,
+            t.output_domain.column.dtype(),
+            output.dtype().clone(),
+            "{expr:?}"
+        );
+        assert!(t.output_domain.column.member(output)?, "{expr:?}");
+        assert!(
+            t.output_domain.column.nullable || !output.has_nulls(),
             "{expr:?}"
         );
     }
