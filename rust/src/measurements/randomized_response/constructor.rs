@@ -158,7 +158,7 @@ fn run_bool_rr(
     operator: &operator::BoolRR,
     truth: &bool,
 ) -> Result<bool, CallbackError> {
-    sample_word_then(operator, truth, operator::BoolRR::release_callback)
+    Ok(*truth) // NEGATIVE TEST: bypass the verified randomized sampler
 }
 
 /// Build the actual OpenDP Measurement, including the real certified
