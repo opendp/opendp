@@ -83,7 +83,7 @@ pub open spec fn adapter_realizes<E>(
             callback_expectation(op, truth, payoff),
         |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
             crate::randomized_response_bool::release_expectation(
-                truth, op.numerator, word_expectation, payoff),
+                truth, op, word_expectation, payoff),
     )
     &&& crate::measurement_proof::realizes_privacy_map(
         |d: u32| callback_map(op, d),
@@ -163,11 +163,11 @@ pub fn verify_built_bool_rr<E>(
                 crate::randomized_response_bool::rr_discrete_close(left, right, d);
             let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
                 crate::randomized_response_bool::release_expectation(
-                    truth, n, word_expectation, payoff);
+                    truth, op, word_expectation, payoff);
             let model_map = |d: u32|
                 crate::randomized_response_bool::rr_factor_map(n, factor, d);
             crate::randomized_response_bool::lemma_rr_operator_valid_measurement(
-                n, word_expectation, error_expectation, success, factor);
+                op, word_expectation, error_expectation, success, factor);
             assert(crate::measurement_proof::realizes_expectation(
                 callback, expectation));
             assert(crate::measurement_proof::realizes_privacy_map(

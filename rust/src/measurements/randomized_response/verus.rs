@@ -57,12 +57,12 @@ pub open spec fn bounded_payoff<E>(f: spec_fn(Result<bool, E>) -> real) -> bool 
 /// expectation functional of that exact executable entropy call.
 pub open spec fn release_expectation<E>(
     truth: bool,
-    numerator: u64,
+    op: operator::BoolRR<f64>,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     payoff: spec_fn(Result<bool, E>) -> real,
 ) -> real {
     word_expectation(|sample: Result<u64, E>| payoff(
-        (operator::BoolRR { numerator, privacy_cost: 0u64 }).release(truth, sample)
+        op.release(truth, sample)
     ))
 }
 
@@ -71,27 +71,27 @@ pub open spec fn release_expectation<E>(
 /// above entropy is verified executable Rust.
 pub proof fn lemma_release_expectation<E>(
     truth: bool,
-    numerator: u64,
+    op: operator::BoolRR<f64>,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,
     payoff: spec_fn(Result<bool, E>) -> real,
 )
     requires
-        numerator <= 9_007_199_254_740_992u64,
+        op.numerator <= 9_007_199_254_740_992u64,
         bounded_payoff(payoff),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
-        release_expectation(truth, numerator, word_expectation, payoff)
+        release_expectation(truth, op.numerator, word_expectation, payoff)
             == success * (
-                (numerator as real / 9_007_199_254_740_992real) * payoff(Ok(truth))
-                + (1real - numerator as real / 9_007_199_254_740_992real) * payoff(Ok(!truth))
+                (op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(truth))
+                + (1real - op.numerator as real / 9_007_199_254_740_992real) * payoff(Ok(!truth))
             ) + error_expectation(|err: E| payoff(Err(err))),
 {
+    let numerator = op.numerator;
     let threshold = prefix_threshold(numerator);
     let on_error = |err: E| payoff(Err(err));
-    let operator = operator::BoolRR { numerator, privacy_cost: 0u64 };
-    let before = |sample: Result<u64, E>| payoff(operator.release(truth, sample));
+    let before = |sample: Result<u64, E>| payoff(op.release(truth, sample));
     let prefix = prefix_post(
         threshold, payoff(Ok(truth)), payoff(Ok(!truth)), on_error,
     );
@@ -108,7 +108,7 @@ pub proof fn lemma_release_expectation<E>(
         }
     }
     assert(before =~= prefix);
-    assert(release_expectation(truth, numerator, word_expectation, payoff)
+    assert(release_expectation(truth, op, word_expectation, payoff)
         == word_expectation(prefix));
 
     assert(threshold == (numerator as nat) * 2048nat);
@@ -132,7 +132,7 @@ pub proof fn lemma_release_expectation<E>(
 /// Pure DP for arbitrary bounded postconditions on the *actual Result* type.
 /// Unlike a proof over modeled PMF atoms, error values are never erased.
 pub proof fn lemma_bool_rr_dp<E>(
-    numerator: u64,
+    op: operator::BoolRR<f64>,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,
@@ -143,28 +143,29 @@ pub proof fn lemma_bool_rr_dp<E>(
     payoff: spec_fn(Result<bool, E>) -> real,
 )
     requires
-        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
+        4_503_599_627_370_496u64 <= op.numerator <= 9_007_199_254_740_992u64,
         factor >= 1real,
-        numerator < 9_007_199_254_740_992u64 ==>
-            numerator as real / 9_007_199_254_740_992real
-                <= factor * (1real - numerator as real / 9_007_199_254_740_992real),
+        op.numerator < 9_007_199_254_740_992u64 ==>
+            op.numerator as real / 9_007_199_254_740_992real
+                <= factor * (1real - op.numerator as real / 9_007_199_254_740_992real),
         left == right || distance > 0,
         bounded_payoff(payoff),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
         distance == 0 ==>
-            release_expectation(left, numerator, word_expectation, payoff)
-                <= release_expectation(right, numerator, word_expectation, payoff),
-        distance > 0 && numerator < 9_007_199_254_740_992u64 ==>
-            release_expectation(left, numerator, word_expectation, payoff)
-                <= factor * release_expectation(right, numerator, word_expectation, payoff),
+            release_expectation(left, op.numerator, word_expectation, payoff)
+                <= release_expectation(right, op.numerator, word_expectation, payoff),
+        distance > 0 && op.numerator < 9_007_199_254_740_992u64 ==>
+            release_expectation(left, op.numerator, word_expectation, payoff)
+                <= factor * release_expectation(right, op.numerator, word_expectation, payoff),
         // With p=1 and positive distance, the privacy map is +infinity.
 {
+    let numerator = op.numerator;
     if distance == 0 {
         assert(left == right);
     } else if numerator < 9_007_199_254_740_992u64 {
-        lemma_release_expectation(left, numerator, word_expectation, error_expectation, success, payoff);
-        lemma_release_expectation(right, numerator, word_expectation, error_expectation, success, payoff);
+        lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
+        lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
         let p = numerator as real / 9_007_199_254_740_992real;
         let on_error = |err: E| payoff(Err(err));
         let err = error_expectation(on_error);
@@ -188,12 +189,12 @@ pub proof fn lemma_bool_rr_dp<E>(
             nonnegative_product(success, xa + xb);
             assert(value >= 0real);
             multiply_inequality(1real, factor, value);
-            assert(release_expectation(left, numerator, word_expectation, payoff)
-                == release_expectation(right, numerator, word_expectation, payoff));
-            assert(release_expectation(right, numerator, word_expectation, payoff)
+            assert(release_expectation(left, op, word_expectation, payoff)
+                == release_expectation(right, op, word_expectation, payoff));
+            assert(release_expectation(right, op, word_expectation, payoff)
                 == value);
-            assert(release_expectation(left, numerator, word_expectation, payoff)
-                <= factor * release_expectation(right, numerator, word_expectation, payoff));
+            assert(release_expectation(left, op, word_expectation, payoff)
+                <= factor * release_expectation(right, op, word_expectation, payoff));
         } else {
             assert(right == !left);
             assert(1real - p <= p);
@@ -223,9 +224,9 @@ pub proof fn lemma_bool_rr_dp<E>(
             distribute(factor, success * vr, err);
             assert(success * vl + err <= factor * (success * vr + err));
 
-            assert(release_expectation(left, numerator, word_expectation, payoff)
+            assert(release_expectation(left, op, word_expectation, payoff)
                 == success * vl + err);
-            assert(release_expectation(right, numerator, word_expectation, payoff)
+            assert(release_expectation(right, op, word_expectation, payoff)
                 == success * vr + err);
         }
     }
@@ -283,18 +284,18 @@ pub open spec fn rr_discrete_close(left: bool, right: bool, distance: u32) -> bo
 /// contract, *before* any dynamic callback erasure. This invokes the
 /// production BoolRR::release semantics through release_expectation.
 pub proof fn lemma_rr_operator_valid_measurement<E>(
-    numerator: u64,
+    op: operator::BoolRR<f64>,
     word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
     error_expectation: spec_fn(spec_fn(E) -> real) -> real,
     success: real,
     factor: real,
 )
     requires
-        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
+        4_503_599_627_370_496u64 <= op.numerator <= 9_007_199_254_740_992u64,
         factor >= 1real,
-        numerator < 9_007_199_254_740_992u64 ==>
-            numerator as real / 9_007_199_254_740_992real
-                <= factor * (1real - numerator as real / 9_007_199_254_740_992real),
+        op.numerator < 9_007_199_254_740_992u64 ==>
+            op.numerator as real / 9_007_199_254_740_992real
+                <= factor * (1real - op.numerator as real / 9_007_199_254_740_992real),
         uniform_word_expectation_rule(word_expectation, error_expectation, success),
     ensures
         crate::measurement_proof::valid_measurement_expectations::<
@@ -304,15 +305,16 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
             |left: bool, right: bool, distance: u32|
                 rr_discrete_close(left, right, distance),
             |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                release_expectation(truth, numerator, word_expectation, payoff),
-            |distance: u32| rr_factor_map(numerator, factor, distance),
+                release_expectation(truth, op.numerator, word_expectation, payoff),
+            |distance: u32| rr_factor_map(op.numerator, factor, distance),
         ),
 {
+    let numerator = op.numerator;
     let member = |_: bool| true;
     let close = |left: bool, right: bool, distance: u32|
         rr_discrete_close(left, right, distance);
     let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-        release_expectation(truth, numerator, word_expectation, payoff);
+        release_expectation(truth, op, word_expectation, payoff);
     let map = |distance: u32| rr_factor_map(numerator, factor, distance);
 
     assert forall|left: bool, right: bool, distance: u32|
@@ -345,7 +347,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
                     <= factor * expectation(right, payoff) by {
                 assert(bounded_payoff(payoff));
                 lemma_bool_rr_dp(
-                    numerator, word_expectation, error_expectation, success,
+                    op, word_expectation, error_expectation, success,
                     factor, left, right, distance, payoff,
                 );
             }
