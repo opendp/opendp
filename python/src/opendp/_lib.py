@@ -318,7 +318,11 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)):  # type: ignore[misc]
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
 #                                 (output         , input       , userdata        )
-CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.py_object)
+# Rust lends the argument to the callback; ctypes must never finalize it,
+# including when converting the argument to a Python value raises.
+CallbackFnValue = ctypes.CFUNCTYPE(
+    ctypes.c_void_p, ctypes.POINTER(AnyObject), ctypes.py_object
+)
 
 
 class CallbackFn(ctypes.Structure):

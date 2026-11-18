@@ -19,6 +19,7 @@ use ::polars_ffi::version_0::{
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
+mod clone;
 #[cfg(feature = "polars")]
 mod polars;
 use bitvec::slice::BitSlice;
