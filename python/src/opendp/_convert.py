@@ -204,9 +204,18 @@ def c_to_py(value: Any) -> Any:
     :return: copy of data in Python representation
     """
     if isinstance(value, ctypes.POINTER(AnyObject)):
-        from opendp._data import object_type, object_as_slice, slice_free
+        from opendp._data import object_type
 
         obj_type = object_type(value)
+
+        if obj_type in {"PrivacyProfile", "AnyOdometerQueryable", "AnyQueryable"}:
+            if not isinstance(value, AnyObjectPtr):
+                # Opaque wrappers escape conversion. Callback/nested pointers
+                # are borrowed, so give the wrapper an independently owned clone.
+                clone = lib.opendp_data__clone_opaque_object
+                clone.argtypes = [ctypes.POINTER(AnyObject)]
+                clone.restype = FfiResult
+                value = unwrap(clone(value), AnyObjectPtr)
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
@@ -226,11 +235,38 @@ def c_to_py(value: Any) -> Any:
 
             return Queryable(value, query_type)
 
-        ffi_slice = object_as_slice(value)
+        runtime_type = RuntimeType.parse(obj_type)
+        if obj_type in {"Series", "DataFrame"}:
+            # Native Polars SeriesExport is a separate ownership protocol.
+            from opendp._data import object_as_slice, slice_free
+
+            ffi_slice = object_as_slice(value)
+            try:
+                return _slice_to_py(ffi_slice, runtime_type)
+            finally:
+                slice_free(ffi_slice)
+
+        if isinstance(runtime_type, RuntimeType) and runtime_type.origin == "Function":
+            clone = lib.opendp_data__clone_function
+            clone.argtypes = [ctypes.POINTER(AnyObject)]
+            clone.restype = FfiResult
+            return unwrap(clone(value), Function)
+
+        create = lib.opendp_data__object_as_slice_owned
+        create.argtypes = [ctypes.POINTER(AnyObject)]
+        create.restype = FfiResult
+        view = lib.opendp_data__slice_owner_view
+        view.argtypes = [ctypes.c_void_p]
+        view.restype = FfiResult
+        release = lib.opendp_data__slice_owner_free
+        release.argtypes = [ctypes.c_void_p]
+        release.restype = FfiResult
+        owner = unwrap(create(value), ctypes.c_void_p)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            ffi_slice = unwrap(view(owner), FfiSlicePtr)
+            return _slice_to_py(ffi_slice, runtime_type)
         finally:
-            slice_free(ffi_slice)
+            unwrap(release(owner), ctypes.c_void_p)
 
     if isinstance(value, ctypes.c_char_p):
         from opendp._data import str_free
@@ -366,10 +402,6 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
         if type_name.origin == "NDArray":
             return _slice_to_numpy(raw, type_name)
-
-        if type_name.origin == "Function":
-            # TODO add test_convert.py unit test
-            return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
@@ -590,18 +622,10 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     inner_type_name = type_name.args[0]
 
     if inner_type_name in {"AnyObject", "Expr", "Bound"}:
-        from opendp._data import ffislice_of_anyobjectptrs
-
-        raw = ffislice_of_anyobjectptrs(raw)
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[
-            0 : raw.contents.len
-        ]
-        res = list(map(c_to_py, array))
-        # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
-        # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
-        for elem in array:
-            elem.__class__ = ctypes.POINTER(AnyObject)
-        return res
+        array = ctypes.cast(
+            raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+        )[0 : raw.contents.len]
+        return list(map(c_to_py, array))
 
     if inner_type_name == "ExtrinsicObject":
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject))[
@@ -729,15 +753,14 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     if inner_type_names == ["PrivacyProfile", "f64"]:
-        curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
-        return PrivacyProfile(curve), delta.contents.value
+        curve = ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))
+        return c_to_py(curve), delta.contents.value
 
     if inner_type_names == ["f64", "AnyObject"]:
         score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
-        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
+        candidate_obj = ctypes.cast(ptr_data[1], ctypes.POINTER(AnyObject))
         candidate = c_to_py(c_to_py(candidate_obj))
-        candidate_obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
         return score.contents.value, candidate
 
     # tuple of instances of Python types
@@ -782,13 +805,6 @@ def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePt
     return ffislice
 
 
-def _slice_to_function(raw: FfiSlicePtr) -> Function:
-    # for ε(α)-RDP curves
-    function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
-    # put the contents behind a new, python pointer
-    return ctypes.cast(ctypes.pointer(function), Function)
-
-
 def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
     if not isinstance(raw, Function):
         from opendp.core import new_function
@@ -798,17 +814,12 @@ def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
 
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
-    slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
-    keys: AnyObjectPtr = slice_array[0]
-    vals: AnyObjectPtr = slice_array[1]
-    result = dict(zip(c_to_py(keys), c_to_py(vals)))
-
-    # AnyObjectPtr.__del__ would free the memory behind keys and vals when this stack frame is popped.
-    # But that memory has a lifetime at least as long as raw, so it cannot be freed yet.
-    # Adjust the class to avoid calling AnyObjectPtr.__del__, which would free the backing memory.
-    keys.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-    vals.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-    return result
+    # These pointers may also come from a Python-owned input slice. Never
+    # assume ownership merely to inspect them, even on conversion failures.
+    slice_array = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ctypes.POINTER(AnyObject))
+    )
+    return dict(zip(c_to_py(slice_array[0]), c_to_py(slice_array[1])))
 
 
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
@@ -890,7 +901,7 @@ def _slice_to_margin(raw: FfiSlicePtr):
 
     invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         max_length=_from_optional_u32_void_ptr(ptr_data[1]),
         max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
         invariant=invariant.value.decode() if invariant.value else None,  # type: ignore[arg-type]
@@ -935,7 +946,7 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     return Bound(
-        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        by=c_to_py(ctypes.cast(ptr_data[0], ctypes.POINTER(AnyObject))),
         per_group=_from_optional_u32_void_ptr(ptr_data[1]),
         num_groups=_from_optional_u32_void_ptr(ptr_data[2]),
     )
@@ -1019,13 +1030,8 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
     Used to return an Option<AnyObject> from Rust to Python.
     """
 
-    obj = ctypes.cast(raw.contents.ptr, AnyObjectPtr)
-    ret = c_to_py(obj)
-    # don't free obj, because it is owned by Rust
-    # c_to_py cares that the type is AnyObject, so this needs to happen after c_to_py
-    obj.__class__ = ctypes.POINTER(AnyObject)  # type: ignore[assignment]
-
-    return ret
+    obj = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObject))
+    return c_to_py(obj)
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
@@ -1040,8 +1046,6 @@ def _invoke_py_callback(c_arg, userdata):
     try:
         # 1. convert AnyObject to Python type
         py_arg = c_to_py(c_arg)
-        # don't free c_arg, because it is owned by Rust
-        c_arg.__class__ = ctypes.POINTER(AnyObject)
 
         # 2. invoke the user-supplied function
         py_out = func(py_arg)
@@ -1084,7 +1088,7 @@ def _wrap_py_func(func, TO):
 #   https://bugs.python.org/issue5710#msg85731
 #                                   (answer         , query       , is_internal  , userdata        )
 TransitionFnValue = ctypes.CFUNCTYPE(
-    ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool, ctypes.py_object
+    ctypes.c_void_p, ctypes.POINTER(AnyObject), ctypes.c_bool, ctypes.py_object
 )
 
 
@@ -1105,8 +1109,6 @@ def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
         # 1. convert to Python type
         py_query = c_to_py(c_query)
         py_is_internal = c_is_internal
-        # don't free c_arg, because it is owned by Rust
-        c_query.__class__ = ctypes.POINTER(AnyObject)
 
         # 2. invoke the user-supplied function
         py_out = py_transition(py_query, py_is_internal)

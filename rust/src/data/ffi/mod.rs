@@ -1,6 +1,5 @@
 use std::any::TypeId;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::ffi::{CString, c_void};
 use std::fmt::Formatter;
 use std::hash::Hash;
@@ -17,9 +16,14 @@ use ::polars_ffi::version_0::{
     SeriesExport, export_column, export_series, import_df, import_series,
 };
 #[cfg(feature = "polars")]
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 mod clone;
+mod owned;
+pub use owned::{
+    FfiSliceOwner, opendp_data__object_as_slice_owned, opendp_data__slice_owner_free,
+    opendp_data__slice_owner_view,
+};
 #[cfg(feature = "polars")]
 mod polars;
 use bitvec::slice::BitSlice;
@@ -436,406 +440,35 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
     arguments(obj(rust_type = b"null")),
     returns(do_not_convert = true, c_type = "FfiResult<const FfiSlice *>")
 )]
-/// Internal function. Unload data from an AnyObject into an FfiSlicePtr.
+/// Export a Polars Series or DataFrame with native SeriesExport descriptors.
 ///
-/// # Arguments
-/// * `obj` - A pointer to the AnyObject to unpack.
-///
-/// # Returns
-/// An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
+/// Other object types use object_as_slice_owned and its typed scratch owner.
+/// Descriptor payloads are consumed by Polars; the binding frees the descriptor
+/// allocation using _series_exports_free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
-    fn bitvector_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let vec: &BitVector = obj.downcast_ref()?;
-        Ok(FfiSlice::new(
-            vec.as_bitptr().pointer() as *mut c_void,
-            vec.len(),
-        ))
-    }
-    fn plain_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let plain: &T = obj.downcast_ref()?;
-        Ok(FfiSlice::new(plain as *const T as *mut c_void, 1))
-    }
-    fn string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let string: &String = obj.downcast_ref()?;
-        // FIXME: There's no way to get a CString without copying, so this leaks.
-        Ok(FfiSlice::new(
-            util::into_raw(util::into_c_char_p(string.clone())? as *mut c_void) as *mut c_void,
-            1,
-        ))
-    }
-    fn vec_string_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let vec_str: &Vec<String> = obj.downcast_ref()?;
-        let vec = vec_str
-            .iter()
-            .cloned()
-            .map(util::into_c_char_p)
-            .collect::<Fallible<Vec<*mut c_char>>>()?;
-
-        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
-        util::into_raw(vec);
-        res
-    }
-
     #[cfg(feature = "polars")]
-    fn vec_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let vec_expr: &Vec<Expr> = obj.downcast_ref()?;
-        let vec = (vec_expr.iter().cloned())
-            .map(AnyObject::new)
-            .collect::<Vec<AnyObject>>();
-
-        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
-        util::into_raw(vec);
-        res
-    }
-    fn slice_to_raw<T>(_obj: &AnyObject) -> Fallible<FfiSlice> {
-        // TODO: Need to get a reference to the slice here.
-        unimplemented!()
-    }
-    fn vec_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let vec: &Vec<T> = obj.downcast_ref()?;
-        Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()))
-    }
-    fn tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let tuple: &(T0, T1) = obj.downcast_ref()?;
-        Ok(FfiSlice::new(
-            util::into_raw([
-                &tuple.0 as *const T0 as *const c_void,
-                &tuple.1 as *const T1 as *const c_void,
-            ]) as *mut c_void,
-            2,
-        ))
-    }
-    fn option_tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        if let Some(tuple) = obj.downcast_ref::<Option<(T0, T1)>>()? {
-            Ok(FfiSlice::new(
-                util::into_raw([
-                    &tuple.0 as *const T0 as *const c_void,
-                    &tuple.1 as *const T1 as *const c_void,
-                ]) as *mut c_void,
-                2,
-            ))
-        } else {
-            Ok(FfiSlice::new(null::<c_void>() as *mut c_void, 0))
-        }
-    }
-    fn option_to_raw(obj: &AnyObject, args: &Vec<TypeId>) -> Fallible<FfiSlice> {
-        let [T] = try_!(parse_type_args(args, "Option"));
-
-        Ok(if T == Type::of::<AnyObject>() {
-            // example usage is when returning bounds, which is an option of a tuple
-            if let Some(value) = obj.downcast_ref::<Option<AnyObject>>()? {
-                FfiSlice::new(value as *const AnyObject as *mut c_void, 1)
-            } else {
-                FfiSlice::new(null::<c_void>() as *mut c_void, 0)
-            }
-        } else if T == Type::of::<(f64, AnyObject)>() {
-            if let Some((score, candidate)) = obj.downcast_ref::<Option<(f64, AnyObject)>>()? {
-                FfiSlice::new(
-                    util::into_raw([
-                        score as *const f64 as *const c_void,
-                        candidate as *const AnyObject as *const c_void,
-                    ]) as *mut c_void,
-                    2,
-                )
-            } else {
-                FfiSlice::new(null::<c_void>() as *mut c_void, 0)
-            }
-        } else if let TypeContents::TUPLE(ref element_ids) = T.contents {
-            let types = try_!(
-                element_ids
-                    .iter()
-                    .map(Type::of_id)
-                    .collect::<Fallible<Vec<_>>>()
-            );
-            if element_ids.len() != 2 {
-                return fallible!(
-                    FFI,
-                    "Only Option-wrapped tuples of length 2 are supported, found length {}",
-                    element_ids.len()
-                );
-            }
-            dispatch!(option_tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))?
-        } else {
-            return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
-        })
-    }
-    fn tuple3_l0Pinf_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
-        Ok(FfiSlice::new(
-            util::into_raw([
-                &tuple.0 as *const IntDistance as *const c_void,
-                &tuple.1 as *const T as *const c_void,
-                &tuple.2 as *const T as *const c_void,
-            ]) as *mut c_void,
-            3,
-        ))
-    }
-
-    fn function_to_raw<I: 'static + Clone, O: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let func: &Function<I, O> = obj.downcast_ref::<Function<I, O>>()?;
-        Ok(FfiSlice::new(
-            util::into_raw(func.clone().into_any()) as *mut c_void,
-            1,
-        ))
-    }
-
-    fn hashmap_to_raw<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
-        obj: &AnyObject,
-    ) -> Fallible<FfiSlice> {
-        let data: &HashMap<K, V> = obj.downcast_ref()?;
-
-        // wrap keys and values up in an AnyObject
-        let keys = AnyObject::new(data.keys().cloned().collect::<Vec<K>>());
-        let vals = AnyObject::new(data.values().cloned().collect::<Vec<V>>());
-
-        // wrap the whole map up together in an FfiSlice
-        let map = vec![util::into_raw(keys), util::into_raw(vals)];
-        let map_slice = FfiSlice::new(map.as_ptr() as *mut c_void, map.len());
-        util::into_raw(map);
-        Ok(map_slice)
-    }
-    #[cfg(feature = "polars")]
-    pub fn serialize_obj<T>(val: &T, name: &str) -> Fallible<FfiSlice>
-    where
-        T: Serialize,
     {
-        let mut buffer: Vec<u8> = vec![];
-
-        polars_utils::pl_serialize::SerializeOptions::default()
-            // based on:
-            // https://github.com/pola-rs/polars/blob/22cff4db2bb4ee5b8ab72365b9c4b4a492df55c1/pyo3-polars/pyo3-polars/src/types.rs#L380-L381
-            // `false` disables forward compatibility
-            .serialize_into_writer::<_, _, false>(&mut buffer, val)
-            .map_err(|e| err!(FFI, "failed to serialize {}: {}", name, e))?;
-
-        let slice = FfiSlice {
-            ptr: buffer.as_ptr() as *mut c_void,
-            len: buffer.len(),
-        };
-        util::into_raw(buffer);
-        Ok(slice)
-    }
-    #[cfg(feature = "polars")]
-    fn serialize_dslplan(logical_plan: &DslPlan) -> Fallible<FfiSlice> {
-        let mut buffer = vec![];
-        logical_plan.serialize_versioned(&mut buffer, Default::default())?;
-
-        let slice = FfiSlice {
-            ptr: buffer.as_ptr() as *mut c_void,
-            len: buffer.len(),
-        };
-        util::into_raw(buffer);
-        Ok(slice)
-    }
-    #[cfg(feature = "polars")]
-    fn lazyframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        serialize_dslplan(&obj.downcast_ref::<LazyFrame>()?.logical_plan)
-    }
-    #[cfg(feature = "polars")]
-    fn expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        serialize_obj(&obj.downcast_ref::<Expr>()?, "Expr")
-    }
-    #[cfg(feature = "polars")]
-    fn dataframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let frame = obj.downcast_ref::<DataFrame>()?;
-        let columns = frame
-            .get_columns()
-            .iter()
-            .map(export_column)
-            .collect::<Box<[_]>>();
-        Ok(FfiSlice::new(Box::into_raw(columns).cast(), frame.width()))
-    }
-
-    #[cfg(feature = "polars")]
-    fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let exports = Box::new([export_series(obj.downcast_ref::<Series>()?)]);
-        Ok(FfiSlice::new(Box::into_raw(exports).cast(), 1))
-    }
-
-    #[cfg(feature = "polars")]
-    fn exprplan_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        use crate::domains::ExprPlan;
-
-        let expr_plan = obj.downcast_ref::<ExprPlan>()?;
-
-        let plan = util::into_raw(serialize_dslplan(&expr_plan.plan)?) as *const c_void;
-        let expr = util::into_raw(serialize_obj(&expr_plan.expr, "Expr")?) as *const c_void;
-        Ok(if let Some(fill) = &expr_plan.fill {
-            let fill = util::into_raw(serialize_obj(&fill, "Expr")?) as *const c_void;
-            FfiSlice::new(util::into_raw([plan, expr, fill]) as *mut c_void, 3)
-        } else {
-            FfiSlice::new(util::into_raw([plan, expr]) as *mut c_void, 2)
-        })
-    }
-
-    #[cfg(feature = "polars")]
-    fn margin_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        use crate::domains::{Invariant, Margin};
-
-        let margin = obj.downcast_ref::<Margin>()?;
-
-        fn to_ptr<T>(v: Option<T>) -> *const c_void {
-            v.map(|v| util::into_raw(v) as *const c_void)
-                .unwrap_or_else(null)
-        }
-
-        let buffer = vec![
-            AnyObject::new_raw(margin.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
-            to_ptr(margin.max_length),
-            to_ptr(margin.max_groups),
-            margin
-                .invariant
-                .map(|v| {
-                    into_c_char_p(
-                        match v {
-                            Invariant::Keys => "keys",
-                            Invariant::Lengths => "lengths",
-                        }
-                        .to_string(),
-                    )
-                    .unwrap() as *const c_void
-                })
-                .unwrap_or_else(null),
-        ];
-        let slice = FfiSlice {
-            ptr: buffer.as_ptr() as *mut c_void,
-            len: buffer.len(),
-        };
-        util::into_raw(buffer);
-        Ok(slice)
-    }
-
-    #[cfg(feature = "polars")]
-    fn group_bound_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let group_bound = obj.downcast_ref::<Bound>()?;
-
-        let buffer = vec![
-            AnyObject::new_raw(group_bound.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
-            group_bound
-                .per_group
-                .map(|v| util::into_raw(v) as *const c_void)
-                .unwrap_or_else(null),
-            group_bound
-                .num_groups
-                .map(|v| util::into_raw(v) as *const c_void)
-                .unwrap_or_else(null),
-        ];
-        let slice = FfiSlice {
-            ptr: buffer.as_ptr() as *mut c_void,
-            len: buffer.len(),
-        };
-        util::into_raw(buffer);
-        Ok(slice)
-    }
-
-    #[cfg(feature = "polars")]
-    fn group_bounds_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let bounds = obj
-            .downcast_ref::<Bounds>()?
-            .0
-            .iter()
-            .map(|b| AnyObject::new(b.clone()))
-            .collect::<Vec<_>>();
-        let (ptr, len) = (bounds.as_ptr() as *mut c_void, bounds.len());
-        util::into_raw(bounds);
-        Ok(FfiSlice::new(ptr, len))
-    }
-
-    fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
-
-        Ok(FfiSlice::new(
-            util::into_raw([
-                AnyObject::new_raw(curve.clone()) as *const c_void,
-                util::into_raw(*delta) as *const c_void,
-            ]) as *mut c_void,
-            2,
-        ))
-    }
-    match &obj.type_.contents {
-        TypeContents::PLAIN("BitVector") => bitvector_to_raw(obj),
-        TypeContents::PLAIN("ExtrinsicObject") => plain_to_raw::<ExtrinsicObject>(obj),
-        TypeContents::PLAIN("String") => string_to_raw(obj),
-
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("LazyFrame") => lazyframe_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("Expr") => expr_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("ExprPlan") => exprplan_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("Series") => series_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("Margin") => margin_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("Bound") => group_bound_to_raw(obj),
-        #[cfg(feature = "polars")]
-        TypeContents::PLAIN("Bounds") => group_bounds_to_raw(obj),
-
-        TypeContents::SLICE(element_id) => {
-            let element = try_!(Type::of_id(element_id));
-            dispatch!(slice_to_raw, [(element, @primitives)], (obj))
-        }
-        TypeContents::VEC(element_id) => {
-            let element = try_!(Type::of_id(element_id));
-
-            #[cfg(feature = "polars")]
-            if element.descriptor == "Expr" {
-                return vec_expr_to_raw(obj).into();
-            } else if element.descriptor == "Bound" {
-                return vec_to_raw::<Bound>(obj).into();
+        return match &obj.type_.contents {
+            TypeContents::PLAIN("Series") => {
+                let exports = Box::new([export_series(try_!(obj.downcast_ref::<Series>()))]);
+                FfiResult::Ok(util::into_raw(FfiSlice::new(
+                    Box::into_raw(exports).cast(), 1,
+                )))
             }
-
-            if element.descriptor == "String" {
-                vec_string_to_raw(obj)
-            } else {
-                // equivalent to @primitives-plus, but listing the types out excludes this from debug build narrowing of types
-                dispatch!(vec_to_raw, [(element, [u32, u64, i32, i64, usize, f32, f64, bool, String, AnyObject, ExtrinsicObject])], (obj))
+            TypeContents::PLAIN("DataFrame") => {
+                let frame = try_!(obj.downcast_ref::<DataFrame>());
+                let exports = frame.get_columns().iter().map(export_column).collect::<Box<[_]>>();
+                FfiResult::Ok(util::into_raw(FfiSlice::new(
+                    Box::into_raw(exports).cast(), frame.width(),
+                )))
             }
-        }
-        TypeContents::TUPLE(element_ids) => {
-            let types = try_!(element_ids.iter().map(Type::of_id).collect::<Fallible<Vec<_>>>());
-
-            match element_ids.len() {
-                // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
-                2 => {
-                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
-                        return tuple_curve_f64_to_raw(obj).into();
-                    }
-                    if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
-                        return tuple2_to_raw::<f64, AnyObject>(obj).into();
-                    }
-                    dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
-                },
-                3 => {
-                    try_!(check_l0Pinf_distance_types(&types));
-                    dispatch!(tuple3_l0Pinf_distance_to_raw, [(types[1], @numbers)], (obj))
-                },
-                l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found length of {}", l).into()
-            }
-        }
-        TypeContents::GENERIC { name, args } => {
-            if name == &"Option" {
-                option_to_raw(obj, args)
-            } else if name == &"Function" {
-                let [I, O] = try_!(parse_type_args(args, "Function"));
-                dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
-            } else if name == &"HashMap" {
-                let [K, V] = try_!(parse_type_args(args, "HashMap"));
-                if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
-                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
-                } else {
-                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
-                }
-            } else { fallible!(FFI, "unrecognized generic {:?}", name) }
-        }
-        // This list is explicit because it allows us to avoid including u32 in the @primitives, and queryables
-        _ => { dispatch!(plain_to_raw, [(obj.type_, [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable])], (obj)) }
-    }.into()
+            _ => err!(FFI, "Use object_as_slice_owned for non-Polars values").into(),
+        };
+    }
+    #[cfg(not(feature = "polars"))]
+    err!(FFI, "Native Polars exports require the polars feature").into()
 }
 
 fn parse_type_args<const N: usize>(args: &Vec<TypeId>, name: &str) -> Fallible<[Type; N]> {
@@ -872,36 +505,6 @@ fn check_l0Pinf_distance_types(types: &Vec<Type>) -> Fallible<()> {
         );
     }
     Ok(())
-}
-
-#[bootstrap(
-    name = "ffislice_of_anyobjectptrs",
-    arguments(raw(rust_type = b"null")),
-    returns(do_not_convert = true)
-)]
-/// Internal function. Converts an FfiSlice of AnyObjects to an FfiSlice of AnyObjectPtrs.
-///
-/// # Arguments
-/// * `raw` - A pointer to the slice to free.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
-    raw: *const FfiSlice,
-) -> FfiResult<*mut FfiSlice> {
-    // dereference the pointer
-    let raw = try_as_ref!(raw);
-
-    // read contents as a slice of AnyObjects, and then construct a vector of pointers to each of the elements
-    let vec_any_ptrs = unsafe { slice::from_raw_parts(raw.ptr as *const AnyObject, raw.len) }
-        .iter()
-        .map(|v| v as *const AnyObject)
-        .collect::<Vec<_>>();
-
-    // build a new ffislice out of the pointers
-    Ok(FfiSlice::new(
-        vec_any_ptrs.leak() as *mut _ as *mut c_void,
-        raw.len,
-    ))
-    .into()
 }
 
 #[bootstrap(
@@ -1421,70 +1024,4 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_data_as_raw_number() -> Fallible<()> {
-        let obj = AnyObject::new_raw(999);
-        let res = opendp_data__object_as_slice(obj);
-        let res = Fallible::from(res)?;
-        assert_eq!(res.len, 1);
-        assert_eq!(as_ref(res.ptr as *const i32).unwrap_test(), &999);
-        Ok(())
-    }
-
-    #[test]
-    fn test_data_as_raw_string() -> Fallible<()> {
-        let obj = AnyObject::new_raw("Hello".to_owned());
-        let res = opendp_data__object_as_slice(obj);
-        let res = Fallible::from(res)?;
-        assert_eq!(res.len, 1);
-        assert_eq!(
-            util::into_string(*as_ref(res.ptr as *mut *mut c_char).unwrap())?,
-            "Hello"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_data_as_raw_vec() -> Fallible<()> {
-        let obj = AnyObject::new_raw(vec![1, 2, 3]);
-        let res = opendp_data__object_as_slice(obj);
-        let res = Fallible::from(res)?;
-        assert_eq!(res.len, 3);
-        assert_eq!(as_ref(res.ptr as *const [i32; 3]).unwrap_test(), &[1, 2, 3]);
-        Ok(())
-    }
-
-    #[test]
-    fn test_data_as_raw_tuple_numbers() -> Fallible<()> {
-        let obj = AnyObject::new_raw((999, -999));
-        let res = opendp_data__object_as_slice(obj);
-        let res = Fallible::from(res)?;
-        assert_eq!(res.len, 2);
-        let res_ptr = as_ref(res.ptr as *const [*mut i32; 2]).unwrap_test();
-        assert_eq!(
-            (
-                as_ref(res_ptr[0]).unwrap_test(),
-                as_ref(res_ptr[1]).unwrap_test()
-            ),
-            (&999, &-999)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_data_as_raw_tuple_objects() -> Fallible<()> {
-        let obj = AnyObject::new_raw((AnyObject::new(999), AnyObject::new(999.0)));
-        let res = opendp_data__object_as_slice(obj);
-        let res = Fallible::from(res)?;
-        assert_eq!(res.len, 2);
-        let res_ptr = as_ref(res.ptr as *const [*mut AnyObject; 2]).unwrap_test();
-        assert_eq!(
-            (
-                as_ref(res_ptr[0]).unwrap_test().downcast_ref()?,
-                as_ref(res_ptr[1]).unwrap_test().downcast_ref()?
-            ),
-            (&999, &999.0)
-        );
-        Ok(())
-    }
 }
