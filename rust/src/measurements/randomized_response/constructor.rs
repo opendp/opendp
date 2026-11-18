@@ -139,21 +139,35 @@ pub fn verify_built_bool_rr<E>(
                 op, word_expectation, callback_expectation, callback_map));
             assert(4_503_599_627_370_496u64 <= n
                 <= 9_007_199_254_740_992u64);
-            if n == 9_007_199_254_740_992u64 {
-                crate::randomized_response_bool::lemma_bool_rr_new_certified(
-                    n, word_expectation, error_expectation, success,
-                    1real, callback, map);
+            let factor = if n == 9_007_199_254_740_992u64 {
+                1real
             } else {
+                verified_arithmetic::real_exp(
+                    verified_arithmetic::float_value(op.privacy_cost))
+            };
+            if n < 9_007_199_254_740_992u64 {
                 let c: u64 = (9_007_199_254_740_992u64 - n) as u64;
                 assert(c == 9_007_199_254_740_992u64 - n);
-                assert(verified_arithmetic::real_exp(
-                    verified_arithmetic::float_value(op.privacy_cost)) >= 1real);
-                assert(n as real <= verified_arithmetic::real_exp(
-                    verified_arithmetic::float_value(op.privacy_cost)) * c as real);
-                crate::randomized_response_bool::lemma_certified_rr_with_computed_epsilon(
-                    n, c, op.privacy_cost, word_expectation, error_expectation,
-                    success, callback, map);
+                assert(factor >= 1real);
+                assert(n as real <= factor * c as real);
+                crate::randomized_response_bool::lemma_odds_bound_sufficient(n, factor);
             }
+            let member = |_: bool| true;
+            let close = |left: bool, right: bool, d: u32|
+                crate::randomized_response_bool::rr_discrete_close(left, right, d);
+            let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                crate::randomized_response_bool::release_expectation(
+                    truth, n, word_expectation, payoff);
+            let model_map = |d: u32|
+                crate::randomized_response_bool::rr_factor_map(n, factor, d);
+            crate::randomized_response_bool::lemma_rr_operator_valid_measurement(
+                n, word_expectation, error_expectation, success, factor);
+            assert(crate::measurement_proof::realizes_expectation(
+                callback, expectation));
+            assert(crate::measurement_proof::realizes_privacy_map(
+                map, model_map));
+            crate::measurement_proof::lemma_new_certified(
+                member, close, expectation, model_map, callback, map);
         }
     }
     result

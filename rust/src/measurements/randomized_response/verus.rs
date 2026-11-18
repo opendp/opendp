@@ -3,9 +3,9 @@
 //! This is deliberately not a second implementation or a general wp library.
 //! BoolRR::release is the production method, imported with Verus dual_spec.
 //! The only probabilistic premise describes the production entropy call.
-//! Rounding the f64 privacy map and closure erasure remain separate tasks.
+//! The constructor separately verifies its numeric bound and audited erasure.
 use vstd::prelude::*;
-use crate::{operator, dyadic53};
+use crate::operator;
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
     lemma_bernoulli_probability, dyadic53_mass, uniform_word_expectation_rule,
@@ -267,58 +267,6 @@ pub proof fn lemma_odds_bound_sufficient(numerator: u64, factor: real)
         requires complement == denominator - n, denominator > 0real;
 }
 
-/// A constructor-level privacy theorem for the same checked numerator
-/// decoder and exact odds parts executed by the public constructor.
-/// Verus does not yet prove the native f64->factor bound or Arc erasure.
-pub proof fn lemma_validated_bool_rr_privacy<E>(
-    bits: u64,
-    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
-    factor: real,
-    left: bool,
-    right: bool,
-    distance: u32,
-    payoff: spec_fn(Result<bool, E>) -> real,
-)
-    requires
-        0x3fe0_0000_0000_0000u64 <= bits <= 0x3ff0_0000_0000_0000u64,
-        factor >= 1real,
-        dyadic53::numerator_from_bits(bits) < 9_007_199_254_740_992u64 ==>
-            dyadic53::numerator_from_bits(bits) as real <= factor
-                * (9_007_199_254_740_992u64
-                    - dyadic53::numerator_from_bits(bits)) as real,
-        left == right || distance > 0,
-        bounded_payoff(payoff),
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
-    ensures
-        distance == 0 ==>
-            release_expectation(left, dyadic53::numerator_from_bits(bits),
-                word_expectation, payoff)
-            <= release_expectation(right, dyadic53::numerator_from_bits(bits),
-                word_expectation, payoff),
-        distance > 0 && dyadic53::numerator_from_bits(bits)
-                < 9_007_199_254_740_992u64 ==>
-            release_expectation(left, dyadic53::numerator_from_bits(bits),
-                word_expectation, payoff)
-            <= factor * release_expectation(
-                right, dyadic53::numerator_from_bits(bits),
-                word_expectation, payoff),
-{
-    crate::bernoulli_proof::lemma_checked_binary64_probability(bits);
-    let numerator = dyadic53::numerator_from_bits(bits);
-    assert(4_503_599_627_370_496u64 <= numerator
-        <= 9_007_199_254_740_992u64);
-    if numerator < 9_007_199_254_740_992u64 {
-        lemma_odds_bound_sufficient(numerator, factor);
-    }
-    lemma_bool_rr_dp(
-        numerator, word_expectation, error_expectation, success,
-        factor, left, right, distance, payoff,
-    );
-}
-
-
 /// The exact abstract MaxDivergence factor map for the Boolean operator:
 /// identity input pairs cost zero, p=1 is infinite for distinct pairs.
 pub open spec fn rr_factor_map(numerator: u64, factor: real, distance: u32) -> Option<real> {
@@ -403,121 +351,6 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
             }
         }
     }
-}
-
-/// Same single proof obligation as Transformation::new_certified:
-/// verified pre-erasure privacy + both callback-correspondence contracts.
-/// In particular, neither equality is asserted for arbitrary Arc<dyn Fn>.
-pub proof fn lemma_bool_rr_new_certified<E>(
-    numerator: u64,
-    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
-    factor: real,
-    callback_expectation: spec_fn(
-        bool, spec_fn(Result<bool, E>) -> real,
-    ) -> real,
-    callback_map: spec_fn(u32) -> Option<real>,
-)
-    requires
-        4_503_599_627_370_496u64 <= numerator <= 9_007_199_254_740_992u64,
-        factor >= 1real,
-        numerator < 9_007_199_254_740_992u64 ==>
-            numerator as real / 9_007_199_254_740_992real
-                <= factor * (1real - numerator as real / 9_007_199_254_740_992real),
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
-        crate::measurement_proof::realizes_expectation(
-            callback_expectation,
-            |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                release_expectation(truth, numerator, word_expectation, payoff),
-        ),
-        crate::measurement_proof::realizes_privacy_map(
-            callback_map,
-            |distance: u32| rr_factor_map(numerator, factor, distance),
-        ),
-    ensures
-        crate::measurement_proof::valid_measurement_expectations::<
-            bool, Result<bool, E>, u32,
-        >(
-            |_: bool| true,
-            |left: bool, right: bool, distance: u32|
-                rr_discrete_close(left, right, distance),
-            callback_expectation,
-            callback_map,
-        ),
-{
-    let member = |_: bool| true;
-    let close = |left: bool, right: bool, distance: u32|
-        rr_discrete_close(left, right, distance);
-    let expectation = |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-        release_expectation(truth, numerator, word_expectation, payoff);
-    let map = |distance: u32| rr_factor_map(numerator, factor, distance);
-    lemma_rr_operator_valid_measurement(
-        numerator, word_expectation, error_expectation, success, factor);
-    crate::measurement_proof::lemma_new_certified(
-        member, close, expectation, map, callback_expectation, callback_map);
-}
-
-
-/// Specialize the certified-constructor theorem to the *computed* floating
-/// privacy cost, interpreted through the trusted arithmetic primitive specs.
-///
-/// `upper_log_odds_u53` (the production helper, also verified by this
-/// harness) establishes the two numeric premises below whenever it returns
-/// Ok(epsilon). They are not assumptions about the RR mechanism's privacy:
-/// they follow from the narrow trusted InfDiv/InfLn contracts and standard
-/// real exponential/logarithm laws.
-pub proof fn lemma_certified_rr_with_computed_epsilon<E>(
-    numerator: u64,
-    complement: u64,
-    epsilon: f64,
-    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
-    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
-    success: real,
-    callback_expectation: spec_fn(
-        bool, spec_fn(Result<bool, E>) -> real,
-    ) -> real,
-    callback_map: spec_fn(u32) -> Option<real>,
-)
-    requires
-        4_503_599_627_370_496u64 <= numerator
-            < 9_007_199_254_740_992u64,
-        complement == 9_007_199_254_740_992u64 - numerator,
-        crate::verified_arithmetic::real_exp(
-            crate::verified_arithmetic::float_value(epsilon)) >= 1real,
-        numerator as real <=
-            crate::verified_arithmetic::real_exp(
-                crate::verified_arithmetic::float_value(epsilon)) * complement as real,
-        uniform_word_expectation_rule(word_expectation, error_expectation, success),
-        crate::measurement_proof::realizes_expectation(
-            callback_expectation,
-            |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
-                release_expectation(truth, numerator, word_expectation, payoff),
-        ),
-        crate::measurement_proof::realizes_privacy_map(
-            callback_map,
-            |d: u32| rr_factor_map(
-                numerator, crate::verified_arithmetic::real_exp(
-                    crate::verified_arithmetic::float_value(epsilon)), d),
-        ),
-    ensures
-        crate::measurement_proof::valid_measurement_expectations::<
-            bool, Result<bool, E>, u32,
-        >(
-            |_: bool| true,
-            |left: bool, right: bool, d: u32| rr_discrete_close(left, right, d),
-            callback_expectation,
-            callback_map,
-        ),
-{
-    let factor = crate::verified_arithmetic::real_exp(
-        crate::verified_arithmetic::float_value(epsilon));
-    assert(complement as real == (9_007_199_254_740_992u64 - numerator) as real);
-    lemma_odds_bound_sufficient(numerator, factor);
-    lemma_bool_rr_new_certified(
-        numerator, word_expectation, error_expectation, success,
-        factor, callback_expectation, callback_map,
-    );
 }
 
 } // verus!

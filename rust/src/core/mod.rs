@@ -296,29 +296,6 @@ where
         function: Function<DI::Carrier, TO>,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
-        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
-    }
-
-    /// Construct from a proof-backed operator, not arbitrary erased callbacks.
-    /// Verus proves validity before erasure; the operator's private native
-    /// adapter is audited for correspondence with the verified release and map.
-    pub(crate) fn new_certified<P: CertifiedMeasurementParts<DI, MI, MO, TO>>(
-        input_domain: DI,
-        input_metric: MI,
-        output_measure: MO,
-        certified: P,
-    ) -> Fallible<Self> {
-        let (function, privacy_map) = certified.into_parts(&input_domain)?;
-        Self::construct(input_domain, input_metric, output_measure, function, privacy_map)
-    }
-
-    fn construct(
-        input_domain: DI,
-        input_metric: MI,
-        output_measure: MO,
-        function: Function<DI::Carrier, TO>,
-        privacy_map: PrivacyMap<MI, MO>,
-    ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
@@ -327,6 +304,17 @@ where
             output_measure,
             privacy_map,
         })
+    }
+
+    /// Bundle callbacks supplied by an audited concrete operator.
+    pub(crate) fn new_certified<P: CertifiedMeasurementParts<DI, MI, MO, TO>>(
+        input_domain: DI,
+        input_metric: MI,
+        output_measure: MO,
+        certified: P,
+    ) -> Fallible<Self> {
+        let (function, privacy_map) = certified.into_parts(&input_domain)?;
+        Self::new(input_domain, input_metric, output_measure, function, privacy_map)
     }
 
     #[allow(dead_code)]

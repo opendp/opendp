@@ -20,20 +20,14 @@ This follows the pattern established by
 - `core/verus/measurement.rs::lemma_new_certified` transfers that guarantee
   from the concrete operator to erased callbacks, **provided** the callback
   expectation and privacy map realize the verified operator's semantics.
-- `lemma_bool_rr_new_certified` specializes this erasure theorem to Boolean
-  randomized response.
 - The production `upper_log_odds_u53` helper uses the same `f64::inf_div`
   and `f64::inf_ln` operations as before. Verus checks their composition
   and proves that a successful returned epsilon satisfies
   `exp(epsilon) >= numerator / (2^53 - numerator)` from small trusted
   numerical primitive contracts.
-- `lemma_certified_rr_with_computed_epsilon` connects that exact
-  likelihood-ratio bound to the certified measurement theorem.
-- **`constructor::verify_built_bool_rr<E>` now executes `build_bool_rr`** and
-  proves its successful output satisfies the measurement validity predicate
-  for the operator's corresponding callbacks, assuming the uniform entropy
-  contract and the single audited `adapter_realizes` contract. Its proof
-  covers both finite cost and the `p = 1` infinite-cost branch.
+- `constructor::verify_built_bool_rr<E>` executes `build_bool_rr`
+  and directly composes the numeric bound, operator DP theorem, and generic
+  callback-erasure theorem. It covers finite and infinite privacy costs.
 - The same builder also verifies rejection of invalid probability encodings
   and propagation of numerical errors without claiming success on `Err`.
 
