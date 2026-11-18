@@ -364,8 +364,9 @@ where
                 assert(epsilon == operator.map(distance, 0.0f64));
                 if distance == 0 {
                     assert(f64_to_bits(epsilon) == 0u64);
-                    assert(((f64_to_bits(epsilon) >> 52u64) & 2047u64) != 2047u64)
-                        by(bit_vector) requires f64_to_bits(epsilon) == 0u64;
+                    let epsilon_bits = f64_to_bits(epsilon);
+                    assert(((epsilon_bits >> 52u64) & 2047u64) != 2047u64)
+                        by(bit_vector) requires epsilon_bits == 0u64;
                     assert(crate::verified_arithmetic::finite(epsilon));
                 } else if operator.numerator == 9_007_199_254_740_992u64 {
                     assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
