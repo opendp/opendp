@@ -12,9 +12,9 @@ use std::fmt::Debug;
 #[cfg(verus_only)]
 use vstd::prelude::*;
 #[cfg(verus_only)]
-use crate::{discrete_distance::DiscreteDistance, max_divergence::MaxDivergence};
+use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
 #[cfg(not(verus_only))]
-use crate::{metrics::DiscreteDistance, measures::MaxDivergence};
+use super::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
 
 /// A randomized mechanism with certain privacy characteristics.
 ///
@@ -130,23 +130,22 @@ where
     }
 }
 
-/// Proof-gated Boolean/DiscreteDistance/MaxDivergence constructor.
-/// The same function/privacy-map objects passed here are installed in the
-/// returned Measurement. No proof token and no hidden operator-specific
-/// callback adapter can stand in for the required validity of these parts.
-///
-/// The descriptor semantics remain to be tied to concrete production types;
-/// only Boolean carrier/u32 distance/f64 measure are admitted here.
+/// Proof-gated constructor, generic over the input domain, input metric,
+/// privacy measure, and output type. Concrete semantic trait implementations
+/// define membership, closeness, and privacy without mechanism-specific axioms.
+/// Validity is a precondition on the actual supplied callback objects.
 #[cfg_attr(verus_only, verus_verify)]
-impl<DI> Measurement<DI, DiscreteDistance, MaxDivergence, bool>
+impl<DI, MI, MO, TO> Measurement<DI, MI, MO, TO>
 where
-    DI: Domain<Carrier = bool>,
-    (DI, DiscreteDistance): MetricSpace,
+    DI: CertifiedDomain,
+    MI: CertifiedMetric<DI::Carrier>,
+    MO: CertifiedMeasure<Result<TO, ()>>,
+    (DI, MI): MetricSpace,
 {
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
-        requires crate::measurement_proof::valid_bool_rr_parts(
-            &function, &privacy_map),
+        requires crate::measurement_proof::valid_certified_parts(
+            &input_domain, &input_metric, &output_measure, &function, &privacy_map),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -154,17 +153,17 @@ where
                 &&& meas.output_measure == output_measure
                 &&& meas.function == function
                 &&& meas.privacy_map == privacy_map
-                &&& crate::measurement_proof::valid_bool_rr_measurement(&meas)
+                &&& crate::measurement_proof::valid_certified_measurement(&meas)
             },
             Err(_) => true,
         },
     ))]
     pub(crate) fn new_certified(
         input_domain: DI,
-        input_metric: DiscreteDistance,
-        output_measure: MaxDivergence,
-        function: Function<bool, bool>,
-        privacy_map: PrivacyMap<DiscreteDistance, MaxDivergence>,
+        input_metric: MI,
+        output_measure: MO,
+        function: Function<DI::Carrier, TO>,
+        privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
         Self::construct(
             input_domain, input_metric, output_measure, function, privacy_map,
