@@ -38,6 +38,28 @@ impl Measure for MaxDivergence {
 
 #[cfg(verus_only)]
 verus! {
+impl<Y> crate::CertifiedMeasure<Result<Y, ()>> for MaxDivergence {
+    open spec fn valid_cost(&self, cost: &f64) -> bool {
+        crate::verified_arithmetic::finite(*cost)
+            || f64_to_bits(*cost) == 0x7ff0_0000_0000_0000u64
+    }
+
+    open spec fn dominates(
+        &self,
+        left: spec_fn(spec_fn(Result<Y, ()>) -> real) -> real,
+        right: spec_fn(spec_fn(Result<Y, ()>) -> real) -> real,
+        cost: &f64,
+    ) -> bool {
+        match MaxDivergence::multiplicative_factor(*cost) {
+            None => true,
+            Some(factor) => factor >= 1real &&
+                forall|payoff: spec_fn(Result<Y, ()>) -> real|
+                    crate::measurement_proof::bounded_payoff(payoff) ==>
+                    #[trigger] left(payoff) <= factor * right(payoff),
+        }
+    }
+}
+
 impl MaxDivergence {
     /// The multiplicative interpretation of a reported pure-DP epsilon.
     /// An unbounded +infinity value imposes no finite factor bound.
