@@ -170,6 +170,43 @@ interpretation without an independently justified semantic soundness
 theorem, nor can a ghost-rich callback simply be substituted for the
 production `Fn(&bool)` without a verified erasure/forwarding argument.
 
+## In-band effect-aware Fn experiment
+
+The verification-only \`effect_fn_probe.rs\` now demonstrates an ordinary
+\`Fn\` closure with an explicit per-invocation \`Tracked<ErrorCredit>\` input
+and output. It invokes the actual verified Boolean RR release callback
+after one entropy draw. Verus checks the closure's output credit against
+the **value it actually returns**.
+
+The in-band drawing interface, \`draw_word_in_band\`, is
+\`external_body\`. Its body calls the production entropy source, but Verus
+does **not** prove equivalence between this credit contract and
+\`sample_uniform_u64\`'s original ghost-output credit contract.
+It is therefore a **second trusted RNG specification**, suitable only
+for evaluating the in-band approach, *not* a new end-to-end proof or a
+reduction of the trusted computing base.
+
+The positive experiment [passed Verus and native tests at
+\`8675901\`](https://github.com/opendp/opendp/actions/runs/44420285781).
+Replacing the output of the **actual closure** with \`Ok(*truth)\`
+while retaining the entropy draw [failed verification at the closure
+postcondition](https://github.com/opendp/opendp/actions/runs/44420407979)
+(68 verified, 1 failed). The mutation was restored.
+
+A further experiment tried to take the already-verified
+\`sample_bool_rr_with_effect\` ghost return from \`proof_with!\`, assign
+it inside a proof block, and return it in-band as \`Tracked\`. The
+\`credited_result\` binding was still inaccessible to Rust/Verus
+[at \`fdf0f7b\`](https://github.com/opendp/opendp/actions/runs/44420543279).
+That failed helper was removed.
+
+**Remaining bridges:** unify the RNG credit contract into a single
+production primitive, rather than trusting two interfaces; prove the
+soundness of the error-credit expectation semantics; and connect an
+effect-certified executable callback to the plain \`Fn(&bool)\`
+stored in the actual \`Measurement\`. The constructor's
+\`callback_expectation\` assumption remains untouched.
+
 ## Regression and falsification
 
 Replacing the sampled entropy with `Ok(0)` *inside*
