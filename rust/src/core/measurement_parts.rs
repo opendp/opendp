@@ -142,32 +142,6 @@ impl<TI, TO> Function<TI, TO> {
         }
     }
 
-    /// Erase a named method of a concrete operator. This is a narrow
-    /// trusted Arc-dispatch correspondence, not a privacy assumption.
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures
-            forall|arg: &TI|
-                #[trigger] function_call_requires(&result, arg)
-                    == call_requires(invoke, (&operator, arg)),
-            forall|arg: &TI, out: Fallible<TO>|
-                #[trigger] function_call_ensures(&result, arg, out)
-                    == call_ensures(invoke, (&operator, arg), out),
-    ))]
-    pub(crate) fn new_from_operator<Op, F>(
-        operator: Op,
-        invoke: F,
-    ) -> Self
-    where
-        Op: Copy + 'static,
-        F: Fn(&Op, &TI) -> Fallible<TO> + Copy + 'static,
-    {
-        #[cfg(not(verus_only))]
-        { Self::new_fallible(move |arg| invoke(&operator, arg)) }
-        #[cfg(verus_only)]
-        { unimplemented!() }
-    }
-
     /// Erase an exact one-word sampler and deterministic postprocessor.
     /// Trusted: Arc dispatch preserves the expectation of the executable
     /// sample_word_then wrapper. The caller must prove its postprocessor's
