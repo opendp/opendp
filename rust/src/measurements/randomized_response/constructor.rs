@@ -376,7 +376,7 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                             crate::uniform_word::one_word_expectation(*right, model, payoff),
                         &epsilon)
                 by {
-                    assert(crate::randomized_response_bool::rr_discrete_close(
+                    assert(DiscreteDistance::bool_close(
                         *left, *right, *d));
                     let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::uniform_word::one_word_expectation(*left, model, payoff);
