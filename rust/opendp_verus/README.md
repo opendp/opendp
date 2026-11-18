@@ -12,10 +12,14 @@ with `Measurement::new_certified(BoolRRParts(operator))`.
   `exp(epsilon) >= n / (2^53 - n)` for `n < 2^53`.
 - Under the entropy contract, the concrete `BoolRR::release` obeys pure DP
   for **all bounded payoffs** on `Result<bool, E>`, including observable errors.
+- The two-outcome domination inequality is proved once, separately
+  from RR's entropy and adjacency specifications.
 - `verify_built_bool_rr` executes the production builder and composes
   its numerical and privacy lemmas with the generic
-  `core/verus/measurement.rs::lemma_new_certified`. It handles
-  both finite epsilon and `n = 2^53` (infinite epsilon).
+  `core/verus/measurement.rs::lemma_new_certified`. It handles both finite
+  epsilon and `n = 2^53` (infinite epsilon). Its callback conclusion is
+  conditional on `adapter_realizes` for **that returned operator only**;
+  no universal adapter assumption is required.
 - A successful callback-erasure step preserves privacy **if** the callbacks
   have the same expectations and privacy map as the verified operator.
 
@@ -25,8 +29,10 @@ with `Measurement::new_certified(BoolRRParts(operator))`.
    including input-independent failures.
 2. The numeric primitives implement their specified exact integer cast,
    upward-rounded `inf_div` and `inf_ln`, and positive infinity. The
-   usual mathematical `exp`/`ln` facts are trusted. Dashu and panic
-   handling are not verified.
+   mathematical `exp`/`ln` facts are trusted. The exact binary64 real
+   interpretation remains defined but opaque to ordinary proof callers;
+   a proved lemma supplies bitwise congruence. Dashu and panic handling
+   are not verified.
 3. `BoolRRParts::into_parts` faithfully forwards through
    `Function::new_fallible` and `PrivacyMap::new` and their
    `Arc<dyn Fn>` storage. The map contract now trusts **bit-for-bit
