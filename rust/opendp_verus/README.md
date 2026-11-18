@@ -200,6 +200,14 @@ it inside a proof block, and return it in-band as `Tracked`. The
 [at `fdf0f7b`](https://github.com/opendp/opendp/actions/runs/44420543279).
 That failed helper was removed.
 
+A reverse adapter from the in-band primitive back to the existing
+`sample_uniform_u64` ghost-output signature also failed: the proof-mode
+credit could not be passed as an executable `Tracked` argument
+([`c01cf14`](https://github.com/opendp/opendp/actions/runs/44420879681)).
+That probe was removed. A single-primitive design must put the in-band
+interface directly at the entropy boundary and propagate it through
+`sample_word_then`, rather than convert modes afterward.
+
 **Remaining bridges:** unify the RNG credit contract into a single
 production primitive, rather than trusting two interfaces; prove the
 soundness of the error-credit expectation semantics; and connect an

@@ -149,34 +149,3 @@ pub fn probe_rr_fn_in_band(
 }
 
 } // verus!
-
-
-// Reverse direction: if the in-band RNG primitive is the only trusted
-// boundary, can the *existing* ghost-output sampler API be verified by
-// forwarding its tracked input/output? This is not an RNG axiom.
-#[verus_verify]
-#[verus_spec(result =>
-    with
-        Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<crate::uniform_word::WordCost>
-            -> end: Tracked<crate::one_word_credit::ErrorCredit>
-    requires
-        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::uniform_word::uniform_word_expectation(word_cost)
-        }),
-        forall|word: Result<u64, crate::uniform_word::WordError>|
-            0real <= #[trigger] word_cost(word) < 1real,
-    ensures
-        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: word_cost(result)
-        }),
-)]
-pub fn back_to_ghost_output() -> Result<u64, crate::uniform_word::WordError> {
-    proof_decl! {
-        let tracked input_credit = Tracked(start);
-        let ghost cost = Ghost(word_cost);
-    }
-    let (word, output_credit) = draw_word_in_band(input_credit, cost);
-    proof_with! { |= output_credit }
-    word
-}
