@@ -49,6 +49,13 @@ impl Metric for DiscreteDistance {
 
 #[cfg(verus_only)]
 verus! {
+impl crate::CertifiedMetric<bool> for DiscreteDistance {
+    open spec fn valid_distance(&self, _distance: &u32) -> bool { true }
+    open spec fn close(&self, left: &bool, right: &bool, distance: &u32) -> bool {
+        DiscreteDistance::bool_close(*left, *right, *distance)
+    }
+}
+
 impl DiscreteDistance {
     /// The documented discrete metric: distinct Boolean values are
     /// one unit apart, identical values are zero apart.
