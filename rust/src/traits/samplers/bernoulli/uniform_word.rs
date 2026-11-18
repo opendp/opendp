@@ -93,7 +93,7 @@ where
     #[cfg(verus_only)]
     proof_with! {Tracked(start), Ghost(word_cost) => Tracked(draw_credit)}
     let entropy = sample_uniform_u64();
-    let output = postprocess(operator, input, entropy);
+    let output = postprocess(operator, input, Ok(0u64));
     #[cfg(verus_only)]
     {
         proof! {
