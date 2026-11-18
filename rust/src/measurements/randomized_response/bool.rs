@@ -46,7 +46,7 @@ use super::constructor;
     ensures match result {
         Ok(measurement) => {
             &&& crate::measurement_proof::valid_bool_rr_measurement(&measurement)
-            &&& measurement.input_domain.bounds.is_none()
+            &&& measurement.input_domain.is_unbounded_nonnull()
         },
         Err(_) => true,
     },

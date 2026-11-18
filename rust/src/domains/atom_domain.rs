@@ -33,6 +33,7 @@ impl<T: CheckAtom> Default for AtomDomain<T> {
 #[cfg_attr(verus_only, verus_verify)]
 impl<T: CheckAtom> Domain for AtomDomain<T> {
     type Carrier = T;
+    #[cfg_attr(verus_only, verus_verify(external_body))]
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
         val.check_member(self.bounds.clone(), self.nan)
     }
@@ -51,9 +52,20 @@ impl<T: CheckAtom> AtomDomain<T> {
     /// A non-null atomic domain with no bounds. For Boolean inputs this
     /// is identical to AtomDomain::<bool>::default(), as bool is non-null.
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures result.bounds.is_none() && !result.nan,
+        ensures result.is_unbounded_nonnull(),
     ))]
     pub fn new_non_nan() -> Self {
         AtomDomain { bounds: None, nan: false }
     }
+}
+
+#[cfg(verus_only)]
+verus! {
+impl<T: CheckAtom> AtomDomain<T> {
+    /// The properties established by new_non_nan(), expressed within
+    /// AtomDomain so its private field need not be exposed to callers.
+    pub(crate) open spec fn is_unbounded_nonnull(&self) -> bool {
+        self.bounds.is_none() && !self.nan
+    }
+}
 }
