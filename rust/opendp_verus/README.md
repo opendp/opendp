@@ -21,6 +21,13 @@ This follows the pattern established by
   expectation and privacy map realize the verified operator's semantics.
 - `lemma_bool_rr_new_certified` specializes this erasure theorem to Boolean
   randomized response.
+- The production `upper_log_odds_u53` helper uses the same `f64::inf_div`
+  and `f64::inf_ln` operations as before. Verus checks their composition
+  and proves that a successful returned epsilon satisfies
+  `exp(epsilon) >= numerator / (2^53 - numerator)` from small trusted
+  numerical primitive contracts.
+- `lemma_certified_rr_with_computed_epsilon` connects that exact
+  likelihood-ratio bound to the certified measurement theorem.
 
 The proof does **not** model a second implementation of the sampler or require
 the Alerus library. The existing `Arc<dyn Fn>` representation is unchanged.
@@ -43,13 +50,18 @@ supply a proof of validity for arbitrary callbacks.
 
 1. Connect the uniform-word expectation contract to the actual fallible
    `sample_uniform_u64` and `fill_bytes` entropy source.
-2. Verify directed rounding for the production `inf_div` and `inf_ln`
-   operations and connect the returned binary64 privacy cost to the
-   real likelihood-ratio factor in the theorem.
+2. Prove the underlying numerical primitive contracts, if a smaller
+   trusted computing base is ever required. Currently we **trust only**
+   successful-result upward-rounding contracts for `InfDiv<f64>` and
+   `InfLn<f64>`, the exact cast for integers up to `2^53`, and
+   the real-analysis facts `exp(ln(x)) = x` for positive `x`
+   and monotonicity of `exp`. The numeric composition theorem itself
+   is verified; no Dashu implementation or panic machinery is verified.
 3. Either mechanically verify the standard-library callback-erasure
    correspondence or retain this small, explicitly trusted native adapter.
 
 Thus we have a checked **conditional** privacy proof and a certified
-constructor path, not a soundness theorem for arbitrary real-world entropy
-or floating-point implementations. No `new_certified` method treats a
+constructor path. The floating-point composition is verified under the
+explicit trusted arithmetic contracts; the actual implementation of those
+contracts and the probabilistic entropy source remain outside Verus. No `new_certified` method treats a
 certificate marker as proof without the corresponding model assumptions.

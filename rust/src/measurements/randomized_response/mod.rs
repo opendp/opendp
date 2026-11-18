@@ -72,8 +72,9 @@ impl CertifiedMeasurementParts<AtomDomain<bool>, DiscreteDistance, MaxDivergence
 /// Verus checks parameter decoding, the production release kernel, and the
 /// conditional expectation-based privacy theorem. The constructor uses a
 /// private certified-parts adapter; Arc callback correspondence is audited.
-/// Entropy semantics and directed-rounded f64 privacy bounds remain explicit
-/// verification obligations.
+/// Verus proves composition of the trusted upward-rounding InfDiv/InfLn
+/// contracts. Entropy semantics and the native callback adapter remain
+/// explicit trusted boundaries.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,

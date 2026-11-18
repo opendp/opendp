@@ -458,4 +458,66 @@ pub proof fn lemma_bool_rr_new_certified<E>(
         member, close, expectation, map, callback_expectation, callback_map);
 }
 
+
+/// Specialize the certified-constructor theorem to the *computed* floating
+/// privacy cost, interpreted through the trusted arithmetic primitive specs.
+///
+/// `upper_log_odds_u53` (the production helper, also verified by this
+/// harness) establishes the two numeric premises below whenever it returns
+/// Ok(epsilon). They are not assumptions about the RR mechanism's privacy:
+/// they follow from the narrow trusted InfDiv/InfLn contracts and standard
+/// real exponential/logarithm laws.
+pub proof fn lemma_certified_rr_with_computed_epsilon<E>(
+    numerator: u64,
+    complement: u64,
+    epsilon: f64,
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+    error_expectation: spec_fn(spec_fn(E) -> real) -> real,
+    success: real,
+    callback_expectation: spec_fn(
+        bool, spec_fn(Result<bool, E>) -> real,
+    ) -> real,
+    callback_map: spec_fn(u32) -> Option<real>,
+)
+    requires
+        4_503_599_627_370_496u64 <= numerator
+            < 9_007_199_254_740_992u64,
+        complement == 9_007_199_254_740_992u64 - numerator,
+        crate::verified_arithmetic::real_exp(
+            crate::verified_arithmetic::float_value(epsilon)) >= 1real,
+        numerator as real <=
+            crate::verified_arithmetic::real_exp(
+                crate::verified_arithmetic::float_value(epsilon)) * complement as real,
+        uniform_word_expectation_rule(word_expectation, error_expectation, success),
+        crate::measurement_proof::realizes_expectation(
+            callback_expectation,
+            |truth: bool, payoff: spec_fn(Result<bool, E>) -> real|
+                release_expectation(truth, numerator, word_expectation, payoff),
+        ),
+        crate::measurement_proof::realizes_privacy_map(
+            callback_map,
+            |d: u32| rr_factor_map(
+                numerator, crate::verified_arithmetic::real_exp(
+                    crate::verified_arithmetic::float_value(epsilon)), d),
+        ),
+    ensures
+        crate::measurement_proof::valid_measurement_expectations::<
+            bool, Result<bool, E>, u32,
+        >(
+            |_: bool| true,
+            |left: bool, right: bool, d: u32| rr_discrete_close(left, right, d),
+            callback_expectation,
+            callback_map,
+        ),
+{
+    let factor = crate::verified_arithmetic::real_exp(
+        crate::verified_arithmetic::float_value(epsilon));
+    assert(complement as real == (9_007_199_254_740_992u64 - numerator) as real);
+    lemma_odds_bound_sufficient(numerator, factor);
+    lemma_bool_rr_new_certified(
+        numerator, word_expectation, error_expectation, success,
+        factor, callback_expectation, callback_map,
+    );
+}
+
 } // verus!
