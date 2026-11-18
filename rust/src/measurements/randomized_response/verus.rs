@@ -6,6 +6,7 @@
 //! The constructor separately verifies its numeric bound and audited erasure.
 use vstd::prelude::*;
 use crate::operator;
+use crate::measurement_proof::bounded_payoff;
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
     lemma_bernoulli_probability, dyadic53_mass, uniform_word_expectation_rule,
@@ -46,10 +47,6 @@ proof fn mul_rotate(x: real, y: real, z: real)
     ensures x * (y * z) == y * (x * z),
 {
     assert(x * (y * z) == y * (x * z)) by(nonlinear_arith);
-}
-
-pub open spec fn bounded_payoff<E>(f: spec_fn(Result<bool, E>) -> real) -> bool {
-    forall|outcome: Result<bool, E>| 0real <= #[trigger] f(outcome) <= 1real
 }
 
 /// Expected payoff of calling the *actual* BoolRR::release after one word
