@@ -69,20 +69,36 @@ pub open spec fn word_expectation() ->
         uniform_word_expectation(payoff)
 }
 
-/// The weakest preexpectation of one uniform-word draw followed by the
-/// specified deterministic postprocessor. The postprocessor is an actual
-/// executable callback's verified result model, not an arbitrary model of
-/// the entire randomized mechanism.
-pub open spec fn one_word_expectation<X, Y>(
+/// A verified deterministic postprocessor has one possible value for
+/// every explicit entropy result. Verus derives that value from the actual
+/// callable's postcondition; no caller-selected ghost model is involved.
+pub open spec fn postprocess_value<Op, X, Y, F>(
+    operator: Op,
     input: &X,
-    postprocess: spec_fn(&X, Result<u64, WordError>) -> Result<Y, WordError>,
-    payoff: spec_fn(Result<Y, WordError>) -> real,
-) -> real {
-    word_expectation()(
-        |entropy: Result<u64, WordError>| payoff(postprocess(input, entropy)))
+    entropy: Result<u64, WordError>,
+    postprocess: F,
+) -> Result<Y, WordError>
+    where F: Fn(&Op, &X, Result<u64, WordError>) -> Result<Y, WordError>,
+{
+    choose|value: Result<Y, WordError>|
+        call_ensures(postprocess, (&operator, input, entropy), value)
 }
 
-
+/// Mathematical expectation of the actual one-word callback composition.
+/// The erasure contract must establish this equals the stored Function's
+/// distribution, and requires the callback to be total and deterministic.
+pub open spec fn one_word_expectation<Op, X, Y, F>(
+    operator: Op,
+    input: &X,
+    postprocess: F,
+    payoff: spec_fn(Result<Y, WordError>) -> real,
+) -> real
+    where F: Fn(&Op, &X, Result<u64, WordError>) -> Result<Y, WordError>,
+{
+    word_expectation()(
+        |entropy: Result<u64, WordError>|
+            payoff(postprocess_value(operator, input, entropy, postprocess)))
+}
 
 /// Trusted distributional law of sample_uniform_u64, including the
 /// input-independent error path. This statement is about entropy, not DP.
