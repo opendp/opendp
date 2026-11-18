@@ -16,26 +16,9 @@ pub type WordError = crate::error::Error;
 /// is the Alerus-style error-credit transfer for an arbitrary bounded
 /// allocation on the returned word or error. No postprocessing is trusted.
 ///
-/// This rule is an external probabilistic axiom whose soundness is conditional
-/// on the error-credit semantics; ordinary Verus alone does not establish
-/// its correspondence with the host RNG.
+/// The RNG implementation itself carries no probabilistic postcondition;
+/// its one trusted expectation transfer is sample_uniform_u64_with_credit.
 #[cfg_attr(verus_only, verus_verify(external_body))]
-#[cfg_attr(verus_only, verus_spec(result =>
-    with
-        Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<WordCost>
-        -> end: Tracked<crate::one_word_credit::ErrorCredit>
-    requires
-        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: uniform_word_expectation(word_cost)
-        }),
-        forall|word: Result<u64, WordError>|
-            0real <= #[trigger] word_cost(word) < 1real,
-    ensures
-        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: word_cost(result)
-        }),
-))]
 pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
     #[cfg(not(verus_only))]
     {
@@ -49,62 +32,91 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
     }
 }
 
+// This is the single trusted probability-bearing entropy contract.
+// It invokes the actual sample_uniform_u64 implementation, adding only an
+// erased in-band credit transfer. No other RNG credit axiom is retained.
+#[cfg(verus_only)]
+#[verus_verify(external_body)]
+#[verus_spec(result =>
+    requires
+        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: uniform_word_expectation(word_cost@)
+        }),
+        forall|word: Result<u64, WordError>|
+            0real <= #[trigger] word_cost@(word) < 1real,
+    ensures
+        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: word_cost@(result.0)
+        }),
+)]
+pub fn sample_uniform_u64_with_credit(
+    credit: Tracked<crate::one_word_credit::ErrorCredit>,
+    word_cost: Ghost<WordCost>,
+) -> (Result<u64, WordError>, Tracked<crate::one_word_credit::ErrorCredit>) {
+    (sample_uniform_u64(), Tracked::assume_new())
+}
+
+#[cfg(verus_only)]
+type SampleWordThenResult<Y> = (
+    Result<Y, WordError>, Tracked<crate::one_word_credit::ErrorCredit>,
+);
+#[cfg(not(verus_only))]
+type SampleWordThenResult<Y> = Result<Y, WordError>;
+
 /// A one-draw expectation-preservation proof for the *production* program.
-/// The input credit is the primitive word-law expectation of an arbitrary
-/// bounded allocation. The verified deterministic callback transports the
-/// credit to the observed output. This is the one-word EPT rule; its
-/// probabilistic interpretation uses the error-credit soundness argument.
+/// The in-band input credit is the primitive word-law expectation of an
+/// arbitrary bounded allocation. Verified deterministic postprocessing
+/// transports that credit to the observed output. This is the one-word EPT
+/// rule; its interpretation uses the error-credit soundness argument.
 ///
 /// Importantly, the only transfer of an input credit to a sample-dependent
 /// credit occurs at the actual `sample_uniform_u64()` call below. Replacing
 /// that call with a constant word cannot satisfy this verified contract.
 #[cfg_attr(verus_only, verus_verify)]
 #[cfg_attr(verus_only, verus_spec(result =>
-    with
-        Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
-        Ghost(word_cost): Ghost<WordCost>,
-        Ghost(output_cost): Ghost<OutputCost<Y>>
-        -> end: Tracked<crate::one_word_credit::ErrorCredit>
     requires
-        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: uniform_word_expectation(word_cost)
+        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: uniform_word_expectation(word_cost@)
         }),
         forall|word: Result<u64, WordError>|
-            0real <= #[trigger] word_cost(word) < 1real,
+            0real <= #[trigger] word_cost@(word) < 1real,
         forall|word: Result<u64, WordError>|
             #[trigger] call_requires(postprocess, (operator, input, word)),
         forall|word: Result<u64, WordError>, out: Result<Y, WordError>|
             #[trigger] call_ensures(postprocess, (operator, input, word), out)
-                ==> word_cost(word) == output_cost(out),
+                ==> word_cost@(word) == output_cost@(out),
     ensures
-        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: output_cost(result)
+        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: output_cost@(result.0)
         }),
 ))]
 pub(crate) fn sample_word_then<Op, X, Y, F>(
     operator: &Op,
     input: X,
     postprocess: F,
-) -> Result<Y, WordError>
+    #[cfg(verus_only)] credit: Tracked<crate::one_word_credit::ErrorCredit>,
+    #[cfg(verus_only)] word_cost: Ghost<WordCost>,
+    #[cfg(verus_only)] output_cost: Ghost<OutputCost<Y>>,
+) -> SampleWordThenResult<Y>
 where
     X: Copy,
     F: Fn(&Op, X, Result<u64, WordError>) -> Result<Y, WordError>,
 {
     #[cfg(verus_only)]
-    proof_with! {Tracked(start), Ghost(word_cost) => Tracked(draw_credit)}
+    let (entropy, draw_credit) = sample_uniform_u64_with_credit(credit, word_cost);
+    #[cfg(not(verus_only))]
     let entropy = sample_uniform_u64();
     let output = postprocess(operator, input, entropy);
     #[cfg(verus_only)]
     {
         proof! {
             assert(call_ensures(postprocess, (operator, input, entropy), output));
-            assert(word_cost(entropy) == output_cost(output));
-            assert(draw_credit@ =~= (crate::one_word_credit::CreditCarrier::Value {
-                amount: output_cost(output)
+            assert(word_cost@(entropy) == output_cost@(output));
+            assert(draw_credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+                amount: output_cost@(output)
             }));
         }
-        proof_with!(|= Tracked(draw_credit));
-        output
+        (output, draw_credit)
     }
     #[cfg(not(verus_only))]
     {

@@ -161,7 +161,14 @@ fn run_bool_rr(
     operator: &operator::BoolRR,
     truth: &bool,
 ) -> Result<bool, CallbackError> {
-    sample_word_then(operator, truth, operator::BoolRR::release_callback)
+    #[cfg(not(verus_only))]
+    {
+        sample_word_then(operator, truth, operator::BoolRR::release_callback)
+    }
+    #[cfg(verus_only)]
+    {
+        unimplemented!()
+    }
 }
 
 /// Build the actual OpenDP Measurement, including the real certified

@@ -40,30 +40,6 @@ pub fn probe_generic_fn<F>(
 
 verus! {
 
-// Trusted expectation-preserving RNG, expressed with *in-band* credits.
-// This is a prototype of a different interface to the same entropy rule,
-// NOT yet a verified bridge to the existing primitive.
-#[verifier::external_body]
-pub fn draw_word_in_band(
-    credit: Tracked<crate::one_word_credit::ErrorCredit>,
-    cost: Ghost<crate::uniform_word::WordCost>,
-) -> (result: (Result<u64, crate::uniform_word::WordError>,
-              Tracked<crate::one_word_credit::ErrorCredit>))
-    requires
-        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::uniform_word::uniform_word_expectation(cost@),
-        }),
-        forall|word: Result<u64, crate::uniform_word::WordError>|
-            0real <= #[trigger] cost@(word) < 1real,
-    ensures
-        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: cost@(result.0),
-        }),
-{
-    let word = crate::uniform_word::sample_uniform_u64();
-    (word, Tracked::assume_new())
-}
-
 pub fn rr_in_band(
     operator: &crate::operator::BoolRR,
     truth: &bool,
@@ -93,15 +69,10 @@ pub fn rr_in_band(
             == crate::randomized_response_bool::release_expectation(
                 *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
     }
-    let (word, credit_after) = draw_word_in_band(credit, Ghost(word_cost));
-    let output = operator.release_callback(truth, word);
-    proof {
-        assert(output == operator.release(*truth, word));
-        assert(credit_after@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: payoff@(output)
-        }));
-    }
-    (output, credit_after)
+    crate::uniform_word::sample_word_then(
+        operator, truth, crate::operator::BoolRR::release_callback,
+        credit, Ghost(word_cost), payoff,
+    )
 }
 
 pub fn probe_rr_fn_in_band(
@@ -146,32 +117,6 @@ pub fn probe_rr_fn_in_band(
             rr_in_band(&operator, truth, token, cost)
         };
     func(&input, credit, payoff)
-}
-
-} // verus!
-
-
-verus! {
-
-// Can proof-mode input credits be inserted in an in-band executable argument
-// when using Verus's native macro syntax rather than an attribute rewrite?
-pub fn bridge_proof_input_to_in_band(
-    tracked starting_credit: crate::one_word_credit::ErrorCredit,
-    ghost cost: crate::uniform_word::WordCost,
-) -> (result: (Result<u64, crate::uniform_word::WordError>,
-              Tracked<crate::one_word_credit::ErrorCredit>))
-    requires
-        starting_credit@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::uniform_word::uniform_word_expectation(cost),
-        }),
-        forall|out: Result<u64, crate::uniform_word::WordError>|
-            0real <= #[trigger] cost(out) < 1real,
-    ensures
-        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: cost(result.0),
-        }),
-{
-    draw_word_in_band(Tracked(starting_credit), Ghost(cost))
 }
 
 } // verus!
