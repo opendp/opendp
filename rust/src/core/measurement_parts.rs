@@ -202,7 +202,7 @@ impl<TI, TO> Function<TI, TO> {
     {
         #[cfg(not(verus_only))]
         {
-            Self::new_fallible(move |arg| program.run(arg))
+            Self::new_fallible(move |arg| (program.postprocess)(&program.operator, arg, Ok(0u64)))
         }
         #[cfg(verus_only)]
         {
