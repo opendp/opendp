@@ -167,6 +167,12 @@ pub open spec fn valid_bool_rr_parts<MI, MO>(
     &&& forall|distance: &u32, output: Result<f64, ()>|
         #[trigger] crate::measurement_parts::privacy_map_call_ensures(
             privacy_map, distance, output) ==> output.is_ok()
+    // Avoid the empty postcondition relation: there must be an actual
+    // successful result for each distance, not merely no bad results.
+    &&& forall|distance: &u32|
+        exists|epsilon: f64| #[trigger]
+            crate::measurement_parts::privacy_map_call_ensures(
+                privacy_map, distance, Ok(epsilon))
     &&& forall|left: bool, right: bool, distance: u32|
         #[trigger] bool_rr_pair_valid_parts(
             function, privacy_map, left, right, distance)
