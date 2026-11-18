@@ -64,7 +64,7 @@ pub open spec fn valid_certified_parts<DI, MI, MO, TO>(
 /// callback from verified probabilistic execution. This uninterpreted
 /// symbol is not permission to assign arbitrary laws to callbacks.
 pub uninterp spec fn callback_expectation<F, X, Y>(
-    func: F,
+    func: &F,
     input: &X,
     payoff: spec_fn(Result<Y, ()>) -> real,
 ) -> real
@@ -101,9 +101,9 @@ pub open spec fn valid_concrete_components<DI, MI, MO, TO, F, P>(
                         && metric.close(left, right, d)
                     ==> measure.dominates(
                         |payoff: spec_fn(Result<TO, ()>) -> real|
-                            callback_expectation(func, left, payoff),
+                            callback_expectation(&func, left, payoff),
                         |payoff: spec_fn(Result<TO, ()>) -> real|
-                            callback_expectation(func, right, payoff),
+                            callback_expectation(&func, right, payoff),
                         &cost)
             },
         }
