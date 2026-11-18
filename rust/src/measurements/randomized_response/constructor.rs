@@ -374,7 +374,7 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         crate::bernoulli_proof::uniform_word_expectation_rule(
             crate::uniform_word::word_expectation()),
     ensures crate::measurement_proof::valid_one_word_components(
-        domain, metric, measure, program, map, model),
+        domain, metric, measure, op, postprocess, map, model),
 {
     use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
     let words = crate::uniform_word::word_expectation();
