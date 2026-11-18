@@ -136,7 +136,7 @@ pub open spec fn valid_bool_rr_measurement<DI, MI, MO>(
             &meas.privacy_map, distance)
     &&& forall|left: bool, right: bool, distance: u32, epsilon: f64|
         (left == right || distance > 0)
-            && #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+            && crate::measurement_parts::privacy_map_call_ensures(
                 &meas.privacy_map, &distance, Ok(epsilon))
         ==> {
             &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
