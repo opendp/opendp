@@ -40,7 +40,8 @@ impl Measure for MaxDivergence {
 verus! {
 impl<Y> crate::CertifiedMeasure<Result<Y, ()>> for MaxDivergence {
     open spec fn valid_cost(&self, cost: &f64) -> bool {
-        crate::verified_arithmetic::finite(*cost)
+        (crate::verified_arithmetic::finite(*cost)
+            && crate::verified_arithmetic::float_value(*cost) >= 0real)
             || f64_to_bits(*cost) == 0x7ff0_0000_0000_0000u64
     }
 
