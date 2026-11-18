@@ -962,6 +962,8 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency("polars")
     if not isinstance(val, pl.DataFrame):
         raise ValueError("expected Polars DataFrame")  # pragma: no cover
+    if val.width == 0 and val.height != 0:
+        raise ValueError("Cannot transfer a DataFrame with rows but no columns over FFI")
 
     exports = (_PolarsSeriesExport * val.width)()
     val._df._export_columns(ctypes.addressof(exports))

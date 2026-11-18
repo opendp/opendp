@@ -203,6 +203,21 @@ def test_polars_native_dataframe_ffi_roundtrip(width, empty, chunked):
         df = df.clear()
     if chunked:
         df = pl.concat([df, df], rechunk=False)
+    if df.width == 0 and df.height != 0:
+        with pytest.raises(ValueError, match="rows but no columns"):
+            py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
+        return
     obj = py_to_c(df, c_type=AnyObjectPtr, type_name="DataFrame")
     result = c_to_py(obj)
     pl_testing.assert_frame_equal(result, df)
+
+
+
+def test_polars_native_dataframe_rejects_height_without_columns():
+    # SeriesExport sends columns only; a zero-column frame cannot encode height.
+    pl = pytest.importorskip("polars")
+    frame = pl.DataFrame({"a": [1, 2, 3]})[:, :0]
+    if frame.height == 0:
+        pytest.skip("This Polars build resets height when dropping all columns")
+    with pytest.raises(ValueError, match="rows but no columns"):
+        py_to_c(frame, c_type=AnyObjectPtr, type_name="DataFrame")

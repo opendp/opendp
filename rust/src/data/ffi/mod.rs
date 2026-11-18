@@ -639,6 +639,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     #[cfg(feature = "polars")]
     fn dataframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let frame = obj.downcast_ref::<DataFrame>()?;
+        if frame.width() == 0 && frame.height() != 0 {
+            return fallible!(FFI, "Cannot transfer a DataFrame with rows but no columns over FFI");
+        }
         let columns = frame
             .get_columns()
             .iter()
