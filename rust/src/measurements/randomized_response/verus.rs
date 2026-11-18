@@ -383,7 +383,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
             assert(map(distance) == Some(1real));
             assert forall|payoff: spec_fn(Result<bool, E>) -> real|
                 crate::measurement_proof::bounded_payoff(payoff)
-                ==> #[trigger] expectation(left, payoff)
+                implies #[trigger] expectation(left, payoff)
                     <= expectation(right, payoff) by {
                 assert(expectation(left, payoff) == expectation(right, payoff));
             }
@@ -393,7 +393,7 @@ pub proof fn lemma_rr_operator_valid_measurement<E>(
             assert(map(distance) == Some(factor));
             assert forall|payoff: spec_fn(Result<bool, E>) -> real|
                 crate::measurement_proof::bounded_payoff(payoff)
-                ==> #[trigger] expectation(left, payoff)
+                implies #[trigger] expectation(left, payoff)
                     <= factor * expectation(right, payoff) by {
                 assert(bounded_payoff(payoff));
                 lemma_bool_rr_dp(

@@ -89,7 +89,7 @@ pub proof fn lemma_new_certified<X, Z, D>(
         if let Some(factor) = model_map(distance) {
             assert(factor >= 1real);
             assert forall|payoff: spec_fn(Z) -> real|
-                bounded_payoff(payoff) ==>
+                bounded_payoff(payoff) implies
                     #[trigger] callback_expectation(left, payoff)
                         <= factor * callback_expectation(right, payoff)
             by {
