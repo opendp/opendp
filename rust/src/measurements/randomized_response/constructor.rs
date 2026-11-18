@@ -310,6 +310,18 @@ where
                 ==> value == Ok(operator.map(*d, 0.0f64)));
         }
     }
+    // A map that returns Err for any valid distance must not be certified.
+    // The executable callback's verified return contract is always Ok.
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|d: &u32, value: Result<f64, ()>|
+            #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+                &privacy_map, d, value) implies value.is_ok() by {
+            assert(crate::measurement_parts::privacy_map_call_ensures(
+                &privacy_map, d, value)
+                ==> value == Ok(operator.map(*d, 0.0f64)));
+        }
+    }
     // Transfer the established operator privacy bound across the proved
     // distributional and map correspondences of the *returned* Measurement.
     #[cfg(verus_only)]
