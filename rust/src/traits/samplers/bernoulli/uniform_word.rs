@@ -28,3 +28,23 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
         unimplemented!()
     }
 }
+
+// The mathematical expectation functional of the *production* entropy call.
+// Its law is the sole probabilistic primitive assumed by this proof stack.
+// This is not an independent or caller-selected probabilistic model.
+#[cfg(verus_only)]
+verus! {
+pub uninterp spec fn uniform_word_expectation(
+    payoff: spec_fn(Result<u64, WordError>) -> real,
+) -> real;
+
+/// Trusted distributional law of sample_uniform_u64, including the
+/// input-independent error path. This statement is about entropy, not DP.
+/// The executable RNG call itself has no native Verus probabilistic semantics.
+#[verifier::external_body]
+pub proof fn lemma_uniform_word_expectation_rule()
+    ensures crate::bernoulli_proof::uniform_word_expectation_rule(
+        uniform_word_expectation),
+{
+}
+}
