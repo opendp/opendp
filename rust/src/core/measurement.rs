@@ -110,11 +110,12 @@ where
     /// the exact distributional callback correspondence, not DP by itself.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
+        with Ghost(model): Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>
         requires forall|arg: &DI::Carrier, word: Result<u64, ()>| {
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& forall|out: Fallible<TO>|
                 call_ensures(postprocess, (&operator, arg, word), out)
-                    ==> out == model@(*arg, word)
+                    ==> out == model(*arg, word)
         },
         ensures match result {
             Ok(meas) => {
@@ -134,7 +135,7 @@ where
                     #[trigger] super::measurement_parts::function_expectation(
                         &meas.function, arg, payoff)
                         == crate::uniform_word::one_word_expectation(
-                            *arg, model@, payoff)
+                            *arg, model, payoff)
                 &&& forall|d: &MI::Distance|
                     #[trigger] super::measurement_parts::privacy_map_call_requires(
                         &meas.privacy_map, d)
@@ -154,8 +155,6 @@ where
         operator: Op,
         postprocess: F,
         privacy_map: P,
-        #[cfg(verus_only)]
-        model: Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>,
     ) -> Fallible<Self>
     where
         Op: Copy + 'static,
@@ -164,8 +163,10 @@ where
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
         #[cfg(verus_only)]
-        let function = Function::new_from_one_word_operator(
-            operator, postprocess, model);
+        let function = {
+            proof_with! { Ghost(model) }
+            Function::new_from_one_word_operator(operator, postprocess)
+        };
         #[cfg(not(verus_only))]
         let function = Function::new_from_one_word_operator(operator, postprocess);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);

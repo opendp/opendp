@@ -203,15 +203,17 @@ where
             |truth: bool, word: Result<u64, ()>| operator.release(truth, word);
     }
     #[cfg(verus_only)]
-    let measurement = Measurement::new_certified(
-        input_domain,
-        input_metric,
-        output_measure,
-        operator,
-        operator::BoolRR::release_callback,
-        operator::BoolRR::map_callback,
-        Ghost::new(release_model),
-    )?;
+    let measurement = {
+        proof_with! { Ghost(release_model) }
+        Measurement::new_certified(
+            input_domain,
+            input_metric,
+            output_measure,
+            operator,
+            operator::BoolRR::release_callback,
+            operator::BoolRR::map_callback,
+        )
+    }?;
     #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(
         input_domain,

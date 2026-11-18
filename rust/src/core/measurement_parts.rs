@@ -156,6 +156,7 @@ impl<TI, TO> Function<TI, TO> {
     /// actual outputs match the supplied ghost result model.
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
+        with Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>
         requires forall|arg: &TI, word: Result<u64, ()>| {
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& forall|output: Fallible<TO>|
@@ -170,13 +171,11 @@ impl<TI, TO> Function<TI, TO> {
                         call_ensures(postprocess, (&operator, arg, word), output),
             forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
                 #[trigger] function_expectation(&result, arg, payoff)
-                    == crate::uniform_word::one_word_expectation(*arg, model@, payoff),
+                    == crate::uniform_word::one_word_expectation(*arg, model, payoff),
     ))]
     pub(crate) fn new_from_one_word_operator<Op, F>(
         operator: Op,
         postprocess: F,
-        #[cfg(verus_only)]
-        model: Ghost<crate::uniform_word::OneWordModel<TI, TO>>,
     ) -> Self
     where
         Op: Copy + 'static,
