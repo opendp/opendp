@@ -21,7 +21,7 @@ verus! {
     pub open spec fn pow2(exponent: nat) -> real
         decreases exponent
     {
-        if exponent == 0 { 1real } else { 2real * pow2(exponent - 1) }
+        if exponent == 0 { 1real } else { 2real * pow2((exponent - 1) as nat) }
     }
 
     pub open spec fn finite(value: f64) -> bool {
@@ -36,10 +36,10 @@ verus! {
             (mantissa as real) / pow2(1074nat)
         } else if exponent >= 1075 {
             ((4_503_599_627_370_496nat + mantissa) as real)
-                * pow2(exponent - 1075nat)
+                * pow2((exponent - 1075nat) as nat)
         } else {
             ((4_503_599_627_370_496nat + mantissa) as real)
-                / pow2(1075nat - exponent)
+                / pow2((1075nat - exponent) as nat)
         };
         if (bits >> 63u64) == 0u64 { magnitude } else { -magnitude }
     }
