@@ -142,3 +142,17 @@ pub fn inf_ln_up_f64(value: f64) -> Result<f64, ArithmeticError> {
     #[cfg(verus_only)]
     { unimplemented!() }
 }
+
+/// Exact native IEEE-754 bit reinterpretation. Verus does not yet
+/// understand f64::to_bits as an executable intrinsic, so we trust only
+/// this low-level correspondence, not a distribution or privacy property.
+#[cfg_attr(verus_only, verus_verify(external_body))]
+#[cfg_attr(verus_only, verus_spec(result =>
+    ensures result == f64_to_bits(value),
+))]
+pub fn f64_to_bits_exact(value: f64) -> u64 {
+    #[cfg(not(verus_only))]
+    { value.to_bits() }
+    #[cfg(verus_only)]
+    { unimplemented!() }
+}

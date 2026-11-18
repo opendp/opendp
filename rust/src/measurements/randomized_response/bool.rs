@@ -16,6 +16,10 @@ type Fallible<T> = Result<T, ()>;
 #[cfg(not(verus_only))]
 use crate::error::*;
 #[cfg(verus_only)]
+use crate::verified_arithmetic::f64_to_bits_exact as bits_exact;
+#[cfg(not(verus_only))]
+use crate::traits::verified::f64_to_bits_exact as bits_exact;
+#[cfg(verus_only)]
 use crate::rr_constructor as constructor;
 #[cfg(not(verus_only))]
 use super::constructor;
@@ -57,7 +61,7 @@ pub fn make_randomized_response_bool(
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
     // This is the same executable path imported by the Verus harness.
     let measurement = constructor::build_bool_rr_measurement(
-        prob.to_bits(),
+        bits_exact(prob),
         AtomDomain::<bool>::new_non_nan(),
         DiscreteDistance,
         MaxDivergence,
