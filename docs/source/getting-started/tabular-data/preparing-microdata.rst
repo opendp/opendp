@@ -70,7 +70,7 @@ adds those columns to the data.
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ i64     │
+            │ enum      ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ...     │
             │ [0, 20)   ┆ ...     │
@@ -172,7 +172,7 @@ these expressions must be row-by-row.
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
             │ ---       ┆ ---     │
-            │ cat       ┆ i64     │
+            │ enum      ┆ i64     │
             ╞═══════════╪═════════╡
             │ null      ┆ ...     │
             │ [0, 20)   ┆ ...     │

@@ -1,7 +1,9 @@
 use super::*;
 use crate::domains::AtomDomain;
+use polars::lazy::dsl::len;
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_frame_new() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
@@ -16,6 +18,7 @@ fn test_frame_new() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_margin() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
@@ -36,6 +39,7 @@ fn test_margin() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(not(feature = "polars-ffi"))]
 fn test_margin_select() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
@@ -67,6 +71,57 @@ fn test_margin_select() -> Fallible<()> {
             .member(&empty)?
     );
 
+    Ok(())
+}
+
+#[test]
+#[cfg(feature = "polars-ffi")]
+fn test_membership_unsupported() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![])?;
+    let frame = DataFrame::empty().lazy();
+    assert!(
+        domain
+            .member(&frame)
+            .unwrap_err()
+            .message
+            .unwrap()
+            .contains("unsupported")
+    );
+    assert!(
+        Margin::select()
+            .member(frame)
+            .unwrap_err()
+            .message
+            .unwrap()
+            .contains("unsupported")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_simulate_schema_group_by() -> Fallible<()> {
+    // Narrow integer sums are promoted; aggregation and list dtypes must agree
+    // with execution, including for an empty input.
+    let frame = df!("key" => [1i32, 1, 2], "value" => [1i8, 2, 3])?;
+    let domain = LazyFrameDomain::new_from_schema((**frame.schema()).clone())?;
+    let aggregate = |lf: LazyFrame| {
+        lf.group_by([col("key")]).agg([
+            len(),
+            col("value").sum().alias("sum"),
+            col("value").mean().alias("mean"),
+            col("value").alias("values"),
+        ])
+    };
+    let inferred = domain.simulate_schema(aggregate)?;
+    assert_eq!(inferred.get("sum"), Some(&DataType::Int64));
+    assert_eq!(inferred.get("mean"), Some(&DataType::Float64));
+    assert_eq!(
+        inferred.get("values"),
+        Some(&DataType::List(Box::new(DataType::Int8)))
+    );
+    for frame in [frame.clone(), frame.clear()] {
+        assert_eq!(&inferred, &**aggregate(frame.lazy()).collect()?.schema());
+    }
     Ok(())
 }
 
