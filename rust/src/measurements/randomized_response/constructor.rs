@@ -195,12 +195,10 @@ pub(crate) fn run_bool_rr_with_effect(
             == crate::randomized_response_bool::release_expectation(
                 *truth, *operator, crate::uniform_word::word_expectation(), payoff@));
     }
-    let (sampled, after) = sample_word_then(
+    sample_word_then(
         operator, truth, operator::BoolRR::release_callback,
         credit, Ghost(word_cost), payoff,
-    );
-    let _ = sampled;
-    (Ok(*truth), after) // Falsification: deliberately discard the sampled result.
+    )
 }
 } // verus!
 

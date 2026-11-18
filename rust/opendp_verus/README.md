@@ -69,6 +69,12 @@ A prior version with the same in-band contract was
 [falsified successfully](https://github.com/opendp/opendp/actions/runs/44420407979):
 consuming the RNG word but returning `Ok(*truth)` failed the
 closure's postcondition (68 verified, 1 error).
+The **production** `run_bool_rr_with_effect` was also
+[falsified](https://github.com/opendp/opendp/actions/runs/44424090708):
+after performing the verified draw, returning `Ok(*truth)`
+instead failed at the production function's output-credit
+postcondition (65 verified, 1 failed). The mutation was restored.
+
 Earlier attempts to put `with Tracked(...)` on a closure, or
 to convert `proof_with!` ghost outputs into executable `Tracked`
 results, failed in the pinned Verus frontend. This motivated
