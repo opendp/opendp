@@ -1,7 +1,7 @@
 # Verus verification of Boolean randomized response
 
-The production `build_bool_rr_measurement` is verified through the actual
-`Measurement::new_certified` call. The constructor **requires** validity of
+The public production `make_randomized_response_bool` is verified through
+`build_bool_rr_measurement` and the actual `Measurement::new_certified` call. The constructor **requires** validity of
 the concrete `Function` and `PrivacyMap` objects it receives; validity
 is not assumed when they are assembled into a `Measurement`.
 
@@ -29,9 +29,16 @@ is not assumed when they are assembled into a `Measurement`.
   discrete adjacency and multiplicative-factor specifications live beside
   their type definitions. The constructor no longer accepts another
   metric or measure merely because its distance type matches.
-- The guarantee applies to any compatible Boolean input domain: the
-  theorem is proved for *both* possible Boolean inputs, so restricting
-  membership cannot invalidate it.
+- The same production `make_randomized_response_bool` body runs in
+  native OpenDP and the Verus harness, including probability validation,
+  `AtomDomain::<bool>::new_non_nan()`, and the certified constructor.
+  Native tests check that this non-null domain equals the previous
+  `AtomDomain::<bool>::default()`, admits both Booleans, and that the
+  public privacy map handles zero, finite, and infinite costs.
+- The production `AtomDomain` representation, non-null constructor,
+  `DiscreteDistance` metric-space check, and the Boolean wrapper are
+  shared source. The privacy theorem applies to both Boolean inputs, so
+  it does not require an assumption about general `CheckAtom` membership.
 
 ## Falsification
 
@@ -59,9 +66,13 @@ of a zero-cost privacy map that disagreed with the operator's cost.
 - Verus currently models `Error` as `()`. The general mathematical
   randomized-response theorem is polymorphic in error values, but
   faithful modeling of OpenDP's native error representation is not proved.
-- The verifier imports the production shared RR builder and constructor,
-  but not the thin public `make_randomized_response_bool` wrapper and
-  its actual `AtomDomain<bool>` default/metric-space implementation.
+- `f64::to_bits` is trusted through a narrow, exact bit-cast contract
+  because Verus does not yet support that Rust intrinsic directly.
+- Verus uses a type-only `CheckAtom` bound. The generic production
+  `Domain::member` implementation is not verified; no membership fact
+  is assumed by the privacy proof, which covers every Boolean input.
+  `AtomDomain::<bool>::new_non_nan()` and the relevant metric-space
+  check are verified from their production source.
 - The validity predicate and constructor are presently specialized to
   Boolean input, `DiscreteDistance`, and `MaxDivergence`, rather than
   generalized to every `Domain`, `Metric`, or privacy `Measure`.
