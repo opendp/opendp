@@ -101,4 +101,58 @@ pub proof fn lemma_valid_measurement_from_equivalent_components<X, Z, D>(
     }
 }
 
+/// Convert the *reported* floating-point MaxDivergence cost to its
+/// multiplicative factor. For zero input distance, RR reports positive
+/// zero, and equality of inputs yields factor one independently of libm.
+pub open spec fn bool_rr_reported_factor(distance: u32, epsilon: f64)
+    -> Option<real>
+{
+    if distance == 0 { Some(1real) }
+    else if f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64 { None }
+    else { Some(crate::verified_arithmetic::real_exp(
+        crate::verified_arithmetic::float_value(epsilon))) }
+}
+
+/// Concrete privacy validity of the *actual returned Measurement* under
+/// Boolean membership, discrete adjacency and MaxDivergence semantics.
+///
+/// Crucially the quantified privacy map is the measurement's REAL erased
+/// callback. Every successful cost it can return must bound the
+/// measurement's REAL erased function distribution, including error outputs.
+/// The separate descriptor-correctness proof is still required.
+pub open spec fn valid_bool_rr_measurement<DI, MI, MO>(
+    meas: &crate::Measurement<DI, MI, MO, bool>,
+) -> bool
+    where
+        DI: crate::Domain<Carrier = bool>,
+        MI: crate::Metric<Distance = u32>,
+        MO: crate::Measure<Distance = f64>,
+{
+    &&& forall|truth: &bool|
+        #[trigger] crate::measurement_parts::function_call_requires(
+            &meas.function, truth)
+    &&& forall|distance: &u32|
+        #[trigger] crate::measurement_parts::privacy_map_call_requires(
+            &meas.privacy_map, distance)
+    &&& forall|left: bool, right: bool, distance: u32, epsilon: f64|
+        (left == right || distance > 0)
+            && #[trigger] crate::measurement_parts::privacy_map_call_ensures(
+                &meas.privacy_map, &distance, Ok(epsilon))
+        ==> {
+            &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
+            &&& match bool_rr_reported_factor(distance, epsilon) {
+                None => true,
+                Some(factor) =>
+                    factor >= 1real
+                    && forall|payoff: spec_fn(Result<bool, ()>) -> real|
+                        bounded_payoff(payoff) ==>
+                            #[trigger] crate::measurement_parts::function_expectation(
+                                &meas.function, &left, payoff)
+                            <= factor *
+                                crate::measurement_parts::function_expectation(
+                                    &meas.function, &right, payoff),
+            }
+        }
+}
+
 } // verus!
