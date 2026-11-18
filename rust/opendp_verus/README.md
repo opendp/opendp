@@ -18,12 +18,12 @@ proves `valid_one_word_components`, defined in
   exact one-word sampling law.
 
 `new_certified` does not inspect the mechanism or repeat the privacy
-proof. It invokes a single `assemble_unchecked` helper, whose native
-body is only `Function::new_fallible`,
-`PrivacyMap::new_fallible`, and `Measurement::new`. This helper is an
-**explicitly trusted Rust callback-storage boundary**: it must install
-and invoke the same callbacks that were proved valid. The proof's
-preconditions are already established before this erasure takes place.
+proof. Its unchecked native body is just
+`Function::new_fallible`, `PrivacyMap::new_fallible`, and
+`Measurement::new`. This is an **explicitly trusted Rust
+callback-storage boundary**: it must install and invoke the same
+callbacks that were proved valid. The preconditions are established
+before this erasure takes place.
 There are no mechanism-specific erasure adapters, callback witness
 tokens, or additional `OneWordProgram` representation.
 
