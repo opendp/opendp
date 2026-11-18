@@ -74,6 +74,13 @@ postprocessor was rejected by Verus at the concrete
 `sample_word_then` proof and failed the native distribution test
 (commit `d522b57`, restored in `b146c69`).
 
+A second mutation passed an always-false ghost output model to
+`new_certified` while leaving both production callbacks unchanged.
+Verus rejected the **certified constructor precondition**
+(commit `c8b2b5c`, restored in `1b2559e`). Thus an unrelated
+or fabricated output model cannot discharge the constructor's proof
+obligations.
+
 Earlier erasure experiments showed that mutating an unchecked native
 adapter could pass Verus while failing native tests. That is why
 unchecked storage is now explicit, minimal, and outside the
