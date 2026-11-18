@@ -43,6 +43,7 @@ use crate::{metrics::DiscreteDistance, measures::MaxDivergence};
     ensures match result {
         Ok(epsilon) => {
             &&& finite(epsilon)
+            &&& float_value(epsilon) >= 0real
             &&& real_exp(float_value(epsilon)) >= 1real
             &&& (numerator as real) <= real_exp(float_value(epsilon)) * (complement as real)
         },
@@ -66,6 +67,8 @@ pub fn upper_log_odds_u53(
         assert(q >= a / b);
         assert(q > 0real) by(nonlinear_arith)
             requires a > 0real, b > 0real, q >= a / b;
+        assert(q >= 1real) by(nonlinear_arith)
+            requires a >= b, b > 0real, q >= a / b;
     }
     let epsilon = inf_ln_up_f64(quotient)?;
     #[cfg(verus_only)]
@@ -78,6 +81,9 @@ pub fn upper_log_odds_u53(
         assert(a > 0real);
         assert(q >= a / b);
         assert(q > 0real) by(nonlinear_arith) requires a > 0real, b > 0real, q >= a / b;
+        assert(q >= 1real) by(nonlinear_arith)
+            requires a >= b, b > 0real, q >= a / b;
+        assert(e >= 0real);
         real_exp_monotonic(real_ln(q), e);
         real_exp_ln_inverse(q);
         assert(real_exp(e) >= q);
@@ -107,6 +113,7 @@ pub fn upper_log_odds_u53(
                     f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64
                 &&& n < 9_007_199_254_740_992u64 ==> {
                     &&& verified_arithmetic::finite(op.privacy_cost)
+                    &&& verified_arithmetic::float_value(op.privacy_cost) >= 0real
                     &&& verified_arithmetic::real_exp(
                         verified_arithmetic::float_value(op.privacy_cost)) >= 1real
                     &&& n as real <= verified_arithmetic::real_exp(
@@ -361,6 +368,8 @@ where
                     &&& (distance == 0 ==> f64_to_bits(epsilon) == 0u64)
                     &&& (crate::verified_arithmetic::finite(epsilon)
                         || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64)
+                    &&& (crate::verified_arithmetic::finite(epsilon) ==>
+                        crate::verified_arithmetic::float_value(epsilon) >= 0real)
                     &&& match crate::measurement_proof::bool_rr_reported_factor(
                         distance, epsilon) {
                         None => true,
@@ -382,10 +391,12 @@ where
                     assert(((epsilon_bits >> 52u64) & 2047u64) != 2047u64)
                         by(bit_vector) requires epsilon_bits == 0u64;
                     assert(crate::verified_arithmetic::finite(epsilon));
+                    crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
                 } else if operator.numerator == 9_007_199_254_740_992u64 {
                     assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
                 } else {
                     assert(crate::verified_arithmetic::finite(operator.privacy_cost));
+                    assert(crate::verified_arithmetic::float_value(operator.privacy_cost) >= 0real);
                     assert(crate::verified_arithmetic::finite(epsilon));
                 }
                 assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
@@ -448,6 +459,7 @@ pub open spec fn well_formed_bool_rr(op: operator::BoolRR) -> bool {
         f64_to_bits(op.privacy_cost) == 0x7ff0_0000_0000_0000u64)
     &&& (op.numerator < 9_007_199_254_740_992u64 ==> {
         &&& verified_arithmetic::finite(op.privacy_cost)
+        &&& verified_arithmetic::float_value(op.privacy_cost) >= 0real
         &&& verified_arithmetic::real_exp(
             verified_arithmetic::float_value(op.privacy_cost)) >= 1real
         &&& (op.numerator as real) <=
@@ -595,6 +607,8 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                     map, d, Ok(epsilon)));
                 assert(crate::verified_arithmetic::finite(epsilon)
                     || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
+                assert(crate::verified_arithmetic::finite(epsilon) ==>
+                    crate::verified_arithmetic::float_value(epsilon) >= 0real);
                 assert(<MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(
                     measure, &epsilon));
 
