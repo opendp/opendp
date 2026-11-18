@@ -125,9 +125,8 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
     Ok(Some(operator::BoolRR { numerator, privacy_cost }))
 }
 
-/// Interpret the actual numeric privacy map of the production operator.
-/// This specification obtains its f64 value from BoolRR::map itself, rather
-/// than accepting a caller-supplied callback or abstract factor.
+// Interpret the actual numeric privacy map of the production operator.
+// The value comes from BoolRR::map, not a caller-supplied factor.
 #[cfg(verus_only)]
 verus! {
 pub open spec fn operator_factor_map(
@@ -185,7 +184,8 @@ pub fn verify_built_bool_rr<E>(
                     verified_arithmetic::float_value(op.privacy_cost))
             };
             if n < 9_007_199_254_740_992u64 {
-                let c: u64 = 9_007_199_254_740_992u64 - n;
+                let c: u64 = (9_007_199_254_740_992u64 - n) as u64;
+                assert(c == 9_007_199_254_740_992u64 - n);
                 assert(factor >= 1real);
                 assert(n as real <= factor * c as real);
             }
