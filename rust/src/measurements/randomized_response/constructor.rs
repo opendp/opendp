@@ -165,8 +165,6 @@ pub open spec fn adapter_realizes<E>(
             == f64_to_bits(op.map(distance, 0.0f64))
 }
 
-} // verus!
-
 /// Constructor-level conditional theorem. This *executes the same builder*
 /// called by make_randomized_response_bool before proving the privacy
 /// guarantee of its certified erasure, rather than accepting a separately
