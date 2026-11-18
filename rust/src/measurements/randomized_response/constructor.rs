@@ -144,7 +144,8 @@ pub fn verify_built_bool_rr<E>(
                     n, word_expectation, error_expectation, success,
                     1real, callback, map);
             } else {
-                let c = 9_007_199_254_740_992u64 - n;
+                let c: u64 = (9_007_199_254_740_992u64 - n) as u64;
+                assert(c == 9_007_199_254_740_992u64 - n);
                 assert(verified_arithmetic::real_exp(
                     verified_arithmetic::float_value(op.privacy_cost)) >= 1real);
                 assert(n as real <= verified_arithmetic::real_exp(
