@@ -346,7 +346,7 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
                 #[trigger] privacy_map_call_requires(&result, d),
             forall|d: &MI::Distance, out: Fallible<MO::Distance>|
                 #[trigger] privacy_map_call_ensures(&result, d, out)
-                    == call_ensures(map, (&operator, d), out),
+                    ==> call_ensures(map, (&operator, d), out),
     ))]
     pub(crate) fn new_from_operator<Op, P>(
         operator: Op,
