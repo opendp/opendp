@@ -132,7 +132,13 @@ where
         operator: Op,
         invoke: fn(&Op, &DI::Carrier) -> Fallible<TO>,
         privacy_map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
-    ) -> Fallible<Self> {
+    ) -> Fallible<Self>
+    where
+        DI::Carrier: 'static,
+        TO: 'static,
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+    {
         let function = Function::new_from_operator(operator, invoke);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);
         Self::construct(

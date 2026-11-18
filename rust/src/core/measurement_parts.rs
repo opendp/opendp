@@ -115,11 +115,6 @@ impl<TI, TO> Function<TI, TO> {
         }
     }
 
-    #[cfg_attr(verus_only, verus_verify(external_body))]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        requires function_call_requires(self, arg),
-        ensures function_call_ensures(self, arg, result),
-    ))]
     /// Erase a named method of a concrete operator. This is a narrow
     /// trusted Arc-dispatch correspondence, not a privacy assumption.
     #[cfg_attr(verus_only, verus_verify(external_body))]
@@ -131,13 +126,22 @@ impl<TI, TO> Function<TI, TO> {
     pub(crate) fn new_from_operator<Op: Copy + 'static>(
         operator: Op,
         invoke: fn(&Op, &TI) -> Fallible<TO>,
-    ) -> Self {
+    ) -> Self
+    where
+        TI: 'static,
+        TO: 'static,
+    {
         #[cfg(not(verus_only))]
         { Self::new_fallible(move |arg| invoke(&operator, arg)) }
         #[cfg(verus_only)]
         { unimplemented!() }
     }
 
+    #[cfg_attr(verus_only, verus_verify(external_body))]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        requires function_call_requires(self, arg),
+        ensures function_call_ensures(self, arg, result),
+    ))]
     pub fn eval(&self, arg: &TI) -> Fallible<TO> {
         (self.function)(arg)
     }
@@ -272,7 +276,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub(crate) fn new_from_operator<Op: Copy + 'static>(
         operator: Op,
         map: fn(&Op, &MI::Distance) -> Fallible<MO::Distance>,
-    ) -> Self {
+    ) -> Self
+    where
+        MI::Distance: 'static,
+        MO::Distance: 'static,
+    {
         #[cfg(not(verus_only))]
         { Self::new_fallible(move |d| map(&operator, d)) }
         #[cfg(verus_only)]
