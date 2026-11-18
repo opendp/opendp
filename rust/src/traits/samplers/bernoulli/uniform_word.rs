@@ -26,15 +26,15 @@ pub type WordError = crate::error::Error;
         Ghost(word_cost): Ghost<spec_fn(Result<u64, WordError>) -> real>
         -> end: Tracked<crate::one_word_credit::ErrorCredit>
     requires
-        start@ =~= crate::one_word_credit::CreditCarrier::Value {
+        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: uniform_word_expectation(word_cost)
-        },
+        }),
         forall|word: Result<u64, WordError>|
             0real <= #[trigger] word_cost(word) < 1real,
     ensures
-        end@@ =~= crate::one_word_credit::CreditCarrier::Value {
+        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: word_cost(result)
-        },
+        }),
 ))]
 pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
     #[cfg(not(verus_only))]
@@ -66,9 +66,9 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
         Ghost(output_cost): Ghost<spec_fn(Result<Y, WordError>) -> real>
         -> end: Tracked<crate::one_word_credit::ErrorCredit>
     requires
-        start@ =~= crate::one_word_credit::CreditCarrier::Value {
+        start@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: uniform_word_expectation(word_cost)
-        },
+        }),
         forall|word: Result<u64, WordError>|
             0real <= #[trigger] word_cost(word) < 1real,
         forall|word: Result<u64, WordError>|
@@ -77,9 +77,9 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
             #[trigger] call_ensures(postprocess, (operator, input, word), out)
                 ==> word_cost(word) == output_cost(out),
     ensures
-        end@@ =~= crate::one_word_credit::CreditCarrier::Value {
+        end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: output_cost(result)
-        },
+        }),
 ))]
 pub(crate) fn sample_word_then<Op, X, Y, F>(
     operator: &Op,
@@ -100,9 +100,9 @@ where
         proof! {
             assert(call_ensures(postprocess, (operator, input, entropy), output));
             assert(word_cost(entropy) == output_cost(output));
-            assert(draw_credit@ =~= crate::one_word_credit::CreditCarrier::Value {
+            assert(draw_credit@ =~= (crate::one_word_credit::CreditCarrier::Value {
                 amount: output_cost(output)
-            });
+            }));
         }
         #[verus_spec(with |= Tracked(draw_credit))]
         output
