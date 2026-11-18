@@ -586,6 +586,18 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                     ==> output.is_ok());
             }
             Ok(epsilon) => {
+                // Identical inputs are close at every distance, so the
+                // old RR pair theorem also establishes map cost validity
+                // independently of which pair is later considered.
+                assert(crate::measurement_proof::bool_rr_pair_valid_parts(
+                    function, map, false, false, *d));
+                assert(crate::measurement_parts::privacy_map_call_ensures(
+                    map, d, Ok(epsilon)));
+                assert(crate::verified_arithmetic::finite(epsilon)
+                    || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
+                assert(<MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(
+                    measure, &epsilon));
+
                 assert forall|left: &bool, right: &bool|
                     domain.contains(left) && domain.contains(right)
                         && metric.close(left, right, d)
@@ -601,6 +613,12 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                         function, map, *left, *right, *d));
                     assert(crate::measurement_parts::privacy_map_call_ensures(
                         map, d, Ok(epsilon)));
+                    if *d == 0u32 {
+                        assert(f64_to_bits(epsilon) == 0u64);
+                        reveal(crate::verified_arithmetic::float_value);
+                        assert(crate::verified_arithmetic::float_value(epsilon) == 0real);
+                        crate::verified_arithmetic::real_exp_zero();
+                    }
                     assert(crate::measurement_proof::bool_rr_reported_factor(*d, epsilon)
                         == MaxDivergence::multiplicative_factor(epsilon));
                     let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
