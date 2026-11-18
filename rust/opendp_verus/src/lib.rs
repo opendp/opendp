@@ -4,6 +4,9 @@
 #[path = "../../src/core/measurement_parts.rs"]
 pub mod measurement_parts;
 pub use measurement_parts::{Domain, Function, Measure, Metric, PrivacyMap};
+#[path = "../../src/core/measurement_semantics.rs"]
+pub mod measurement_semantics;
+pub use measurement_semantics::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
 #[path = "../../src/traits/operations/atom_traits.rs"]
 pub mod atom_traits;
 #[path = "../../src/domains/atom_domain.rs"]
