@@ -104,3 +104,53 @@ def test_extras_object_polars():
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
     assert_frame_equal(val_out, val_in)
+
+
+
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_native_series_ffi_preserves_logical_dtype(empty, chunked):
+    from polars.testing import assert_series_equal
+
+    for dtype in [pl.Enum(["A", "B", "C"]), pl.Categorical]:
+        series = pl.Series("group", [] if empty else ["B", "A", None], dtype=dtype)
+        if chunked:
+            series = pl.concat([series, series], rechunk=False)
+        obj = py_to_c(series, AnyObjectPtr, "Series")
+        result = c_to_py(obj)
+        assert_series_equal(result, series)
+
+
+@pytest.mark.parametrize("width", [0, 1, 4])
+@pytest.mark.parametrize("empty", [False, True])
+@pytest.mark.parametrize("chunked", [False, True])
+def test_native_dataframe_ffi_preserves_logical_dtype(width, empty, chunked):
+    from polars.testing import assert_frame_equal
+
+    frame = pl.DataFrame({
+        "category": pl.Series(["B", "A", None], dtype=pl.Enum(["A", "B", "C"])),
+        "id": [0, 1, 2],
+        "categorical": pl.Series(["B", None, "A"], dtype=pl.Categorical),
+        "nested": [[1, None], [], None],
+    })[:, :width]
+    if empty:
+        frame = frame.clear()
+    if chunked:
+        frame = pl.concat([frame, frame], rechunk=False)
+    obj = py_to_c(frame, AnyObjectPtr, "DataFrame")
+    result = c_to_py(obj)
+    assert_frame_equal(result, frame)
+
+
+def test_native_input_exports_are_released_when_conversion_is_abandoned():
+    import gc
+    from opendp._convert import _series_to_slice, _dataframe_to_slice
+
+    series = pl.Series("field", [1, 2, 3])
+    frame = pl.DataFrame({"field": series})
+    for value, converter in [(series, _series_to_slice), (frame, _dataframe_to_slice)]:
+        for _ in range(20):
+            raw = converter(value)
+            assert raw.contents.len == 1
+            del raw
+        gc.collect()
