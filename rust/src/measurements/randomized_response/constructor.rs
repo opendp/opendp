@@ -226,7 +226,7 @@ where
     let map = move |distance: &u32| operator.map_callback(distance);
     #[cfg(verus_only)]
     proof! {
-        lemma_bool_rr_closure_forwarding(operator, func, map, release_model);
+        trust_bool_rr_closure_forwarding(operator, func, map, release_model);
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
             operator, func, map, release_model);
@@ -273,17 +273,18 @@ pub open spec fn well_formed_bool_rr(op: operator::BoolRR) -> bool {
     })
 }
 
-/// Narrowly audited probabilistic forwarding for the two adjacent, literal
-/// RR closures. This is NOT a DP axiom: the existing sampler EPT and the
-/// deterministic postprocessor proof establish the one-word law. The remaining
+/// EXPLICIT TRUST: probabilistic forwarding of the two adjacent literal
+/// RR closures. This is not a DP axiom, but it is an unchecked law about
+/// their actual execution. The separately verified sampler EPT and the
+/// deterministic postprocessor establish the one-word law. The remaining
 /// trust is that the Rust Fn closure calls run_bool_rr on its captured operator
 /// and the map closure calls the exact map_callback. Verus cannot extract this
 /// probabilistic correspondence from a standard Fn closure today.
 ///
-/// Keep this lemma private: applying it to unrelated callbacks would be
-/// unsound. It must be reviewed against the exact source at the one callsite.
+/// This unchecked fact is only justified by the exact literal closure
+/// expressions above. Applying it to unrelated callbacks is UNSOUND.
 #[verifier::external_body]
-proof fn lemma_bool_rr_closure_forwarding<F, P>(
+proof fn trust_bool_rr_closure_forwarding<F, P>(
     op: operator::BoolRR,
     func: F,
     map: P,
