@@ -160,7 +160,7 @@ impl<TI, TO> Function<TI, TO> {
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& forall|output: Fallible<TO>|
                 call_ensures(postprocess, (&operator, arg, word), output)
-                    ==> output == model(arg, word)
+                    ==> output == model@(*arg, word)
         },
         ensures
             forall|arg: &TI| #[trigger] function_call_requires(&result, arg),
@@ -170,16 +170,17 @@ impl<TI, TO> Function<TI, TO> {
                         call_ensures(postprocess, (&operator, arg, word), output),
             forall|arg: &TI, payoff: spec_fn(Result<TO, ()>) -> real|
                 #[trigger] function_expectation(&result, arg, payoff)
-                    == crate::uniform_word::one_word_expectation(arg, model, payoff),
+                    == crate::uniform_word::one_word_expectation(*arg, model@, payoff),
     ))]
     pub(crate) fn new_from_one_word_operator<Op, F>(
         operator: Op,
         postprocess: F,
         #[cfg(verus_only)]
-        Ghost(model): Ghost<crate::uniform_word::OneWordModel<TI, TO>>,
+        model: Ghost<crate::uniform_word::OneWordModel<TI, TO>>,
     ) -> Self
     where
         Op: Copy + 'static,
+        TI: Copy,
         F: Fn(&Op, &TI, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
     {
         #[cfg(not(verus_only))]

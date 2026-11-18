@@ -205,8 +205,8 @@ where
         operator,
         operator::BoolRR::release_callback,
         operator::BoolRR::map_callback,
-        Ghost(|truth: &bool, word: Result<u64, ()>|
-            operator.release(*truth, word)),
+        Ghost::new(|truth: bool, word: Result<u64, ()>|
+            operator.release(truth, word)),
     )?;
     #[cfg(not(verus_only))]
     let measurement = Measurement::new_certified(

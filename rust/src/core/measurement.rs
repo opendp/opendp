@@ -114,7 +114,7 @@ where
             &&& call_requires(postprocess, (&operator, arg, word))
             &&& forall|out: Fallible<TO>|
                 call_ensures(postprocess, (&operator, arg, word), out)
-                    ==> out == model(arg, word)
+                    ==> out == model@(*arg, word)
         },
         ensures match result {
             Ok(meas) => {
@@ -134,7 +134,7 @@ where
                     #[trigger] super::measurement_parts::function_expectation(
                         &meas.function, arg, payoff)
                         == crate::uniform_word::one_word_expectation(
-                            arg, model, payoff)
+                            *arg, model@, payoff)
                 &&& forall|d: &MI::Distance|
                     #[trigger] super::measurement_parts::privacy_map_call_requires(
                         &meas.privacy_map, d)
@@ -155,16 +155,17 @@ where
         postprocess: F,
         privacy_map: P,
         #[cfg(verus_only)]
-        Ghost(model): Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>,
+        model: Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>,
     ) -> Fallible<Self>
     where
         Op: Copy + 'static,
+        DI::Carrier: Copy,
         F: Fn(&Op, &DI::Carrier, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
         P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
     {
         #[cfg(verus_only)]
         let function = Function::new_from_one_word_operator(
-            operator, postprocess, Ghost(model));
+            operator, postprocess, model);
         #[cfg(not(verus_only))]
         let function = Function::new_from_one_word_operator(operator, postprocess);
         let privacy_map = PrivacyMap::new_from_operator(operator, privacy_map);

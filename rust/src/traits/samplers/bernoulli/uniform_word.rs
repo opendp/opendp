@@ -72,12 +72,12 @@ pub open spec fn word_expectation() ->
 /// Ghost model of deterministic postprocessing after one entropy result.
 /// The executable callback must prove every returned value agrees with it.
 pub type OneWordModel<X, Y> =
-    spec_fn(&X, Result<u64, WordError>) -> Result<Y, WordError>;
+    spec_fn(X, Result<u64, WordError>) -> Result<Y, WordError>;
 
 /// The one-word weakest preexpectation, using the *same* uniform entropy
 /// primitive as the production code. No privacy claim is trusted here.
 pub open spec fn one_word_expectation<X, Y>(
-    input: &X,
+    input: X,
     model: OneWordModel<X, Y>,
     payoff: spec_fn(Result<Y, WordError>) -> real,
 ) -> real {
