@@ -170,12 +170,20 @@ where
         lemma_built_bool_rr_valid(
             operator, crate::uniform_word::word_expectation());
     }
+    let map_fn = move |distance: &u32| operator.map_fallible(*distance);
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|d: &u32, out: Result<f64, ()>|
+            call_ensures(map_fn, (d,), out)
+                ==> out == Ok(operator.map(*d, 0.0f64))
+        by { }
+    }
     let measurement = Measurement::new_certified(
         input_domain,
         input_metric,
         output_measure,
         move |truth: &bool| operator.invoke(*truth),
-        move |distance: &u32| Ok(operator.map(*distance, 0.0)),
+        map_fn,
     )?;
     Ok(Some(measurement))
 }
