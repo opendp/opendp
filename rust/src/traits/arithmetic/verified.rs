@@ -39,6 +39,7 @@ verus! {
 
     pub closed spec fn float_value(value: f64) -> real {
         let bits = f64_to_bits(value);
+        if bits == 0u64 { return 0real; }
         let exponent = ((bits >> 52u64) & 2047u64) as nat;
         let mantissa = (bits & 0x000f_ffff_ffff_ffffu64) as nat;
         let magnitude = if exponent == 0 {
