@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 pub(crate) mod verified;
-pub(crate) use verified::upper_log_odds_u53;
+pub(crate) use verified::{upper_log_odds_u53, positive_infinity_f64};
 
 use crate::{
     error::Fallible,
