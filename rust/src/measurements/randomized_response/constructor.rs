@@ -230,7 +230,22 @@ where
         move |distance: &u32| operator.map_callback(distance);
     #[cfg(verus_only)]
     proof! {
-        trust_bool_rr_closure_forwarding(operator, func, map, release_model);
+        // The sole unchecked probabilistic correspondence: this precise
+        // closure calls run_bool_rr, which forwards to the verified sampler.
+        // This is NOT a reusable theorem about arbitrary Fn values.
+        assume(forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
+            #[trigger] crate::measurement_proof::callback_expectation(
+                &func, truth, payoff)
+                == crate::uniform_word::one_word_expectation(*truth, release_model, payoff));
+        // Unlike the randomized result law, ordinary Fn postconditions
+        // suffice to verify the deterministic privacy-map closure.
+        assert forall|truth: &bool|
+            #[trigger] call_requires(func, (truth,)) by {}
+        assert forall|distance: &u32|
+            #[trigger] call_requires(map, (distance,)) by {}
+        assert forall|distance: &u32, out: Result<f64, ()>|
+            #[trigger] call_ensures(map, (distance,), out)
+                implies out == Ok(operator.map(*distance, 0.0f64)) by {}
         lemma_built_bool_rr_concrete_valid(
             &input_domain, &input_metric, &output_measure,
             operator, func, map, release_model);
@@ -275,43 +290,6 @@ pub open spec fn well_formed_bool_rr(op: operator::BoolRR) -> bool {
                 verified_arithmetic::float_value(op.privacy_cost)) *
             ((9_007_199_254_740_992u64 - op.numerator) as real)
     })
-}
-
-/// EXPLICIT TRUST: probabilistic forwarding of the two adjacent literal
-/// RR closures. This is not a DP axiom, but it is an unchecked law about
-/// their actual execution. The separately verified sampler EPT and the
-/// deterministic postprocessor establish the one-word law. The remaining
-/// trust is that the Rust Fn closure calls run_bool_rr on its captured operator
-/// and the map closure calls the exact map_callback. Verus cannot extract this
-/// probabilistic correspondence from a standard Fn closure today.
-///
-/// This unchecked fact is only justified by the exact literal closure
-/// expressions above. Applying it to unrelated callbacks is UNSOUND.
-#[verifier::external_body]
-proof fn trust_bool_rr_closure_forwarding<F, P>(
-    op: operator::BoolRR,
-    func: F,
-    map: P,
-    model: crate::uniform_word::OneWordModel<bool, bool>,
-)
-    where
-        F: Fn(&bool) -> Result<bool, ()> + Copy,
-        P: Fn(&u32) -> Result<f64, ()> + Copy,
-    requires
-        crate::measurement_parts::exact_word_postprocessing(
-            op, operator::BoolRR::release_callback, model),
-        crate::bernoulli_proof::uniform_word_expectation_rule(
-            crate::uniform_word::word_expectation()),
-    ensures
-        forall|truth: &bool| #[trigger] call_requires(func, (truth,)),
-        forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
-            #[trigger] crate::measurement_proof::callback_expectation(&func, truth, payoff)
-                == crate::uniform_word::one_word_expectation(*truth, model, payoff),
-        forall|d: &u32| #[trigger] call_requires(map, (d,)),
-        forall|d: &u32, output: Result<f64, ()>|
-            #[trigger] call_ensures(map, (d,), output)
-                ==> output == Ok(op.map(*d, 0.0f64)),
-{
 }
 
 /// The complete pre-erasure proof obligation of new_certified.
