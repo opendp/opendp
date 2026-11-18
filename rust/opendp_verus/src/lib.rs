@@ -36,3 +36,7 @@ pub mod verified_arithmetic;
 
 #[path = "../../src/measurements/randomized_response/constructor.rs"]
 pub mod rr_constructor;
+
+// Verify the actual public Boolean constructor body, not a harness copy.
+#[path = "../../src/measurements/randomized_response/bool.rs"]
+pub mod rr_bool;

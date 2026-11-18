@@ -41,6 +41,16 @@ use super::constructor;
 /// Verus checks the operator builder and conditional privacy guarantee.
 /// Entropy, numerical primitives, and callback erasure are trusted; see
 /// rust/opendp_verus/README.md.
+#[cfg_attr(verus_only, verus_verify)]
+#[cfg_attr(verus_only, verus_spec(result =>
+    ensures match result {
+        Ok(measurement) => {
+            &&& crate::measurement_proof::valid_bool_rr_measurement(&measurement)
+            &&& measurement.input_domain.bounds.is_none()
+        },
+        Err(_) => true,
+    },
+))]
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
