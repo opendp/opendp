@@ -196,6 +196,8 @@ where
             assert(call_requires(operator::BoolRR::release_callback,
                 (&operator, truth, word)));
         }
+        assert(crate::measurement_parts::exact_word_postprocessing(
+            operator, operator::BoolRR::release_callback, release_model));
     }
     #[cfg(verus_only)]
     proof_decl! {

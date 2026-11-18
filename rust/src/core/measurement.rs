@@ -111,12 +111,8 @@ where
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
         with Ghost(model): Ghost<crate::uniform_word::OneWordModel<DI::Carrier, TO>>
-        requires forall|arg: &DI::Carrier, word: Result<u64, ()>| {
-            &&& call_requires(postprocess, (&operator, arg, word))
-            &&& forall|out: Fallible<TO>|
-                call_ensures(postprocess, (&operator, arg, word), out)
-                    ==> out == model(*arg, word)
-        },
+        requires super::measurement_parts::exact_word_postprocessing(
+            operator, postprocess, model),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
