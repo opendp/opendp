@@ -53,20 +53,18 @@ pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
-    // Parameter validation, exact probability decoding, log-odds
-    // arithmetic and operator assembly are the shared Verus-checked path.
-    let Some(operator) = constructor::build_bool_rr(prob.to_bits())? else {
-        return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
-    };
-    let _ = constant_time; // Both settings use one fixed-size entropy draw.
-
-    Measurement::new_certified(
+    // This is the same executable path imported by the Verus harness.
+    let measurement = constructor::build_bool_rr_measurement(
+        prob.to_bits(),
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        move |truth: &bool| operator.invoke(*truth),
-        move |distance: &u32| Ok(operator.map(*distance, 0.0)),
-    )
+    )?;
+    let _ = constant_time; // Both settings use one fixed-size entropy draw.
+    let Some(measurement) = measurement else {
+        return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
+    };
+    Ok(measurement)
 }
 
 #[bootstrap(

@@ -21,6 +21,11 @@ use crate::traits::verified::{
     positive_infinity_f64,
 };
 
+#[cfg(verus_only)]
+use crate::{Domain, Measure, Measurement, Metric, MetricSpace};
+#[cfg(not(verus_only))]
+use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
+
 /// Production floating-point log odds, with exactly the same division and
 /// logarithm used elsewhere in OpenDP. The Verus harness checks this body
 /// using the trusted primitive contracts above.
@@ -123,6 +128,49 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
         Some((n, complement)) => upper_log_odds_u53(n, complement)?,
     };
     Ok(Some(operator::BoolRR { numerator, privacy_cost }))
+}
+
+/// Build the actual OpenDP Measurement, including the real certified
+/// constructor call. The public API supplies AtomDomain<bool>,
+/// DiscreteDistance, and MaxDivergence; this shared function performs the
+/// same executable work in the native and Verus builds.
+///
+/// The whole privacy-validity precondition on new_certified is still to be
+/// discharged; importing this executable call makes that obligation visible.
+#[cfg_attr(verus_only, verus_verify)]
+#[cfg_attr(verus_only, verus_spec(result =>
+    ensures match result {
+        Ok(Some(measurement)) => {
+            &&& measurement.input_domain == input_domain
+            &&& measurement.input_metric == input_metric
+            &&& measurement.output_measure == output_measure
+        },
+        _ => true,
+    },
+))]
+pub(crate) fn build_bool_rr_measurement<DI, MI, MO>(
+    bits: u64,
+    input_domain: DI,
+    input_metric: MI,
+    output_measure: MO,
+) -> Result<Option<Measurement<DI, MI, MO, bool>>, ArithmeticError>
+where
+    DI: Domain<Carrier = bool>,
+    MI: Metric<Distance = u32>,
+    MO: Measure<Distance = f64>,
+    (DI, MI): MetricSpace,
+{
+    let Some(operator) = build_bool_rr(bits)? else {
+        return Ok(None);
+    };
+    let measurement = Measurement::new_certified(
+        input_domain,
+        input_metric,
+        output_measure,
+        move |truth: &bool| operator.invoke(*truth),
+        move |distance: &u32| Ok(operator.map(*distance, 0.0)),
+    )?;
+    Ok(Some(measurement))
 }
 
 // Interpret the actual numeric privacy map of the production operator.
