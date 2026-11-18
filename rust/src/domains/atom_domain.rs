@@ -75,6 +75,12 @@ impl<T: CheckAtom> AtomDomain<T> {
 
 #[cfg(verus_only)]
 verus! {
+impl crate::CertifiedDomain for AtomDomain<bool> {
+    // A conservative carrier-wide membership specification for bool.
+    // Both boolean values are valid in the public non-null unbounded domain.
+    open spec fn contains(&self, _value: &bool) -> bool { true }
+}
+
 impl<T: CheckAtom> AtomDomain<T> {
     /// The properties established by new_non_nan(), expressed within
     /// AtomDomain so its private field need not be exposed to callers.
