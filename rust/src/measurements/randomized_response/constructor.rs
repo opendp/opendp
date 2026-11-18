@@ -357,7 +357,7 @@ where
             member, close, model, factor_map, expectation, factor_map);
 
         assert forall|left: bool, right: bool, distance: u32|
-            #[trigger] crate::measurement_proof::bool_rr_pair_valid_parts(
+            #[trigger] crate::randomized_response_bool::bool_rr_pair_valid_parts(
                 &function, &privacy_map, left, right, distance)
         by {
             if left == right || distance > 0 {
@@ -370,7 +370,7 @@ where
                         || f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64)
                     &&& (crate::verified_arithmetic::finite(epsilon) ==>
                         crate::verified_arithmetic::float_value(epsilon) >= 0real)
-                    &&& match crate::measurement_proof::bool_rr_reported_factor(
+                    &&& match crate::randomized_response_bool::bool_rr_reported_factor(
                         distance, epsilon) {
                         None => true,
                         Some(factor) => factor >= 1real
@@ -410,7 +410,7 @@ where
                 }
                 assert(crate::verified_arithmetic::finite(epsilon) ==>
                     crate::verified_arithmetic::float_value(epsilon) >= 0real);
-                assert(crate::measurement_proof::bool_rr_reported_factor(distance, epsilon)
+                assert(crate::randomized_response_bool::bool_rr_reported_factor(distance, epsilon)
                     == operator_factor_map(operator, distance));
                 if distance == 0 {
                     assert(left == right);
@@ -427,7 +427,7 @@ where
             }
             }
         }
-        assert(crate::measurement_proof::valid_bool_rr_parts(&function, &privacy_map));
+        assert(crate::randomized_response_bool::valid_bool_rr_parts(&function, &privacy_map));
     }
     // Translate the mechanism-specific proof into the generic certified
     // contract, using the actual production descriptor semantics.
@@ -569,7 +569,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
     map: &PrivacyMap<DiscreteDistance, MaxDivergence>,
 )
     where DI: crate::CertifiedDomain<Carrier = bool>,
-    requires crate::measurement_proof::valid_bool_rr_parts(function, map),
+    requires crate::randomized_response_bool::valid_bool_rr_parts(function, map),
     ensures crate::measurement_proof::valid_certified_parts(
         domain, metric, measure, function, map),
 {
@@ -612,7 +612,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                 // Identical inputs are close at every distance, so the
                 // old RR pair theorem also establishes map cost validity
                 // independently of which pair is later considered.
-                assert(crate::measurement_proof::bool_rr_pair_valid_parts(
+                assert(crate::randomized_response_bool::bool_rr_pair_valid_parts(
                     function, map, false, false, *d));
                 assert(crate::measurement_parts::privacy_map_call_ensures(
                     map, d, Ok(epsilon)));
@@ -634,7 +634,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                         &epsilon)
                 by {
                     assert(DiscreteDistance::bool_close(*left, *right, *d));
-                    assert(crate::measurement_proof::bool_rr_pair_valid_parts(
+                    assert(crate::randomized_response_bool::bool_rr_pair_valid_parts(
                         function, map, *left, *right, *d));
                     assert(crate::measurement_parts::privacy_map_call_ensures(
                         map, d, Ok(epsilon)));
@@ -643,7 +643,7 @@ pub proof fn lemma_bool_rr_satisfies_generic_contract<DI>(
                         crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
                         crate::verified_arithmetic::real_exp_zero();
                     }
-                    assert(crate::measurement_proof::bool_rr_reported_factor(*d, epsilon)
+                    assert(crate::randomized_response_bool::bool_rr_reported_factor(*d, epsilon)
                         == MaxDivergence::multiplicative_factor(epsilon));
                     let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::measurement_parts::function_expectation(function, left, payoff);
