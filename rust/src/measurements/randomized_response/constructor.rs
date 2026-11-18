@@ -22,9 +22,13 @@ use crate::traits::verified::{
 };
 
 #[cfg(verus_only)]
-use crate::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
+use crate::{Domain, Function, Measurement, MetricSpace, PrivacyMap};
 #[cfg(not(verus_only))]
-use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
+use crate::core::{Domain, Function, Measurement, MetricSpace, PrivacyMap};
+#[cfg(verus_only)]
+use crate::{discrete_distance::DiscreteDistance, max_divergence::MaxDivergence};
+#[cfg(not(verus_only))]
+use crate::{metrics::DiscreteDistance, measures::MaxDivergence};
 
 /// Production floating-point log odds, with exactly the same division and
 /// logarithm used elsewhere in OpenDP. The Verus harness checks this body
@@ -161,17 +165,15 @@ pub fn build_bool_rr(bits: u64) -> Result<Option<operator::BoolRR>, ArithmeticEr
         _ => true,
     },
 ))]
-pub(crate) fn build_bool_rr_measurement<DI, MI, MO>(
+pub(crate) fn build_bool_rr_measurement<DI>(
     bits: u64,
     input_domain: DI,
-    input_metric: MI,
-    output_measure: MO,
-) -> Result<Option<Measurement<DI, MI, MO, bool>>, ArithmeticError>
+    input_metric: DiscreteDistance,
+    output_measure: MaxDivergence,
+) -> Result<Option<Measurement<DI, DiscreteDistance, MaxDivergence, bool>>, ArithmeticError>
 where
     DI: Domain<Carrier = bool>,
-    MI: Metric<Distance = u32>,
-    MO: Measure<Distance = f64>,
-    (DI, MI): MetricSpace,
+    (DI, DiscreteDistance): MetricSpace,
 {
     let Some(operator) = build_bool_rr(bits)? else {
         return Ok(None);

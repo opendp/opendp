@@ -4,6 +4,11 @@
 #[path = "../../src/core/measurement_parts.rs"]
 pub mod measurement_parts;
 pub use measurement_parts::{Domain, Function, Measure, Metric, PrivacyMap};
+#[path = "../../src/metrics/discrete_distance.rs"]
+pub mod discrete_distance;
+#[path = "../../src/measures/max_divergence.rs"]
+pub mod max_divergence;
+
 #[path = "../../src/core/measurement.rs"]
 pub mod core_measurement;
 pub use core_measurement::{Measurement, MetricSpace};

@@ -523,38 +523,8 @@ impl<T: CheckAtom, const P: usize> MetricSpace
     }
 }
 
-/// Indicates if two elements are equal to each other.
-///
-/// This is used in the context of randomized response,
-/// to capture the distance between adjacent inputs (they are either equivalent or not).
-///
-/// # Proof Definition
-///
-/// ### `d`-closeness
-/// For any two datasets $u, v \in$ `AtomDomain<T>` and any $d$ of type [`IntDistance`],
-/// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
-///
-/// ```math
-/// d_{Eq}(u, v) = \mathbb{1}[u \ne v] \leq d
-/// ```
-///
-/// # Notes
-/// Clearly, `d` is bounded above by 1.
-/// 1 is the expected argument on measurements that use this distance.
-///
-/// # Compatible Domains
-/// * `AtomDomain<T>` for any valid `T`.
-#[derive(Clone, Default, PartialEq)]
-pub struct DiscreteDistance;
-
-impl Debug for DiscreteDistance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "DiscreteDistance()")
-    }
-}
-impl Metric for DiscreteDistance {
-    type Distance = IntDistance;
-}
+mod discrete_distance;
+pub use discrete_distance::DiscreteDistance;
 
 impl<T: CheckAtom> MetricSpace for (AtomDomain<T>, DiscreteDistance) {
     fn check_space(&self) -> Fallible<()> {

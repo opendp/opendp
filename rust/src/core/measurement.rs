@@ -11,6 +11,10 @@ use crate::traits::ProductOrd;
 use std::fmt::Debug;
 #[cfg(verus_only)]
 use vstd::prelude::*;
+#[cfg(verus_only)]
+use crate::{discrete_distance::DiscreteDistance, max_divergence::MaxDivergence};
+#[cfg(not(verus_only))]
+use crate::{metrics::DiscreteDistance, measures::MaxDivergence};
 
 /// A randomized mechanism with certain privacy characteristics.
 ///
@@ -134,12 +138,10 @@ where
 /// The descriptor semantics remain to be tied to concrete production types;
 /// only Boolean carrier/u32 distance/f64 measure are admitted here.
 #[cfg_attr(verus_only, verus_verify)]
-impl<DI, MI, MO> Measurement<DI, MI, MO, bool>
+impl<DI> Measurement<DI, DiscreteDistance, MaxDivergence, bool>
 where
     DI: Domain<Carrier = bool>,
-    MI: Metric<Distance = u32>,
-    MO: Measure<Distance = f64>,
-    (DI, MI): MetricSpace,
+    (DI, DiscreteDistance): MetricSpace,
 {
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
@@ -159,10 +161,10 @@ where
     ))]
     pub(crate) fn new_certified(
         input_domain: DI,
-        input_metric: MI,
-        output_measure: MO,
+        input_metric: DiscreteDistance,
+        output_measure: MaxDivergence,
         function: Function<bool, bool>,
-        privacy_map: PrivacyMap<MI, MO>,
+        privacy_map: PrivacyMap<DiscreteDistance, MaxDivergence>,
     ) -> Fallible<Self> {
         Self::construct(
             input_domain, input_metric, output_measure, function, privacy_map,
