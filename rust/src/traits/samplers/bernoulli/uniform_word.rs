@@ -112,6 +112,64 @@ where
     }
 }
 
+/// Concrete one-word program. Its executable `run` method is the only
+/// entry point invoked by the erased OpenDP Function closure.
+///
+/// Keeping the captured operator and callback in an ordinary Rust value
+/// separates the verified computation from the (still trusted) Arc dispatch.
+#[cfg_attr(verus_only, verus_verify)]
+#[derive(Clone, Copy)]
+pub(crate) struct OneWordProgram<Op, F> {
+    pub operator: Op,
+    pub postprocess: F,
+}
+
+#[cfg_attr(verus_only, verus_verify)]
+impl<Op, F> OneWordProgram<Op, F> {
+    #[cfg_attr(verus_only, verus_verify)]
+    pub(crate) fn new(operator: Op, postprocess: F) -> Self {
+        Self { operator, postprocess }
+    }
+
+    /// The source of the erased closure's result, verified with exactly the
+    /// same one-word credit transfer as the generic sampler below.
+    #[cfg_attr(verus_only, verus_verify)]
+    #[cfg_attr(verus_only, verus_spec(result =>
+        with
+            Tracked(start): Tracked<crate::one_word_credit::ErrorCredit>,
+            Ghost(word_cost): Ghost<WordCost>,
+            Ghost(output_cost): Ghost<OutputCost<Y>>
+            -> end: Tracked<crate::one_word_credit::ErrorCredit>
+        requires
+            start@ =~= (crate::one_word_credit::CreditCarrier::Value {
+                amount: uniform_word_expectation(word_cost)
+            }),
+            forall|word: Result<u64, WordError>|
+                0real <= #[trigger] word_cost(word) < 1real,
+            forall|word: Result<u64, WordError>|
+                #[trigger] call_requires(self.postprocess, (&self.operator, input, word)),
+            forall|word: Result<u64, WordError>, out: Result<Y, WordError>|
+                #[trigger] call_ensures(self.postprocess, (&self.operator, input, word), out)
+                    ==> word_cost(word) == output_cost(out),
+        ensures
+            end@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+                amount: output_cost(result)
+            }),
+    ))]
+    pub(crate) fn run<X, Y>(&self, input: &X) -> Result<Y, WordError>
+    where
+        X: Copy,
+        F: Fn(&Op, &X, Result<u64, WordError>) -> Result<Y, WordError> + Copy,
+    {
+        #[cfg(verus_only)]
+        proof_with! {Tracked(start), Ghost(word_cost), Ghost(output_cost) => Tracked(credit)}
+        let result = sample_word_then(&self.operator, input, self.postprocess);
+        #[cfg(verus_only)]
+        proof_with!(|= Tracked(credit));
+        result
+    }
+}
+
 // The mathematical expectation functional of the *production* entropy call.
 // Its law is the sole probabilistic primitive assumed by this proof stack.
 // This is not an independent or caller-selected probabilistic model.
