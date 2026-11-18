@@ -225,6 +225,38 @@ where
         operator::BoolRR::release_callback,
         operator::BoolRR::map_callback,
     )?;
+    // The distribution of the *returned erased Function* is the same
+    // as the executable RR release under the one-word entropy law.
+    // This follows from the generic one-word erasure specification and the
+    // checked postprocessor, not from a mechanism-specific privacy axiom.
+    #[cfg(verus_only)]
+    proof! {
+        assert forall|truth: bool,
+                       payoff: spec_fn(Result<bool, ()>) -> real|
+            #[trigger] crate::measurement_parts::function_expectation(
+                &measurement.function, &truth, payoff)
+                == crate::randomized_response_bool::release_expectation(
+                    truth, operator, crate::uniform_word::word_expectation(), payoff)
+        by {
+            let before = |word: Result<u64, ()>| payoff(release_model(truth, word));
+            let after = |word: Result<u64, ()>| payoff(operator.release(truth, word));
+            assert forall|word: Result<u64, ()>|
+                #[trigger] before(word) == after(word) by {
+                assert(release_model(truth, word) == operator.release(truth, word));
+            }
+            assert(before =~= after);
+            assert(crate::measurement_parts::function_expectation(
+                &measurement.function, &truth, payoff)
+                == crate::uniform_word::one_word_expectation(
+                    truth, release_model, payoff));
+            assert(crate::uniform_word::one_word_expectation(
+                truth, release_model, payoff)
+                == crate::uniform_word::word_expectation()(before));
+            assert(crate::randomized_response_bool::release_expectation(
+                truth, operator, crate::uniform_word::word_expectation(), payoff)
+                == crate::uniform_word::word_expectation()(after));
+        }
+    }
     #[cfg(verus_only)]
     proof! {
         assert forall|d: &u32| #[trigger]
