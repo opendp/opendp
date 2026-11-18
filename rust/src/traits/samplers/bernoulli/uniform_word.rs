@@ -29,6 +29,23 @@ pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
     }
 }
 
+/// Apply deterministic postprocessing to one real production entropy call.
+/// This shared executable body is the sampling/composition point for Verus.
+/// Only the distribution of `sample_uniform_u64` is external; the callback
+/// invocation is checked as ordinary Rust code.
+#[cfg_attr(verus_only, verus_verify)]
+pub(crate) fn sample_word_then<Op, X, Y, F>(
+    operator: &Op,
+    input: X,
+    postprocess: F,
+) -> Result<Y, WordError>
+where
+    F: Fn(&Op, X, Result<u64, WordError>) -> Result<Y, WordError>,
+{
+    let entropy = sample_uniform_u64();
+    postprocess(operator, input, entropy)
+}
+
 // The mathematical expectation functional of the *production* entropy call.
 // Its law is the sole probabilistic primitive assumed by this proof stack.
 // This is not an independent or caller-selected probabilistic model.

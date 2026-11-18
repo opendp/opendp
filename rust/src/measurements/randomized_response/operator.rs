@@ -53,9 +53,9 @@ impl BoolRR {
 // The actual native invocation is verified from this same executable body.
 // Only the sample_uniform_u64 distribution is outside Verus's scope.
 #[cfg(verus_only)]
-use crate::uniform_word::{sample_uniform_u64, WordError};
+use crate::uniform_word::{sample_word_then, WordError};
 #[cfg(not(verus_only))]
-use crate::traits::samplers::sample_uniform_u64;
+use crate::traits::samplers::uniform_word::sample_word_then;
 #[cfg(not(verus_only))]
 use crate::error::Error as WordError;
 
@@ -68,8 +68,7 @@ impl BoolRR {
             ==> result == Ok(truth),
     ))]
     pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
-        let entropy = sample_uniform_u64();
-        self.release(truth, entropy)
+        sample_word_then(self, truth, Self::release)
     }
 
     #[cfg_attr(verus_only, verus_verify)]
