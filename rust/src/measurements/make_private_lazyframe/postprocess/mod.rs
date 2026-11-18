@@ -1,19 +1,33 @@
 use std::sync::Arc;
 
 use polars::prelude::DslPlan;
+use polars_plan::prelude::ProjectionOptions;
 
 use crate::combinators::CompositionMeasure;
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DslPlanDomain, LazyFrameDomain};
 use crate::{
     core::{Function, Measurement},
-    error::Fallible,
+    error::*,
 };
 
 use super::PrivateDslPlan;
+use crate::polars::options::valid_projection_options;
 
 #[cfg(test)]
 mod test;
+
+// This path permits only column selection and renaming. Parallelism changes
+// scheduling; shape validation remains mandatory.
+fn validated_projection_options(options: ProjectionOptions) -> Fallible<ProjectionOptions> {
+    if !valid_projection_options(options) {
+        return fallible!(
+            MakeMeasurement,
+            "Postprocessing requires duplicate checks and broadcasting"
+        );
+    }
+    Ok(options)
+}
 
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: DslPlanDomain,
@@ -51,6 +65,7 @@ where
             )?;
             let post = match plan {
                 DslPlan::Select { expr, options, .. } => {
+                    let options = validated_projection_options(options)?;
                     Function::new_fallible(move |arg: &DslPlan| {
                         Ok(DslPlan::Select {
                             input: Arc::new(arg.clone()),
@@ -60,6 +75,7 @@ where
                     })
                 }
                 DslPlan::HStack { exprs, options, .. } => {
+                    let options = validated_projection_options(options)?;
                     Function::new_fallible(move |arg: &DslPlan| {
                         Ok(DslPlan::HStack {
                             input: Arc::new(arg.clone()),

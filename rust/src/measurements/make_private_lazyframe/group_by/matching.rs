@@ -1,9 +1,9 @@
 use std::{collections::BTreeSet, sync::Arc};
 
+use crate::polars::options::{ORDINARY_GROUP_BY_OPTIONS, valid_public_key_join_options};
 use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
 use polars_plan::{
     dsl::{Expr, Operator},
-    prelude::GroupbyOptions,
     utils::expr_output_name,
 };
 
@@ -60,6 +60,21 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                     "predicates are not supported in DP key joins"
                 );
             }
+            if !options.args.should_coalesce() {
+                return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
+            }
+            if options.args.slice.is_some() {
+                return fallible!(
+                    MakeMeasurement,
+                    "DP key joins cannot be sliced because slicing introduces order dependence"
+                );
+            }
+            if !valid_public_key_join_options(options.as_ref()) {
+                return fallible!(
+                    MakeMeasurement,
+                    "Unsupported public-key join options: {options:?}"
+                );
+            }
             let how = options.as_ref().args.how.clone();
             let (keys, keys_on, input_on) = match how {
                 JoinType::Left => {
@@ -78,15 +93,6 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 }
             };
 
-            if !options.args.should_coalesce() {
-                return fallible!(MakeMeasurement, "DP key joins must coalesce join keys");
-            }
-            if options.args.slice.is_some() {
-                return fallible!(
-                    MakeMeasurement,
-                    "DP key joins cannot be sliced because slicing introduces order dependence"
-                );
-            }
             // Non-column join expressions can disable coalescing in newer
             // Polars versions, exposing private-side join key columns.
             if !keys_on
@@ -193,11 +199,10 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         return Ok(None);
     };
 
-    if options.as_ref() != &GroupbyOptions::default() {
+    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return fallible!(
             MakeMeasurement,
-            "Unsupported options in logical plan. Do not optimize the lazyframe passed into the constructor. Options should be default, but are {:?}",
-            options
+            "Unsupported private group-by options: {options:?}"
         );
     }
 

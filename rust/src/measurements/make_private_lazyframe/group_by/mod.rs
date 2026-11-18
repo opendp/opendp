@@ -14,6 +14,7 @@ use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::StableDslPlan;
 use crate::transformations::make_stable_expr;
@@ -186,7 +187,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Default::default(),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
@@ -195,7 +196,7 @@ where
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,
-            options: Default::default(),
+            options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         Ok(match key_sanitizer.clone() {
             Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
@@ -237,7 +238,11 @@ where
                         options,
                     }),
                     exprs: fill_null.unwrap(),
-                    options: ProjectionOptions::default(),
+                    options: ProjectionOptions {
+                        run_parallel: true,
+                        duplicate_check: true,
+                        should_broadcast: true,
+                    },
                 }
             }
             None => output,

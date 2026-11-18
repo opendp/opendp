@@ -4,6 +4,7 @@ use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -11,7 +12,6 @@ use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
-use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
 
@@ -79,10 +79,10 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    if options.as_ref() != &GroupbyOptions::default() {
+    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return fallible!(
             MakeTransformation,
-            "Options is not currently supported. Please open an issue if this would be useful to you."
+            "Unsupported stable group-by options: {options:?}"
         );
     }
 

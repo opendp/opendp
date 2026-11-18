@@ -7,6 +7,7 @@ use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
+use crate::polars::options::valid_projection_options;
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
@@ -39,9 +40,21 @@ where
 {
     let is_truncated = input_metric.0.identifier().is_some();
 
-    let DslPlan::Select { expr, input, .. } = plan.clone() else {
+    let DslPlan::Select {
+        expr,
+        input,
+        options,
+    } = plan
+    else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
+
+    if !valid_projection_options(options) {
+        return fallible!(
+            MakeMeasurement,
+            "Projection requires duplicate checks and broadcasting"
+        );
+    }
 
     let t_prior = input
         .as_ref()
@@ -104,21 +117,15 @@ where
         middle_metric,
         output_measure,
         Function::new_fallible(move |arg: &DslPlan| {
-            let mut output = plan.clone();
-            if let DslPlan::Select {
-                ref mut input,
-                ref mut expr,
-                ..
-            } = output
-            {
-                *input = Arc::new(arg.clone());
-                *expr = m_select_expr
-                    .invoke(&arg)?
+            Ok(DslPlan::Select {
+                input: Arc::new(arg.clone()),
+                expr: m_select_expr
+                    .invoke(arg)?
                     .into_iter()
                     .map(|e| e.expr)
-                    .collect();
-            };
-            Ok(output)
+                    .collect(),
+                options,
+            })
         }),
         privacy_map,
     )?;
