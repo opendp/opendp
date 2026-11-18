@@ -164,18 +164,19 @@ pub proof fn lemma_bool_rr_dp<E>(
         lemma_release_expectation(left, op, word_expectation, error_expectation, success, payoff);
         lemma_release_expectation(right, op, word_expectation, error_expectation, success, payoff);
         let p = numerator as real / 9_007_199_254_740_992real;
-        // Convert the integer likelihood-ratio bound from the constructor
-        // only where this (finite-cost) DP inequality needs it.
+        // Convert the constructor's integer odds bound where the
+        // finite-cost privacy inequality actually needs it.
+        let n = numerator as real;
+        let denominator = 9_007_199_254_740_992real;
         let complement = (9_007_199_254_740_992u64 - numerator) as real;
-        assert(complement == 9_007_199_254_740_992real - numerator as real);
-        assert((numerator as real) <= factor * complement);
-        assert(p <= factor * (complement / 9_007_199_254_740_992real))
+        assert(complement == denominator - n);
+        assert(n <= factor * complement);
+        assert(n / denominator <= factor * (complement / denominator))
             by(nonlinear_arith)
-            requires 9_007_199_254_740_992real > 0real,
-                numerator as real <= factor * complement;
-        assert(complement / 9_007_199_254_740_992real == 1real - p)
+            requires denominator > 0real, n <= factor * complement;
+        assert(complement / denominator == 1real - n / denominator)
             by(nonlinear_arith)
-            requires complement == 9_007_199_254_740_992real - numerator as real;
+            requires complement == denominator - n, denominator > 0real;
         assert(p <= factor * (1real - p));
         let on_error = |err: E| payoff(Err(err));
         let err = error_expectation(on_error);
