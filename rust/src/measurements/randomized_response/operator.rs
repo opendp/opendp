@@ -64,8 +64,11 @@ impl BoolRR {
     /// draw. If p=1 and the draw succeeds, the result must equal truth.
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
-            ==> result == Ok(truth),
+        ensures
+            exists|entropy: Result<u64, WordError>|
+                result == self.release(truth, entropy),
+            self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
+                ==> result == Ok(truth),
     ))]
     pub fn invoke(&self, truth: bool) -> Result<bool, WordError> {
         sample_word_then(self, truth, Self::release)
@@ -73,8 +76,11 @@ impl BoolRR {
 
     #[cfg_attr(verus_only, verus_verify)]
     #[cfg_attr(verus_only, verus_spec(result =>
-        ensures self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
-            ==> result == Ok(*truth),
+        ensures
+            exists|entropy: Result<u64, WordError>|
+                result == self.release(*truth, entropy),
+            self.numerator == 9_007_199_254_740_992u64 && result.is_ok()
+                ==> result == Ok(*truth),
     ))]
     pub fn invoke_callback(&self, truth: &bool) -> Result<bool, WordError> {
         self.invoke(*truth)
