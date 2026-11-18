@@ -7,7 +7,9 @@ use crate::{dyadic53, operator, verified_arithmetic};
 #[cfg(not(verus_only))]
 use super::operator;
 #[cfg(not(verus_only))]
-use crate::traits::samplers::dyadic53;
+use crate::traits::samplers::{dyadic53, OneWordProgram};
+#[cfg(verus_only)]
+use crate::uniform_word::OneWordProgram;
 
 #[cfg(verus_only)]
 use crate::verified_arithmetic::{
@@ -217,15 +219,17 @@ where
     // Install the exact one-word sampler and the actual map method.
     // These are ordinary OpenDP Function/PrivacyMap objects. Their DP
     // validity will be a precondition of new_certified, not its result.
+    let program = OneWordProgram {
+        operator,
+        postprocess: operator::BoolRR::release_callback,
+    };
     #[cfg(verus_only)]
     let function = {
         proof_with! { Ghost(release_model) }
-        Function::new_from_one_word_operator(
-            operator, operator::BoolRR::release_callback)
+        Function::erase_one_word_program(program)
     };
     #[cfg(not(verus_only))]
-    let function = Function::new_from_one_word_operator(
-        operator, operator::BoolRR::release_callback);
+    let function = Function::erase_one_word_program(program);
     let privacy_map = PrivacyMap::new_from_operator(
         operator, operator::BoolRR::map_callback);
     // The distribution of the *returned erased Function* is the same
