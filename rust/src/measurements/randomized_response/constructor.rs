@@ -276,15 +276,6 @@ where
     // cannot successfully return the wrong bit.
     #[cfg(verus_only)]
     proof! {
-        assert forall|truth: &bool| #[trigger]
-            crate::measurement_parts::function_call_requires(
-                &function, truth)
-        by {
-            assert(crate::measurement_parts::function_call_requires(
-                &function, truth)
-                == call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
-            assert(call_requires(operator::BoolRR::invoke_callback, (&operator, truth)));
-        }
         assert forall|truth: &bool, value: Result<bool, ()>|
             crate::measurement_parts::function_call_ensures(
                 &function, truth, value)
