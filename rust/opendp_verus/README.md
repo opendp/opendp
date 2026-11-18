@@ -1,92 +1,100 @@
 # Verified Boolean randomized response
 
-The Verus harness imports the production `make_randomized_response_bool`,
-`BoolRR`, sampler, domains, metrics, measures, and `Measurement` source.
+The Verus harness imports the production OpenDP `Measurement`, Boolean
+randomized-response constructor, sampler, domain, metric, and measure.
 
-## Proof boundary
+## Certified constructor
 
-`Measurement::new_certified` accepts the **concrete** operator,
-postprocessor, and privacy-map callback. Before calling it, the mechanism
-proves `valid_one_word_components`, defined in
-`core/verus/measurement.rs`. This contract requires:
+`Measurement::new_certified` is independent of randomized response and
+sampling algorithms. It takes exactly five runtime arguments:
 
-- A deterministic result specification matching the actual postprocessor
-  for *every* entropy word and error result.
-- A callable privacy map whose every result is a successful, valid cost.
-- The generic privacy-measure domination inequality for every supported
-  pair of domain members at every supported metric distance, using the
-  exact one-word sampling law.
+```rust
+new_certified(input_domain, input_metric, output_measure, func, map)
+```
 
-`new_certified` does not inspect the mechanism or repeat the privacy
-proof. Its unchecked native body is just
-`Function::new_fallible`, `PrivacyMap::new_fallible`, and
-`Measurement::new`. This is an **explicitly trusted Rust
-callback-storage boundary**: it must install and invoke the same
-callbacks that were proved valid. The preconditions are established
-before this erasure takes place.
-There are no mechanism-specific erasure adapters, callback witness
-tokens, or additional `OneWordProgram` representation.
+`func` and `map` are ordinary concrete `Fn` callbacks. Its
+`valid_concrete_components` precondition requires domain membership
+to imply that `func` is callable; each supported distance to be
+accepted by `map`; every map result to be a successful, valid privacy
+cost; and the *actual callback's* output expectations to satisfy the
+semantic measure's domination inequality on every neighboring pair.
 
-This first certified constructor is generic in domain, metric, privacy
-measure, and output type, but currently accepts a concrete *one-word*
-sampling operator. Extending certification to other sampler structures
-requires their own executable sampling specifications; it must not
-create a new trusted privacy claim.
+The only native work in `new_certified` is:
 
-## Probabilistic reasoning
+```rust
+Self::new(
+    input_domain, input_metric, output_measure,
+    Function::new_fallible(func),
+    PrivacyMap::new_fallible(map),
+)
+```
 
-The production `sample_word_then` is Verus-checked. Its result consumes
-a single `sample_uniform_u64` draw and executes the actual deterministic
-callback. The tiny verification-only `one_word_credit.rs` adapts an
-Alerus-style linear error credit to establish a one-draw
-expectation-preserving judgment. `BoolRR::release_callback` is checked
-against its deterministic result model. The Boolean RR payoff inequality
-and directed logarithm bound are then used to discharge the generic
-constructor precondition **before erasure**.
+This unchecked storage operation is in the trusted computing base.
+No mechanism-specific operator, entropy word, postprocessor, privacy
+map factory, or semantic witness is an argument of `new_certified`.
 
-The probabilistic interpretation of these credits depends on an
-**unmechanized soundness argument for the adapted credit calculus**.
-The primitive's uniform-word law and input-independent error behavior
-are trusted, not properties verified of the native RNG.
+## Boolean RR verification
 
-## Other trusted operations
+The RR builder constructs its own closures:
 
-- `assemble_unchecked` and the conventional Rust `Arc<dyn Fn>`
-  implementation used to store and invoke the supplied callbacks.
-  Verus does not inspect their implementations.
-- Numerical division/logarithm rounding, exact integer conversions,
-  the floating-point bit-cast contract, positive infinity, and external
-  real exponential/logarithm facts.
-- Panic behavior and the exact native error representation are not
-  fully modeled. Verus represents errors by `()`; the underlying RR
-  payoff theorem is polymorphic over error values.
+```rust
+let func = move |truth: &bool| run_bool_rr(&operator, truth);
+let map = move |distance: &u32| operator.map_callback(distance);
+```
 
-`Domain`, `DiscreteDistance`, `MaxDivergence`, metric-space checks,
-and the public Boolean RR constructor use production source. Native
-`CertifiedDomain`, `CertifiedMetric`, and `CertifiedMeasure` are
-marker bounds; the real mathematical specifications are checked in
-Verus. The native Rust type system alone is not a proof of certification.
+The production `sample_word_then` and deterministic
+`BoolRR::release_callback` are verified separately. One-word
+expectation preservation uses a small Alerus-style linear error-credit
+resource in `one_word_credit.rs`; the randomized-response payoff
+inequality and the reported floating-point cost are proved using the
+real operator. The RR-specific proof then establishes the generic
+`valid_concrete_components` precondition *before* calling
+`new_certified`.
 
-## Negative tests
+## Explicitly trusted callback correspondence
 
-A temporary change that draws entropy but passes `Ok(0)` to the
-postprocessor was rejected by Verus at the concrete
-`sample_word_then` proof and failed the native distribution test
+**This part is not mechanized.** Ordinary Verus `Fn` contracts
+describe possible return values, not the distribution of a randomized
+closure. `sample_word_then`'s EPT contract needs ghost error credits
+which a normal `Fn(&bool)` invocation cannot provide. The native
+`run_bool_rr` forwarding method is therefore a one-line
+`external_body`:
+
+```rust
+sample_word_then(operator, truth, BoolRR::release_callback)
+```
+
+The private `trust_bool_rr_closure_forwarding` proof function is also
+`external_body`. It asserts only the execution correspondence of the
+two literal closures above: the `func` law is the already-proved
+one-word postprocessing law, and `map` forwards the actual operator
+map. It **does not assert differential privacy**, but it *does* assert
+a substantive probabilistic correspondence, and it would be unsound
+if invoked on different callbacks. It must be audited together with
+its single callsite. Merely passing Verus is not proof of that
+correspondence.
+
+This is distinct from the generic constructor's ordinary `Arc<dyn
+Fn>` erasure trust. Future work could formally integrate EPTs for
+concrete `Fn` closures to remove the former assumption.
+
+Other trusted pieces are the RNG's uniform-word/input-independent
+error law, the unmechanized soundness interpretation of the adapted
+error-credit calculus, numerical division/logarithm rounding and
+selected arithmetic identities, plus the native panic/error model.
+Verus uses `()` for the native error value.
+
+## Regression and falsification
+
+Replacing the sampled entropy with `Ok(0)` *inside*
+`sample_word_then` was rejected by Verus and failed native tests
 (commit `d522b57`, restored in `b146c69`).
 
-A second mutation passed an always-false ghost output model to
-`new_certified` while leaving both production callbacks unchanged.
-Verus rejected the **certified constructor precondition**
-(commit `c8b2b5c`, restored in `1b2559e`). Thus an unrelated
-or fabricated output model cannot discharge the constructor's proof
-obligations.
+Earlier experiments showed that modifying an unchecked callback
+adapter could pass Verus while breaking the native distribution. The
+current callback-forwarding code is likewise an explicit trusted
+boundary; its behavior must be reviewed and tested separately.
 
-Earlier erasure experiments showed that mutating an unchecked native
-adapter could pass Verus while failing native tests. That is why
-unchecked storage is now explicit, minimal, and outside the
-mathematical verification boundary. It remains part of the trusted
-computing base, rather than being described as verified code.
-
-The resulting privacy proof is conditional on these stated primitives
-and trusted operations, not an unconditional proof of the Rust runtime
-or every OpenDP measurement.
+The resulting certificate is conditional on these documented
+primitives and trusted Rust forwarding, not a mechanized theorem
+about the entire native runtime.
