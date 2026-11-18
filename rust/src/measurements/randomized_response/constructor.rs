@@ -454,13 +454,16 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                 by {
                     assert(crate::randomized_response_bool::rr_discrete_close(
                         *left, *right, *d));
+                    let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::uniform_word::one_word_expectation(*left, model, payoff);
+                    let right_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::uniform_word::one_word_expectation(*right, model, payoff);
                     if let Some(factor) = operator_factor_map(op, *d) {
                         assert(factor >= 1real);
                         assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
                             crate::measurement_proof::bounded_payoff(payoff)
                             implies
-                                #[trigger] actual(*left, payoff)
-                                    <= factor * actual(*right, payoff)
+                                #[trigger] left_law(payoff) <= factor * right_law(payoff)
                         by {
                             if *d == 0 {
                                 assert(*left == *right);
@@ -473,10 +476,20 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                                 crate::randomized_response_bool::lemma_bool_rr_dp(
                                     op, words, factor, *left, *right, payoff);
                             }
+                            assert(left_law(payoff) == actual(*left, payoff));
+                            assert(right_law(payoff) == actual(*right, payoff));
                             assert(actual(*left, payoff) == expected(*left, payoff));
                             assert(actual(*right, payoff) == expected(*right, payoff));
                         }
                     }
+                    assert(measure.dominates(left_law, right_law, &epsilon));
+                    let displayed_left = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::uniform_word::one_word_expectation(*left, model, payoff);
+                    let displayed_right = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::uniform_word::one_word_expectation(*right, model, payoff);
+                    assert(displayed_left =~= left_law);
+                    assert(displayed_right =~= right_law);
+                    assert(measure.dominates(displayed_left, displayed_right, &epsilon));
                 }
             }
         }
