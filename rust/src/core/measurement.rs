@@ -130,28 +130,23 @@ where
     }
 }
 
-/// Proof boundary for concrete one-word sampling callbacks.
+/// Generic certification boundary for concrete executable callbacks.
 ///
-/// The caller proves the complete measurement validity predicate before any
-/// callback erasure. The body below is the sole explicitly trusted operation:
-/// ordinary Rust storage of the exact callbacks in an OpenDP Measurement.
-/// Nothing here assumes a mechanism-specific privacy theorem.
+/// The caller proves all invariants before storage. This external body is
+/// *only* the ordinary Rust wrapping of those exact callbacks in OpenDP.
+/// In particular, the contract is independent of how `func` samples.
 #[cfg_attr(verus_only, verus_verify)]
 impl<DI, MI, MO, TO> Measurement<DI, MI, MO, TO>
 where
     DI: CertifiedDomain,
-    DI::Carrier: Copy,
     MI: CertifiedMetric<DI::Carrier>,
     MO: CertifiedMeasure<Result<TO, ()>>,
     (DI, MI): MetricSpace,
 {
     #[cfg_attr(verus_only, verus_verify(external_body))]
     #[cfg_attr(verus_only, verus_spec(result =>
-        with Ghost(model): Ghost<
-            crate::uniform_word::OneWordModel<DI::Carrier, TO>>
-        requires crate::measurement_proof::valid_one_word_components(
-            &input_domain, &input_metric, &output_measure,
-            operator, postprocess, map, model),
+        requires crate::measurement_proof::valid_concrete_components(
+            &input_domain, &input_metric, &output_measure, func, map),
         ensures match result {
             Ok(meas) => {
                 &&& meas.input_domain == input_domain
@@ -162,30 +157,23 @@ where
             Err(_) => true,
         },
     ))]
-    pub(crate) fn new_certified<Op, F, P>(
+    pub(crate) fn new_certified<F, P>(
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        operator: Op,
-        postprocess: F,
+        func: F,
         map: P,
     ) -> Fallible<Self>
     where
-        Op: Copy + 'static,
-        F: Fn(&Op, &DI::Carrier, Fallible<u64>) -> Fallible<TO> + Copy + 'static,
-        P: Fn(&Op, &MI::Distance) -> Fallible<MO::Distance> + Copy + 'static,
+        F: Fn(&DI::Carrier) -> Fallible<TO> + 'static,
+        P: Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static,
     {
         #[cfg(not(verus_only))]
         {
-            let map_operator = operator;
             Self::new(
-                input_domain,
-                input_metric,
-                output_measure,
-                Function::new_fallible(move |input| {
-                    crate::traits::samplers::sample_word_then(&operator, input, postprocess)
-                }),
-                PrivacyMap::new_fallible(move |d| map(&map_operator, d)),
+                input_domain, input_metric, output_measure,
+                Function::new_fallible(func),
+                PrivacyMap::new_fallible(map),
             )
         }
         #[cfg(verus_only)]
