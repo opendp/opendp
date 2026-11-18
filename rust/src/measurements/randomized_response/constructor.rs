@@ -166,8 +166,8 @@ fn run_bool_rr(
 /// DiscreteDistance, and MaxDivergence; this shared function performs the
 /// same executable work in the native and Verus builds.
 ///
-/// Verus establishes privacy validity of the actual Function/PrivacyMap
-/// pair before calling new_certified, which requires that validity.
+/// Verus establishes privacy validity of concrete func/map callbacks before
+/// calling the generic new_certified, which requires that validity.
 #[cfg_attr(verus_only, verus_verify)]
 #[cfg_attr(verus_only, verus_spec(result =>
     ensures match result {
