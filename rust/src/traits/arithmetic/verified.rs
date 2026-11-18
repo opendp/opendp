@@ -67,6 +67,12 @@ verus! {
     pub uninterp spec fn real_ln(value: real) -> real;
     pub uninterp spec fn real_exp(value: real) -> real;
 
+    /// Standard exponential identity for the real mathematical model.
+    #[verifier::external_body]
+    pub proof fn real_exp_zero()
+        ensures real_exp(0real) == 1real,
+    { }
+
     /// Standard real-analysis facts, marked trusted, not smuggled into a
     /// purported verification of the arithmetic implementation.
     #[verifier::external_body]
