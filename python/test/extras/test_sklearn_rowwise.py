@@ -183,3 +183,50 @@ def test_rowwise_rejects_uncertified_method_and_metric():
         _make_rowwise_transform(
             domain(), dp.frame_distance(dp.symmetric_distance()), Rowwise()
         )
+
+
+def test_uncertified_output_domain_and_missing_public_width():
+    class BadDomain(TransformationMixin, BaseEstimator):
+        def transform(self, X):
+            return X
+
+        def rowwise_output_domain(self, input_domain, *, method):
+            return None
+
+    with pytest.raises(TypeError, match="must return a Domain"):
+        predict_transform(BadDomain(), domain(), "transform")
+
+    class UnknownWidth(BadDomain):
+        def rowwise_output_domain(self, input_domain, *, method):
+            return dp.numpy.array2_domain(T=dp.f64)
+
+    with pytest.raises(ValueError, match="public output width"):
+        predict_transform(UnknownWidth(), domain(), "transform")
+
+
+def test_logistic_regression_rejects_invalid_inference_contracts():
+    from opendp.extras.sklearn.linear_model import LogisticRegression
+
+    model = LogisticRegression()
+    model._ingest_release(np.zeros(3))
+    with pytest.raises(ValueError, match="feature count"):
+        model.rowwise_output_domain(
+            dp.numpy.array2_domain(T=dp.f64, num_columns=3), method="predict"
+        )
+
+    features = dp.numpy.array2_domain(T=dp.f64, num_columns=2)
+    model.classes_ = np.array([1, 2])
+    with pytest.raises(ValueError, match="0/1 classes"):
+        model.rowwise_output_domain(features, method="predict")
+
+    model.classes_ = np.array([0, 1])
+    with pytest.raises(ValueError, match="not certified rowwise"):
+        model.rowwise_output_domain(features, method="transform")
+
+
+def test_certified_inference_requires_aligned_input_domain():
+    ctx = dp.Context.compositor(
+        np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
+    )
+    with pytest.raises(TypeError, match="aligned SklearnFit domain"):
+        ctx.query().sklearn(IdentityFitted(), method="transform")
