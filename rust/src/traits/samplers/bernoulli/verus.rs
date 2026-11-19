@@ -75,6 +75,11 @@ pub open spec fn error_mass<E>(
     })
 }
 
+/// The zero payoff on an error is an identically zero event.
+pub open spec fn zero_error_post<E>() -> spec_fn(E) -> real {
+    |_err: E| 0real
+}
+
 /// The one probabilistic boundary: the expectation functional of the
 /// production sample_uniform_u64 call. Error mass and success mass are
 /// derived from this *same* functional, not independently supplied axioms.
@@ -86,9 +91,13 @@ pub open spec fn uniform_word_expectation_rule<E>(
 ) -> bool {
     &&& 0real <= success_mass(expectation) <= 1real
     &&& error_mass(expectation, |_: E| 1real) == 1real - success_mass(expectation)
+    // An expectation must send the impossible event to zero. The old rule
+    // did not constrain error_mass(0), admitting non-probability functionals.
+    &&& error_mass(expectation, zero_error_post()) == 0real
     &&& forall|err_post: spec_fn(E) -> real|
         (forall|err: E| 0real <= #[trigger] err_post(err) <= 1real)
         ==> 0real <= #[trigger] error_mass(expectation, err_post)
+            <= 1real - success_mass(expectation)
     &&& forall|threshold: nat, below: real, above: real, err_post: spec_fn(E) -> real|
         threshold <= 18_446_744_073_709_551_616nat
         && 0real <= below <= 1real
