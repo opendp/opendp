@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use dashu::float::FBig;
-use dashu::float::round::mode::{Down, Up, Zero};
+use dashu::rational::RBig;
 use num::{ToPrimitive, Zero as _};
 use opendp_derive::bootstrap;
 
@@ -13,7 +12,7 @@ use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L01InfDistance};
-use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
+use crate::traits::samplers::{fill_bytes, sample_bernoulli_rational};
 use crate::traits::{Hashable, InfCast, InfMul, Integer};
 use std::collections::hash_map::DefaultHasher;
 
@@ -67,6 +66,9 @@ fn pre_hash<K: Hash>(x: K) -> u64 {
 /// See <http://hjemmesider.diku.dk/~jyrki/Paper/CP-11.4.1997.pdf>
 /// "A Reliable Randomized Algorithm for the Closest-Pair Problem"
 fn hash(x: u64, a: u64, b: u64, l: u32) -> usize {
+    if l == 0 {
+        return 0;
+    }
     (a.wrapping_mul(x).wrapping_add(b) >> (64 - l)) as usize
 }
 
@@ -87,50 +89,49 @@ fn exponent_next_power_of_two(x: u64) -> u32 {
     if x > (1 << exp) { exp + 1 } else { exp }
 }
 
-// Multiplies x with scale/alpha and applies randomized rounding to return an integer
-fn scale_and_round<CI>(x: CI, alpha: f64, scale: f64) -> Fallible<usize>
+// Interpret the public floating-point parameters as exact rationals.
+fn make_rate(alpha: f64, scale: f64) -> Fallible<RBig> {
+    if !scale.is_finite() || scale <= 0.0 {
+        return fallible!(
+            MakeMeasurement,
+            "scale ({}) must be positive and finite",
+            scale
+        );
+    }
+    if !alpha.is_finite() || alpha <= 0.0 {
+        return fallible!(
+            MakeMeasurement,
+            "alpha ({}) must be positive and finite",
+            alpha
+        );
+    }
+    Ok(RBig::try_from(scale)? / RBig::try_from(alpha)?)
+}
+
+// Exact randomized rounding, capped at the number of hash functions.
+// Values above this cap result in the same projected bits.
+fn scale_and_round<CI>(x: CI, rate: &RBig, max: usize) -> Fallible<usize>
 where
     CI: Integer + ToPrimitive,
 {
-    let mut scale = FBig::<Down>::neg_inf_cast(scale)?;
-    scale /= FBig::<Down>::inf_cast(alpha)?;
-
-    // Truncate bits that represents values below 2^-53.
-    // exp is the MSB position (scale in [2^(exp-1), 2^exp)), matching MPFR's get_exp
-    let exp = scale.repr().exponent() + scale.repr().digits() as isize;
-    scale = scale
-        .clone()
-        .with_precision((f64::MANTISSA_DIGITS as isize - exp).max(1) as usize)
-        .value();
-
-    let r = FBig::from(x.max(CI::zero()).to_u64().unwrap_or_else(|| u64::MAX))
-        .with_precision(64)
-        .value()
-        * scale;
-
-    let floored = f64::inf_cast(r.clone().floor())? as usize;
-
-    match sample_bernoulli_float(f64::inf_cast(r.fract())?, false)? {
-        true => Ok(floored + 1),
-        false => Ok(floored),
+    if max == 0 || x <= CI::zero() {
+        return Ok(0);
     }
-}
 
-// Probability of flipping bits = 1 / (alpha + 2)
-fn compute_prob(alpha: f64) -> f64 {
-    let alpha: FBig<Down> = FBig::<Down>::neg_inf_cast(alpha).expect("impl is infallible") + 2;
-    let alpha = FBig::<Up>::ONE / alpha.with_rounding();
-    // Round up to preserve privacy
-    f64::inf_cast(alpha).expect("impl is infallible")
-}
+    let x = x
+        .to_u128()
+        .ok_or_else(|| err!(FailedCast, "failed to convert nonnegative count to u128"))?;
+    let r = RBig::from(x) * rate;
+    if r >= RBig::from(max) {
+        return Ok(max);
+    }
 
-/// Reject any choice of `scale` or `alpha` such that `scale / alpha < 2^-52`
-///
-/// Due to privacy concerns the current implementation discards bits with significance less than 2^-52 from scale/alpha
-fn are_parameters_invalid(alpha: f64, scale: f64) -> bool {
-    let scale = FBig::<Zero>::inf_cast(scale).expect("impl is infallible");
-    let alpha = FBig::<Zero>::neg_inf_cast(alpha).expect("impl is infallible");
-    scale * (1i64 << 52) < alpha
+    let floor = r.floor();
+    let fractional = r - RBig::from(floor.clone());
+    let floor = floor
+        .to_usize()
+        .ok_or_else(|| err!(FailedCast, "rounded count exceeds usize"))?;
+    Ok(floor + usize::from(sample_bernoulli_rational(fractional)?))
 }
 
 /// Computes the DP projection.
@@ -139,8 +140,8 @@ fn are_parameters_invalid(alpha: f64, scale: f64) -> bool {
 fn compute_projection<K, CI>(
     x: &HashMap<K, CI>,
     hashers: &Vec<HashFunction<K>>, // h
-    alpha: f64,
-    scale: f64,
+    rate: &RBig,
+    flip_prob: &RBig,
     projection_size: usize, // s
 ) -> Fallible<BitVector>
 where
@@ -149,15 +150,13 @@ where
     let mut z = vec![false; projection_size];
 
     for (k, v) in x.iter() {
-        let round = scale_and_round(v.clone(), alpha.clone(), scale.clone())?;
+        let round = scale_and_round(v.clone(), rate, hashers.len())?;
         // ^= true TODO: Hash collisions can be handled using OR or XOR
         (hashers.iter().take(round)).for_each(|h_i| z[h_i(k) % projection_size] = true);
     }
 
-    let p = compute_prob(alpha);
-
     z.iter()
-        .map(|b| sample_bernoulli_float(p, false).map(|flip| b ^ flip))
+        .map(|b| sample_bernoulli_rational(flip_prob.clone()).map(|flip| b ^ flip))
         .collect()
 }
 
@@ -235,28 +234,18 @@ where
         return fallible!(MakeMeasurement, "value domain must be non-nan");
     }
 
-    if scale.is_sign_negative() || scale.is_zero() {
-        return fallible!(MakeMeasurement, "scale ({}) must be positive", scale);
-    }
-    if alpha.is_sign_negative() || alpha.is_zero() {
-        return fallible!(MakeMeasurement, "alpha ({}) must be positive", alpha);
-    }
+    let rate = make_rate(alpha, scale)?;
     if projection_size == 0 {
         return fallible!(MakeMeasurement, "projection_size must be positive");
     }
-    if are_parameters_invalid(alpha, scale) {
-        return fallible!(
-            MakeMeasurement,
-            "scale divided by alpha must be above 2^-52"
-        );
-    }
+    let flip_prob = RBig::ONE / (RBig::try_from(alpha)? + RBig::from(2));
 
     Measurement::new(
         input_domain,
         input_metric,
         MaxDivergence,
         Function::new_fallible(move |x: &HashMap<K, CI>| {
-            let z = compute_projection(x, &hashers, alpha, scale, projection_size)?;
+            let z = compute_projection(x, &hashers, &rate, &flip_prob, projection_size)?;
             Ok(AlpState {
                 alpha,
                 scale,
@@ -293,43 +282,64 @@ where
     f64: InfCast<CI> + InfCast<u32>,
     (SparseDomain<K, CI>, L01InfDistance<AbsoluteDistance<CI>>): MetricSpace,
 {
-    let value_limit: f64 = value_limit
-        // if value limit is None, read it from the domain
+    let value_limit = value_limit
         .or_else(|| {
-            (input_domain.value_domain.bounds.as_ref())
+            input_domain
+                .value_domain
+                .bounds
+                .as_ref()
                 .and_then(|b| b.upper())
                 .cloned()
         })
-        // if value limit is still None, return an error
         .ok_or_else(|| {
             err!(
                 MakeMeasurement,
                 "value_limit is required when data is unbounded"
             )
-        })?
-        .to_f64()
-        .ok_or_else(|| err!(MakeMeasurement, "failed to parse value_limit"))?;
+        })?;
 
-    let total_limit: f64 = total_limit
-        .to_f64()
-        .ok_or_else(|| err!(MakeMeasurement, "failed to parse total_limit"))?;
+    if value_limit < CI::zero() || total_limit < CI::zero() {
+        return fallible!(
+            MakeMeasurement,
+            "value_limit and total_limit must be nonnegative"
+        );
+    }
 
-    let size_factor = size_factor.unwrap_or(SIZE_FACTOR_DEFAULT) as f64;
+    let value_limit = value_limit
+        .to_u128()
+        .ok_or_else(|| err!(MakeMeasurement, "failed to convert value_limit"))?;
+    let total_limit = total_limit
+        .to_u128()
+        .ok_or_else(|| err!(MakeMeasurement, "failed to convert total_limit"))?;
 
-    // f64 represents all integers exactly up to 2^52
     let alpha = alpha.unwrap_or(ALPHA_DEFAULT) as f64;
+    let rate = make_rate(alpha, scale)?;
 
-    let quotient = (scale / alpha)
-        .to_f64()
-        .ok_or_else(|| err!(MakeTransformation, "failed to parse scale"))?;
-    let m = usize::inf_cast(value_limit * quotient)?;
-
-    let exp = exponent_next_power_of_two((size_factor * total_limit * quotient) as u64);
+    let m = (RBig::from(value_limit) * &rate)
+        .ceil()
+        .to_usize()
+        .ok_or_else(|| err!(MakeMeasurement, "number of hash functions exceeds usize"))?;
+    let size =
+        (RBig::from(size_factor.unwrap_or(SIZE_FACTOR_DEFAULT)) * RBig::from(total_limit) * &rate)
+            .ceil()
+            .to_u64()
+            .ok_or_else(|| err!(MakeMeasurement, "projection size is too large"))?;
+    let exp = exponent_next_power_of_two(size);
+    let projection_size = 1usize
+        .checked_shl(exp)
+        .ok_or_else(|| err!(MakeMeasurement, "projection size is too large"))?;
     let hashers = (0..m)
         .map(|_| sample_hash_function(exp))
         .collect::<Fallible<Vec<HashFunction<K>>>>()?;
 
-    make_alp_state_with_hashers(input_domain, input_metric, scale, alpha, 1 << exp, hashers)
+    make_alp_state_with_hashers(
+        input_domain,
+        input_metric,
+        scale,
+        alpha,
+        projection_size,
+        hashers,
+    )
 }
 
 /// Make a postprocessor that wraps the AlpState in a Queryable object.
