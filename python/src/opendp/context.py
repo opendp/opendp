@@ -850,15 +850,8 @@ class Query(object):
             )
 
         if method is not None:
-            from opendp.extras.sklearn._domains import SklearnFitDescriptor
             from opendp.extras.sklearn._rowwise import _make_rowwise_transform
 
-            try:
-                input_domain.cast(SklearnFitDescriptor)
-            except ValueError as exc:
-                raise TypeError(
-                    "Certified inference requires an aligned SklearnFit domain"
-                ) from exc
             trans = _make_rowwise_transform(
                 input_domain, input_metric, estimator, method=method
             )
