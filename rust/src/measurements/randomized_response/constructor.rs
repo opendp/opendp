@@ -369,6 +369,10 @@ pub proof fn lemma_bool_rr_map_cost(op: operator::BoolRR, distance: u32)
         crate::verified_arithmetic::lemma_same_bits_same_value(
             epsilon, op.privacy_cost);
         assert(crate::verified_arithmetic::finite(epsilon));
+        let bits = f64_to_bits(epsilon);
+        assert(((bits >> 52u64) & 2047u64) != 2047u64);
+        crate::verified_arithmetic::lemma_finite_bits_not_positive_infinity(bits);
+        assert(bits != 0x7ff0_0000_0000_0000u64);
         assert(crate::verified_arithmetic::float_value(epsilon)
             == crate::verified_arithmetic::float_value(op.privacy_cost));
         assert(MaxDivergence::multiplicative_factor(epsilon)
