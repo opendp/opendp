@@ -5,13 +5,14 @@ use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExpr
 use crate::error::*;
 use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
+use crate::polars::permute::match_permute;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
+use crate::transformations::make_stable_expr::cast::{check_private_cast, is_numeric_coercion};
 use crate::transformations::traits::UnboundedMetric;
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
-#[cfg(not(patch_polars))]
-use polars_plan::dsl::WindowType;
+use polars_plan::plans::{DynLiteralValue, LiteralValue};
 
 use super::StableDslPlan;
 
@@ -29,6 +30,12 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     input_metric: FrameDistance<M>,
     plan: DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
+    if M::ORDERED {
+        return fallible!(
+            MakeTransformation,
+            "Sample-and-aggregate requires an unordered input metric."
+        );
+    }
     #[cfg(patch_polars)]
     let DslPlan::GroupBy {
         input,
@@ -72,13 +79,6 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    if maintain_order {
-        return fallible!(
-            MakeTransformation,
-            "maintain_order is wasted compute because row ordering is protected information"
-        );
-    }
-
     if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
         return fallible!(
             MakeTransformation,
@@ -105,13 +105,18 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             let t_key: Transformation<_, _, _, L01InfDistance<M>> = key
                 .clone()
                 .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))?;
+            if !canonical_sort_dtype(&t_key.output_domain.column.dtype()) {
+                return fallible!(MakeTransformation,
+                    "Floating-point grouping keys may emit permutation-dependent representatives (signed zeros or NaN payloads).");
+            }
             Ok(t_key.invoke(&input)?.expr)
         })
         .collect::<Fallible<Vec<_>>>()?;
 
-    // check that aggregations are infallible. Aggregations are allowed to resize data
+    // Validate fallibility and permutation invariance in the same traversal.
+    let schema = middle_domain.schema();
     aggs.iter()
-        .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+        .try_for_each(|e| check_permutation_invariance(e, &schema))?;
 
     if middle_metric.0.identifier().is_some() {
         return fallible!(
@@ -153,7 +158,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
                 predicates: vec![],
                 aggs: aggs.clone(),
                 apply: None,
-                maintain_order: false,
+                maintain_order,
                 options: options.clone(),
             };
             #[cfg(not(patch_polars))]
@@ -162,7 +167,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
                 keys: stable_keys.clone(),
                 aggs: aggs.clone(),
                 apply: None,
-                maintain_order: false,
+                maintain_order,
                 options: options.clone(),
             };
             output
@@ -203,852 +208,415 @@ pub(crate) enum Resize {
     Ban,
 }
 
-const INVITE: &'static str = "Please open an issue if this would be useful to you.";
-
-/// # Proof Definition
-/// Returns an error if the expression may raise data-dependent errors,
-/// or if `resize` is Ban and the expression resizes the data.
+/// How an expression behaves when the input rows are permuted.
 ///
-/// A resize is an expression that changes the number of rows in the data.
-/// Scalar-valued expressions are not considered a resize,
-/// because they can be broadcasted.
-pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
-    Ok(match expr {
-        #[cfg(patch_polars)]
-        Expr::Rolling {
-            function,
-            index_column,
-            ..
-        } => {
-            check_infallible(&*function, resize)?;
-            check_infallible(&*index_column, resize)?;
+/// An invariant expression produces the same value; an equivariant expression
+/// reorders its result with the input; a randomized expression has a
+/// permutation-invariant distribution. Uncertified behavior is an error.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PermutationBehavior {
+    Invariant,
+    Equivariant,
+    Randomized,
+}
+
+impl PermutationBehavior {
+    /// Combine row-aligned arguments, preserving scalar broadcast.
+    fn combine(self, rhs: Self) -> Fallible<Self> {
+        use PermutationBehavior::*;
+        match (self, rhs) {
+            (Invariant, other) | (other, Invariant) => Ok(other),
+            (Equivariant, Equivariant) => Ok(Equivariant),
+            // Combining a shuffled column with an unshuffled column can
+            // produce an order-dependent joint distribution.
+            (Randomized, _) | (_, Randomized) => unproven(),
         }
-        Expr::Element => (),
-        #[cfg(patch_polars)]
-        Expr::Over {
-            function,
-            partition_by,
-            order_by,
-            ..
-        } => {
-            check_infallible(&*function, resize)?;
-            partition_by
-                .iter()
-                .try_for_each(|by| check_infallible(&*by, Resize::Ban))?;
-            if let Some((order, _)) = order_by {
-                check_infallible(order, Resize::Ban)?;
-            }
+    }
+
+    fn reducer(self) -> Self {
+        Self::Invariant
+    }
+
+    fn order_sensitive_reducer(self) -> Fallible<Self> {
+        match self {
+            Self::Invariant | Self::Randomized => Ok(Self::Invariant),
+            Self::Equivariant => fallible!(
+                MakeTransformation,
+                "Order-sensitive aggregation requires a trusted random permutation of its input, or a permutation-equivariant input for an invariant reducer."
+            ),
         }
-        #[cfg(not(patch_polars))]
-        Expr::Window {
-            function,
-            partition_by,
-            order_by,
+    }
+}
+
+/// Fail immediately when an expression's permutation behavior cannot be proven.
+fn unproven() -> Fallible<PermutationBehavior> {
+    fallible!(
+        MakeTransformation,
+        "Expression permutation behavior is not certified for sample-and-aggregate."
+    )
+}
+
+/// Validate an aggregation and prove that its result is invariant in
+/// distribution under permutations of the input rows.
+pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fallible<()> {
+    if inspect_expr(expr, Resize::Allow, Some(schema))? == PermutationBehavior::Invariant {
+        Ok(())
+    } else {
+        fallible!(
+            MakeTransformation,
+            "Aggregation expression has no established permutation-invariance proof."
+        )
+    }
+}
+
+/// Check that a truncation key commutes with row permutations and cannot
+/// resize its input or fail depending on private values.
+pub(crate) fn is_permutation_equivariant(expr: &Expr) -> bool {
+    inspect_expr(expr, Resize::Ban, None).is_ok_and(|behavior| {
+        matches!(
+            behavior,
+            PermutationBehavior::Equivariant | PermutationBehavior::Invariant
+        )
+    })
+}
+
+pub(super) fn canonical_sort_dtype(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Float32 | DataType::Float64 => false,
+        DataType::List(inner) | DataType::Array(inner, _) => canonical_sort_dtype(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .all(|field| canonical_sort_dtype(field.dtype())),
+        _ => true,
+    }
+}
+
+/// Quantile parameters are currently evaluated against the entire frame,
+/// rather than separately for each group: https://github.com/pola-rs/polars/issues/20951
+/// A public scalar parameter preserves group locality.
+fn check_quantile(expr: &Expr) -> Fallible<()> {
+    let value = match expr {
+        Expr::Literal(LiteralValue::Scalar(value)) if value.dtype().is_numeric() => {
+            value.value().try_extract::<f64>().ok()
+        }
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Int(value))) => Some(*value as f64),
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Float(value))) => Some(*value),
+        _ => None,
+    };
+    if value.is_some_and(|value| value.is_finite() && (0.0..=1.0).contains(&value)) {
+        Ok(())
+    } else {
+        fallible!(
+            MakeTransformation,
+            "quantile requires a public numeric scalar literal in [0, 1]."
+        )
+    }
+}
+
+/// Return a schema-derived dtype, rather than guessing about expressions
+/// whose behavior (e.g. categorical encoding) is type-dependent.
+fn checked_dtype(expr: &Expr, schema: Option<&Schema>) -> Fallible<DataType> {
+    let schema = schema.ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "A schema is required to certify this expression."
+        )
+    })?;
+    Ok(expr.clone().to_field(schema)?.dtype)
+}
+
+fn simple_dtype(dtype: &DataType) -> bool {
+    dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean | DataType::String)
+}
+
+/// Bound arguments must not be expressions over private rows.
+fn public_numeric_literal(expr: &Expr) -> bool {
+    match expr {
+        Expr::Literal(LiteralValue::Scalar(value)) if value.dtype().is_numeric() => {
+            value.value().try_extract::<f64>().is_ok_and(f64::is_finite)
+        }
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Int(_))) => true,
+        Expr::Literal(LiteralValue::Dyn(DynLiteralValue::Float(value))) => value.is_finite(),
+        _ => false,
+    }
+}
+
+fn public_scalar(expr: &Expr) -> bool {
+    matches!(expr, Expr::Literal(value) if value.is_scalar())
+}
+
+/// Check only the small set of operations needed for ordinary bounded
+/// sample-and-aggregate statistics. Everything else is unsupported.
+fn inspect_expr(
+    expr: &Expr,
+    resize: Resize,
+    schema: Option<&Schema>,
+) -> Fallible<PermutationBehavior> {
+    use PermutationBehavior::*;
+
+    if let Some(data) = match_permute(expr)? {
+        if matches!(resize, Resize::Ban) {
+            return fallible!(
+                MakeTransformation,
+                "permute cannot be combined with another row-aligned expression."
+            );
+        }
+        return match inspect_expr(data, Resize::Allow, schema)? {
+            Invariant | Equivariant => Ok(Randomized),
+            Randomized => unproven(),
+        };
+    }
+
+    match expr {
+        Expr::Element | Expr::Column(_) => Ok(Equivariant),
+        Expr::Alias(expr, _) | Expr::KeepName(expr) | Expr::RenameAlias { expr, .. } => {
+            inspect_expr(expr, resize, schema)
+        }
+        Expr::Literal(value) if value.is_scalar() => Ok(Invariant),
+        Expr::Literal(_) => fallible!(
+            MakeTransformation,
+            "Only scalar literals are supported in grouped aggregations."
+        ),
+        Expr::Len => Ok(Invariant),
+
+        // Binary expressions are not certified for infallible, permutation-
+        // invariant sample-and-aggregate execution.
+        Expr::BinaryExpr { .. } => unproven(),
+
+        Expr::Cast {
+            expr,
+            dtype,
             options,
         } => {
-            if *options != WindowType::Over(WindowMapping::GroupsToRows) {
-                return fallible!(
+            match options {
+                CastOptions::NonStrict => (),
+                CastOptions::Strict => {
+                    return fallible!(
+                        MakeTransformation,
+                        "Strict casts are not supported in grouped aggregations."
+                    );
+                }
+                CastOptions::Overflowing => {
+                    return fallible!(MakeTransformation, "Overflowing casts are not supported.");
+                }
+            }
+            let target = dtype.as_literal().ok_or_else(|| {
+                err!(
                     MakeTransformation,
-                    "Only groups-to-rows window expressions are currently supported. {INVITE}"
-                );
+                    "Cast target must be a public literal dtype."
+                )
+            })?;
+            if !target.is_primitive_numeric() && !matches!(target, DataType::Boolean) {
+                return unproven();
             }
-            check_infallible(&*function, resize)?;
-            partition_by
-                .iter()
-                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
-            if let Some((order, _)) = order_by {
-                check_infallible(order, Resize::Ban)?;
+            let source = checked_dtype(expr, schema)?;
+            if !public_scalar(expr) && !is_numeric_coercion(&source, target) {
+                return unproven();
             }
+            check_private_cast(&source, target)?;
+            inspect_expr(expr, resize, schema)
         }
-        Expr::Eval {
-            expr, evaluation, ..
-        } => {
-            check_infallible(expr, resize)?;
-            check_infallible(evaluation, Resize::Allow)?;
-        }
-        Expr::Alias(e, _) => check_infallible(e.as_ref(), resize)?,
-        Expr::Column(_) => (),
-        Expr::Selector(_) => (),
-        Expr::Literal(_) => (),
-        Expr::BinaryExpr { left, right, .. } => {
-            check_infallible(&left, Resize::Ban)?;
-            check_infallible(&right, Resize::Ban)?;
-        }
-        Expr::Cast { options, expr, .. } => {
-            if matches!(options, CastOptions::Strict) {
-                return fallible!(
-                    MakeTransformation,
-                    "Strict casting may cause data-dependent errors. Set strict to false."
-                );
-            }
-            check_infallible(expr, resize)?;
-        }
-        Expr::Sort { expr, .. } => check_infallible(expr.as_ref(), resize)?,
-        Expr::Gather { .. } => fallible!(
-            MakeTransformation,
-            "Gather may cause data-dependent errors due to OOB indexing."
-        )?,
-        Expr::SortBy { expr, by, .. } => {
-            check_infallible(expr, Resize::Ban)?;
-            by.iter()
-                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
-        }
-        Expr::Agg(agg_expr) => match agg_expr {
-            AggExpr::Sum(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Mean(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Median(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::NUnique(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::First(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Last(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Implode(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Count { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Quantile { expr: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Max { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Min { input: e, .. } => check_infallible(e, Resize::Allow)?,
-            AggExpr::Std(e, _) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Var(e, _) => check_infallible(e, Resize::Allow)?,
-            AggExpr::AggGroups(e) => check_infallible(e, Resize::Allow)?,
-            #[cfg(patch_polars)]
-            AggExpr::FirstNonNull(e) | AggExpr::LastNonNull(e) => {
-                check_infallible(e, Resize::Allow)?
-            }
-            AggExpr::Item { .. } => {
-                return fallible!(
-                    MakeTransformation,
-                    "item raises an error if length is not one."
-                );
-            }
-        },
+
         Expr::Ternary {
             predicate,
             truthy,
             falsy,
         } => {
-            check_infallible(predicate, Resize::Ban)?;
-            check_infallible(truthy, Resize::Ban)?;
-            check_infallible(falsy, Resize::Ban)?;
-        }
-        Expr::Function { input, function } => check_infallible_function(function, input, resize)?,
-        Expr::Explode { input: e, .. } => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "explode may cause data-dependent errors due to different lengths."
-                );
+            // Polars inserts strict casts to a common supertype. Restrict
+            // implicit promotions to pairs that cannot fail on private values.
+            if checked_dtype(predicate, schema)? != DataType::Boolean {
+                return unproven();
             }
-            check_infallible(e, resize)?;
+            let truthy_dtype = checked_dtype(truthy, schema)?;
+            let falsy_dtype = checked_dtype(falsy, schema)?;
+            if truthy_dtype != falsy_dtype
+                && truthy_dtype != DataType::Null
+                && falsy_dtype != DataType::Null
+                && !is_numeric_coercion(&truthy_dtype, &falsy_dtype)
+            {
+                return unproven();
+            }
+            inspect_expr(predicate, Resize::Ban, schema)?
+                .combine(inspect_expr(truthy, Resize::Ban, schema)?)?
+                .combine(inspect_expr(falsy, Resize::Ban, schema)?)
         }
+
         Expr::Filter { input, by } => {
             if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "Filter may cause data-dependent errors due to different lengths."
-                );
+                return unproven();
             }
-            check_infallible(input.as_ref(), resize)?;
-            check_infallible(by.as_ref(), resize)?;
+            if !matches!(checked_dtype(by, schema)?, DataType::Boolean) {
+                return unproven();
+            }
+            inspect_expr(input, Resize::Ban, schema)?.combine(inspect_expr(
+                by,
+                Resize::Ban,
+                schema,
+            )?)
         }
-        Expr::Slice { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "Slice may cause data-dependent errors due to null offset."
-            );
+
+        Expr::Agg(agg) => {
+            enum Reducer {
+                Invariant,
+                IntegerSum,
+                CanonicalMinMax,
+                OrderSensitive,
+            }
+            use Reducer::*;
+
+            let (input, reducer) = match agg {
+                AggExpr::Count { input, .. } | AggExpr::NUnique(input) => {
+                    (input.as_ref(), Invariant)
+                }
+                AggExpr::Sum(input) => (input.as_ref(), IntegerSum),
+                AggExpr::Min { input, .. } | AggExpr::Max { input, .. } => {
+                    (input.as_ref(), CanonicalMinMax)
+                }
+                AggExpr::First(input)
+                | AggExpr::Last(input)
+                | AggExpr::Mean(input)
+                | AggExpr::Median(input)
+                | AggExpr::Std(input, _)
+                | AggExpr::Var(input, _) => (input.as_ref(), OrderSensitive),
+                AggExpr::Quantile {
+                    expr: input,
+                    quantile,
+                    ..
+                } => {
+                    check_quantile(quantile)?;
+                    (input.as_ref(), OrderSensitive)
+                }
+                _ => return unproven(),
+            };
+
+            let behavior = inspect_expr(input, Resize::Allow, schema)?;
+            let invariant = match reducer {
+                Invariant => true,
+                IntegerSum => schema.is_some_and(|schema| {
+                    input.clone().to_field(schema).is_ok_and(|field| {
+                        field.dtype.is_integer() || matches!(field.dtype, DataType::Boolean)
+                    })
+                }),
+                CanonicalMinMax => schema.is_some_and(|schema| {
+                    input
+                        .clone()
+                        .to_field(schema)
+                        .is_ok_and(|field| canonical_sort_dtype(&field.dtype))
+                }),
+                OrderSensitive => false,
+            };
+
+            if invariant {
+                Ok(behavior.reducer())
+            } else {
+                behavior.order_sensitive_reducer()
+            }
         }
-        Expr::KeepName(e) => check_infallible(e.as_ref(), resize)?,
-        Expr::Len => (),
-        Expr::RenameAlias { expr, .. } => check_infallible(expr.as_ref(), resize)?,
-        Expr::Field(_) => (),
-        Expr::AnonymousFunction { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "Anonymous functions could raise data-dependent errors."
-            );
-        }
-        Expr::SubPlan(_, _) => {
-            return fallible!(
-                MakeTransformation,
-                "SubPlans are not currently supported. {INVITE}"
-            );
-        }
-        Expr::DataTypeFunction(_) => (),
-    })
+
+        Expr::Function { input, function } => inspect_function(function, input, resize, schema),
+        _ => unproven(),
+    }
 }
 
-/// # Proof Definition
-/// Returns an error if the function expression may raise data-dependent errors,
-/// or if `resize` is Ban and the expression resizes the data.
-///
-/// A resize is an expression that changes the number of rows in the data.
-/// Scalar-valued expressions are not considered a resize,
-/// because they can be broadcasted.
-#[allow(unreachable_patterns)]
-fn check_infallible_function(
+/// The function whitelist contains only simple elementwise operations and
+/// aggregation primitives. A rejected function remains unsupported even if
+/// its arguments happen to be permutation-equivariant.
+fn inspect_function(
     function: &FunctionExpr,
-    inputs: &Vec<Expr>,
+    inputs: &[Expr],
     resize: Resize,
-) -> Fallible<()> {
-    macro_rules! check_inputs {
-        () => {
-            check_inputs!(resize)
-        };
-        (resize=$name:literal) => {{
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "{} may cause data-dependent errors due to different lengths.",
-                    $name
-                );
+    schema: Option<&Schema>,
+) -> Fallible<PermutationBehavior> {
+    use PermutationBehavior::*;
+
+    let unary = || -> Fallible<PermutationBehavior> {
+        let [input] = <&[Expr; 1]>::try_from(inputs)
+            .map_err(|_| err!(MakeTransformation, "Expected one function argument."))?;
+        inspect_expr(input, resize, schema)
+    };
+
+    match function {
+        FunctionExpr::Boolean(BooleanFunction::Any { .. })
+        | FunctionExpr::Boolean(BooleanFunction::All { .. })
+        | FunctionExpr::NullCount => {
+            let [input] = <&[Expr; 1]>::try_from(inputs)
+                .map_err(|_| err!(MakeTransformation, "Expected one aggregation argument."))?;
+            inspect_expr(input, Resize::Allow, schema)?;
+            Ok(Invariant)
+        }
+        FunctionExpr::Boolean(
+            BooleanFunction::IsNull
+            | BooleanFunction::IsNotNull
+            | BooleanFunction::IsNan
+            | BooleanFunction::IsNotNan
+            | BooleanFunction::IsFinite
+            | BooleanFunction::IsInfinite
+            | BooleanFunction::Not,
+        ) => unary(),
+
+        // Float unary operations are row-local and cannot overflow integer
+        // representations. Negative square roots produce NaN, not an error.
+        FunctionExpr::Abs
+        | FunctionExpr::Negate
+        | FunctionExpr::Floor
+        | FunctionExpr::Ceil
+        | FunctionExpr::Round { .. }
+        | FunctionExpr::Pow(PowFunction::Sqrt) => {
+            let [input] = <&[Expr; 1]>::try_from(inputs)
+                .map_err(|_| err!(MakeTransformation, "Expected one numeric argument."))?;
+            if !matches!(
+                checked_dtype(input, schema)?,
+                DataType::Float32 | DataType::Float64
+            ) {
+                return unproven();
             }
-            check_inputs!(resize)
-        }};
-        (aggregate) => {
-            check_inputs!(Resize::Allow)
-        };
-        (aligned_rows) => {
-            check_inputs!(Resize::Ban)
-        };
-        ($resize:expr) => {
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, $resize))?
-        };
+            unary()
+        }
+
+        FunctionExpr::AsStruct => {
+            let mut behavior = Invariant;
+            for input in inputs {
+                behavior = behavior.combine(inspect_expr(input, Resize::Ban, schema)?)?;
+            }
+            Ok(behavior)
+        }
+
+        FunctionExpr::FillNull => {
+            let [data, replacement] = <&[Expr; 2]>::try_from(inputs)
+                .map_err(|_| err!(MakeTransformation, "fill_null requires two arguments."))?;
+            if !public_scalar(replacement) {
+                return unproven();
+            }
+            let data_dtype = checked_dtype(data, schema)?;
+            let fill_dtype = checked_dtype(replacement, schema)?;
+            if !simple_dtype(&data_dtype)
+                || (data_dtype != fill_dtype && !is_numeric_coercion(&data_dtype, &fill_dtype))
+            {
+                return unproven();
+            }
+            inspect_expr(data, resize, schema)
+        }
+
+        FunctionExpr::Clip { has_min, has_max } => {
+            let expected = 1 + usize::from(*has_min) + usize::from(*has_max);
+            if inputs.len() != expected
+                || !inputs.iter().skip(1).all(public_numeric_literal)
+                || !checked_dtype(&inputs[0], schema)?.is_primitive_numeric()
+            {
+                return unproven();
+            }
+            inspect_expr(&inputs[0], resize, schema)
+        }
+
+        // A filtered input is allowed inside a reducer, but not wherever
+        // another expression needs the original row alignment.
+        FunctionExpr::DropNulls => {
+            if matches!(resize, Resize::Ban) {
+                return unproven();
+            }
+            unary()
+        }
+
+        _ => unproven(),
     }
-    Ok(match function {
-        FunctionExpr::Boolean(bool_expr) => match bool_expr {
-            BooleanFunction::Any { .. } => check_inputs!(aggregate),
-            BooleanFunction::All { .. } => check_inputs!(aggregate),
-            BooleanFunction::IsClose { .. } => check_inputs!(),
-            BooleanFunction::IsNull => check_inputs!(),
-            BooleanFunction::IsNotNull => check_inputs!(),
-            BooleanFunction::IsFinite => check_inputs!(),
-            BooleanFunction::IsInfinite => check_inputs!(),
-            BooleanFunction::IsFirstDistinct => check_inputs!(),
-            BooleanFunction::IsLastDistinct => check_inputs!(),
-            BooleanFunction::IsBetween { .. } => check_inputs!(),
-            BooleanFunction::IsNan => check_inputs!(),
-            BooleanFunction::IsNotNan => check_inputs!(),
-            BooleanFunction::IsIn { .. } => {
-                let [input, set] = <&[Expr; 2]>::try_from(inputs.as_slice())
-                    .map_err(|_| err!(MakeTransformation, "IsIn must have two arguments"))?;
-                check_infallible(input, resize)?;
-                check_infallible(set, Resize::Allow)?;
-            }
-            BooleanFunction::AllHorizontal => check_inputs!(aligned_rows),
-            BooleanFunction::AnyHorizontal => check_inputs!(aligned_rows),
-            BooleanFunction::Not => check_inputs!(),
-            _ => match bool_expr.to_string().as_str() {
-                "is_unique" | "is_duplicated" => check_inputs!(),
-                _ => {
-                    return fallible!(
-                        MakeTransformation,
-                        "Boolean function is not currently supported. {INVITE}"
-                    );
-                }
-            },
-        },
-        FunctionExpr::Abs => check_inputs!(),
-        FunctionExpr::Negate => check_inputs!(),
-        FunctionExpr::NullCount => check_inputs!(aggregate),
-        FunctionExpr::Pow(PowFunction::Generic) => {
-            return fallible!(
-                MakeTransformation,
-                "pow may raise data-dependent errors due to integer exponent conversion."
-            );
-        }
-        FunctionExpr::Pow(_) => check_inputs!(aligned_rows),
-        FunctionExpr::Range(_) => check_inputs!(),
-        FunctionExpr::FillNull => check_inputs!(),
-        FunctionExpr::FillNullWithStrategy(_) => check_inputs!(),
-        FunctionExpr::ShiftAndFill => check_inputs!(),
-        FunctionExpr::Shift => check_inputs!(),
-        FunctionExpr::DropNans => check_inputs!(),
-        FunctionExpr::DropNulls => check_inputs!(),
-        FunctionExpr::Reshape(_) => {
-            return fallible!(
-                MakeTransformation,
-                "reshape expression may cause data-dependent errors due to different lengths."
-            );
-        }
-        FunctionExpr::RepeatBy => check_inputs!(aligned_rows),
-        FunctionExpr::ArgUnique => check_inputs!(),
-        FunctionExpr::Rank { .. } => check_inputs!(),
-        FunctionExpr::Repeat => check_inputs!(),
-        FunctionExpr::Clip { .. } => check_inputs!(aligned_rows),
-        FunctionExpr::AsStruct => check_inputs!(aligned_rows),
-        FunctionExpr::Reverse => check_inputs!(),
-        FunctionExpr::ValueCounts { .. } => check_inputs!(resize = "value_counts"),
-        FunctionExpr::Coalesce => check_inputs!(aligned_rows),
-        FunctionExpr::Unique(_) => check_inputs!(resize = "unique"),
-        FunctionExpr::Round { .. } => check_inputs!(),
-        FunctionExpr::RoundSF { .. } => check_inputs!(),
-        FunctionExpr::Floor => check_inputs!(),
-        FunctionExpr::Ceil => check_inputs!(),
-        FunctionExpr::UpperBound => check_inputs!(),
-        FunctionExpr::LowerBound => check_inputs!(),
-        FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
-        FunctionExpr::Cut { .. } => check_inputs!(),
-        FunctionExpr::QCut { .. } => {
-            // Duplicate quantiles are only one possible failure; even with
-            // allow_duplicates=true, quantile calculation depends on private values.
-            return fallible!(
-                MakeTransformation,
-                "qcut may raise data-dependent errors while computing quantiles."
-            );
-        }
-        FunctionExpr::ToPhysical => check_inputs!(),
-        FunctionExpr::Random { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "Random may raise data-dependent errors due to sampling n without replacement from a set of length less than n."
-            );
-        }
-        FunctionExpr::SetSortedFlag(_) => check_inputs!(),
-        #[cfg(feature = "ffi")]
-        FunctionExpr::FfiPlugin { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "FfiPlugin may raise data-dependent errors."
-            );
-        }
-        FunctionExpr::MaxHorizontal => check_inputs!(aligned_rows),
-        FunctionExpr::MinHorizontal => check_inputs!(aligned_rows),
-        FunctionExpr::SumHorizontal { ignore_nulls: _ } => check_inputs!(aligned_rows),
-        FunctionExpr::MeanHorizontal { ignore_nulls: _ } => check_inputs!(aligned_rows),
-        FunctionExpr::ArrayExpr(array_function) => match array_function {
-            // Unary on the array column
-            ArrayFunction::Length
-            | ArrayFunction::Min
-            | ArrayFunction::Max
-            | ArrayFunction::Sum
-            | ArrayFunction::ToList
-            | ArrayFunction::Unique(_)
-            | ArrayFunction::NUnique
-            | ArrayFunction::Std(_)
-            | ArrayFunction::Var(_)
-            | ArrayFunction::Mean
-            | ArrayFunction::Median
-            | ArrayFunction::Sort(_)
-            | ArrayFunction::Reverse
-            | ArrayFunction::ArgMin
-            | ArrayFunction::ArgMax => check_inputs!(),
-
-            // Still unary, but changes row count (Array width is schema-known, but it is a resize)
-            #[cfg(patch_polars)]
-            ArrayFunction::Explode(_) => check_inputs!(resize = "array.explode"),
-            #[cfg(not(patch_polars))]
-            ArrayFunction::Explode { .. } => check_inputs!(resize = "array.explode"),
-
-            // Multi-input: allow scalar broadcast, but ban mismatched lengths if Resize::Ban
-            ArrayFunction::Get(_)
-            | ArrayFunction::Join(_)
-            | ArrayFunction::Contains { .. }
-            | ArrayFunction::Shift
-            | ArrayFunction::Concat
-            | ArrayFunction::Slice(_, _) => check_inputs!(aligned_rows),
-            _ => match array_function.to_string().as_str() {
-                "arr.any" | "arr.all" | "arr.to_struct" => check_inputs!(),
-                "arr.count_matches" => check_inputs!(aligned_rows),
-                _ => {
-                    return fallible!(
-                        MakeTransformation,
-                        "Array function is not currently supported. {INVITE}"
-                    );
-                }
-            },
-        },
-        FunctionExpr::BinaryExpr(binary_function) => match binary_function {
-            BinaryFunction::Contains
-            | BinaryFunction::StartsWith
-            | BinaryFunction::EndsWith
-            | BinaryFunction::HexEncode
-            | BinaryFunction::Size
-            | BinaryFunction::Reinterpret(_, _) => check_inputs!(aligned_rows),
-            #[cfg(patch_polars)]
-            BinaryFunction::Slice | BinaryFunction::Head | BinaryFunction::Tail => {
-                check_inputs!(aligned_rows)
-            }
-
-            // Decode may raise if strict=true (invalid encoding depends on data)
-            BinaryFunction::HexDecode(strict) => {
-                if *strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "hex_decode(strict=true) may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-            BinaryFunction::Base64Decode(strict) => {
-                if *strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "base64_decode(strict=true) may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-            BinaryFunction::Base64Encode => check_inputs!(),
-        },
-        FunctionExpr::Categorical(categorical_function) => match categorical_function {
-            // These are schema/type dependent but not value-fallible in the “data-dependent error” sense.
-            CategoricalFunction::GetCategories
-            | CategoricalFunction::LenBytes
-            | CategoricalFunction::LenChars => check_inputs!(),
-
-            // Pattern inputs may be per-row, so require row alignment rules.
-            CategoricalFunction::StartsWith(_)
-            | CategoricalFunction::EndsWith(_)
-            | CategoricalFunction::Slice(_, _) => check_inputs!(aligned_rows),
-        },
-        FunctionExpr::ListExpr(list_function) => match list_function {
-            ListFunction::Concat => check_inputs!(aligned_rows),
-            ListFunction::Contains { .. } => check_inputs!(aligned_rows),
-            ListFunction::Slice => check_inputs!(aligned_rows),
-            ListFunction::Shift => check_inputs!(aligned_rows),
-            ListFunction::Sum
-            | ListFunction::Length
-            | ListFunction::Max
-            | ListFunction::Min
-            | ListFunction::Mean
-            | ListFunction::Median
-            | ListFunction::Std(_)
-            | ListFunction::Var(_)
-            | ListFunction::ArgMin
-            | ListFunction::ArgMax
-            | ListFunction::Diff { .. }
-            | ListFunction::Sort(_)
-            | ListFunction::Reverse
-            | ListFunction::Unique(_)
-            | ListFunction::NUnique => check_inputs!(),
-            ListFunction::Get(null_on_oob) => {
-                if !*null_on_oob {
-                    return fallible!(
-                        MakeTransformation,
-                        "list.get/gather(null_on_oob=false) may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-            ListFunction::Join(_) => check_inputs!(aligned_rows),
-            ListFunction::ToArray(_) => {
-                return fallible!(
-                    MakeTransformation,
-                    "list.to_array may raise data-dependent errors if list lengths don't match the target width."
-                );
-            }
-            _ => match list_function.to_string().as_str() {
-                "list.count_matches"
-                | "list.union"
-                | "list.difference"
-                | "list.intersection"
-                | "list.symmetric_difference" => check_inputs!(aligned_rows),
-                "list.gather" | "list.gather_every" => check_inputs!(aligned_rows),
-                "list.sample_n" | "list.sample_fraction" => {
-                    return fallible!(
-                        MakeTransformation,
-                        "list.sample may raise data-dependent errors when sampling without replacement."
-                    );
-                }
-                "list.drop_nulls" | "list.any" | "list.all" | "list.to_struct" => {
-                    check_inputs!()
-                }
-                _ => {
-                    return fallible!(
-                        MakeTransformation,
-                        "List function is not currently supported. {INVITE}"
-                    );
-                }
-            },
-        },
-        FunctionExpr::StringExpr(string_function) => match string_function {
-            // Most string transforms don't “value-fail” (they may be null-propagating).
-            StringFunction::Format { .. }
-            | StringFunction::ConcatHorizontal { .. }
-            | StringFunction::ConcatVertical { .. }
-            | StringFunction::CountMatches(_)
-            | StringFunction::EndsWith
-            | StringFunction::Extract(_)
-            | StringFunction::ExtractAll
-            | StringFunction::ExtractGroups { .. }
-            | StringFunction::LenBytes
-            | StringFunction::LenChars
-            | StringFunction::Lowercase
-            | StringFunction::Replace { .. }
-            | StringFunction::Reverse
-            | StringFunction::Slice
-            | StringFunction::Head
-            | StringFunction::Tail
-            | StringFunction::HexEncode
-            | StringFunction::Base64Encode
-            | StringFunction::StartsWith
-            | StringFunction::StripChars
-            | StringFunction::StripCharsStart
-            | StringFunction::StripCharsEnd
-            | StringFunction::StripPrefix
-            | StringFunction::StripSuffix
-            | StringFunction::SplitExact { .. }
-            | StringFunction::SplitN(_)
-            | StringFunction::Split(_)
-            | StringFunction::ToDecimal { .. }
-            | StringFunction::Uppercase
-            | StringFunction::EscapeRegex => check_inputs!(aligned_rows),
-
-            // Regex/pattern operations: strict=true means “raise on bad pattern/match”.
-            StringFunction::Contains { strict, .. } | StringFunction::Find { strict, .. } => {
-                if *strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "string contains/find with strict=true may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-
-            // Conversion: strict=true raises if any conversion fails.
-            StringFunction::ToInteger { strict, .. } => {
-                if *strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "str.to_integer(strict=true) may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-
-            // Binary decode: strict=true raises on invalid encoding.
-            StringFunction::HexDecode(strict) | StringFunction::Base64Decode(strict) => {
-                if *strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "string decode with strict=true may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-
-            StringFunction::Strptime(_, options) => {
-                if options.strict {
-                    return fallible!(
-                        MakeTransformation,
-                        "strptime strict may raise data-dependent errors."
-                    );
-                }
-                check_inputs!(aligned_rows)
-            }
-            _ => match string_function.to_string().as_str() {
-                "normalize" | "pad_start" | "pad_end" | "zfill" | "contains_any"
-                | "replace_many" | "extract_many" | "find_many" => {
-                    check_inputs!(aligned_rows)
-                }
-                _ => {
-                    return fallible!(
-                        MakeTransformation,
-                        "String function is not currently supported. {INVITE}"
-                    );
-                }
-            },
-        },
-        FunctionExpr::StructExpr(struct_function) => match struct_function {
-            // Schema/metadata driven; not value-fallible.
-            StructFunction::FieldByName(_) => check_inputs!(),
-            StructFunction::RenameFields(_) => check_inputs!(),
-            StructFunction::PrefixFields(_) => check_inputs!(),
-            StructFunction::SuffixFields(_) => check_inputs!(),
-            StructFunction::JsonEncode => check_inputs!(),
-            StructFunction::WithFields => check_inputs!(aligned_rows),
-            StructFunction::SelectFields(_) => check_inputs!(),
-            // Callback is applied to field names (schema), not values.
-            StructFunction::MapFieldNames(_) => check_inputs!(),
-        },
-
-        FunctionExpr::TemporalExpr(temporal_function) => match temporal_function {
-            // These conversions may panic on out-of-range physical Datetime values.
-            // Unlike stable expressions, this checker has no input domain to
-            // establish that a timestamp is representable.
-            // Component extraction / conversions.
-            TemporalFunction::Millennium
-            | TemporalFunction::Century
-            | TemporalFunction::Year
-            | TemporalFunction::IsLeapYear
-            | TemporalFunction::IsoYear
-            | TemporalFunction::Quarter
-            | TemporalFunction::Month
-            | TemporalFunction::DaysInMonth
-            | TemporalFunction::Week
-            | TemporalFunction::WeekDay
-            | TemporalFunction::Day
-            | TemporalFunction::OrdinalDay
-            | TemporalFunction::Time
-            | TemporalFunction::Date
-            | TemporalFunction::Datetime
-            | TemporalFunction::Hour
-            | TemporalFunction::Minute
-            | TemporalFunction::Second
-            | TemporalFunction::Millisecond
-            | TemporalFunction::Microsecond
-            | TemporalFunction::Nanosecond
-            | TemporalFunction::ToString(_)
-            | TemporalFunction::BaseUtcOffset
-            | TemporalFunction::DSTOffset => {
-                return fallible!(
-                    MakeTransformation,
-                    "Temporal component extraction may panic on out-of-range datetime values."
-                );
-            }
-
-            // Duration arithmetic and timestamp reinterpretation do not
-            // convert timestamps through a calendar datetime.
-            TemporalFunction::TotalDays { .. }
-            | TemporalFunction::TotalHours { .. }
-            | TemporalFunction::TotalMinutes { .. }
-            | TemporalFunction::TotalSeconds { .. }
-            | TemporalFunction::TotalMilliseconds { .. }
-            | TemporalFunction::TotalMicroseconds { .. }
-            | TemporalFunction::TotalNanoseconds { .. }
-            | TemporalFunction::Duration(_)
-            | TemporalFunction::CastTimeUnit(_)
-            | TemporalFunction::WithTimeUnit(_)
-            | TemporalFunction::ConvertTimeZone(_)
-            | TemporalFunction::TimeStamp(_) => check_inputs!(),
-
-            // These can raise depending on values around DST ambiguity/non-existent local times.
-            TemporalFunction::Truncate | TemporalFunction::Round | TemporalFunction::Replace => {
-                return fallible!(
-                    MakeTransformation,
-                    "Temporal operation may raise data-dependent errors due to ambiguous/non-existent datetimes (DST)."
-                );
-            }
-
-            // ReplaceTimeZone has explicit ambiguous/non_existent handling and defaults to raising.
-            TemporalFunction::ReplaceTimeZone(_, _) => {
-                return fallible!(
-                    MakeTransformation,
-                    "replace_time_zone may raise data-dependent errors due to ambiguous/non-existent datetimes (DST)."
-                );
-            }
-
-            // Combining date/time: aligns rows with the provided time expression/column.
-            TemporalFunction::Combine(_) => check_inputs!(aligned_rows),
-
-            // Datetime constructor/localization can raise on ambiguous datetimes depending on values.
-            TemporalFunction::DatetimeFunction { .. } => {
-                return fallible!(
-                    MakeTransformation,
-                    "datetime construction/localization may raise data-dependent errors due to ambiguous/non-existent datetimes (DST)."
-                );
-            }
-            _ => match temporal_function.to_string().as_str() {
-                "month_start" | "month_end" => check_inputs!(),
-                "offset_by" => {
-                    return fallible!(
-                        MakeTransformation,
-                        "Temporal operation may raise data-dependent errors due to ambiguous/non-existent datetimes (DST)."
-                    );
-                }
-                _ => {
-                    return fallible!(
-                        MakeTransformation,
-                        "Temporal function is not currently supported. {INVITE}"
-                    );
-                }
-            },
-        },
-
-        FunctionExpr::Bitwise(bitwise_function) => match bitwise_function {
-            BitwiseFunction::CountOnes
-            | BitwiseFunction::CountZeros
-            | BitwiseFunction::LeadingOnes
-            | BitwiseFunction::LeadingZeros
-            | BitwiseFunction::TrailingOnes
-            | BitwiseFunction::TrailingZeros => check_inputs!(),
-
-            BitwiseFunction::And | BitwiseFunction::Or | BitwiseFunction::Xor => {
-                check_inputs!(aligned_rows)
-            }
-        },
-
-        // Expr.hash(...) is value-safe; seeds affect determinism but not fallibility.
-        FunctionExpr::Hash(_, _, _, _) => check_inputs!(),
-
-        // Returns indices where condition is true => resizes based on values.
-        FunctionExpr::ArgWhere => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "arg_where resizes the data (number of true values depends on input)."
-                );
-            }
-            // Condition must be row-aligned; don't allow inner resizes.
-            let [cond] = <&[Expr; 1]>::try_from(inputs.as_slice())
-                .map_err(|_| err!(MakeTransformation, "arg_where must have one argument"))?;
-            check_infallible(cond, Resize::Ban)?;
-        }
-
-        // Fixed-length rolling windows are value-safe (bad args are param-dependent, not data-dependent).
-        FunctionExpr::RollingExpr { .. } => check_inputs!(),
-        FunctionExpr::RollingExprBy { .. } => check_inputs!(aligned_rows),
-
-        FunctionExpr::Rechunk => check_inputs!(),
-
-        // Appends two expressions => resizes. Allow only if Resize::Allow.
-        FunctionExpr::Append { .. } => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "append resizes the data (concatenates chunks/rows)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-
-        // Mode can return multiple values (ties) => resizes based on data.
-        FunctionExpr::Mode { .. } => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "mode resizes the data (can return multiple values)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-
-        // Scalar aggregates (broadcastable)
-        FunctionExpr::Skew(_) => check_inputs!(aggregate),
-        FunctionExpr::Kurtosis(_, _) => check_inputs!(aggregate),
-        FunctionExpr::ArgMin => check_inputs!(aggregate),
-        FunctionExpr::ArgMax => check_inputs!(aggregate),
-        FunctionExpr::Product => check_inputs!(aggregate),
-        FunctionExpr::ApproxNUnique => check_inputs!(aggregate),
-
-        // Argsort returns permutation indices of same length.
-        FunctionExpr::ArgSort { .. } => check_inputs!(),
-
-        // Cumulative ops keep length.
-        FunctionExpr::CumCount { .. }
-        | FunctionExpr::CumSum { .. }
-        | FunctionExpr::CumProd { .. }
-        | FunctionExpr::CumMin { .. }
-        | FunctionExpr::CumMax { .. } => check_inputs!(),
-
-        // unique_counts returns counts per unique value => resizes.
-        FunctionExpr::UniqueCounts => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "unique_counts resizes the data (one row per unique value)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-
-        FunctionExpr::Diff(_) => check_inputs!(),
-        FunctionExpr::Interpolate(_) => check_inputs!(),
-        FunctionExpr::InterpolateBy => check_inputs!(aligned_rows),
-
-        FunctionExpr::PeakMin => check_inputs!(),
-        FunctionExpr::PeakMax => check_inputs!(),
-
-        // rle returns runs => resizes based on values.
-        FunctionExpr::RLE => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "rle resizes the data (one row per run)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-        // rle_id is per-row run labels => same length.
-        FunctionExpr::RLEID => check_inputs!(),
-
-        // These carry callbacks; treat as potentially value-fallible.
-        FunctionExpr::FoldHorizontal { .. }
-        | FunctionExpr::ReduceHorizontal { .. }
-        | FunctionExpr::CumReduceHorizontal { .. }
-        | FunctionExpr::CumFoldHorizontal { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "fold/reduce with callbacks may raise data-dependent errors."
-            );
-        }
-
-        // Non-strict replace is intended to be non-fallible w.r.t. missing mapping keys.
-        FunctionExpr::Replace => check_inputs!(aligned_rows),
-
-        // Strict replace can error on incomplete mapping unless a default is present; reject conservatively.
-        FunctionExpr::ReplaceStrict { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "replace_strict may raise data-dependent errors due to incomplete mapping."
-            );
-        }
-
-        // Picks every n-th row => resizes.
-        FunctionExpr::GatherEvery { .. } => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "gather_every resizes the data (subsamples rows)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-        // Extends series by constants => resizes.
-        FunctionExpr::ExtendConstant => {
-            if matches!(resize, Resize::Ban) {
-                return fallible!(
-                    MakeTransformation,
-                    "extend_constant resizes the data (adds rows)."
-                );
-            }
-            inputs
-                .iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-        }
-
-        // Row encoding is length-preserving (encodes multiple cols into one binary col).
-        FunctionExpr::RowEncode(_) => check_inputs!(aligned_rows),
-
-        // Decoding can error if bytes/metadata are invalid; be conservative.
-        FunctionExpr::RowDecode(_, _) => {
-            return fallible!(
-                MakeTransformation,
-                "row_decode may raise data-dependent errors on invalid encoded data."
-            );
-        }
-        _ => match function.to_string().as_str() {
-            "hist" => check_inputs!(resize = "hist"),
-            "index_of" => check_inputs!(aggregate),
-            "search_sorted" => check_inputs!(aligned_rows),
-            "top_k" | "top_k_by" => check_inputs!(resize = "top_k"),
-            "pct_change" => check_inputs!(aligned_rows),
-            "ewm_mean" | "ewm_std" | "ewm_var" | "reinterpret" => check_inputs!(),
-            "cos" | "cot" | "sin" | "tan" | "arccos" | "arcsin" | "arctan" | "cosh" | "sinh"
-            | "tanh" | "arccosh" | "arcsinh" | "arctanh" | "degrees" | "radians" | "sign"
-            | "log" | "log1p" | "exp" => check_inputs!(),
-            "atan2" => check_inputs!(aligned_rows),
-            "ewm_mean_by" | "business_day_count" | "add_business_days" => {
-                check_inputs!(aligned_rows)
-            }
-            "entropy" | "corr" | "spearman_rank_corr" => check_inputs!(aggregate),
-            "is_business_day" | "ext.storage()" => check_inputs!(),
-            name if name.starts_with("ext.to(") => check_inputs!(),
-            _ => {
-                return fallible!(
-                    MakeTransformation,
-                    "Function expression is not currently supported. {INVITE}"
-                );
-            }
-        },
-    })
 }
