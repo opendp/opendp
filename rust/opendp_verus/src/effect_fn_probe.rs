@@ -14,7 +14,7 @@ pub fn probe_rr_fn_in_band(
     requires
         operator.numerator <= 9_007_199_254_740_992u64,
         forall|out: Result<bool, crate::uniform_word::WordError>|
-            0real <= #[trigger] payoff@(out) < 1real,
+            0real <= #[trigger] payoff@(out),
         credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: crate::randomized_response_bool::release_expectation(
                 input, operator, crate::uniform_word::word_expectation(), payoff@),
@@ -33,7 +33,7 @@ pub fn probe_rr_fn_in_band(
         requires
             operator.numerator <= 9_007_199_254_740_992u64,
             forall|value: Result<bool, crate::uniform_word::WordError>|
-                0real <= #[trigger] cost@(value) < 1real,
+                0real <= #[trigger] cost@(value),
             token@@ =~= (crate::one_word_credit::CreditCarrier::Value {
                 amount: crate::randomized_response_bool::release_expectation(
                     *truth, operator, crate::uniform_word::word_expectation(), cost@),
