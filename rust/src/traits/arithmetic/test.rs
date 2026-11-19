@@ -55,6 +55,45 @@ fn test_inf_powi() {
     check(powi(-0.5, huge + 1), (-5e-324, -0.0), (-5e-324, 5e-324));
 }
 
+// Regression tests for https://github.com/opendp/opendp/issues/2957.
+#[test]
+fn test_inf_subnormal_rounding_regression() -> Fallible<()> {
+    let u = f64::from_bits(1);
+    let three_u = 3.0 * u;
+
+    // 0.75 * 3u = 2.25u; 3u / 2 = 1.5u.
+    assert_eq!(0.75f64.inf_mul(&three_u)?, 3.0 * u);
+    assert_eq!(0.75f64.neg_inf_mul(&three_u)?, 2.0 * u);
+    assert_eq!(three_u.inf_div(&2.0)?, 2.0 * u);
+    assert_eq!(three_u.neg_inf_div(&2.0)?, u);
+
+    assert_eq!((-0.75f64).inf_mul(&three_u)?, -2.0 * u);
+    assert_eq!((-0.75f64).neg_inf_mul(&three_u)?, -3.0 * u);
+    assert_eq!((-three_u).inf_div(&2.0)?, -u);
+    assert_eq!((-three_u).neg_inf_div(&2.0)?, -2.0 * u);
+    Ok(())
+}
+
+#[test]
+fn test_inf_negative_powi_rounding_regression() -> Fallible<()> {
+    let a = 1.0 + f64::EPSILON;
+    // 1 / a lies strictly between 1 - EPSILON and 1 - EPSILON / 2.
+    assert_eq!(a.inf_powi(IBig::from(-1))?, 1.0 - f64::EPSILON / 2.0);
+    assert_eq!(a.neg_inf_powi(IBig::from(-1))?, 1.0 - f64::EPSILON);
+    Ok(())
+}
+
+#[test]
+fn test_inf_near_zero_rounding_regression() -> Fallible<()> {
+    let x = f64::from_bits(0x39b0_0000_0000_0000); // 2^-100
+    // exp(x) - 1 > x and ln(1 + x) < x, by less than one ULP.
+    assert_eq!(x.inf_exp_m1()?, f64::from_bits(x.to_bits() + 1));
+    assert_eq!(x.neg_inf_exp_m1()?, x);
+    assert_eq!(x.inf_ln_1p()?, x);
+    assert_eq!(x.neg_inf_ln_1p()?, f64::from_bits(x.to_bits() - 1));
+    Ok(())
+}
+
 fn assert_error<T: std::fmt::Debug>(result: Fallible<T>, variant: ErrorVariant) {
     assert_eq!(result.unwrap_err().variant, variant);
 }
