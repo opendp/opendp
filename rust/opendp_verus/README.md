@@ -121,7 +121,7 @@ The production constructor still installs:
 
 ```rust
 let func = move |truth: &bool| run_bool_rr(&operator, truth);
-let map = move |distance: &u32| operator.map_callback(distance);
+let map = move |distance: &u32| Ok(operator.map(*distance, 0.0));
 ```
 
 The map closure's executable return relation is verified. However,

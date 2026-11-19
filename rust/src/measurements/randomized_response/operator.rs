@@ -54,7 +54,6 @@ impl BoolRR {
     pub fn map(&self, distance: u32, zero: f64) -> f64 {
         if distance == 0 { zero } else { self.privacy_cost }
     }
-
 }
 
 // The native RR closure calls sample_word_then with release_callback.
