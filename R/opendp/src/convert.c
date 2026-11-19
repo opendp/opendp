@@ -64,15 +64,14 @@ unsigned char is_in(const char *str, const char **arr)
 static ExtrinsicObject sexp_to_extrinsicobject(SEXP value)
 {
     RetainedSexp *retained = new_retained_sexp(value);
+    opendp_register_resource(retained, opendp_release_ref_counted);
     ExtrinsicObject output = {(const void *)retained};
     return output;
 }
 
 ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
 {
-    ExtrinsicObject *output_obj = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
-    if (!output_obj)
-        error("failed to allocate extrinsic object");
+    ExtrinsicObject *output_obj = (ExtrinsicObject *)R_alloc(1, sizeof(ExtrinsicObject));
     output_obj[0] = sexp_to_extrinsicobject(value);
     return output_obj;
 }
@@ -435,7 +434,7 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
 }
 
 // forward declaration
-SEXP anyobjectptr_to_sexp(AnyObject *obj);
+SEXP borrowed_anyobjectptr_to_sexp(AnyObject *obj);
 
 FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
 {
@@ -450,7 +449,7 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     {
         if (TYPEOF(value) != VECSXP)
             error("expected a list when constructing Vec<ExtrinsicObject>");
-        ExtrinsicObject *objects = (ExtrinsicObject *)malloc(LENGTH(value) * sizeof(ExtrinsicObject));
+        ExtrinsicObject *objects = (ExtrinsicObject *)R_alloc(LENGTH(value), sizeof(ExtrinsicObject));
         for (int i = 0; i < LENGTH(value); i++)
             objects[i] = sexp_to_extrinsicobject(VECTOR_ELT(value, i));
         result.ptr = objects;
@@ -469,6 +468,8 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     return result;
 }
 
+static void slice_cleanup(void *slice);
+
 // all scalars are returned as vectors, because R doesn't have a scalar type
 SEXP slice_to_scalar(FfiSlice *raw, SEXP type_name)
 {
@@ -485,12 +486,14 @@ SEXP slice_to_scalar(FfiSlice *raw, SEXP type_name)
     else if (str_equal(c_origin, "AnyObject"))
     {
         result = PROTECT(allocVector(VECSXP, raw->len));
+        // object_as_slice exposes contiguous AnyObjects; this helper builds pointers.
         FfiResult_____FfiSlice result_slice = opendp_data__ffislice_of_anyobjectptrs(raw);
         if (result_slice.tag == Err_____FfiSlice)
             extract_error(result_slice.err);
         FfiSlice *slice = result_slice.ok;
+        opendp_register_resource(slice, slice_cleanup);
         for (int i = 0; i < raw->len; i++)
-            SET_VECTOR_ELT(result, i, anyobjectptr_to_sexp(((AnyObject **)slice->ptr)[i]));
+            SET_VECTOR_ELT(result, i, borrowed_anyobjectptr_to_sexp(((AnyObject **)slice->ptr)[i]));
         UNPROTECT(1);
     }
     else
@@ -608,9 +611,9 @@ FfiSlice hashmap_to_slice(SEXP value, SEXP type_name)
     if (errorOccurred)
         error("Error getting val type");
 
-    void *ptr = malloc(2 * sizeof(void *));
-    ((void **)ptr)[0] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 0), key_rt);
-    ((void **)ptr)[1] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 1), val_rt);
+    void *ptr = R_alloc(2, sizeof(void *));
+    ((void **)ptr)[0] = sexp_to_anyobjectptr_temp(VECTOR_ELT(hashitems, 0), key_rt);
+    ((void **)ptr)[1] = sexp_to_anyobjectptr_temp(VECTOR_ELT(hashitems, 1), val_rt);
 
     FfiSlice result = {ptr, 2};
     UNPROTECT(9);
@@ -621,8 +624,8 @@ SEXP slice_to_hashmap(FfiSlice *raw, SEXP type_name)
 {
     PROTECT(type_name);
     void **backing = (void **)raw->ptr;
-    SEXP keys = PROTECT(anyobjectptr_to_sexp(backing[0]));
-    SEXP vals = PROTECT(anyobjectptr_to_sexp(backing[1]));
+    SEXP keys = PROTECT(borrowed_anyobjectptr_to_sexp(backing[0]));
+    SEXP vals = PROTECT(borrowed_anyobjectptr_to_sexp(backing[1]));
 
     int errorOccurred;
     SEXP hashtab_call = PROTECT(lang3(install("new_hashtab"), keys, vals));
@@ -649,7 +652,7 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     }
     else if (str_equal(c_origin, "ExtrinsicObject"))
     {
-        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+        ExtrinsicObject *object = (ExtrinsicObject *)R_alloc(1, sizeof(ExtrinsicObject));
         object[0] = sexp_to_extrinsicobject(value);
         FfiSlice t = {.ptr = object, .len = 1};
         result = t;
@@ -788,7 +791,39 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
     return result.ok;
 }
 
-SEXP anyobjectptr_to_sexp(AnyObject *obj)
+static void slice_cleanup(void *slice)
+{
+    opendp_data__slice_free((FfiSlice *)slice);
+}
+
+static void anyobject_cleanup(void *obj)
+{
+    opendp_data__object_free((AnyObject *)obj);
+}
+
+AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name)
+{
+    AnyObject *obj = sexp_to_anyobjectptr(data, type_name);
+    // A NULL type signals an already-owned external pointer: do not free it.
+    if (!isNull(type_name))
+        opendp_register_resource(obj, anyobject_cleanup);
+    return obj;
+}
+
+static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned);
+
+SEXP owned_anyobjectptr_to_sexp(AnyObject *obj)
+{
+    opendp_register_resource(obj, anyobject_cleanup);
+    return anyobjectptr_to_sexp_impl(obj, 1);
+}
+
+SEXP borrowed_anyobjectptr_to_sexp(AnyObject *obj)
+{
+    return anyobjectptr_to_sexp_impl(obj, 0);
+}
+
+static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned)
 {
     FfiResult_____c_char type_name_result = opendp_data__object_type(obj);
     if (type_name_result.tag == Err_____c_char)
@@ -799,6 +834,18 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     SEXP type_name = PROTECT(parse_runtime_type(sexp_to_charptr(type_string)));
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
+    if (!owned && (str_equal(c_origin, "PrivacyProfile") ||
+                   str_equal(c_origin, "AnyOdometerQueryable") ||
+                   str_equal(c_origin, "AnyQueryable")))
+    {
+        // Callback arguments and nested slice elements are borrowed. Opaque
+        // R wrappers escape this call, so give their finalizers a real owner.
+        FfiResult_____AnyObject cloned = opendp_data__clone_opaque_object(obj);
+        if (cloned.tag == Err_____AnyObject)
+            extract_error(cloned.err);
+        obj = cloned.ok;
+        opendp_register_resource(obj, anyobject_cleanup);
+    }
     if (str_equal(c_origin, "PrivacyProfile"))
     {
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
@@ -824,7 +871,7 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     if (slice_result.tag == Err_____FfiSlice)
         extract_error(slice_result.err);
     FfiSlice *slice = slice_result.ok;
-
+    opendp_register_resource(slice, slice_cleanup);
     SEXP value = slice_to_sexp(slice, type_name);
     UNPROTECT(2);
     return value;

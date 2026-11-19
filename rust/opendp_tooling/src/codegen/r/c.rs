@@ -153,6 +153,7 @@ pub fn generate_c_module(module_name: &str, module: &Vec<Function>) -> String {
 #include "Ropendp.h"
 #include "opendp.h"
 #include "opendp_extras.h"
+#include "ownership.h"
 
 {funcs}
 "#
@@ -169,16 +170,36 @@ fn generate_c_function(module_name: &str, func: &Function) -> String {
         .collect::<Vec<_>>()
         .join("");
 
+    let names = flatten_args_for_c(func)
+        .iter()
+        .map(|arg| arg.name())
+        .chain(std::iter::once("log".to_string()))
+        .collect::<Vec<_>>();
+    let unpack = names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| format!("SEXP {name} = ((SEXP *)data)[{i}];"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
     format!(
         r#"
+static SEXP {module_name}__{func_name}_exec(void *data) {{
+{unpack}
+{body}
+}}
+
 SEXP {module_name}__{func_name}(
 {args}
 ) {{
-{body}
+    SEXP args[] = {{{names}}};
+    return opendp_with_scope({module_name}__{func_name}_exec, args);
 }}
 "#,
         func_name = func.name,
         args = tab_c(format!("{args}SEXP log")),
+        names = names.join(", "),
+        unpack = tab_c(unpack),
         body = tab_c(generate_c_body(module_name, func))
     )
 }
@@ -263,28 +284,8 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         .collect::<Vec<_>>()
         .join(", ");
 
-    let cleanup = func
-        .args
-        .iter()
-        .filter_map(|arg| {
-            let name = arg.name();
-            match arg.c_type().as_str() {
-                "CallbackFn" => Some(format!("callbackfn_release(&c_{name});")),
-                "TransitionFn" => Some(format!("transitionfn_release(&c_{name});")),
-                _ => None,
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
-
     // mirrors the PROTECT calls in `generate_data_converter`. One addition for `log`
     let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len() + 1);
-    let cleanup = if cleanup.is_empty() {
-        String::new()
-    } else {
-        format!("{cleanup}\n\n")
-    };
-
     let mut ret = func.ret.clone();
     // always save the output to a variable called `_result`
     ret.name = Some("_result".to_string());
@@ -295,12 +296,11 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         r#"// Call library function.
 {ret_type} {ret_name} = opendp_{module_name}__{func_name}({args});
 
-{cleanup}{unprotect}
+{unprotect}
 {convert_response}"#,
         ret_type = mangle(ret.c_type().as_str()),
         ret_name = ret.name(),
         func_name = func.name,
-        cleanup = cleanup,
     )
 }
 
@@ -332,7 +332,7 @@ fn r_to_c(arg: &Argument) -> String {
     match &c_type {
         ty if ty == "void *" => format!("sexp_to_voidptr({name}, {rust_type})"),
         ty if ty == "ExtrinsicObject *" => format!("sexp_to_extrinsicobjectptr({name})"),
-        ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr({name}, {rust_type})"),
+        ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr_temp({name}, {rust_type})"),
         ty if ty == "AnyTransformation *" => format!("sexp_to_anytransformationptr({name})"),
         ty if ty == "AnyMeasurement *" => format!("sexp_to_anymeasurementptr({name})"),
         ty if ty == "AnyOdometer *" => format!("sexp_to_anyodometerptr({name})"),
@@ -404,7 +404,7 @@ fn c_to_r(arg: Argument) -> String {
             format!("voidptr_to_sexp({name}, {rust_type})")
         }
         // call out to hand-written code from `convert.c` and `convert_elements.c`
-        ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
+        ty if ty == "AnyObject *" => format!("owned_anyobjectptr_to_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
         ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, log)"),
@@ -412,7 +412,7 @@ fn c_to_r(arg: Argument) -> String {
         ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
-        ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
+        ty if ty == "ExtrinsicObject *" => format!("owned_extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
         ty if ty == "char *" => format!("charptr_to_sexp({name})"),
         ty if ty == "double" => format!("ScalarReal(*(double *){name})"),
