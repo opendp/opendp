@@ -25,8 +25,8 @@ impl BoolRR {
         },
     ))]
     pub fn release<E>(&self, truth: bool, entropy: Result<u64, E>) -> Result<bool, E> {
-        match dyadic53::from_word(self.numerator, entropy) {
-            Ok(honest) => Ok(truth ^ !honest),
+        match entropy {
+            Ok(word) => Ok(truth ^ !dyadic53::success(self.numerator, word)),
             Err(err) => Err(err),
         }
     }
@@ -55,14 +55,6 @@ impl BoolRR {
         if distance == 0 { zero } else { self.privacy_cost }
     }
 
-    // Same executable map callback in both native and verified builds.
-    #[cfg_attr(verus_only, verus_verify)]
-    #[cfg_attr(verus_only, verus_spec(result =>
-        ensures result == Ok(self.map(*distance, 0.0f64)),
-    ))]
-    pub fn map_callback(&self, distance: &u32) -> Result<f64, WordError> {
-        Ok(self.map(*distance, 0.0))
-    }
 }
 
 // The native RR closure calls sample_word_then with release_callback.

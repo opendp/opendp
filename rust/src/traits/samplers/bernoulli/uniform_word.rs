@@ -12,27 +12,8 @@ pub type WordError = ();
 #[cfg(not(verus_only))]
 pub type WordError = crate::error::Error;
 
-/// The actual native entropy primitive. Its implementation obtains one
-/// uniformly modeled word or an error; no probability postcondition is
-/// attached here. The credit transfer is specified only at
-/// sample_uniform_u64_with_credit below.
-#[cfg_attr(verus_only, verus_verify(external_body))]
-pub(crate) fn sample_uniform_u64() -> Result<u64, WordError> {
-    #[cfg(not(verus_only))]
-    {
-        let mut bytes = [0u8; 8];
-        fill_bytes(&mut bytes)?;
-        Ok(u64::from_ne_bytes(bytes))
-    }
-    #[cfg(verus_only)]
-    {
-        unimplemented!()
-    }
-}
-
-// This is the single trusted probability-bearing entropy contract.
-// It invokes the actual sample_uniform_u64 implementation, adding only an
-// erased in-band credit transfer. No other RNG credit axiom is retained.
+// The native body is the actual entropy draw. This single entry point
+// carries the trusted in-band credit-transfer contract under Verus.
 #[cfg(verus_only)]
 type CreditWordResult = (
     Result<u64, WordError>, Tracked<crate::one_word_credit::ErrorCredit>,
@@ -53,17 +34,19 @@ type CreditWordResult = Result<u64, WordError>;
             amount: word_cost@(result.0)
         }),
 ))]
-pub(crate) fn sample_uniform_u64_with_credit(
+pub(crate) fn sample_uniform_u64(
     #[cfg(verus_only)] credit: Tracked<crate::one_word_credit::ErrorCredit>,
     #[cfg(verus_only)] word_cost: Ghost<WordCost>,
 ) -> CreditWordResult {
     #[cfg(verus_only)]
     {
-        (sample_uniform_u64(), Tracked::assume_new())
+        (unimplemented!(), Tracked::assume_new())
     }
     #[cfg(not(verus_only))]
     {
-        sample_uniform_u64()
+        let mut bytes = [0u8; 8];
+        fill_bytes(&mut bytes)?;
+        Ok(u64::from_ne_bytes(bytes))
     }
 }
 
@@ -81,7 +64,7 @@ type SampleWordThenResult<Y> = Result<Y, WordError>;
 /// rule; its interpretation uses the error-credit soundness argument.
 ///
 /// The only transfer of an input credit to a sample-dependent credit is
-/// the trusted call to sample_uniform_u64_with_credit below. The verified
+/// the trusted call to sample_uniform_u64 below. The verified
 /// postprocessor cannot discard the sample and return an unrelated value.
 #[cfg_attr(verus_only, verus_verify)]
 #[cfg_attr(verus_only, verus_spec(result =>
@@ -114,9 +97,9 @@ where
     F: Fn(&Op, X, Result<u64, WordError>) -> Result<Y, WordError>,
 {
     #[cfg(verus_only)]
-    let (entropy, draw_credit) = sample_uniform_u64_with_credit(credit, word_cost);
+    let (entropy, draw_credit) = sample_uniform_u64(credit, word_cost);
     #[cfg(not(verus_only))]
-    let entropy = sample_uniform_u64_with_credit();
+    let entropy = sample_uniform_u64();
     let output = postprocess(operator, input, entropy);
     #[cfg(verus_only)]
     {

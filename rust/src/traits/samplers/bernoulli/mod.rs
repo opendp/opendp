@@ -15,7 +15,7 @@ mod test;
 pub(crate) mod dyadic53;
 
 mod uniform_word;
-pub(crate) use uniform_word::{sample_uniform_u64, sample_word_then};
+pub(crate) use uniform_word::sample_word_then;
 
 /// Sample from `Bernoulli(p=0.5)`.
 ///

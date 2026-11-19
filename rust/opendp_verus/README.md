@@ -19,19 +19,15 @@ contracts are part of the trusted boundary.
 
 ## Sampling and in-band credit verification
 
-The native `sample_uniform_u64()` obtains eight random bytes via
-`fill_bytes` and interprets them as a `u64`, propagating errors.
-It has no probabilistic Verus postcondition of its own.
+`sample_uniform_u64` is the **single native entropy entry point
+and trusted in-band credit-transfer rule**. Its native body obtains
+eight random bytes from `fill_bytes`, interprets them as a `u64`,
+and propagates errors. Under Verus it accepts an erased
+`Tracked<ErrorCredit>` and a `Ghost<WordCost>`, returning a tracked
+credit whose value is the selected cost of the actual word or error.
+There is no separate, externally specified sampling wrapper.
 
-`sample_uniform_u64_with_credit` is the **single trusted in-band
-credit-transfer rule** for this entropy draw. In both configurations
-the wrapper invokes `sample_uniform_u64()`. In Verus it also accepts
-an erased `Tracked<ErrorCredit>` and a `Ghost<WordCost>`, and returns
-a tracked credit whose value is the selected cost of the actual word
-or error. The native wrapper has no extra runtime arguments and
-returns the original `Result`.
-
-`sample_word_then` uses that same wrapper in both configurations
+`sample_word_then` calls that same primitive in both configurations
 and applies the **production postprocessor** to the entropy result.
 Verus proves that the output credit equals the postprocessor's
 output allocation. Its in-band credit arguments and returned token
