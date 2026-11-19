@@ -51,8 +51,9 @@ pub fn probe_rr_fn_in_band(
 
 /// The indicator takes value *one* on the chosen observable output.
 /// This is the payoff needed for a direct event-probability bound.
-pub open spec fn true_event(outcome: Result<bool, crate::uniform_word::WordError>) -> real {
-    if outcome == Ok(true) { 1real } else { 0real }
+pub open spec fn true_event_cost() -> crate::uniform_word::OutputCost<bool> {
+    |outcome: Result<bool, crate::uniform_word::WordError>|
+        if outcome == Ok(true) { 1real } else { 0real }
 }
 
 /// An effect-aware call instantiated with a 0/1 event indicator.
@@ -69,17 +70,17 @@ pub fn probe_rr_true_event(
         operator.numerator <= 9_007_199_254_740_992u64,
         credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: crate::randomized_response_bool::release_expectation(
-                truth, operator, crate::uniform_word::word_expectation(), true_event),
+                truth, operator, crate::uniform_word::word_expectation(), true_event_cost()),
         }),
     ensures
         result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: true_event(result.0),
+            amount: true_event_cost()(result.0),
         }),
 {
     assert forall|out: Result<bool, crate::uniform_word::WordError>|
-        0real <= #[trigger] true_event(out) by {};
+        0real <= #[trigger] true_event_cost()(out) by {};
     crate::rr_constructor::run_bool_rr_with_effect(
-        &operator, &truth, credit, Ghost(true_event))
+        &operator, &truth, credit, Ghost(true_event_cost()))
 }
 
 } // verus!
