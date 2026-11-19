@@ -110,6 +110,59 @@ pub open spec fn uniform_word_expectation_rule<E>(
             ) + error_mass(expectation, err_post)
 }
 
+/// Constant postconditions, useful when checking that the trusted
+/// word-law has the normalization required of a probability expectation.
+pub open spec fn zero_word_post<E>() -> spec_fn(Result<u64, E>) -> real {
+    |_sample: Result<u64, E>| 0real
+}
+pub open spec fn one_word_post<E>() -> spec_fn(Result<u64, E>) -> real {
+    |_sample: Result<u64, E>| 1real
+}
+
+/// Normalization is a *derived* theorem, not a second entropy axiom.
+/// The error-only zero law is necessary: the previous prefix equation by
+/// itself did not exclude an impossible event having positive mass.
+pub proof fn lemma_uniform_word_normalization<E>(
+    expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+)
+    requires uniform_word_expectation_rule(expectation),
+    ensures
+        expectation(zero_word_post()) == 0real,
+        expectation(one_word_post()) == 1real,
+{
+    let zero = zero_word_post::<E>();
+    let zero_errors = zero_error_post::<E>();
+    let zero_prefix = prefix_post(0nat, 0real, 0real, zero_errors);
+    assert forall|sample: Result<u64, E>|
+        #[trigger] zero_prefix(sample) == zero(sample) by {
+        match sample { Ok(_) => {}, Err(_) => {} }
+    }
+    assert(zero_prefix =~= zero);
+    assert(error_mass(expectation, zero_errors) == 0real);
+    assert(expectation(zero_prefix)
+        == success_mass(expectation) * (
+            0real / 18_446_744_073_709_551_616real * 0real
+            + (1real - 0real / 18_446_744_073_709_551_616real) * 0real
+        ) + error_mass(expectation, zero_errors));
+    assert(expectation(zero) == 0real);
+
+    let one = one_word_post::<E>();
+    let one_errors = |_err: E| 1real;
+    let one_prefix = prefix_post(0nat, 1real, 1real, one_errors);
+    assert forall|sample: Result<u64, E>|
+        #[trigger] one_prefix(sample) == one(sample) by {
+        match sample { Ok(_) => {}, Err(_) => {} }
+    }
+    assert(one_prefix =~= one);
+    assert(error_mass(expectation, one_errors) == 1real - success_mass(expectation));
+    assert(expectation(one_prefix)
+        == success_mass(expectation) * (
+            0real / 18_446_744_073_709_551_616real * 1real
+            + (1real - 0real / 18_446_744_073_709_551_616real) * 1real
+        ) + error_mass(expectation, one_errors));
+    assert(expectation(one) == 1real);
+}
+
 /// The exact mathematical value of any accepted binary64 probability bit
 /// pattern. Accepted probabilities lie in [1/2, 1], so the only nontrivial
 /// exponent is 1022 and every value has denominator 2^53.
