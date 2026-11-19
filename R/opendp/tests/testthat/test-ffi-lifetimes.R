@@ -34,3 +34,15 @@ test_that("owned string and boolean results are copied before release", {
   }
   gc()
 })
+
+test_that("temporary AnyObjects are scoped across reentrant callbacks and errors", {
+  domain <- atom_domain(.T = i32)
+  ident <- make_identity(domain, discrete_distance())
+  nested <- new_function(function_ = function(arg) ident(arg = arg), .TO = i32)
+  for (i in 1:20) {
+    expect_equal(nested(arg = 7L), 7L)
+    expect_error(ident(d_in = 1L, d_out = -1L))
+    expect_equal(ident(arg = 8L), 8L)
+  }
+  gc()
+})
