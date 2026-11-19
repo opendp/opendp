@@ -1,0 +1,3 @@
+disallowed-types = [
+    { path = "vstd::proph::Prophecy", reason = "unsound with Alerus-style error credits; see https://github.com/ahuoguo/alerus/blob/main/alerus/proph_paradox.rs" },
+]
