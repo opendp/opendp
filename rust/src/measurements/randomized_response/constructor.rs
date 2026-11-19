@@ -268,7 +268,7 @@ where
     }
     // The one-word sampler has its own verified EPT. Verify the map
     // closure and isolate the remaining probabilistic Fn assumption here.
-    let func = move |truth: &bool| -> Result<bool, CallbackError> { Ok(*truth) }; // FALSIFICATION: no RNG
+    let func = move |truth: &bool| run_bool_rr(&operator, truth);
     // The two configurations have identical native closure bodies; Verus
     // needs its return postcondition attached to the closure expression.
     #[cfg(verus_only)]
