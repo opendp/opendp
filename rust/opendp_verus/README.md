@@ -48,7 +48,22 @@ including the rounding arithmetic contracts. The verifier checks
 The separate external lemma `lemma_uniform_word_expectation_rule`
 constrains the *mathematical law* of the entropy word, including the
 input-independent error case. It is not a second executable credit
-transfer. The `ErrorCredit` resource is tracked linearly. Following the
+transfer. That law now requires zero error mass for a zero payoff
+and bounds error payoffs by the total error probability. The
+**verified** `lemma_uniform_word_normalization` derives
+`E[0] = 0` and `E[1] = 1` instead of adding those as trusted axioms.
+
+The **verified** `lemma_true_event_probability` proves the exact
+`Ok(true)` mass in the production Boolean RR release model:
+`success_mass * p` when the private input is true and
+`success_mass * (1 - p)` otherwise. The indicator-credit test now
+uses this explicit quantity as its precondition.
+
+These lemmas constrain the prefix-event payoffs needed by Boolean RR.
+They do **not** establish all probability-measure laws (such as
+linearity for arbitrary word payoffs) for the uninterpreted
+`word_expectation`, nor do they connect it to the native entropy
+provider. The `ErrorCredit` resource is tracked linearly. Following the
 [upstream Alerus sampling rule](https://github.com/ahuoguo/alerus/blob/main/alerus/rand_primitives.rs),
 the post-draw credit allocation is only required to be
 **nonnegative**, not strictly below 1. This matters for 0/1
@@ -157,6 +172,13 @@ that semantics to the in-band credit judgment. Ordinary pointwise
 Verus `Fn` contracts, or another unproved callback wrapper, cannot
 derive a probability distribution. The remaining explicit assumption
 is therefore retained and auditable rather than presented as verified.
+
+AlerusBelt's mechanized semantic model does not include the
+full production Rust concurrency semantics. Here the claim is about
+a **single mechanism invocation**; importing AlerusBelt's result
+directly for a concurrently invoked `Arc<dyn Fn>` would require
+additional justification. Upstream also excludes ordinary prophecy
+variables, as noted above.
 
 The verified result is **conditional** on these boundaries, not a
 fully mechanized theorem about every native runtime effect.
