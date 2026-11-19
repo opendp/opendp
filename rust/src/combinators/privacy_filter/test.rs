@@ -23,17 +23,17 @@ fn test_privacy_filter() -> Fallible<()> {
     let mut qbl_filter = meas_filter.invoke(&true)?;
 
     // ln(p / (1 - p)) = ln(0.51 / (1 - 0.51))
-    let q1 = qbl_filter.invoke(make_randomized_response_bool(0.51, false)?);
+    let q1 = qbl_filter.invoke(make_randomized_response_bool(0.51)?);
     assert!(q1.is_ok());
     assert_eq!(qbl_filter.privacy_loss(1)?, 0.040005334613699206);
 
     // ...now add: ln(p / (1 - p)) = ln(0.51 / (1 - 0.51))
-    let q2 = qbl_filter.invoke(make_randomized_response_bool(0.51, false)?);
+    let q2 = qbl_filter.invoke(make_randomized_response_bool(0.51)?);
     assert!(q2.is_ok());
     assert_eq!(qbl_filter.privacy_loss(1)?, 0.08001066922739841);
 
     // ...now try adding: ln(0.75 / (1 - 0.75))
-    let q3 = qbl_filter.invoke(make_randomized_response_bool(0.75, false)?);
+    let q3 = qbl_filter.invoke(make_randomized_response_bool(0.75)?);
     assert!(q3.is_err());
     assert!(qbl_filter.privacy_loss(1).is_err());
 
@@ -50,7 +50,7 @@ fn test_privacy_filter_constructor_d_in() -> Fallible<()> {
             Some(d_in),
         )
     };
-    let m_rr = make_randomized_response_bool(0.51, false)?;
+    let m_rr = make_randomized_response_bool(0.51)?;
 
     let mut qbl = make_privacy_filter(odometer(1)?, 1, 1.0)?.invoke(&true)?;
     assert!(qbl.invoke(m_rr.clone()).is_ok());
@@ -62,11 +62,11 @@ fn test_privacy_filter_constructor_d_in() -> Fallible<()> {
 
 #[test]
 fn test_privacy_filter_failed_postprocessing_counts_privacy_loss() -> Fallible<()> {
-    let rr = make_randomized_response_bool(0.75, false)?;
+    let rr = make_randomized_response_bool(0.75)?;
     let budget = rr.map(&1)?;
     let failing = (rr.clone()
         >> Function::new_fallible(|_: &bool| {
-            make_randomized_response_bool(-1.0, false)?;
+            make_randomized_response_bool(-1.0)?;
             Ok(false)
         }))?;
     let odometer = make_fully_adaptive_composition(
@@ -89,9 +89,9 @@ fn test_privacy_filter_failed_postprocessing_counts_privacy_loss() -> Fallible<(
 
 #[test]
 fn test_privacy_filter_exhaustion_withholds_postprocessing_error() -> Fallible<()> {
-    let failing = (make_randomized_response_bool(0.75, false)?
+    let failing = (make_randomized_response_bool(0.75)?
         >> Function::new_fallible(|_: &bool| {
-            make_randomized_response_bool(-1.0, false)?;
+            make_randomized_response_bool(-1.0)?;
             Ok(false)
         }))?;
     let odometer = make_fully_adaptive_composition(
@@ -113,10 +113,10 @@ fn test_privacy_filter_exhaustion_withholds_postprocessing_error() -> Fallible<(
 
 #[test]
 fn test_privacy_filter_failed_postprocessing_cannot_refund_budget() -> Fallible<()> {
-    let rr = make_randomized_response_bool(0.75, false)?;
+    let rr = make_randomized_response_bool(0.75)?;
     let failing = (rr.clone()
         >> Function::new_fallible(|_: &bool| {
-            make_randomized_response_bool(-1.0, false)?;
+            make_randomized_response_bool(-1.0)?;
             Ok(false)
         }))?;
     let odometer = make_fully_adaptive_composition(

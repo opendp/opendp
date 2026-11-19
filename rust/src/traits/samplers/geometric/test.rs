@@ -94,7 +94,7 @@ fn discrete_laplace_linear_matches_clamped_pmf_at_interior_and_outside_bounds() 
     for shift in [i8::MIN, -5, -4, 0, 4, 5, i8::MAX] {
         check_pmf(shift, (-5i8, 5))?;
     }
-    // A one-step interval sets trials=Some(0).
+    // A one-step interval runs one Bernoulli trial.
     for shift in [0u8, 1] {
         check_pmf(shift, (0u8, 1))?;
     }
@@ -154,5 +154,16 @@ fn discrete_laplace_linear_extreme_bounds_in_range() -> Fallible<()> {
             }
         }
     }
+    Ok(())
+}
+
+#[test]
+fn discrete_laplace_linear_rejects_unrepresentable_scales() -> Fallible<()> {
+    assert!(sample_discrete_laplace_linear(2u8, 1e300f64, (0, 4)).is_err());
+    assert!(sample_discrete_laplace_linear(2u8, -1.0f64, (0, 4)).is_err());
+    assert!(sample_discrete_laplace_linear(2u8, f64::NAN, (0, 4)).is_err());
+    assert!(sample_discrete_laplace_linear(2u8, f64::INFINITY, (0, 4)).is_err());
+    // Tails below 2^-64 still round upward to the smallest nonzero probability.
+    assert!(sample_discrete_laplace_linear(2u8, 0.01f64, (0, 4)).is_ok());
     Ok(())
 }
