@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod accuracy;
 pub(crate) mod options;
+pub(crate) mod permute;
 pub mod preflight;
 
 #[cfg(test)]
@@ -353,6 +354,14 @@ impl PrivacyNamespace for Expr {
 
 pub struct DPExpr(Expr);
 impl DPExpr {
+    /// Return a uniformly random permutation of this expression's rows.
+    ///
+    /// Randomness is cryptographically secure. This operation materializes
+    /// its input and an O(n) index buffer.
+    pub fn permute(self) -> Expr {
+        apply_anonymous_function(vec![self.0], permute::PermutePlugin)
+    }
+
     /// Add noise to the expression.
     ///
     /// `scale` must not be negative or inf.
