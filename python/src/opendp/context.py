@@ -822,12 +822,18 @@ class Query(object):
         leaving the supplied estimator unchanged.
         """
         from sklearn.base import clone
-        from opendp.extras.sklearn._estimator import MeasurementMixin, _finish_fit
+        from opendp.extras.sklearn._estimator import (
+            MeasurementMixin,
+            TransformationMixin,
+            _finish_fit,
+        )
 
         if method is None and not isinstance(estimator, MeasurementMixin):
             raise TypeError(
                 "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
+        if method is not None and not isinstance(estimator, TransformationMixin):
+            raise TypeError("Stage must implement TransformationMixin")
         if isinstance(self._chain, tuple):
             input_domain, input_metric = self._chain
             d_mid = self._d_in
