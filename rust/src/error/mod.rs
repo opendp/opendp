@@ -1,7 +1,6 @@
 //! Error handling utilities.
 
-use std::fmt;
-use std::fmt::Debug;
+use std::{fmt, fmt::Debug, str::FromStr};
 
 use std::backtrace::Backtrace as _Backtrace;
 
@@ -20,11 +19,7 @@ macro_rules! fallible {
 #[macro_export]
 macro_rules! err {
     // error without message
-    ($variant:ident) => ($crate::error::Error {
-        variant: $crate::error::ErrorVariant::$variant,
-        message: None,
-        backtrace: err!(@backtrace)
-    });
+    ($variant:ident) => ($crate::error::Error::from($crate::error::ErrorVariant::$variant));
     // error with explicit message
     ($variant:ident, $message:expr) =>
         (err!(@new $variant, format!($message)));
@@ -33,9 +28,8 @@ macro_rules! err {
         (err!(@new $variant, format!($template, $($args,)+)));
 
     (@new $variant:ident, $message:expr) => ($crate::error::Error {
-        variant: $crate::error::ErrorVariant::$variant,
         message: Some($message),
-        backtrace: err!(@backtrace)
+        ..$crate::error::Error::from($crate::error::ErrorVariant::$variant)
     });
 
     (@backtrace) => (std::backtrace::Backtrace::capture());
@@ -46,6 +40,11 @@ pub struct Error {
     pub variant: ErrorVariant,
     pub message: Option<String>,
     pub backtrace: _Backtrace,
+    /// Original foreign exception, retained by bindings that preserve it (Python, not R).
+    /// On return to such a binding, it takes precedence over the Rust variant,
+    /// even if the variant was changed by [`WithVariant`].
+    #[cfg(feature = "ffi")]
+    pub callback: Option<crate::ffi::util::ExtrinsicObject>,
 }
 
 // don't derive this trait because std's backtrace.display() is much prettier than std backtrace's debug
@@ -132,6 +131,36 @@ pub enum ErrorVariant {
     NotImplemented,
 }
 
+impl FromStr for ErrorVariant {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        use ErrorVariant::*;
+        Ok(match value {
+            "FFI" => FFI,
+            "TypeParse" => TypeParse,
+            "Type" => Type,
+            "FailedFunction" => FailedFunction,
+            "FailedMap" => FailedMap,
+            "RelationDebug" => RelationDebug,
+            "FailedCast" => FailedCast,
+            "DomainMismatch" => DomainMismatch,
+            "MetricMismatch" => MetricMismatch,
+            "MeasureMismatch" => MeasureMismatch,
+            "MakeDomain" => MakeDomain,
+            "MakeTransformation" => MakeTransformation,
+            "MakeMeasurement" => MakeMeasurement,
+            "MetricSpace" => MetricSpace,
+            "InvalidDistance" => InvalidDistance,
+            "Search" => Search,
+            "NumericError" => NumericError,
+            "Overflow" => Overflow,
+            "NotImplemented" => NotImplemented,
+            _ => return Err(()),
+        })
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.variant)
@@ -151,6 +180,8 @@ impl From<ErrorVariant> for Error {
             variant,
             message: None,
             backtrace: std::backtrace::Backtrace::capture(),
+            #[cfg(feature = "ffi")]
+            callback: None,
         }
     }
 }
@@ -167,6 +198,8 @@ impl From<ConversionError> for Error {
             variant: ErrorVariant::FailedCast,
             message: Some(err.to_string()),
             backtrace: std::backtrace::Backtrace::capture(),
+            #[cfg(feature = "ffi")]
+            callback: None,
         }
     }
 }
@@ -178,6 +211,8 @@ impl From<PolarsError> for Error {
             variant: ErrorVariant::FailedFunction,
             message: Some(format!("{:?}", error)),
             backtrace: std::backtrace::Backtrace::capture(),
+            #[cfg(feature = "ffi")]
+            callback: None,
         }
     }
 }
@@ -215,10 +250,9 @@ pub trait WithVariant {
 }
 impl<T> WithVariant for Fallible<T> {
     fn with_variant(self, v: ErrorVariant) -> Self {
-        self.map_err(|e| Error {
-            variant: v,
-            message: e.message,
-            backtrace: e.backtrace,
+        self.map_err(|mut e| {
+            e.variant = v;
+            e
         })
     }
 }

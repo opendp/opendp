@@ -85,13 +85,18 @@ def test_plugin_queryable_list():
     assert qbl([2, 3]) == 3
 
 
+def test_plugin_queryable_one_argument():
+    qbl = dp.new_queryable(lambda query: query + 1, int, int)
+    assert qbl(2) == 3
+
+
 def test_plugin_queryable_error():
     def transition(_query, _is_internal):
         raise ValueError("test clean stack trace")
 
     qbl = dp.new_queryable(transition, "Vec<i32>", int)
 
-    with pytest.raises(dp.OpenDPException):
+    with pytest.raises(ValueError, match="test clean stack trace"):
         qbl([2, 3])
 
     with pytest.raises(TypeError):
