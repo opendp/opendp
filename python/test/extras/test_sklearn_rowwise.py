@@ -126,7 +126,7 @@ def test_query_predicts_without_freezing_or_spending_privacy():
     assert trans.map(1) == 1
     np.testing.assert_array_equal(trans(dp.sklearn.SklearnFit(X)).X, [[1], [0]])
     assert ctx.current_privacy_loss() == privacy_before
-    with pytest.raises(ValueError, match="not certified rowwise"):
+    with pytest.raises(TypeError, match="no sklearn 'transform' method"):
         ctx.query().sklearn(model, method="transform")
 
 
