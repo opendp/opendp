@@ -64,10 +64,13 @@ call with exactly such an indicator allocation. This exercises the
 real production RR sampler, but does not prove a distributional
 postcondition for the plain measurement `Fn`.
 
-Alerus identifies ordinary `vstd::proph::Prophecy` variables as
-unsound in combination with Eris-style credits. The dedicated CI
-now applies the same Clippy type ban as upstream; `ProphecyGhost`
-is not banned. The [AlerusBelt soundness argument](https://arxiv.org/abs/2607.12282)
+Alerus identifies ordinary `vstd::proph::Prophecy` variables
+as unsound in combination with Eris-style credits; the proof
+harness must not introduce them. `ProphecyGhost` is permitted by
+upstream Alerus. Its Clippy ban cannot currently be run against this
+Verus-only harness using ordinary Cargo, so **this restriction is not
+automatically enforced** here. The
+[AlerusBelt soundness argument](https://arxiv.org/abs/2607.12282)
 is **not imported as a mechanized proof** of this adapted OpenDP
 credit calculus, and its connection to runtime callback
 expectations remains unproved.

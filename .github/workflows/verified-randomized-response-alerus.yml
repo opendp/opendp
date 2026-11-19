@@ -51,7 +51,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: '1.99.1'
-          components: rustc-dev,llvm-tools,clippy
+          components: rustc-dev,llvm-tools
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust/opendp_verus -> target
@@ -64,9 +64,6 @@ jobs:
       - name: Verify randomized response
         working-directory: rust/opendp_verus
         run: cargo verus verify
-      - name: Reject unsound prophecy variables
-        working-directory: rust/opendp_verus
-        run: cargo clippy --lib -- -D clippy::disallowed_types
 
   native:
     runs-on: ubuntu-24.04
