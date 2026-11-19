@@ -85,10 +85,10 @@ pub proof fn lemma_release_callback_preserves_cost(
 )
     requires
         forall|out: Result<bool, WordError>|
-            0real <= #[trigger] output_cost(out) < 1real,
+            0real <= #[trigger] output_cost(out),
     ensures
         forall|word: Result<u64, WordError>|
-            0real <= #[trigger] output_cost(operator.release(*truth, word)) < 1real,
+            0real <= #[trigger] output_cost(operator.release(*truth, word)),
         forall|word: Result<u64, WordError>|
             #[trigger] call_requires(BoolRR::release_callback, (&operator, truth, word)),
         forall|word: Result<u64, WordError>, out: Result<bool, WordError>|
