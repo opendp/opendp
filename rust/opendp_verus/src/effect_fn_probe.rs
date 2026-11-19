@@ -2,6 +2,7 @@
 //! Fn closure with in-band linear credits. This is a verification-only test;
 //! it does not assert the expectation law of the plain Measurement Fn.
 use vstd::prelude::*;
+use crate::randomized_response_bool::true_event;
 verus! {
 
 pub fn probe_rr_fn_in_band(
@@ -49,13 +50,6 @@ pub fn probe_rr_fn_in_band(
 }
 
 
-/// The indicator takes value *one* on the chosen observable output.
-/// This is the payoff needed for a direct event-probability bound.
-pub open spec fn true_event_cost() -> crate::uniform_word::OutputCost<bool> {
-    |outcome: Result<bool, crate::uniform_word::WordError>|
-        if outcome == Ok(true) { 1real } else { 0real }
-}
-
 /// An effect-aware call instantiated with a 0/1 event indicator.
 /// This would not typecheck under the old strict (< 1) allocation rule.
 /// It is deliberately a probabilistic credit judgment, *not* a claim
@@ -69,18 +63,28 @@ pub fn probe_rr_true_event(
     requires
         operator.numerator <= 9_007_199_254_740_992u64,
         credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: crate::randomized_response_bool::release_expectation(
-                truth, operator, crate::uniform_word::word_expectation(), true_event_cost()),
+            amount: crate::bernoulli_proof::success_mass(
+                crate::uniform_word::word_expectation()) *
+                (if truth {
+                    operator.numerator as real / 9_007_199_254_740_992real
+                } else {
+                    1real - operator.numerator as real / 9_007_199_254_740_992real
+                }),
         }),
     ensures
         result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
-            amount: true_event_cost()(result.0),
+            amount: true_event::<crate::uniform_word::WordError>()(result.0),
         }),
 {
+    proof {
+        crate::uniform_word::lemma_uniform_word_expectation_rule();
+        crate::randomized_response_bool::lemma_true_event_probability(
+            truth, operator, crate::uniform_word::word_expectation());
+    }
     assert forall|out: Result<bool, crate::uniform_word::WordError>|
-        0real <= #[trigger] true_event_cost()(out) by {};
+        0real <= #[trigger] true_event::<crate::uniform_word::WordError>()(out) by {};
     crate::rr_constructor::run_bool_rr_with_effect(
-        &operator, &truth, credit, Ghost(true_event_cost()))
+        &operator, &truth, credit, Ghost(true_event::<crate::uniform_word::WordError>()))
 }
 
 } // verus!
