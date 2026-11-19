@@ -48,9 +48,29 @@ including the rounding arithmetic contracts. The verifier checks
 The separate external lemma `lemma_uniform_word_expectation_rule`
 constrains the *mathematical law* of the entropy word, including the
 input-independent error case. It is not a second executable credit
-transfer. The custom `ErrorCredit` resource is tracked linearly,
-but a full semantic soundness proof relating the adapted credit
-calculus to distributional expectations is **not mechanized**.
+transfer. The `ErrorCredit` resource is tracked linearly. Following the
+[upstream Alerus sampling rule](https://github.com/ahuoguo/alerus/blob/main/alerus/rand_primitives.rs),
+the post-draw credit allocation is only required to be
+**nonnegative**, not strictly below 1. This matters for 0/1
+indicator payoffs: an allocation of 1 on a selected outcome is how
+Alerus bounds that event's probability. The input credit is still
+constrained by the resource algebra to be strictly below 1.
+A post-draw credit of 1 is contradictory *in the probabilistic
+error-credit semantics*; it does **not** establish that the event is
+impossible as an ordinary Rust safety property.
+
+The harness's `probe_rr_true_event` verifies an effect-aware
+call with exactly such an indicator allocation. This exercises the
+real production RR sampler, but does not prove a distributional
+postcondition for the plain measurement `Fn`.
+
+Alerus identifies ordinary `vstd::proph::Prophecy` variables as
+unsound in combination with Eris-style credits. The dedicated CI
+now applies the same Clippy type ban as upstream; `ProphecyGhost`
+is not banned. The [AlerusBelt soundness argument](https://arxiv.org/abs/2607.12282)
+is **not imported as a mechanized proof** of this adapted OpenDP
+credit calculus, and its connection to runtime callback
+expectations remains unproved.
 
 ## Effect-aware Fn experiment
 
