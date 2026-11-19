@@ -35,6 +35,8 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len);
 
 SEXP anymeasurement_to_sexp(AnyMeasurement *input);
 const char *sexp_to_charptr(SEXP type_name);
+SEXP charptr_to_sexp(char *input);
+SEXP boolptr_to_sexp(c_bool *input);
 
 SEXP extract_error(FfiError *err);
 
