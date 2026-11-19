@@ -10,7 +10,7 @@ use crate::measurement_proof::bounded_payoff;
 use crate::bernoulli_proof::{
     prefix_post, prefix_threshold, lemma_success_is_prefix,
     lemma_bernoulli_probability, uniform_word_expectation_rule,
-    success_mass, error_mass,
+    success_mass, error_mass, zero_error_post,
 };
 
 verus! {
@@ -158,6 +158,62 @@ pub proof fn lemma_release_expectation<E>(
     lemma_bernoulli_probability(numerator);
     assert(threshold as real / 18_446_744_073_709_551_616real
         == numerator as real / 9_007_199_254_740_992real);
+}
+
+/// Indicator of observing a successful true release. It assigns zero to
+/// errors and to a successful false release, so this is an event probability
+/// rather than an arbitrary payoff expectation.
+pub open spec fn true_event<E>() -> spec_fn(Result<bool, E>) -> real {
+    |out: Result<bool, E>| match out {
+        Ok(true) => 1real,
+        _ => 0real,
+    }
+}
+
+/// Exact true-event mass in the modeled one-word RR distribution.
+/// The error branch contributes zero, which requires the RNG model to
+/// preserve the expectation of the zero payoff. This theorem uses the
+/// production BoolRR::release and introduces no new trusted rule.
+pub proof fn lemma_true_event_probability<E>(
+    truth: bool,
+    op: operator::BoolRR,
+    word_expectation: spec_fn(spec_fn(Result<u64, E>) -> real) -> real,
+)
+    requires
+        op.numerator <= 9_007_199_254_740_992u64,
+        uniform_word_expectation_rule(word_expectation),
+    ensures
+        release_expectation(truth, op, word_expectation, true_event())
+            == success_mass(word_expectation) *
+                (if truth {
+                    op.numerator as real / 9_007_199_254_740_992real
+                } else {
+                    1real - op.numerator as real / 9_007_199_254_740_992real
+                }),
+{
+    let payoff = true_event::<E>();
+    assert forall|out: Result<bool, E>|
+        0real <= #[trigger] payoff(out) <= 1real by {
+        match out {
+            Ok(value) => { if value {} else {} }
+            Err(_) => {}
+        }
+    }
+    assert(bounded_payoff(payoff));
+    lemma_release_expectation(truth, op, word_expectation, payoff);
+    let on_error = |err: E| payoff(Err(err));
+    let zero = zero_error_post::<E>();
+    assert forall|err: E| #[trigger] on_error(err) == zero(err) by {}
+    assert(on_error =~= zero);
+    assert(error_mass(word_expectation, zero) == 0real);
+    assert(error_mass(word_expectation, on_error) == 0real);
+    if truth {
+        assert(payoff(Ok(truth)) == 1real);
+        assert(payoff(Ok(!truth)) == 0real);
+    } else {
+        assert(payoff(Ok(truth)) == 0real);
+        assert(payoff(Ok(!truth)) == 1real);
+    }
 }
 
 /// Pure DP for arbitrary bounded postconditions on the *actual Result* type.
