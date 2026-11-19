@@ -129,9 +129,10 @@ class MeasurementMixin(ABC):
 class TransformationMixin(ABC):
     """Certify rowwise sklearn inference by declaring its output domain.
 
-    Implementing rowwise_output_domain asserts that the named sklearn method
-    is total on the input domain, independently processes each row, and preserves
-    row count and alignment. Unsupported methods must raise.
+    Implementing rowwise_output_domain certifies that successful calls process
+    each row independently and preserve row count and alignment. Failures must
+    not depend on private input data, but may depend on the released fitted model.
+    Unsupported methods must raise.
     """
 
     @abstractmethod
