@@ -94,7 +94,10 @@ The map closure's executable return relation is verified. However,
 the ordinary `Fn(&bool)` has no linear-credit arguments, and its
 `callback_expectation` is uninterpreted by Verus. The RR constructor
 still contains one **explicit `assume`** equating that actual
-closure's expectation to the proved one-word release expectation.
+closure's expectation to the proved one-word release expectation
+**for bounded payoffs** (values between 0 and 1), which are exactly the
+test functions quantified by `MaxDivergence::dominates`. The previous
+assumption covered arbitrary real-valued payoffs unnecessarily.
 The `run_bool_rr` native forwarding function remains
 `external_body`, although it now delegates directly to the
 effect-verified production implementation. The generic
@@ -112,6 +115,25 @@ input-independent error law, the credit calculus's semantic
 interpretation, floating-point division/logarithm and selected
 arithmetic identities, plus native error/panic behavior. The
 Verus harness represents the native error type as `()`.
+
+A [direct falsification of the installed closure](https://github.com/opendp/opendp/actions/runs/44425623408)
+replaced `move |truth| run_bool_rr(&operator, truth)` with
+`move |truth| Ok(*truth)`, leaving the effect-verified sampler
+unchanged. **Verus still verified all 66 obligations** because the
+constructor's assumption directly supplies the expectation law.
+The native `test_bool_rr_native_sampling_law_regression` rejected
+the mutation (15 tests passed, 1 failed); the correct closure was
+restored in [`0560dca`](https://github.com/opendp/opendp/commit/0560dca3dddc2f6590e52461d423fb4dec8613a3).
+This is evidence of a genuine soundness gap, not proof that the
+native regression test establishes privacy.
+
+Closing the gap without a trusted assumption requires an operational
+probabilistic semantics for invoking an ordinary Rust `Fn` that
+accounts for the actual entropy effect, and a sound theorem connecting
+that semantics to the in-band credit judgment. Ordinary pointwise
+Verus `Fn` contracts, or another unproved callback wrapper, cannot
+derive a probability distribution. The remaining explicit assumption
+is therefore retained and auditable rather than presented as verified.
 
 The verified result is **conditional** on these boundaries, not a
 fully mechanized theorem about every native runtime effect.
