@@ -5,7 +5,8 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
-use crate::transformations::expr_replace::materialize_lit_list;
+use crate::polars::contains_categorical;
+use crate::transformations::expr_replace::{materialize_lit_list, reject_reserved_replace_name};
 
 use super::StableExpr;
 use super::expr_replace::{is_cast_fallible, literal_is_nullable, literal_len};
@@ -39,13 +40,12 @@ where
         return fallible!(MakeTransformation, "expected replace_strict expression");
     };
 
-    let return_dtype_lit = match return_dtype.as_ref() {
-        Some(expr) => Some(
-            expr.as_literal()
-                .ok_or_else(|| err!(MakeTransformation, "return_dtype must be literal"))?,
-        ),
-        None => None,
-    };
+    if return_dtype
+        .as_ref()
+        .is_some_and(|dtype| dtype.as_literal().is_none())
+    {
+        return fallible!(MakeTransformation, "return_dtype must be literal");
+    }
 
     if input.len() == 3 {
         input.push(Expr::Literal(LiteralValue::untyped_null()));
@@ -59,7 +59,9 @@ where
         )
     })?;
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let t_prior = input
+        .clone()
+        .make_stable(input_domain.clone(), input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let (Expr::Literal(old_lit), Expr::Literal(new_lit), Expr::Literal(default_lit)) =
@@ -76,6 +78,7 @@ where
 
     let old_lit = materialize_lit_list(old_lit)?;
     let new_lit = materialize_lit_list(new_lit)?;
+    let default_lit = materialize_lit_list(default_lit)?;
 
     // check lengths
     let (old_len, new_len) = (literal_len(&old_lit)?, literal_len(&new_lit)?);
@@ -87,17 +90,19 @@ where
             old_len
         );
     }
-    if literal_len(default_lit)? != 1 {
+    let default_len = literal_len(&default_lit)?;
+    if default_len != 1 {
         return fallible!(
             MakeTransformation,
             "length of `default` ({}) must be 1",
-            literal_len(default_lit)?
+            default_len
         );
-    };
+    }
 
     // check data types
+    reject_reserved_replace_name(&middle_domain.column.name)?;
     let input_dtype = middle_domain.column.dtype();
-    if matches!(input_dtype, DataType::Categorical(_, _)) {
+    if contains_categorical(&input_dtype) {
         return fallible!(
             MakeTransformation,
             "replace_strict cannot be applied to categorical data ({}), because it may trigger a data-dependent CategoricalRemappingWarning in Polars",
@@ -115,32 +120,54 @@ where
         );
     }
 
+    // Infer only after validating literal shapes, to avoid panics in Polars'
+    // dtype inference for unsupported dynamic list literals.
+    let output_dtype = super::infer_output_dtype(
+        &Expr::Function {
+            input: vec![
+                input,
+                Expr::Literal(old_lit.clone()),
+                Expr::Literal(new_lit.clone()),
+                Expr::Literal(default_lit.clone()),
+            ],
+            function: FunctionExpr::ReplaceStrict {
+                return_dtype: return_dtype.clone(),
+            },
+        },
+        &input_domain,
+    )?
+    .materialize_unknown(false)?;
+    if contains_categorical(&output_dtype) {
+        return fallible!(
+            MakeTransformation,
+            "replace_strict cannot produce categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
+        );
+    }
+
     let new_dtype = new_lit.get_datatype();
-    if let Some(return_dtype_lit) = return_dtype_lit {
-        if is_cast_fallible(&new_dtype, return_dtype_lit) {
-            return fallible!(
-                MakeTransformation,
-                "replace_strict: new datatype ({}) must be consistent with the return datatype ({})",
-                new_dtype,
-                return_dtype_lit
-            );
-        }
+    if is_cast_fallible(&new_dtype, &output_dtype) {
+        return fallible!(
+            MakeTransformation,
+            "replace_strict: new datatype ({}) must be consistent with the output datatype ({})",
+            new_dtype,
+            output_dtype
+        );
     }
 
     let default_dtype = default_lit.get_datatype();
-    if is_cast_fallible(&default_dtype, &new_dtype) {
+    if is_cast_fallible(&default_dtype, &output_dtype) {
         return fallible!(
             MakeTransformation,
-            "replace_strict: default datatype ({}) must be consistent with the new datatype ({})",
+            "replace_strict: default datatype ({}) must be consistent with the output datatype ({})",
             default_dtype,
-            new_dtype
+            output_dtype
         );
     }
 
     let mut output_domain = middle_domain.clone();
 
     // reset domain descriptors
-    output_domain.column.set_dtype(new_dtype)?;
+    output_domain.column.set_dtype(output_dtype)?;
 
     // if replacement can introduce nulls, then set nullable
     output_domain.column.nullable =
@@ -153,7 +180,12 @@ where
             output_domain,
             middle_metric,
             Function::then_expr(move |expr| Expr::Function {
-                input: vec![expr.clone(), old.clone(), new.clone(), default.clone()],
+                input: vec![
+                    expr,
+                    Expr::Literal(old_lit.clone()),
+                    Expr::Literal(new_lit.clone()),
+                    Expr::Literal(default_lit.clone()),
+                ],
                 function: FunctionExpr::ReplaceStrict {
                     return_dtype: return_dtype.clone(),
                 },

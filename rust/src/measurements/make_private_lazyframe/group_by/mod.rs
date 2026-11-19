@@ -14,6 +14,7 @@ use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
+use crate::polars::contains_categorical;
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::StableDslPlan;
@@ -356,18 +357,6 @@ fn contains_float(dtype: &DataType) -> bool {
         DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
         DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
         DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
-        _ => false,
-    }
-}
-
-/// Reject data-dependent categorical encodings at any depth in a grouping key.
-fn contains_categorical(dtype: &DataType) -> bool {
-    match dtype {
-        DataType::Categorical(_, _) => true,
-        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
-        DataType::Struct(fields) => fields
-            .iter()
-            .any(|field| contains_categorical(field.dtype())),
         _ => false,
     }
 }

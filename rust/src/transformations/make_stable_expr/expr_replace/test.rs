@@ -1,39 +1,18 @@
-use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::{FrameDistance, SymmetricDistance};
-use crate::transformations::make_stable_lazyframe;
+use crate::transformations::make_stable_expr::test_helper::replace::check_replace_expr;
 
 use super::*;
 
 fn check_replace(old: Expr, new: Expr, expected: Option<(Series, bool)>) -> Fallible<()> {
-    let series_domain = SeriesDomain::new("", OptionDomain::new(AtomDomain::<i32>::default()));
-    let lf_domain = LazyFrameDomain::new(vec![series_domain])?;
-    let lf = df!("" => &[1, 2, 3])?.lazy();
+    check_replace_on_input(&[Some(1), Some(2), Some(3)], old, new, expected)
+}
 
-    let lf_replace = lf.clone().with_column(col("").replace(old, new));
-    let t_obs = make_stable_lazyframe(
-        lf_domain.clone(),
-        FrameDistance(SymmetricDistance),
-        lf_replace,
-    );
-
-    let (t_obs, expected) = match (t_obs, expected) {
-        (Err(_), None) => return Ok(()),
-        (Ok(observed), Some(expected)) => (observed, expected),
-        (Err(e), Some(_)) => return Err(e),
-        (Ok(_), None) => panic!("expected error, but did not error"),
-    };
-
-    // check that polars behavior is as expected
-    let df_observed = t_obs.invoke(&lf)?.collect()?;
-    assert_eq!(
-        df_observed.column("")?.as_materialized_series(),
-        &expected.0
-    );
-
-    // since the replacement has nullity, the outcome may have nullity
-    let new_series_domain = t_obs.output_domain.series_domain("".into())?;
-    assert_eq!(new_series_domain.nullable, expected.1);
-    Ok(())
+fn check_replace_on_input(
+    input: &[Option<i32>],
+    old: Expr,
+    new: Expr,
+    expected: Option<(Series, bool)>,
+) -> Fallible<()> {
+    check_replace_expr(input, col("").replace(old, new), expected)
 }
 
 #[test]
@@ -57,25 +36,54 @@ fn test_make_expr_replace_standard_series() -> Fallible<()> {
 }
 #[test]
 fn test_make_expr_replace_impute_scalar() -> Fallible<()> {
-    // when replacing null with "x", output is not nullable
-    check_replace(
+    // replacing null with a non-null value removes nullability
+    check_replace_on_input(
+        &[Some(1), None, Some(3)],
         lit(NULL),
         lit(0),
-        Some((Series::new("".into(), [1, 2, 3]), false)),
+        Some((Series::new("".into(), [1, 0, 3]), false)),
     )
 }
 
 #[test]
 fn test_make_expr_replace_impute_series() -> Fallible<()> {
-    // when replacing each of old with respective new, output remains nullable
-    check_replace(
+    // replacing null with a non-null value removes nullability
+    check_replace_on_input(
+        &[Some(1), None, Some(3)],
         lit(Series::new("".into(), vec![Some(1), None])),
         lit(Series::new("".into(), vec![10, 0])),
-        Some((Series::new("".into(), [10, 2, 3]), false)),
+        Some((Series::new("".into(), [10, 0, 3]), false)),
     )
 }
 
 #[test]
 fn test_make_expr_replace_wrong_dtype() -> Fallible<()> {
     check_replace(lit("A"), lit(45), None)
+}
+
+#[test]
+fn test_replace_rejects_nested_categorical() -> Fallible<()> {
+    use crate::domains::LazyFrameDomain;
+    use crate::metrics::{FrameDistance, SymmetricDistance};
+
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let nested = DataType::Array(Box::new(categorical), 2);
+    let schema = Schema::from_iter([Field::new("data".into(), nested)]);
+    let domain = LazyFrameDomain::new_from_schema(schema)?;
+    let err = make_expr_replace(
+        domain.row_by_row(),
+        FrameDistance(SymmetricDistance),
+        col("data").replace(lit(1i32), lit(2i32)),
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert!(
+        err.message
+            .as_deref()
+            .unwrap_or_default()
+            .contains("categorical"),
+        "{err:?}"
+    );
+    Ok(())
 }
