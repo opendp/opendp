@@ -175,7 +175,7 @@ pub(crate) fn run_bool_rr_with_effect(
     requires
         operator.numerator <= 9_007_199_254_740_992u64,
         forall|out: Result<bool, CallbackError>|
-            0real <= #[trigger] payoff@(out) < 1real,
+            0real <= #[trigger] payoff@(out),
         credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: crate::randomized_response_bool::release_expectation(
                 *truth, *operator, crate::uniform_word::word_expectation(), payoff@)
