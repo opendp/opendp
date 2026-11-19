@@ -146,6 +146,15 @@ pub proof fn lemma_uniform_word_normalization<E>(
             0real / 18_446_744_073_709_551_616real * 0real
             + (1real - 0real / 18_446_744_073_709_551_616real) * 0real
         ) + error_mass(expectation, zero_errors));
+    let q = success_mass(expectation);
+    let f = 0real / 18_446_744_073_709_551_616real;
+    assert(f == 0real);
+    assert(f * 0real + (1real - f) * 0real == 0real)
+        by(nonlinear_arith);
+    assert(q * (f * 0real + (1real - f) * 0real) == 0real)
+        by(nonlinear_arith);
+    assert(expectation(zero_prefix)
+        == q * (f * 0real + (1real - f) * 0real) + 0real);
     assert(expectation(zero_prefix) == 0real);
     assert(expectation(zero) == expectation(zero_prefix));
     assert(expectation(zero) == 0real);
