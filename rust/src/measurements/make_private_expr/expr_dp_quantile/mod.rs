@@ -21,7 +21,8 @@ use crate::{
     metrics::L01InfDistance,
     polars::{OpenDPPlugin, apply_anonymous_function, literal_value_of, match_shim},
     transformations::{
-        StableExpr, expr_discrete_quantile_score::DiscreteQuantileScoreShim,
+        StableExpr,
+        expr_discrete_quantile_score::{DiscreteQuantileScoreShim, cast_quantile_candidates},
         traits::UnboundedMetric,
     },
 };
@@ -100,13 +101,20 @@ where
         .make_stable(input_domain.clone(), input_metric.clone())?;
     let series_domain = t_prior.output_domain.column.clone();
 
-    let midpoint = literal_value_of::<Series>(&candidates)?
-        .and_then(|s| s.median())
-        .ok_or_else(|| err!(MakeMeasurement, "candidates must be non-empty"))?;
-    input = input.fill_null(lit(midpoint));
+    let candidates_series = literal_value_of::<Series>(&candidates)?
+        .ok_or_else(|| err!(MakeMeasurement, "candidates must be known"))?;
+    if candidates_series.is_empty() {
+        return fallible!(MakeMeasurement, "candidates must be non-empty");
+    }
+    // Score and release the same values; never round private data through a candidate dtype.
+    let candidates_typed = cast_quantile_candidates(&candidates_series, &series_domain.dtype())?;
+    // An f64 median would promote integer inputs to Float64 before scoring.
+    let fill_value = Expr::Literal(candidates_typed.get(candidates_typed.len() / 2)?.into());
+    let candidates = lit(candidates_typed);
+    input = input.fill_null(fill_value.clone());
 
     if series_domain.dtype().is_float() {
-        input = input.fill_nan(lit(midpoint))
+        input = input.fill_nan(fill_value)
     }
     input = apply_anonymous_function(
         vec![input, alpha, candidates.clone()],

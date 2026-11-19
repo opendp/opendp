@@ -107,12 +107,11 @@ pub(crate) fn check_candidates<T: Number>(candidates: &Vec<T>) -> Fallible<()> {
     if candidates.is_empty() {
         return fallible!(MakeTransformation, "candidates must be non-empty");
     }
-    if candidates.windows(2).any(|w| {
-        w[0].partial_cmp(&w[1])
-            // NaN always evaluates to false
-            .map(|c| c != Ordering::Less)
-            .unwrap_or(true)
-    }) {
+    if candidates.iter().any(|c| c.partial_cmp(c).is_none())
+        || candidates
+            .windows(2)
+            .any(|w| w[0].partial_cmp(&w[1]) != Some(Ordering::Less))
+    {
         return fallible!(
             MakeTransformation,
             "candidates must be non-null and strictly increasing"
