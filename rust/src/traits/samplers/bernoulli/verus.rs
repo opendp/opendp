@@ -139,11 +139,15 @@ pub proof fn lemma_uniform_word_normalization<E>(
     }
     assert(zero_prefix =~= zero);
     assert(error_mass(expectation, zero_errors) == 0real);
+    assert(0real / 18_446_744_073_709_551_616real == 0real)
+        by(nonlinear_arith);
     assert(expectation(zero_prefix)
         == success_mass(expectation) * (
             0real / 18_446_744_073_709_551_616real * 0real
             + (1real - 0real / 18_446_744_073_709_551_616real) * 0real
         ) + error_mass(expectation, zero_errors));
+    assert(expectation(zero_prefix) == 0real);
+    assert(expectation(zero) == expectation(zero_prefix));
     assert(expectation(zero) == 0real);
 
     let one = one_word_post::<E>();
@@ -160,6 +164,11 @@ pub proof fn lemma_uniform_word_normalization<E>(
             0real / 18_446_744_073_709_551_616real * 1real
             + (1real - 0real / 18_446_744_073_709_551_616real) * 1real
         ) + error_mass(expectation, one_errors));
+    assert(expectation(one_prefix)
+        == success_mass(expectation) * 1real
+            + (1real - success_mass(expectation)));
+    assert(expectation(one_prefix) == 1real);
+    assert(expectation(one) == expectation(one_prefix));
     assert(expectation(one) == 1real);
 }
 
