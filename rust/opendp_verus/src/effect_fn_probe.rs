@@ -48,4 +48,38 @@ pub fn probe_rr_fn_in_band(
     func(&input, credit, payoff)
 }
 
+
+/// The indicator takes value *one* on the chosen observable output.
+/// This is the payoff needed for a direct event-probability bound.
+pub open spec fn true_event(outcome: Result<bool, crate::uniform_word::WordError>) -> real {
+    if outcome == Ok(true) { 1real } else { 0real }
+}
+
+/// An effect-aware call instantiated with a 0/1 event indicator.
+/// This would not typecheck under the old strict (< 1) allocation rule.
+/// It is deliberately a probabilistic credit judgment, *not* a claim
+/// that the observed event is impossible in ordinary Rust execution.
+pub fn probe_rr_true_event(
+    operator: crate::operator::BoolRR,
+    truth: bool,
+    credit: Tracked<crate::one_word_credit::ErrorCredit>,
+) -> (result: (Result<bool, crate::uniform_word::WordError>,
+              Tracked<crate::one_word_credit::ErrorCredit>))
+    requires
+        operator.numerator <= 9_007_199_254_740_992u64,
+        credit@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: crate::randomized_response_bool::release_expectation(
+                truth, operator, crate::uniform_word::word_expectation(), true_event),
+        }),
+    ensures
+        result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
+            amount: true_event(result.0),
+        }),
+{
+    assert forall|out: Result<bool, crate::uniform_word::WordError>|
+        0real <= #[trigger] true_event(out) by {};
+    crate::rr_constructor::run_bool_rr_with_effect(
+        &operator, &truth, credit, Ghost(true_event))
+}
+
 } // verus!
