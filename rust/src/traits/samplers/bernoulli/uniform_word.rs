@@ -47,7 +47,7 @@ type CreditWordResult = Result<u64, WordError>;
             amount: uniform_word_expectation(word_cost@)
         }),
         forall|word: Result<u64, WordError>|
-            0real <= #[trigger] word_cost@(word) < 1real,
+            0real <= #[trigger] word_cost@(word),
     ensures
         result.1@@ =~= (crate::one_word_credit::CreditCarrier::Value {
             amount: word_cost@(result.0)
@@ -90,7 +90,7 @@ type SampleWordThenResult<Y> = Result<Y, WordError>;
             amount: uniform_word_expectation(word_cost@)
         }),
         forall|word: Result<u64, WordError>|
-            0real <= #[trigger] word_cost@(word) < 1real,
+            0real <= #[trigger] word_cost@(word),
         forall|word: Result<u64, WordError>|
             #[trigger] call_requires(postprocess, (operator, input, word)),
         forall|word: Result<u64, WordError>, out: Result<Y, WordError>|
