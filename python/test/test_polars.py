@@ -238,10 +238,102 @@ def test_private_lazyframe_median():
         0.0,
     )
     expect = pl.DataFrame(
-        [pl.Series("D", [2], dtype=pl.Int32), pl.Series("B", [3], dtype=pl.Int64)]
+        [pl.Series("D", [2], dtype=pl.Int32), pl.Series("B", [3], dtype=pl.Int32)]
     )
 
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
+
+@pytest.mark.parametrize(
+    "dtype,atom_type",
+    [(pl.Int64, dp.i64), (pl.UInt64, dp.u64)],
+)
+@pytest.mark.parametrize("with_null", [False, True])
+def test_private_lazyframe_quantile_integer_precision(dtype, atom_type, with_null):
+    # Above 2**53, an f64 midpoint in fill_null rounds the private values.
+    value = 2**53 + 1
+    candidates = [value - 1, value + 1]
+    values = [value, None] if with_null else [value]
+    lf = pl.LazyFrame({"A": pl.Series("A", values, dtype=dtype)})
+
+    atom_domain = dp.atom_domain(T=atom_type)
+    series_domain = dp.series_domain(
+        "A", dp.option_domain(atom_domain) if with_null else atom_domain
+    )
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([series_domain]),
+        Margin(max_length=len(values), invariant="keys"),
+    )
+
+    query = seed(lf.collect_schema()).select(
+        pl.col("A").dp.quantile(0.5, candidates, scale=1.0)
+    )
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        query,
+        global_scale=0.0,
+    )
+    # Both endpoints tie without nulls; at zero noise, ties select the last.
+    # With a null, filling with the upper-middle candidate also selects last.
+    assert measurement(lf).collect()["A"][0] == candidates[1]
+
+
+def test_private_lazyframe_quantile_float32_candidate_rounding():
+    lf = pl.LazyFrame({"A": pl.Series("A", [0.2] * 5, dtype=pl.Float32)})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=dp.f32))]),
+        Margin(max_length=5, invariant="keys"),
+    )
+    query = seed(lf.collect_schema()).select(
+        pl.col("A").dp.quantile(0.5, [0.1, 0.2, 0.3], scale=1.0)
+    )
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        query,
+        global_scale=0.0,
+    )
+    result = measurement(lf).collect()["A"]
+    assert result.dtype == pl.Float32
+    assert result[0] == pl.Series([0.2], dtype=pl.Float32)[0]
+
+
+@pytest.mark.parametrize(
+    "candidates,valid",
+    [
+        ([1.0, 2.0], True),  # Exact Float64 -> Int64
+        ([1.1, 2.9], False),  # Fractional candidates cannot be represented
+    ],
+)
+def test_private_lazyframe_quantile_candidate_coercion(candidates, valid):
+    lf = pl.LazyFrame({"A": pl.Series("A", [1, 1, 1, 2, 2, 2, 5, 5], dtype=pl.Int64)})
+    lf_domain = dp.with_margin(
+        dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=dp.i64))]),
+        Margin(max_length=8, invariant="keys"),
+    )
+    query = seed(lf.collect_schema()).select(
+        pl.col("A").dp.quantile(0.5, candidates, scale=1.0)
+    )
+
+    def make_measurement():
+        return dp.m.make_private_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            query,
+            global_scale=0.0,
+        )
+
+    if valid:
+        result = make_measurement()(lf).collect()
+        assert result["A"].dtype == pl.Int64
+        assert result["A"][0] == 2
+    else:
+        with pytest.raises(dp.OpenDPException, match="represented exactly"):
+            make_measurement()
 
 
 @pytest.mark.parametrize(

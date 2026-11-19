@@ -71,6 +71,10 @@ fn test_validate_candidates() -> Fallible<()> {
     let candidates = vec![f64::NAN, 1.0, 2.0];
     assert!(check_candidates(&candidates).is_err());
 
+    assert!(check_candidates(&vec![f64::NAN]).is_err());
+    assert!(check_candidates(&vec![f32::NAN]).is_err());
+    check_candidates(&vec![1.0f64])?;
+
     Ok(())
 }
 
