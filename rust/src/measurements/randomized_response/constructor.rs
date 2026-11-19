@@ -308,23 +308,8 @@ where
     Ok(Some(measurement))
 }
 
-// Interpret the actual numeric privacy map of the production operator.
-// The value comes from BoolRR::map, not a caller-supplied factor.
 #[cfg(verus_only)]
 verus! {
-pub open spec fn operator_factor_map(
-    op: operator::BoolRR,
-    distance: u32,
-) -> Option<real> {
-    if distance == 0 { Some(1real) }
-    else if f64_to_bits(op.map(distance, 0.0f64)) == 0x7ff0_0000_0000_0000u64 {
-        None
-    } else {
-        Some(verified_arithmetic::real_exp(
-            verified_arithmetic::float_value(op.map(distance, 0.0f64))))
-    }
-}
-
 /// Conditions established by the real build_bool_rr success contract.
 /// The bound concerns the precise cost stored in this concrete BoolRR value.
 pub open spec fn well_formed_bool_rr(op: operator::BoolRR) -> bool {
@@ -342,6 +327,115 @@ pub open spec fn well_formed_bool_rr(op: operator::BoolRR) -> bool {
                 verified_arithmetic::float_value(op.privacy_cost)) *
             ((9_007_199_254_740_992u64 - op.numerator) as real)
     })
+}
+
+/// Interpret the exact privacy cost returned by BoolRR::map using the
+/// measure's canonical factor interpretation. This is numeric only:
+/// it makes no claim about a callback or an output distribution.
+pub proof fn lemma_bool_rr_map_cost(op: operator::BoolRR, distance: u32)
+    requires well_formed_bool_rr(op),
+    ensures
+        <MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(
+            &MaxDivergence, &op.map(distance, 0.0f64)),
+        match MaxDivergence::multiplicative_factor(op.map(distance, 0.0f64)) {
+            None => true,
+            Some(factor) => {
+                &&& factor >= 1real
+                &&& (distance == 0u32 ==> factor == 1real)
+                &&& (distance != 0u32 ==> {
+                    &&& op.numerator < 9_007_199_254_740_992u64
+                    &&& op.numerator as real <= factor
+                        * (9_007_199_254_740_992u64 - op.numerator) as real
+                })
+            },
+        },
+{
+    use crate::CertifiedMeasure;
+    let epsilon = op.map(distance, 0.0f64);
+    if distance == 0u32 {
+        assert(f64_to_bits(epsilon) == 0u64);
+        let bits = f64_to_bits(epsilon);
+        assert(((bits >> 52u64) & 2047u64) != 2047u64)
+            by(bit_vector) requires bits == 0u64;
+        crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
+        crate::verified_arithmetic::real_exp_zero();
+        assert(MaxDivergence::multiplicative_factor(epsilon) == Some(1real));
+    } else if op.numerator == 9_007_199_254_740_992u64 {
+        assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
+        assert(MaxDivergence::multiplicative_factor(epsilon) == None);
+    } else {
+        assert(crate::verified_arithmetic::finite(op.privacy_cost));
+        assert(f64_to_bits(epsilon) == f64_to_bits(op.privacy_cost));
+        crate::verified_arithmetic::lemma_same_bits_same_value(
+            epsilon, op.privacy_cost);
+        assert(crate::verified_arithmetic::finite(epsilon));
+        assert(crate::verified_arithmetic::float_value(epsilon)
+            == crate::verified_arithmetic::float_value(op.privacy_cost));
+        assert(MaxDivergence::multiplicative_factor(epsilon)
+            == Some(verified_arithmetic::real_exp(
+                verified_arithmetic::float_value(op.privacy_cost))));
+        assert(verified_arithmetic::real_exp(
+            verified_arithmetic::float_value(op.privacy_cost)) >= 1real);
+        assert(op.numerator as real <= verified_arithmetic::real_exp(
+            verified_arithmetic::float_value(op.privacy_cost))
+            * (9_007_199_254_740_992u64 - op.numerator) as real);
+    }
+    assert(<MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(
+        &MaxDivergence, &epsilon));
+}
+
+/// RR privacy is a property of the actual release law and the actual map
+/// value. This lemma is independent of callback storage, closure erasure,
+/// and the generic measurement constructor.
+pub proof fn lemma_bool_rr_release_dominates(
+    op: operator::BoolRR,
+    distance: u32,
+    left: bool,
+    right: bool,
+)
+    requires
+        well_formed_bool_rr(op),
+        DiscreteDistance::bool_close(left, right, distance),
+        crate::bernoulli_proof::uniform_word_expectation_rule(
+            crate::uniform_word::word_expectation()),
+    ensures
+        <MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::dominates(
+            &MaxDivergence,
+            |payoff: spec_fn(Result<bool, ()>) -> real|
+                crate::randomized_response_bool::release_expectation(
+                    left, op, crate::uniform_word::word_expectation(), payoff),
+            |payoff: spec_fn(Result<bool, ()>) -> real|
+                crate::randomized_response_bool::release_expectation(
+                    right, op, crate::uniform_word::word_expectation(), payoff),
+            &op.map(distance, 0.0f64)),
+{
+    use crate::CertifiedMeasure;
+    lemma_bool_rr_map_cost(op, distance);
+    let epsilon = op.map(distance, 0.0f64);
+    let words = crate::uniform_word::word_expectation();
+    let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+        crate::randomized_response_bool::release_expectation(left, op, words, payoff);
+    let right_law = |payoff: spec_fn(Result<bool, ()>) -> real|
+        crate::randomized_response_bool::release_expectation(right, op, words, payoff);
+    if let Some(factor) = MaxDivergence::multiplicative_factor(epsilon) {
+        assert(factor >= 1real);
+        assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
+            crate::measurement_proof::bounded_payoff(payoff)
+                implies #[trigger] left_law(payoff) <= factor * right_law(payoff)
+        by {
+            if distance == 0u32 {
+                assert(left == right);
+                assert(factor == 1real);
+            } else {
+                assert(op.numerator < 9_007_199_254_740_992u64);
+                assert(op.numerator as real <= factor
+                    * (9_007_199_254_740_992u64 - op.numerator) as real);
+                crate::randomized_response_bool::lemma_bool_rr_dp(
+                    op, words, factor, left, right, payoff);
+            }
+        }
+    }
+    assert(MaxDivergence.dominates(left_law, right_law, &epsilon));
 }
 
 /// The complete pre-erasure proof obligation of new_certified.
@@ -379,21 +473,6 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         domain, metric, measure, func, map),
 {
     use crate::{CertifiedDomain, CertifiedMetric, CertifiedMeasure};
-    let words = crate::uniform_word::word_expectation();
-    let expected = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
-        crate::randomized_response_bool::release_expectation(
-            truth, op, words, payoff);
-    let actual = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
-        crate::measurement_proof::callback_expectation(&func, &truth, payoff);
-    assert forall|truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
-        crate::measurement_proof::bounded_payoff(payoff) implies
-            #[trigger] actual(truth, payoff) == expected(truth, payoff)
-    by {
-        assert(crate::measurement_proof::bounded_payoff(payoff));
-        assert(crate::measurement_proof::callback_expectation(&func, &truth, payoff)
-            == crate::randomized_response_bool::release_expectation(
-                truth, op, crate::uniform_word::word_expectation(), payoff));
-    }
     assert forall|input: &bool| domain.contains(input)
         implies #[trigger] call_requires(func, (input,)) by {}
     assert forall|d: &u32| metric.valid_distance(d) ==>
@@ -422,31 +501,11 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         assert(output == Ok(op.map(*d, 0.0f64)));
         match output {
             Err(_) => { assert(false); }
-            Ok(epsilon) => {
-                if *d == 0 {
-                    assert(f64_to_bits(epsilon) == 0u64);
-                    let bits = f64_to_bits(epsilon);
-                    assert(((bits >> 52u64) & 2047u64) != 2047u64)
-                        by(bit_vector) requires bits == 0u64;
-                    crate::verified_arithmetic::lemma_positive_zero_real(epsilon);
-                    crate::verified_arithmetic::real_exp_zero();
-                } else if op.numerator == 9_007_199_254_740_992u64 {
-                    assert(f64_to_bits(epsilon) == 0x7ff0_0000_0000_0000u64);
-                    let bits = f64_to_bits(epsilon);
-                    assert(((bits >> 52u64) & 2047u64) == 2047u64)
-                        by(bit_vector) requires bits == 0x7ff0_0000_0000_0000u64;
-                    assert(!crate::verified_arithmetic::finite(epsilon));
-                } else {
-                    assert(crate::verified_arithmetic::finite(op.privacy_cost));
-                    assert(f64_to_bits(epsilon) == f64_to_bits(op.privacy_cost));
-                    crate::verified_arithmetic::lemma_same_bits_same_value(
-                        epsilon, op.privacy_cost);
-                }
+            Ok(cost) => {
+                assert(cost == op.map(*d, 0.0f64));
+                lemma_bool_rr_map_cost(op, *d);
                 assert(<MaxDivergence as crate::CertifiedMeasure<Result<bool, ()>>>::valid_cost(
-                    measure, &epsilon));
-                assert(MaxDivergence::multiplicative_factor(epsilon)
-                    == operator_factor_map(op, *d));
-
+                    measure, &cost));
                 assert forall|left: &bool, right: &bool|
                     domain.contains(left) && domain.contains(right)
                         && metric.close(left, right, d)
@@ -455,47 +514,40 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                             crate::measurement_proof::callback_expectation(&func, left, payoff),
                         |payoff: spec_fn(Result<bool, ()>) -> real|
                             crate::measurement_proof::callback_expectation(&func, right, payoff),
-                        &epsilon)
+                        &cost)
                 by {
-                    assert(DiscreteDistance::bool_close(
-                        *left, *right, *d));
+                    assert(DiscreteDistance::bool_close(*left, *right, *d));
+                    lemma_bool_rr_release_dominates(op, *d, *left, *right);
+                    let words = crate::uniform_word::word_expectation();
+                    let left_model = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::randomized_response_bool::release_expectation(
+                            *left, op, words, payoff);
+                    let right_model = |payoff: spec_fn(Result<bool, ()>) -> real|
+                        crate::randomized_response_bool::release_expectation(
+                            *right, op, words, payoff);
                     let left_law = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::measurement_proof::callback_expectation(&func, left, payoff);
                     let right_law = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::measurement_proof::callback_expectation(&func, right, payoff);
-                    if let Some(factor) = operator_factor_map(op, *d) {
+                    if let Some(factor) = MaxDivergence::multiplicative_factor(cost) {
                         assert(factor >= 1real);
                         assert forall|payoff: spec_fn(Result<bool, ()>) -> real|
                             crate::measurement_proof::bounded_payoff(payoff)
-                            implies
-                                #[trigger] left_law(payoff) <= factor * right_law(payoff)
+                            implies #[trigger] left_law(payoff) <= factor * right_law(payoff)
                         by {
-                            if *d == 0 {
-                                assert(*left == *right);
-                            } else {
-                                assert(op.numerator < 9_007_199_254_740_992u64);
-                                assert(factor == verified_arithmetic::real_exp(
-                                    verified_arithmetic::float_value(op.privacy_cost)));
-                                assert(op.numerator as real <= factor *
-                                    (9_007_199_254_740_992u64 - op.numerator) as real);
-                                crate::randomized_response_bool::lemma_bool_rr_dp(
-                                    op, words, factor, *left, *right, payoff);
-                            }
-                            assert(left_law(payoff) == actual(*left, payoff));
-                            assert(right_law(payoff) == actual(*right, payoff));
-                            assert(crate::measurement_proof::bounded_payoff(payoff));
-                            assert(actual(*left, payoff) == expected(*left, payoff));
-                            assert(actual(*right, payoff) == expected(*right, payoff));
+                            assert(left_law(payoff) == left_model(payoff));
+                            assert(right_law(payoff) == right_model(payoff));
+                            assert(left_model(payoff) <= factor * right_model(payoff));
                         }
                     }
-                    assert(measure.dominates(left_law, right_law, &epsilon));
+                    assert(measure.dominates(left_law, right_law, &cost));
                     let displayed_left = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::measurement_proof::callback_expectation(&func, left, payoff);
                     let displayed_right = |payoff: spec_fn(Result<bool, ()>) -> real|
                         crate::measurement_proof::callback_expectation(&func, right, payoff);
                     assert(displayed_left =~= left_law);
                     assert(displayed_right =~= right_law);
-                    assert(measure.dominates(displayed_left, displayed_right, &epsilon));
+                    assert(measure.dominates(displayed_left, displayed_right, &cost));
                 }
             }
         }
