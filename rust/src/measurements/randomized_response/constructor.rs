@@ -284,10 +284,11 @@ where
         // closure calls run_bool_rr, which forwards to the verified sampler.
         // This is NOT a reusable theorem about arbitrary Fn values.
         assume(forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
-            #[trigger] crate::measurement_proof::callback_expectation(
-                &func, truth, payoff)
+            crate::measurement_proof::bounded_payoff(payoff) ==>
+                #[trigger] crate::measurement_proof::callback_expectation(
+                    &func, truth, payoff)
                 == crate::randomized_response_bool::release_expectation(
-                *truth, operator, crate::uniform_word::word_expectation(), payoff));
+                    *truth, operator, crate::uniform_word::word_expectation(), payoff));
         // Unlike the randomized result law, ordinary Fn postconditions
         // suffice to verify the deterministic privacy-map closure.
         assert forall|truth: &bool|
@@ -363,10 +364,11 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
         forall|truth: &bool|
             #[trigger] call_requires(func, (truth,)),
         forall|truth: &bool, payoff: spec_fn(Result<bool, ()>) -> real|
-            #[trigger] crate::measurement_proof::callback_expectation(
-                &func, truth, payoff)
+            crate::measurement_proof::bounded_payoff(payoff) ==>
+                #[trigger] crate::measurement_proof::callback_expectation(
+                    &func, truth, payoff)
                 == crate::randomized_response_bool::release_expectation(
-                *truth, op, crate::uniform_word::word_expectation(), payoff),
+                    *truth, op, crate::uniform_word::word_expectation(), payoff),
         forall|d: &u32| #[trigger] call_requires(map, (d,)),
         forall|d: &u32, out: Result<f64, ()>|
             #[trigger] call_ensures(map, (d,), out)
@@ -384,8 +386,10 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
     let actual = |truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
         crate::measurement_proof::callback_expectation(&func, &truth, payoff);
     assert forall|truth: bool, payoff: spec_fn(Result<bool, ()>) -> real|
-        #[trigger] actual(truth, payoff) == expected(truth, payoff)
+        crate::measurement_proof::bounded_payoff(payoff) implies
+            #[trigger] actual(truth, payoff) == expected(truth, payoff)
     by {
+        assert(crate::measurement_proof::bounded_payoff(payoff));
         assert(crate::measurement_proof::callback_expectation(&func, &truth, payoff)
             == crate::randomized_response_bool::release_expectation(
                 truth, op, crate::uniform_word::word_expectation(), payoff));
@@ -479,6 +483,7 @@ pub proof fn lemma_built_bool_rr_concrete_valid<DI, F, P>(
                             }
                             assert(left_law(payoff) == actual(*left, payoff));
                             assert(right_law(payoff) == actual(*right, payoff));
+                            assert(crate::measurement_proof::bounded_payoff(payoff));
                             assert(actual(*left, payoff) == expected(*left, payoff));
                             assert(actual(*right, payoff) == expected(*right, payoff));
                         }
