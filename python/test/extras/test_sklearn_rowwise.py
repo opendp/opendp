@@ -1,4 +1,4 @@
-"""Certified rowwise inference for fitted sklearn-compatible estimators."""
+"""Rowwise inference for fitted sklearn-compatible estimators."""
 
 import numpy as np
 import pytest
@@ -67,7 +67,7 @@ def test_fitted_transform_query_needs_no_frozen_wrapper_or_budget():
     assert ctx.current_privacy_loss() == [0.5]
 
 
-def test_arbitrary_sklearn_estimator_is_not_certified():
+def test_arbitrary_sklearn_estimator_lacks_rowwise_support():
     fitted = StandardScaler().fit(np.ones((2, 2)))
     ctx = dp.Context.compositor(
         np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
@@ -78,7 +78,7 @@ def test_arbitrary_sklearn_estimator_is_not_certified():
         _make_rowwise_transform(domain(), dp.symmetric_distance(), fitted)
 
 
-def test_predictions_are_certified_rowwise_with_aligned_targets():
+def test_predictions_are_rowwise_with_aligned_targets():
     from opendp.extras.sklearn.linear_model._logistic_regression import (
         LogisticRegression,
     )
@@ -148,7 +148,7 @@ def test_empty_inference_and_sklearn_tie_breaking():
         assert trans.output_domain.member(result)
 
 
-def test_certification_snapshots_coefficients():
+def test_rowwise_transform_snapshots_coefficients():
     from opendp.extras.sklearn.linear_model._logistic_regression import (
         LogisticRegression,
     )
@@ -162,7 +162,7 @@ def test_certification_snapshots_coefficients():
     np.testing.assert_array_equal(trans(data).X, original)
 
 
-def test_rowwise_rejects_uncertified_method_and_metric():
+def test_rowwise_rejects_unsupported_method_and_metric():
     class Untrusted:
         def rowwise_output_domain(self, features, *, method):
             return features
@@ -179,13 +179,17 @@ def test_rowwise_rejects_uncertified_method_and_metric():
                 raise ValueError("Unsupported")
             return features
 
-    with pytest.raises(ValueError, match="row-adjacency"):
-        _make_rowwise_transform(
-            domain(), dp.frame_distance(dp.symmetric_distance()), Rowwise()
-        )
+    for metric in (
+        dp.insert_delete_distance(),
+        dp.change_one_distance(),
+        dp.hamming_distance(),
+        dp.frame_distance(dp.symmetric_distance()),
+    ):
+        with pytest.raises(ValueError, match="symmetric_distance"):
+            _make_rowwise_transform(domain(), metric, Rowwise())
 
 
-def test_uncertified_output_domain_and_missing_public_width():
+def test_invalid_rowwise_output_domain_and_missing_public_width():
     class BadDomain(TransformationMixin, BaseEstimator):
         def transform(self, X):
             return X
@@ -220,11 +224,11 @@ def test_logistic_regression_rejects_invalid_inference_contracts():
         model.rowwise_output_domain(features, method="predict")
 
     model.classes_ = np.array([0, 1])
-    with pytest.raises(ValueError, match="not certified rowwise"):
+    with pytest.raises(ValueError, match="does not support rowwise inference"):
         model.rowwise_output_domain(features, method="transform")
 
 
-def test_certified_inference_requires_aligned_input_domain():
+def test_rowwise_inference_requires_aligned_input_domain():
     ctx = dp.Context.compositor(
         np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
     )

@@ -92,7 +92,7 @@ class LogisticRegression(
         return self.classes_[(self.predict_proba(X)[:, 1] > 0.5).astype(int)]
 
     def rowwise_output_domain(self, feature_domain, *, method):
-        """Certify independent per-row classification and its output domain."""
+        """Describe the output domain of independent per-row classification."""
         from opendp.extras.numpy import NPArray2Domain, array2_domain
 
         check_is_fitted(self, ["coef_", "intercept_", "classes_"])
@@ -109,6 +109,6 @@ class LogisticRegression(
             num_columns = 2
             dtype = np.float64
         else:
-            raise ValueError(f"Method {method!r} is not certified rowwise")
+            raise ValueError(f"Method {method!r} does not support rowwise inference")
 
         return array2_domain(T=dtype, num_columns=num_columns, size=x.size, nan=False)
