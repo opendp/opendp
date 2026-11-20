@@ -1,5 +1,5 @@
 from opendp.extras._utilities import to_then
-from opendp.extras.numpy import _sscp_domain
+from opendp.extras.numpy import _nuclear_norm_distance, _symmetric_matrix_domain
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
 from opendp._internal import _make_transformation
@@ -17,7 +17,7 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
     :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
 
-    :return: a Transformation that computes ``X.T @ X``
+    :return: a Transformation with nuclear-norm output metric, computing ``X.T @ X``
     """
     import opendp.prelude as dp
 
@@ -47,6 +47,14 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
             f"input_domain ({input_domain}) must have known num_columns"
         )  # pragma: no cover
 
+    if input_desc.norm is None or not np.isfinite(input_desc.norm):
+        raise ValueError("input_domain must have a finite row norm bound")
+    row_norm_sq = input_desc.norm**2
+    if row_norm_sq == 0 and input_desc.norm != 0:
+        raise ValueError("row norm squared underflows")
+    if not np.isfinite(row_norm_sq):
+        raise ValueError("row norm squared overflows")
+
     if input_desc.origin is not None and np.any(input_desc.origin != 0):
         raise ValueError(
             "input_domain origin must be zero. Center the data and update its domain first."
@@ -55,16 +63,13 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
     return _make_transformation(
         input_domain,
         input_metric,
-        _sscp_domain(
-            num_features=input_desc.num_columns,
-            norm=input_desc.norm,
-            p=input_desc.p,
-            size=input_desc.size,
-            T=input_desc.T,
+        _symmetric_matrix_domain(
+            num_features=input_desc.num_columns, T=input_desc.T
         ),
-        input_metric,
+        _nuclear_norm_distance(),
         lambda arg: arg.T @ arg,
-        lambda d_in: d_in,
+        # ||xx^T||_* = ||x||_2^2 <= norm^2, also for L1-bounded rows.
+        lambda d_in: d_in * row_norm_sq,
     )
 
 
