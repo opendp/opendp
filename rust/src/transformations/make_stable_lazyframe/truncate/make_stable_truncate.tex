@@ -10,7 +10,7 @@
 \contrib
 
 Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate}
-in \asOfCommit{mod.rs}{c5a044563}.
+in \asOfCommit{mod.rs}{a105afe}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -18,7 +18,8 @@ in \asOfCommit{mod.rs}{c5a044563}.
 None
 
 \subsubsection*{Caller-verified}
-None
+The input plan, truncations, and candidate contribution bounds are produced
+together by \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations}.
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}
@@ -26,13 +27,24 @@ None
 
 \subsection*{Postcondition}
 \begin{theorem}
-\validTransformation{\texttt{(input\_domain, input\_metric, plan)}}{\\\texttt{make\_stable\_truncate}}
+\validTransformation{\texttt{(input\_domain, input\_metric, input, truncations, truncation\_bounds)}}{\\\texttt{make\_stable\_truncate}}
 \end{theorem}
 
 \begin{proof}[Appropriate Output Domain]
+    By line \ref{line:validate-sort-keys}, the matcher rechecks each matched
+    filter with the preceding plan's output schema. This certifies
+    permutation-equivariant rank keys. Line \ref{line:check-certificates}
+    also checks that the validated bounds are exactly the candidate filter
+    certificates (as a multiset); the final group-by's separate bound is
+    excluded from this comparison. Thus no structurally matched filter certificate
+    enters the stability map without semantic validation.
     By line \ref{line:stable-keys},
-    the grouping keys are stable row-by-row transformations of the data,
-    therefore the preconditions of \ref{line:truncation} are satisfied.
+    the grouping keys can be transformed into stable row-by-row expressions.
+    The constructors may rewrite expressions, notably replacing strict casts
+    with non-strict casts. Line \ref{line:check-rewrites} requires each
+    transformed expression to equal the original key used by truncation.
+    Thus the executed grouping keys are precisely the certified expressions,
+    satisfying the preconditions of \ref{line:truncation}.
     By the postcondition of \ref{line:truncation},
     for every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
 \end{proof}
@@ -44,7 +56,8 @@ None
         d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) \le \texttt{total\_num\_ids}.
     \end{equation}
 
-    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations},
+    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations}
+    and the key validation on line \ref{line:validate-sort-keys},
     for each \texttt{truncation\_bound} on line \ref{line:truncation-bound},
     \begin{align*}
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\

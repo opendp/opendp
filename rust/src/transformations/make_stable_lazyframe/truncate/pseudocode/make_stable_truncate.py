@@ -2,29 +2,49 @@
 def make_stable_truncate(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance[SymmetricIdDistance],
-    plan: DslPlan,
+    input: DslPlan,
+    truncations: Vec[Truncation],
+    truncation_bounds: Vec[Bound],
 ) -> Transformation[
     DslPlanDomain,
     DslPlanDomain,
     FrameDistance[SymmetricIdDistance],
     FrameDistance[SymmetricDistance],
 ]:
-    # the identifier is protected from changes, so we can use the identifier from the input metric
-    # instead of the identifier from the middle_metric to match truncations
-    input, truncations, truncation_bounds = match_truncations(
-        plan, input_metric[0].identifier
-    )
-
-    if truncations.is_empty():
-        return ValueError("failed to match truncation")
+    if not truncations:
+        raise ValueError("failed to match truncation")
 
     t_prior = input.make_stable(input_domain, input_metric)
     middle_domain, middle_metric = t_prior.output_space()
 
+    # Recheck the exact candidate certificates against the stable input schema.
+    schema = middle_domain.schema()
+    unmatched = list(truncation_bounds)
+    if isinstance(truncations[-1], Truncation.GroupBy):
+        if not unmatched:
+            raise ValueError("missing group-by truncation bound")
+        unmatched.pop()
+
+    for truncation in truncations:  # |\label{line:validate-sort-keys}|
+        if not isinstance(truncation, Truncation.Filter):
+            continue
+        validated = match_truncation_predicate(
+            truncation.predicate, middle_metric[0].identifier, schema
+        )
+        if validated is None:
+            raise ValueError("failed to validate truncation")
+        for bound in validated:  # |\label{line:check-certificates}|
+            if bound not in unmatched:
+                raise ValueError("validated truncation bounds changed")
+            unmatched.remove(bound)
+    if unmatched:
+        raise ValueError("validated truncation bounds changed")
+
+    # Truncation executes the original keys, not rewritten stable expressions.
+    stable_input = t_prior(input)
     for bound in truncation_bounds:
         for key in bound.by:
-            # raises if the key is not infallible row-by-row
-            make_stable_expr(  # |\label{line:stable-keys}|
+            t_key = make_stable_expr(  # |\label{line:stable-keys}|
                 WildExprDomain(
                     columns=middle_domain.series_domains,
                     context=Context.RowByRow,
@@ -32,6 +52,8 @@ def make_stable_truncate(
                 L0PInfDistance(middle_metric[0]),
                 key,
             )
+            if t_key(stable_input).expr != key:  # |\label{line:check-rewrites}|
+                raise ValueError("truncation key requires a rewrite")
 
     output_domain = middle_domain.clone()
     for truncation in truncations:  # |\label{line:truncation}|

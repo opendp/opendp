@@ -248,6 +248,104 @@ fn test_truncate_input_bounds_use_original_group_key() -> Fallible<()> {
 }
 
 #[test]
+fn test_validate_truncation_bounds_matches_certificates() -> Fallible<()> {
+    let identifier = col("ID");
+    let schema = Schema::from_iter([
+        Field::new("ID".into(), DataType::Int32),
+        Field::new("A".into(), DataType::Int32),
+        Field::new("B".into(), DataType::Int32),
+    ]);
+    let rank = |key: Expr, limit| {
+        key.rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+        .over([identifier.clone()])
+        .lt_eq(lit(limit))
+    };
+    let predicates = [rank(col("A"), 1), rank(col("B"), 2)];
+    let truncations = predicates
+        .iter()
+        .cloned()
+        .map(Truncation::Filter)
+        .collect::<Vec<_>>();
+    let mut candidates = predicates
+        .iter()
+        .map(|predicate| {
+            match_truncation_predicate(predicate, &identifier, None)
+                .map(|bounds| bounds.expect("expected truncation"))
+        })
+        .collect::<Fallible<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    // Matching reverses filter order and can reverse bounds within a filter.
+    candidates.reverse();
+    validate_truncation_bounds(&truncations, &candidates, &identifier, &schema)?;
+
+    let mut incorrect = candidates.clone();
+    incorrect[0].num_groups = Some(4);
+    assert!(validate_truncation_bounds(&truncations, &incorrect, &identifier, &schema).is_err());
+    assert!(
+        validate_truncation_bounds(&truncations, &candidates[..1], &identifier, &schema).is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_truncate_rejects_rewritten_strict_cast_keys() -> Fallible<()> {
+    let lf = df!(
+        "ID" => [7i32, 7],
+        "text" => ["1", "not a number"],
+        "value" => [10i32, 20],
+    )?
+    .lazy();
+    let domain = LazyFrameDomain::new_from_schema((*lf.clone().collect_schema()?).clone())?;
+    let strict_key = col("text").strict_cast(DataType::Int64);
+    let stabilize = |plan| {
+        make_stable_lazyframe::<_, FrameDistance<SymmetricDistance>>(
+            domain.clone(),
+            SymmetricIdDistance {
+                identifier: col("ID"),
+            },
+            plan,
+        )
+    };
+
+    // The stable-expression constructor would change strict to non-strict.
+    // Replaying the original group-by key could leak through a cast failure.
+    let groupby = lf
+        .clone()
+        .group_by([col("ID"), strict_key.clone()])
+        .agg([col("value").sum()]);
+    assert!(stabilize(groupby).is_err());
+
+    // Dense-rank truncation keys are subject to the same requirement.
+    let rank = strict_key
+        .rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+        .over([col("ID")])
+        .lt_eq(lit(1));
+    assert!(stabilize(lf.clone().filter(rank)).is_err());
+
+    // The non-strict version is already stable and is left unchanged.
+    let non_strict = lf
+        .group_by([col("ID"), col("text").cast(DataType::Int64)])
+        .agg([col("value").sum()]);
+    assert!(stabilize(non_strict).is_ok());
+    Ok(())
+}
+
+#[test]
 fn test_truncate_rejects_filter_after_group_by() -> Fallible<()> {
     let lf = df!("ID" => [7i32], "A" => [1i32])?.lazy();
     let predicate = col("A")
@@ -369,5 +467,75 @@ fn test_truncate_materializes_each_bound_grouping_subset() -> Fallible<()> {
     // per (A + B, C). Four different C values still contribute to output A.
     let output = t.invoke(&lf)?.group_by([col("A")]).agg([len()]).collect()?;
     assert_eq!(output.column("len")?.u32()?.get(0), Some(4));
+    Ok(())
+}
+
+#[test]
+fn test_truncate_domain_requires_permutation_invariant_aggregations() -> Fallible<()> {
+    let domain = DslPlanDomain::new(vec![
+        SeriesDomain::new("ID", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+        SeriesDomain::new("integer", AtomDomain::<i64>::default()),
+    ])?;
+    for agg in [
+        col("value").first(),
+        col("value").mean(),
+        col("value").sum(),
+        col("value").sort(Default::default()).mean(),
+    ] {
+        assert!(
+            truncate_domain(
+                domain.clone(),
+                &Truncation::GroupBy {
+                    keys: vec![col("ID")],
+                    aggs: vec![agg],
+                }
+            )
+            .is_err()
+        );
+    }
+    // Sorting integers does not establish a permutation-invariance proof
+    // for an order-sensitive reducer. Integer sums are invariant.
+    assert!(
+        truncate_domain(
+            domain.clone(),
+            &Truncation::GroupBy {
+                keys: vec![col("ID")],
+                aggs: vec![col("integer").sort(Default::default()).mean()],
+            }
+        )
+        .is_err()
+    );
+    assert!(
+        truncate_domain(
+            domain,
+            &Truncation::GroupBy {
+                keys: vec![col("ID")],
+                aggs: vec![col("integer").sum()],
+            }
+        )
+        .is_ok()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_truncate_rejects_floating_grouping_representatives() -> Fallible<()> {
+    let domain = DslPlanDomain::new(vec![
+        SeriesDomain::new("ID", AtomDomain::<i64>::default()),
+        SeriesDomain::new("value", AtomDomain::<f64>::default()),
+    ])?;
+    for keys in [vec![col("ID"), col("value")], vec![col("value")]] {
+        assert!(
+            truncate_domain(
+                domain.clone(),
+                &Truncation::GroupBy {
+                    keys,
+                    aggs: vec![len()],
+                }
+            )
+            .is_err()
+        );
+    }
     Ok(())
 }

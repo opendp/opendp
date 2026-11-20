@@ -33,11 +33,10 @@ None
 \end{theorem}
 
 \begin{proof}
-    Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
-    an error is only raised if the predicate is unambiguously a \texttt{per\_group} truncation predicate.
-
-    The \texttt{per\_group} predicate is only unambiguously identified.
-    This check happens on line \ref{line:check_rank}.
+    Line \ref{line:check_rank} first distinguishes a dense-rank truncation
+    from other expressions. Non-ranking expressions are not treated as
+    number-of-groups truncations; malformed rank expressions are rejected
+    by the subsequent checks.
 
     Line \ref{line:check_identifier} checks that \texttt{partition\_by} is a singleton of the \texttt{identifier}, meeting the conditions of the postcondition.
 
@@ -47,8 +46,8 @@ None
     Special consideration is made for structs, which are considered multiple grouping columns.
 
     Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
-    This effectively randomizes the ranking of the grouping columns, as the ranking is based on a lexicographic ordering.
-    and gives in effect a random sample of grouping columns.
+    The hash chooses a deterministic priority for the grouping columns,
+    rather than a cryptographically uniform random sample.
     The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
     which prevents different combinations of grouping keys from being assigned the same rank,
     preventing more distinct groups being kept than is permitted.

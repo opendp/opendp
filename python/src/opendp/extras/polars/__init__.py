@@ -732,25 +732,17 @@ _LAZY_EXECUTION_METHODS = {
 
 @dataclass
 class SortBy:
-    """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
+    """Priority ordering for :py:meth:`LazyFrameQuery.truncate_per_group`.
 
-    Follows the arguments in Polars' ``sort_by`` method.
+    Rows are sorted by these keys using Polars' native struct ranking,
+    with cryptographically random tie-breaking.
     """
 
     by: Any
     """Column(s) to sort by. Accepts expression input. Strings are parsed as column names."""
 
-    descending: bool | Sequence[bool] = False
-    """Sort in descending order. When sorting by multiple columns, can be specified per column by passing a sequence of booleans."""
-
-    nulls_last: bool | Sequence[bool] = False
-    """Place null values last; can specify a single boolean applying to all columns or a sequence of booleans for per-column control."""
-
-    multithreaded: bool = True
-    """Sort using multiple threads."""
-
-    maintain_order: bool = False
-    """Whether the order should be maintained if elements are equal."""
+    descending: bool = False
+    """Sort all keys in descending order when True."""
 
 
 class LazyFrameQuery:
@@ -1017,14 +1009,16 @@ class LazyFrameQuery:
         self,
         k: int,
         by: list[Any] | None = None,
-        keep: Literal["sample", "first", "last"] | SortBy = "sample",
+        keep: Literal["sample"] | SortBy = "sample",
     ) -> LazyFrameQuery:
         """
         Limit the number of contributed rows per group.
 
         :param k: the number of rows to keep for each identifier and group
         :param by: optional, additional columns to group by
-        :param keep: which rows to keep for each identifier in each group
+        :param keep: ``"sample"`` selects rows uniformly at random.
+            ``SortBy(...)`` selects rows by priority, breaking ties uniformly
+            at random.
         """
         input_metric = self._query._chain[1]
 
@@ -1038,20 +1032,34 @@ class LazyFrameQuery:
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
             raise ValueError("truncation is only valid when identifier is defined")
 
+        indices = pl.int_range(pl.len())
         if keep == "sample":
-            indexes = pl.int_range(pl.len()).shuffle()
-        elif keep == "first":
-            indexes = pl.int_range(pl.len())
-        elif keep == "last":
-            indexes = pl.int_range(pl.len()).reverse()
+            ranks = indices.dp.permute()
+            predicate = ranks.over(input_metric.identifier, *by or []) < k
         elif isinstance(keep, SortBy):
-            indexes = pl.int_range(pl.len()).sort_by(**asdict(keep))
+            keys = [keep.by] if isinstance(keep.by, (str, pl.Expr)) else list(keep.by)
+            if not isinstance(keep.descending, bool):
+                raise ValueError(
+                    "Mixed descending directions are no longer directly supported, "
+                    "but can be re-added if needed."
+                )
+            # Struct ranking uses Polars' native null ordering. The trusted
+            # permutation breaks ties uniformly.
+            fields = [
+                (pl.col(key) if isinstance(key, str) else key).alias(
+                    f"__opendp_sort_{i}"
+                )
+                for i, key in enumerate(keys)
+            ]
+            ranks = pl.struct(
+                *fields,
+                indices.dp.permute().alias("__opendp_tie"),
+            ).rank("ordinal", descending=keep.descending)
+            predicate = ranks.over(input_metric.identifier, *by or []) <= k
         else:
-            raise ValueError(
-                "keep must be 'sample', 'first', 'last' or SortBy"
-            )  # pragma: no cover
+            raise ValueError("keep must be 'sample' or SortBy(...)")
 
-        return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
+        return self.filter(predicate)
 
     def truncate_num_groups(
         self,

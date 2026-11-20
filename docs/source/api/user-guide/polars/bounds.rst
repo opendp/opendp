@@ -33,13 +33,13 @@ and hence reduce the amount of noise required to meet a given privacy guarantee.
             ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
 
-By default, ``truncate_per_group`` takes a random sample of records
-per-identifier, per-group. To choose which records you’d like to keep,
-you can also set ``keep`` to ``'first'``, ``'last'``, or an instance of
-``SortBy``. ``'first'`` is the most computationally efficient, but may
-bias your estimates if natural order is significant. The following
-demonstrates the sort, which prefers records with lower ``ILOSTAT``
-status, when the individual worked for pay or profit.
+``truncate_per_group`` by default takes a uniform random sample without
+replacement of records per-identifier, per-group. Use ``SortBy`` to prioritize
+rows by one or more keys. Sort priority, including null placement, follows
+Polars' native struct ranking; ``SortBy`` does not provide a ``nulls_last``
+option. Each individual group must be materializable in memory due to the
+use of custom plugins for cryptographically secure uniform sampling and
+tie-breaking.
 
 .. tab-set::
 
@@ -55,7 +55,12 @@ status, when the individual worked for pay or profit.
             ...         10, keep=dp.polars.SortBy(pl.col("ILOSTAT"))
             ...     )
             ...     # ...is equivalent to:
-            ...     # .filter(pl.int_range(pl.len()).sort_by(pl.col.ILOSTAT).over("PIDENT") < 10)
+            ...     # .filter(
+            ...     #     pl.struct(
+            ...     #         pl.col("ILOSTAT").alias("__opendp_sort_0"),
+            ...     #         pl.int_range(pl.len()).dp.permute().alias("__opendp_tie"),
+            ...     #     ).rank("ordinal").over("PIDENT") <= 10
+            ...     # )
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()

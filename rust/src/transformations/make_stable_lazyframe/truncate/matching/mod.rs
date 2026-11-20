@@ -8,12 +8,25 @@ use opendp_derive::proven;
 use polars_plan::dsl::WindowType;
 
 use polars::prelude::{
-    BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
-    int_range, len, lit,
+    BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, Schema,
+    WindowMapping, int_range, len, lit,
 };
 
 #[cfg(test)]
 mod test;
+
+// Polars may assign Categorical physical codes in observation order.
+// Ranking those codes is not invariant to permutations of private rows.
+fn contains_categorical(dtype: &DataType) -> bool {
+    match dtype {
+        DataType::Categorical(_, _) => true,
+        DataType::List(inner) | DataType::Array(inner, _) => contains_categorical(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(field.dtype())),
+        _ => false,
+    }
+}
 
 #[derive(PartialEq, Debug)]
 pub(crate) enum Truncation {
@@ -28,7 +41,8 @@ pub(crate) enum Truncation {
 /// For any choice of LazyFrame plan,
 /// returns the plan with the truncations removed,
 /// the truncations that were removed,
-/// and per-id bounds on row and/or group contributions.
+/// and candidate per-id bounds on row and/or group contributions.
+/// The caller must validate sort keys before using the bounds.
 #[proven]
 pub(crate) fn match_truncations(
     mut plan: DslPlan,
@@ -47,7 +61,7 @@ pub(crate) fn match_truncations(
 
     // match until not a filter truncation
     while let DslPlan::Filter { input, predicate } = plan.clone() {
-        let Some(new_bounds) = match_truncation_predicate(&predicate, identifier)? else {
+        let Some(new_bounds) = match_truncation_predicate(&predicate, identifier, None)? else {
             break;
         };
 
@@ -149,9 +163,14 @@ fn match_group_by_truncation(
 /// For a given filter predicate and identifier expression,
 /// returns an error if the predicate contains a mis-specified truncation,
 /// none if the predicate is not a truncation,
-/// otherwise the per-identifier bounds on user contribution.
+/// otherwise candidate per-identifier contribution bounds.
+/// Sort keys are certified only when a schema is supplied.
 #[proven]
-fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<Option<Vec<Bound>>> {
+pub(super) fn match_truncation_predicate(
+    predicate: &Expr,
+    identifier: &Expr,
+    schema: Option<&Schema>,
+) -> Fallible<Option<Vec<Bound>>> {
     Ok(Some(match predicate {
         // handles all_horizontal which is emitted by filter(a, b, c) in polars Python
         Expr::Function {
@@ -161,7 +180,7 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
         } => {
             // propagate errors
             let bounds = (input.iter())
-                .map(|expr| match_truncation_predicate(expr, identifier))
+                .map(|expr| match_truncation_predicate(expr, identifier, schema))
                 .collect::<Fallible<Vec<Option<Vec<Bound>>>>>()?;
 
             // propagate nones
@@ -179,8 +198,8 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             op: Operator::And,
             right,
         } => {
-            let left = match_truncation_predicate(left, identifier)?;
-            let right = match_truncation_predicate(right, identifier)?;
+            let left = match_truncation_predicate(left, identifier, schema)?;
+            let right = match_truncation_predicate(right, identifier, schema)?;
             let Some((left, right)) = left.zip(right) else {
                 return Ok(None);
             };
@@ -201,8 +220,8 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             let Expr::Over {
                 function,
                 partition_by,
+                order_by: None,
                 mapping: WindowMapping::GroupsToRows,
-                ..
             } = over.as_ref()
             else {
                 return Ok(None);
@@ -211,8 +230,8 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             let Expr::Window {
                 function,
                 partition_by,
+                order_by: None,
                 options: WindowType::Over(WindowMapping::GroupsToRows),
-                ..
             } = over.as_ref()
             else {
                 return Ok(None);
@@ -233,23 +252,28 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             // account for distinction between gt and ge
             let threshold_value = threshold.inf_add(&offset)?;
 
-            let num_groups = match_num_groups_predicate(
-                function.as_ref(),
-                partition_by,
-                identifier,
-                threshold_value,
-            )?;
             let per_group = match_per_group_predicate(
                 function.as_ref(),
                 partition_by,
                 identifier,
                 threshold_value,
+                schema,
             )?;
+            let num_groups = if per_group.is_none() {
+                match_num_groups_predicate(
+                    function.as_ref(),
+                    partition_by,
+                    identifier,
+                    threshold_value,
+                )?
+            } else {
+                None
+            };
 
             let Some(bound) = num_groups.or(per_group) else {
                 return fallible!(
                     MakeTransformation,
-                    "expected a predicate that limits per_group contributions (via int_range) or num_groups contributions (via rank). Found {:?}",
+                    "expected per_group truncation via a trusted permutation or sort-by ranks, or num_groups truncation via dense rank. Found {:?}",
                     function
                 );
             };
@@ -349,53 +373,34 @@ fn match_num_groups_predicate(
 }
 
 /// # Proof Definition
-/// If `enumeration` is an enumeration of rows,
-/// and `partition_by` includes `identifier`,
-/// then returns a `threshold` bound on per-group contribution,
-/// when grouped by the non-identifier columns in `partition_by`.
+/// If `enumeration` is a trusted uniform permutation of row indices or
+/// ordinal ranks of permutation-equivariant sort keys with trusted uniform
+/// tie-breaking, and `partition_by` includes `identifier`, then returns
+/// a valid bound on per-group contributions when grouped by the remaining
+/// expressions in `partition_by`, provided the sort keys are schema-validated.
+/// Without a schema the result is only a structural candidate.
 #[proven]
 fn match_per_group_predicate(
-    mut enumeration: &Expr,
+    enumeration: &Expr,
     partition_by: &Vec<Expr>,
     identifier: &Expr,
     threshold: u32,
+    schema: Option<&Schema>,
 ) -> Fallible<Option<Bound>> {
-    // reorderings of an enumeration are still enumerations
-    match enumeration {
-        Expr::Function {
-            input, function, ..
-        } => {
-            // FunctionExprs that may reorder data
-            let is_reorder = match function {
-                FunctionExpr::Reverse => true,
-                FunctionExpr::Random { method, .. } => {
-                    // since method is not public, we can't match on the enum directly.
-                    // however, we can convert it to a string and match on that.
-                    let method: &'static str = method.into();
-                    method == "shuffle"
-                }
-                _ => false,
-            };
-
-            if is_reorder {
-                enumeration = input
-                    .get(0)
-                    .ok_or_else(|| err!(MakeTransformation, "expected one input"))?;
-            }
-        }
-        Expr::SortBy { expr, by, .. } => {
-            if by.iter().any(|key| !is_permutation_equivariant(key)) {
-                return fallible!(
-                    MakeTransformation,
-                    "SortBy truncation keys must be permutation-equivariant expressions."
-                );
-            }
-            enumeration = expr.as_ref()
-        }
-        _ => (),
-    };
-
-    if enumeration.ne(&int_range(lit(0), len(), 1, DataType::Int64)) {
+    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    if enumeration == &range {
+        return fallible!(
+            MakeTransformation,
+            "per-group truncation requires a full trusted random permutation; physical first/last are not stable under unordered identifier metrics."
+        );
+    }
+    let (trusted, one_based) =
+        if crate::polars::permute::match_permute(enumeration)?.is_some_and(|data| data == &range) {
+            (true, false)
+        } else {
+            (match_ordinal_rank(enumeration, &range, schema)?, true)
+        };
+    if !trusted {
         return Ok(None);
     }
     // we now know this is a per group predicate,
@@ -416,7 +421,59 @@ fn match_per_group_predicate(
 
     Ok(Some(Bound {
         by,
-        per_group: Some(threshold),
+        per_group: Some(if one_based {
+            threshold.saturating_sub(1)
+        } else {
+            threshold
+        }),
         num_groups: None,
     }))
+}
+
+fn match_ordinal_rank(enumeration: &Expr, range: &Expr, schema: Option<&Schema>) -> Fallible<bool> {
+    let Expr::Function {
+        input,
+        function: FunctionExpr::Rank { options, .. },
+    } = enumeration
+    else {
+        return Ok(false);
+    };
+    if options.method != RankMethod::Ordinal {
+        return Ok(false);
+    }
+    let [
+        Expr::Function {
+            input: fields,
+            function: FunctionExpr::AsStruct,
+        },
+    ] = input.as_slice()
+    else {
+        return Ok(false);
+    };
+    let Some((random_priority, sort_keys)) = fields.split_last() else {
+        return Ok(false);
+    };
+    let Expr::Alias(random_priority, _) = random_priority else {
+        return Ok(false);
+    };
+    if !crate::polars::permute::match_permute(random_priority)?.is_some_and(|data| data == range) {
+        return Ok(false);
+    }
+    if let Some(schema) = schema {
+        for key in sort_keys {
+            if contains_categorical(&key.clone().to_field(schema)?.dtype) {
+                return fallible!(
+                    MakeTransformation,
+                    "SortBy truncation cannot use Categorical keys; cast to String or Enum first."
+                );
+            }
+            if !is_permutation_equivariant(key, schema) {
+                return fallible!(
+                    MakeTransformation,
+                    "SortBy truncation keys must be permutation-equivariant expressions."
+                );
+            }
+        }
+    }
+    Ok(true)
 }

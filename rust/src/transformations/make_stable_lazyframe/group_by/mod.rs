@@ -259,7 +259,7 @@ fn unproven() -> Fallible<PermutationBehavior> {
 /// Validate an aggregation and prove that its result is invariant in
 /// distribution under permutations of the input rows.
 pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fallible<()> {
-    if inspect_expr(expr, Resize::Allow, Some(schema))? == PermutationBehavior::Invariant {
+    if inspect_expr(expr, Resize::Allow, schema)? == PermutationBehavior::Invariant {
         Ok(())
     } else {
         fallible!(
@@ -271,8 +271,8 @@ pub(crate) fn check_permutation_invariance(expr: &Expr, schema: &Schema) -> Fall
 
 /// Check that a truncation key commutes with row permutations and cannot
 /// resize its input or fail depending on private values.
-pub(crate) fn is_permutation_equivariant(expr: &Expr) -> bool {
-    inspect_expr(expr, Resize::Ban, None).is_ok_and(|behavior| {
+pub(crate) fn is_permutation_equivariant(expr: &Expr, schema: &Schema) -> bool {
+    inspect_expr(expr, Resize::Ban, schema).is_ok_and(|behavior| {
         matches!(
             behavior,
             PermutationBehavior::Equivariant | PermutationBehavior::Invariant
@@ -315,13 +315,7 @@ fn check_quantile(expr: &Expr) -> Fallible<()> {
 
 /// Return a schema-derived dtype, rather than guessing about expressions
 /// whose behavior (e.g. categorical encoding) is type-dependent.
-fn checked_dtype(expr: &Expr, schema: Option<&Schema>) -> Fallible<DataType> {
-    let schema = schema.ok_or_else(|| {
-        err!(
-            MakeTransformation,
-            "A schema is required to certify this expression."
-        )
-    })?;
+fn checked_dtype(expr: &Expr, schema: &Schema) -> Fallible<DataType> {
     Ok(expr.clone().to_field(schema)?.dtype)
 }
 
@@ -347,11 +341,7 @@ fn public_scalar(expr: &Expr) -> bool {
 
 /// Check only the small set of operations needed for ordinary bounded
 /// sample-and-aggregate statistics. Everything else is unsupported.
-fn inspect_expr(
-    expr: &Expr,
-    resize: Resize,
-    schema: Option<&Schema>,
-) -> Fallible<PermutationBehavior> {
+fn inspect_expr(expr: &Expr, resize: Resize, schema: &Schema) -> Fallible<PermutationBehavior> {
     use PermutationBehavior::*;
 
     if let Some(data) = match_permute(expr)? {
@@ -379,8 +369,6 @@ fn inspect_expr(
         ),
         Expr::Len => Ok(Invariant),
 
-        // Binary expressions are not certified for infallible, permutation-
-        // invariant sample-and-aggregate execution.
         Expr::BinaryExpr { .. } => unproven(),
 
         Expr::Cast {
@@ -492,17 +480,13 @@ fn inspect_expr(
             let behavior = inspect_expr(input, Resize::Allow, schema)?;
             let invariant = match reducer {
                 Invariant => true,
-                IntegerSum => schema.is_some_and(|schema| {
-                    input.clone().to_field(schema).is_ok_and(|field| {
-                        field.dtype.is_integer() || matches!(field.dtype, DataType::Boolean)
-                    })
+                IntegerSum => input.clone().to_field(schema).is_ok_and(|field| {
+                    field.dtype.is_integer() || matches!(field.dtype, DataType::Boolean)
                 }),
-                CanonicalMinMax => schema.is_some_and(|schema| {
-                    input
-                        .clone()
-                        .to_field(schema)
-                        .is_ok_and(|field| canonical_sort_dtype(&field.dtype))
-                }),
+                CanonicalMinMax => input
+                    .clone()
+                    .to_field(schema)
+                    .is_ok_and(|field| canonical_sort_dtype(&field.dtype)),
                 OrderSensitive => false,
             };
 
@@ -525,7 +509,7 @@ fn inspect_function(
     function: &FunctionExpr,
     inputs: &[Expr],
     resize: Resize,
-    schema: Option<&Schema>,
+    schema: &Schema,
 ) -> Fallible<PermutationBehavior> {
     use PermutationBehavior::*;
 
@@ -554,10 +538,28 @@ fn inspect_function(
             | BooleanFunction::Not,
         ) => unary(),
 
-        // Float unary operations are row-local and cannot overflow integer
-        // representations. Negative square roots produce NaN, not an error.
+        // Polars negation wraps for signed integers, so it remains
+        // infallible and row-wise even at the minimum representable value.
+        FunctionExpr::Negate => {
+            let [input] = <&[Expr; 1]>::try_from(inputs)
+                .map_err(|_| err!(MakeTransformation, "Expected one numeric argument."))?;
+            if !matches!(
+                checked_dtype(input, schema)?,
+                DataType::Int8
+                    | DataType::Int16
+                    | DataType::Int32
+                    | DataType::Int64
+                    | DataType::Float32
+                    | DataType::Float64
+            ) {
+                return unproven();
+            }
+            unary()
+        }
+
+        // Float unary operations cannot overflow integer representations.
+        // Negative square roots produce NaN, not an error.
         FunctionExpr::Abs
-        | FunctionExpr::Negate
         | FunctionExpr::Floor
         | FunctionExpr::Ceil
         | FunctionExpr::Round { .. }
