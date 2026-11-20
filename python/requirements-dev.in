@@ -18,6 +18,7 @@ coverage
 mypy
 types-Deprecated
 blacken-docs
+cloudpickle  # Needed to serialize Python callbacks in Polars preflight tests.
 
 # Just needed for examples in documentation:
 pandas

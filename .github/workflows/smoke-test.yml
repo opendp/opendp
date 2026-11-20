@@ -217,13 +217,8 @@ jobs:
         run: |
           case "${{ matrix.extra-install }}" in
             all)  coverage run -m pytest -v;;
-            *)    pytest -v --ignore=test/test_subprocesses.py;;
+            *)    pytest -v;;
           esac
-
-      - name: Test replace-binary-path
-        if: matrix.extra-install == 'all'
-        # Messes with envvars, so can't be run in parallel!
-        run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.

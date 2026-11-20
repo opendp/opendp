@@ -41,18 +41,25 @@ perhaps on a remote server.
         ...     )
         ... )
         >>> # Then use the serialized plan from the client:
-        >>> new_query = new_context.deserialize_polars_plan(
-        ...     serialized_plan
-        ... )
+        >>> new_query = new_context.query().deserialize(serialized_plan)
         >>> print("DP len:", new_query.release().collect().item())
         DP len: ...
 
 
-Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deserialize_polars_plan`` is a convenience method for `Polars binary serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
+The ``polars_plan`` is a Polars ``LazyFrame``. The binary plan is produced by `Polars serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
 
-Polars serializations will include the path of the local binary.
-These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH`` :ref:`environment variable <envvars>`.
+For plans received from untrusted clients, use
+:py:meth:`~opendp.extras.polars.LazyFrameQuery.deserialize`
+with its default ``trusted=False``, rather than calling
+``polars.LazyFrame.deserialize`` directly. OpenDP's deserialization
+rejects I/O operations (including data-source scans and output sinks),
+Python callbacks, and unrecognized FFI plugins, and rebinds DP plugins
+to the locally loaded OpenDP library before Polars can execute them.
 
+For locally created, trusted plans, ``deserialize(..., trusted=True)``
+skips the security checks and permits ordinary Polars features, including
+local file scans and Python callbacks. DP plugins are still rebound.
+Never set ``trusted=True`` for plans from untrusted clients.
 
 Context Serialization
 ---------------------

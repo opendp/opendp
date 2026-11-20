@@ -61,6 +61,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "make_stable_expr",
     "make_private_lazyframe",
     "make_private_expr",
+    "sanitize_polars_plan",
     "_onceframe_take_lazy",
     "onceframe_lazy",
     "summarize_polars_measurement",

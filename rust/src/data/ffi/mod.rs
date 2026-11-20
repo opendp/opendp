@@ -19,6 +19,7 @@ use ::polars_ffi::version_0::{
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
+mod clone;
 #[cfg(feature = "polars")]
 mod polars;
 use bitvec::slice::BitSlice;
@@ -249,8 +250,13 @@ pub extern "C" fn opendp_data__slice_as_object(
     pub fn deserialize_raw_dslplan(
         raw: &FfiSlice
     ) -> Fallible<DslPlan> {
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
-        DslPlan::deserialize_versioned(slice)
+        if raw.ptr.is_null() {
+            return fallible!(FFI, "Invalid serialized Polars plan buffer");
+        }
+        let bytes = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        // This FFI loader handles plans supplied by the trusted local caller.
+        // Remote plans must be sanitized explicitly before deserialization.
+        DslPlan::deserialize_versioned(bytes)
             .map_err(
             |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
         )
@@ -985,7 +991,9 @@ pub extern "C" fn opendp_data___series_exports_free(
 /// * `this` - A pointer to the string to free.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
-    util::into_owned(this).map(|_| ()).into()
+    // Strings cross FFI via CString::into_raw, not Box<c_char>::into_raw.
+    // Reconstruct the CString so its full allocation is released.
+    util::into_string(this).map(|_| ()).into()
 }
 
 #[bootstrap(
@@ -1346,6 +1354,17 @@ mod tests {
     use crate::ffi::util::ToCharP;
 
     use super::*;
+
+    #[test]
+    fn test_str_free() -> Fallible<()> {
+        for value in ["", "a", "a longer UTF-8 string: λ"] {
+            let raw = util::into_c_char_p(value.to_owned())?;
+            let _: () = Fallible::from(opendp_data__str_free(raw))?;
+        }
+        let result: Fallible<()> = opendp_data__str_free(std::ptr::null_mut()).into();
+        assert!(result.is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_slice_as_object_number() -> Fallible<()> {
