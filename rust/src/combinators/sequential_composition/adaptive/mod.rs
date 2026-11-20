@@ -17,6 +17,9 @@ mod ffi;
 
 use super::CompositionMeasure;
 
+/// Internal accounting probe against the compositor's authoritative state.
+pub(crate) struct BudgetWasReserved(pub usize);
+
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -186,6 +189,10 @@ where
 
                 // if the query is internal (passed by the framework)
                 if let Query::Internal(query) = query {
+                    if let Some(probe) = query.downcast_ref::<BudgetWasReserved>() {
+                        return Ok(Answer::internal(d_mids.len() < probe.0));
+                    }
+
                     // check if the query is from a child queryable who is asking for permission to execute
                     if let Some(AskPermission(id)) = query.downcast_ref() {
                         // deny permission if the sequential compositor has moved on
