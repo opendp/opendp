@@ -138,6 +138,7 @@ vendor/
 binary/
 
 # Auto-generated files
+# BEGIN GENERATED BINDINGS
 rust/opendp.h
 R/opendp/R/accuracy.R
 R/opendp/R/combinators.R
@@ -150,6 +151,7 @@ R/opendp/R/metrics.R
 R/opendp/R/transformations.R
 R/opendp/R/internal.R
 R/opendp/src/Ropendp.h
+R/opendp/src/opendp.h
 R/opendp/src/accuracy.c
 R/opendp/src/combinators.c
 R/opendp/src/core.c
@@ -171,6 +173,7 @@ python/src/opendp/measurements.py
 python/src/opendp/measures.py
 python/src/opendp/metrics.py
 python/src/opendp/transformations.py
+# END GENERATED BINDINGS
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
