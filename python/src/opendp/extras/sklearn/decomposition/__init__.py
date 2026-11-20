@@ -93,10 +93,10 @@ def make_private_pca(
         raise ValueError("PCA currently supports symmetric_distance() only")
     if output_measure != dp.max_divergence():
         raise ValueError("PCA currently supports max_divergence() only")
-    if d_in <= 0 or d_out <= 0:
-        raise ValueError("d_in and d_out must be positive")
     if d_in not in (1, 2):
         raise ValueError("PCA currently supports d_in=1 or d_in=2")
+    if d_out <= 0:
+        raise ValueError("d_out must be positive")
     if center is not None and not (isinstance(center, str) and center == "origin"):
         raise ValueError("center must be None or 'origin'")
 
@@ -135,8 +135,6 @@ def make_private_pca(
     )
     if origin.ndim == 0:
         origin = np.full(n_features, origin.item())
-    if origin.shape != (n_features,):
-        raise ValueError("domain origin must be scalar or have shape (n_features,)")
     radius = desc.norm if desc.p == 2 else None
     if clip_norm is not None:
         clip_norm = float(clip_norm)
@@ -148,7 +146,7 @@ def make_private_pca(
     if radius <= 0 or not np.isfinite(radius) or not np.all(np.isfinite(origin)):
         raise ValueError("PCA requires a positive finite L2 radius and finite origin")
 
-    # A certified tighter ball needs no clipping. Domains permitting NaNs
+    # An already bounded input needs no clipping. Domains permitting NaNs
     # still require sanitization before finite-valued means and covariance.
     t_clip = None
     ball_domain = input_domain
@@ -216,7 +214,7 @@ def make_private_pca(
     if not estimate_mean:
         measurement = eigendecomposition(origin)
     else:
-        # Certify ||x-c||_1 <= sqrt(d) R without changing the L2-clipped rows.
+        # Bound ||x-c||_1 <= sqrt(d) R without changing the L2-clipped rows.
         # Round both sqrt and multiplication upwards for conservative sensitivity.
         l1_radius = np.nextafter(
             np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
@@ -389,13 +387,7 @@ class PCA(
         from sklearn.decomposition._pca import _infer_dimension
         from sklearn.utils.extmath import svd_flip
 
-        if not isinstance(release, PCARelease):
-            raise TypeError("PCA expected a PCARelease")
-
         n_samples = release.n_samples
-        if n_samples <= 1:
-            raise ValueError("PCA requires at least two samples")
-
         mean = np.array(release.mean, copy=True)
         singular_values = np.array(release.singular_values, copy=True)
         components = np.array(release.components, copy=True)
@@ -411,20 +403,15 @@ class PCA(
             else np.zeros_like(explained_variance)
         )
 
+        # Public parameters were validated when the measurement was constructed.
         n_components = release.n_components
         if n_components is None:
             n_components = min(n_samples, n_features)
         elif n_components == "mle":
-            if n_samples < n_features:
-                raise ValueError("n_components='mle' requires n_samples >= n_features")
             # sklearn may select zero for one feature or a zero spectrum.
-            # This API retains at least one component, even in those cases.
             n_components = max(1, _infer_dimension(explained_variance, n_samples))
         elif isinstance(n_components, float):
-            if not 0 < n_components < 1:
-                raise ValueError("n_components must be in (0, 1) when fractional")
-            # With no released variance, one component is sufficient for any
-            # requested fraction; searching an all-zero cumulative sum is not.
+            # With no released variance, one component is sufficient.
             n_components = (
                 1
                 if total_variance == 0
@@ -433,19 +420,7 @@ class PCA(
                 )
                 + 1
             )
-        elif isinstance(n_components, int) and not isinstance(n_components, bool):
-            if not 1 <= n_components <= min(n_samples, n_features):
-                raise ValueError(
-                    "n_components must be between 1 and min(n_samples, n_features)"
-                )
-        else:
-            raise ValueError(
-                "n_components must be None, an integer, a fraction, or 'mle'"
-            )
-
         n_components = int(n_components)
-        if n_components < 1 or n_components > len(explained_variance):
-            raise ValueError("n_components is incompatible with the released PCA")
 
         self.mean_ = mean
         self.components_ = components[:n_components, :]
@@ -527,11 +502,11 @@ class PCA(
         return scores
 
     def rowwise_output_domain(self, input_domain, *, method):
-        """Certify data-independent failure and rowwise PCA inference."""
+        """Describe the output domain for rowwise PCA inference."""
         import opendp.prelude as dp
 
         if method not in ("transform", "inverse_transform", "score_samples"):
-            raise ValueError(f"Method {method!r} is not certified rowwise")
+            raise ValueError(f"Method {method!r} does not support rowwise inference")
         check_is_fitted(self)
         desc = input_domain.cast(dp.numpy.NPArray2Domain)
         if method == "transform":
@@ -544,7 +519,7 @@ class PCA(
         if desc.num_columns != input_width:
             raise ValueError("input_domain must match the fitted number of features")
         if desc.T not in ("f32", "f64"):
-            raise ValueError("Certified PCA inference requires floating-point input")
+            raise ValueError("Rowwise PCA inference requires floating-point input")
         return dp.numpy.array2_domain(T=float, size=desc.size, num_columns=output_width)
 
 
