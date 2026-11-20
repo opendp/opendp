@@ -30,8 +30,8 @@ pub extern "C" fn opendp_core__queryable_eval(
     queryable: *mut AnyObject,
     query: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
-    let queryable = try_as_mut_ref!(queryable);
-    let queryable = try_!(queryable.downcast_mut::<AnyQueryable>());
+    let queryable = try_as_ref!(queryable);
+    let queryable = try_!(queryable.downcast_ref::<AnyQueryable>());
     let query = try_as_ref!(query);
     queryable.eval(query).into()
 }
@@ -49,8 +49,8 @@ pub extern "C" fn opendp_core__queryable_eval(
 pub extern "C" fn opendp_core__queryable_query_type(
     this: *mut AnyObject,
 ) -> FfiResult<*mut c_char> {
-    let this = try_as_mut_ref!(this);
-    let this = try_!(this.downcast_mut::<AnyQueryable>());
+    let this = try_as_ref!(this);
+    let this = try_!(this.downcast_ref::<AnyQueryable>());
     let answer: Type = try_!(this.eval_internal(&QueryType));
     FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
 }
