@@ -106,6 +106,11 @@ class DPExpr(object):
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
 
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("polars")
+
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.extras.polars.DPExpr object at ...>
@@ -129,6 +134,11 @@ class DPExpr(object):
         :param scale: Scale parameter for the noise distribution.
 
         :example:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -175,6 +185,11 @@ class DPExpr(object):
         :example:
 
         This function is a shortcut for the exact Polars ``len`` and then noise addition:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -230,6 +245,11 @@ class DPExpr(object):
 
         Count the number of records with known (non-null) visits:
 
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
+
         >>> import polars as pl
         >>> context = dp.Context.compositor(
         ...     data=pl.LazyFrame({"visits": [1, 2, None]}),
@@ -279,6 +299,11 @@ class DPExpr(object):
         :example:
 
         Count the number of records with unknown (null) visits:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -334,6 +359,11 @@ class DPExpr(object):
 
         Count the number of unique addresses:
 
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
+
         >>> import polars as pl
         >>> context = dp.Context.compositor(
         ...     data=pl.LazyFrame({"visits": [1, 2, None]}),
@@ -378,6 +408,11 @@ class DPExpr(object):
         * Clipping the values
         * Summing them
         * Applying noise to the sum
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -425,6 +460,11 @@ class DPExpr(object):
         :param scale: relative parameter for the scale of the noise distributions
 
         :example:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -478,6 +518,11 @@ class DPExpr(object):
 
         :example:
 
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
+
         >>> import polars as pl
         >>> context = dp.Context.compositor(
         ...     data=pl.LazyFrame({"age": list(range(100))}),
@@ -522,6 +567,11 @@ class DPExpr(object):
         :param scale: How much noise to add to the scores of candidate.
 
         :example:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         >>> import polars as pl
         >>> context = dp.Context.compositor(
@@ -582,6 +632,11 @@ def dp_len(scale: float | None = None, signed: bool | None = None):
 
     This function is a shortcut for the exact Polars ``len`` and then noise addition:
 
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("polars")
+
     >>> import polars as pl
     >>> context = dp.Context.compositor(
     ...     data=pl.LazyFrame({"A": list(range(100))}),
@@ -628,13 +683,13 @@ class OnceFrame(object):
         Does not require "honest-but-curious", but callers must follow the
         privacy requirements documented in :meth:`lazy`.
         """
-        from opendp._data import _onceframe_take_lazy
+        from opendp._data import _onceframe_take_lazy  # type: ignore[attr-defined]
 
         return _onceframe_take_lazy(self.queryable)
 
     def collect(self):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
-        from opendp._data import _shuffle_dataframe
+        from opendp._data import _shuffle_dataframe  # type: ignore[attr-defined]
 
         return _shuffle_dataframe(
             self._take_lazy().collect(
@@ -757,22 +812,27 @@ class LazyFrameQuery:
 
     :example:
 
-        .. code:: pycon
+    ..
 
-            >>> import polars as pl
-            >>> data = pl.LazyFrame([pl.Series("active", [0, 1] * 50, dtype=pl.Int32)])
+        >>> import pytest
+        >>> _ = pytest.importorskip("polars")
 
-            >>> context = dp.Context.compositor(
-            ...     data=data,
-            ...     privacy_unit=dp.unit_of(contributions=1),
-            ...     privacy_loss=dp.loss_of(epsilon=1.0),
-            ...     split_evenly_over=1,
-            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
-            ... )
+    .. code:: pycon
 
-            >>> lf_query = context.query()
-            >>> dict(lf_query.collect_schema())
-            {'active': Int32}
+        >>> import polars as pl
+        >>> data = pl.LazyFrame([pl.Series("active", [0, 1] * 50, dtype=pl.Int32)])
+
+        >>> context = dp.Context.compositor(
+        ...     data=data,
+        ...     privacy_unit=dp.unit_of(contributions=1),
+        ...     privacy_loss=dp.loss_of(epsilon=1.0),
+        ...     split_evenly_over=1,
+        ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
+        ... )
+
+        >>> lf_query = context.query()
+        >>> dict(lf_query.collect_schema())
+        {'active': Int32}
 
     Added and modified methods are listed below.
     """
@@ -1123,6 +1183,11 @@ class LazyFrameQuery:
         :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
 
         :example:
+
+        ..
+
+            >>> import pytest
+            >>> _ = pytest.importorskip("polars")
 
         .. code:: pycon
 

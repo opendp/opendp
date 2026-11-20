@@ -969,7 +969,7 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_dataframe(raw: FfiSlicePtr):
-    from opendp._data import _series_exports_free
+    from opendp._data import _series_exports_free  # type: ignore[attr-defined]
 
     pl = import_optional_dependency("polars")
     try:
@@ -1001,7 +1001,7 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_series(raw: FfiSlicePtr):
-    from opendp._data import _series_exports_free
+    from opendp._data import _series_exports_free  # type: ignore[attr-defined]
 
     pl = import_optional_dependency("polars")
     export = raw.contents.ptr

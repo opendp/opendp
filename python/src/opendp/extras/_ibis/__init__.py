@@ -1,11 +1,6 @@
 """
 This module requires extra installs: ``pip install 'opendp[ibis]'``
 
-..
-
-    >>> import pytest
-    >>> _ = pytest.importorskip("ibis")
-
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
@@ -81,6 +76,11 @@ def run_on_database(query, connection, table_name: str):
     :param connection: A connection object.
 
     :example:
+
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("polars")
 
     .. code:: pycon
 

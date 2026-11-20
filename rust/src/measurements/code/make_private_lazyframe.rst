@@ -1,5 +1,5 @@
 >>> dp.enable_features("contrib")
->>> import polars as pl
+>>> import pytest; pl = pytest.importorskip("polars")  # Or just: "import polars as pl"
 
 We'll imagine an elementary school is taking a pet census.
 The private census data will have two columns:
