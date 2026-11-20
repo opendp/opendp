@@ -7,10 +7,18 @@ use crate::transformations::make_stable_lazyframe;
 
 #[test]
 fn test_permutation_checker_rejects_data_dependent_errors() -> Fallible<()> {
+    let schema = Schema::default();
     // Failures are rejected independently of permutation behavior.
-    assert!(inspect_expr(&lit("a").strict_cast(DataType::Int32), Resize::Allow, None).is_err());
-    assert!(inspect_expr(&col("t").dt().year(), Resize::Allow, None).is_err());
-    assert!(inspect_expr(&col("t").dt().hour(), Resize::Allow, None).is_err());
+    assert!(
+        inspect_expr(
+            &lit("a").strict_cast(DataType::Int32),
+            Resize::Allow,
+            &schema
+        )
+        .is_err()
+    );
+    assert!(inspect_expr(&col("t").dt().year(), Resize::Allow, &schema).is_err());
+    assert!(inspect_expr(&col("t").dt().hour(), Resize::Allow, &schema).is_err());
     Ok(())
 }
 
@@ -41,36 +49,32 @@ fn test_permutation_checker_resize() -> Fallible<()> {
         Field::new("B".into(), DataType::Int32),
     ]);
     assert_eq!(
-        inspect_expr(&col("A"), Resize::Ban, Some(&schema))?,
+        inspect_expr(&col("A"), Resize::Ban, &schema)?,
         PermutationBehavior::Equivariant
     );
-    assert!(is_permutation_equivariant(&col("A")));
-    assert!(!is_permutation_equivariant(&(col("A") + lit(1))));
-    assert!(is_permutation_equivariant(&len()));
-    assert!(!is_permutation_equivariant(&col("A").sum()));
-    assert!(is_permutation_equivariant(&as_struct(vec![
-        col("A"),
-        col("B")
-    ])));
+    assert!(is_permutation_equivariant(&col("A"), &schema));
+    assert!(!is_permutation_equivariant(&(col("A") + lit(1)), &schema));
+    assert!(is_permutation_equivariant(&-col("A"), &schema));
+    assert!(is_permutation_equivariant(&len(), &schema));
+    // An integer sum is invariant under permutations and can serve as a sort key.
+    assert!(is_permutation_equivariant(&col("A").sum(), &schema));
+    assert!(is_permutation_equivariant(
+        &as_struct(vec![col("A"), col("B")]),
+        &schema
+    ));
     assert!(!is_permutation_equivariant(
-        &col("A").strict_cast(DataType::Int64)
+        &col("A").strict_cast(DataType::Int64),
+        &schema
     ));
     // Integer sum is a broadcastable invariant scalar.
     assert_eq!(
-        inspect_expr(&col("A").sum(), Resize::Ban, Some(&schema))?,
+        inspect_expr(&col("A").sum(), Resize::Ban, &schema)?,
         PermutationBehavior::Invariant
     );
     // Data-dependent resizes and order-dependent intermediate results are rejected.
-    assert!(inspect_expr(&col("A").unique(), Resize::Ban, Some(&schema)).is_err());
-    assert!(
-        inspect_expr(
-            &(col("A").unique() + col("B")),
-            Resize::Allow,
-            Some(&schema)
-        )
-        .is_err()
-    );
-    assert!(inspect_expr(&col("A").shift(lit(1)).sum(), Resize::Allow, Some(&schema)).is_err());
+    assert!(inspect_expr(&col("A").unique(), Resize::Ban, &schema).is_err());
+    assert!(inspect_expr(&(col("A").unique() + col("B")), Resize::Allow, &schema).is_err());
+    assert!(inspect_expr(&col("A").shift(lit(1)).sum(), Resize::Allow, &schema).is_err());
     Ok(())
 }
 
@@ -149,7 +153,7 @@ fn test_permutation_checker_float_preprocessing() -> Fallible<()> {
         sqrt,
     ] {
         assert_eq!(
-            inspect_expr(&expr, Resize::Allow, Some(&schema))?,
+            inspect_expr(&expr, Resize::Allow, &schema)?,
             PermutationBehavior::Equivariant,
             "{expr:?}"
         );
@@ -163,7 +167,7 @@ fn test_permutation_checker_float_preprocessing() -> Fallible<()> {
         col("x") * lit(2.0),
         col("i") / col("i"),
     ] {
-        assert!(inspect_expr(&expr, Resize::Allow, Some(&schema)).is_err());
+        assert!(inspect_expr(&expr, Resize::Allow, &schema).is_err());
     }
     Ok(())
 }
@@ -232,6 +236,7 @@ fn test_permutation_checker_rejects_enum_string_ordering() -> Fallible<()> {
 
 #[test]
 fn test_permutation_checker_rejects_unrelated_functions() -> Fallible<()> {
+    let schema = Schema::default();
     let array_get = Expr::Function {
         input: vec![col("array"), lit(0i64)],
         function: FunctionExpr::ArrayExpr(ArrayFunction::Get(true)),
@@ -254,7 +259,7 @@ fn test_permutation_checker_rejects_unrelated_functions() -> Fallible<()> {
     };
     for expr in [array_get, list_get, extract, hashed, repeated] {
         assert!(
-            inspect_expr(&expr, Resize::Allow, None).is_err(),
+            inspect_expr(&expr, Resize::Allow, &schema).is_err(),
             "{expr:?}"
         );
     }
@@ -263,11 +268,12 @@ fn test_permutation_checker_rejects_unrelated_functions() -> Fallible<()> {
 
 #[test]
 fn test_permutation_checker_rejects_dtype_wide_categories() -> Fallible<()> {
+    let schema = Schema::default();
     let categories = Expr::Function {
         input: vec![col("category")],
         function: FunctionExpr::Categorical(CategoricalFunction::GetCategories),
     };
-    assert!(inspect_expr(&categories, Resize::Allow, None).is_err());
+    assert!(inspect_expr(&categories, Resize::Allow, &schema).is_err());
     Ok(())
 }
 
@@ -352,19 +358,24 @@ fn test_group_by_preserves_plain_margin_keys() -> Fallible<()> {
 
 #[test]
 fn test_permutation_checker_pow_and_qcut() -> Fallible<()> {
+    let schema = Schema::from_iter([
+        Field::new("a".into(), DataType::Int64),
+        Field::new("b".into(), DataType::Int64),
+        Field::new("v".into(), DataType::Float64),
+    ]);
     // Integer pow may fail when a private exponent is negative.
     let pow = Expr::Function {
         input: vec![col("a"), col("b")],
         function: FunctionExpr::Pow(PowFunction::Generic),
     };
-    assert!(inspect_expr(&pow.first(), Resize::Allow, None).is_err());
+    assert!(inspect_expr(&pow.first(), Resize::Allow, &schema).is_err());
 
     // Even infallible operations remain unsupported until certified.
     let sqrt = Expr::Function {
         input: vec![col("a")],
         function: FunctionExpr::Pow(PowFunction::Sqrt),
     };
-    assert!(inspect_expr(&sqrt, Resize::Allow, None).is_err());
+    assert!(inspect_expr(&sqrt, Resize::Allow, &schema).is_err());
 
     for allow_duplicates in [false, true] {
         let qcut = Expr::Function {
@@ -377,7 +388,7 @@ fn test_permutation_checker_pow_and_qcut() -> Fallible<()> {
                 include_breaks: false,
             },
         };
-        assert!(inspect_expr(&qcut.first(), Resize::Allow, None).is_err());
+        assert!(inspect_expr(&qcut.first(), Resize::Allow, &schema).is_err());
     }
 
     Ok(())
@@ -465,25 +476,30 @@ fn test_permutation_invariance_validation() -> Fallible<()> {
 
 #[test]
 fn test_group_locality_validation() -> Fallible<()> {
+    let schema = Schema::from_iter([
+        Field::new("i".into(), DataType::Int32),
+        Field::new("x".into(), DataType::Float64),
+        Field::new("q".into(), DataType::Float64),
+    ]);
     let range = Expr::Literal(LiteralValue::Range(polars_plan::plans::RangeLiteralValue {
         low: 0,
         high: 2,
         dtype: DataType::Int32,
     }));
-    assert!(!is_permutation_equivariant(&range));
-    assert!(inspect_expr(&range, Resize::Allow, None).is_err());
+    assert!(!is_permutation_equivariant(&range, &schema));
+    assert!(inspect_expr(&range, Resize::Allow, &schema).is_err());
     // A genuine scalar list broadcasts, unlike a positional Series literal.
     let list = Expr::Literal(LiteralValue::Scalar(Scalar::new(
         DataType::List(Box::new(DataType::Int32)),
         AnyValue::List(Series::new("list".into(), [1i32, 2])),
     )));
-    assert!(is_permutation_equivariant(&list));
-    inspect_expr(&list, Resize::Allow, None)?;
+    assert!(is_permutation_equivariant(&list, &schema));
+    inspect_expr(&list, Resize::Allow, &schema)?;
     assert!(
         inspect_expr(
             &(col("i") * lit(Series::new("weights".into(), [1i32, 0]))).sum(),
             Resize::Allow,
-            None
+            &schema
         )
         .is_err()
     );
@@ -491,7 +507,7 @@ fn test_group_locality_validation() -> Fallible<()> {
         inspect_expr(
             &col("x").sort(Default::default()).agg_groups(),
             Resize::Allow,
-            None
+            &schema
         )
         .is_err()
     );
@@ -510,7 +526,7 @@ fn test_group_locality_validation() -> Fallible<()> {
             inspect_expr(
                 &col("x").quantile(quantile, QuantileMethod::Linear),
                 Resize::Allow,
-                None
+                &schema
             )
             .is_err()
         );

@@ -1,6 +1,8 @@
+#[cfg(feature = "ffi")]
+use polars::prelude::all_horizontal;
 use polars::{
     df,
-    prelude::{IntoLazy, RankOptions, all_horizontal, as_struct, col},
+    prelude::{Categories, Field, IntoLazy, RankOptions, as_struct, col},
 };
 
 use super::*;
@@ -154,6 +156,7 @@ fn test_match_group_by_truncation_with_grouping() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "ffi")]
 #[test]
 fn test_match_truncation_predicate_tree() -> Fallible<()> {
     let bounds = vec![
@@ -174,14 +177,13 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
         descending: false,
     };
     let truncate_num_groups = col("A").rank(rank_opt, None).over([col("ID")]).lt(lit(10));
-    let truncate_per_group = int_range(lit(0), len(), 1, DataType::Int64)
-        .over([col("A"), col("ID")])
-        .lt(lit(11));
+    let truncate_per_group = random_enumeration().over([col("A"), col("ID")]).lt(lit(11));
 
     assert_eq!(
         match_truncation_predicate(
             &truncate_num_groups.clone().and(truncate_per_group.clone()),
-            &col("ID")
+            &col("ID"),
+            None
         )?,
         Some(bounds.clone())
     );
@@ -189,7 +191,8 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
     assert_eq!(
         match_truncation_predicate(
             &all_horizontal([truncate_num_groups.clone(), truncate_per_group.clone()])?,
-            &col("ID")
+            &col("ID"),
+            None
         )?,
         Some(bounds)
     );
@@ -197,7 +200,8 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
     assert!(
         match_truncation_predicate(
             &all_horizontal([truncate_num_groups.clone(), col("D").lt(4)])?,
-            &col("ID")
+            &col("ID"),
+            None
         )?
         // Any non-truncation predicate should return None, failure to match.
         // Want to ensure no other non-row-by-row or fallible predicates get through.
@@ -207,6 +211,7 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
     Ok(())
 }
 
+#[cfg(feature = "ffi")]
 #[test]
 fn test_match_truncation_predicate_op() -> Fallible<()> {
     let bound = Bound {
@@ -217,11 +222,11 @@ fn test_match_truncation_predicate_op() -> Fallible<()> {
 
     let check = |expr: Expr| {
         assert_eq!(
-            match_truncation_predicate(&expr, &col("ID")),
+            match_truncation_predicate(&expr, &col("ID"), None),
             Ok(Some(vec![bound.clone()]))
         );
     };
-    let over = int_range(lit(0), len(), 1, DataType::Int64).over([col("A"), col("ID")]);
+    let over = random_enumeration().over([col("A"), col("ID")]);
 
     check(over.clone().lt_eq(lit(11)));
     check(over.clone().lt(lit(12)));
@@ -267,34 +272,230 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
 }
 
 #[test]
-fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
-    let bound = Some(Bound {
-        by: HashSet::from([col("A")]),
-        per_group: Some(10),
-        num_groups: None,
-    });
-
-    let check =
-        |expr: Expr| match_per_group_predicate(&expr, &vec![col("A"), col("ID")], &col("ID"), 10);
-
-    let range = int_range(lit(0), len(), 1, DataType::Int64);
-    assert_eq!(check(range.clone())?, bound);
-    assert_eq!(check(range.clone().reverse())?, bound);
-    assert_eq!(check(range.clone().shuffle(None))?, bound);
-    assert_eq!(
-        check(range.clone().sort_by([col("D")], Default::default()))?,
-        bound
+fn test_truncation_window_rejects_order_by() -> Fallible<()> {
+    let rank = col("A").rank(
+        RankOptions {
+            method: RankMethod::Dense,
+            descending: false,
+        },
+        None,
     );
-    assert!(check(int_range(lit(0), len(), 1, DataType::Int64).head(None))?.is_none());
+
+    // An order-by expression is evaluated by Polars even though it is not
+    // part of the ranker or partitioning keys. A strict cast can fail on
+    // private values, so this cannot be certified as a truncation.
+    let ordered = rank
+        .clone()
+        .over_with_options(
+            Some(vec![col("ID")]),
+            Some((
+                vec![col("secret").strict_cast(DataType::Int64)],
+                Default::default(),
+            )),
+            WindowMapping::GroupsToRows,
+        )?
+        .lt_eq(lit(1));
+    assert!(match_truncation_predicate(&ordered, &col("ID"), None)?.is_none());
+
+    let ordinary = rank.over([col("ID")]).lt_eq(lit(1));
+    assert!(match_truncation_predicate(&ordinary, &col("ID"), None)?.is_some());
     Ok(())
 }
 
 #[test]
-fn test_match_per_group_predicate_id() -> Fallible<()> {
+fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
+    let check = |expr: Expr| {
+        match_per_group_predicate(&expr, &vec![col("A"), col("ID")], &col("ID"), 10, None)
+    };
+
     let range = int_range(lit(0), len(), 1, DataType::Int64);
+    assert!(check(range.clone()).is_err());
+    // Unsupported reorderings are not recognized as truncations.
+    assert!(check(range.clone().reverse())?.is_none());
+    assert!(check(range.clone().shuffle(None))?.is_none());
+    assert!(check(range.clone().sort_by([col("D")], Default::default()))?.is_none());
+    assert!(check(int_range(lit(0), len(), 1, DataType::Int64).head(None))?.is_none());
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
+#[test]
+fn test_match_per_group_predicate_id() -> Fallible<()> {
+    let range = random_enumeration();
     // no matches should error
-    assert!(match_per_group_predicate(&range, &vec![col("A")], &col("ID"), 10).is_err());
+    assert!(match_per_group_predicate(&range, &vec![col("A")], &col("ID"), 10, None).is_err());
     // multiple matches should pass
-    assert!(match_per_group_predicate(&range, &vec![col("ID"); 2], &col("ID"), 0)?.is_some());
+    assert!(match_per_group_predicate(&range, &vec![col("ID"); 2], &col("ID"), 0, None)?.is_some());
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
+fn permute(data: Expr) -> Expr {
+    Expr::Function {
+        input: vec![data],
+        function: FunctionExpr::FfiPlugin {
+            flags: polars_plan::prelude::FunctionOptions::length_preserving(),
+            lib: "opendp".into(),
+            symbol: "permute_plugin".into(),
+            kwargs: Default::default(),
+        },
+    }
+}
+
+#[cfg(feature = "ffi")]
+fn random_enumeration() -> Expr {
+    permute(int_range(lit(0), len(), 1, DataType::Int64))
+}
+
+#[cfg(feature = "ffi")]
+#[test]
+fn test_match_full_random_truncation_ranks() -> Fallible<()> {
+    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    let check =
+        |expr: Expr| match_per_group_predicate(&expr, &vec![col("ID")], &col("ID"), 1, None);
+    assert!(check(random_enumeration())?.is_some());
+    // A malformed plugin with an extra argument is not a trusted permutation.
+    let malformed = Expr::Function {
+        input: vec![range.clone(), lit(1)],
+        function: FunctionExpr::FfiPlugin {
+            flags: polars_plan::prelude::FunctionOptions::length_preserving(),
+            lib: "opendp".into(),
+            symbol: "permute_plugin".into(),
+            kwargs: Default::default(),
+        },
+    };
+    assert!(check(malformed.clone())?.is_none());
+    assert!(
+        match_truncation_predicate(&malformed.over([col("ID")]).lt(lit(1)), &col("ID"), None)
+            .is_err()
+    );
+    // Ordinal ranks are aligned to rows, and a final trusted permutation
+    // breaks ties uniformly without relying on physical input order.
+    let ranked = |keys: Vec<Expr>, method| {
+        as_struct(keys).rank(
+            RankOptions {
+                method,
+                descending: false,
+            },
+            None,
+        )
+    };
+    let trusted = ranked(
+        vec![
+            col("A").alias("__sort0"),
+            random_enumeration().alias("__tie"),
+        ],
+        RankMethod::Ordinal,
+    );
+    assert!(check(trusted.clone())?.is_some());
+    assert_eq!(
+        match_per_group_predicate(&trusted, &vec![col("ID")], &col("ID"), 2, None)?
+            .unwrap()
+            .per_group,
+        Some(1)
+    );
+
+    // A trusted tie-breaking key must be last and the method ordinal.
+    assert!(check(ranked(vec![col("A")], RankMethod::Ordinal))?.is_none());
+    assert!(
+        check(ranked(
+            vec![random_enumeration().alias("__tie"), col("A")],
+            RankMethod::Ordinal
+        ))?
+        .is_none()
+    );
+    assert!(
+        check(ranked(
+            vec![col("A"), random_enumeration().alias("__tie")],
+            RankMethod::Dense
+        ))?
+        .is_none()
+    );
+
+    // Structural matching recognizes this rank, but semantic validation
+    // rejects its positional key when the prior plan's schema is available.
+    let positional = ranked(
+        vec![range, random_enumeration().alias("__tie")],
+        RankMethod::Ordinal,
+    );
+    assert!(check(positional.clone())?.is_some());
+    let schema = Schema::from_iter([Field::new("A".into(), DataType::Int64)]);
+    assert!(
+        match_per_group_predicate(&positional, &vec![col("ID")], &col("ID"), 1, Some(&schema))
+            .is_err()
+    );
+
+    let negated = ranked(
+        vec![-col("A"), random_enumeration().alias("__tie")],
+        RankMethod::Ordinal,
+    );
+    assert!(
+        match_per_group_predicate(&negated, &vec![col("ID")], &col("ID"), 1, Some(&schema))?
+            .is_some()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_ordinal_rank_rejects_categorical_sort_keys() -> Fallible<()> {
+    use crate::polars::PrivacyNamespace;
+
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let schema = Schema::from_iter([
+        Field::new("category".into(), categorical.clone()),
+        Field::new("nested".into(), DataType::Array(Box::new(categorical), 2)),
+        Field::new("score".into(), DataType::Float64),
+    ]);
+    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    let rank = |key: Expr| {
+        as_struct(vec![
+            key.alias("__sort"),
+            range.clone().dp().permute().alias("__tie"),
+        ])
+        .rank(
+            RankOptions {
+                method: RankMethod::Ordinal,
+                descending: false,
+            },
+            None,
+        )
+    };
+
+    for key in [col("category"), col("nested")] {
+        assert!(match_ordinal_rank(&rank(key), &range, Some(&schema)).is_err());
+    }
+    // Numeric priorities remain admitted, including floating-point priorities.
+    assert!(match_ordinal_rank(
+        &rank(col("score")),
+        &range,
+        Some(&schema)
+    )?);
+    Ok(())
+}
+
+#[test]
+fn test_native_permutation_matches_without_ffi() -> Fallible<()> {
+    use crate::polars::PrivacyNamespace;
+
+    let permutation = int_range(lit(0), len(), 1, DataType::Int64).dp().permute();
+    let by = vec![col("ID")];
+    let bound = match_per_group_predicate(&permutation, &by, &col("ID"), 2, None)?
+        .expect("native permutation should be trusted");
+    assert_eq!(bound.per_group, Some(2));
+    let max_bound = match_per_group_predicate(&permutation, &by, &col("ID"), u32::MAX, None)?
+        .expect("trusted permutation should admit the largest u32 bound");
+    assert_eq!(max_bound.per_group, Some(u32::MAX));
+
+    let ranks = as_struct(vec![col("A").alias("__sort0"), permutation.alias("__tie")]).rank(
+        RankOptions {
+            method: RankMethod::Ordinal,
+            descending: false,
+        },
+        None,
+    );
+    let bound = match_per_group_predicate(&ranks, &by, &col("ID"), 2, None)?
+        .expect("native permutation must certify ordinal tie-breaking");
+    assert_eq!(bound.per_group, Some(1));
     Ok(())
 }

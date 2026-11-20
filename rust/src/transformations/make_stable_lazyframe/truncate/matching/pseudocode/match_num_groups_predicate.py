@@ -17,7 +17,7 @@ def match_num_groups_predicate(
     if partition_by != [identifier]:  # |\label{line:check_identifier}|
         raise "num_groups truncation must use the identifier in the over clause"
 
-    if not isinstance(options.method, RankMethod.Dense):  # |\label{line:check_method}|
+    if options.method != RankMethod.Dense:  # |\label{line:check_method}|
         raise "num_groups truncation's rank must be dense"
 
     if len(input) != 1:  # |\label{line:check_input}|
@@ -32,18 +32,23 @@ def match_num_groups_predicate(
         # If the first field is a hash of the second field,
         # then interpret the grouping columns as the hash input.
         # The second field disambiguates hash collisions when ranking.
-        if isinstance(input_item, Expr.Function) and isinstance(
-            input_item.function, FunctionExpr.Hash
+        fields = input_item.input
+        if (
+            fields
+            and isinstance(fields[0], Expr.Function)
+            and isinstance(fields[0].function, FunctionExpr.Hash)
         ):  # |\label{line:check_hash}|
-            hash_input = input_item.input
-            if hash_input.get(0) == input.get(1):
-                if not isinstance(hash_input.get(0), Expr.Function) or not isinstance(
-                    hash_input.get(0).function, FunctionExpr.AsStruct
+            hash_inputs = fields[0].input
+            second = fields[1] if len(fields) > 1 else None
+            if (hash_inputs[0] if hash_inputs else None) == second:
+                inner = hash_inputs[0] if hash_inputs else None
+                if not isinstance(inner, Expr.Function) or not isinstance(
+                    inner.function, FunctionExpr.AsStruct
                 ):
-                    raise f"expected hash input to be a struct, found {hash_input}"
-                input = hash_input.get(0)
+                    raise f"expected hash input to be a struct, found {hash_inputs}"
+                fields = inner.input
 
-        by = set(input_item.input)
+        by = set(fields)
     else:
         by = {input_item}
 

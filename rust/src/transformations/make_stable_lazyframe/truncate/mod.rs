@@ -10,7 +10,7 @@ use crate::metrics::{
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
-use matching::Truncation;
+use matching::{Truncation, match_truncation_predicate};
 use opendp_derive::proven;
 use polars::prelude::*;
 
@@ -30,11 +30,15 @@ pub(crate) use matching::match_truncations;
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
-/// * `plan` - The LazyFrame to transform.
-pub fn make_stable_truncate(
+/// * `input` - The plan before the matched truncations.
+/// * `truncations` - The structurally matched truncations.
+/// * `truncation_bounds` - Candidate contribution bounds from matching.
+pub(super) fn make_stable_truncate(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<SymmetricIdDistance>,
-    plan: DslPlan,
+    input: DslPlan,
+    truncations: Vec<Truncation>,
+    truncation_bounds: Vec<Bound>,
 ) -> Fallible<
     Transformation<
         DslPlanDomain,
@@ -43,31 +47,44 @@ pub fn make_stable_truncate(
         FrameDistance<SymmetricDistance>,
     >,
 > {
-    // the identifier is protected from changes, so we can use the identifier from the input metric
-    // instead of the identifier from the middle_metric to match truncations
-    let (input, truncations, truncation_bounds) =
-        match_truncations(plan, &input_metric.0.identifier)?;
-
     if truncations.is_empty() {
-        // should be unreachable in practice, but makes this function self-contained
         return fallible!(MakeTransformation, "failed to match truncation");
-    };
+    }
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
         t_prior.output_space();
 
+    // Match structurally first, then certify the exact same bounds using
+    // the stable input schema before they enter the stability map.
+    let schema = middle_domain.schema();
+    validate_truncation_bounds(
+        &truncations,
+        &truncation_bounds,
+        &middle_metric.0.identifier,
+        &schema,
+    )?;
+
+    // The stable expression constructors can rewrite an expression (for
+    // example, strict casts become non-strict). Truncation executes its
+    // original expressions, so only accept keys that need no rewrite.
+    let stable_input = t_prior.invoke(&input)?;
     (truncation_bounds.iter().flat_map(|b| &b.by)).try_for_each(|key| {
-        // check that each grouping key/over key is infallible row-by-row
-        make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
+        let t_key = make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
             WildExprDomain {
                 columns: middle_domain.series_domains.clone(),
                 context: Context::RowByRow,
             },
             L0PInfDistance(middle_metric.0.clone()),
             key.clone(),
-        )
-        .map(|_| ())
+        )?;
+        if t_key.invoke(&stable_input)?.expr != *key {
+            return fallible!(
+                MakeTransformation,
+                "Truncation keys must not require stability-preserving expression rewrites."
+            );
+        }
+        Ok(())
     })?;
 
     let output_domain = (truncations.iter())
@@ -145,6 +162,43 @@ pub fn make_stable_truncate(
         }),
     )?;
     t_prior >> t_truncate
+}
+
+// Structural matching precedes schema inference. Match the validated filter
+// certificates as a multiset because matching reverses the traversal order,
+// including the order of multiple bounds in a single filter.
+fn validate_truncation_bounds(
+    truncations: &[Truncation],
+    candidates: &[Bound],
+    identifier: &Expr,
+    schema: &Schema,
+) -> Fallible<()> {
+    let mut unmatched = candidates.to_vec();
+    // The final group-by contributes a separate, structurally derived bound.
+    if matches!(truncations.last(), Some(Truncation::GroupBy { .. })) {
+        unmatched
+            .pop()
+            .ok_or_else(|| err!(MakeTransformation, "missing group-by truncation bound"))?;
+    }
+    for truncation in truncations {
+        if let Truncation::Filter(predicate) = truncation {
+            let validated = match_truncation_predicate(predicate, identifier, Some(schema))?
+                .ok_or_else(|| err!(MakeTransformation, "failed to validate truncation"))?;
+            for bound in validated {
+                let index = unmatched
+                    .iter()
+                    .position(|candidate| candidate == &bound)
+                    .ok_or_else(|| {
+                        err!(MakeTransformation, "validated truncation bounds changed")
+                    })?;
+                unmatched.swap_remove(index);
+            }
+        }
+    }
+    if !unmatched.is_empty() {
+        return fallible!(MakeTransformation, "validated truncation bounds changed");
+    }
+    Ok(())
 }
 
 /// # Proof Definition

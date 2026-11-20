@@ -5,21 +5,22 @@ def match_truncations(
     truncations = []
     bounds = []
 
-    allowed_keys = match_group_by_truncation(
+    matched_group_by = match_group_by_truncation(
         plan, identifier
     )  # |\label{line:match_group_by_truncation}|
-    if allowed_keys:
-        input, truncate, new_bound = allowed_keys
+    allowed_keys = None
+    if matched_group_by is not None:
+        input, truncate, new_bound = matched_group_by
         plan = input  # |\label{line:match_group_by_truncation_start}|
         truncations.append(truncate)
         bounds.append(new_bound)  # |\label{line:match_group_by_truncation_end}|
         allowed_keys = new_bound.by  # |\label{line:allowed_keys}|
 
     # match until not a filter truncation
-    while isinstance(plan, Truncation.Filter):  # |\label{line:match_filter_truncation}|
+    while isinstance(plan, DslPlan.Filter):  # |\label{line:match_filter_truncation}|
         input, predicate = plan.input, plan.predicate
         new_bounds = match_truncation_predicate(
-            predicate, identifier
+            predicate, identifier, None
         )  # |\label{line:match_truncation_predicate}|
         if new_bounds is None:
             break
@@ -30,7 +31,7 @@ def match_truncations(
         # invalidating the filter truncation bounds.
         if allowed_keys is not None:  # |\label{line:allowed_keys_check}|
             for bound in new_bounds:
-                if not bound.by.is_subset(allowed_keys):
+                if not bound.by.issubset(allowed_keys):
                     raise f"Filter truncation keys ({bound.by}) must be a subset of groupby truncation keys ({allowed_keys})."
 
         plan = input  # |\label{line:match_filter_truncation_start}|

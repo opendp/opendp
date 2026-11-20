@@ -29,12 +29,20 @@ None
     For any choice of LazyFrame plan,
     returns the plan with the truncations removed,
     the truncations that were removed in the order they are applied,
-    and per-id bounds on row and/or group contributions using the original grouping expressions.
+    and candidate per-id bounds on row and/or group contributions using the original grouping expressions.
+    Sort-key validity is not checked during structural matching.
+    The caller must validate the matched filter predicates against the stable input schema
+    before using the bounds for stability accounting.
     If a groupby truncation is present, its caller must express these bounds in terms of the materialized output columns
     before using them as output distance bounds.
 \end{theorem}
 
 \begin{proof}
+
+    The caller matches the truncation structure once, then constructs a stability
+    transformation for the preceding plan. After obtaining its output schema,
+    the caller validates each matched filter predicate.
+    Only after this validation may the contribution bounds be used for stability accounting.
 
     The algorithm maintains three invariants:
     \begin{itemize}
