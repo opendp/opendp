@@ -1,6 +1,11 @@
 """
 This module requires extra installs: ``pip install 'opendp[polars]'``
 
+..
+
+    >>> import pytest
+    >>> _ = pytest.importorskip("polars")
+
 The ``opendp.extras.polars`` module adds differential privacy to the
 `Polars DataFrame library <https://docs.pola.rs>`_.
 
