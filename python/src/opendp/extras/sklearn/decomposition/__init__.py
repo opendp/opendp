@@ -311,6 +311,16 @@ class PCA(
     :param center: None uses a privately estimated mean. 'origin' uses the public
         domain origin, which need not equal the empirical mean.
 
+    :ivar components_: Released principal axes, one per row.
+    :ivar mean_: Privately estimated mean, or the public origin when ``center='origin'``.
+    :ivar explained_variance_: Variances derived from released eigenvalues.
+    :ivar explained_variance_ratio_: Fractions of total released variance.
+    :ivar singular_values_: Singular values derived from released eigenvalues.
+    :ivar noise_variance_: Mean discarded variance in the probabilistic PCA model.
+    :ivar n_components_: Number of retained components.
+    :ivar n_features_in_: Number of fitted input features.
+    :ivar n_samples_: Public number of samples used in fitting.
+
     Example:
 
     .. code:: pycon
