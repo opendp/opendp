@@ -78,10 +78,10 @@ impl Measure for SmoothedMaxDivergence {
 ///
 /// This is the distance type for [`SmoothedMaxDivergence`].
 #[derive(Clone)]
-pub struct PrivacyProfile(Arc<dyn Fn(f64) -> Fallible<f64> + Send + Sync>);
+pub struct PrivacyProfile(Arc<dyn Fn(f64) -> Fallible<f64>>);
 
 impl PrivacyProfile {
-    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
+    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static) -> Self {
         PrivacyProfile(Arc::new(delta))
     }
 
