@@ -1,9 +1,11 @@
 use polars::{
-    prelude::{NamedFrom, PlSmallStr, is_in},
+    prelude::{DataType, FrozenCategories, NamedFrom, PlSmallStr, is_in},
     series::{IntoSeries, Series},
 };
 
 use crate::{core::Domain, error::Fallible};
+
+use super::SeriesElementDomain;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -32,6 +34,10 @@ impl EnumDomain {
                 "categories dtype ({}) must be string",
                 categories.dtype()
             );
+        }
+
+        if categories.null_count() > 0 {
+            return fallible!(MakeDomain, "categories must not contain nulls");
         }
 
         let n_duplicates = categories.len() - categories.n_unique()?;
@@ -66,4 +72,39 @@ impl Domain for EnumDomain {
         .get(0)
         .unwrap())
     }
+}
+
+impl SeriesElementDomain for EnumDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        let categories = self.categories().str().unwrap().iter().map(|v| v.unwrap());
+        let categories = FrozenCategories::new(categories).unwrap();
+        DataType::Enum(categories.clone(), categories.mapping().clone())
+    }
+
+    fn matches_dtype(&self, dtype: &DataType) -> bool {
+        let DataType::Enum(categories, _) = dtype else {
+            return false;
+        };
+        // Polars compares Enum categories by pointer identity. Physical indices
+        // expose the category ordering, so compare the labels in order instead.
+        self.categories().str().is_ok_and(|expected| {
+            expected
+                .into_iter()
+                .flatten()
+                .eq(categories.categories().non_null_values_iter())
+        })
+    }
+
+    fn check_values(&self, _: &Series) -> Fallible<bool> {
+        // A matching Enum dtype already fixes its possible values and encoding.
+        Ok(true)
+    }
+
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
 }

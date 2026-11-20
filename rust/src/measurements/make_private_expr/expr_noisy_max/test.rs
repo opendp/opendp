@@ -3,6 +3,7 @@ use polars::prelude::*;
 use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 
 use crate::{
+    domains::{ArrayDomain, AtomDomain, OptionDomain, SeriesDomain},
     error::ErrorVariant,
     measurements::make_private_expr,
     measures::MaxDivergence,
@@ -107,4 +108,18 @@ fn test_fail_noisy_max_expr_nan_scale() -> Fallible<()> {
     assert_eq!(err_variant, ErrorVariant::MakeMeasurement);
 
     Ok(())
+}
+
+#[test]
+fn test_noisy_max_rejects_nullable_array_elements() {
+    let array_domain = ArrayDomain::new(AtomDomain::<u32>::default(), 3);
+    let column = SeriesDomain::new("scores", array_domain.clone());
+    assert!(non_nullable_scores_domain(&column).is_err());
+
+    let array_domain = array_domain.with_nullable(false);
+    let column = SeriesDomain::new("scores", array_domain.clone());
+    assert!(non_nullable_scores_domain(&column).is_ok());
+
+    let column = SeriesDomain::new("scores", OptionDomain::new(array_domain));
+    assert!(non_nullable_scores_domain(&column).is_err());
 }

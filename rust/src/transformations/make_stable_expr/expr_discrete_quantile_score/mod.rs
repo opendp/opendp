@@ -1,5 +1,7 @@
 use crate::core::{StabilityMap, Transformation};
-use crate::domains::{Context, ExprDomain, Invariant, Margin, WildExprDomain};
+use crate::domains::{
+    ArrayDomain, AtomDomain, Context, ExprDomain, Invariant, Margin, WildExprDomain,
+};
 use crate::metrics::{L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
@@ -118,10 +120,10 @@ where
     )));
 
     let mut output_domain = active_series.clone();
-    output_domain.set_dtype(DataType::Array(
-        Box::new(DataType::UInt64),
-        candidates.len(),
-    ))?;
+    // The score plugin and the fill value construct arrays with no null elements.
+    output_domain.set_element_domain(
+        ArrayDomain::new(AtomDomain::<u64>::default(), candidates.len()).with_nullable(false),
+    );
 
     let output_domain = ExprDomain {
         column: output_domain,

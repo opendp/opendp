@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::core::PrivacyMap;
-use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
+use crate::domains::{
+    ArrayDomain, AtomDomain, ExprPlan, SeriesDomain, VectorDomain, WildExprDomain,
+};
 use crate::measurements::{TopKMeasure, make_noisy_max, noisy_top_k};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -92,14 +94,7 @@ where
 
     let scale = scale.inf_mul(&global_scale)?;
 
-    if middle_domain.column.nullable {
-        return fallible!(
-            MakeMeasurement,
-            "{} requires non-nullable input",
-            NoisyMaxPlugin::NAME
-        );
-    }
-    let array_domain = middle_domain.column.element_domain::<ArrayDomain>()?;
+    let array_domain = non_nullable_scores_domain(&middle_domain.column)?;
 
     use DataType::*;
     let privacy_map = match array_domain.element_domain.dtype() {
@@ -139,6 +134,25 @@ where
     )?;
 
     t_prior >> m_rnm
+}
+
+fn non_nullable_scores_domain(column: &SeriesDomain) -> Fallible<&ArrayDomain> {
+    if column.nullable {
+        return fallible!(
+            MakeMeasurement,
+            "{} requires non-nullable input",
+            NoisyMaxPlugin::NAME
+        );
+    }
+    let array_domain = column.element_domain::<ArrayDomain>()?;
+    if array_domain.nullable {
+        return fallible!(
+            MakeMeasurement,
+            "{} requires non-nullable array elements",
+            NoisyMaxPlugin::NAME
+        );
+    }
+    Ok(array_domain)
 }
 
 fn rnm_privacy_map<T: Number, MO: TopKMeasure>(
