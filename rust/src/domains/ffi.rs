@@ -665,13 +665,6 @@ impl PartialEq for ExtrinsicElement {
     }
 }
 
-/// Rust does not directly manipulate the data behind pointers,
-/// the bindings language enforces Send.
-unsafe impl Send for ExtrinsicElement {}
-/// Rust does not directly manipulate the data behind pointers,
-/// the bindings language enforces Sync.
-unsafe impl Sync for ExtrinsicElement {}
-
 #[derive(Clone)]
 pub struct ExtrinsicDomain {
     pub element: ExtrinsicElement,

@@ -89,9 +89,6 @@ impl ProductOrd for ExtrinsicObject {
     }
 }
 
-unsafe impl Send for ExtrinsicObject {}
-unsafe impl Sync for ExtrinsicObject {}
-
 impl Clone for ExtrinsicObject {
     fn clone(&self) -> Self {
         (REF_COUNT.get().unwrap())(self.0, true);
