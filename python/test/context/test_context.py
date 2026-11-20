@@ -263,6 +263,41 @@ def test_query():
     assert isinstance(query.release(10), int)
 
 
+def test_query_argument_binding():
+    query = dp.Query(
+        (dp.atom_domain(T=int), dp.absolute_distance(T=int)),
+        dp.max_divergence(),
+    )
+
+    with pytest.raises(ValueError, match="resize is missing 2 parameter"):
+        query.resize()
+    with pytest.raises(TypeError, match="multiple values for argument"):
+        query.resize(4, size=5, constant=0)
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        query.resize(size=4, constant=0, unexpected=True)
+    with pytest.raises(TypeError, match="too many positional arguments"):
+        query.resize(4, 0, "SymmetricDistance", "extra")
+
+
+def test_query_keyword_only_after_default():
+    def make_keyword_only(input_domain, input_metric, default=1, *, required):
+        return _make_measurement(
+            input_domain,
+            input_metric,
+            dp.max_divergence(),
+            lambda _: default + required,
+            lambda _: 0.0,
+        )
+
+    dp.register(make_keyword_only)
+    query = dp.Query(
+        (dp.atom_domain(T=int), dp.absolute_distance(T=int)),
+        dp.max_divergence(),
+    )
+    assert query.keyword_only()._chain(3)(10) == 4
+    assert query.keyword_only(default=2)._chain(3)(10) == 5
+
+
 @pytest.mark.parametrize(
     ("mechanism", "measure", "metric"),
     [
@@ -582,6 +617,10 @@ def test_local_DP():
 
     assert query.param() == 0.6224593312018545
     assert isinstance(query.release(), str)
+
+    keyword_query = context.query().randomized_response(categories=["A", "B"])
+    assert keyword_query.param() == query.param()
+    assert isinstance(keyword_query.release(), str)
 
 
 def test_filter_pure_dp():

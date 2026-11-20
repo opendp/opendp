@@ -750,25 +750,27 @@ class Query(object):
             """
             constructor, is_partial = constructors[name]
 
-            # determine how many parameters are missing
-            param_diff = len(args)
-            for param in signature(constructor).parameters.values():
-                if param.name in kwargs:
-                    continue
-                if param.default is not param.empty:
-                    break
-                param_diff -= 1
+            sig = signature(constructor)
+            bound = sig.bind_partial(*args, **kwargs)
+            missing = [
+                param.name
+                for param in sig.parameters.values()
+                if param.name not in bound.arguments
+                and param.default is param.empty
+                and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
+            ]
 
-            if param_diff == -1 and not isinstance(self._chain, PartialChain):
-                constructor = PartialChain.wrap(constructor)
-            elif param_diff < 0:
-                raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
-            elif param_diff > 0:
-                raise ValueError(
-                    f"{name} has {param_diff} parameter(s) too many."
-                )  # pragma: no cover
+            if len(missing) == 1 and not isinstance(self._chain, PartialChain):
 
-            new_chain = constructor(*args, **kwargs)
+                def fill_param(value):
+                    bound.arguments[missing[0]] = value
+                    return constructor(*bound.args, **bound.kwargs)
+
+                new_chain = PartialChain(fill_param)
+            elif missing:
+                raise ValueError(f"{name} is missing {len(missing)} parameter(s).")
+            else:
+                new_chain = constructor(*args, **kwargs)
             if is_partial or not isinstance(self._chain, tuple):
                 new_chain = self._chain >> new_chain
 
@@ -1126,18 +1128,6 @@ class PartialChain(object):
         raise ValueError(
             "At most one parameter may be missing at a time"
         )  # pragma: no cover
-
-    @classmethod
-    def wrap(cls, f):
-        """Wraps a constructor for a transformation or measurement to return a partial chain instead.
-
-        :param f: function to wrap
-        """
-
-        def _inner(*args, **kwargs):
-            return cls(f, *args, **kwargs)
-
-        return _inner
 
 
 def _check_sized_contributions(domain: Domain, input_metric: Metric, d_in) -> None:
