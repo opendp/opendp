@@ -1,13 +1,8 @@
 use std::collections::HashSet;
 
+use super::super::group_by::is_permutation_equivariant;
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
-use crate::{
-    error::Fallible,
-    metrics::Bound,
-    polars::literal_value_of,
-    traits::InfAdd,
-    transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
-};
+use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
@@ -389,8 +384,12 @@ fn match_per_group_predicate(
             }
         }
         Expr::SortBy { expr, by, .. } => {
-            by.iter()
-                .try_for_each(|key| check_infallible(key, Resize::Ban))?;
+            if by.iter().any(|key| !is_permutation_equivariant(key)) {
+                return fallible!(
+                    MakeTransformation,
+                    "SortBy truncation keys must be permutation-equivariant expressions."
+                );
+            }
             enumeration = expr.as_ref()
         }
         _ => (),
