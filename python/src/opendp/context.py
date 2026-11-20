@@ -574,13 +574,20 @@ class Context(object):
 
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
-        answer = self.queryable(query)
+        if self.d_mids is None:
+            answer = self.queryable(query)
+            self.d_mids_consumed.append(query.map(self.d_in))
+            return answer
 
-        # pop won't fail if queryable returned an answer
-        self.d_mids_consumed.append(
-            query.map(self.d_in) if self.d_mids is None else self.d_mids.pop(0)  # type: ignore[arg-type]
-        )
-        return answer
+        from opendp.combinators import _adaptive_composition_consumed
+
+        try:
+            return self.queryable(query)
+        finally:
+            # Rust reserves an allowance only after validation, but before
+            # invocation. Even a failing callback may have consumed the slot.
+            if _adaptive_composition_consumed(self.queryable.value, len(self.d_mids)):
+                self.d_mids_consumed.append(self.d_mids.pop(0))
 
     def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.

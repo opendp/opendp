@@ -160,7 +160,9 @@ fn test_adaptive_failed_postprocessing_consumes_budget() -> Fallible<()> {
     )?
     .invoke(&true)?;
 
+    assert!(!qbl.eval_internal::<bool>(&BudgetWasReserved(1))?);
     assert!(qbl.eval(&failing).is_err());
+    assert!(qbl.eval_internal::<bool>(&BudgetWasReserved(1))?);
     let error = qbl.eval(&rr).unwrap_err();
     assert_eq!(error.message.as_deref(), Some("out of queries"));
     Ok(())
@@ -181,7 +183,9 @@ fn test_adaptive_pre_invocation_rejection_preserves_budget() -> Fallible<()> {
         qbl.eval(&make_randomized_response_bool(0.9, false)?)
             .is_err()
     );
+    assert!(!qbl.eval_internal::<bool>(&BudgetWasReserved(1))?);
     assert!(qbl.eval(&rr).is_ok());
+    assert!(qbl.eval_internal::<bool>(&BudgetWasReserved(1))?);
     Ok(())
 }
 

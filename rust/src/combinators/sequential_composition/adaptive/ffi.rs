@@ -1,7 +1,14 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::FfiResult,
     error::Fallible,
-    ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
+    ffi::{
+        any::{
+            AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable, Downcast,
+        },
+        util::{self, c_bool},
+    },
 };
 
 #[unsafe(no_mangle)]
@@ -43,4 +50,25 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
     )
     .map(|m| m.into_any_Q().into_any_out())
     .into()
+}
+
+#[bootstrap(
+    name = "_adaptive_composition_consumed",
+    features("contrib"),
+    arguments(queryable(rust_type = b"null"), previous_remaining(c_type = "size_t")),
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Whether the compositor reserved a budget slot since the last observation.
+///
+/// An invocation failure can consume budget; pre-invocation rejection does not.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators___adaptive_composition_consumed(
+    queryable: *mut AnyObject,
+    previous_remaining: usize,
+) -> FfiResult<*mut c_bool> {
+    let queryable = try_as_mut_ref!(queryable);
+    let queryable = try_!(queryable.downcast_mut::<AnyQueryable>());
+    let probe = super::BudgetWasReserved(previous_remaining);
+    let consumed = try_!(queryable.eval_internal::<bool>(&probe));
+    FfiResult::Ok(util::into_raw(util::from_bool(consumed)))
 }

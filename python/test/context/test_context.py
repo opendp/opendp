@@ -712,3 +712,56 @@ def test_filter_remaining_privacy_loss_is_conservative(privacy_loss, query_loss)
         .release(),
         int,
     )
+
+
+def test_context_failed_postprocessing_consumes_budget():
+    dp.enable_features("contrib")
+    ctx = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+    )
+    measurement = ctx.query().count().laplace().resolve()
+
+    def failing_postprocess(_):
+        raise ValueError("postprocessing failed")
+
+    with pytest.raises(dp.OpenDPException, match="postprocessing failed"):
+        ctx(measurement >> failing_postprocess)
+
+    assert ctx.current_privacy_loss() == [0.5]
+    assert ctx.remaining_privacy_loss() == [0.5]
+    assert isinstance(ctx.query().count().laplace().release(), int)
+    assert ctx.current_privacy_loss() == [0.5, 0.5]
+    assert ctx.remaining_privacy_loss() == []
+
+
+@pytest.mark.parametrize("rejection", ["over_budget", "wrong_domain"])
+def test_context_rejected_query_does_not_consume_budget(rejection):
+    dp.enable_features("contrib")
+    ctx = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+    )
+    domain, metric = ctx.accountant.input_space
+    if rejection == "wrong_domain":
+        domain = dp.vector_domain(dp.atom_domain(T=dp.f64))
+
+    invalid = _make_measurement(
+        domain,
+        metric,
+        dp.max_divergence(),
+        lambda _: 7,
+        lambda _: 0.75 if rejection == "over_budget" else 0.5,
+    )
+    with pytest.raises(dp.OpenDPException):
+        ctx(invalid)
+
+    assert ctx.current_privacy_loss() == []
+    assert ctx.remaining_privacy_loss() == [0.5, 0.5]
+    assert isinstance(ctx.query().count().laplace().release(), int)
+    assert ctx.current_privacy_loss() == [0.5]
+    assert ctx.remaining_privacy_loss() == [0.5]
