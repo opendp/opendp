@@ -530,16 +530,16 @@ class PCA(
         """Certify data-independent failure and rowwise PCA inference."""
         import opendp.prelude as dp
 
+        if method not in ("transform", "inverse_transform", "score_samples"):
+            raise ValueError(f"Method {method!r} is not certified rowwise")
         check_is_fitted(self)
         desc = input_domain.cast(dp.numpy.NPArray2Domain)
         if method == "transform":
             input_width, output_width = self.n_features_in_, self.n_components_
         elif method == "inverse_transform":
             input_width, output_width = self.n_components_, self.n_features_in_
-        elif method == "score_samples":
+        else:  # score_samples
             input_width, output_width = self.n_features_in_, 1
-        else:
-            raise ValueError(f"Method {method!r} is not certified rowwise")
 
         if desc.num_columns != input_width:
             raise ValueError("input_domain must match the fitted number of features")
