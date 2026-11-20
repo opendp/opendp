@@ -130,7 +130,7 @@ number of records per quarter.
             ...     # .filter(pl.int_range(pl.len()).dp.permute().over("PIDENT", *quarterly) < 1)
             ...     .truncate_num_groups(10, by=quarterly)
             ...     # ...is roughly equivalent to:
-            ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") < 10)
+            ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") <= 10)
             ...     .group_by(quarterly)
             ...     .agg(
             ...         dp.len(signed=True),

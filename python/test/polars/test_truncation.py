@@ -405,6 +405,44 @@ def test_truncate_num_groups_rejects_window_order_by():
         _run_truncation(data, query)
 
 
+def test_truncate_num_groups_rejects_unvalidated_dense_rank_field():
+    # The positional third field breaks permutation invariance even though
+    # the first two fields match the trusted hash/key ranking pattern.
+    data = pl.LazyFrame({"id": [1, 1], "A": [0, 0], "B": [10, 20]})
+    keys = pl.struct("A")
+    ranks = pl.struct(
+        keys.hash().alias("__opendp_hash"),
+        keys.alias("__opendp_key"),
+        pl.int_range(pl.len()).alias("__position"),
+    ).rank("dense")
+    query = (
+        _truncation_context(data)
+        .query()
+        .filter(ranks.over("id") <= 1)
+        .group_by("id", "A")
+        .agg(pl.col("B").sum())
+    )
+    with pytest.raises(dp.OpenDPException, match="hashed num_groups rank must"):
+        _run_truncation(data, query)
+
+
+@pytest.mark.parametrize("nested", [False, True])
+@pytest.mark.parametrize("keep", ["sample", "first", "last"])
+def test_truncate_num_groups_rejects_categorical_keys(nested, keep):
+    data = pl.LazyFrame({"id": [1, 1], "category": ["A", "B"]}).with_columns(
+        pl.col("category").cast(pl.Categorical)
+    )
+    key = pl.struct("category") if nested else pl.col("category")
+    query = (
+        _truncation_context(data).query().truncate_num_groups(1, by=[key], keep=keep)
+    )
+    with pytest.raises(
+        dp.OpenDPException,
+        match="num_groups truncation cannot use Categorical keys",
+    ):
+        _run_truncation(data, query)
+
+
 @pytest.mark.parametrize("nested", [False, True])
 def test_truncate_per_group_rejects_categorical_priority(nested):
     data = pl.LazyFrame({"id": [1, 1], "category": ["A", "B"]}).with_columns(
@@ -421,6 +459,27 @@ def test_truncate_per_group_rejects_categorical_priority(nested):
         match="SortBy truncation cannot use Categorical keys",
     ):
         _run_truncation(data, query)
+
+
+@pytest.mark.parametrize("k", [0, 1, 2, 4])
+@pytest.mark.parametrize("keep", ["sample", "first", "last"])
+def test_truncate_num_groups_keeps_k_groups(k, keep):
+    data = pl.LazyFrame({"id": [1, 1, 1, 1, 2, 2], "group": [0, 1, 1, 2, 0, 1]})
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .truncate_num_groups(k, by=["group"], keep=keep)
+        )
+        actual = _run_truncation(frame, query)
+        for identifier, total_groups in [(1, 3), (2, 2)]:
+            selected = actual.filter(pl.col("id") == identifier)
+            assert selected["group"].n_unique() == min(k, total_groups)
+            # Entire groups are retained, including duplicate keys.
+            assert selected.filter(pl.col("group") == 1).height in (
+                0,
+                2 if identifier == 1 else 1,
+            )
 
 
 @pytest.mark.parametrize("k", [0, 1, 3, 10])

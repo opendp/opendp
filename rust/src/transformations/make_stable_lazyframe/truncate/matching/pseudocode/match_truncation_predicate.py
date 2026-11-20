@@ -59,7 +59,11 @@ def match_truncation_predicate(
         )
         num_groups = (
             match_num_groups_predicate(
-                over.function, over.partition_by, identifier, threshold_value
+                over.function,
+                over.partition_by,
+                identifier,
+                threshold_value.saturating_sub(1),  # dense ranks start at 1
+                schema,
             )
             if per_group is None
             else None

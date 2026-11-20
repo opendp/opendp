@@ -210,8 +210,8 @@ fn test_truncate_computed_key_bound_after_group_by() -> Fallible<()> {
     assert!(output_bounds.0.iter().all(|b| !b.by.contains(&key)));
     let materialized_bound = output_bounds.get_bound(&HashSet::from([col("A")]));
     assert_eq!(materialized_bound.per_group, Some(1));
-    // The matcher conservatively interprets <= 4 as an upper bound of 5.
-    assert_eq!(materialized_bound.num_groups, Some(5));
+    // Dense ranks start at one, so <= 4 bounds the number of groups to four.
+    assert_eq!(materialized_bound.num_groups, Some(4));
     let recomputed_bound = output_bounds.get_bound(&HashSet::from([key.clone()]));
     assert!(recomputed_bound.per_group.is_none_or(|bound| bound >= 4));
 
@@ -416,7 +416,7 @@ fn test_truncate_plain_key_bound_after_group_by() -> Fallible<()> {
 
     let bound = t.map(&1)?.get_bound(&HashSet::from([col("A")]));
     assert_eq!(bound.per_group, Some(1));
-    assert_eq!(bound.num_groups, Some(5));
+    assert_eq!(bound.num_groups, Some(4));
     Ok(())
 }
 
@@ -457,8 +457,8 @@ fn test_truncate_materializes_each_bound_grouping_subset() -> Fallible<()> {
 
     let bounds = t.map(&1)?;
     let subset_bound = bounds.get_bound(&HashSet::from([col("A")]));
-    // The <= 1 predicate receives the same conservative offset.
-    assert_eq!(subset_bound.num_groups, Some(2));
+    // Dense ranks start at one, so <= 1 retains at most one group.
+    assert_eq!(subset_bound.num_groups, Some(1));
     assert_eq!(subset_bound.per_group, None);
     let full_bound = bounds.get_bound(&HashSet::from([col("A"), col("C")]));
     assert_eq!(full_bound.per_group, Some(1));
