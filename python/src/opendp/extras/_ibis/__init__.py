@@ -77,6 +77,11 @@ def run_on_database(query, connection, table_name: str):
 
     :example:
 
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("polars")
+
     .. code:: pycon
 
         >>> connection = get_connection('sqlite')

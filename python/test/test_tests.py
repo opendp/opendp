@@ -71,6 +71,7 @@ def test_doctest_ignore(capsys):
 
 # Include "polars" in name to filter out in smoke-test.yml.
 def test_doctest_fuzzy_polars(capsys):
+    pytest.importorskip("polars")
     doctest_in = """
     >>> import polars as pl
     >>> pl.DataFrame({'col': ['value']})"""

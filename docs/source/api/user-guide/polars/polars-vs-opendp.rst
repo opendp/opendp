@@ -1,3 +1,7 @@
+..
+
+    >>> import pytest
+    >>> _ = pytest.importorskip("polars")
 
 Polars vs. OpenDP
 =================

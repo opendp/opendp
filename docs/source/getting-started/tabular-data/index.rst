@@ -1,3 +1,8 @@
+..
+
+    >>> import pytest
+    >>> _ = pytest.importorskip("polars")
+
 .. _tabular-data:
 
 Working with Tabular Data
