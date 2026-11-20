@@ -1117,6 +1117,13 @@ def test_pca_rejects_unsupported_certified_inference_method():
         decomposition.PCA().rowwise_output_domain(None, method="predict")
 
 
+def test_pca_inverse_transform_rejects_wrong_width():
+    np = pytest.importorskip("numpy")
+    model = _released_pca(whiten=False)
+    with pytest.raises(ValueError, match="Input width"):
+        model.inverse_transform(np.ones((2, model.n_components_ + 1)))
+
+
 @pytest.mark.parametrize("whiten", [False, True])
 @pytest.mark.parametrize(
     "method,input_width,output_width",
