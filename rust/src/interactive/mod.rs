@@ -81,23 +81,43 @@ impl<A> Answer<A> {
     }
 }
 
+type WrapperFn = dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>;
+
 thread_local! {
-    pub(crate) static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+    static WRAPPER: RefCell<Option<Rc<WrapperFn>>> = RefCell::new(None);
+}
+
+/// Restores the previous wrapper when the scope exits, including during unwinding.
+struct WrapperGuard(Option<Rc<WrapperFn>>);
+
+impl WrapperGuard {
+    fn replace(wrapper: Option<Rc<WrapperFn>>) -> Self {
+        Self(WRAPPER.with(|w| w.replace(wrapper)))
+    }
+}
+
+impl Drop for WrapperGuard {
+    fn drop(&mut self) {
+        WRAPPER.with(|w| *w.borrow_mut() = self.0.take());
+    }
+}
+
+pub(crate) fn without_wrapper<T>(f: impl FnOnce() -> T) -> T {
+    let _restore = WrapperGuard::replace(None);
+    f()
 }
 
 pub(crate) fn wrap<T>(wrapper: Wrapper, f: impl FnOnce() -> T) -> T {
-    let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
+    let prev_wrapper = WRAPPER.with(|w| w.borrow().clone());
 
-    let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (prev)((wrapper)(qbl)?)) as Rc<_>
+    let new_wrapper = Some(if let Some(prev) = prev_wrapper {
+        Rc::new(move |qbl| (prev)((wrapper)(qbl)?)) as Rc<WrapperFn>
     } else {
         wrapper.0
     });
 
-    WRAPPER.with(|w| *w.borrow_mut() = new_wrapper);
-    let res = f();
-    WRAPPER.with(|w| *w.borrow_mut() = prev_wrapper);
-    res
+    let _restore = WrapperGuard::replace(new_wrapper);
+    f()
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
@@ -312,5 +332,36 @@ impl<Q: ?Sized> Queryable<Q, Box<dyn Any>> {
                 )
             })
             .map(|b| *b)
+    }
+}
+
+#[cfg(test)]
+mod wrapper_guard_tests {
+    use super::*;
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    #[test]
+    fn restores_nested_and_suspended_wrappers_after_unwind() {
+        assert!(WRAPPER.with(|w| w.borrow().is_none()));
+
+        wrap(Wrapper::new(|q| Ok(q)), || {
+            let before = WRAPPER.with(|w| w.borrow().clone().unwrap());
+
+            for suspend in [false, true] {
+                let result = catch_unwind(AssertUnwindSafe(|| {
+                    if suspend {
+                        without_wrapper(|| panic!("test unwind"));
+                    } else {
+                        wrap(Wrapper::new(|q| Ok(q)), || panic!("test unwind"));
+                    }
+                }));
+                assert!(result.is_err());
+
+                let after = WRAPPER.with(|w| w.borrow().clone().unwrap());
+                assert!(Rc::ptr_eq(&before, &after));
+            }
+        });
+
+        assert!(WRAPPER.with(|w| w.borrow().is_none()));
     }
 }

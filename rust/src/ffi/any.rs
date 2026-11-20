@@ -14,7 +14,7 @@ use crate::core::{
     StabilityMap, Transformation,
 };
 use crate::error::*;
-use crate::interactive::{Answer, Query, Queryable, WRAPPER};
+use crate::interactive::{Answer, Query, Queryable, without_wrapper};
 use crate::{err, fallible};
 
 use super::util::{ExtrinsicObject, Type, into_owned};
@@ -300,9 +300,7 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
 
                     // Don't wrap inner queryable.
                     // Types of inner queryable don't align with filter.
-                    let wrapper = WRAPPER.take();
-                    let result = function.eval(arg);
-                    WRAPPER.set(wrapper);
+                    let result = without_wrapper(|| function.eval(arg));
                     let mut inner_qbl = result?;
 
                     // Instead, apply the wrapper only after type-erasure.
