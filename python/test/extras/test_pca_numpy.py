@@ -528,7 +528,7 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
 ):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition
-    from opendp.extras.sklearn import _make_eigendecomposition as eigen
+    from opendp.extras.sklearn import _make_eigenvector as eigenvector
 
     def unexpected(*args, **kwargs):
         pytest.fail(
@@ -536,7 +536,7 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
         )
 
     monkeypatch.setattr(decomposition, "make_private_np_mean", unexpected)
-    monkeypatch.setattr(eigen, "then_private_eigenvectors", unexpected)
+    monkeypatch.setattr(eigenvector, "then_private_eigenvector", unexpected)
     domain = dp.numpy.array2_domain(
         T=float, size=10, num_columns=1, norm=1, p=2, nan=False
     )
