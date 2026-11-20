@@ -222,13 +222,13 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.11'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.11'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
