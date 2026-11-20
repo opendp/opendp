@@ -264,7 +264,8 @@ pub(super) fn match_truncation_predicate(
                     function.as_ref(),
                     partition_by,
                     identifier,
-                    threshold_value,
+                    threshold_value.saturating_sub(1),
+                    schema,
                 )?
             } else {
                 None
@@ -295,6 +296,7 @@ fn match_num_groups_predicate(
     partition_by: &Vec<Expr>,
     identifier: &Expr,
     threshold: u32,
+    schema: Option<&Schema>,
 ) -> Fallible<Option<Bound>> {
     // check if the function is limiting num_groups
     let Expr::Function {
@@ -327,6 +329,13 @@ fn match_num_groups_predicate(
         );
     };
 
+    fn strip_alias(expr: &Expr) -> &Expr {
+        match expr {
+            Expr::Alias(inner, _) => strip_alias(inner),
+            other => other,
+        }
+    }
+
     let by = match input_item.clone() {
         // Treat as_struct as a special case that represents multiple columns.
         // Could still actually have a struct column via to_struct(to_struct(...)).
@@ -342,9 +351,17 @@ fn match_num_groups_predicate(
                 input: hash_input,
                 function: FunctionExpr::Hash(_, _, _, _),
                 ..
-            }) = input.get(0)
+            }) = input.first().map(strip_alias)
             {
-                if hash_input.get(0) == input.get(1) {
+                if hash_input.first() == input.get(1).map(strip_alias) {
+                    // Every field affecting the dense rank must be represented
+                    // by the certified grouping keys.
+                    if input.len() != 2 || hash_input.len() != 1 {
+                        return fallible!(
+                            MakeTransformation,
+                            "hashed num_groups rank must contain exactly two struct fields and one hash input"
+                        );
+                    }
                     let Some(Expr::Function {
                         input: true_input,
                         function: FunctionExpr::AsStruct,
@@ -364,6 +381,17 @@ fn match_num_groups_predicate(
         }
         input => HashSet::from([input.clone()]),
     };
+
+    if let Some(schema) = schema {
+        for key in &by {
+            if contains_categorical(&key.clone().to_field(schema)?.dtype) {
+                return fallible!(
+                    MakeTransformation,
+                    "num_groups truncation cannot use Categorical keys; cast to String or Enum first."
+                );
+            }
+        }
+    }
 
     Ok(Some(Bound {
         by,

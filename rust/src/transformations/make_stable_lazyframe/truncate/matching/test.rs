@@ -41,7 +41,7 @@ fn test_match_truncations_ok() -> Fallible<()> {
             Bound {
                 by: HashSet::from([col("A")]),
                 per_group: None,
-                num_groups: Some(10),
+                num_groups: Some(9),
             },
             Bound {
                 by: HashSet::from([col("A")]),
@@ -163,7 +163,7 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
         Bound {
             by: HashSet::from([col("A")]),
             per_group: None,
-            num_groups: Some(10),
+            num_groups: Some(9),
         },
         Bound {
             by: HashSet::from([col("A")]),
@@ -244,7 +244,8 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
         num_groups: Some(10),
     });
 
-    let check = |expr: Expr| match_num_groups_predicate(&expr, &vec![col("ID")], &col("ID"), 10);
+    let check =
+        |expr: Expr| match_num_groups_predicate(&expr, &vec![col("ID")], &col("ID"), 10, None);
     assert_eq!(
         check(col("A").rank(
             RankOptions {
@@ -268,6 +269,109 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
     );
 
     assert!(check(as_struct(vec![col("A")]))?.is_none());
+
+    let keys = as_struct(vec![col("A")]);
+    let hashed_keys = as_struct(vec![
+        keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+        keys.alias("__opendp_key"),
+    ]);
+    assert_eq!(
+        check(hashed_keys.rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        ))?,
+        bound
+    );
+
+    // Extra struct fields affect ranking but must not disappear from the
+    // certified grouping keys.
+    let keys = as_struct(vec![col("A")]);
+    let dense = |expr: Expr| {
+        expr.rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+    };
+    let positional = as_struct(vec![
+        keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+        keys.clone().alias("__opendp_key"),
+        int_range(lit(0), len(), 1, DataType::Int64).alias("__position"),
+    ]);
+    assert!(check(dense(positional)).is_err());
+
+    // Likewise, an additional hash input cannot be discarded.
+    let malformed_hash = Expr::Function {
+        input: vec![keys.clone(), col("B")],
+        function: FunctionExpr::Hash(0, 0, 0, 0),
+    };
+    let malformed = as_struct(vec![
+        malformed_hash.alias("__opendp_hash"),
+        keys.alias("__opendp_key"),
+    ]);
+    assert!(check(dense(malformed)).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_hashed_dense_rank_rejects_categorical_keys() -> Fallible<()> {
+    let categories = Categories::global();
+    let schema = Schema::from_iter([
+        Field::new(
+            "category".into(),
+            DataType::Categorical(categories.clone(), categories.mapping()),
+        ),
+        Field::new("name".into(), DataType::String),
+        Field::new(
+            "nested".into(),
+            DataType::Array(
+                Box::new(DataType::Categorical(
+                    categories.clone(),
+                    categories.mapping(),
+                )),
+                2,
+            ),
+        ),
+    ]);
+    let rank = |keys: Vec<Expr>| {
+        let keys = as_struct(keys);
+        as_struct(vec![
+            keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+            keys.alias("__opendp_key"),
+        ])
+        .rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+    };
+    let check = |expr: Expr| {
+        match_num_groups_predicate(&expr, &vec![col("ID")], &col("ID"), 1, Some(&schema))
+    };
+
+    assert!(check(rank(vec![col("category")])).is_err());
+    assert!(check(rank(vec![as_struct(vec![col("category")])])).is_err());
+    assert!(check(rank(vec![col("nested")])).is_err());
+    assert!(check(rank(vec![col("name")]))?.is_some());
+
+    // Direct ranks also depend on categorical physical code assignments.
+    assert!(
+        check(as_struct(vec![col("category")]).rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        ))
+        .is_err()
+    );
     Ok(())
 }
 
@@ -299,6 +403,32 @@ fn test_truncation_window_rejects_order_by() -> Fallible<()> {
 
     let ordinary = rank.over([col("ID")]).lt_eq(lit(1));
     assert!(match_truncation_predicate(&ordinary, &col("ID"), None)?.is_some());
+    Ok(())
+}
+
+#[test]
+fn test_dense_rank_threshold_is_one_based() -> Fallible<()> {
+    let ranks = col("A")
+        .rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+        .over([col("ID")]);
+    for k in [0u32, 1, 2, 10, u32::MAX - 1] {
+        for (predicate, expected) in [
+            (ranks.clone().lt(lit(k)), k.saturating_sub(1)),
+            (ranks.clone().lt_eq(lit(k)), k),
+        ] {
+            let bound = match_truncation_predicate(&predicate, &col("ID"), None)?
+                .expect("expected num_groups truncation");
+            assert_eq!(bound[0].num_groups, Some(expected));
+        }
+    }
+    // <= u32::MAX needs a public k+1 value that does not fit in u32.
+    assert!(match_truncation_predicate(&ranks.lt_eq(lit(u32::MAX)), &col("ID"), None).is_err());
     Ok(())
 }
 

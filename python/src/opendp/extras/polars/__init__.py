@@ -1072,7 +1072,7 @@ class LazyFrameQuery:
 
         :param k: the number of groups to keep for each identifier
         :param by: when grouped by these grouping columns
-        :param keep: which groups to keep for each identifier
+        :param keep: how to order group keys. "sample" uses a deterministic hash priority
         """
         input_metric = self._query._chain[1]
 
@@ -1088,7 +1088,10 @@ class LazyFrameQuery:
 
         struct = pl.struct(*by)
         if keep == "sample":
-            ranks = pl.struct(struct.hash(), struct).rank("dense")
+            ranks = pl.struct(
+                struct.hash().alias("__opendp_hash"),
+                struct.alias("__opendp_key"),
+            ).rank("dense")
         elif keep == "first":
             ranks = struct.rank("dense", descending=False)
         elif keep == "last":
@@ -1098,7 +1101,7 @@ class LazyFrameQuery:
                 "keep must be 'sample', 'first' or 'last'"
             )  # pragma: no cover
 
-        return self.filter(ranks.over(input_metric.identifier) < k)
+        return self.filter(ranks.over(input_metric.identifier) <= k)
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""

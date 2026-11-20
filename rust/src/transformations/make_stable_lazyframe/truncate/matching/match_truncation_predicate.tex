@@ -57,7 +57,7 @@ None
     Polars but is not part of the certified truncation ranking or partitioning keys;
     an unchecked order-by expression could fail depending on private values.
 
-    \texttt{threshold\_value} on line \ref{line:threshold_value} accounts for strict versus inclusive comparisons. Per-group ordinal ranks are one-based and are adjusted by their own matcher.
+    \texttt{threshold\_value} on line \ref{line:threshold_value} accounts for strict versus inclusive comparisons. Dense group ranks start at one, so their bound is reduced by one. Per-group ordinal ranks are also one-based and are adjusted by their own matcher.
 
     By the postconditions of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate},
     and \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate},
