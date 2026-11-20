@@ -11,3 +11,9 @@ fn test_enum_member() -> Fallible<()> {
     assert!(!domain.member(&"d".into())?);
     Ok(())
 }
+
+#[test]
+fn test_enum_rejects_null_categories() {
+    let categories = Series::new("".into(), [Some("a"), None]);
+    assert!(EnumDomain::new(categories).is_err());
+}
