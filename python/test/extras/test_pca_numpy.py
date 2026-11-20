@@ -898,3 +898,38 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
     assert trans.map(1) == 1
     with pytest.raises(np.linalg.LinAlgError):
         singular.score_samples(np.zeros((0, 3)))
+
+
+@pytest.mark.parametrize("row_norm", [0.5, 1.0, 4.0])
+def test_eigendecomposition_privacy_budget_with_nuclear_metric(row_norm):
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=3, size=10, nan=False, T=float
+    )
+    measurement = (
+        (domain, dp.symmetric_distance())
+        >> decomposition.then_private_np_eigendecomposition(
+            eigvals_epsilon=0.3, eigvecs_epsilons=[0.35, 0.35]
+        )
+    )
+    # One replacement has symmetric distance 2, independent of row_norm.
+    assert measurement.map(2) == pytest.approx(1.0)
+    assert measurement.check(2, 1.0)
+
+
+def test_eigendecomposition_bingham_concentration():
+    from opendp.extras.numpy._make_np_sscp import make_np_sscp
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    row_norm = 2.0
+    epsilon = 1.0
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=2, size=5, nan=False, T=float
+    )
+    sscp = make_np_sscp(domain, dp.symmetric_distance())
+    # Preserve Amin et al.'s calibration: concentration = ε / (4B²).
+    concentration = epsilon / (4 * row_norm**2)
+    eigenvector = make_private_eigenvector(
+        sscp.output_domain, sscp.output_metric, concentration
+    )
+    assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
+    assert eigenvector.map(sscp.map(1)) == pytest.approx(epsilon / 2)

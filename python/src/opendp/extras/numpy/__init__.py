@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 from dataclasses import dataclass, asdict
 
-from opendp.mod import Domain
+from opendp.mod import Domain, Metric
 from opendp.typing import (
     RuntimeType,
     RuntimeTypeDescriptor,
@@ -23,7 +23,7 @@ from opendp.typing import (
     _PRIMITIVE_TYPES,
 )
 from opendp._lib import import_optional_dependency
-from opendp._internal import _extrinsic_domain
+from opendp._internal import _extrinsic_domain, _extrinsic_distance
 from opendp.extras.numpy._norm import _rows_within_norm
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp  # noqa: F401
@@ -294,32 +294,32 @@ class NPArrayDDomain:
     """atom type"""
 
 
-def _sscp_domain(
+def _nuclear_norm_distance() -> Metric:
+    """Metric on symmetric matrices: d(C, C') = ||C - C'||_*.
+
+    The nuclear norm is the sum of singular values. The norm does not need to
+    be evaluated at runtime to construct or execute a DP measurement.
+    """
+    return _extrinsic_distance("NPNuclearNormDistance")
+
+
+def _symmetric_matrix_domain(
     *,
-    norm: float | None = None,
-    p: Literal[1, 2, None] = None,
-    size: int | None = None,
-    num_features: int | None = None,
+    num_features: int,
     T: RuntimeTypeDescriptor = float,
 ) -> Domain:
-    """The domain of sums of squares and cross products matrices formed by computing x^Tx,
-    for some dataset x.
+    """Finite symmetric matrices with a fixed, public dimension.
 
-    Elements are finite, members are square symmetric positive semi-definite matrices.
-
-    :param norm: each row in x is bounded by the norm
-    :param p: designates L`p` norm
-    :param size: number of rows in data
-    :param num_features: number of rows/columns in the matrix
-    :param T: the type of data elements in the array
+    A matrix does not carry adjacency information about a latent row dataset.
+    Row norm and dataset size belong to the SSCP transformation's input domain.
     """
     import opendp.prelude as dp
 
     np = import_optional_dependency("numpy")
 
-    _check_norm_and_p(norm, p)
-    _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_features, "num_features")
+    if num_features is None or num_features < 1:
+        raise ValueError("num_features must be a positive integer")
 
     T = dp.RuntimeType.parse(T)
     if T not in {dp.f32, dp.f64}:
@@ -331,32 +331,20 @@ def _sscp_domain(
         T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
             raise TypeError(f"must have data of type {T}, got {T_actual}")
-        if x.shape != (x.shape[0], x.shape[0]):
-            raise ValueError("must be a square array")
-        if num_features is not None and x.shape[0] != num_features:
-            raise ValueError(f"must have {num_features} features")
-        if (~np.isfinite(x)).any():
+        if x.shape != (num_features, num_features):
+            raise ValueError(f"must have shape ({num_features}, {num_features})")
+        if not np.isfinite(x).all():
             raise ValueError("must have finite values")
         if np.any(x != x.T):
             raise ValueError("must be symmetric")
-        if np.any(np.linalg.eigvals(x) < 0):
-            raise ValueError("must be positive semi-definite")
         return True
 
     @dataclass(kw_only=True, frozen=True)
-    class NPSSCPDescriptor:
-        num_features: int | None
-        norm: float | None
-        p: Literal[1, 2, None]
-        size: int | None
+    class NPSymmetricMatrixDescriptor:
+        num_features: int
         T: str | dp.RuntimeType
 
-    desc = NPSSCPDescriptor(
-        num_features=num_features,
-        norm=norm,
-        p=p,
-        size=size,
-        T=T,
+    desc = NPSymmetricMatrixDescriptor(num_features=num_features, T=T)
+    return _extrinsic_domain(
+        f"NPSymmetricMatrixDomain({_fmt_attrs(desc)})", _member, desc
     )
-
-    return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", _member, desc)

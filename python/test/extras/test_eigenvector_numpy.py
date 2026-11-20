@@ -1,5 +1,5 @@
 import opendp.prelude as dp
-from opendp.extras.numpy import _sscp_domain
+from opendp.extras.numpy import _nuclear_norm_distance, _symmetric_matrix_domain
 import pytest
 
 np = pytest.importorskip("numpy")
@@ -11,10 +11,10 @@ def test_private_eigenvector():
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 
     space = (
-        _sscp_domain(num_features=4, norm=1.0, p=2, T=float),
-        dp.symmetric_distance(),
+        _symmetric_matrix_domain(num_features=4, T=float),
+        _nuclear_norm_distance(),
     )
-    meas = space >> then_private_eigenvector(unit_epsilon=100_000.0)
+    meas = space >> then_private_eigenvector(concentration=25_000.0)
 
     data = np.random.normal(size=(4, 4))
     data += data.T
@@ -26,6 +26,7 @@ def test_private_eigenvector():
 
     assert np.allclose(noisy, exact, atol=0.3)
     assert meas.map(2) == 100_000.0
+    assert meas.map(1) == 50_000.0
 
 
 def test_private_eigenvector_acceptance_probability(monkeypatch):
@@ -44,12 +45,12 @@ def test_private_eigenvector_acceptance_probability(monkeypatch):
     monkeypatch.setattr(eigenvector, "get_np_csprng", FixedRNG)
 
     space = (
-        _sscp_domain(num_features=2, norm=1.0, p=2, T=float),
-        dp.symmetric_distance(),
+        _symmetric_matrix_domain(num_features=2, T=float),
+        _nuclear_norm_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(unit_epsilon=4.0)
+    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
 
-    # For C = diag(1, 0) and epsilon = 4:
+    # For C = diag(1, 0) and concentration = 1:
     #   A = diag(0, 1), b = sqrt(2), Omega = diag(1, 1 + sqrt(2)).
     #
     # The first proposal, u = e2, has acceptance probability ~0.84
@@ -69,12 +70,12 @@ def test_private_eigenvector_distribution(monkeypatch):
     monkeypatch.setattr(eigenvector, "get_np_csprng", lambda: np.random.default_rng(0))
 
     space = (
-        _sscp_domain(num_features=2, norm=1.0, p=2, T=float),
-        dp.symmetric_distance(),
+        _symmetric_matrix_domain(num_features=2, T=float),
+        _nuclear_norm_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(unit_epsilon=4.0)
+    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
 
-    # For C = diag(1, 0), the Bingham density is proportional to
+    # With concentration = 1, the Bingham density is proportional to
     # exp(-sin(theta)**2), so 2 * theta follows von Mises(0, 0.5).
     samples = np.array([meas(np.diag([1.0, 0.0])) for _ in range(1024)])
     angles = 2 * np.arctan2(samples[:, 1], samples[:, 0])
@@ -88,8 +89,8 @@ def test_private_eigenvector_distribution(monkeypatch):
 def test_private_eigenvector_isotropic_matrix(width, value):
     from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
 
-    domain = _sscp_domain(num_features=width, norm=1.0, p=2, T=float)
-    measurement = make_private_eigenvector(domain, dp.symmetric_distance(), 1.0)
+    domain = _symmetric_matrix_domain(num_features=width, T=float)
+    measurement = make_private_eigenvector(domain, _nuclear_norm_distance(), 0.25)
     vector = measurement(np.eye(width) * value)
     assert np.isfinite(vector).all()
     assert np.linalg.norm(vector) == pytest.approx(1.0)
@@ -130,7 +131,10 @@ def test_eigenvectors():
         dp.symmetric_distance(),
     )
     sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
-    meas = sp_sscp >> then_private_eigenvectors([1.0] * 3)
+    # Row norm B = 4, one replacement has nuclear sensitivity 2B^2.
+    concentrations = [1.0 / (4 * 4.0**2)] * 3
+    meas = sp_sscp >> then_private_eigenvectors(concentrations)
+    assert meas.map(2) == pytest.approx(3.0)
 
     data = np.random.normal(size=(1000, num_columns))
     print("meas(data)", meas(data))
@@ -141,3 +145,36 @@ def test_optimal_b_zero():
 
     # A = 0 when the data is empty
     assert _optimal_b(np.zeros(4), 4) == pytest.approx(4)
+
+
+def test_private_eigenvector_rejects_wrong_metric_and_bad_concentration():
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    domain = _symmetric_matrix_domain(num_features=2)
+    with pytest.raises(ValueError, match="nuclear norm"):
+        make_private_eigenvector(domain, dp.symmetric_distance(), 1.0)
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        make_private_eigenvector(domain, _nuclear_norm_distance(), -1.0)
+
+
+def test_projected_sscp_has_identity_nuclear_stability():
+    from opendp.extras.sklearn._make_eigenvector import make_np_sscp_projection
+
+    domain = _symmetric_matrix_domain(num_features=2)
+    metric = _nuclear_norm_distance()
+    P = np.array([[1.0, 0.0]])
+    trans = make_np_sscp_projection(domain, metric, P)
+    assert trans.map(2.0) == 2.0
+    P[:] = 10.0  # Stored projection must not share this mutable array.
+    np.testing.assert_array_equal(trans(np.diag([3.0, 4.0])), [[3.0]])
+
+
+def test_projection_promotes_float32_input_to_float64_output():
+    from opendp.extras.sklearn._make_eigenvector import make_np_sscp_projection
+
+    domain = _symmetric_matrix_domain(num_features=2, T=dp.f32)
+    P = np.array([[1.0, 0.0]], dtype=np.float64)
+    trans = make_np_sscp_projection(domain, _nuclear_norm_distance(), P)
+    matrix = np.diag([3.0, 4.0]).astype(np.float32)
+    assert trans.output_domain.member(trans(matrix))
+    assert trans(matrix).dtype == np.float64

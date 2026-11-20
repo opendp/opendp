@@ -41,6 +41,9 @@ def make_private_np_eigendecomposition(
     if input_desc.p != 2:
         raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
 
+    if input_desc.norm is None:
+        raise ValueError("input_domain must have a bounded row norm")
+
     if input_desc.num_columns < 1:
         raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
 
@@ -51,18 +54,27 @@ def make_private_np_eigendecomposition(
     num_components = num_components or input_desc.num_columns
 
     t_sscp = make_np_sscp(input_domain, input_metric)
+    # Sensitivity for one insertion/deletion, in nuclear-norm units.
+    row_norm_sq = t_sscp.map(1)
 
     t_eigvals = t_sscp.output_space >> then_eigenvalues()
     m_eigvals = (
         dp.binary_search_chain(  # type: ignore[misc]
             lambda s: t_eigvals >> dp.m.then_laplace(s),
-            d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
+            d_in=t_sscp.map(2),  # nuclear sensitivity of one replacement
             d_out=eigvals_epsilon,
         )
         >> dp.as_array()
     )
+    # Keep the original Bingham concentration from Amin et al.
+    # Each query is 2 * κ * d_*-DP, with κ = epsilon / (4 * norm**2).
+    # A replacement has nuclear sensitivity at most 2 * norm**2.
+    concentrations = [
+        0.0 if row_norm_sq == 0 else epsilon / (4 * row_norm_sq)
+        for epsilon in eigvecs_epsilons
+    ]
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
-        eigvecs_epsilons,
+        concentrations,
     )
     return t_sscp >> dp.c.make_composition([m_eigvals, m_eigvecs])
 
