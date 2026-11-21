@@ -1,5 +1,5 @@
-//! Decompose compatible group-by aggregates into noisy intermediate statistics
-//! and postprocessing on those statistics.
+//! Decompose group-by expressions into private aggregate leaves and
+//! deterministic postprocessing on their materialized results.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -50,7 +50,7 @@ impl PrivateAggPlan {
         for expr in &aggs {
             has_implicit_mean |= implicit_mean(expr)?.is_some();
         }
-        if !has_implicit_mean {
+        if !has_implicit_mean && !aggs.iter().any(can_decompose) {
             return Ok(Self::unchanged(aggs));
         }
 
@@ -93,17 +93,22 @@ impl PrivateAggPlan {
             used.extend(keys.compute_schema()?.iter_names().map(|n| n.to_string()));
         }
 
-        // Prefer an existing public output of dp.len(), if compatible, so
-        // explicit count queries and means consume the same random variable.
+        // Preserve the existing cross-column count sharing for top-level
+        // implicit-scale means. Nested private leaves are *not* deduplicated:
+        // that is a separate workload optimization.
         let mut count = None;
-        for (expr, name) in aggs.iter().zip(&outputs) {
-            if implicit_count(expr)? {
-                count = Some(name.clone());
-                break;
+        if has_implicit_mean {
+            for (expr, name) in aggs.iter().zip(&outputs) {
+                if implicit_count(expr)? {
+                    count = Some(name.clone());
+                    break;
+                }
             }
         }
-        let synthesized = count.is_none();
-        let count = count.unwrap_or_else(|| unique_name(&mut used, "count"));
+        let synthesized = has_implicit_mean && count.is_none();
+        if synthesized {
+            count = Some(unique_name(&mut used, "count"));
+        }
 
         let mut private_aggs = Vec::with_capacity(aggs.len() + usize::from(synthesized));
         let mut postprocess = Vec::new();
@@ -112,13 +117,14 @@ impl PrivateAggPlan {
         let mut have_count = false;
 
         for (expr, name) in aggs.into_iter().zip(&outputs) {
-            if implicit_count(&expr)? {
-                if name == &count && !have_count {
+            if has_implicit_mean && implicit_count(&expr)? {
+                let shared_count = count.as_ref().expect("a mean requires a count");
+                if name == shared_count && !have_count {
                     private_aggs.push(expr);
                     have_count = true;
                 } else {
-                    postprocess.push(col(count.as_str()).alias(name.as_str()));
-                    count_aliases.insert(name.clone(), count.clone());
+                    postprocess.push(col(shared_count.as_str()).alias(name.as_str()));
+                    count_aliases.insert(name.clone(), shared_count.clone());
                 }
             } else if let Some([input, lower, upper, scale]) = implicit_mean(&expr)? {
                 let sum_name = unique_name(&mut used, "sum");
@@ -132,18 +138,29 @@ impl PrivateAggPlan {
                     Expr::BinaryExpr {
                         left: Arc::new(col(sum_name.as_str())),
                         op: polars::prelude::Operator::TrueDivide,
-                        right: Arc::new(col(count.as_str())),
+                        right: Arc::new(col(count.as_deref().expect("a mean requires a count"))),
                     }
                     .alias(name.as_str()),
                 );
                 hidden.push(sum_name);
+            } else if can_decompose(&expr) {
+                // Preserve one independent private measurement per leaf.
+                // Only deterministic postprocessing is deferred.
+                let reconstruction = decompose(
+                    expr.meta().undo_aliases(),
+                    &mut private_aggs,
+                    &mut hidden,
+                    &mut used,
+                );
+                postprocess.push(reconstruction.alias(name.as_str()));
             } else {
                 private_aggs.push(expr);
             }
         }
         if synthesized {
-            private_aggs.push(dp_len(None, false).alias(count.as_str()));
-            hidden.push(count.clone());
+            let name = count.as_ref().expect("synthesized count has a name");
+            private_aggs.push(dp_len(None, false).alias(name.as_str()));
+            hidden.push(name.clone());
         }
 
         Ok(Self {
@@ -152,7 +169,7 @@ impl PrivateAggPlan {
             outputs,
             hidden,
             count_aliases,
-            count: Some(count),
+            count,
         })
     }
 
@@ -189,6 +206,59 @@ impl PrivateAggPlan {
             input: Arc::new(input),
             expr: exprs,
             options: projection_options(),
+        }
+    }
+}
+
+/// Lift only supported postprocessing; leave arbitrary private expressions
+/// opaque, and never treat data-dependent column references as public.
+fn can_decompose(expr: &Expr) -> bool {
+    match expr {
+        Expr::Alias(inner, _) => can_decompose(inner),
+        Expr::BinaryExpr { .. } | Expr::Cast { .. } => has_leaf(expr),
+        _ => false,
+    }
+}
+
+fn has_leaf(expr: &Expr) -> bool {
+    match expr {
+        Expr::Alias(inner, _) | Expr::Cast { expr: inner, .. } => has_leaf(inner),
+        Expr::BinaryExpr { left, right, .. } => has_leaf(left) || has_leaf(right),
+        Expr::Literal(_) => false,
+        _ => true,
+    }
+}
+
+/// Produce independent private leaves and a deterministic reconstruction
+/// expression over their *materialized* output columns.
+fn decompose(
+    expr: Expr,
+    aggs: &mut Vec<Expr>,
+    hidden: &mut Vec<String>,
+    used: &mut HashSet<String>,
+) -> Expr {
+    match expr {
+        Expr::Alias(inner, name) => decompose(*inner, aggs, hidden, used).alias(name),
+        Expr::BinaryExpr { left, op, right } => Expr::BinaryExpr {
+            left: Arc::new(decompose(*left, aggs, hidden, used)),
+            op,
+            right: Arc::new(decompose(*right, aggs, hidden, used)),
+        },
+        Expr::Cast {
+            expr,
+            dtype,
+            options,
+        } => Expr::Cast {
+            expr: Arc::new(decompose(*expr, aggs, hidden, used)),
+            dtype,
+            options,
+        },
+        Expr::Literal(_) => expr,
+        expr => {
+            let name = unique_name(used, "agg");
+            aggs.push(expr.alias(name.as_str()));
+            hidden.push(name.clone());
+            col(name.as_str())
         }
     }
 }

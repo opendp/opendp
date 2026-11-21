@@ -952,3 +952,142 @@ fn test_mean_only_private_key_filter_synthesizes_count() -> Fallible<()> {
     assert!(release.column("mean_b").is_ok());
     Ok(())
 }
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_nested_postprocessing_preserves_independent_leaves() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_invariant_keys()
+            .with_max_length(2)
+            .with_max_groups(1),
+    )?;
+    let data = df!("A" => [0i32, 0], "B" => [2.0f64, 3.0])?.lazy();
+
+    let sum = col("B").dp().sum((lit(0.0), lit(10.0)), Some(1.0));
+    let combined = (sum.clone() + sum)
+        .cast(DataType::Float64)
+        .alias("combined");
+
+    let plan = workload::PrivateAggPlan::new(vec![combined.clone()], &[col("A")], &None)?;
+    assert_eq!(plan.aggs.len(), 2, "identical leaves must not yet be deduplicated");
+    assert!(plan.count.is_none());
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        data.clone().group_by([col("A")]).agg([combined]),
+        Some(1.0),
+        None,
+    )?;
+    let _ = meas.map(&1.into())?;
+    let release = meas.invoke(&data)?.collect()?;
+    assert_eq!(release.width(), 2);
+    assert_eq!(release.column("combined")?.dtype(), &DataType::Float64);
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_nested_means_remain_independent() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+        SeriesDomain::new("C", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_invariant_keys()
+            .with_max_length(2)
+            .with_max_groups(1),
+    )?;
+    let data = df!(
+        "A" => [0i32, 0],
+        "B" => [2.0f64, 3.0],
+        "C" => [5.0f64, 6.0],
+    )?
+    .lazy();
+
+    // Nested means remain opaque leaves, so this refactor does not
+    // introduce new count sharing or change their privacy accounting.
+    let expr = (
+        col("B").dp().mean((lit(0.0), lit(10.0)), None)
+            + col("C").dp().mean((lit(0.0), lit(10.0)), None)
+    )
+    .alias("combined");
+    let plan = workload::PrivateAggPlan::new(vec![expr.clone()], &[col("A")], &None)?;
+    assert_eq!(plan.aggs.len(), 2);
+    assert!(plan.count.is_none());
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        data.clone().group_by([col("A")]).agg([expr]),
+        Some(1.0),
+        None,
+    )?;
+    let _ = meas.map(&1.into())?;
+    let release = meas.invoke(&data)?.collect()?;
+    assert_eq!(release.width(), 2);
+    assert!(release.column("combined").is_ok());
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_nested_postprocessing_follows_join_fills() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(2).with_max_groups(1))?;
+    let data = df!("A" => [0i32, 0], "B" => [2.0f64, 3.0])?.lazy();
+    let keys = df!(
+        "A" => [0i32, 1],
+        "label" => ["present", "absent"],
+    )?
+    .lazy();
+
+    let sum = col("B").dp().sum((lit(0.0), lit(10.0)), Some(1.0));
+    let combined = (sum + lit(1.0)).cast(DataType::Float64).alias("combined");
+    let query = data
+        .clone()
+        .group_by([col("A")])
+        .agg([combined])
+        .join(keys, [col("A")], [col("A")], JoinType::Right.into());
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        query,
+        Some(1.0),
+        None,
+    )?;
+    let output = meas.invoke(&data)?.collect()?;
+    assert_eq!(output.height(), 2);
+    assert_eq!(output.width(), 3);
+    for name in ["A", "label", "combined"] {
+        assert!(output.column(name).is_ok());
+    }
+    Ok(())
+}
+
+#[test]
+fn test_postprocess_predicate_decomposition_is_deferred() -> Fallible<()> {
+    let sum = col("B").dp().sum((lit(0.0), lit(10.0)), None);
+    let expression = (sum + lit(1.0)).alias("combined");
+    let plan = workload::PrivateAggPlan::new(
+        vec![expression],
+        &[col("A")],
+        &Some(KeySanitizer::Filter(col("combined").gt(lit(3.0)))),
+    )?;
+    assert_eq!(plan.aggs.len(), 1, "predicate rewriting is a separate change");
+    Ok(())
+}
