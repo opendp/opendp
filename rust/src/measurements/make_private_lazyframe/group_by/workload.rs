@@ -23,6 +23,7 @@ use crate::polars::{apply_plugin, dp_len, literal_value_of, match_shim};
 
 use super::{KeySanitizer, is_threshold_predicate};
 use super::matching::{find_len_expr, is_len_expr};
+use super::joint_sensitivity::IdealJointSensitivity;
 
 /// The private expressions in aggs run within GroupBy. Postprocessing only
 /// reads their *materialized* output columns, so it cannot resample noise.
@@ -33,18 +34,24 @@ pub(super) struct PrivateAggPlan {
     hidden: Vec<String>,
     count_aliases: HashMap<String, String>,
     pub count: Option<String>,
+    // Bounds for ideal exact sums only. Not suitable for calibrating actual
+    // Polars floating-point mechanisms without rounding relaxation.
+    #[allow(dead_code)]
+    pub(super) ideal_sensitivity: Option<IdealJointSensitivity>,
 }
 
 impl PrivateAggPlan {
-    fn unchanged(aggs: Vec<Expr>) -> Self {
-        Self {
+    fn unchanged(aggs: Vec<Expr>, columns: &[SeriesDomain]) -> Fallible<Self> {
+        let ideal_sensitivity = IdealJointSensitivity::from_aggs(&aggs, columns, &[])?;
+        Ok(Self {
             aggs,
             postprocess: Vec::new(),
             outputs: Vec::new(),
             hidden: Vec::new(),
             count_aliases: HashMap::new(),
             count: None,
-        }
+            ideal_sensitivity,
+        })
     }
 
     #[cfg(test)]
@@ -79,7 +86,7 @@ impl PrivateAggPlan {
             && !aggs.iter().any(can_decompose)
             && !has_duplicates(&aggs)?
         {
-            return Ok(Self::unchanged(aggs));
+            return Self::unchanged(aggs, columns);
         }
 
         let outputs = aggs
@@ -122,6 +129,7 @@ impl PrivateAggPlan {
         let mut postprocess = Vec::new();
         let mut hidden = Vec::new();
         let mut count_aliases = HashMap::new();
+        let mut centered_squares = Vec::new();
         let mut have_count = false;
 
         for (expr, name) in aggs.into_iter().zip(&outputs) {
@@ -191,6 +199,7 @@ impl PrivateAggPlan {
                     ).alias(sq_name.as_str()),
                 );
                 hidden.push(sq_name.clone());
+                centered_squares.push((sq_name, square_upper));
 
                 let count_name = match scale {
                     None => count.as_ref().expect("implicit variance needs shared count").clone(),
@@ -241,6 +250,11 @@ impl PrivateAggPlan {
             &mut count_aliases,
         )?;
 
+        // This is descriptive metadata, not part of mechanism calibration.
+        // If any private leaf is unrecognized, omit the entire joint model.
+        let ideal_sensitivity =
+            IdealJointSensitivity::from_aggs(&private_aggs, columns, &centered_squares)?;
+
         Ok(Self {
             aggs: private_aggs,
             postprocess,
@@ -248,6 +262,7 @@ impl PrivateAggPlan {
             hidden,
             count_aliases,
             count,
+            ideal_sensitivity,
         })
     }
 

@@ -1481,6 +1481,12 @@ fn test_shared_count_sum_mean_and_population_variance() -> Fallible<()> {
     )?;
     assert_eq!(plan.aggs.len(), 5, "one count, two sums and two squared moments");
     assert_eq!(plan.count.as_deref(), Some("n"));
+    let joint = plan.ideal_sensitivity.as_ref().expect("complete joint moment model");
+    assert_eq!(joint.coordinates.len(), 5);
+    let (l1, l2) = joint.ideal_bounds((1, 1, 1))?;
+    // Count, two sums in [0, 10] and two squared centered sums in [0, 25].
+    assert!(l1 >= 71.0 && l1 < 71.001);
+    assert!(l2 >= (1451.0f64).sqrt() && l2 < 39.0);
 
     let meas = make_private_lazyframe(
         domain,

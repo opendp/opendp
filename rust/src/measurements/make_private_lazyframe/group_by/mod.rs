@@ -28,6 +28,7 @@ use polars_plan::dsl::Expr;
 mod test;
 
 mod matching;
+mod joint_sensitivity;
 mod workload;
 use workload::PrivateAggPlan;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
