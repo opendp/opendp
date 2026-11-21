@@ -1091,3 +1091,168 @@ fn test_postprocess_predicate_decomposition_is_deferred() -> Fallible<()> {
     assert_eq!(plan.aggs.len(), 1, "predicate rewriting is a separate change");
     Ok(())
 }
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_joint_dedup_shares_implicit_sum_across_outputs() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_invariant_keys()
+            .with_max_length(2)
+            .with_max_groups(1),
+    )?;
+    let data = df!("A" => [0i32, 0], "B" => [2.0f64, 3.0])?.lazy();
+
+    let sum = col("B").dp().sum((lit(0.0), lit(10.0)), None);
+    let aggs = vec![
+        sum.clone().alias("total"),
+        (sum.clone() + sum.clone()).alias("double"),
+        (sum + lit(1.0)).alias("plus_one"),
+    ];
+    let plan = workload::PrivateAggPlan::new(aggs.clone(), &[col("A")], &None)?;
+    assert_eq!(plan.aggs.len(), 1, "one noise draw for all identical leaves");
+
+    let shared = make_private_lazyframe(
+        domain.clone(),
+        SymmetricDistance,
+        MaxDivergence,
+        data.clone().group_by([col("A")]).agg(aggs),
+        Some(1.0),
+        None,
+    )?;
+    let single = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        data.clone()
+            .group_by([col("A")])
+            .agg([col("B").dp().sum((lit(0.0), lit(10.0)), None).alias("total")]),
+        Some(1.0),
+        None,
+    )?;
+    assert_eq!(shared.map(&1.into())?, single.map(&1.into())?);
+
+    let released = shared.invoke(&data)?.collect()?;
+    let total = released.column("total")?.f64()?.get(0).unwrap();
+    let double = released.column("double")?.f64()?.get(0).unwrap();
+    let plus_one = released.column("plus_one")?.f64()?.get(0).unwrap();
+    assert_eq!(double, 2.0 * total);
+    assert_eq!(plus_one, total + 1.0);
+    assert_eq!(released.width(), 4);
+    Ok(())
+}
+
+#[test]
+fn test_joint_dedup_respects_scales_bounds_and_sources() -> Fallible<()> {
+    let input = col("B");
+    let base = input.clone().dp().sum((lit(0.0), lit(10.0)), None);
+    let other_bounds = input.clone().dp().sum((lit(0.0), lit(20.0)), None);
+    let other_source = col("C").dp().sum((lit(0.0), lit(10.0)), None);
+    let explicit = input.clone().dp().sum((lit(0.0), lit(10.0)), Some(1.0));
+
+    let plan = workload::PrivateAggPlan::new(
+        vec![
+            base.alias("a"),
+            other_bounds.alias("b"),
+            other_source.alias("c"),
+            (explicit.clone() + explicit).alias("d"),
+        ],
+        &[col("A")],
+        &None,
+    )?;
+    assert_eq!(
+        plan.aggs.len(),
+        5,
+        "different bounds, sources, and explicit-scale draws stay separate"
+    );
+
+    let count = crate::polars::dp_len(None, false);
+    let signed = crate::polars::dp_len(None, true);
+    let count_plan = workload::PrivateAggPlan::new(
+        vec![count.alias("unsigned"), signed.alias("signed")],
+        &[col("A")],
+        &None,
+    )?;
+    assert_eq!(count_plan.aggs.len(), 2);
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_joint_dedup_private_count_threshold_alias() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+    let data = df!("A" => [0i32, 1])?.lazy();
+    let count = crate::polars::dp_len(None, false);
+    let aggs = vec![count.clone().alias("count_a"), count.alias("count_b")];
+    let filter = col("count_b").gt(lit(3u32));
+    let plan = workload::PrivateAggPlan::new(
+        aggs.clone(),
+        &[col("A")],
+        &Some(KeySanitizer::Filter(filter.clone())),
+    )?;
+    assert_eq!(plan.aggs.len(), 1);
+    assert_eq!(plan.raw_count("count_b"), "count_a");
+
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        data.clone().group_by([col("A")]).agg(aggs).filter(filter),
+        Some(1.0),
+        None,
+    )?;
+    let _ = measurement.map(&1.into())?;
+    let release = measurement.invoke(&data)?.collect()?;
+    assert_eq!(release.width(), 3);
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_joint_dedup_join_fills_one_noisy_sum() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(1))?;
+    let data = df!("A" => [0i32], "B" => [2.0f64])?.lazy();
+    let keys = df!("A" => [0i32, 1], "label" => ["present", "absent"])?.lazy();
+    let sum = col("B").dp().sum((lit(0.0), lit(10.0)), None);
+    let aggs = vec![sum.clone().alias("sum_a"), sum.alias("sum_b")];
+    let plan = workload::PrivateAggPlan::new(
+        aggs.clone(),
+        &[col("A")],
+        &None,
+    )?;
+    assert_eq!(plan.aggs.len(), 1);
+    let query = data
+        .clone()
+        .group_by([col("A")])
+        .agg(aggs)
+        .join(keys, [col("A")], [col("A")], JoinType::Right.into());
+    let measurement = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        query,
+        Some(1.0),
+        None,
+    )?;
+    let release = measurement.invoke(&data)?.collect()?;
+    assert_eq!(release.height(), 2);
+    assert_eq!(release.width(), 4);
+    let a = release.column("sum_a")?.f64()?;
+    let b = release.column("sum_b")?.f64()?;
+    for i in 0..release.height() {
+        assert_eq!(a.get(i), b.get(i), "missing groups reuse the same noise");
+    }
+    Ok(())
+}

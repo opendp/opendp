@@ -9,8 +9,11 @@ use polars_plan::prelude::ProjectionOptions;
 
 use crate::error::Fallible;
 use crate::measurements::{
+    expr_dp_counting_query::{DPCountShim, DPLenShim, DPNUniqueShim, DPNullCountShim},
     expr_dp_frame_len::DPFrameLenShim,
     expr_dp_mean::DPMeanShim,
+    expr_dp_median::DPMedianShim,
+    expr_dp_quantile::DPQuantileShim,
     expr_dp_sum::DPSumShim,
     expr_noise::match_noise,
 };
@@ -50,7 +53,7 @@ impl PrivateAggPlan {
         for expr in &aggs {
             has_implicit_mean |= implicit_mean(expr)?.is_some();
         }
-        if !has_implicit_mean && !aggs.iter().any(can_decompose) {
+        if !has_implicit_mean && !aggs.iter().any(can_decompose) && !has_duplicates(&aggs)? {
             return Ok(Self::unchanged(aggs));
         }
 
@@ -163,6 +166,16 @@ impl PrivateAggPlan {
             hidden.push(name.clone());
         }
 
+        // Only one private measurement is constructed per distinct implicit-
+        // scale leaf. All references to removed leaves point to its noisy
+        // materialized column, including after an empty-group fill.
+        private_aggs = deduplicate(
+            private_aggs,
+            &mut postprocess,
+            &hidden,
+            &mut count_aliases,
+        )?;
+
         Ok(Self {
             aggs: private_aggs,
             postprocess,
@@ -229,8 +242,8 @@ fn has_leaf(expr: &Expr) -> bool {
     }
 }
 
-/// Produce independent private leaves and a deterministic reconstruction
-/// expression over their *materialized* output columns.
+/// Produce private leaves and a deterministic reconstruction expression over
+/// their *materialized* output columns. Leaf deduplication is a later pass.
 fn decompose(
     expr: Expr,
     aggs: &mut Vec<Expr>,
@@ -261,6 +274,137 @@ fn decompose(
             col(name.as_str())
         }
     }
+}
+
+/// Semantic identity of a supported mechanism, not of its output alias.
+/// Comparing the original shim's arguments avoids relying on plugin-object
+/// pointer identity, and includes preprocessing, bounds and dtype-affecting
+/// parameters. All leaves share the same group-by input domain and budget.
+#[derive(PartialEq)]
+struct LeafKey {
+    mechanism: &'static str,
+    args: Vec<Expr>,
+}
+
+fn leaf_key(expr: &Expr) -> Fallible<Option<LeafKey>> {
+    let expr = expr.clone().meta().undo_aliases();
+
+    macro_rules! keyed {
+        ($shim:ty, $arity:literal, $scale:literal, $name:literal) => {
+            if let Some(args) = match_shim::<$shim, $arity>(&expr)? {
+                if literal_value_of::<f64>(&args[$scale])?.is_none() {
+                    return Ok(Some(LeafKey {
+                        mechanism: $name,
+                        args: args.into_iter().collect(),
+                    }));
+                }
+                return Ok(None);
+            }
+        };
+    }
+
+    keyed!(DPFrameLenShim, 2, 0, "frame_len");
+    keyed!(DPLenShim, 3, 1, "len");
+    keyed!(DPCountShim, 3, 1, "count");
+    keyed!(DPNullCountShim, 3, 1, "null_count");
+    keyed!(DPNUniqueShim, 3, 1, "n_unique");
+    keyed!(DPSumShim, 4, 3, "sum");
+    keyed!(DPMeanShim, 4, 3, "mean");
+    keyed!(DPMedianShim, 3, 2, "median");
+    keyed!(DPQuantileShim, 4, 3, "quantile");
+
+    if let Some((input, scale)) = match_noise(&expr)? {
+        if scale.is_none() {
+            return Ok(Some(LeafKey {
+                mechanism: "noise",
+                args: vec![input.clone()],
+            }));
+        }
+    }
+
+    // Do not merge explicit-scale measurements, opaque randomized plugins,
+    // or expressions whose privacy semantics have not been certified here.
+    Ok(None)
+}
+
+fn has_duplicates(aggs: &[Expr]) -> Fallible<bool> {
+    let mut seen = Vec::new();
+    for expr in aggs {
+        if let Some(key) = leaf_key(expr)? {
+            if seen.contains(&key) {
+                return Ok(true);
+            }
+            seen.push(key);
+        }
+    }
+    Ok(false)
+}
+
+/// Rewrite only deterministic reconstruction expressions created by this
+/// module. Never traverse and clone a randomized aggregate expression.
+fn replace_columns(expr: Expr, replacements: &[(String, String)]) -> Expr {
+    match expr {
+        Expr::Column(name) => {
+            let new_name = replacements
+                .iter()
+                .find(|(from, _)| from == name.as_str())
+                .map(|(_, to)| to.as_str())
+                .unwrap_or(name.as_str());
+            col(new_name)
+        }
+        Expr::Alias(inner, name) => {
+            replace_columns(*inner, replacements).alias(name)
+        }
+        Expr::BinaryExpr { left, op, right } => Expr::BinaryExpr {
+            left: Arc::new(replace_columns(*left, replacements)),
+            op,
+            right: Arc::new(replace_columns(*right, replacements)),
+        },
+        Expr::Cast { expr, dtype, options } => Expr::Cast {
+            expr: Arc::new(replace_columns(*expr, replacements)),
+            dtype,
+            options,
+        },
+        // Only the cases above and literals are generated by decompose().
+        other => other,
+    }
+}
+
+fn deduplicate(
+    aggs: Vec<Expr>,
+    postprocess: &mut Vec<Expr>,
+    hidden: &[String],
+    aliases: &mut HashMap<String, String>,
+) -> Fallible<Vec<Expr>> {
+    let mut seen: Vec<(LeafKey, String)> = Vec::new();
+    let mut unique = Vec::with_capacity(aggs.len());
+    let mut substitutions = Vec::new();
+    let mut output_aliases = Vec::new();
+
+    for expr in aggs {
+        let key = leaf_key(&expr)?;
+        if let Some(key) = key {
+            if let Some((_, existing)) = seen.iter().find(|(other, _)| other == &key) {
+                let name = expr.clone().meta().output_name()?.to_string();
+                aliases.insert(name.clone(), existing.clone());
+                if hidden.iter().any(|hidden| hidden == &name) {
+                    substitutions.push((name, existing.clone()));
+                } else {
+                    output_aliases.push(col(existing.as_str()).alias(name.as_str()));
+                }
+                continue;
+            }
+            let name = expr.clone().meta().output_name()?.to_string();
+            seen.push((key, name));
+        }
+        unique.push(expr);
+    }
+
+    for expr in postprocess.iter_mut() {
+        *expr = replace_columns(expr.clone(), &substitutions);
+    }
+    postprocess.extend(output_aliases);
+    Ok(unique)
 }
 
 fn projection_options() -> ProjectionOptions {
