@@ -13,6 +13,7 @@ from opendp.extras.sklearn._domains import (
     sklearn_fit_domain,
 )
 from opendp.extras.sklearn._estimator import TransformationMixin
+from opendp.extras.sklearn._composition import unwrap_frozen_estimator
 from opendp.metrics import symmetric_distance
 from opendp.mod import DataFrameDomain, Domain, assert_features
 
@@ -99,10 +100,11 @@ def _trusted_rowwise(estimator, method):
 def _make_rowwise_transform(
     input_domain, input_metric, estimator, *, method="transform"
 ):
-    """Compile row-independent inference with data-independent failure."""
+    """Compile a fitted rowwise method with data-independent errors."""
     if input_metric != symmetric_distance():
         raise ValueError("Rowwise inference requires symmetric_distance()")
 
+    estimator = unwrap_frozen_estimator(estimator)
     if not isinstance(estimator, TransformationMixin):
         raise TypeError("Stage must implement TransformationMixin")
     if not callable(getattr(estimator, method, None)):
