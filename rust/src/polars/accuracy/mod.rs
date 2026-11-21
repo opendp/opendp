@@ -17,7 +17,6 @@ use crate::{
     error::Fallible,
     measurements::{
         KeySanitizer, MatchGroupBy,
-        expr_index_candidates::IndexCandidatesPlugin,
         expr_noise::{NoiseDistribution, NoisePlugin, Support},
         expr_noisy_max::NoisyMaxPlugin,
         is_threshold_predicate, match_group_by,
@@ -168,89 +167,80 @@ fn agg_dataframe(
     )?)
 }
 /// Summarize the statistics to be computed in an Expr
-fn summarize_expr<'a>(
+fn summarize_expr(
     expr: &Expr,
     alpha: Option<f64>,
     threshold: Option<(String, u32)>,
 ) -> Fallible<Vec<UtilitySummary>> {
     let name = expr.clone().meta().output_name()?.to_string();
-    let expr = expr.clone().meta().undo_aliases();
-    let t_value = threshold
-        .clone()
-        .and_then(|(t_name, t_value)| (name == t_name).then_some(t_value));
+    let t_value = threshold.and_then(|(t_name, t_value)| (name == t_name).then_some(t_value));
 
-    if let Some((input, plugin)) = match_trusted_plugin::<NoisePlugin>(&expr)? {
-        let accuracy = if let Some(alpha) = alpha {
-            use {NoiseDistribution::*, Support::*};
-            Some(match (plugin.distribution, plugin.support) {
-                (Laplace, Float) => laplacian_scale_to_accuracy(plugin.scale, alpha),
-                (Gaussian, Float) => gaussian_scale_to_accuracy(plugin.scale, alpha),
-                (Laplace, Integer) => discrete_laplacian_scale_to_accuracy(plugin.scale, alpha),
-                (Gaussian, Integer) => discrete_gaussian_scale_to_accuracy(plugin.scale, alpha),
-            }?)
-        } else {
-            None
-        };
+    // Traverse deterministic postprocessing without propagating its effects
+    // on accuracy. Only report the underlying mechanisms.
+    let mut stack = vec![expr.clone()];
+    let mut summaries = Vec::new();
+    while let Some(expr) = stack.pop() {
+        if let Some((input, plugin)) = match_trusted_plugin::<NoisePlugin>(&expr)? {
+            let accuracy = if let Some(alpha) = alpha {
+                use {NoiseDistribution::*, Support::*};
+                Some(match (plugin.distribution, plugin.support) {
+                    (Laplace, Float) => laplacian_scale_to_accuracy(plugin.scale, alpha),
+                    (Gaussian, Float) => gaussian_scale_to_accuracy(plugin.scale, alpha),
+                    (Laplace, Integer) => discrete_laplacian_scale_to_accuracy(plugin.scale, alpha),
+                    (Gaussian, Integer) => discrete_gaussian_scale_to_accuracy(plugin.scale, alpha),
+                }?)
+            } else {
+                None
+            };
 
-        return Ok(vec![UtilitySummary {
-            name,
-            aggregate: expr_aggregate(&input[0])?.to_string(),
-            distribution: Some(format!("{:?} {:?}", plugin.support, plugin.distribution)),
-            scale: Some(plugin.scale),
-            accuracy,
-            threshold: t_value,
-        }]);
+            summaries.push(UtilitySummary {
+                name: name.clone(),
+                aggregate: expr_aggregate(&input[0])?.to_string(),
+                distribution: Some(format!("{:?} {:?}", plugin.support, plugin.distribution)),
+                scale: Some(plugin.scale),
+                accuracy,
+                threshold: t_value,
+            });
+            continue;
+        }
+
+        if let Some((inputs, plugin)) = match_trusted_plugin::<NoisyMaxPlugin>(&expr)? {
+            summaries.push(UtilitySummary {
+                name: name.clone(),
+                aggregate: expr_aggregate(&inputs[0])?.to_string(),
+                distribution: Some(format!(
+                    "{}{}",
+                    if plugin.replacement {
+                        "Exponential"
+                    } else {
+                        "Gumbel"
+                    },
+                    if plugin.negate { "Min" } else { "Max" },
+                )),
+                scale: Some(plugin.scale),
+                accuracy: None,
+                threshold: t_value,
+            });
+            continue;
+        }
+
+        if matches!(&expr, Expr::Len) {
+            summaries.push(UtilitySummary {
+                name: name.clone(),
+                aggregate: "Frame Length".to_string(),
+                distribution: None,
+                scale: None,
+                accuracy: alpha.is_some().then_some(0.0),
+                threshold: t_value,
+            });
+            continue;
+        }
+
+        // Polars supplies the children of any expression node in traversal
+        // order, including casts, literals and wrappers like index_candidates.
+        expr.nodes_owned(&mut stack);
     }
-
-    // summarize quantile statistics
-    if let Some((inputs, _)) = match_trusted_plugin::<IndexCandidatesPlugin>(&expr)? {
-        return summarize_expr(&inputs[0], alpha, threshold);
-    }
-
-    if let Some((inputs, plugin)) = match_trusted_plugin::<NoisyMaxPlugin>(&expr)? {
-        return Ok(vec![UtilitySummary {
-            name,
-            aggregate: expr_aggregate(&inputs[0])?.to_string(),
-            distribution: Some(format!(
-                "{}{}",
-                match plugin.replacement {
-                    false => "Exponential",
-                    true => "Gumbel",
-                },
-                if plugin.negate { "Min" } else { "Max" }
-            )),
-            scale: Some(plugin.scale),
-            accuracy: None,
-            threshold: t_value,
-        }]);
-    }
-
-    Ok(match expr {
-        Expr::Len => vec![UtilitySummary {
-            name: name.clone(),
-            aggregate: "Frame Length".to_string(),
-            distribution: None,
-            scale: None,
-            accuracy: alpha.is_some().then_some(0.0),
-            threshold: t_value,
-        }],
-
-        Expr::Function { input, .. } => input
-            .iter()
-            .map(|e| summarize_expr(e, alpha, threshold.clone()))
-            .collect::<Fallible<Vec<_>>>()?
-            .into_iter()
-            .flatten()
-            .collect(),
-
-        Expr::BinaryExpr { left, op: _, right } => [
-            summarize_expr(&left, alpha, threshold.clone())?,
-            summarize_expr(&right, alpha, threshold)?,
-        ]
-        .concat(),
-
-        e => return fallible!(FailedFunction, "unrecognized primitive: {:?}", e),
-    })
+    Ok(summaries)
 }
 
 fn expr_aggregate(expr: &Expr) -> Fallible<String> {

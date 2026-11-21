@@ -9,6 +9,17 @@ use crate::measures::{MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::AbsoluteDistance;
 
 #[test]
+fn test_zero_noise_accuracy() -> Fallible<()> {
+    for alpha in [0.05, 1.0] {
+        assert_eq!(laplacian_scale_to_accuracy(0.0, alpha)?, 0.0);
+        assert_eq!(discrete_laplacian_scale_to_accuracy(0.0, alpha)?, 0.0);
+        assert_eq!(gaussian_scale_to_accuracy(0.0, alpha)?, 0.0);
+        assert_eq!(discrete_gaussian_scale_to_accuracy(0.0, alpha)?, 0.0);
+    }
+    Ok(())
+}
+
+#[test]
 fn test_comparison() -> Fallible<()> {
     let alpha = 0.05;
     let scale = 20.;
