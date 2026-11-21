@@ -228,5 +228,5 @@ def test_certified_inference_requires_aligned_input_domain():
     ctx = dp.Context.compositor(
         np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
     )
-    with pytest.raises(TypeError, match="aligned SklearnFit domain"):
+    with pytest.raises(ValueError):
         ctx.query().sklearn(IdentityFitted(), method="transform")

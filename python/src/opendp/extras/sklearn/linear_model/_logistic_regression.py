@@ -11,14 +11,6 @@ from opendp.extras.sklearn.linear_model._make_private_logistic_regression import
 )
 
 
-def _predict_probability(X, coef, intercept):
-    """Shared numeric prediction kernel for public and certified inference."""
-    X = np.nan_to_num(np.asarray(X), nan=0.0, posinf=0.0, neginf=0.0)
-    with np.errstate(all="ignore"):
-        z = np.nan_to_num(X @ coef + intercept, nan=0.0)
-    return expit(z)
-
-
 class LogisticRegression(
     ClassifierMixin, MeasurementMixin, TransformationMixin, BaseEstimator
 ):
@@ -90,7 +82,10 @@ class LogisticRegression(
         X = validate_data(
             self, X, reset=False, ensure_all_finite=False, ensure_min_samples=0
         )
-        p = _predict_probability(X, self.coef_[0], self.intercept_[0])
+        X = np.nan_to_num(np.asarray(X), nan=0.0, posinf=0.0, neginf=0.0)
+        with np.errstate(all="ignore"):
+            z = np.nan_to_num(X @ self.coef_[0] + self.intercept_[0], nan=0.0)
+        p = expit(z)
         return np.column_stack([1 - p, p])
 
     def predict(self, X):
@@ -108,12 +103,12 @@ class LogisticRegression(
             raise ValueError("Only 0/1 classes are currently supported")
 
         if method == "predict":
-            names = ("prediction",)
+            num_columns = 1
             dtype = np.int64
         elif method == "predict_proba":
-            names = ("proba_0", "proba_1")
+            num_columns = 2
             dtype = np.float64
         else:
             raise ValueError(f"Method {method!r} is not certified rowwise")
 
-        return array2_domain(T=dtype, num_columns=len(names), size=x.size, nan=False)
+        return array2_domain(T=dtype, num_columns=num_columns, size=x.size, nan=False)
