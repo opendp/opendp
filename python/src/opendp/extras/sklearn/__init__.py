@@ -41,6 +41,10 @@ def __getattr__(name):
         member = import_module(f"{__name__}.compose").ColumnTransformer
         globals()[name] = member
         return member
+    if name == "Pipeline":
+        member = import_module(f"{__name__}.pipeline").Pipeline
+        globals()[name] = member
+        return member
     module = import_module(f"{__name__}.{name}")
     return module
 
@@ -55,4 +59,6 @@ __all__ = [
     "linear_model",
     "compose",
     "ColumnTransformer",
+    "pipeline",
+    "Pipeline",
 ]

@@ -125,6 +125,7 @@ nitpick_ignore = [
     ("py:class", "opendp.extras.sklearn._estimator.TransformationMixin"),
     ("py:class", "sklearn.base.BaseEstimator"),
     ("py:class", "sklearn.compose.ColumnTransformer"),
+    ("py:class", "sklearn.pipeline.Pipeline"),
     # Standard library reference fails to resolve
     ("py:class", "abc.ABC"),
     # I think the problem is that Sphinx is making parameter list documentation,
