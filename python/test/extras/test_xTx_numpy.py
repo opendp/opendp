@@ -10,9 +10,7 @@ np = pytest.importorskip("numpy")
 
 def test_np_sscp_sym():
     space = (
-        dp.numpy.array2_domain(
-            num_columns=4, T=float, nan=False, norm=10.0, p=2
-        ),
+        dp.numpy.array2_domain(num_columns=4, T=float, nan=False, norm=10.0, p=2),
         dp.symmetric_distance(),
     )
     trans = space >> then_np_sscp()
@@ -51,9 +49,7 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
 
 
 @pytest.mark.parametrize("T, dtype", [(dp.f32, np.float32), (dp.f64, np.float64)])
-@pytest.mark.parametrize(
-    "origin_kind", ["scalar_zero", "zero_vector", "signed_zero"]
-)
+@pytest.mark.parametrize("origin_kind", ["scalar_zero", "zero_vector", "signed_zero"])
 def test_zero_origin_preserves_sscp(T, dtype, origin_kind):
     kwargs: dict[str, Any] = {"norm": 1.0, "p": 2}
     if origin_kind == "scalar_zero":
