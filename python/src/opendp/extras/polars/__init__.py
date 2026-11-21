@@ -454,6 +454,32 @@ class DPExpr(object):
             changes_length=True,
         )
 
+    def var(
+        self,
+        bounds: tuple[float, float],
+        scale: float | None = None,
+    ):
+        """Estimate the differentially private population variance (ddof=0).
+
+        Supported in group-by aggregations for Float64 columns with finite
+        bounds. Values are clipped to the given bounds; nulls and NaNs are
+        imputed with the midpoint. The group-by workload shares count and
+        sum noise with compatible aggregates when the noise scale is implicit.
+
+        :param bounds: finite lower and upper clipping bounds
+        :param scale: relative scale of the noise on each sufficient statistic
+        """
+        from polars import lit  # type: ignore[import-not-found]
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=lib_path,
+            function_name="dp_var",
+            args=(self.expr, lit(float(bounds[0])), lit(float(bounds[1])), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
+
     def quantile(
         self, alpha: float, candidates: list[float], scale: float | None = None
     ):

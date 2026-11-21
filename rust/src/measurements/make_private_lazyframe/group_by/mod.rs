@@ -113,7 +113,12 @@ where
     let margin = middle_domain.get_margin(&group_by_id);
     let is_join = matches!(key_sanitizer, Some(KeySanitizer::Join { .. }));
 
-    let agg_plan = PrivateAggPlan::new(aggs, &group_by, &key_sanitizer)?;
+    let agg_plan = PrivateAggPlan::new_with_columns(
+        aggs,
+        &group_by,
+        &key_sanitizer,
+        &middle_domain.series_domains,
+    )?;
     let m_expr_aggs = agg_plan.aggs.iter().cloned().map(|expr| {
         expr.make_private(
             WildExprDomain {

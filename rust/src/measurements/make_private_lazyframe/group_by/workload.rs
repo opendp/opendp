@@ -7,6 +7,7 @@ use std::sync::Arc;
 use polars::prelude::{DslPlan, Expr, Operator, PlSmallStr, Selector, all, col, lit};
 use polars_plan::prelude::ProjectionOptions;
 
+use crate::domains::SeriesDomain;
 use crate::error::Fallible;
 use crate::measurements::{
     expr_dp_counting_query::{DPCountShim, DPLenShim, DPNUniqueShim, DPNullCountShim},
@@ -15,6 +16,7 @@ use crate::measurements::{
     expr_dp_median::DPMedianShim,
     expr_dp_quantile::DPQuantileShim,
     expr_dp_sum::DPSumShim,
+    expr_dp_var::DPVarShim,
     expr_noise::{NoisePlugin, match_noise},
 };
 use crate::polars::{apply_plugin, dp_len, literal_value_of, match_shim};
@@ -45,16 +47,38 @@ impl PrivateAggPlan {
         }
     }
 
+    #[cfg(test)]
     pub fn new(
         aggs: Vec<Expr>,
         group_keys: &[Expr],
         sanitizer: &Option<KeySanitizer>,
     ) -> Fallible<Self> {
+        Self::new_with_columns(aggs, group_keys, sanitizer, &[])
+    }
+
+    pub fn new_with_columns(
+        aggs: Vec<Expr>,
+        group_keys: &[Expr],
+        sanitizer: &Option<KeySanitizer>,
+        columns: &[SeriesDomain],
+    ) -> Fallible<Self> {
         let mut has_implicit_mean = false;
+        let mut has_var = false;
+        let mut has_implicit_var = false;
+        for expr in &aggs {
+            if let Some(variance) = variance_args(expr, columns)? {
+                has_var = true;
+                has_implicit_var |= variance.scale.is_none();
+            }
+        }
         for expr in &aggs {
             has_implicit_mean |= implicit_mean(expr)?.is_some();
         }
-        if !has_implicit_mean && !aggs.iter().any(can_decompose) && !has_duplicates(&aggs)? {
+        let needs_shared_count = has_implicit_mean || has_implicit_var;
+        if !has_var && !has_implicit_mean
+            && !aggs.iter().any(can_decompose)
+            && !has_duplicates(&aggs)?
+        {
             return Ok(Self::unchanged(aggs));
         }
 
@@ -78,11 +102,10 @@ impl PrivateAggPlan {
             used.extend(keys.compute_schema()?.iter_names().map(|n| n.to_string()));
         }
 
-        // Preserve shared counts for top-level implicit-scale means.
-        // Nested means remain opaque leaves (though identical leaves
-        // may still be deduplicated below).
+        // One implicit-scale count serves top-level means and variances,
+        // including requests on different columns.
         let mut count = None;
-        if has_implicit_mean {
+        if needs_shared_count {
             for (expr, name) in aggs.iter().zip(&outputs) {
                 if implicit_count(expr)? {
                     count = Some(name.clone());
@@ -90,20 +113,20 @@ impl PrivateAggPlan {
                 }
             }
         }
-        let synthesized = has_implicit_mean && count.is_none();
+        let synthesized = needs_shared_count && count.is_none();
         if synthesized {
             count = Some(unique_name(&mut used, "count"));
         }
 
-        let mut private_aggs = Vec::with_capacity(aggs.len() + usize::from(synthesized));
+        let mut private_aggs = Vec::with_capacity(aggs.len() + usize::from(synthesized) + 3 * usize::from(has_var));
         let mut postprocess = Vec::new();
         let mut hidden = Vec::new();
         let mut count_aliases = HashMap::new();
         let mut have_count = false;
 
         for (expr, name) in aggs.into_iter().zip(&outputs) {
-            if has_implicit_mean && implicit_count(&expr)? {
-                let shared_count = count.as_ref().expect("a mean requires a count");
+            if needs_shared_count && implicit_count(&expr)? {
+                let shared_count = count.as_ref().expect("a shared count is required");
                 if name == shared_count && !have_count {
                     private_aggs.push(expr);
                     have_count = true;
@@ -128,6 +151,66 @@ impl PrivateAggPlan {
                     .alias(name.as_str()),
                 );
                 hidden.push(sum_name);
+            } else if let Some(var) = variance_args(&expr, columns)? {
+                let VarArgs {
+                    input,
+                    lower,
+                    upper,
+                    midpoint,
+                    square_upper,
+                    scale,
+                } = var;
+
+                // Matching means and sums already use the original clipped
+                // input and can share this same first-moment mechanism.
+                let sum_name = unique_name(&mut used, "sum");
+                private_aggs.push(
+                    apply_plugin(
+                        vec![input.clone(), lit(lower), lit(upper), scale.map(lit).unwrap_or_default()],
+                        expr.clone().meta().undo_aliases(),
+                        DPSumShim,
+                    ).alias(sum_name.as_str()),
+                );
+                hidden.push(sum_name.clone());
+
+                // Fill nulls and NaNs with exactly the same midpoint as
+                // dp.sum(), *before* squaring. Otherwise the two moments
+                // describe different input populations.
+                let clipped = input
+                    .fill_null(lit(midpoint))
+                    .fill_nan(lit(midpoint))
+                    .clip(lit(lower), lit(upper));
+                let centered = clipped - lit(midpoint);
+                let squared = centered.clone() * centered;
+                let sq_name = unique_name(&mut used, "squared");
+                private_aggs.push(
+                    apply_plugin(
+                        vec![squared, lit(0.0f64), lit(square_upper), scale.map(lit).unwrap_or_default()],
+                        expr.clone().meta().undo_aliases(),
+                        DPSumShim,
+                    ).alias(sq_name.as_str()),
+                );
+                hidden.push(sq_name.clone());
+
+                let count_name = match scale {
+                    None => count.as_ref().expect("implicit variance needs shared count").clone(),
+                    Some(scale) => {
+                        // Explicit-scale variance components are not merged
+                        // with implicitly scaled counts or other estimates.
+                        let name = unique_name(&mut used, "count");
+                        private_aggs.push(dp_len(Some(scale), false).alias(name.as_str()));
+                        hidden.push(name.clone());
+                        name
+                    }
+                };
+                let denom = col(count_name.as_str());
+                let mean = col(sum_name.as_str()) / denom.clone();
+                let centered_mean = mean - lit(midpoint);
+                let variance =
+                    col(sq_name.as_str()) / denom - centered_mean.clone() * centered_mean;
+                postprocess.push(
+                    variance.clip(lit(0.0f64), lit(square_upper)).alias(name.as_str()),
+                );
             } else if can_decompose(&expr) {
                 // Defer deterministic postprocessing; equivalent private
                 // leaves are deduplicated in the final pass below.
@@ -378,6 +461,69 @@ fn filter_has_certified_guard(
     predicate.is_some_and(|predicate| {
         guarded_thresholds(predicate).iter().any(|(n, t)| n == name && *t == bound)
     })
+}
+
+/// A population-variance workload. Direct Float64 inputs and finite public
+/// bounds keep the second moment bounded and avoid overflow in its sensitivity
+/// analysis. The existing dp.sum constructor certifies both noisy moments.
+struct VarArgs {
+    input: Expr,
+    lower: f64,
+    upper: f64,
+    midpoint: f64,
+    square_upper: f64,
+    scale: Option<f64>,
+}
+
+fn variance_args(expr: &Expr, columns: &[SeriesDomain]) -> Fallible<Option<VarArgs>> {
+    let expr = expr.clone().meta().undo_aliases();
+    let Some([input, lower, upper, scale]) = match_shim::<DPVarShim, 4>(&expr)? else {
+        return Ok(None);
+    };
+
+    let Expr::Column(ref name) = input else {
+        return crate::fallible!(
+            MakeMeasurement,
+            "dp.var() requires a direct Float64 column"
+        );
+    };
+    let domain = columns.iter().find(|col| col.name.as_str() == name.as_str()).ok_or_else(|| {
+        crate::err!(MakeMeasurement, "missing domain for dp.var() column {name}")
+    })?;
+    if domain.dtype() != polars::prelude::DataType::Float64 {
+        return crate::fallible!(
+            MakeMeasurement,
+            "dp.var() currently requires Float64 input, found {}",
+            domain.dtype()
+        );
+    }
+
+    let lower = literal_value_of::<f64>(&lower)?.ok_or_else(|| {
+        crate::err!(MakeMeasurement, "dp.var() lower bound must be a finite Float64 literal")
+    })?;
+    let upper = literal_value_of::<f64>(&upper)?.ok_or_else(|| {
+        crate::err!(MakeMeasurement, "dp.var() upper bound must be a finite Float64 literal")
+    })?;
+    if !lower.is_finite() || !upper.is_finite() || lower > upper {
+        return crate::fallible!(
+            MakeMeasurement,
+            "dp.var() bounds must be finite and ordered"
+        );
+    }
+
+    // Match the midpoint filler in make_expr_dp_sum exactly. Reject bounds
+    // whose midpoint or centered square could overflow.
+    let midpoint = (lower + upper) / 2.0;
+    let radius = (lower - midpoint).abs().max((upper - midpoint).abs());
+    let square_upper = (radius * radius).next_up();
+    if !midpoint.is_finite() || !radius.is_finite() || !square_upper.is_finite() {
+        return crate::fallible!(
+            MakeMeasurement,
+            "dp.var() bounds are too large for finite centered squares"
+        );
+    }
+    let scale = literal_value_of::<f64>(&scale)?;
+    Ok(Some(VarArgs { input, lower, upper, midpoint, square_upper, scale }))
 }
 
 /// Lift only supported postprocessing; leave arbitrary private expressions

@@ -1451,3 +1451,173 @@ fn test_disjunction_cannot_certify_private_keys() -> Fallible<()> {
     assert_eq!(err.variant, MakeMeasurement);
     Ok(())
 }
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_shared_count_sum_mean_and_population_variance() -> Fallible<()> {
+    let columns = vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+        SeriesDomain::new("C", AtomDomain::<f64>::default()),
+    ];
+    let domain = LazyFrameDomain::new(columns.clone())?
+        .with_margin(Margin::by(["A"]).with_invariant_keys().with_max_length(3).with_max_groups(1))?;
+    let data = df!(
+        "A" => [0i32, 0, 0],
+        "B" => [1.0f64, 2.0, 3.0],
+        "C" => [4.0f64, 5.0, 6.0],
+    )?.lazy();
+
+    let aggs = vec![
+        crate::polars::dp_len(None, false).alias("n"),
+        col("B").dp().sum((lit(0.0), lit(10.0)), None).alias("total"),
+        col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mean_b"),
+        col("B").dp().var((lit(0.0), lit(10.0)), None).alias("var_b"),
+        col("C").dp().var((lit(0.0), lit(10.0)), None).alias("var_c"),
+    ];
+    let plan = workload::PrivateAggPlan::new_with_columns(
+        aggs.clone(), &[col("A")], &None, &columns,
+    )?;
+    assert_eq!(plan.aggs.len(), 5, "one count, two sums and two squared moments");
+    assert_eq!(plan.count.as_deref(), Some("n"));
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        data.clone().group_by([col("A")]).agg(aggs),
+        Some(0.0),
+        None,
+    )?;
+    let result = meas.invoke(&data)?.collect()?;
+    assert_eq!(result.width(), 6);
+    assert_eq!(result.column("n")?.u32()?.get(0), Some(3));
+    assert_eq!(result.column("total")?.f64()?.get(0), Some(6.0));
+    assert_eq!(result.column("mean_b")?.f64()?.get(0), Some(2.0));
+    for column in ["var_b", "var_c"] {
+        let variance = result.column(column)?.f64()?.get(0).unwrap();
+        assert!((variance - 2.0 / 3.0).abs() < 1e-12, "{column}: {variance}");
+    }
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_variance_null_and_nan_imputation_matches_first_moment() -> Fallible<()> {
+    let columns = vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ];
+    let domain = LazyFrameDomain::new(columns.clone())?
+        .with_margin(Margin::by(["A"]).with_invariant_keys().with_max_length(4).with_max_groups(1))?;
+    let data = df!(
+        "A" => [0i32, 0, 0, 0],
+        "B" => &[Some(1.0f64), Some(2.0), None, Some(f64::NAN)],
+    )?.lazy();
+    let query = data.clone().group_by([col("A")]).agg([
+        col("B").dp().var((lit(0.0), lit(10.0)), None).alias("variance"),
+    ]);
+    let meas = make_private_lazyframe(
+        domain, SymmetricDistance, MaxDivergence, query, Some(0.0), None,
+    )?;
+    let result = meas.invoke(&data)?.collect()?;
+    let variance = result.column("variance")?.f64()?.get(0).unwrap();
+    // [1, 2, 5, 5], since null and NaN are imputed with midpoint 5.
+    assert!((variance - 3.1875).abs() < 1e-12, "{variance}");
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_population_variance_join_fills_moments_before_reconstruction() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(2).with_max_groups(1))?;
+    let data = df!("A" => [0i32, 0], "B" => [1.0f64, 2.0])?.lazy();
+    let keys = df!("A" => [0i32, 1], "label" => ["present", "absent"])?.lazy();
+    let query = data.clone()
+        .group_by([col("A")])
+        .agg([col("B").dp().var((lit(0.0), lit(10.0)), None).alias("variance")])
+        .join(keys, [col("A")], [col("A")], JoinType::Right.into());
+    let meas = make_private_lazyframe(
+        domain, SymmetricDistance, MaxDivergence, query, Some(1.0), None,
+    )?;
+    let released = meas.invoke(&data)?.collect()?;
+    assert_eq!(released.height(), 2);
+    assert_eq!(released.width(), 3);
+    for name in ["A", "label", "variance"] {
+        assert!(released.column(name).is_ok());
+    }
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_private_variance_threshold_uses_shared_count() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+    let data = df!("A" => [0i32, 1], "B" => [1.0f64, 2.0])?.lazy();
+    let query = data.clone().group_by([col("A")]).agg([
+        col("B").dp().var((lit(0.0), lit(10.0)), None).alias("variance"),
+    ]);
+    let meas = make_private_lazyframe(
+        domain, SymmetricDistance, Approximate(MaxDivergence),
+        query, Some(1.0), Some(3),
+    )?;
+    let _ = meas.map(&1.into())?;
+    let released = meas.invoke(&data)?.collect()?;
+    assert_eq!(released.width(), 2);
+    Ok(())
+}
+
+#[test]
+fn test_population_variance_rejects_unsupported_dtypes_and_bounds() -> Fallible<()> {
+    let float32 = vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f32>::default()),
+    ];
+    let err = workload::PrivateAggPlan::new_with_columns(
+        vec![col("B").dp().var((lit(0.0), lit(10.0)), None)],
+        &[col("A")], &None, &float32,
+    ).map(|_| ()).unwrap_err();
+    assert!(err.message.as_deref().unwrap_or_default().contains("Float64"));
+
+    let float64 = vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ];
+    for (lower, upper) in [
+        (10.0, 0.0),
+        (-1.0e200, 1.0e200),
+        (f64::NAN, 10.0),
+        (0.0, f64::INFINITY),
+    ] {
+        assert!(workload::PrivateAggPlan::new_with_columns(
+            vec![col("B").dp().var((lit(lower), lit(upper)), None)],
+            &[col("A")], &None, &float64,
+        ).is_err(), "bounds ({lower}, {upper}) must be rejected");
+    }
+    Ok(())
+}
+
+#[test]
+fn test_explicit_scale_variance_is_not_deduplicated() -> Fallible<()> {
+    let columns = vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ];
+    let expr = col("B").dp().var((lit(0.0), lit(10.0)), Some(1.0));
+    let plan = workload::PrivateAggPlan::new_with_columns(
+        vec![expr.clone().alias("first"), expr.alias("second")],
+        &[col("A")], &None, &columns,
+    )?;
+    // Each explicitly scaled variance independently releases S, Q and n.
+    assert_eq!(plan.aggs.len(), 6);
+    Ok(())
+}

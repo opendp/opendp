@@ -12,6 +12,7 @@ use crate::{
         expr_dp_median::DPMedianShim,
         expr_dp_quantile::DPQuantileShim,
         expr_dp_sum::DPSumShim,
+        expr_dp_var::DPVarShim,
         expr_noise::NoiseShim,
         expr_noisy_max::NoisyMaxShim,
     },
@@ -431,6 +432,16 @@ impl DPExpr {
     pub fn mean(self, bounds: (Expr, Expr), scale: Option<f64>) -> Expr {
         let scale = scale.map(lit).unwrap_or_default();
         apply_anonymous_function(vec![self.0, bounds.0, bounds.1, scale], DPMeanShim)
+    }
+
+    /// Privately estimate the population variance (ddof=0) in a group-by.
+    ///
+    /// The workload compiler shares the noisy sum and count with compatible
+    /// sums and means. Only direct Float64 columns and finite bounds are
+    /// currently supported.
+    pub fn var(self, bounds: (Expr, Expr), scale: Option<f64>) -> Expr {
+        let scale = scale.map(lit).unwrap_or_default();
+        apply_anonymous_function(vec![self.0, bounds.0, bounds.1, scale], DPVarShim)
     }
 
     /// Report the argmax or argmin after adding noise.

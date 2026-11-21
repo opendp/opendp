@@ -194,6 +194,34 @@ def test_private_lazyframe_mean(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect().sort("B"), expect)
 
 
+@pytest.mark.parametrize(
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
+)
+def test_private_groupby_population_variance_shares_moments(measure):
+    lf_domain, lf = example_lf(
+        margin=["B"],
+        invariant="keys",
+        max_length=50,
+        max_groups=10,
+    )
+    plan = seed(lf.collect_schema()).group_by("B").agg(
+        pl.col("A").dp.sum((0, 10)).alias("total"),
+        pl.col("A").dp.mean((0, 10)).alias("average"),
+        pl.col("A").dp.var((0, 10)).alias("variance"),
+    )
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), measure, plan, 0.0
+    )
+    result = measurement(lf).collect()
+    assert result.height == 5
+    assert result.schema["variance"] == pl.Float64
+    assert result["total"].to_list() == [10.0] * 5
+    assert result["average"].to_list() == [1.0] * 5
+    assert result["variance"].to_list() == [0.0] * 5
+
+
 def test_cast():
     lf_domain, lf = example_lf()
     m_lf = dp.t.make_stable_lazyframe(

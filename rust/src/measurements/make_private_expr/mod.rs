@@ -14,6 +14,7 @@ use crate::{
         expr_dp_median::DPMedianShim,
         expr_dp_quantile::DPQuantileShim,
         expr_dp_sum::DPSumShim,
+        expr_dp_var::DPVarShim,
         expr_noise::NoiseExprMeasure,
     },
     measures::Approximate,
@@ -40,6 +41,8 @@ pub(crate) mod expr_dp_median;
 pub(crate) mod expr_dp_quantile;
 #[cfg(feature = "contrib")]
 pub(crate) mod expr_dp_sum;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_var;
 
 #[cfg(feature = "contrib")]
 mod expr_len;
@@ -190,6 +193,13 @@ where
                 output_measure,
                 self,
                 global_scale,
+            );
+        }
+
+        if match_shim::<DPVarShim, 4>(&self)?.is_some() {
+            return fallible!(
+                MakeMeasurement,
+                "dp.var() is supported in group-by aggregations; it must be lowered with the entire group-by workload"
             );
         }
 
