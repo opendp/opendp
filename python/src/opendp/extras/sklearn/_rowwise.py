@@ -77,7 +77,8 @@ def _trusted_rowwise(estimator, method):
         steps = [
             step
             for _, step in estimator.steps
-            if step is not None and not (isinstance(step, str) and step == "passthrough")
+            if step is not None
+            and not (isinstance(step, str) and step == "passthrough")
         ]
         return all(
             _trusted_rowwise(step, method if i == len(steps) - 1 else "transform")

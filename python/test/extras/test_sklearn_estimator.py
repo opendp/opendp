@@ -10,7 +10,6 @@ from sklearn.base import BaseEstimator, TransformerMixin, clone
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
 
 
-
 @pytest.fixture(autouse=True)
 def allow_test_rowwise_callbacks():
     # Test doubles assert their own rowwise contracts instead of using library code.
