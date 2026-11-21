@@ -906,10 +906,10 @@ def test_eigendecomposition_privacy_budget_with_nuclear_metric(row_norm):
         norm=row_norm, p=2, num_columns=3, size=10, nan=False, T=float
     )
     measurement = (
-        (domain, dp.symmetric_distance())
-        >> decomposition.then_private_np_eigendecomposition(
-            eigvals_epsilon=0.3, eigvecs_epsilons=[0.35, 0.35]
-        )
+        domain,
+        dp.symmetric_distance(),
+    ) >> decomposition.then_private_np_eigendecomposition(
+        eigvals_epsilon=0.3, eigvecs_epsilons=[0.35, 0.35]
     )
     # One replacement has symmetric distance 2, independent of row_norm.
     assert measurement.map(2) == pytest.approx(1.0)
