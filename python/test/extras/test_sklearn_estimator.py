@@ -104,7 +104,7 @@ def test_fit_requires_explicit_privacy():
 def test_sklearn_requires_an_estimator_and_resolved_input():
     from opendp.context import PartialChain
 
-    with pytest.raises(TypeError, match="OpenDP fitting capability"):
+    with pytest.raises(TypeError, match="OpenDP fitting"):
         _context().query().sklearn(object())
     partial = dp.Query(
         PartialChain(lambda _: None), dp.max_divergence(), d_in=1, d_out=1
@@ -396,3 +396,39 @@ def test_conditional_private_fitting_shortcuts_follow_sklearn_roles():
     with pytest.raises(NotImplementedError, match="Private fit_predict"):
         cluster.fit_predict(np.ones((2, 2)))
     assert not hasattr(cluster, "release_")
+
+
+def test_sklearn_fit_metadata_clears_stale_public_column_names():
+    from opendp.extras.sklearn._estimator import _set_fit_metadata
+
+    model = _ConstantEstimator()
+    named = dp.sklearn.sklearn_fit_domain(
+        dp.dataframe_domain(
+            [
+                dp.series_domain("first", dp.atom_domain(T=dp.f64)),
+                dp.series_domain("second", dp.atom_domain(T=dp.f64)),
+            ]
+        )
+    )
+    _set_fit_metadata(model, named)
+    assert model.n_features_in_ == 2
+    np.testing.assert_array_equal(model.feature_names_in_, ["first", "second"])
+
+    unnamed = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=dp.f64, num_columns=2)
+    )
+    _set_fit_metadata(model, unnamed)
+    assert model.n_features_in_ == 2
+    assert not hasattr(model, "feature_names_in_")
+
+
+def test_standalone_sklearn_fit_requires_eager_input_domain():
+    lazy = dp.lazyframe_domain([dp.series_domain("feature", dp.atom_domain(T=dp.f64))])
+    domain = dp.sklearn.sklearn_fit_domain(lazy)
+    with pytest.raises(TypeError, match="Explicitly collect"):
+        _ConstantEstimator().fit(
+            np.ones((1, 1)),
+            domain=domain,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1),
+        )
