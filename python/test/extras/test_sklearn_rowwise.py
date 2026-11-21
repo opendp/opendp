@@ -296,22 +296,22 @@ def test_trusted_rowwise_validates_frozen_and_module_identity(monkeypatch):
 
     model = LogisticRegression()
     model._ingest_release(np.zeros(3))
-    assert _trusted_rowwise(model, "predict")
-    assert _trusted_rowwise(FrozenEstimator(model), "predict")
+    assert _trusted_rowwise(model)
+    assert _trusted_rowwise(FrozenEstimator(model))
 
     wrapped = FrozenEstimator(model)
     wrapped.predict = lambda X: X
-    assert not _trusted_rowwise(wrapped, "predict")
+    assert not _trusted_rowwise(wrapped)
 
     class UnsafeFrozen(FrozenEstimator):
         pass
 
-    assert not _trusted_rowwise(UnsafeFrozen(model), "predict")
+    assert not _trusted_rowwise(UnsafeFrozen(model))
 
     module = sys.modules[LogisticRegression.__module__]
     with monkeypatch.context() as patch:
         patch.setattr(module, "LogisticRegression", object())
-        assert not _trusted_rowwise(model, "predict")
+        assert not _trusted_rowwise(model)
 
 
 def test_trusted_rowwise_recursively_checks_composites(monkeypatch):
@@ -343,12 +343,12 @@ def test_trusted_rowwise_recursively_checks_composites(monkeypatch):
         ("passthrough", "passthrough"),
         ("classifier", model),
     ]
-    assert _trusted_rowwise(pipeline, "predict")
+    assert _trusted_rowwise(pipeline)
     pipeline.steps = [("unsafe", IdentityFitted()), ("classifier", model)]
-    assert not _trusted_rowwise(pipeline, "predict")
+    assert not _trusted_rowwise(pipeline)
 
     columns = ColumnTransformer()
     columns.transformers = [("passthrough", "passthrough", [0])]
-    assert _trusted_rowwise(columns, "transform")
+    assert _trusted_rowwise(columns)
     columns.transformers = [("unsafe", IdentityFitted(), [0])]
-    assert not _trusted_rowwise(columns, "transform")
+    assert not _trusted_rowwise(columns)

@@ -19,46 +19,29 @@ from opendp.mod import Domain, assert_features
 
 # Only OpenDP implementations reviewed for rowwise inference are trusted.
 # This is intentionally not extensible through subclassing or registration.
-_TRUSTED_METHODS = {
-    ("opendp.extras.sklearn.linear_model._logistic_regression", "LogisticRegression"): (
-        "predict",
-        "predict_proba",
-    ),
-    ("opendp.extras.sklearn.linear_model._theil_sen", "TheilSenRegressor"): (
-        "predict",
-    ),
-    ("opendp.extras.sklearn.decomposition", "PCA"): (
-        "transform",
-        "inverse_transform",
-        "score_samples",
-    ),
-    ("opendp.extras.sklearn.cluster._spherical_kmeans", "SphericalKMeans"): (
-        "transform",
-        "predict",
-    ),
-    ("opendp.extras.sklearn.compose", "ColumnTransformer"): ("transform",),
-    ("opendp.extras.sklearn.pipeline", "Pipeline"): (
-        "transform",
-        "predict",
-        "predict_proba",
-        "decision_function",
-        "inverse_transform",
-        "score_samples",
-    ),
+_TRUSTED_CLASSES = {
+    ("opendp.extras.sklearn.linear_model._logistic_regression", "LogisticRegression"),
+    ("opendp.extras.sklearn.linear_model._theil_sen", "TheilSenRegressor"),
+    ("opendp.extras.sklearn.decomposition", "PCA"),
+    ("opendp.extras.sklearn.cluster._spherical_kmeans", "SphericalKMeans"),
+    ("opendp.extras.sklearn.compose", "ColumnTransformer"),
+    ("opendp.extras.sklearn.pipeline", "Pipeline"),
 }
 
 
-def _trusted_rowwise(estimator, method):
+def _trusted_rowwise(estimator):
     """Recognize reviewed inference implementations, including composite children."""
     from sklearn.frozen import FrozenEstimator
 
     if isinstance(estimator, FrozenEstimator):
-        if type(estimator) is not FrozenEstimator or method in vars(estimator):
+        if type(estimator) is not FrozenEstimator:
+            return False
+        if vars(estimator).keys() != {"estimator"}:
             return False
         estimator = estimator.estimator
 
     cls = type(estimator)
-    if method not in _TRUSTED_METHODS.get((cls.__module__, cls.__name__), ()):
+    if (cls.__module__, cls.__name__) not in _TRUSTED_CLASSES:
         return False
     if getattr(modules.get(cls.__module__), cls.__name__, None) is not cls:
         return False
@@ -82,16 +65,11 @@ def _trusted_rowwise(estimator, method):
             if step is not None
             and not (isinstance(step, str) and step == "passthrough")
         ]
-        return all(
-            _trusted_rowwise(step, method if i == len(steps) - 1 else "transform")
-            for i, step in enumerate(steps)
-        )
+        return all(_trusted_rowwise(step) for step in steps)
     if cls.__name__ == "ColumnTransformer":
         steps = getattr(estimator, "transformers_", estimator.transformers)
         return all(
-            _trusted_rowwise(step, "transform")
-            for _, step, _ in steps
-            if not isinstance(step, str)
+            _trusted_rowwise(step) for _, step, _ in steps if not isinstance(step, str)
         )
     return True
 
@@ -111,7 +89,7 @@ def _make_rowwise_transform(
     desc = input_domain.cast(SklearnFitDescriptor)
     # Check the same snapshot that will execute inference.
     fitted = deepcopy(estimator)
-    if not _trusted_rowwise(fitted, method):
+    if not _trusted_rowwise(fitted):
         assert_features("honest-but-curious")
     output = fitted.rowwise_output_domain(desc.X, method=method)
     if not isinstance(output, Domain):
