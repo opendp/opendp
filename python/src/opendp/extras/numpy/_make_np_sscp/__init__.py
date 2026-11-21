@@ -63,9 +63,7 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
     return _make_transformation(
         input_domain,
         input_metric,
-        _symmetric_matrix_domain(
-            num_features=input_desc.num_columns, T=input_desc.T
-        ),
+        _symmetric_matrix_domain(num_features=input_desc.num_columns, T=input_desc.T),
         _nuclear_norm_distance(),
         lambda arg: arg.T @ arg,
         # ||xx^T||_* = ||x||_2^2 <= norm^2, also for L1-bounded rows.
