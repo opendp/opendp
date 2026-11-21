@@ -53,6 +53,8 @@ def _trusted_rowwise(estimator, method):
     from sklearn.frozen import FrozenEstimator
 
     if isinstance(estimator, FrozenEstimator):
+        if type(estimator) is not FrozenEstimator or method in vars(estimator):
+            return False
         estimator = estimator.estimator
 
     cls = type(estimator)
