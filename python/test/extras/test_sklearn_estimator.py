@@ -384,4 +384,3 @@ def test_conditional_private_fitting_shortcuts_follow_sklearn_roles():
     with pytest.raises(NotImplementedError, match="Private fit_predict"):
         cluster.fit_predict(np.ones((2, 2)))
     assert not hasattr(cluster, "release_")
-
