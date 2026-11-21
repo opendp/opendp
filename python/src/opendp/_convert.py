@@ -10,6 +10,7 @@ from opendp.mod import (
     ExtrinsicDivergence,
     ExtrinsicDomain,
     LazyFrameDomain,
+    DataFrameDomain,
     Measure,
     Metric,
     FrameDistance,
@@ -267,6 +268,8 @@ def c_to_py(value: Any) -> Any:
                 value.__class__ = SeriesDomain
             elif rt_type == LazyFrameDomain.__name__:
                 value.__class__ = LazyFrameDomain
+            elif rt_type == DataFrameDomain.__name__:
+                value.__class__ = DataFrameDomain
             elif rt_type == ExtrinsicDomain.__name__:
                 value.__class__ = ExtrinsicDomain
         # if you fall through these cases, then it is just treated as a generic Domain
