@@ -251,6 +251,15 @@ def domain_of(T, infer: bool = False) -> Domain:
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 
+        sp = import_optional_dependency("scipy.sparse", raise_error=False)
+        if sp is not None and isinstance(T, sp.csr_array) and T.ndim == 2:
+            from opendp.extras.scipy import csr_array2_domain
+
+            return csr_array2_domain(
+                T.shape[1],
+                T=_ELEMENTARY_TYPES[T.dtype.type],
+            )
+
         np = import_optional_dependency("numpy", raise_error=False)
         if np is not None and isinstance(T, np.ndarray) and T.ndim == 2:
             from opendp.extras.numpy import array2_domain
