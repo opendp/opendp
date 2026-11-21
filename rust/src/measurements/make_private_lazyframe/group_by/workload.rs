@@ -4,7 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use polars::prelude::{DslPlan, Expr, PlSmallStr, Selector, all, col};
+use polars::prelude::{DslPlan, Expr, Operator, PlSmallStr, Selector, all, col, lit};
 use polars_plan::prelude::ProjectionOptions;
 
 use crate::error::Fallible;
@@ -15,11 +15,12 @@ use crate::measurements::{
     expr_dp_median::DPMedianShim,
     expr_dp_quantile::DPQuantileShim,
     expr_dp_sum::DPSumShim,
-    expr_noise::match_noise,
+    expr_noise::{NoisePlugin, match_noise},
 };
 use crate::polars::{apply_plugin, dp_len, literal_value_of, match_shim};
 
 use super::{KeySanitizer, is_threshold_predicate};
+use super::matching::{find_len_expr, is_len_expr};
 
 /// The private expressions in aggs run within GroupBy. Postprocessing only
 /// reads their *materialized* output columns, so it cannot resample noise.
@@ -57,25 +58,6 @@ impl PrivateAggPlan {
             return Ok(Self::unchanged(aggs));
         }
 
-        // A filter over a reconstructed output would need predicate lowering.
-        // For now, optimize only when its predicate is a threshold on a
-        // directly released, implicit-scale count.
-        if let Some(KeySanitizer::Filter(predicate)) = sanitizer {
-            let mut safe = false;
-            if let Some((name, _)) = is_threshold_predicate(predicate.clone()) {
-                for expr in &aggs {
-                    if expr.clone().meta().output_name()?.as_str() == name
-                        && implicit_count(expr)?
-                    {
-                        safe = true;
-                    }
-                }
-            }
-            if !safe {
-                return Ok(Self::unchanged(aggs));
-            }
-        }
-
         let outputs = aggs
             .iter()
             .map(|e| e.clone().meta().output_name().map(|s| s.to_string()))
@@ -96,9 +78,9 @@ impl PrivateAggPlan {
             used.extend(keys.compute_schema()?.iter_names().map(|n| n.to_string()));
         }
 
-        // Preserve the existing cross-column count sharing for top-level
-        // implicit-scale means. Nested private leaves are *not* deduplicated:
-        // that is a separate workload optimization.
+        // Preserve shared counts for top-level implicit-scale means.
+        // Nested means remain opaque leaves (though identical leaves
+        // may still be deduplicated below).
         let mut count = None;
         if has_implicit_mean {
             for (expr, name) in aggs.iter().zip(&outputs) {
@@ -147,8 +129,8 @@ impl PrivateAggPlan {
                 );
                 hidden.push(sum_name);
             } else if can_decompose(&expr) {
-                // Preserve one independent private measurement per leaf.
-                // Only deterministic postprocessing is deferred.
+                // Defer deterministic postprocessing; equivalent private
+                // leaves are deduplicated in the final pass below.
                 let reconstruction = decompose(
                     expr.meta().undo_aliases(),
                     &mut private_aggs,
@@ -186,7 +168,7 @@ impl PrivateAggPlan {
         })
     }
 
-    /// Resolve a user-visible count alias to the one noisy intermediate.
+    /// Resolve a user-visible count alias to its materialized noisy column.
     pub fn raw_count(&self, output_name: &str) -> String {
         self.count_aliases
             .get(output_name)
@@ -194,24 +176,154 @@ impl PrivateAggPlan {
             .unwrap_or_else(|| output_name.to_string())
     }
 
+    /// Lower a filter over requested results to a deterministic expression
+    /// over the already materialized noisy aggregate columns.
+    fn lower_predicate(&self, expr: Expr) -> Fallible<Expr> {
+        match expr {
+            Expr::Column(name) => {
+                let name = name.as_str();
+                if let Some(reconstructed) = self.postprocess.iter().find(|expr| {
+                    expr.clone().meta().output_name().is_ok_and(|output| output.as_str() == name)
+                }) {
+                    return self.lower_predicate(reconstructed.clone().meta().undo_aliases());
+                }
+                let raw = self.raw_count(name);
+                Ok(col(raw.as_str()))
+            }
+            Expr::Literal(_) => Ok(expr),
+            Expr::Alias(inner, name) => Ok(self.lower_predicate(*inner)?.alias(name)),
+            Expr::BinaryExpr { left, op, right } => Ok(Expr::BinaryExpr {
+                left: Arc::new(self.lower_predicate(*left)?),
+                op,
+                right: Arc::new(self.lower_predicate(*right)?),
+            }),
+            Expr::Cast { expr, dtype, options } => Ok(Expr::Cast {
+                expr: Arc::new(self.lower_predicate(*expr)?),
+                dtype,
+                options,
+            }),
+            other => {
+                // Preserve other deterministic Polars filters when none of
+                // their input columns require reconstruction. Rewriting an
+                // unknown expression containing a deferred result is unsafe.
+                let deferred = self.postprocess.iter().filter_map(|expr| {
+                    expr.clone().meta().output_name().ok().map(|n| n.to_string())
+                }).chain(self.count_aliases.keys().cloned()).collect::<HashSet<_>>();
+                if other.clone().meta().root_names().iter().any(|n| deferred.contains(n.as_str())) {
+                    return crate::fallible!(
+                        MakeMeasurement,
+                        "unsupported filter postprocessing: {other:?}"
+                    );
+                }
+                Ok(other)
+            }
+        }
+    }
+
+    /// Build one key-selection predicate and (when required) certify that it
+    /// contains a positive threshold on a genuine noisy group length.
+    pub fn selection(
+        &self,
+        filter: Option<Expr>,
+        threshold: Option<u32>,
+        dp_exprs: &[Expr],
+        group_keys: &[Expr],
+        private_keys: bool,
+    ) -> Fallible<Option<Selection>> {
+        let guard = if private_keys {
+            let mut found = None;
+            if let Some(predicate) = &filter {
+                for (name, bound) in guarded_thresholds(predicate) {
+                    let raw_name = self.raw_count(&name);
+                    if let Some((_, noise)) = dp_exprs.iter().find_map(|expr| {
+                        is_len_expr(expr, Some(&raw_name))
+                    }) {
+                        found = Some((raw_name, noise, bound));
+                        break;
+                    }
+                }
+            }
+            if let Some(found) = found {
+                Some(found)
+            } else if let Some(bound) = threshold {
+                let (name, noise) = find_len_expr(&dp_exprs.to_vec(), self.count.as_deref())?;
+                Some((name, noise, bound))
+            } else {
+                return crate::fallible!(
+                    MakeMeasurement,
+                    "private group keys require a threshold on a noisy length or a public-key join"
+                );
+            }
+        } else {
+            None
+        };
+
+        let mut predicate = filter.map(|expr| self.lower_predicate(expr)).transpose()?;
+        // If the user's predicate already contains a certified threshold,
+        // retain it. Otherwise add the constructor threshold as a conjunction,
+        // never discard the original filter.
+        if let Some((name, _, bound)) = &guard {
+            let user_guarded = filter_has_certified_guard(
+                predicate.as_ref(), name, *bound
+            );
+            if !user_guarded {
+                let gate = col(name.as_str()).gt(lit(*bound));
+                predicate = Some(match predicate {
+                    Some(predicate) => gate.and(predicate),
+                    None => gate,
+                });
+            }
+        }
+
+        let Some(predicate) = predicate else {
+            return Ok(None);
+        };
+
+        let mut used = self.outputs.iter().cloned().collect::<HashSet<_>>();
+        used.extend(self.hidden.iter().cloned());
+        for expr in dp_exprs {
+            used.insert(expr.clone().meta().output_name()?.to_string());
+        }
+        for key in group_keys {
+            match key {
+                Expr::Selector(Selector::ByName { names, .. }) => {
+                    used.extend(names.iter().map(|n| n.to_string()));
+                }
+                key => {
+                    used.insert(key.clone().meta().output_name()?.to_string());
+                }
+            }
+        }
+        let column = unique_name(&mut used, "keep");
+        Ok(Some(Selection {
+            column,
+            predicate,
+            certificate: guard.map(|(_, noise, bound)| (noise, bound)),
+        }))
+    }
+
     /// Postprocess only after key sanitization and any empty-group fills.
-    /// Preserve public-key join columns and the original aggregate ordering.
-    pub fn finish(&self, input: DslPlan) -> DslPlan {
-        if self.postprocess.is_empty() {
+    /// Remove the temporary selection column and internal statistics.
+    pub fn finish(&self, input: DslPlan, selection_column: Option<&str>) -> DslPlan {
+        if self.postprocess.is_empty() && selection_column.is_none() {
             return input;
         }
 
-        let input = DslPlan::HStack {
-            input: Arc::new(input),
-            exprs: self.postprocess.clone(),
-            options: projection_options(),
+        let input = if self.postprocess.is_empty() {
+            input
+        } else {
+            DslPlan::HStack {
+                input: Arc::new(input),
+                exprs: self.postprocess.clone(),
+                options: projection_options(),
+            }
         };
-
         let excluded = self
             .outputs
             .iter()
             .chain(&self.hidden)
             .map(|s| PlSmallStr::from(s.as_str()))
+            .chain(selection_column.map(PlSmallStr::from))
             .collect::<Vec<_>>();
         let mut exprs = vec![all().exclude_cols(excluded).as_expr()];
         exprs.extend(self.outputs.iter().map(|name| col(name.as_str())));
@@ -221,6 +333,51 @@ impl PrivateAggPlan {
             options: projection_options(),
         }
     }
+}
+
+/// A deterministic predicate and its separately certified sparse-key guard.
+/// Neither the predicate nor this intermediate column samples additional noise.
+pub(super) struct Selection {
+    pub column: String,
+    predicate: Expr,
+    pub certificate: Option<(NoisePlugin, u32)>,
+}
+
+impl Selection {
+    pub fn apply(&self, input: DslPlan) -> DslPlan {
+        let input = DslPlan::HStack {
+            input: Arc::new(input),
+            exprs: vec![self.predicate.clone().alias(self.column.as_str())],
+            options: projection_options(),
+        };
+        DslPlan::Filter {
+            input: Arc::new(input),
+            predicate: col(self.column.as_str()),
+        }
+    }
+}
+
+/// Only a positive conjunctive threshold can certify sparse-key selection.
+/// A threshold beneath OR, NOT or any other operation is insufficient.
+fn guarded_thresholds(predicate: &Expr) -> Vec<(String, u32)> {
+    match predicate {
+        Expr::BinaryExpr { left, op: Operator::And | Operator::LogicalAnd, right } => {
+            let mut guards = guarded_thresholds(left);
+            guards.extend(guarded_thresholds(right));
+            guards
+        }
+        predicate => is_threshold_predicate(predicate.clone()).into_iter().collect(),
+    }
+}
+
+fn filter_has_certified_guard(
+    predicate: Option<&Expr>,
+    name: &str,
+    bound: u32,
+) -> bool {
+    predicate.is_some_and(|predicate| {
+        guarded_thresholds(predicate).iter().any(|(n, t)| n == name && *t == bound)
+    })
 }
 
 /// Lift only supported postprocessing; leave arbitrary private expressions

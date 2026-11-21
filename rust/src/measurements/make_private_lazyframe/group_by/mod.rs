@@ -21,8 +21,7 @@ use crate::transformations::make_stable_expr;
 use crate::transformations::traits::UnboundedMetric;
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
-use matching::find_len_expr;
-use polars::prelude::{DataType, DslPlan, JoinType, UniqueKeepStrategy, col, lit};
+use polars::prelude::{DataType, DslPlan, JoinType, UniqueKeepStrategy, col};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -115,17 +114,6 @@ where
     let is_join = matches!(key_sanitizer, Some(KeySanitizer::Join { .. }));
 
     let agg_plan = PrivateAggPlan::new(aggs, &group_by, &key_sanitizer)?;
-    // Threshold predicates on aliased, shared counts must refer to the
-    // materialized noisy column rather than resampling a count.
-    if let Some(KeySanitizer::Filter(predicate)) = &mut key_sanitizer {
-        if let Some((name, value)) = is_threshold_predicate(predicate.clone()) {
-            let raw_name = agg_plan.raw_count(&name);
-            if name != raw_name {
-                *predicate = col(raw_name.as_str()).gt(lit(value));
-            }
-        }
-    }
-
     let m_expr_aggs = agg_plan.aggs.iter().cloned().map(|expr| {
         expr.make_private(
             WildExprDomain {
@@ -151,31 +139,30 @@ where
         .map(|plan| (plan.expr, plan.fill))
         .unzip();
 
-    // 3.1: reconcile information about the threshold
-    let threshold_info = if margin.invariant.is_some() || is_join {
-        None
-    } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
-        let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
-        Some((name, noise, threshold_value, false))
-    } else if let Some(threshold_value) = threshold {
-        let (name, noise) = find_len_expr(&dp_exprs, agg_plan.count.as_deref())?;
-        Some((name, noise, threshold_value, true))
-    } else {
-        return fallible!(
-            MakeMeasurement,
-            "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.",
-            group_by_id
-        );
+    // 3.1: Key-set selection operates solely on materialized noisy
+    // intermediates. The certificate is derived from an actual noisy length,
+    // not from the final reconstructed output expression.
+    let filter = match &key_sanitizer {
+        Some(KeySanitizer::Filter(predicate)) => Some(predicate.clone()),
+        _ => None,
     };
+    let selection = if is_join {
+        None
+    } else {
+        agg_plan.selection(
+            filter,
+            threshold,
+            &dp_exprs,
+            &group_by_keys,
+            margin.invariant.is_none(),
+        )?
+    };
+    let threshold_info = selection.as_ref().and_then(|selection| selection.certificate.clone());
 
-    // 3.2: update key sanitizer
-    if let Some((name, _, threshold_value, is_present)) = &threshold_info {
-        let threshold_expr = col(name).gt(lit(*threshold_value));
-        key_sanitizer = Some(KeySanitizer::Filter(match (is_present, key_sanitizer) {
-            (false, Some(KeySanitizer::Filter(predicate))) => threshold_expr.and(predicate),
-            _ => threshold_expr,
-        }))
-    } else if let Some(KeySanitizer::Join { fill_null, .. }) = key_sanitizer.as_mut() {
+    // 3.2: A public-key join must fill the private intermediate statistics
+    // before reconstructing requested outputs. Private-key filtering uses
+    // its selection plan instead of adding a filter to final outputs.
+    if let Some(KeySanitizer::Join { fill_null, .. }) = key_sanitizer.as_mut() {
         *fill_null = Some(
             dp_exprs.iter().zip(null_exprs
                 .into_iter())
@@ -213,10 +200,10 @@ where
             options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
         let sanitized = match key_sanitizer.clone() {
-            Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
-                input: Arc::new(output),
-                predicate: predicate.clone(),
-            },
+            Some(KeySanitizer::Filter(_)) => selection
+                .as_ref()
+                .expect("private-key filter has a selection plan")
+                .apply(output),
             Some(KeySanitizer::Join {
                 keys: labels,
                 how,
@@ -259,9 +246,12 @@ where
                     },
                 }
             }
-            None => output,
+            None => match &selection {
+                Some(selection) => selection.apply(output),
+                None => output,
+            },
         };
-        Ok(agg_plan.finish(sanitized))
+        Ok(agg_plan.finish(sanitized, selection.as_ref().map(|s| s.column.as_str())))
     });
 
     let privacy_map = PrivacyMap::new_fallible(move |d_in: &Bounds| {
@@ -329,7 +319,7 @@ where
 
         if margin.invariant.is_some() || is_join {
             ()
-        } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
+        } else if let Some((noise, threshold_value)) = &threshold_info {
             if li >= *threshold_value {
                 return fallible!(FailedMap, "threshold must be greater than {:?}", li);
             }

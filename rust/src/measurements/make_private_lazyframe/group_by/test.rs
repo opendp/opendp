@@ -1088,7 +1088,7 @@ fn test_postprocess_predicate_decomposition_is_deferred() -> Fallible<()> {
         &[col("A")],
         &Some(KeySanitizer::Filter(col("combined").gt(lit(3.0)))),
     )?;
-    assert_eq!(plan.aggs.len(), 1, "predicate rewriting is a separate change");
+    assert_eq!(plan.aggs.len(), 1, "decomposition exposes the noisy leaf");
     Ok(())
 }
 
@@ -1254,5 +1254,200 @@ fn test_joint_dedup_join_fills_one_noisy_sum() -> Fallible<()> {
     for i in 0..release.height() {
         assert_eq!(a.get(i), b.get(i), "missing groups reuse the same noise");
     }
+    Ok(())
+}
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_filter_reconstructed_mean_after_noisy_groupby() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_invariant_keys()
+            .with_max_length(2)
+            .with_max_groups(1),
+    )?;
+    let data = df!("A" => [0i32, 0], "B" => [2.0f64, 3.0])?.lazy();
+    let grouped = data.clone().group_by([col("A")]).agg([
+        col("B")
+            .dp()
+            .mean((lit(0.0), lit(10.0)), None)
+            .alias("mean_b"),
+    ]);
+    let base = make_private_lazyframe(
+        domain.clone(),
+        SymmetricDistance,
+        MaxDivergence,
+        grouped.clone(),
+        Some(1.0),
+        None,
+    )?;
+    let filtered = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        grouped.filter(col("mean_b").gt(lit(2.0))),
+        Some(1.0),
+        None,
+    )?;
+    assert_eq!(base.map(&1.into())?, filtered.map(&1.into())?);
+
+    let released = filtered.invoke(&data)?;
+    let DslPlan::Select { input, .. } = &released.logical_plan else {
+        panic!("expected final projection");
+    };
+    let DslPlan::HStack { input, .. } = input.as_ref() else {
+        panic!("expected reconstruction after filter");
+    };
+    let DslPlan::Filter { input, predicate } = input.as_ref() else {
+        panic!("expected filter over noisy intermediate columns");
+    };
+    assert!(matches!(predicate, Expr::Column(_)));
+    let DslPlan::HStack { input, exprs, .. } = input.as_ref() else {
+        panic!("expected materialized selection predicate");
+    };
+    assert_eq!(exprs.len(), 1);
+    assert!(matches!(input.as_ref(), DslPlan::GroupBy { .. }));
+
+    let result = released.collect()?;
+    assert_eq!(result.width(), 2, "selection and noisy intermediates stay private");
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_private_filter_with_threshold_and_reconstructed_mean() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+    let data = df!("A" => [0i32, 1], "B" => [2.0f64, 3.0])?.lazy();
+    let query = data
+        .clone()
+        .group_by([col("A")])
+        .agg([
+            crate::polars::dp_len(None, false).alias("count"),
+            col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mean_b"),
+        ])
+        .filter(
+            col("count")
+                .gt(lit(3u32))
+                .and(col("mean_b").gt(lit(1.0))),
+        );
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        query,
+        Some(1.0),
+        None,
+    )?;
+    let _ = meas.map(&1.into())?;
+    let plan = meas.invoke(&data)?.logical_plan;
+    let DslPlan::Select { input, .. } = &plan else {
+        panic!("expected final projection");
+    };
+    let DslPlan::HStack { input, .. } = input.as_ref() else {
+        panic!("expected final reconstruction");
+    };
+    let DslPlan::Filter { input, .. } = input.as_ref() else {
+        panic!("expected key sanitizer");
+    };
+    let DslPlan::HStack { exprs, .. } = input.as_ref() else {
+        panic!("expected selection predicate over raw noisy aggregates");
+    };
+    assert_eq!(exprs.len(), 1);
+    assert!(matches!(
+        exprs[0].clone().meta().undo_aliases(),
+        Expr::BinaryExpr { op: Operator::And | Operator::LogicalAnd, .. }
+    ));
+    let release = LazyFrame::from(plan).collect()?;
+    assert_eq!(release.width(), 3);
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_constructor_threshold_preserves_additional_filter() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+    let data = df!("A" => [0i32, 1], "B" => [2.0f64, 3.0])?.lazy();
+
+    // The threshold is supplied by the constructor, but the user still wants
+    // to filter the released mean. Both conditions must be applied.
+    let query = data
+        .clone()
+        .group_by([col("A")])
+        .agg([
+            col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mean_b"),
+        ])
+        .filter(col("mean_b").gt(lit(1.5)));
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        query,
+        Some(1.0),
+        Some(3),
+    )?;
+    let _ = meas.map(&1.into())?;
+    let plan = meas.invoke(&data)?.logical_plan;
+    let DslPlan::Select { input, .. } = &plan else {
+        panic!("expected final projection");
+    };
+    let DslPlan::HStack { input, .. } = input.as_ref() else {
+        panic!("expected reconstructed mean");
+    };
+    let DslPlan::Filter { input, .. } = input.as_ref() else {
+        panic!("expected key sanitizer");
+    };
+    let DslPlan::HStack { exprs, .. } = input.as_ref() else {
+        panic!("expected materialized predicate");
+    };
+    assert!(matches!(
+        exprs[0].clone().meta().undo_aliases(),
+        Expr::BinaryExpr { op: Operator::And | Operator::LogicalAnd, .. }
+    ));
+    let output = LazyFrame::from(plan).collect()?;
+    assert_eq!(output.width(), 2);
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_disjunction_cannot_certify_private_keys() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+    let data = df!("A" => [0i32], "B" => [2.0f64])?.lazy();
+    let query = data.group_by([col("A")])
+        .agg([
+            crate::polars::dp_len(None, false).alias("count"),
+            col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mean_b"),
+        ])
+        .filter(
+            col("count").gt(lit(3u32))
+                .or(col("mean_b").gt(lit(1.0))),
+        );
+    let err = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        query,
+        Some(1.0),
+        None,
+    ).map(|_| ()).unwrap_err();
+    assert_eq!(err.variant, MakeMeasurement);
     Ok(())
 }
