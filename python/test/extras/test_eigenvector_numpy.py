@@ -29,18 +29,21 @@ def test_private_eigenvector():
     assert meas.map(1) == 50_000.0
 
 
-def test_private_eigenvector_acceptance_probability(monkeypatch):
+@pytest.mark.parametrize("uniform, expected", [(0.5, [0.0, 1.0]), (0.9, [1.0, 0.0])])
+def test_private_eigenvector_acceptance_probability(monkeypatch, uniform, expected):
     import opendp.extras.sklearn._make_eigenvector as eigenvector
 
     class FixedRNG:
         def __init__(self):
-            self.proposals = iter((np.array([0.0, 1.0]), np.array([1.0, 0.0])))
+            # eigh orders the eigenvalues of C increasingly: e2, then e1.
+            self.proposals = iter((np.array([1.0, 0.0]), np.array([0.0, 1.0])))
 
-        def multivariate_normal(self, mean, cov):
+        def standard_normal(self, size):
+            assert size == 2
             return next(self.proposals)
 
         def random(self):
-            return 0.5
+            return uniform
 
     monkeypatch.setattr(eigenvector, "get_np_csprng", FixedRNG)
 
@@ -60,7 +63,8 @@ def test_private_eigenvector_acceptance_probability(monkeypatch):
     # Fixing the uniform draw at 0.5 makes the test deterministic:
     # the correct sampler accepts e2, whereas the buggy sampler
     # rejects it and proceeds to the second proposal, e1.
-    assert np.array_equal(meas(np.diag([1.0, 0.0])), [0.0, 1.0])
+    # At 0.9, the correct sampler also rejects e2, then accepts e1 (~0.95).
+    assert np.array_equal(meas(np.diag([1.0, 0.0])), expected)
 
 
 def test_private_eigenvector_distribution(monkeypatch):
@@ -84,7 +88,7 @@ def test_private_eigenvector_distribution(monkeypatch):
     assert kstest(angles, vonmises(0.5).cdf).pvalue > 1e-6
 
 
-@pytest.mark.parametrize("width", [2, 4])
+@pytest.mark.parametrize("width", [2, 4, 128])
 @pytest.mark.parametrize("value", [0.0, 1.0])
 def test_private_eigenvector_isotropic_matrix(width, value):
     from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
@@ -95,6 +99,81 @@ def test_private_eigenvector_isotropic_matrix(width, value):
     assert np.isfinite(vector).all()
     assert np.linalg.norm(vector) == pytest.approx(1.0)
     assert measurement.map(2) == 1.0
+
+
+@pytest.mark.parametrize("concentration", [0.0, 2.0])
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+def test_private_eigenvector_eigenbasis(monkeypatch, concentration, dtype):
+    import opendp.extras.sklearn._make_eigenvector as eigenvector
+
+    # A dense matrix with a repeated eigenvalue exercises scaling AND rotation.
+    Q = np.array([[1, 1, 1, 1], [1, -1, 1, -1],
+                  [1, 1, -1, -1], [1, -1, -1, 1]], dtype=dtype) / 2
+    C = (Q * np.array([0, 0, 1, 3], dtype=dtype)) @ Q.T
+    values, basis = np.linalg.eigh(C)
+    a = concentration * (float(values[-1]) - values.astype(float))
+    b = eigenvector._optimal_b(a, 4)
+    omega = 1 + 2 * a / b
+    g = np.array([1.0, 2.0, 3.0, 4.0])
+    z = g / np.sqrt(omega)
+    expected = basis @ (z / np.linalg.norm(z))
+    # Check the diagonal forms against their original-coordinate matrix forms.
+    A = concentration * (float(values[-1]) * np.eye(4) - C)
+    Omega = np.eye(4) + 2 * A / b
+    w_squared = (z / np.linalg.norm(z)) ** 2
+    assert a @ w_squared == pytest.approx(expected @ A @ expected, abs=1e-6)
+    assert omega @ w_squared == pytest.approx(expected @ Omega @ expected, abs=1e-6)
+
+    class FixedRNG:
+        def standard_normal(self, size):
+            assert size == 4
+            return g
+
+        def random(self):
+            return 0.0  # Also exercises the endpoint without taking log(0).
+
+    calls = []
+    eigh = np.linalg.eigh
+
+    def counted_eigh(matrix):
+        calls.append(matrix)
+        return eigh(matrix)
+
+    monkeypatch.setattr(np.linalg, "eigh", counted_eigh)
+    monkeypatch.setattr(eigenvector, "get_np_csprng", FixedRNG)
+    measurement = eigenvector.make_private_eigenvector(
+        _symmetric_matrix_domain(num_features=4, T=dp.f32 if dtype == np.float32 else dp.f64),
+        _nuclear_norm_distance(), concentration)
+    np.testing.assert_allclose(measurement(C), expected, atol=1e-6)
+    assert len(calls) == 1
+    assert measurement.map(2) == 4 * concentration
+
+
+def test_private_eigenvector_log_envelope(monkeypatch):
+    import opendp.extras.sklearn._make_eigenvector as eigenvector
+
+    # log(M) > 709: the old exp/power expression overflows. Mock only the
+    # eigendecomposition to keep this numerical regression test inexpensive.
+    d = 512
+    values = np.r_[np.full(d - 1, -1000.0), 0.0]
+    monkeypatch.setattr(np.linalg, "eigh", lambda C: (values, np.eye(d)))
+    monkeypatch.setattr(eigenvector, "get_np_csprng", lambda: np.random.default_rng(3))
+    measurement = eigenvector.make_private_eigenvector(
+        _symmetric_matrix_domain(num_features=d), _nuclear_norm_distance(), 1.0)
+    with np.errstate(all="raise"):
+        vector = measurement(np.diag(values))
+    assert np.isfinite(vector).all()
+    assert np.linalg.norm(vector) == pytest.approx(1.0)
+
+    # Invalid envelope computations must fail explicitly, not clip or loop.
+    monkeypatch.setattr(eigenvector, "_optimal_b", lambda a, d: float("nan"))
+    with pytest.raises(dp.OpenDPException, match="invalid Bingham rejection envelope"):
+        measurement(np.diag(values))
+    # A finite but wrong normalizer that would force p > 1 must also fail.
+    monkeypatch.setattr(eigenvector, "_optimal_b", lambda a, d: 1.0)
+    monkeypatch.setattr(np, "log1p", lambda x: -100.0)
+    with pytest.raises(dp.OpenDPException, match="invalid Bingham log acceptance"):
+        measurement(np.diag(values))
 
 
 def test_eigenvector_integration():

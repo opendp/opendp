@@ -37,6 +37,7 @@ def make_private_eigenvector(
         The privacy map is concentration times the nuclear-norm distance.
     """
     np = import_optional_dependency("numpy")
+    assert np is not None
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
@@ -59,10 +60,11 @@ def make_private_eigenvector(
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=15
         # (1) Shifting the score by its largest eigenvalue does not
         # change the target Bingham distribution.
-        A = concentration * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
-
-        # (2)
-        A_eigvals = np.linalg.eigvalsh(A)
+        eigvals, Q = np.linalg.eigh(C)
+        # Work in the eigenbasis, widening float32 eigenvalues before arithmetic.
+        eigvals = eigvals.astype(float)
+        with np.errstate(over="raise", invalid="raise"):
+            A_eigvals = concentration * (eigvals[-1] - eigvals)
 
         # This algorithm first finds parameters for an angular central gaussian distribution (ACG),
         #   which acts as an envelope distribution for rejection sampling.
@@ -71,34 +73,45 @@ def make_private_eigenvector(
         # Criteria for being an envelope are given in 3.4 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf
 
         b = _optimal_b(A_eigvals, d)
-        Omega = np.eye(d) + 2 * A / b
-
-        # (3)
-        M = np.exp(-(d - b) / 2) * (d / b) ** (d / 2)
-
-        # prepare sampling
-        Omega_inv = np.linalg.inv(Omega)
+        roundoff = 64 * np.finfo(float).eps
+        if not np.isfinite(b) or not 0 < b <= d * (1 + roundoff):
+            raise ValueError("invalid Bingham rejection envelope parameter b")
+        with np.errstate(over="raise", invalid="raise", divide="raise"):
+            omega = 1 + 2 * A_eigvals / b
+            # log(M), using log1p for accuracy when b is close to d.
+            log_M = -(d - b) / 2 + (d / 2) * np.log1p((d - b) / b)
+            proposal_scale = 1 / np.sqrt(omega)
+        if not np.isfinite(omega).all() or not np.isfinite(log_M):
+            raise ValueError("non-finite Bingham rejection envelope")
 
         while True:
-            # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
-            #  - Mult normal does not have an invertible cdf
-            #  - Could try:
-            #    1. a "conservative" Cholesky decomposition of Omega_inv
-            #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
-            #       sample with sufficient precision where all components round to same float
-
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr]
-            # u is a sample from the angular central gaussian distribution,
-            #    an envelope for the bingham distribution
-            u = z / np.linalg.norm(z)
+            # This continuous sampler still requires idealized numerics:
+            # normal sampling, normalization and rejection are not floating-point-safe.
+            z = np_csprng.standard_normal(d) * proposal_scale  # type: ignore[union-attr]
+            norm = np.linalg.norm(z)
+            if not np.isfinite(norm) or norm == 0:
+                raise ValueError("invalid Bingham proposal norm")
+            # w is the ACG proposal in the eigenbasis.
+            w = z / norm
+            w_squared = w * w
+            score = A_eigvals @ w_squared
             # Amin et al., Algorithm 2 step 4(b), incorrectly divides by
             # (u.T @ Omega @ u) ** (d / 2). The ACG proposal density
             # contains its inverse, so rejection sampling must multiply
             # by this factor instead (Kent et al., Eq. 3.3).
-            if np_csprng.random() < (
-                np.exp(-u.T @ A @ u) * (u.T @ Omega @ u) ** (d / 2) / M
-            ):
-                return u
+            log_acg = (d / 2) * np.log(omega @ w_squared)
+            log_p = -score + log_acg - log_M
+            # Allow cancellation-scale roundoff, but do not clip invalid envelopes
+            # to probability one or silently retry NaNs indefinitely.
+            # The log argument's rounding error is amplified by d/2, even
+            # when its logarithm is near zero (notably for isotropic inputs).
+            tolerance = roundoff * max(float(d), abs(score), abs(log_acg), abs(log_M))
+            if not np.isfinite(log_p) or log_p > tolerance:
+                raise ValueError("invalid Bingham log acceptance probability")
+            uniform = np_csprng.random()
+            if uniform == 0 or np.log(uniform) < log_p:
+                # Only accepted proposals pay for the O(d^2) rotation.
+                return (Q @ w).astype(C.dtype, copy=False)
 
     return _make_measurement(
         input_domain,
