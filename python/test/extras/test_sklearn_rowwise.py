@@ -15,6 +15,19 @@ from sklearn.utils.validation import check_is_fitted
 dp.enable_features("contrib")
 
 
+
+@pytest.fixture(autouse=True)
+def allow_test_rowwise_callbacks():
+    # Test doubles assert their own rowwise contracts instead of using library code.
+    from opendp.mod import GLOBAL_FEATURES
+
+    enabled = "honest-but-curious" in GLOBAL_FEATURES
+    dp.enable_features("honest-but-curious")
+    yield
+    if not enabled:
+        dp.disable_features("honest-but-curious")
+
+
 class IdentityFitted(MeasurementMixin, TransformationMixin, BaseEstimator):
     def make_measurement(self, domain, metric, measure, d_in, d_out):
         return dp.m.make_user_measurement(
@@ -65,6 +78,44 @@ def test_fitted_transform_query_needs_no_frozen_wrapper_or_budget():
     query = ctx.query().sklearn(fitted, method="transform")
     assert query.resolve(allow_transformations=True).map(1) == 1
     assert ctx.current_privacy_loss() == [0.5]
+
+
+
+def test_custom_rowwise_requires_honest_but_curious():
+    from opendp.mod import OpenDPException
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
+
+    fitted = IdentityFitted()
+    fitted.release_ = 7
+    trusted = LogisticRegression()
+    trusted._ingest_release(np.array([2.0, -1.0, 0.0]))
+
+    class Override(LogisticRegression):
+        def predict(self, X):
+            return np.repeat(X[:1, 0], len(X))
+
+    overridden = Override()
+    overridden._ingest_release(np.array([2.0, -1.0, 0.0]))
+    patched = LogisticRegression()
+    patched._ingest_release(np.array([2.0, -1.0, 0.0]))
+    patched.predict_proba = lambda X: np.repeat(X[:1, :1], 2, axis=0)
+
+    dp.disable_features("honest-but-curious")
+    try:
+        assert predict_transform(trusted, domain(), "predict").map(1) == 1
+        for model, method in (
+            (fitted, "transform"),
+            (overridden, "predict"),
+            (patched, "predict"),
+        ):
+            with pytest.raises(OpenDPException, match="honest-but-curious"):
+                predict_transform(model, domain(), method)
+        dp.enable_features("honest-but-curious")
+        assert predict_transform(fitted, domain(), "transform").map(1) == 1
+    finally:
+        dp.enable_features("honest-but-curious")
 
 
 def test_arbitrary_sklearn_estimator_lacks_rowwise_support():

@@ -10,6 +10,19 @@ from sklearn.base import BaseEstimator, TransformerMixin, clone
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
 
 
+
+@pytest.fixture(autouse=True)
+def allow_test_rowwise_callbacks():
+    # Test doubles assert their own rowwise contracts instead of using library code.
+    from opendp.mod import GLOBAL_FEATURES
+
+    enabled = "honest-but-curious" in GLOBAL_FEATURES
+    dp.enable_features("honest-but-curious")
+    yield
+    if not enabled:
+        dp.disable_features("honest-but-curious")
+
+
 class _ConstantEstimator(MeasurementMixin, BaseEstimator):
     def __init__(self, value=23):
         self.value = value
