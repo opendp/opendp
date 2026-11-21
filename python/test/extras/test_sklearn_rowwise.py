@@ -15,7 +15,6 @@ from sklearn.utils.validation import check_is_fitted
 dp.enable_features("contrib")
 
 
-
 @pytest.fixture(autouse=True)
 def allow_test_rowwise_callbacks():
     # Test doubles assert their own rowwise contracts instead of using library code.
@@ -78,7 +77,6 @@ def test_fitted_transform_query_needs_no_frozen_wrapper_or_budget():
     query = ctx.query().sklearn(fitted, method="transform")
     assert query.resolve(allow_transformations=True).map(1) == 1
     assert ctx.current_privacy_loss() == [0.5]
-
 
 
 def test_custom_rowwise_requires_honest_but_curious():
