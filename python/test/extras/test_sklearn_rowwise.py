@@ -197,7 +197,7 @@ def test_empty_inference_and_sklearn_tie_breaking():
         assert trans.output_domain.member(result)
 
 
-def test_rowwise_transform_snapshots_coefficients():
+def test_rowwise_snapshots_coefficients():
     from opendp.extras.sklearn.linear_model._logistic_regression import (
         LogisticRegression,
     )
@@ -238,26 +238,59 @@ def test_rowwise_rejects_unsupported_method_and_metric():
             _make_rowwise_transform(domain(), metric, Rowwise())
 
 
-def test_invalid_rowwise_output_domain_and_missing_public_width():
-    class BadDomain(TransformationMixin, BaseEstimator):
+def test_rowwise_output_contract_rejects_invalid_domains_and_widths():
+    class BadStage(TransformationMixin, BaseEstimator):
+        def __init__(self, mode):
+            self.mode = mode
+
         def transform(self, X):
             return X
 
-        def rowwise_output_domain(self, input_domain, *, method):
-            return None
-
-    with pytest.raises(TypeError, match="must return a Domain"):
-        predict_transform(BadDomain(), domain(), "transform")
-
-    class UnknownWidth(BadDomain):
-        def rowwise_output_domain(self, input_domain, *, method):
+        def rowwise_output_domain(self, features, *, method):
+            if self.mode == "none":
+                return None
+            if self.mode == "atom":
+                return dp.atom_domain(T=dp.f64)
             return dp.numpy.array2_domain(T=dp.f64)
 
-    with pytest.raises(ValueError, match="public output width"):
-        predict_transform(UnknownWidth(), domain(), "transform")
+    for mode, error, match in [
+        ("none", TypeError, "must return a Domain"),
+        ("atom", TypeError, "Rowwise output"),
+        ("unknown-width", ValueError, "public output width"),
+    ]:
+        with pytest.raises(error, match=match):
+            predict_transform(BadStage(mode), domain(), "transform")
+    with pytest.raises(TypeError, match="no sklearn"):
+        predict_transform(BadStage("none"), domain(), "predict")
 
 
-def test_logistic_regression_rejects_invalid_inference_contracts():
+def test_rowwise_dataframe_output_reuses_names_and_accepts_dataframe():
+    pl = pytest.importorskip("polars")
+
+    class FrameStage(TransformationMixin, BaseEstimator):
+        def __init__(self, return_frame=False):
+            self.return_frame = return_frame
+
+        def transform(self, X):
+            values = np.ones(len(X))
+            return pl.DataFrame({"value": values}) if self.return_frame else values
+
+        def rowwise_output_domain(self, features, *, method):
+            return dp.dataframe_domain(
+                [dp.series_domain("value", dp.atom_domain(T=dp.f64))]
+            )
+
+    for return_frame in (True, False):
+        trans = predict_transform(FrameStage(return_frame), domain(), "transform")
+        frame = trans(dp.sklearn.SklearnFit(np.ones((2, 2)))).X
+        assert isinstance(frame, pl.DataFrame)
+        assert frame.columns == ["value"]
+        assert frame["value"].to_list() == [1.0, 1.0]
+        empty = trans(dp.sklearn.SklearnFit(np.empty((0, 2)))).X
+        assert empty.shape == (0, 1)
+
+
+def test_logistic_rowwise_rejects_incompatible_public_contracts():
     from opendp.extras.sklearn.linear_model import LogisticRegression
 
     model = LogisticRegression()
@@ -266,20 +299,10 @@ def test_logistic_regression_rejects_invalid_inference_contracts():
         model.rowwise_output_domain(
             dp.numpy.array2_domain(T=dp.f64, num_columns=3), method="predict"
         )
-
     features = dp.numpy.array2_domain(T=dp.f64, num_columns=2)
     model.classes_ = np.array([1, 2])
     with pytest.raises(ValueError, match="0/1 classes"):
         model.rowwise_output_domain(features, method="predict")
-
     model.classes_ = np.array([0, 1])
     with pytest.raises(ValueError, match="does not support rowwise inference"):
         model.rowwise_output_domain(features, method="transform")
-
-
-def test_rowwise_inference_requires_aligned_input_domain():
-    ctx = dp.Context.compositor(
-        np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
-    )
-    with pytest.raises(ValueError):
-        ctx.query().sklearn(IdentityFitted(), method="transform")

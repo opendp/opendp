@@ -14,6 +14,11 @@ Submodule organization will follow the conventions of `scikit-learn <https://sci
 
 from typing import TYPE_CHECKING
 
+from opendp.extras.sklearn._make_sklearn_fit import (
+    make_sklearn_fit,
+    make_sklearn_fit_numpy,
+)
+
 from opendp.extras.sklearn._domains import (
     SklearnFit,
     SklearnFitDescriptor,
@@ -37,6 +42,8 @@ def __getattr__(name):
 
 
 __all__ = [
+    "make_sklearn_fit",
+    "make_sklearn_fit_numpy",
     "SklearnFit",
     "SklearnFitDescriptor",
     "sklearn_fit_domain",

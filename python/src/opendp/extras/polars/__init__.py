@@ -863,6 +863,7 @@ class LazyFrameQuery:
 
     def collect(self):
         """Build a stable eager DataFrame query without releasing private data."""
+
         query = object.__getattribute__(self, "_query")
         plan = object.__getattribute__(self, "polars_plan")
         domain, metric = query._stable_space()
@@ -886,6 +887,10 @@ class LazyFrameQuery:
         stable = make_stable_lazyframe(domain, metric, plan, MO=mo)
         chain = stable >> make_collect(*stable.output_space)
         return query._append(chain)
+
+    def sklearn(self, estimator, *, y=None):
+        """Explicitly materialize the Polars plan before fitting sklearn."""
+        raise TypeError("Call .collect().sklearn(estimator, y=...)")
 
     # These definitions are primarily for mypy:
     # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
