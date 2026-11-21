@@ -1627,3 +1627,87 @@ fn test_explicit_scale_variance_is_not_deduplicated() -> Fallible<()> {
     assert_eq!(plan.aggs.len(), 6);
     Ok(())
 }
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_exact_integer_joint_gaussian_release_and_privacy() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["key"])
+            .with_invariant_keys()
+            .with_max_length(3)
+            .with_max_groups(2),
+    )?;
+    let data = df!("key" => [0i32, 0, 1], "value" => [1i32, 2, 3])?.lazy();
+    let query = data.clone().group_by([col("key")]).agg([
+        crate::polars::dp_len(None, false).alias("count"),
+        col("value").dp().sum((lit(0i32), lit(4i32)), None).alias("total"),
+    ]);
+
+    let scalar = make_private_group_by(
+        domain.clone().cast_carrier(),
+        FrameDistance(SymmetricDistance),
+        ZeroConcentratedDivergence,
+        query.logical_plan.clone(),
+        Some(2.0),
+        None,
+    )?;
+    let joint = make_private_group_by_with_strategy(
+        domain.cast_carrier(),
+        FrameDistance(SymmetricDistance),
+        ZeroConcentratedDivergence,
+        query.logical_plan,
+        Some(2.0),
+        None,
+        GroupByStrategy::ExactIntegerGaussian,
+    )?;
+
+    let scalar_rho = scalar.map(&Bounds::from(1))?;
+    let joint_rho = joint.map(&Bounds::from(1))?;
+    assert!(joint_rho >= 0.125 && joint_rho < 0.126, "rho {joint_rho}");
+    assert!(joint_rho < scalar_rho, "joint {joint_rho}, independent {scalar_rho}");
+
+    let output = LazyFrame::from(joint.invoke(&data.logical_plan)?).collect()?;
+    assert_eq!(output.height(), 2);
+    for name in ["key", "count", "total"] {
+        assert!(output.column(name).is_ok(), "missing {name}");
+    }
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_exact_integer_joint_gaussian_private_keys() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("key", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["key"]).with_max_length(1).with_max_groups(2),
+    )?;
+    let data = df!("key" => [0i32, 1], "value" => [1i32, 3])?.lazy();
+    let query = data.clone().group_by([col("key")]).agg([
+        crate::polars::dp_len(None, false).alias("count"),
+        col("value").dp().sum((lit(0i32), lit(4i32)), None).alias("total"),
+    ]);
+
+    let meas = make_private_group_by_with_strategy(
+        domain.cast_carrier(),
+        FrameDistance(SymmetricDistance),
+        Approximate(ZeroConcentratedDivergence),
+        query.logical_plan,
+        Some(2.0),
+        Some(3),
+        GroupByStrategy::ExactIntegerGaussian,
+    )?;
+    let (rho, delta) = meas.map(&Bounds::from(1))?;
+    assert!(rho >= 0.125 && rho < 0.126);
+    assert!(delta >= 0.0 && delta <= 1.0);
+    let result = LazyFrame::from(meas.invoke(&data.logical_plan)?).collect()?;
+    assert_eq!(result.width(), 3);
+    Ok(())
+}

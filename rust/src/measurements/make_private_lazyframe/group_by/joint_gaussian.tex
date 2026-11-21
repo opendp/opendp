@@ -1,0 +1,83 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{Joint discrete-Gaussian group-by strategy for exact integer aggregates}
+\date{}
+\begin{document}
+\maketitle
+
+\section{Scope}
+
+This argument concerns the optional \texttt{JointGaussian} strategy in
+\texttt{joint\_gaussian.rs}. It does not replace the proof of
+\texttt{make\_private\_group\_by}: the public constructor continues to use
+independent composition. The strategy is eligible only when \emph{every}
+materialized private aggregate is an implicitly scaled integer length or a
+bounded, direct-column \texttt{Int32} sum. All other workloads fall back.
+
+The existing scalar constructors enforce numeric validity and reject integer
+sums that could overflow within the maximum group length. Consequently, each
+eligible coordinate is an exact integral sum of per-record contributions
+bounded by a public interval. The argument does not apply to floating-point
+sum/variance, whose numerical relaxation requires separate analysis.
+
+\section{Joint stability}
+
+For each record \(x\), let \(v(x)\in\mathbb Z^d\) contain its contribution to
+every released coordinate in one group. Length coordinates contribute \(1\).
+A bounded sum coordinate contributes a clipped (and, for nulls, publicly
+imputed) integer in its declared interval. Write
+\[
+ B_2=\sqrt{\sum_{j=1}^d \max(|a_j|,|b_j|)^2}.
+\]
+Thus \(\|v(x)\|_2\le B_2\) for every permitted row.
+
+Suppose neighboring grouped datasets differ in at most \(l_0\) groups,
+\(l_1\) rows total, and \(l_\infty\) rows in any single group. If group \(g\)
+has \(m_g\) changed rows, then
+\(\|\Delta q_g\|_2\le m_g B_2\) by the triangle inequality.
+It follows that
+\[
+  \|\Delta q\|_2^2
+  \le B_2^2\sum_g m_g^2
+  \le B_2^2\min\bigl(
+    l_1^2,\; l_\infty l_1,\; l_0 l_\infty^2
+  \bigr).
+\]
+The implementation computes an upward-rounded bound on this quantity.
+Every private leaf is included, and duplicates are removed by the preceding
+workload planner. The bound is therefore on the \emph{full} private vector,
+not an arbitrary subset of its coordinates.
+
+\section{Gaussian release and accounting}
+
+The function adds independent samples from the same discrete Gaussian
+distribution of scale \(\sigma\) to each integer coordinate in each group.
+The existing OpenDP scalar Gaussian mechanism certifies zCDP cost
+\(\Delta_j^2/(2\sigma^2)\) for each coordinate with integer shift
+\(\Delta_j\). Product composition over all coordinates and groups gives
+\[
+  \rho \le \frac{\|\Delta q\|_2^2}{2\sigma^2}.
+\]
+The implementation computes this expression using a conservative
+floating-point distance bound, exact rational arithmetic for the quotient,
+and upward rounding for the returned privacy loss.
+
+For implicit calibration, \(\sigma\) is the upward-rounded product of the
+requested global scale and the joint sensitivity at the smallest admissible
+dataset distance (one added/removed row, or two for invariant lengths).
+Every leaf receives the same computed scale via the existing scalar shim
+compiler. The joint privacy map uses that same scale value.
+
+For public-key joins, all missing-group coordinates are independently
+imputed using the scalar constructors' noise fillers before deterministic
+reconstruction. For private-key filters, the existing certified noisy-count
+tail bound is applied separately as the catastrophic-event probability.
+Any final arithmetic, filtering and projection are postprocessing.
+
+When \(\sigma=0\) and the sensitivity is positive, the joint privacy map
+returns infinite loss. When the input distance is zero, the map returns zero.
+The strategy is only enabled for zCDP or approximate zCDP; other measures
+retain the independent-composition strategy.
+
+\end{document}

@@ -116,7 +116,7 @@ impl IdealJointSensitivity {
     }
 }
 
-/// Recognize only direct-column bounded Float64 sums and ordinary lengths.
+/// Recognize direct-column bounded Int32/Float64 sums and ordinary lengths.
 /// Unsupported preprocessing, dtypes and plugins are deliberately opaque.
 fn coordinate_interval(
     expr: &Expr,
@@ -139,20 +139,31 @@ fn coordinate_interval(
         let Expr::Column(name) = input else {
             return Ok(None);
         };
-        if !columns.iter().any(|col| {
-            col.name.as_str() == name.as_str() && col.dtype() == DataType::Float64
-        }) {
-            return Ok(None);
-        }
-        // Invalid or unrecognized bounds are handled by the actual scalar
-        // measurement; they simply cannot furnish joint metadata here.
-        let Some(lower) = literal_value_of::<f64>(&lower).ok().flatten() else {
-            return Ok(None);
+        let dtype = columns.iter().find(|column| column.name == name).map(|c| c.dtype());
+        // Int32 sums are exact if the scalar constructor's overflow check
+        // passes. Float64 sums remain descriptive metadata only because
+        // their rounding relaxation has not been incorporated.
+        return match dtype {
+            Some(DataType::Int32) => {
+                let Some(l) = literal_value_of::<i32>(&lower).ok().flatten() else {
+                    return Ok(None);
+                };
+                let Some(u) = literal_value_of::<i32>(&upper).ok().flatten() else {
+                    return Ok(None);
+                };
+                Ok(Some((f64::from(l), f64::from(u))))
+            }
+            Some(DataType::Float64) => {
+                let Some(l) = literal_value_of::<f64>(&lower).ok().flatten() else {
+                    return Ok(None);
+                };
+                let Some(u) = literal_value_of::<f64>(&upper).ok().flatten() else {
+                    return Ok(None);
+                };
+                Ok(Some((l, u)))
+            }
+            _ => Ok(None),
         };
-        let Some(upper) = literal_value_of::<f64>(&upper).ok().flatten() else {
-            return Ok(None);
-        };
-        return Ok(Some((lower, upper)));
     }
     Ok(None)
 }

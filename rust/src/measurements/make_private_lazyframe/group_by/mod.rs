@@ -29,8 +29,10 @@ mod test;
 
 mod matching;
 mod joint_sensitivity;
+mod joint_gaussian;
 mod workload;
 use workload::PrivateAggPlan;
+use joint_gaussian::JointGaussian;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
 
@@ -51,6 +53,42 @@ pub(crate) fn make_private_group_by<MI, MO>(
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
+) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
+where
+    MI: 'static + UnboundedMetric,
+    MO: 'static + ApproximateMeasure,
+    Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<SymmetricDistance>>,
+{
+    make_private_group_by_with_strategy(
+        input_domain,
+        input_metric,
+        output_measure,
+        plan,
+        global_scale,
+        threshold,
+        GroupByStrategy::Independent,
+    )
+}
+
+/// An explicit internal strategy choice. Automatic strategy selection is a
+/// separate change; the public constructor continues using independent
+/// composition until that selector has been validated.
+#[allow(dead_code)] // the joint strategy becomes selectable in the next stage
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub(crate) enum GroupByStrategy {
+    Independent,
+    ExactIntegerGaussian,
+}
+
+fn make_private_group_by_with_strategy<MI, MO>(
+    input_domain: DslPlanDomain,
+    input_metric: FrameDistance<MI>,
+    output_measure: MO,
+    plan: DslPlan,
+    global_scale: Option<f64>,
+    threshold: Option<u32>,
+    strategy: GroupByStrategy,
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
@@ -120,7 +158,23 @@ where
         &key_sanitizer,
         &middle_domain.series_domains,
     )?;
-    let m_expr_aggs = agg_plan.aggs.iter().cloned().map(|expr| {
+    let joint_gaussian = if strategy == GroupByStrategy::ExactIntegerGaussian
+        && MO::supports_joint_gaussian()
+    {
+        JointGaussian::prepare(
+            &agg_plan.aggs,
+            &middle_domain.series_domains,
+            &margin,
+            global_scale,
+        )?
+    } else {
+        None
+    };
+    let private_aggs = joint_gaussian
+        .as_ref()
+        .map(|joint| joint.aggs.as_slice())
+        .unwrap_or(&agg_plan.aggs);
+    let m_expr_aggs = private_aggs.iter().cloned().map(|expr| {
         expr.make_private(
             WildExprDomain {
                 columns: middle_domain.series_domains.clone(),
@@ -321,7 +375,12 @@ where
         let li = li.min(l1);
         let l1 = l1.min(l0.inf_mul(&li)?);
 
-        let mut d_out = privacy_map.eval(&(l0, l1, li))?;
+        let mut d_out = if let Some(joint) = &joint_gaussian {
+            MO::from_joint_gaussian_rho(joint.rho((l0, l1, li))?)
+                .ok_or_else(|| err!(FailedMap, "joint Gaussian requires zCDP output measure"))?
+        } else {
+            privacy_map.eval(&(l0, l1, li))?
+        };
 
         if margin.invariant.is_some() || is_join {
             ()
@@ -398,6 +457,14 @@ fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
 
 pub trait ApproximateMeasure: CompositionMeasure {
     fn add_delta(d_out: Self::Distance, delta_p: f64) -> Fallible<Self::Distance>;
+
+    fn supports_joint_gaussian() -> bool {
+        false
+    }
+
+    fn from_joint_gaussian_rho(_rho: f64) -> Option<Self::Distance> {
+        None
+    }
 }
 
 macro_rules! impl_measure_non_catastrophic {
@@ -415,14 +482,35 @@ macro_rules! impl_measure_non_catastrophic {
 }
 
 impl_measure_non_catastrophic!(MaxDivergence);
-impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl<MO: CompositionMeasure> ApproximateMeasure for Approximate<MO>
+impl ApproximateMeasure for ZeroConcentratedDivergence {
+    fn add_delta(_d_out: Self::Distance, _delta_p: f64) -> Fallible<Self::Distance> {
+        fallible!(MakeMeasurement, "key-sets cannot be released under zCDP without approximate privacy")
+    }
+
+    fn supports_joint_gaussian() -> bool {
+        true
+    }
+
+    fn from_joint_gaussian_rho(rho: f64) -> Option<Self::Distance> {
+        Some(rho)
+    }
+}
+
+impl<MO: ApproximateMeasure> ApproximateMeasure for Approximate<MO>
 where
     Self: CompositionMeasure<Distance = (MO::Distance, f64)>,
 {
     fn add_delta((d_out, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
         Ok((d_out, delta.inf_add(&delta_p)?))
+    }
+
+    fn supports_joint_gaussian() -> bool {
+        MO::supports_joint_gaussian()
+    }
+
+    fn from_joint_gaussian_rho(rho: f64) -> Option<Self::Distance> {
+        MO::from_joint_gaussian_rho(rho).map(|d| (d, 0.0))
     }
 }
 
