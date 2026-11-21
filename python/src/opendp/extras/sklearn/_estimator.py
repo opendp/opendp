@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 from opendp.context import _cast_measure, domain_of
 from sklearn.utils.metaestimators import available_if
 
-from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
+from opendp.extras.sklearn._domains import SklearnFit
 from opendp.mod import Domain, Metric, Measure, Measurement
 
 _EstimatorT = TypeVar("_EstimatorT", bound="MeasurementMixin")
@@ -15,38 +15,6 @@ _EstimatorT = TypeVar("_EstimatorT", bound="MeasurementMixin")
 def _inherited_method(name):
     """Expose only sklearn shortcuts supplied by the estimator's other mixins."""
     return lambda self: hasattr(super(MeasurementMixin, self), name)
-
-
-def _set_fit_metadata(estimator, input_domain):
-    """Set sklearn feature metadata from public domain information."""
-    features = input_domain.cast(SklearnFitDescriptor).X
-    # DataFrameDomain is supplied by the independent Polars bridge.
-    names = tuple(features.columns) if hasattr(features, "columns") else None
-    descriptor = getattr(features, "descriptor", None)
-    width: Any = (
-        len(names) if names is not None else getattr(descriptor, "num_columns", None)
-    )
-    if width is None:
-        width = getattr(descriptor, "n_features", None)
-
-    if width is not None and not isinstance(
-        getattr(type(estimator), "n_features_in_", None), property
-    ):
-        estimator.n_features_in_ = width
-
-    if not isinstance(getattr(type(estimator), "feature_names_in_", None), property):
-        if names is not None:
-            import numpy as np
-
-            estimator.feature_names_in_ = np.asarray(names, dtype=object)
-        elif hasattr(estimator, "feature_names_in_"):
-            del estimator.feature_names_in_
-
-
-def _finish_fit(estimator, release, input_domain):
-    """Install accounted parameters and public sklearn metadata."""
-    estimator._ingest_release(release)
-    _set_fit_metadata(estimator, input_domain)
 
 
 class MeasurementMixin(ABC):
@@ -95,10 +63,6 @@ class MeasurementMixin(ABC):
         input_metric, d_in = privacy_unit
         output_measure, d_out = privacy_loss
 
-        from opendp.mod import LazyFrameDomain
-
-        if isinstance(domain.cast(SklearnFitDescriptor).X, LazyFrameDomain):
-            raise TypeError("Explicitly collect lazy input before sklearn fitting")
         measurement = self.make_measurement(
             domain, input_metric, output_measure, d_in, d_out
         )
@@ -106,7 +70,7 @@ class MeasurementMixin(ABC):
         if not measurement.check(d_in, d_out):
             raise ValueError("Fitting measurement exceeds the privacy allowance")
 
-        _finish_fit(self, measurement(data), domain)
+        self._ingest_release(measurement(data))
         return self
 
     @available_if(_inherited_method("fit_transform"))
@@ -122,20 +86,20 @@ class MeasurementMixin(ABC):
         """Never expose row-level predictions on privately fitted records."""
         raise NotImplementedError(
             "Private fit_predict is unsupported; use fit with a privacy budget "
-            "then certified prediction on private records"
+            "then use rowwise prediction on private records"
         )
 
 
 class TransformationMixin(ABC):
-    """Certify rowwise sklearn inference by declaring its output domain.
+    """Describe the output domain of rowwise sklearn inference.
 
-    Implementing rowwise_output_domain certifies that successful calls process
-    each row independently and preserve row count and alignment. Failures must
-    not depend on private input data, but may depend on the released fitted model.
+    Implementations must process rows independently, preserve row count and
+    alignment, and avoid data-dependent failures for inputs in the declared domain.
+    Failures may depend on the released fitted model.
     Unsupported methods must raise.
     """
 
     @abstractmethod
     def rowwise_output_domain(self, input_domain: Domain, *, method: str) -> Domain:
-        """Return the certified output domain of a rowwise sklearn method."""
+        """Return the output domain of a rowwise sklearn method."""
         ...

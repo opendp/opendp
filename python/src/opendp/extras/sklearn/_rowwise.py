@@ -1,4 +1,4 @@
-"""Compile certified rowwise sklearn inference into OpenDP transformations."""
+"""Compile rowwise sklearn inference into OpenDP transformations."""
 
 from copy import deepcopy
 
@@ -12,12 +12,7 @@ from opendp.extras.sklearn._domains import (
     sklearn_fit_domain,
 )
 from opendp.extras.sklearn._estimator import TransformationMixin
-from opendp.metrics import (
-    change_one_distance,
-    hamming_distance,
-    insert_delete_distance,
-    symmetric_distance,
-)
+from opendp.metrics import symmetric_distance
 from opendp.mod import Domain
 
 
@@ -25,13 +20,8 @@ def _make_rowwise_transform(
     input_domain, input_metric, estimator, *, method="transform"
 ):
     """Compile row-independent inference with data-independent failure."""
-    if input_metric not in (
-        symmetric_distance(),
-        insert_delete_distance(),
-        change_one_distance(),
-        hamming_distance(),
-    ):
-        raise ValueError("Certified rowwise inference requires a row-adjacency metric")
+    if input_metric != symmetric_distance():
+        raise ValueError("Rowwise inference requires symmetric_distance()")
 
     if not isinstance(estimator, TransformationMixin):
         raise TypeError("Stage must implement TransformationMixin")
@@ -39,15 +29,14 @@ def _make_rowwise_transform(
         raise TypeError(f"{type(estimator).__name__} has no sklearn {method!r} method")
 
     desc = input_domain.cast(SklearnFitDescriptor)
-    # Certify the same snapshot that will execute inference. Any public schema
-    # metadata recorded during certification stays with this snapshot.
+    # Check the same snapshot that will execute inference.
     fitted = deepcopy(estimator)
     output = fitted.rowwise_output_domain(desc.X, method=method)
     if not isinstance(output, Domain):
         raise TypeError("rowwise_output_domain must return a Domain")
     array = output.cast(NPArray2Domain)
     if array.num_columns is None:
-        raise ValueError("Certified rowwise inference requires a public output width")
+        raise ValueError("Rowwise inference requires a public output width")
 
     infer = getattr(fitted, method)
 

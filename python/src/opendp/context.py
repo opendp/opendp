@@ -825,7 +825,6 @@ class Query(object):
         from opendp.extras.sklearn._estimator import (
             MeasurementMixin,
             TransformationMixin,
-            _finish_fit,
         )
 
         if method is None and not isinstance(estimator, MeasurementMixin):
@@ -866,7 +865,7 @@ class Query(object):
 
         def ingest(release):
             fitted = clone(prototype)
-            _finish_fit(fitted, release, input_domain)
+            fitted._ingest_release(release)
             return fitted
 
         measurement = measurement >> ingest

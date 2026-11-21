@@ -385,33 +385,3 @@ def test_conditional_private_fitting_shortcuts_follow_sklearn_roles():
         cluster.fit_predict(np.ones((2, 2)))
     assert not hasattr(cluster, "release_")
 
-
-def test_public_feature_metadata_with_named_and_unnamed_inputs():
-    from types import SimpleNamespace
-    from opendp.extras.sklearn._estimator import _set_fit_metadata
-
-    model = _ConstantEstimator()
-    named = SimpleNamespace(columns=("first", "second"))
-    input_domain = SimpleNamespace(cast=lambda _: SimpleNamespace(X=named))
-    _set_fit_metadata(model, input_domain)
-    assert model.n_features_in_ == 2
-    np.testing.assert_array_equal(model.feature_names_in_, ["first", "second"])
-
-    unnamed = SimpleNamespace(descriptor=SimpleNamespace(num_columns=2))
-    input_domain = SimpleNamespace(cast=lambda _: SimpleNamespace(X=unnamed))
-    _set_fit_metadata(model, input_domain)
-    assert model.n_features_in_ == 2
-    assert not hasattr(model, "feature_names_in_")
-
-
-def test_standalone_fit_rejects_lazy_input_domain():
-    pytest.importorskip("polars")
-    lazy = dp.lazyframe_domain([dp.series_domain("feature", dp.atom_domain(T=dp.f64))])
-    domain = dp.sklearn.sklearn_fit_domain(lazy)
-    with pytest.raises(TypeError, match="Explicitly collect lazy input"):
-        _ConstantEstimator().fit(
-            [[1.0]],
-            domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
