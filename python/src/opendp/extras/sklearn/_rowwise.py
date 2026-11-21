@@ -24,7 +24,7 @@ from opendp.mod import Domain
 def _make_rowwise_transform(
     input_domain, input_metric, estimator, *, method="transform"
 ):
-    """Compile a fitted sklearn method certified as total and row-independent."""
+    """Compile row-independent inference with data-independent failure."""
     if input_metric not in (
         symmetric_distance(),
         insert_delete_distance(),
