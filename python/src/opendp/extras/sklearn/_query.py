@@ -1,19 +1,30 @@
-"""Sklearn query integration: certified inference or accounted private fitting."""
+"""Sklearn query integration: rowwise inference or accounted private fitting."""
 
 from sklearn.base import clone
 
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
-from opendp.extras.sklearn._estimator import MeasurementMixin, _finish_fit
+from opendp.extras.sklearn._estimator import (
+    MeasurementMixin,
+    TransformationMixin,
+    _finish_fit,
+)
+from opendp.extras.sklearn._composition import (
+    unwrap_frozen_estimator,
+    needs_private_fit,
+)
 from opendp.extras.sklearn._make_sklearn_fit import make_sklearn_fit
 from opendp.extras.sklearn._rowwise import _make_rowwise_transform
 from opendp.mod import LazyFrameDomain
 
 
 def sklearn_query(query, estimator, *, y=None, method=None):
-    """Fit privately or apply a certified sklearn inference method."""
-    if method is None and not isinstance(estimator, MeasurementMixin):
+    """Fit privately or apply a rowwise sklearn inference method."""
+    unwrapped = unwrap_frozen_estimator(estimator)
+    if method is None and not isinstance(
+        unwrapped, (MeasurementMixin, TransformationMixin)
+    ):
         raise TypeError(
-            "sklearn(...) expects an estimator with OpenDP fitting capability"
+            "sklearn requires an OpenDP fitting or transformation capability"
         )
 
     domain, metric = query._stable_space()
@@ -34,6 +45,13 @@ def sklearn_query(query, estimator, *, y=None, method=None):
     if method is not None:
         return query._append(
             _make_rowwise_transform(domain, metric, estimator, method=method)
+        )
+
+    if not needs_private_fit(estimator):
+        if not isinstance(unwrapped, TransformationMixin):
+            raise TypeError("Stable inference requires TransformationMixin")
+        return query._append(
+            _make_rowwise_transform(domain, metric, estimator, method="transform")
         )
 
     distance = query._stable_distance()
