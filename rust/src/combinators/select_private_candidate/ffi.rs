@@ -1,13 +1,18 @@
+use opendp_derive::bootstrap;
+use std::os::raw::c_char;
+
 use crate::{
-    core::{FfiResult, Function, Measurement, PrivacyMap},
+    core::{FfiResult, Function, Measure, Measurement, PrivacyMap},
     error::Fallible,
     ffi::{
-        any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-        util::Type,
+        any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
+        util::{self, Type, to_str},
     },
-    measures::MaxDivergence,
+    measures::{MaxDivergence, RenyiDivergence},
     traits::RoundCast,
 };
+
+use super::{PrivateCandidateMeasure, Repetitions};
 
 fn to_f64<T: 'static>(obj: AnyObject) -> Fallible<f64>
 where
@@ -16,26 +21,20 @@ where
     f64::round_cast(obj.downcast::<T>()?)
 }
 
-fn make_select_private_candidate(
+// Adapt the FFI's dynamically typed scored candidate to the strongly typed
+// (score, candidate) representation expected by both selection algorithms.
+fn into_scored_measurement<MO: 'static + Measure>(
     measurement: &AnyMeasurement,
-    stop_probability: f64,
-    threshold: f64,
-) -> Fallible<AnyMeasurement> {
+) -> Fallible<Measurement<AnyDomain, AnyMetric, MO, (f64, AnyObject)>> {
     let function = measurement.function.clone();
     let privacy_map = measurement.privacy_map.clone();
-    let measurement = Measurement::new(
+
+    Measurement::new(
         measurement.input_domain.clone(),
         measurement.input_metric.clone(),
-        measurement
-            .output_measure
-            .downcast_ref::<MaxDivergence>()?
-            .clone(),
+        measurement.output_measure.downcast_ref::<MO>()?.clone(),
         Function::new_fallible(move |arg: &AnyObject| {
             let release = function.eval(arg)?;
-
-            // for usability and to ensure the measurement always returns data with the right type,
-            // apply a postprocessor that makes the combinator more forgiving about the form of the input type
-
             Ok(if release.type_ == Type::of::<(f64, AnyObject)>() {
                 release.downcast::<(f64, AnyObject)>()?
             } else if let Ok(val) = release.downcast::<Vec<AnyObject>>() {
@@ -50,22 +49,164 @@ fn make_select_private_candidate(
             })
         }),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast()),
-    )?;
+    )
+}
 
-    let m = super::make_select_private_candidate(measurement, stop_probability, threshold)?;
-
-    let privacy_map = m.privacy_map.clone();
-    let function = m.function.clone();
+fn into_any_measurement<MO: 'static + Measure>(
+    measurement: Measurement<AnyDomain, AnyMetric, MO, Option<(f64, AnyObject)>>,
+) -> Fallible<AnyMeasurement> {
+    let privacy_map = measurement.privacy_map.clone();
+    let function = measurement.function.clone();
 
     Measurement::new(
-        m.input_domain.clone(),
-        m.input_metric.clone(),
-        AnyMeasure::new(m.output_measure.clone()),
+        measurement.input_domain.clone(),
+        measurement.input_metric.clone(),
+        AnyMeasure::new(measurement.output_measure.clone()),
         Function::new_fallible(move |arg: &AnyObject| function.eval(arg).map(AnyObject::new)),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| {
             privacy_map.eval(d_in).map(AnyObject::new)
         }),
     )
+}
+
+fn monomorphize<MO: 'static + Measure + PrivateCandidateMeasure>(
+    measurement: &AnyMeasurement,
+    mean: f64,
+    threshold: Option<f64>,
+    repetitions: Repetitions,
+) -> Fallible<AnyMeasurement> {
+    let scored = into_scored_measurement::<MO>(measurement)?;
+    let selected = super::make_select_private_candidate_impl(scored, mean, threshold, repetitions)?;
+    into_any_measurement(selected)
+}
+
+#[bootstrap(features("contrib"))]
+/// Select the first private candidate whose score is at least `threshold`.
+///
+/// The repetition budget is geometric, with expected size at most `mean`.
+/// `measurement` releases a pair `(score, candidate)`; for a Python user
+/// measurement specify `TO=(float, "ExtrinsicObject")`.
+///
+/// The privacy cost is twice the base pure-DP cost, or the appropriate
+/// conditional-selection bound for a Rényi-DP base measurement.
+fn make_select_above_threshold(
+    measurement: &AnyMeasurement,
+    mean: f64,
+    threshold: f64,
+) -> Fallible<AnyMeasurement> {
+    let MO_ = measurement.output_measure.type_.clone();
+    dispatch!(
+        monomorphize,
+        [(MO_, [MaxDivergence, RenyiDivergence])],
+        (measurement, mean, Some(threshold), Repetitions::Geometric)
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators__make_select_above_threshold(
+    measurement: *const AnyMeasurement,
+    mean: f64,
+    threshold: f64,
+) -> FfiResult<*mut AnyMeasurement> {
+    FfiResult::from(make_select_above_threshold(
+        try_as_ref!(measurement),
+        mean,
+        threshold,
+    ))
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        distribution(c_type = "char *", default = "geometric"),
+        eta(c_type = "AnyObject *", default = b"null")
+    )
+)]
+/// Return the highest-scoring private candidate among a random number of draws.
+///
+/// `measurement` releases a pair `(score, candidate)`; for a Python user
+/// measurement specify `TO=(float, "ExtrinsicObject")`.
+///
+/// `mean` bounds the expected number of repetitions. `distribution` is one
+/// of `"geometric"`, `"logarithmic"`, `"negative_binomial"`, or
+/// `"poisson"`; `eta` is required only for `"negative_binomial"`.
+/// Poisson repetitions require a Rényi-DP base measurement.
+fn make_select_best_candidate(
+    measurement: &AnyMeasurement,
+    mean: f64,
+    distribution: String,
+    eta: Option<f64>,
+) -> Fallible<AnyMeasurement> {
+    let repetitions = match distribution.as_str() {
+        "poisson" => {
+            if eta.is_some() {
+                return fallible!(FFI, "eta must be omitted when distribution is \"poisson\"");
+            }
+            Repetitions::Poisson
+        }
+        "geometric" => {
+            if eta.is_some() {
+                return fallible!(
+                    FFI,
+                    "eta must be omitted when distribution is \"geometric\""
+                );
+            }
+            Repetitions::Geometric
+        }
+        "logarithmic" => {
+            if eta.is_some() {
+                return fallible!(
+                    FFI,
+                    "eta must be omitted when distribution is \"logarithmic\""
+                );
+            }
+            Repetitions::Logarithmic
+        }
+        "negative_binomial" => Repetitions::NegativeBinomial {
+            eta: eta.ok_or_else(|| err!(FFI, "eta must be provided for negative_binomial"))?,
+        },
+        _ => return fallible!(FFI, "unrecognized distribution value: {}", distribution),
+    };
+
+    let MO_ = measurement.output_measure.type_.clone();
+    dispatch!(
+        monomorphize,
+        [(MO_, [MaxDivergence, RenyiDivergence])],
+        (measurement, mean, None, repetitions)
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators__make_select_best_candidate(
+    measurement: *const AnyMeasurement,
+    mean: f64,
+    distribution: *const c_char,
+    eta: *const AnyObject,
+) -> FfiResult<*mut AnyMeasurement> {
+    let distribution = try_!(to_str(distribution)).to_string();
+    let eta = if let Some(param) = util::as_ref(eta) {
+        Some(*try_!(try_as_ref!(param).downcast_ref::<f64>()))
+    } else {
+        None
+    };
+
+    FfiResult::from(make_select_best_candidate(
+        try_as_ref!(measurement),
+        mean,
+        distribution,
+        eta,
+    ))
+}
+
+fn make_select_private_candidate(
+    measurement: &AnyMeasurement,
+    stop_probability: f64,
+    threshold: f64,
+) -> Fallible<AnyMeasurement> {
+    let scored = into_scored_measurement::<MaxDivergence>(measurement)?;
+    #[allow(deprecated)]
+    let selected = super::make_select_private_candidate(scored, stop_probability, threshold)?;
+    into_any_measurement(selected)
 }
 
 #[unsafe(no_mangle)]

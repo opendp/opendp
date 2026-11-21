@@ -1,0 +1,118 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\title{\texttt{fn sample\_truncated\_negative\_binomial\_rational}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \texttt{sample\_truncated\_negative\_binomial\_rational}
+in \texttt{mod.rs} satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{eta} \in \mathbb{Q}_{>0}$ and $\texttt{x} \in \mathbb{Q}_{>0}$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_truncated_negative_binomial_rational.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{eta} and \texttt{x} such that the given preconditions hold,
+\texttt{sample\_truncated\_negative\_binomial\_rational} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as a negative binomial random variable
+with shape \texttt{eta} and success probability $1 - e^{-x}$, parameterized as the number of failures before
+the \texttt{eta}-th success, conditioned on \texttt{out > 0}.
+
+\section{Proof}
+Assume the preconditions and put $q=e^{-x}$ and $p=1-q$, so $0<p,q<1$.
+For $k\ge1$, the target distribution is
+\begin{equation}
+\label{eq:target}
+\Pr[\texttt{out}=k]
+=\frac{q^k}{p^{-\eta}-1}\frac{(\eta)_k}{k!},
+\qquad (\eta)_k:=\prod_{j=0}^{k-1}(\eta+j).
+\end{equation}
+
+\begin{lemma}
+\label{lem:geometric}
+For $\eta=1$, the output follows the target law.
+\end{lemma}
+\begin{proof}
+Line \ref{line:geometric} returns one plus
+\rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast}.
+By its proof definition, this is a sample on the positive integers with
+$\Pr[\texttt{out}=k]=p q^{k-1}$, which agrees with
+Equation~\ref{eq:target} when $\eta=1$.
+\end{proof}
+
+\begin{lemma}
+\label{lem:fractional}
+For $0<\eta<1$, the output follows the target law.
+\end{lemma}
+\begin{proof}
+Let $Y=G+1$, where $G$ is the geometric draw on line
+\ref{line:positive_draw}. By its proof definition,
+$\Pr[Y=k]=p q^{k-1}$ for $k\ge1$.
+
+The call to \rustdoc{traits/samplers/negative_binomial/fn}{sample\_integer\_envelope\_accept}
+on line \ref{line:positive_accept} uses
+$\texttt{eta\_numer}/\texttt{eta\_denom}=\eta+1$ and
+$\texttt{base\_denom}/\texttt{eta\_denom}=2$.
+Consequently, conditional on $Y=k$, its acceptance probability is
+\begin{equation*}
+A(k)=\prod_{i=0}^{k-2}\frac{\eta+1+i}{2+i}
+=\prod_{i=1}^{k-1}\frac{\eta+i}{i+1}.
+\end{equation*}
+Each factor belongs to $(0,1]$. In particular, $A(1)=1$ by the empty-product
+convention. The accepted joint mass is
+\begin{align*}
+\Pr[Y=k,\text{ accepted}]
+&=p q^{k-1} A(k)
+=\frac{p}{\eta q}\,q^k\frac{(\eta)_k}{k!}.
+\end{align*}
+The total acceptance probability is positive (already the event $Y=1$
+is accepted with probability $p>0$), so the rejection loop terminates
+almost surely. By the binomial series,
+\[
+\sum_{k=1}^{\infty}q^k\frac{(\eta)_k}{k!}
+=(1-q)^{-\eta}-1=p^{-\eta}-1.
+\]
+Conditioning the displayed joint mass on acceptance therefore yields
+Equation~\ref{eq:target}.
+\end{proof}
+
+\begin{lemma}
+\label{lem:integer-envelope}
+For $\eta>1$, the output follows the target law.
+\end{lemma}
+\begin{proof}
+Every iteration draws an independent ordinary negative-binomial variable
+$K$ via line \ref{line:ordinary_draw} and accepts it when $K>0$ on
+line \ref{line:positive_branch}.
+By the proof definition of the ordinary sampler,
+\[
+\Pr[K=k]=p^\eta q^k\frac{(\eta)_k}{k!}
+\quad(k\ge0).
+\]
+Since $\Pr[K>0]=1-p^\eta>0$, the loop terminates almost surely, and
+conditioning on positivity gives
+\[
+\Pr[\texttt{out}=k]
+=\frac{p^\eta q^k(\eta)_k/k!}{1-p^\eta}
+=\frac{q^k(\eta)_k/k!}{p^{-\eta}-1}
+\quad(k\ge1).
+\]
+\end{proof}
+
+\begin{proof}[Proof of the postcondition]
+The three lemmas cover every valid $\eta>0$ and establish the exact
+distribution. The only fallible operations invoke
+\rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast},
+\rustdoc{traits/samplers/negative_binomial/fn}{sample\_integer\_envelope\_accept},
+or \rustdoc{traits/samplers/negative_binomial/fn}{sample\_negative\_binomial\_rational}.
+Their proof definitions restrict returned errors to lack of system entropy;
+other arithmetic operations are exact on arbitrary-precision integers and
+rationals. Hence the function satisfies the postcondition.
+\end{proof}
+
+\end{document}
