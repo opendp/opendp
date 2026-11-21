@@ -814,7 +814,7 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
-    def sklearn(self, estimator):
+    def sklearn(self, estimator, *, method=None):
         """Construct a measurement that releases a new fitted estimator clone.
 
         Use the current chain's output domain/metric and stability, and this query's
@@ -822,12 +822,17 @@ class Query(object):
         leaving the supplied estimator unchanged.
         """
         from sklearn.base import clone
-        from opendp.extras.sklearn._estimator import DPEstimator
+        from opendp.extras.sklearn._estimator import (
+            MeasurementMixin,
+            TransformationMixin,
+        )
 
-        if not isinstance(estimator, DPEstimator):
-            raise ValueError(
+        if method is None and not isinstance(estimator, MeasurementMixin):
+            raise TypeError(
                 "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
+        if method is not None and not isinstance(estimator, TransformationMixin):
+            raise TypeError("Stage must implement TransformationMixin")
         if isinstance(self._chain, tuple):
             input_domain, input_metric = self._chain
             d_mid = self._d_in
@@ -843,8 +848,18 @@ class Query(object):
                 f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
+        if method is not None:
+            from opendp.extras.sklearn._rowwise import _make_rowwise_transform
+
+            trans = _make_rowwise_transform(
+                input_domain, input_metric, estimator, method=method
+            )
+            return self.new_with(
+                chain=trans if isinstance(self._chain, tuple) else self._chain >> trans
+            )
+
         prototype = clone(estimator)
-        measurement = prototype.make(
+        measurement = prototype.make_measurement(
             input_domain, input_metric, self._output_measure, d_mid, self._d_out
         )
 

@@ -5,16 +5,28 @@ import pytest
 import opendp.prelude as dp
 
 pytest.importorskip("sklearn")
-from sklearn.base import TransformerMixin, clone
+from sklearn.base import BaseEstimator, TransformerMixin, clone
 
-from opendp.extras.sklearn._estimator import DPEstimator, DPTransformer
+from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
 
 
-class _ConstantEstimator(DPEstimator):
+@pytest.fixture(autouse=True)
+def allow_test_rowwise_callbacks():
+    # Test doubles assert their own rowwise contracts instead of using library code.
+    from opendp.mod import GLOBAL_FEATURES
+
+    enabled = "honest-but-curious" in GLOBAL_FEATURES
+    dp.enable_features("honest-but-curious")
+    yield
+    if not enabled:
+        dp.disable_features("honest-but-curious")
+
+
+class _ConstantEstimator(MeasurementMixin, BaseEstimator):
     def __init__(self, value=23):
         self.value = value
 
-    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+    def make_measurement(self, input_domain, input_metric, output_measure, d_in, d_out):
         value = self.value
         return dp.m.make_user_measurement(
             input_domain,
@@ -29,11 +41,13 @@ class _ConstantEstimator(DPEstimator):
         self.release_ = release
 
 
-class _OffsetTransformer(TransformerMixin, DPTransformer):
+class _OffsetTransformer(
+    MeasurementMixin, TransformationMixin, TransformerMixin, BaseEstimator
+):
     def __init__(self, offset):
         self.offset = offset
 
-    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+    def make_measurement(self, input_domain, input_metric, output_measure, d_in, d_out):
         offset = self.offset.copy()
         return dp.m.make_user_measurement(
             input_domain,
@@ -50,25 +64,13 @@ class _OffsetTransformer(TransformerMixin, DPTransformer):
     def transform(self, X):
         return X + self.offset_
 
-    def make_transform(self, input_domain, input_metric):
-        from opendp._internal import _make_transformation
-
-        offset = self.offset_.copy()
-        desc = input_domain.cast(dp.sklearn.SklearnFitDescriptor)
-        X_desc = desc.X.cast(dp.numpy.NPArray2Domain)
-        output_domain = dp.sklearn.sklearn_fit_domain(
-            dp.numpy.array2_domain(
-                T=float, size=X_desc.size, num_columns=X_desc.num_columns
-            ),
-            desc.y,
-        )
-        return _make_transformation(
-            input_domain,
-            input_metric,
-            output_domain,
-            input_metric,
-            lambda data: dp.sklearn.SklearnFit(data.X + offset, data.y),
-            lambda d: d,
+    def rowwise_output_domain(self, input_domain, *, method):
+        if method != "transform":
+            raise ValueError(f"Unsupported method {method!r}")
+        self.offset_
+        desc = input_domain.cast(dp.numpy.NPArray2Domain)
+        return dp.numpy.array2_domain(
+            T=float, size=desc.size, num_columns=desc.num_columns
         )
 
 
@@ -102,7 +104,7 @@ def test_fit_requires_explicit_privacy():
 def test_sklearn_requires_an_estimator_and_resolved_input():
     from opendp.context import PartialChain
 
-    with pytest.raises(ValueError, match="OpenDP fitting capability"):
+    with pytest.raises(TypeError, match="OpenDP fitting capability"):
         _context().query().sklearn(object())
     partial = dp.Query(
         PartialChain(lambda _: None), dp.max_divergence(), d_in=1, d_out=1
@@ -133,14 +135,14 @@ def test_context_constructs_once_and_executes_only_on_release():
     calls = []
 
     class RecordingEstimator(_ConstantEstimator):
-        def make(self, *args):
+        def make_measurement(self, *args):
             calls.append("make")
 
             def execute(value):
                 calls.append("execute")
                 return value
 
-            return super().make(*args) >> execute
+            return super().make_measurement(*args) >> execute
 
     context = _context()
     model = RecordingEstimator()
@@ -231,7 +233,7 @@ def test_sklearn_receives_transformed_domain_metric_and_distance():
     )
 
     class CheckingEstimator(_ConstantEstimator):
-        def make(self, domain, metric, measure, d_in, d_out):
+        def make_measurement(self, domain, metric, measure, d_in, d_out):
             assert (domain, metric, measure, d_in, d_out) == (
                 output_domain,
                 output_metric,
@@ -260,7 +262,7 @@ def test_fitting_rejects_excess_privacy_loss(route):
     executions = []
 
     class BudgetedEstimator(_ConstantEstimator):
-        def make(self, domain, metric, measure, d_in, d_out):
+        def make_measurement(self, domain, metric, measure, d_in, d_out):
             assert (domain, metric, measure, d_in, d_out) == (
                 *_space(),
                 dp.max_divergence(),
@@ -303,9 +305,11 @@ def test_fitting_rejects_excess_privacy_loss(route):
 @pytest.mark.parametrize("route", ["standalone", "context"])
 def test_sklearn_preserves_measure_conversion(route):
     class PureEstimator(_ConstantEstimator):
-        def make(self, domain, metric, measure, d_in, d_out):
+        def make_measurement(self, domain, metric, measure, d_in, d_out):
             assert measure == dp.zero_concentrated_divergence()
-            return super().make(domain, metric, dp.max_divergence(), d_in, 1.0)
+            return super().make_measurement(
+                domain, metric, dp.max_divergence(), d_in, 1.0
+            )
 
     model = PureEstimator()
     if route == "context":
@@ -337,14 +341,16 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
         dp.vector_domain(dp.atom_domain(T=int)),
     )
     data, model = dp.sklearn.SklearnFit(X, y), _OffsetTransformer(np.array([2.0, 3.0]))
-    measurement = model.make(
+    measurement = model.make_measurement(
         domain, dp.symmetric_distance(), dp.max_divergence(), 1, 1.0
     )
     model.offset[:] = 9
     parameters = measurement(data)
     assert not hasattr(model, "offset_")
     model._ingest_release(parameters)
-    transform = model.make_transform(domain, dp.symmetric_distance())
+    from opendp.extras.sklearn._rowwise import _make_rowwise_transform
+
+    transform = _make_rowwise_transform(domain, dp.symmetric_distance(), model)
     model.offset_[:] = 10
     transformed = (transform >> dp.t.make_identity(*transform.output_space))(data)
     np.testing.assert_array_equal(transformed.X, X + [2.0, 3.0])
@@ -362,3 +368,31 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
         is model
     )
     np.testing.assert_array_equal(model.transform(X), X + 9)
+
+
+def test_conditional_private_fitting_shortcuts_follow_sklearn_roles():
+    from sklearn.base import ClusterMixin
+
+    assert not hasattr(_ConstantEstimator(), "fit_transform")
+    assert not hasattr(_ConstantEstimator(), "fit_predict")
+
+    transformer = _OffsetTransformer(np.array([1.0, 2.0]))
+    assert hasattr(transformer, "fit_transform")
+    assert not hasattr(transformer, "fit_predict")
+    with pytest.raises(NotImplementedError, match="Private fit_transform"):
+        transformer.fit_transform(np.ones((2, 2)))
+    assert not hasattr(transformer, "offset_")
+
+    class Cluster(MeasurementMixin, ClusterMixin, BaseEstimator):
+        def make_measurement(self, *args):
+            return _ConstantEstimator().make_measurement(*args)
+
+        def _ingest_release(self, release):
+            self.release_ = release
+
+    cluster = Cluster()
+    assert hasattr(cluster, "fit_predict")
+    assert not hasattr(cluster, "fit_transform")
+    with pytest.raises(NotImplementedError, match="Private fit_predict"):
+        cluster.fit_predict(np.ones((2, 2)))
+    assert not hasattr(cluster, "release_")

@@ -32,7 +32,7 @@ def _domain(size=None, y_size=None, **features):
 
 
 def _make(model, domain, d_in=2, rho=1.0):
-    return model.make(
+    return model.make_measurement(
         domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), d_in, rho
     )
 

@@ -34,6 +34,9 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
         norm=1.0, p=2, origin=origin, num_columns=2, size=2, nan=False, T=T
     )
 
+    if constructor == "eigendecomposition":
+        pytest.importorskip("sklearn")
+
     with pytest.raises(ValueError, match="origin must be zero"):
         if constructor == "sscp":
             make_np_sscp(domain, dp.symmetric_distance())

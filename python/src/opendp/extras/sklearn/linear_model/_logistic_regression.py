@@ -2,15 +2,18 @@
 
 import numpy as np
 from scipy.special import expit  # type: ignore[import-untyped]
-from sklearn.base import ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils.validation import check_is_fitted, validate_data
 
-from opendp.extras.sklearn._estimator import DPEstimator
+from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
 from opendp.extras.sklearn.linear_model._make_private_logistic_regression import (
     make_private_logistic_regression as _make_private_logistic_regression,
 )
 
 
-class LogisticRegression(ClassifierMixin, DPEstimator):
+class LogisticRegression(
+    ClassifierMixin, MeasurementMixin, TransformationMixin, BaseEstimator
+):
     """Differentially private binary logistic regression with sklearn's classifier interface.
 
     Uses full-batch noisy gradient descent with per-record L2 clipping and Gaussian noise,
@@ -51,7 +54,7 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
         self.clip_norm = clip_norm
         self.reference_size = reference_size
 
-    def make(self, input_domain, input_metric, output_measure, d_in, d_out):
+    def make_measurement(self, input_domain, input_metric, output_measure, d_in, d_out):
         return _make_private_logistic_regression(
             input_domain,
             input_metric,
@@ -75,6 +78,10 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
         self.n_features_in_ = self.coef_.shape[1]
 
     def predict_proba(self, X):
+        check_is_fitted(self, ["coef_", "intercept_", "classes_"])
+        X = validate_data(
+            self, X, reset=False, ensure_all_finite=False, ensure_min_samples=0
+        )
         X = np.nan_to_num(np.asarray(X), nan=0.0, posinf=0.0, neginf=0.0)
         with np.errstate(all="ignore"):
             z = np.nan_to_num(X @ self.coef_[0] + self.intercept_[0], nan=0.0)
@@ -82,4 +89,26 @@ class LogisticRegression(ClassifierMixin, DPEstimator):
         return np.column_stack([1 - p, p])
 
     def predict(self, X):
-        return self.classes_[(self.predict_proba(X)[:, 1] >= 0.5).astype(int)]
+        return self.classes_[(self.predict_proba(X)[:, 1] > 0.5).astype(int)]
+
+    def rowwise_output_domain(self, feature_domain, *, method):
+        """Describe the output domain of independent per-row classification."""
+        from opendp.extras.numpy import NPArray2Domain, array2_domain
+
+        check_is_fitted(self, ["coef_", "intercept_", "classes_"])
+        x = feature_domain.cast(NPArray2Domain)
+        if x.num_columns != self.n_features_in_:
+            raise ValueError("Prediction feature count differs from fitted model")
+        if not np.array_equal(self.classes_, [0, 1]):
+            raise ValueError("Only 0/1 classes are currently supported")
+
+        if method == "predict":
+            num_columns = 1
+            dtype = np.int64
+        elif method == "predict_proba":
+            num_columns = 2
+            dtype = np.float64
+        else:
+            raise ValueError(f"Method {method!r} does not support rowwise inference")
+
+        return array2_domain(T=dtype, num_columns=num_columns, size=x.size, nan=False)
