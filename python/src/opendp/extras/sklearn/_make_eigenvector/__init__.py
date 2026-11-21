@@ -199,7 +199,10 @@ def make_private_eigenvectors(
 
     privacy_measure = dp.max_divergence()
     m_compose = dp.c.make_adaptive_composition(
-        input_domain, input_metric, privacy_measure, 1.0,
+        input_domain,
+        input_metric,
+        privacy_measure,
+        1.0,
         [2 * concentration for concentration in concentrations],
     )
 
