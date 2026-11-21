@@ -1,0 +1,81 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn log\_alpha\_over\_alpha\_minus\_one\_lo}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn log\_alpha\_over\_alpha\_minus\_one\_lo} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{alpha} $> 1$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/log_alpha_over_alpha_minus_one_lo.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{alpha} such that the given precondition holds,
+\texttt{log\_alpha\_over\_alpha\_minus\_one\_lo} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \le \log\!\left(\frac{\texttt{alpha}}{\texttt{alpha} - 1}\right).
+\]
+\end{theorem}
+
+\section{Proof}
+Assume the precondition is met.
+
+\begin{lemma}
+\label{err-e}
+\texttt{log\_alpha\_over\_alpha\_minus\_one\_lo} only returns \texttt{Err(e)} if one of the
+fallible helper calls in the pseudocode returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+The only fallible operations are the calls on lines \ref{line:div_lo} and \ref{line:ln1p_hi}.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{log\_alpha\_over\_alpha\_minus\_one\_lo} is \texttt{Ok(out)}, then
+\[
+\texttt{out} \le \log\!\left(\frac{\texttt{alpha}}{\texttt{alpha} - 1}\right).
+\]
+\end{lemma}
+
+\begin{proof}
+By the proof definition of \texttt{neg\_inf\_div},
+\[
+\texttt{inv\_alpha\_lo} \le \frac{1}{\texttt{alpha}}.
+\]
+Multiplying by $-1$ reverses the inequality:
+\[
+\texttt{neg\_inv\_alpha\_hi} = -\texttt{inv\_alpha\_lo} \ge -\frac{1}{\texttt{alpha}}.
+\]
+Since \texttt{alpha} $> 1$, both arguments lie in $(-1,0)$, so by the proof definition of
+\texttt{inf\_ln\_1p},
+\[
+\texttt{ln\_one\_minus\_inv\_alpha\_hi}
+\ge \ln\!\left(1 - \frac{1}{\texttt{alpha}}\right).
+\]
+Multiplying by $-1$ gives
+\[
+\texttt{out}
+=
+-\texttt{ln\_one\_minus\_inv\_alpha\_hi}
+\le
+-\ln\!\left(1 - \frac{1}{\texttt{alpha}}\right)
+= \log\!\left(\frac{\texttt{alpha}}{\texttt{alpha} - 1}\right).
+\]
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

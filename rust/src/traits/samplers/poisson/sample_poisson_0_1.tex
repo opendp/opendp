@@ -1,0 +1,168 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_poisson\_0\_1}}
+\author{OpenDP}
+
+\begin{document}
+\maketitle
+
+\contrib Proves soundness of \texttt{fn sample\_poisson\_0\_1} in \texttt{mod.rs}.
+This proof uses a geometric proposal distribution on $\mathbb{N}_0$ and accepts with
+probability $1/k!$ to realize the exact Poisson law on the interval $[0,1)$.
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{lambda} is of type \texttt{RBig}, a bignum rational
+\end{itemize}
+
+\subsubsection*{User-verified}
+$0 \le \texttt{lambda} < 1$
+
+\subsection*{Implementation}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_poisson_0_1.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{lambda} such that the given preconditions hold, \\
+\texttt{sample\_poisson\_0\_1} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Poisson(\texttt{lambda})$.
+\end{theorem}
+
+\section{Proof}
+
+\begin{lemma}
+\label{err-e}
+\texttt{sample\_poisson\_0\_1} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+If \texttt{lambda} $= 0$, the function returns \texttt{Ok(0)} immediately.
+
+Otherwise, the function only invokes
+\rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_rational}
+on lines \ref{line:prop} and \ref{line:acc}. Since the precondition gives
+$0 < \texttt{lambda} < 1$, the first call is valid. On line \ref{line:acc},
+the argument is $1/i$ for an integer $i \ge 2$, so this probability also lies in $(0,1)$.
+By the definition of \texttt{sample\_bernoulli\_rational}, an error can only arise from
+a lack of system entropy. Therefore \texttt{sample\_poisson\_0\_1} only returns
+\texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+We now condition on not returning an error and fix any iteration of the outer loop.
+
+\begin{lemma}
+\label{proposal}
+If \texttt{k} is the value after line \ref{line:prop}, then for every $k \in \mathbb{N}_0$,
+\[
+\Pr[K = k] = (1-\lambda)\lambda^k.
+\]
+\end{lemma}
+
+\begin{proof}
+The loop on line \ref{line:prop} increments \texttt{k} once for each consecutive success
+of a Bernoulli random variable with success probability $\lambda$, and stops at the first failure.
+Therefore \texttt{k} is geometric on $\mathbb{N}_0$ with
+\[
+\Pr[K = k] = (1-\lambda)\lambda^k.
+\]
+\end{proof}
+
+\begin{lemma}
+\label{accept}
+Conditional on $K=k$, the probability that the algorithm returns $k$ in a fixed outer-loop
+iteration is $1/k!$.
+\end{lemma}
+
+\begin{proof}
+If $k=0$ or $k=1$, the acceptance loop does not reject and the return probability is $1 = 1/k!$.
+
+If $k \ge 2$, line \ref{line:acc} performs independent Bernoulli draws with probabilities
+$1/2, 1/3, \ldots, 1/k$, and returns $k$ only if all of them succeed. Thus
+\[
+\Pr[\text{return } k \mid K=k]
+=
+\prod_{i=2}^k \frac{1}{i}
+=
+\frac{1}{k!}.
+\]
+\end{proof}
+
+\begin{lemma}
+\label{one-step-return}
+For every $k \in \mathbb{N}_0$, the probability that a fixed outer-loop iteration returns $k$ is
+\[
+(1-\lambda)\frac{\lambda^k}{k!}.
+\]
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{proposal} and Lemma~\ref{accept},
+\[
+\Pr[\text{one iteration returns }k]
+=
+\Pr[K=k]\Pr[\text{return }k \mid K=k]
+=
+(1-\lambda)\lambda^k \cdot \frac{1}{k!}.
+\]
+\end{proof}
+
+\begin{lemma}
+\label{one-step-accept}
+The probability that a fixed outer-loop iteration returns some value is
+\[
+(1-\lambda)e^\lambda.
+\]
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{one-step-return},
+\[
+\Pr[\text{one iteration returns a value}]
+=
+\sum_{k=0}^\infty (1-\lambda)\frac{\lambda^k}{k!}
+=
+(1-\lambda)\sum_{k=0}^\infty \frac{\lambda^k}{k!}
+=
+(1-\lambda)e^\lambda.
+\]
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{sample\_poisson\_0\_1} is \texttt{Ok(out)}, then \texttt{out} is distributed as $Poisson(\texttt{lambda})$.
+\end{lemma}
+
+\begin{proof}
+Let
+\[
+r_k := (1-\lambda)\frac{\lambda^k}{k!}
+\quad\text{and}\quad
+a := (1-\lambda)e^\lambda.
+\]
+By Lemma~\ref{one-step-return}, a fixed outer-loop iteration returns $k$ with probability $r_k$.
+By Lemma~\ref{one-step-accept}, a fixed outer-loop iteration returns some value with probability $a$.
+
+Since outer-loop iterations are independent, the probability that the algorithm returns $k$
+on iteration $t$ is $(1-a)^{t-1}r_k$. Therefore
+\begin{align*}
+\Pr[\texttt{out}=k]
+&= \sum_{t=1}^\infty (1-a)^{t-1}r_k \\
+&= \frac{r_k}{a} \\
+&= \frac{(1-\lambda)\lambda^k/k!}{(1-\lambda)e^\lambda} \\
+&= e^{-\lambda}\frac{\lambda^k}{k!}.
+\end{align*}
+Thus \texttt{out} is distributed as $Poisson(\texttt{lambda})$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}

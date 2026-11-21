@@ -1,0 +1,101 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn solve\_nb\_x\_from\_mean}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn solve\_nb\_x\_from\_mean} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{mean} $> 1$ and \texttt{eta} $\ge 0$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/solve_nb_x_from_mean.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any inputs satisfying the precondition, \texttt{solve\_nb\_x\_from\_mean} either returns
+\texttt{Err(e)}, or returns \texttt{Ok(out)} where
+\[
+\texttt{expected\_nb\_mean\_from\_x\_hi(eta, out)} \le \texttt{mean}.
+\]
+Moreover, \texttt{out} is the final value of the upper bisection endpoint \texttt{hi}.
+\end{theorem}
+
+\section{Proof}
+Assume the precondition.
+
+\begin{lemma}
+\label{err-e}
+\texttt{solve\_nb\_x\_from\_mean} only returns \texttt{Err(e)} if some call to
+\texttt{expected\_nb\_mean\_from\_x\_hi} propagates \texttt{Err(e)} or if the explicit finite
+guard on line \ref{line:finite_guard} fails.
+\end{lemma}
+
+\begin{proof}
+These are the only fallible operations in the pseudocode.
+\end{proof}
+
+\begin{lemma}
+\label{hi-invariant}
+Whenever control reaches the top of the bisection loop on line \ref{line:bisection},
+\[
+\texttt{expected\_nb\_mean\_from\_x\_hi(eta, hi)} \le \texttt{mean}.
+\]
+\end{lemma}
+
+\begin{proof}
+When the expansion loop terminates normally, the guard on line \ref{line:expand} is false, so the
+current \texttt{hi} satisfies the inequality.
+Inside the bisection loop, \texttt{hi} is updated only in the \texttt{else} branch, and there it is
+set to \texttt{mid} only after checking that
+\texttt{expected\_nb\_mean\_from\_x\_hi(eta, mid)} $\le$ \texttt{mean}.
+Thus the property is preserved from one iteration to the next.
+\end{proof}
+
+\begin{lemma}
+\label{termination}
+If the function does not return \texttt{Err(e)}, then the bisection loop eventually reaches line
+\ref{line:converged} and returns.
+\end{lemma}
+
+\begin{proof}
+At the start of the bisection loop, \texttt{lo} and \texttt{hi} are finite and satisfy
+\texttt{lo < hi}. Each non-terminating iteration sets exactly one endpoint to the midpoint on line
+\ref{line:mid}, so the new interval is a strict subinterval of the previous one and still has
+finite endpoints.
+
+Because \texttt{f64} has only finitely many representable values in any bounded interval, this
+strict shrinking cannot continue indefinitely. Therefore after finitely many iterations there is no
+representable \texttt{f64} strictly between \texttt{lo} and \texttt{hi}. At that point the
+midpoint rounds to one of the endpoints, so the test on line \ref{line:converged} succeeds and the
+function returns.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If \texttt{solve\_nb\_x\_from\_mean} returns \texttt{Ok(out)}, then
+\[
+\texttt{expected\_nb\_mean\_from\_x\_hi(eta, out)} \le \texttt{mean},
+\]
+and \texttt{out} is the final value of \texttt{hi}.
+\end{lemma}
+
+\begin{proof}
+The only successful return is on line \ref{line:converged}, which returns \texttt{hi}; therefore
+\texttt{out} is exactly the final value of the upper endpoint.
+
+By Lemma~\ref{hi-invariant}, the displayed inequality holds at the start of every bisection
+iteration. The convergence test does not modify \texttt{hi}, so it still holds at return.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e}, Lemma~\ref{termination}, and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}
