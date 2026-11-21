@@ -283,3 +283,72 @@ def test_rowwise_inference_requires_aligned_input_domain():
     )
     with pytest.raises(ValueError):
         ctx.query().sklearn(IdentityFitted(), method="transform")
+
+
+def test_trusted_rowwise_validates_frozen_and_module_identity(monkeypatch):
+    """Only the reviewed implementation, without overrides, is trusted."""
+    from sklearn.frozen import FrozenEstimator
+    from opendp.extras.sklearn._rowwise import _trusted_rowwise
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
+    import sys
+
+    model = LogisticRegression()
+    model._ingest_release(np.zeros(3))
+    assert _trusted_rowwise(model, "predict")
+    assert _trusted_rowwise(FrozenEstimator(model), "predict")
+
+    wrapped = FrozenEstimator(model)
+    wrapped.predict = lambda X: X
+    assert not _trusted_rowwise(wrapped, "predict")
+
+    class UnsafeFrozen(FrozenEstimator):
+        pass
+
+    assert not _trusted_rowwise(UnsafeFrozen(model), "predict")
+
+    module = sys.modules[LogisticRegression.__module__]
+    with monkeypatch.context() as patch:
+        patch.setattr(module, "LogisticRegression", object())
+        assert not _trusted_rowwise(model, "predict")
+
+
+def test_trusted_rowwise_recursively_checks_composites(monkeypatch):
+    """Composite inference is trusted only when all its children are."""
+    import sys
+    from types import ModuleType
+    from opendp.extras.sklearn._rowwise import _trusted_rowwise
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
+
+    def composite_class(module_name, name):
+        module = ModuleType(module_name)
+        cls = type(name, (), {"__module__": module_name})
+        setattr(module, name, cls)
+        monkeypatch.setitem(sys.modules, module_name, module)
+        return cls
+
+    Pipeline = composite_class("opendp.extras.sklearn.pipeline", "Pipeline")
+    ColumnTransformer = composite_class(
+        "opendp.extras.sklearn.compose", "ColumnTransformer"
+    )
+    model = LogisticRegression()
+    model._ingest_release(np.zeros(3))
+
+    pipeline = Pipeline()
+    pipeline.steps = [
+        ("unused", None),
+        ("passthrough", "passthrough"),
+        ("classifier", model),
+    ]
+    assert _trusted_rowwise(pipeline, "predict")
+    pipeline.steps = [("unsafe", IdentityFitted()), ("classifier", model)]
+    assert not _trusted_rowwise(pipeline, "predict")
+
+    columns = ColumnTransformer()
+    columns.transformers = [("passthrough", "passthrough", [0])]
+    assert _trusted_rowwise(columns, "transform")
+    columns.transformers = [("unsafe", IdentityFitted(), [0])]
+    assert not _trusted_rowwise(columns, "transform")
