@@ -406,9 +406,7 @@ def test_public_feature_metadata_with_named_and_unnamed_inputs():
 
 def test_standalone_fit_rejects_lazy_input_domain():
     pytest.importorskip("polars")
-    lazy = dp.lazyframe_domain(
-        [dp.series_domain("feature", dp.atom_domain(T=dp.f64))]
-    )
+    lazy = dp.lazyframe_domain([dp.series_domain("feature", dp.atom_domain(T=dp.f64))])
     domain = dp.sklearn.sklearn_fit_domain(lazy)
     with pytest.raises(TypeError, match="Explicitly collect lazy input"):
         _ConstantEstimator().fit(
