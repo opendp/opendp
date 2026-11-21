@@ -801,3 +801,154 @@ fn test_max_groups_bounds_changed_keys() -> Fallible<()> {
     }
     Ok(())
 }
+
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_group_by_means_share_count() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+        SeriesDomain::new("C", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(
+        Margin::by(["A"])
+            .with_invariant_keys()
+            .with_max_length(3)
+            .with_max_groups(1),
+    )?;
+
+    let data = df!(
+        "A" => [1i32, 1, 1],
+        "B" => [1.0f64, 2.0, 3.0],
+        "C" => [4.0f64, 5.0, 6.0],
+    )?
+    .lazy();
+    let query = data.clone().group_by([col("A")]).agg([
+        col("B")
+            .dp()
+            .mean((lit(0.0), lit(10.0)), None)
+            .alias("mean_b"),
+        col("C")
+            .dp()
+            .mean((lit(0.0), lit(10.0)), None)
+            .alias("mean_c"),
+        crate::polars::dp_len(None, false).alias("count"),
+    ]);
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        query,
+        Some(1.0),
+        None,
+    )?;
+    let plan = meas.invoke(&data)?.logical_plan;
+
+    let DslPlan::Select { input, .. } = &plan else {
+        panic!("expected final projection");
+    };
+    let DslPlan::HStack { input, .. } = input.as_ref() else {
+        panic!("expected shared-statistic postprocessing");
+    };
+    let DslPlan::GroupBy { aggs, .. } = input.as_ref() else {
+        panic!("expected aggregate of noisy sufficient statistics");
+    };
+    assert_eq!(
+        aggs.iter()
+            .filter(|expr| super::matching::is_len_expr(expr, None).is_some())
+            .count(),
+        1,
+        "both means must reuse the same materialized noisy count"
+    );
+
+    let release = LazyFrame::from(plan).collect()?;
+    assert_eq!(release.width(), 4);
+    assert!(release.column("mean_b").is_ok());
+    assert!(release.column("mean_c").is_ok());
+    assert!(release.column("count").is_ok());
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_shared_means_join_fills_before_postprocessing() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+        SeriesDomain::new("C", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(2).with_max_groups(1))?;
+
+    let data = df!(
+        "A" => [0i32, 0],
+        "B" => [1.0f64, 2.0],
+        "C" => [3.0f64, 4.0],
+    )?
+    .lazy();
+    let keys = df!(
+        "A" => [0i32, 1],
+        "label" => ["present", "absent"],
+    )?
+    .lazy();
+    let query = data
+        .clone()
+        .group_by([col("A")])
+        .agg([
+            col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mb"),
+            col("C").dp().mean((lit(0.0), lit(10.0)), None).alias("mc"),
+        ])
+        .join(keys, [col("A")], [col("A")], JoinType::Right.into());
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        MaxDivergence,
+        query,
+        Some(1.0),
+        None,
+    )?;
+    let release = meas.invoke(&data)?.collect()?;
+    assert_eq!(release.height(), 2);
+    assert_eq!(release.width(), 4);
+    for name in ["A", "label", "mb", "mc"] {
+        assert!(release.column(name).is_ok(), "missing {name}");
+    }
+    Ok(())
+}
+
+#[test]
+#[cfg(not(feature = "polars-ffi"))]
+fn test_mean_only_private_key_filter_synthesizes_count() -> Fallible<()> {
+    let domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<i32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
+
+    let data = df!(
+        "A" => [0i32, 1],
+        "B" => [2.0f64, 4.0],
+    )?
+    .lazy();
+    // No user-visible count expression: selection uses the mean's shared
+    // noisy denominator, and the intermediate count is removed afterwards.
+    let query = data.clone().group_by([col("A")]).agg([
+        col("B").dp().mean((lit(0.0), lit(10.0)), None).alias("mean_b"),
+    ]);
+
+    let meas = make_private_lazyframe(
+        domain,
+        SymmetricDistance,
+        Approximate(MaxDivergence),
+        query,
+        Some(1.0),
+        Some(3),
+    )?;
+    let _ = meas.map(&1.into())?;
+    let release = meas.invoke(&data)?.collect()?;
+    assert_eq!(release.width(), 2);
+    assert!(release.column("mean_b").is_ok());
+    Ok(())
+}

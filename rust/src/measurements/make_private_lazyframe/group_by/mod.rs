@@ -29,6 +29,8 @@ use polars_plan::dsl::Expr;
 mod test;
 
 mod matching;
+mod workload;
+use workload::PrivateAggPlan;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::{DistinctOptionsDSL, ProjectionOptions};
 
@@ -112,7 +114,19 @@ where
     let margin = middle_domain.get_margin(&group_by_id);
     let is_join = matches!(key_sanitizer, Some(KeySanitizer::Join { .. }));
 
-    let m_expr_aggs = aggs.into_iter().map(|expr| {
+    let agg_plan = PrivateAggPlan::new(aggs, &group_by, &key_sanitizer)?;
+    // Threshold predicates on aliased, shared counts must refer to the
+    // materialized noisy column rather than resampling a count.
+    if let Some(KeySanitizer::Filter(predicate)) = &mut key_sanitizer {
+        if let Some((name, value)) = is_threshold_predicate(predicate.clone()) {
+            let raw_name = agg_plan.raw_count(&name);
+            if name != raw_name {
+                *predicate = col(raw_name.as_str()).gt(lit(value));
+            }
+        }
+    }
+
+    let m_expr_aggs = agg_plan.aggs.iter().cloned().map(|expr| {
         expr.make_private(
             WildExprDomain {
                 columns: middle_domain.series_domains.clone(),
@@ -144,7 +158,7 @@ where
         let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
         Some((name, noise, threshold_value, false))
     } else if let Some(threshold_value) = threshold {
-        let (name, noise) = find_len_expr(&dp_exprs, None)?;
+        let (name, noise) = find_len_expr(&dp_exprs, agg_plan.count.as_deref())?;
         Some((name, noise, threshold_value, true))
     } else {
         return fallible!(
@@ -198,7 +212,7 @@ where
             maintain_order: false,
             options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
         };
-        Ok(match key_sanitizer.clone() {
+        let sanitized = match key_sanitizer.clone() {
             Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
                 input: Arc::new(output),
                 predicate: predicate.clone(),
@@ -246,7 +260,8 @@ where
                 }
             }
             None => output,
-        })
+        };
+        Ok(agg_plan.finish(sanitized))
     });
 
     let privacy_map = PrivacyMap::new_fallible(move |d_in: &Bounds| {
