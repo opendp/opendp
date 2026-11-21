@@ -4,17 +4,54 @@ from abc import ABC, abstractmethod
 from typing import Any, TypeVar
 
 from opendp.context import _cast_measure, domain_of
-from sklearn.base import BaseEstimator
+from sklearn.utils.metaestimators import available_if
 
-from opendp.extras.sklearn._domains import SklearnFit
-from opendp.mod import Domain, Metric, Measure, Measurement, Transformation
+from opendp.extras.sklearn._domains import SklearnFit, SklearnFitDescriptor
+from opendp.mod import Domain, Metric, Measure, Measurement
 
-_EstimatorT = TypeVar("_EstimatorT", bound="DPEstimator")
+_EstimatorT = TypeVar("_EstimatorT", bound="MeasurementMixin")
 
 
-class DPEstimator(BaseEstimator, ABC):
+def _inherited_method(name):
+    """Expose only sklearn shortcuts supplied by the estimator's other mixins."""
+    return lambda self: hasattr(super(MeasurementMixin, self), name)
+
+
+def _set_fit_metadata(estimator, input_domain):
+    """Set sklearn feature metadata from public domain information."""
+    features = input_domain.cast(SklearnFitDescriptor).X
+    # DataFrameDomain is supplied by the independent Polars bridge.
+    names = tuple(features.columns) if hasattr(features, "columns") else None
+    descriptor = getattr(features, "descriptor", None)
+    width: Any = (
+        len(names) if names is not None else getattr(descriptor, "num_columns", None)
+    )
+    if width is None:
+        width = getattr(descriptor, "n_features", None)
+
+    if width is not None and not isinstance(
+        getattr(type(estimator), "n_features_in_", None), property
+    ):
+        estimator.n_features_in_ = width
+
+    if not isinstance(getattr(type(estimator), "feature_names_in_", None), property):
+        if names is not None:
+            import numpy as np
+
+            estimator.feature_names_in_ = np.asarray(names, dtype=object)
+        elif hasattr(estimator, "feature_names_in_"):
+            del estimator.feature_names_in_
+
+
+def _finish_fit(estimator, release, input_domain):
+    """Install accounted parameters and public sklearn metadata."""
+    estimator._ingest_release(release)
+    _set_fit_metadata(estimator, input_domain)
+
+
+class MeasurementMixin(ABC):
     @abstractmethod
-    def make(
+    def make_measurement(
         self,
         input_domain: Domain,
         input_metric: Metric,
@@ -49,7 +86,6 @@ class DPEstimator(BaseEstimator, ABC):
 
         ``domain`` should be constructed with ``sklearn_fit_domain(...)``.
         Otherwise, dtypes and feature count are inferred from the data.
-
         Context's ``query.sklearn(model).release()`` instead returns a fitted clone.
         """
         data = SklearnFit(X, y=y)
@@ -58,25 +94,47 @@ class DPEstimator(BaseEstimator, ABC):
 
         input_metric, d_in = privacy_unit
         output_measure, d_out = privacy_loss
-        measurement = self.make(domain, input_metric, output_measure, d_in, d_out)
+
+        from opendp.mod import LazyFrameDomain
+
+        if isinstance(domain.cast(SklearnFitDescriptor).X, LazyFrameDomain):
+            raise TypeError("Explicitly collect lazy input before sklearn fitting")
+        measurement = self.make_measurement(
+            domain, input_metric, output_measure, d_in, d_out
+        )
         measurement = _cast_measure(measurement, output_measure, d_out)
         if not measurement.check(d_in, d_out):
             raise ValueError("Fitting measurement exceeds the privacy allowance")
 
-        self._ingest_release(measurement(data))
+        _finish_fit(self, measurement(data), domain)
         return self
 
+    @available_if(_inherited_method("fit_transform"))
+    def fit_transform(self, X, y=None, **fit_params):
+        """Transform public records only when fitting consumes no privacy budget."""
+        raise NotImplementedError(
+            "Private fit_transform is unsupported; use fit with a privacy budget "
+            "then call query.sklearn(fitted_estimator, method='transform')"
+        )
 
-class DPTransformer(DPEstimator):
-    """A DP estimator that supports stable post-fit transformations."""
+    @available_if(_inherited_method("fit_predict"))
+    def fit_predict(self, X, y=None, **fit_params):
+        """Never expose row-level predictions on privately fitted records."""
+        raise NotImplementedError(
+            "Private fit_predict is unsupported; use fit with a privacy budget "
+            "then certified prediction on private records"
+        )
+
+
+class TransformationMixin(ABC):
+    """Certify rowwise sklearn inference by declaring its output domain.
+
+    Implementing rowwise_output_domain asserts that the named sklearn method
+    is total on the input domain, independently processes each row, and preserves
+    row count and alignment. Unsupported methods must raise.
+    """
 
     @abstractmethod
-    def make_transform(
-        self, input_domain: Domain, input_metric: Metric
-    ) -> Transformation:
-        """Construct a stable SklearnFit transformation preserving aligned metadata.
-
-        Do not fit or modify self. Snapshot configuration and fitted parameters so
-        later mutations cannot change the function or stability map.
-        """
+    def rowwise_output_domain(self, input_domain: Domain, *, method: str) -> Domain:
+        """Return the certified output domain of a rowwise sklearn method."""
         ...
