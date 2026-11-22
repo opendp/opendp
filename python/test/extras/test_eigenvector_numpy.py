@@ -100,6 +100,7 @@ def test_private_eigenvector_isotropic_matrix(width, value):
 def test_eigenvector_integration():
     from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
+    from opendp.extras.numpy import _nuclear_norm_distance
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvector
 
     num_columns = 4
@@ -111,7 +112,7 @@ def test_eigenvector_integration():
     meas = (
         space
         >> then_np_clamp(norm=1.0, p=2)
-        >> then_np_sscp()
+        >> then_np_sscp(output_metric=_nuclear_norm_distance())
         >> then_private_eigenvector(1.0)
     )
 
@@ -122,6 +123,7 @@ def test_eigenvector_integration():
 def test_eigenvectors():
     from opendp.extras.numpy import then_np_clamp
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
+    from opendp.extras.numpy import _nuclear_norm_distance
     from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 
     num_columns = 4
@@ -130,7 +132,7 @@ def test_eigenvectors():
         domain,
         dp.symmetric_distance(),
     )
-    sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
+    sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp(output_metric=_nuclear_norm_distance())
     # Row norm B = 4, one replacement has nuclear sensitivity 2B^2.
     concentrations = [1.0 / (4 * 4.0**2)] * 3
     meas = sp_sscp >> then_private_eigenvectors(concentrations)

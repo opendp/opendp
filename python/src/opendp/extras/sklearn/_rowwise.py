@@ -22,6 +22,7 @@ from opendp.mod import Domain, assert_features
 _TRUSTED_CLASSES = {
     ("opendp.extras.sklearn.linear_model._logistic_regression", "LogisticRegression"),
     ("opendp.extras.sklearn.linear_model._theil_sen", "TheilSenRegressor"),
+    ("opendp.extras.sklearn.linear_model2._linear_regression", "LinearRegression"),
     ("opendp.extras.sklearn.decomposition", "PCA"),
     ("opendp.extras.sklearn.cluster._spherical_kmeans", "SphericalKMeans"),
     ("opendp.extras.sklearn.compose", "ColumnTransformer"),

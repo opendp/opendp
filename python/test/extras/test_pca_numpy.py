@@ -918,6 +918,7 @@ def test_eigendecomposition_privacy_budget_with_nuclear_metric(row_norm):
 
 def test_eigendecomposition_bingham_concentration():
     from opendp.extras.numpy._make_np_sscp import make_np_sscp
+    from opendp.extras.numpy import _nuclear_norm_distance
     from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
 
     row_norm = 2.0
@@ -925,7 +926,9 @@ def test_eigendecomposition_bingham_concentration():
     domain = dp.numpy.array2_domain(
         norm=row_norm, p=2, num_columns=2, size=5, nan=False, T=float
     )
-    sscp = make_np_sscp(domain, dp.symmetric_distance())
+    sscp = make_np_sscp(
+        domain, dp.symmetric_distance(), output_metric=_nuclear_norm_distance()
+    )
     # Preserve Amin et al.'s calibration: concentration = ε / (4B²).
     concentration = epsilon / (4 * row_norm**2)
     eigenvector = make_private_eigenvector(

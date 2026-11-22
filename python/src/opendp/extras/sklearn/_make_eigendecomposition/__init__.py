@@ -5,6 +5,7 @@ from opendp.context import register
 from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
+from opendp.extras.numpy import _nuclear_norm_distance
 
 from opendp.extras._utilities import to_then
 from opendp.mod import Domain, Metric, Measurement
@@ -53,7 +54,9 @@ def make_private_np_eigendecomposition(
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_desc.num_columns
 
-    t_sscp = make_np_sscp(input_domain, input_metric)
+    t_sscp = make_np_sscp(
+        input_domain, input_metric, output_metric=_nuclear_norm_distance()
+    )
     # Sensitivity for one insertion/deletion, in nuclear-norm units.
     row_norm_sq = t_sscp.map(1)
 
