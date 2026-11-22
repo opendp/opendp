@@ -1,4 +1,7 @@
-use dashu::{integer::Sign, rational::RBig};
+use dashu::{
+    integer::{Sign, UBig},
+    rational::RBig,
+};
 use num::{One, Zero};
 use opendp_derive::proven;
 
@@ -7,8 +10,10 @@ use crate::{
     traits::{ExactIntCast, Float, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer, sample_uniform_ubig_below};
+use super::{EntropySource, SystemEntropy, fill_bytes, sample_geometric_buffer};
 
+#[cfg(test)]
+mod exact_test;
 #[cfg(test)]
 mod test;
 
@@ -142,12 +147,58 @@ where
 /// returns `Err(e)` if there is a lack of system entropy,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
 pub fn sample_bernoulli_rational(prob: RBig) -> Fallible<bool> {
+    sample_bernoulli_rational_with(prob, &mut SystemEntropy)
+}
+
+pub(crate) fn sample_bernoulli_rational_with(
+    prob: RBig,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
     let (numer, denom) = prob.into_parts();
     let (Sign::Positive, numer) = numer.into_parts() else {
         return fallible!(FailedFunction, "numerator must not be negative");
     };
-    if numer > denom {
-        return fallible!(FailedFunction, "prob must not be greater than one");
+    sample_bernoulli_ratio_with(&numer, &denom, entropy)
+}
+
+/// The ratio need not be reduced. Avoid constructing an RBig just to flip a coin.
+pub(crate) fn sample_bernoulli_ratio_with(
+    numer: &UBig,
+    denom: &UBig,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
+    if denom.is_zero() || numer > denom {
+        return fallible!(
+            FailedFunction,
+            "probability ratio must lie in [0, 1] with positive denominator"
+        );
     }
-    sample_uniform_ubig_below(denom).map(|s| numer > s)
+    if numer.is_zero() {
+        return Ok(false);
+    }
+    if numer == denom {
+        return Ok(true);
+    }
+    if let Ok(upper) = u64::try_from(denom) {
+        return entropy
+            .uniform_u64_below(upper)
+            .map(|s| numer > &UBig::from(s));
+    }
+    // Compare a lazy U(0,1) with numer/denom. A typical trial needs one
+    // random word, even if the rational denominator has thousands of bits.
+    // Keep the same prefix on overlap: there is no native precision cutoff.
+    let mut prefix = UBig::ZERO;
+    let mut target = numer.clone();
+    loop {
+        let word = entropy.word()?;
+        prefix = (prefix << 64usize) + UBig::from(word);
+        target <<= 64usize;
+        let lower = &prefix * denom;
+        if lower >= target {
+            return Ok(false);
+        }
+        if lower + denom <= target {
+            return Ok(true);
+        }
+    }
 }

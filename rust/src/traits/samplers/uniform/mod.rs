@@ -7,6 +7,8 @@ use num::Unsigned;
 use opendp_derive::proven;
 
 #[cfg(test)]
+mod exact_test;
+#[cfg(test)]
 mod test;
 
 /// Create a value of type `Self` from a byte array of length `N`.
@@ -40,17 +42,35 @@ pub fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<
 /// Sample an integer uniformly from `[0, upper)`
 ///
 /// # Proof Definition
-/// For any setting of `upper`,
-/// return either `Err(e)` if there is insufficient system entropy,
-/// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
+/// For positive `upper`, return either `Err(e)` if there is insufficient system
+/// entropy, or `Ok(sample)`, uniformly distributed over `[0, upper)`.
+/// Return an error if `upper` is zero.
 pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: usize>(
     upper: T,
 ) -> Fallible<T> {
+    sample_uniform_uint_below_with::<T, N>(upper, &mut fill_bytes)
+}
+
+pub(super) fn sample_uniform_uint_below_with<
+    T: Integer + Unsigned + FromBytes<N>,
+    const N: usize,
+>(
+    upper: T,
+    fill: &mut impl FnMut(&mut [u8]) -> Fallible<()>,
+) -> Fallible<T> {
+    if upper == T::zero() {
+        return fallible!(FailedFunction, "uniform upper bound must be positive");
+    }
+    if upper == T::one() {
+        return Ok(T::zero());
+    }
     let threshold = T::MAX_FINITE - T::MAX_FINITE % upper;
 
     Ok(loop {
         // algorithm is only valid when sample is non-negative, which is why T: Unsigned
-        let sample = sample_from_uniform_bytes::<T, N>()?;
+        let mut bytes = [0u8; N];
+        fill(&mut bytes)?;
+        let sample = T::from_ne_bytes(bytes);
         if sample < threshold {
             // sample % upper is unbiased for any v < MAX_FINITE - MAX_FINITE % upper, because
             // MAX_FINITE - MAX_FINITE % upper evenly folds into [0, upper), MAX_FINITE // upper times
@@ -63,26 +83,37 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
 /// Sample an integer uniformly from `[0, upper)`
 ///
 /// # Proof Definition
-/// For any non-negative setting of `upper`,
-/// return either `Err(e)` if there is insufficient system entropy,
-/// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
+/// For positive `upper`, return either `Err(e)` if there is insufficient system
+/// entropy, or `Ok(sample)`, uniformly distributed over `[0, upper)`.
+/// Return an error if `upper` is zero.
 pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
-    // ceil(ceil(log_2(upper)) / 8)
-    let byte_len = upper.bit_len().div_ceil(8);
+    sample_uniform_ubig_below_with(upper, &mut fill_bytes)
+}
 
-    // sample % upper is unbiased for any sample < threshold, because
-    // max - max % upper evenly folds into [0, upper), max // upper times
-    let max = UBig::from_be_bytes(&vec![u8::MAX; byte_len]);
-    let threshold = &max - &max % &upper;
-
-    let mut buffer = vec![0; byte_len];
-
+pub(super) fn sample_uniform_ubig_below_with(
+    upper: UBig,
+    fill: &mut impl FnMut(&mut [u8]) -> Fallible<()>,
+) -> Fallible<UBig> {
+    if upper.is_zero() {
+        return fallible!(FailedFunction, "uniform upper bound must be positive");
+    }
+    if upper == UBig::ONE {
+        return Ok(UBig::ZERO);
+    }
+    // Sample ceil(log2(upper)) bits. Mask padding in the first big-endian
+    // byte, then reject outside [0, upper). No wide division or remainder.
+    // For power-of-two upper bounds, every candidate is accepted.
+    let bits = (&upper - 1u8).bit_len();
+    let mut buffer = vec![0; bits.div_ceil(8)];
+    let high_bits = bits % 8;
     Ok(loop {
-        fill_bytes(&mut buffer)?;
-
+        fill(&mut buffer)?;
+        if high_bits != 0 {
+            buffer[0] &= (1u8 << high_bits) - 1;
+        }
         let sample = UBig::from_be_bytes(&buffer);
-        if sample < threshold {
-            break sample % &upper;
+        if sample < upper {
+            break sample;
         }
     })
 }

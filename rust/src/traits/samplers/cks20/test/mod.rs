@@ -1,5 +1,6 @@
 mod bernoulli;
 mod geometric;
+mod optimized;
 mod symmetric;
 
 use dashu::rational::RBig;

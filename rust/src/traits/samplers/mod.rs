@@ -9,6 +9,9 @@ pub use bernoulli::*;
 mod cks20;
 pub use cks20::*;
 
+mod entropy;
+pub(crate) use entropy::{EntropySource, SamplerEntropy, SystemEntropy};
+
 mod geometric;
 pub use geometric::*;
 
