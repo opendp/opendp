@@ -9,6 +9,9 @@ pub use bernoulli::*;
 mod cks20;
 pub use cks20::*;
 
+mod continuous;
+pub use continuous::*;
+
 mod rounded_gaussian;
 pub use rounded_gaussian::*;
 

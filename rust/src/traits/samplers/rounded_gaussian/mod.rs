@@ -382,6 +382,33 @@ pub fn sample_rounded_gaussian<T: Float>(mu: T, scale: T) -> Fallible<T> {
     }
 }
 
+pub(crate) fn sample_rounded_gaussian_rational<T: Float>(mu: T, scale: RBig) -> Fallible<T> {
+    if !mu.is_finite() {
+        return fallible!(FailedFunction, "mu must be finite");
+    }
+
+    if scale < RBig::ZERO {
+        return fallible!(FailedFunction, "scale must be nonnegative");
+    }
+
+    let mu = mu.into_rational()?;
+    if scale.is_zero() {
+        return Ok(T::from_rational(mu));
+    }
+
+    let mut z = sample_exact_std_normal()?;
+    loop {
+        let interval = normal_interval(&z, &mu, &scale);
+        let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
+
+        if affine_trace_inside_cell(&z, &mu, &scale, None, &cell) {
+            return Ok(y);
+        }
+
+        z.x.refine()?;
+    }
+}
+
 /// Sample exactly from a clipped continuous Gaussian rounded to f32/f64.
 ///
 /// For finite `mu`, finite nonnegative `scale`, and finite nonnegative `range`,

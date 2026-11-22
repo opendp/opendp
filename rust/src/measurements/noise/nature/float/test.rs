@@ -1,4 +1,4 @@
-use crate::{measurements::make_laplace, metrics::AbsoluteDistance, traits::CastInternalRational};
+use crate::{measurements::make_laplace, metrics::AbsoluteDistance};
 
 use super::*;
 
@@ -28,7 +28,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             k: i32::MIN
         }
         .make_noise(space.clone())
-        .is_err()
+        .is_ok()
     );
 
     assert!(
@@ -43,20 +43,8 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_then_deintegerize_vec() -> Fallible<()> {
-    // rationals with greater magnitude than MAX saturate to infinity
-    let q = RBig::try_from(f64::MAX).unwrap();
-    assert!(f64::from_rational(q * IBig::from(2u8)).is_infinite());
-
-    assert!(then_deintegerize_vec::<f64>(i32::MIN).is_err());
-    assert!(then_deintegerize_vec::<f64>(i32::MAX).is_ok());
-    assert!(then_deintegerize_vec::<f64>(0).is_ok());
-    Ok(())
-}
-
 #[allow(non_snake_case)]
-fn sample_dlap_Z2K(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
+fn sample_continuous_laplace(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
     make_laplace(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<i8>::default(),
@@ -67,45 +55,24 @@ fn sample_dlap_Z2K(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
 }
 
 #[test]
-fn test_make_float_to_bigint_pos_k() -> Fallible<()> {
-    // check rounding of negative arguments
-    assert_eq!(sample_dlap_Z2K(-4., 0.0, 2)?, -4.);
-    assert_eq!(sample_dlap_Z2K(-3.0, 0.0, 2)?, -4.0);
-    assert_eq!(sample_dlap_Z2K(-2.0, 0.0, 2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(-1.0, 0.0, 2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(-3.6522343492937, 0.0, 2)?, -4.0);
-
-    assert_eq!(sample_dlap_Z2K(0.0, 0.0, 2)?, 0.0);
-
-    // check rounding of positive arguments
-    assert_eq!(sample_dlap_Z2K(1.0, 0.0, 2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(2.0, 0.0, 2)?, 4.0);
-    assert_eq!(sample_dlap_Z2K(3.0, 0.0, 2)?, 4.0);
-    assert_eq!(sample_dlap_Z2K(4.0, 0.0, 2)?, 4.0);
-    assert_eq!(sample_dlap_Z2K(3.6522343492937, 0.0, 2)?, 4.0);
-
-    // check that noise is applied in increments of 4
-    assert_eq!(sample_dlap_Z2K(4.0, 23.0, 2)? % 4.0, 0.0);
-    assert_eq!(sample_dlap_Z2K(4.0, 2.0, 2)? % 4.0, 0.0);
-    assert_eq!(sample_dlap_Z2K(4.0, 456e3f64, 2)? % 4.0, 0.0);
+fn test_continuous_laplace_ignores_positive_k() -> Fallible<()> {
+    assert_eq!(sample_continuous_laplace(-3.0, 0.0, 2)?, -3.0);
+    assert_eq!(
+        sample_continuous_laplace(-3.6522343492937, 0.0, 2)?,
+        -3.6522343492937
+    );
+    assert_eq!(sample_continuous_laplace(3.0, 0.0, 2)?, 3.0);
+    assert!(sample_continuous_laplace(4.0, 23.0, 2)?.is_finite());
 
     Ok(())
 }
 
 #[test]
-fn test_make_float_to_bigint_neg_k() -> Fallible<()> {
-    assert_eq!(sample_dlap_Z2K(-100.23, 0.0, -2)?, -100.25);
-    assert_eq!(sample_dlap_Z2K(-34.29, 0.0, -2)?, -34.25);
-    assert_eq!(sample_dlap_Z2K(-0.1, 0.0, -2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(0.0, 0.0, -2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(0.1, 0.0, -2)?, 0.0);
-    assert_eq!(sample_dlap_Z2K(0.125, 0.0, -2)?, 0.25);
-    assert_eq!(sample_dlap_Z2K(0.13, 0.0, -2)?, 0.25);
-
-    // check that noise is applied in increments of .25
-    assert_eq!(sample_dlap_Z2K(2342.234532, 23.0, -2)? % 0.25, 0.0);
-    assert_eq!(sample_dlap_Z2K(2.8954, 2.0, -2)? % 0.25, 0.0);
-    assert_eq!(sample_dlap_Z2K(834.349, 456e3f64, -2)? % 0.25, 0.0);
+fn test_continuous_laplace_ignores_negative_k() -> Fallible<()> {
+    assert_eq!(sample_continuous_laplace(-100.23, 0.0, -2)?, -100.23);
+    assert_eq!(sample_continuous_laplace(-0.1, 0.0, -2)?, -0.1);
+    assert_eq!(sample_continuous_laplace(0.125, 0.0, -2)?, 0.125);
+    assert!(sample_continuous_laplace(2.8954, 2.0, -2)?.is_finite());
 
     Ok(())
 }
