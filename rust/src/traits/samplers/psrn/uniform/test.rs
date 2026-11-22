@@ -1,4 +1,5 @@
 use super::*;
+use crate::traits::samplers::SystemEntropy;
 use dashu::integer::UBig;
 
 fn uniform(prefix: UBig, precision: usize) -> PartialUniform01 {
@@ -50,7 +51,10 @@ fn check_disjoint(a: UBig, p: usize, b: UBig, q: usize, shift: usize) -> Fallibl
         // Overlapping prefixes do not yet certify an answer.
         return Ok(());
     };
-    assert_eq!(a.less_than_scaled_uniform(&mut b, shift)?, expected);
+    assert_eq!(
+        a.less_than_scaled_uniform(&mut b, shift, &mut SystemEntropy)?,
+        expected
+    );
     assert_eq!((a.refinements, b.refinements), (p, q));
     Ok(())
 }
@@ -61,7 +65,7 @@ fn overlapping_prefixes_refine_past_machine_precision() -> Fallible<()> {
         // a and b/2^shift start at the same lower endpoint.
         let mut a = uniform(UBig::ONE, 128 + shift);
         let mut b = uniform(UBig::ONE, 128);
-        let result = a.less_than_scaled_uniform(&mut b, shift)?;
+        let result = a.less_than_scaled_uniform(&mut b, shift, &mut SystemEntropy)?;
         let factor = RBig::from(UBig::ONE << shift);
         assert!(a.refinements > 128 + shift || b.refinements > 128);
         if result {
@@ -74,10 +78,25 @@ fn overlapping_prefixes_refine_past_machine_precision() -> Fallible<()> {
 }
 
 #[test]
+fn failed_refinement_preserves_a_nonzero_prefix() {
+    struct FailedEntropy;
+    impl EntropySource for FailedEntropy {
+        fn fill(&mut self, out: &mut [u8]) -> Fallible<()> {
+            out.fill(0xee);
+            fallible!(FailedFunction, "synthetic partial entropy failure")
+        }
+    }
+    let mut x = uniform(UBig::from(0x123u16), 64);
+    let before = (x.lower(), x.upper(), x.randomness.clone(), x.refinements);
+    assert!(x.refine_with(&mut FailedEntropy).is_err());
+    assert_eq!((x.lower(), x.upper(), x.randomness, x.refinements), before);
+}
+
+#[test]
 fn touching_endpoints_are_refined() -> Fallible<()> {
     let mut a = uniform(0u8.into(), 1);
     let mut b = uniform(1u8.into(), 1);
-    assert!(a.less_than_scaled_uniform(&mut b, 0)?);
+    assert!(a.less_than_scaled_uniform(&mut b, 0, &mut SystemEntropy)?);
     assert!(a.refinements > 1 || b.refinements > 1);
     Ok(())
 }

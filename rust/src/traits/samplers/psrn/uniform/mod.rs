@@ -1,6 +1,6 @@
 use dashu::rational::RBig;
 
-use crate::error::Fallible;
+use crate::{error::Fallible, traits::samplers::EntropySource};
 
 use super::{InverseCDF, ODPRound, PartialSample};
 
@@ -28,6 +28,7 @@ impl PartialUniform01 {
         &mut self,
         other: &mut Self,
         shift: usize,
+        entropy: &mut impl EntropySource,
     ) -> Fallible<bool> {
         loop {
             let other_precision = other.refinements + shift;
@@ -46,9 +47,9 @@ impl PartialUniform01 {
                 return Ok(false);
             }
             if self.refinements <= other_precision {
-                self.refine()?;
+                self.refine_with(entropy)?;
             } else {
-                other.refine()?;
+                other.refine_with(entropy)?;
             }
         }
     }

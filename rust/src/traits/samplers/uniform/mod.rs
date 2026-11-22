@@ -46,11 +46,23 @@ pub fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<
 pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: usize>(
     upper: T,
 ) -> Fallible<T> {
+    sample_uniform_uint_below_with::<T, N>(upper, &mut fill_bytes)
+}
+
+pub(super) fn sample_uniform_uint_below_with<
+    T: Integer + Unsigned + FromBytes<N>,
+    const N: usize,
+>(
+    upper: T,
+    fill: &mut impl FnMut(&mut [u8]) -> Fallible<()>,
+) -> Fallible<T> {
     let threshold = T::MAX_FINITE - T::MAX_FINITE % upper;
 
     Ok(loop {
         // algorithm is only valid when sample is non-negative, which is why T: Unsigned
-        let sample = sample_from_uniform_bytes::<T, N>()?;
+        let mut bytes = [0u8; N];
+        fill(&mut bytes)?;
+        let sample = T::from_ne_bytes(bytes);
         if sample < threshold {
             // sample % upper is unbiased for any v < MAX_FINITE - MAX_FINITE % upper, because
             // MAX_FINITE - MAX_FINITE % upper evenly folds into [0, upper), MAX_FINITE // upper times
@@ -67,6 +79,13 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
 /// return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
 pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
+    sample_uniform_ubig_below_with(upper, &mut fill_bytes)
+}
+
+pub(super) fn sample_uniform_ubig_below_with(
+    upper: UBig,
+    fill: &mut impl FnMut(&mut [u8]) -> Fallible<()>,
+) -> Fallible<UBig> {
     // ceil(ceil(log_2(upper)) / 8)
     let byte_len = upper.bit_len().div_ceil(8);
 
@@ -78,7 +97,7 @@ pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
     let mut buffer = vec![0; byte_len];
 
     Ok(loop {
-        fill_bytes(&mut buffer)?;
+        fill(&mut buffer)?;
 
         let sample = UBig::from_be_bytes(&buffer);
         if sample < threshold {

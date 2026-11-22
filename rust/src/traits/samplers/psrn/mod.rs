@@ -9,7 +9,7 @@ use dashu::{
     rational::RBig,
 };
 
-use super::sample_from_uniform_bytes;
+use super::{EntropySource, SystemEntropy};
 use crate::{error::Fallible, traits::RoundCast};
 
 #[cfg(all(feature = "contrib", test))]
@@ -76,8 +76,14 @@ impl<D: InverseCDF> PartialSample<D> {
 
     /// Randomly discard the lower or upper half of the remaining interval 64 times.
     pub(crate) fn refine(&mut self) -> Fallible<()> {
+        self.refine_with(&mut SystemEntropy)
+    }
+
+    pub(crate) fn refine_with(&mut self, entropy: &mut impl EntropySource) -> Fallible<()> {
+        // A failed draw must leave an existing prefix and its precision intact.
+        let word = entropy.word()?;
         self.randomness <<= 64;
-        self.randomness += UBig::from(sample_from_uniform_bytes::<u64, 8>()?);
+        self.randomness += UBig::from(word);
         self.refinements += 64;
         Ok(())
     }

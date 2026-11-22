@@ -12,6 +12,9 @@ pub use cks20::*;
 mod continuous;
 pub use continuous::*;
 
+mod entropy;
+pub(crate) use entropy::{EntropySource, SamplerEntropy, SystemEntropy};
+
 mod rounded_gaussian;
 pub use rounded_gaussian::*;
 

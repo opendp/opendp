@@ -30,14 +30,9 @@ use crate::{
     error::Fallible,
     traits::{
         Float,
-        samplers::{
-            PartialSample, PartialUniform01, Uniform01RV, sample_uniform_ubig_below,
-            sample_uniform_uint_below,
-        },
+        samplers::{EntropySource, PartialSample, PartialUniform01, SamplerEntropy, Uniform01RV},
     },
 };
-
-use super::sample_standard_bernoulli;
 
 #[cfg(test)]
 mod test;
@@ -47,11 +42,14 @@ mod native;
 /// One Bernoulli trial with success probability `exp(-x)` for lazy `x`.
 ///
 /// This is the generalized von Neumann decreasing-sequence test used by DFW20.
-fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
+fn sample_bernoulli_exp_uniform(
+    x: &mut PartialUniform01,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
     // First term: continue iff U_1 < x.
     let mut y = PartialSample::new(Uniform01RV);
 
-    if !y.less_than_scaled_uniform(x, 0)? {
+    if !y.less_than_scaled_uniform(x, 0, entropy)? {
         return Ok(true);
     }
 
@@ -62,7 +60,7 @@ fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
         let mut u = PartialSample::new(Uniform01RV);
 
         // Continue iff U_{n+1} < U_n.
-        if !u.less_than_scaled_uniform(&mut y, 0)? {
+        if !u.less_than_scaled_uniform(&mut y, 0, entropy)? {
             return Ok(accept_on_failure);
         }
 
@@ -72,25 +70,32 @@ fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
 }
 
 /// Return whether `u < x / 2` for lazy uniforms `u` and `x`.
-fn sample_bernoulli_u_lt_x2(u: &mut PartialUniform01, x: &mut PartialUniform01) -> Fallible<bool> {
-    u.less_than_scaled_uniform(x, 1)
+fn sample_bernoulli_u_lt_x2(
+    u: &mut PartialUniform01,
+    x: &mut PartialUniform01,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
+    u.less_than_scaled_uniform(x, 1, entropy)
 }
 
 /// One Bernoulli trial with success probability `exp(-x^2 / 2)`.
 ///
 /// This is DFW20's `B_{e^{-xy}}` algorithm with parameters `(x/2, x)`.
-fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<bool> {
+fn sample_bernoulli_exp_half_x_squared(
+    x: &mut PartialUniform01,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
     // First continuation event:
     //     u_1 < x / 2
     //     v_1 < x
     let mut w = PartialSample::new(Uniform01RV);
 
-    if !sample_bernoulli_u_lt_x2(&mut w, x)? {
+    if !sample_bernoulli_u_lt_x2(&mut w, x, entropy)? {
         return Ok(true);
     }
 
     let mut v = PartialSample::new(Uniform01RV);
-    if !v.less_than_scaled_uniform(x, 0)? {
+    if !v.less_than_scaled_uniform(x, 0, entropy)? {
         return Ok(true);
     }
 
@@ -102,12 +107,12 @@ fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<boo
 
         // Later continuation events use the decreasing-uniform chain:
         //     u_{i+1} < u_i
-        if !u.less_than_scaled_uniform(&mut w, 0)? {
+        if !u.less_than_scaled_uniform(&mut w, 0, entropy)? {
             return Ok(accept_on_failure);
         }
 
         let mut v = PartialSample::new(Uniform01RV);
-        if !v.less_than_scaled_uniform(x, 0)? {
+        if !v.less_than_scaled_uniform(x, 0, entropy)? {
             return Ok(accept_on_failure);
         }
 
@@ -123,17 +128,21 @@ fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<boo
 /// DFW20 factorizes this as
 ///
 ///     exp(-k x) * exp(-x^2 / 2).
-fn accept_fraction(k: &UBig, x: &mut PartialUniform01) -> Fallible<bool> {
+fn accept_fraction(
+    k: &UBig,
+    x: &mut PartialUniform01,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
     let mut remaining = k.clone();
 
     while !remaining.is_zero() {
-        if !sample_bernoulli_exp_uniform(x)? {
+        if !sample_bernoulli_exp_uniform(x, entropy)? {
             return Ok(false);
         }
         remaining -= UBig::ONE;
     }
 
-    sample_bernoulli_exp_half_x_squared(x)
+    sample_bernoulli_exp_half_x_squared(x, entropy)
 }
 
 pub(super) struct ExactStdNormal {
@@ -143,11 +152,11 @@ pub(super) struct ExactStdNormal {
 }
 
 /// Exact Bernoulli(exp(-1/2)), specializing the Bernoulli exponential series.
-fn sample_bernoulli_exp_half() -> Fallible<bool> {
+fn sample_bernoulli_exp_half(entropy: &mut impl EntropySource) -> Fallible<bool> {
     sample_bernoulli_exp_half_with(|denominator| match u64::try_from(denominator) {
-        Ok(upper) => Ok(sample_uniform_uint_below::<u64, 8>(upper)? == 0),
+        Ok(upper) => Ok(entropy.uniform_u64_below(upper)? == 0),
         // No native-counter or run-length cap: retain an exact fallback.
-        Err(_) => Ok(sample_uniform_ubig_below(denominator.clone())?.is_zero()),
+        Err(_) => Ok(entropy.uniform_ubig_below(denominator.clone())?.is_zero()),
     })
 }
 
@@ -192,16 +201,16 @@ fn sample_standard_half_gaussian_with(mut trial: impl FnMut() -> Fallible<bool>)
 /// Sample an exact lazy standard normal in Karney form:
 ///
 ///     Z = S * (K + X).
-fn sample_exact_std_normal() -> Fallible<ExactStdNormal> {
+fn sample_exact_std_normal(entropy: &mut impl EntropySource) -> Fallible<ExactStdNormal> {
     loop {
-        let k = sample_standard_half_gaussian_with(sample_bernoulli_exp_half)?;
+        let k = sample_standard_half_gaussian_with(|| sample_bernoulli_exp_half(entropy))?;
         let mut x = PartialSample::new(Uniform01RV);
 
-        if !accept_fraction(&k, &mut x)? {
+        if !accept_fraction(&k, &mut x, entropy)? {
             continue;
         }
 
-        let negative = sample_standard_bernoulli()?;
+        let negative = entropy.coin()?;
         let k = RBig::from(k);
 
         return Ok(ExactStdNormal { negative, k, x });
@@ -405,26 +414,14 @@ pub fn sample_rounded_gaussian<T: Float>(mu: T, scale: T) -> Fallible<T> {
         return Ok(mu);
     }
 
-    let mu = mu.into_rational()?;
-    let scale = scale.into_rational()?;
-    let mut z = sample_exact_std_normal()?;
-
-    loop {
-        let interval = normal_interval(&z, &mu, &scale);
-        let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
-
-        // Reuse the exact rational endpoints for the containment certificate.
-        if interval_inside_cell(&interval, &cell) {
-            return Ok(y);
-        }
-
-        // The current interval straddles a rounding boundary. Refine only the
-        // accepted fractional component X; K and sign are already exact.
-        z.x.refine()?;
-    }
+    sample_rounded_gaussian_rational(mu, scale.into_rational()?, &mut SamplerEntropy::new())
 }
 
-pub(crate) fn sample_rounded_gaussian_rational<T: Float>(mu: T, scale: RBig) -> Fallible<T> {
+pub(crate) fn sample_rounded_gaussian_rational<T: Float>(
+    mu: T,
+    scale: RBig,
+    entropy: &mut impl EntropySource,
+) -> Fallible<T> {
     if !mu.is_finite() {
         return fallible!(FailedFunction, "mu must be finite");
     }
@@ -438,7 +435,7 @@ pub(crate) fn sample_rounded_gaussian_rational<T: Float>(mu: T, scale: RBig) -> 
         return Ok(T::from_rational(mu));
     }
 
-    let mut z = sample_exact_std_normal()?;
+    let mut z = sample_exact_std_normal(entropy)?;
     loop {
         let interval = normal_interval(&z, &mu, &scale);
         let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
@@ -447,7 +444,7 @@ pub(crate) fn sample_rounded_gaussian_rational<T: Float>(mu: T, scale: RBig) -> 
             return Ok(y);
         }
 
-        z.x.refine()?;
+        z.x.refine_with(entropy)?;
     }
 }
 
@@ -481,7 +478,8 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
     }
 
     let scale = scale.into_rational()?;
-    let mut z = sample_exact_std_normal()?;
+    let mut entropy = SamplerEntropy::new();
+    let mut z = sample_exact_std_normal(&mut entropy)?;
 
     loop {
         let interval = clip_interval(normal_interval(&z, &mu, &scale), &range);
@@ -491,7 +489,7 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
             return Ok(y);
         }
 
-        z.x.refine()?;
+        z.x.refine_with(&mut entropy)?;
     }
 }
 

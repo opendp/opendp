@@ -1,5 +1,9 @@
 # Continuous Laplace and Gaussian performance
 
+This report describes the pushed baseline at `4a51edde7`. For the subsequent
+invocation-local entropy-buffering experiment and its additional speedups, see
+[AMORTIZATION.md](AMORTIZATION.md).
+
 ## Results
 
 Apple M4 Pro, macOS 26.5.2, Rust 1.96.0 (`aarch64-apple-darwin`), release profile,

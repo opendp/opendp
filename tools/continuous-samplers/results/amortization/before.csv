@@ -1,0 +1,26 @@
+# samples_per_batch=16384, repetitions=5, warmup_calls=3, openssl=true
+mu,scale,vector_len,sampler,median_ns,min_ns,max_ns
+0,1,1,continuous_laplace,1872.1,1829.7,2425.8
+0,1,1,continuous_gaussian,3277.6,3272.6,3301.1
+0,1,16,continuous_laplace,1838.1,1816.4,1858.2
+0,1,16,continuous_gaussian,3227.3,3223.1,3251.0
+0,1,256,continuous_laplace,1820.3,1814.3,1837.1
+0,1,256,continuous_gaussian,3244.0,3223.6,3269.4
+0,1,4096,continuous_laplace,1815.3,1804.2,1834.7
+0,1,4096,continuous_gaussian,3264.7,3209.0,3327.1
+1000000,1,1,continuous_laplace,1967.6,1867.3,4658.1
+1000000,1,1,continuous_gaussian,3303.6,3274.7,3380.6
+1000000,1,16,continuous_laplace,1828.3,1822.9,1849.6
+1000000,1,16,continuous_gaussian,3272.7,3256.4,3358.6
+1000000,1,256,continuous_laplace,1832.4,1807.1,1841.4
+1000000,1,256,continuous_gaussian,3271.6,3243.3,3312.0
+1000000,1,4096,continuous_laplace,1838.3,1835.5,1855.3
+1000000,1,4096,continuous_gaussian,3286.6,3281.2,3829.7
+0,0.000001,1,continuous_laplace,2200.9,2165.6,2231.7
+0,0.000001,1,continuous_gaussian,3645.4,3629.7,3666.8
+0,0.000001,16,continuous_laplace,2195.8,2147.7,2377.1
+0,0.000001,16,continuous_gaussian,3598.9,3577.5,3668.9
+0,0.000001,256,continuous_laplace,2148.0,2144.1,2171.2
+0,0.000001,256,continuous_gaussian,3590.8,3567.5,3597.8
+0,0.000001,4096,continuous_laplace,2157.5,2155.4,2168.4
+0,0.000001,4096,continuous_gaussian,3577.7,3557.2,4358.7

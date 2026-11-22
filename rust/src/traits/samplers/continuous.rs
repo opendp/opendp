@@ -7,8 +7,8 @@ use crate::{
     traits::{
         Float,
         samplers::{
-            PartialUniform01, Uniform01RV, sample_rounded_gaussian_rational,
-            sample_standard_bernoulli,
+            EntropySource, PartialUniform01, SamplerEntropy, Uniform01RV,
+            sample_rounded_gaussian_rational,
         },
     },
 };
@@ -20,7 +20,7 @@ pub trait RoundedContinuousVectorSampler<T: Float> {
 trait LazyRational {
     fn lower(&self) -> RBig;
     fn upper(&self) -> RBig;
-    fn refine(&mut self) -> Fallible<()>;
+    fn refine(&mut self, entropy: &mut impl EntropySource) -> Fallible<()>;
 }
 
 #[derive(Clone, Debug)]
@@ -57,15 +57,18 @@ impl<L: LazyRational> LazyRational for LazyAffine<L> {
         }
     }
 
-    fn refine(&mut self) -> Fallible<()> {
-        self.inner.refine()
+    fn refine(&mut self, entropy: &mut impl EntropySource) -> Fallible<()> {
+        self.inner.refine(entropy)
     }
 }
 
 // Share the boundary handling for subnormals, finite extrema and infinities.
 use super::rounded_gaussian::{interval_inside_cell, rounding_cell};
 
-fn finalize_lazy_rational_to_float<T: Float, L: LazyRational>(mut x: L) -> Fallible<T> {
+fn finalize_lazy_rational_to_float<T: Float, L: LazyRational>(
+    mut x: L,
+    entropy: &mut impl EntropySource,
+) -> Fallible<T> {
     loop {
         let interval = (x.lower(), x.upper());
         // Any endpoint is a valid candidate guess: containment below is the
@@ -75,7 +78,7 @@ fn finalize_lazy_rational_to_float<T: Float, L: LazyRational>(mut x: L) -> Falli
         if interval_inside_cell(&interval, &cell) {
             return Ok(candidate);
         }
-        x.refine()?;
+        x.refine(entropy)?;
     }
 }
 
@@ -88,8 +91,8 @@ impl LazyRational for PartialUniform01 {
         PartialUniform01::upper(self).expect("Uniform01 inverse CDF is identity")
     }
 
-    fn refine(&mut self) -> Fallible<()> {
-        PartialUniform01::refine(self)
+    fn refine(&mut self, entropy: &mut impl EntropySource) -> Fallible<()> {
+        self.refine_with(entropy)
     }
 }
 
@@ -98,24 +101,29 @@ struct LazyStdExponential {
     x: PartialUniform01,
 }
 
-fn sample_lazy_standard_exponential() -> Fallible<LazyStdExponential> {
+fn sample_lazy_standard_exponential(
+    entropy: &mut impl EntropySource,
+) -> Fallible<LazyStdExponential> {
     // Each attempt accepts with probability integral_0^1 exp(-x) dx = 1-e^-1.
     // Thus P[k=m, X in dx] = e^-m exp(-x) dx: the number of rejected
     // attempts supplies the integer part of Exp(1), without a separate draw.
     let mut k = UBig::ZERO;
     loop {
         let mut x = PartialUniform01::new(Uniform01RV);
-        if sample_bernoulli_exp_unit_lazy(&mut x)? {
+        if sample_bernoulli_exp_unit_lazy(&mut x, entropy)? {
             return Ok(LazyStdExponential { k, x });
         }
         k += 1u8;
     }
 }
 
-fn sample_bernoulli_exp_unit_lazy(x: &mut PartialUniform01) -> Fallible<bool> {
+fn sample_bernoulli_exp_unit_lazy(
+    x: &mut PartialUniform01,
+    entropy: &mut impl EntropySource,
+) -> Fallible<bool> {
     let mut y = PartialUniform01::new(Uniform01RV);
 
-    if !y.less_than_scaled_uniform(x, 0)? {
+    if !y.less_than_scaled_uniform(x, 0, entropy)? {
         return Ok(true);
     }
 
@@ -123,13 +131,28 @@ fn sample_bernoulli_exp_unit_lazy(x: &mut PartialUniform01) -> Fallible<bool> {
     loop {
         let mut u = PartialUniform01::new(Uniform01RV);
 
-        if !u.less_than_scaled_uniform(&mut y, 0)? {
+        if !u.less_than_scaled_uniform(&mut y, 0, entropy)? {
             return Ok(accept_on_failure);
         }
 
         y = u;
         accept_on_failure = !accept_on_failure;
     }
+}
+
+fn sample_rounded_laplace_rational<T: Float>(
+    mu: T,
+    scale: &RBig,
+    entropy: &mut impl EntropySource,
+) -> Fallible<T> {
+    let mu = mu.into_rational()?;
+    let negative = entropy.coin()?;
+    let LazyStdExponential { k, x } = sample_lazy_standard_exponential(entropy)?;
+    let scale = if negative { -scale } else { scale.clone() };
+    // Fold the integer part into the offset once, rather than reconstructing
+    // and scaling k+x separately at both bounds.
+    let offset = mu + &scale * RBig::from(k);
+    finalize_lazy_rational_to_float::<T, _>(LazyAffine::new(scale, offset, x), entropy)
 }
 
 #[derive(Clone, Debug)]
@@ -158,23 +181,16 @@ impl<T: Float> RoundedContinuousVectorSampler<T> for IidContinuousLaplace<T> {
                 .map(|x| x.clamp(T::MIN_FINITE, T::MAX_FINITE))
                 .collect());
         }
+        let mut entropy = SamplerEntropy::new();
         input
             .iter()
             .copied()
             .map(|x| {
-                let x = x.clamp(T::MIN_FINITE, T::MAX_FINITE);
-                let mu = x.into_rational()?;
-                let negative = sample_standard_bernoulli()?;
-                let LazyStdExponential { k, x } = sample_lazy_standard_exponential()?;
-                let scale = if negative {
-                    -&self.scale
-                } else {
-                    self.scale.clone()
-                };
-                // Fold the integer part into the offset once, rather than
-                // reconstructing and scaling k+x separately at both bounds.
-                let offset = mu + &scale * RBig::from(k);
-                finalize_lazy_rational_to_float::<T, _>(LazyAffine::new(scale, offset, x))
+                sample_rounded_laplace_rational(
+                    x.clamp(T::MIN_FINITE, T::MAX_FINITE),
+                    &self.scale,
+                    &mut entropy,
+                )
             })
             .collect()
     }
@@ -200,6 +216,7 @@ impl<T: Float> IidContinuousGaussian<T> {
 
 impl<T: Float> RoundedContinuousVectorSampler<T> for IidContinuousGaussian<T> {
     fn sample_around(&self, input: &[T]) -> Fallible<Vec<T>> {
+        let mut entropy = SamplerEntropy::new();
         input
             .iter()
             .copied()
@@ -207,6 +224,7 @@ impl<T: Float> RoundedContinuousVectorSampler<T> for IidContinuousGaussian<T> {
                 sample_rounded_gaussian_rational(
                     x.clamp(T::MIN_FINITE, T::MAX_FINITE),
                     self.scale.clone(),
+                    &mut entropy,
                 )
             })
             .collect()
@@ -218,6 +236,10 @@ mod test {
     use super::*;
     use crate::traits::CastInternalRational;
 
+    fn finalize_lazy_rational_to_float<T: Float, L: LazyRational>(x: L) -> Fallible<T> {
+        super::finalize_lazy_rational_to_float(x, &mut SamplerEntropy::new())
+    }
+
     // A certificate that must finalize without asking for more entropy.
     struct FixedInterval(RBig, RBig);
 
@@ -228,7 +250,7 @@ mod test {
         fn upper(&self) -> RBig {
             self.1.clone()
         }
-        fn refine(&mut self) -> Fallible<()> {
+        fn refine(&mut self, _: &mut impl EntropySource) -> Fallible<()> {
             panic!("the interval should already fit in one rounding cell")
         }
     }
@@ -243,7 +265,7 @@ mod test {
             fn upper(&self) -> RBig {
                 self.1.clone()
             }
-            fn refine(&mut self) -> Fallible<()> {
+            fn refine(&mut self, _: &mut impl EntropySource) -> Fallible<()> {
                 self.0 = (&self.0 + &self.1) / RBig::from(2);
                 Ok(())
             }
@@ -397,6 +419,38 @@ mod test {
             assert!((tail - (-t).exp()).abs() < 0.04, "t={t}, tail={tail}");
         }
         Ok(())
+    }
+
+    #[test]
+    fn buffering_preserves_complete_laplace_traces() -> Fallible<()> {
+        use crate::traits::samplers::entropy::test::{TestBuffered, TestStream};
+        fn check<const N: usize>() -> Fallible<()> {
+            let mut direct = TestStream::new(123);
+            let mut buffered = TestBuffered::<N>::new(123);
+            for i in 0..1000 {
+                let mu = [0.0f64, 1.0, -1e6, f64::MAX][i % 4];
+                let scale = [1.0f64, 1e-6, 1e6, f64::from_bits(1)][(i / 4) % 4].into_rational()?;
+                let a = sample_rounded_laplace_rational(mu, &scale, &mut direct)?;
+                let b = sample_rounded_laplace_rational(mu, &scale, &mut buffered)?;
+                assert_eq!(a.to_bits(), b.to_bits());
+                assert_eq!(direct.position, buffered.consumed());
+            }
+            Ok(())
+        }
+        check::<7>()?; // force unaligned words across refills
+        check::<256>()?;
+        Ok(())
+    }
+
+    #[test]
+    fn laplace_entropy_failure_is_not_a_rejection() {
+        struct FailedEntropy;
+        impl EntropySource for FailedEntropy {
+            fn fill(&mut self, _: &mut [u8]) -> Fallible<()> {
+                fallible!(FailedFunction, "synthetic entropy failure")
+            }
+        }
+        assert!(sample_rounded_laplace_rational(0.0f64, &RBig::ONE, &mut FailedEntropy).is_err());
     }
 
     #[test]

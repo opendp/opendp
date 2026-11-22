@@ -71,9 +71,10 @@ fn specialized_integer_sampler_distribution() -> Fallible<()> {
     let n = 50_000;
     let mut coin_successes = 0;
     let mut bins = [0usize; 5];
+    let mut entropy = SamplerEntropy::new();
     for _ in 0..n {
-        coin_successes += usize::from(sample_bernoulli_exp_half()?);
-        let k = sample_standard_half_gaussian_with(sample_bernoulli_exp_half)?;
+        coin_successes += usize::from(sample_bernoulli_exp_half(&mut entropy)?);
+        let k = sample_standard_half_gaussian_with(|| sample_bernoulli_exp_half(&mut entropy))?;
         let bin = if k >= UBig::from(4u8) {
             4
         } else {
@@ -135,6 +136,43 @@ fn reused_interval_matches_affine_certificate() -> Fallible<()> {
             }
         }
     }
+    Ok(())
+}
+
+#[test]
+fn buffering_preserves_complete_gaussian_traces() -> Fallible<()> {
+    use crate::traits::samplers::entropy::test::{TestBuffered, TestStream};
+    fn check<const N: usize>() -> Fallible<()> {
+        let mut direct = TestStream::new(123);
+        let mut buffered = TestBuffered::<N>::new(123);
+        for i in 0..1000 {
+            let mu = [0.0f64, 1.0, -1e6, f64::MAX][i % 4];
+            let scale = [1.0f64, 1e-6, 1e6, f64::from_bits(1)][(i / 4) % 4].into_rational()?;
+            let a = sample_rounded_gaussian_rational(mu, scale.clone(), &mut direct)?;
+            let b = sample_rounded_gaussian_rational(mu, scale, &mut buffered)?;
+            assert_eq!(a.to_bits(), b.to_bits());
+            assert_eq!(direct.position, buffered.consumed());
+        }
+        Ok(())
+    }
+    check::<7>()?;
+    check::<256>()?;
+    Ok(())
+}
+
+#[test]
+fn gaussian_entropy_failure_is_not_a_rejection() -> Fallible<()> {
+    struct FailedEntropy;
+    impl EntropySource for FailedEntropy {
+        fn fill(&mut self, _: &mut [u8]) -> Fallible<()> {
+            fallible!(FailedFunction, "synthetic entropy failure")
+        }
+    }
+    assert!(sample_rounded_gaussian_rational(0.0f64, RBig::ONE, &mut FailedEntropy).is_err());
+    assert_eq!(
+        sample_rounded_gaussian_rational(1.25f64, RBig::ZERO, &mut FailedEntropy)?,
+        1.25
+    );
     Ok(())
 }
 
