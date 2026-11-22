@@ -29,8 +29,11 @@ if import_optional_dependency("sklearn", raise_error=False) is not None:
     from opendp.extras.sklearn.linear_model._sgd_classifier import (
         SGDClassifier,
     )
+    from opendp.extras.sklearn.linear_model._logistic_regression import (
+        LogisticRegression,
+    )
 
-__all__ = ["LinearRegression", "SGDClassifier"]
+__all__ = ["LinearRegression", "LogisticRegression", "SGDClassifier"]
 
 
 class LinearRegression:

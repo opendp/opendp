@@ -21,6 +21,7 @@ from opendp.mod import Domain, assert_features
 # This is intentionally not extensible through subclassing or registration.
 _TRUSTED_CLASSES = {
     ("opendp.extras.sklearn.linear_model._sgd_classifier", "SGDClassifier"),
+    ("opendp.extras.sklearn.linear_model._logistic_regression", "LogisticRegression"),
     ("opendp.extras.sklearn.linear_model._theil_sen", "TheilSenRegressor"),
     ("opendp.extras.sklearn.decomposition", "PCA"),
     ("opendp.extras.sklearn.cluster._spherical_kmeans", "SphericalKMeans"),
