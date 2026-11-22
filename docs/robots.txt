@@ -36,3 +36,4 @@ Disallow: /en/v0.14.2/
 Disallow: /en/v0.15.0/
 Disallow: /en/v0.15.1/
 Disallow: /en/v0.16.0/
+Disallow: /en/v0.16.0-nightly.20261122.1/
