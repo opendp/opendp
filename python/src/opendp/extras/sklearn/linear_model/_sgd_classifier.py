@@ -11,7 +11,9 @@ from opendp.extras.sklearn.linear_model._make_private_logistic_regression import
 )
 
 
-class SGDClassifier(ClassifierMixin, MeasurementMixin, TransformationMixin, BaseEstimator):
+class SGDClassifier(
+    ClassifierMixin, MeasurementMixin, TransformationMixin, BaseEstimator
+):
     """Differentially private linear classification using noisy gradients.
 
     The constructor largely follows sklearn.linear_model.SGDClassifier,

@@ -110,7 +110,9 @@ def test_nonfinite_gradients_and_fitting(model_type, fit_intercept):
         )
     assert np.isfinite(gradients).all()
     np.testing.assert_array_equal(gradients[3:], np.zeros((2, 2 + int(fit_intercept))))
-    model = _supported(model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept).fit(
+    model = _supported(
+        model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept
+    ).fit(
         X, y, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
     assert np.isfinite(model.coef_).all() and np.isfinite(model.intercept_).all()
@@ -194,7 +196,9 @@ def test_unsized_empty_fit_has_noise(model_type, fit_intercept):
     from sklearn.base import clone
 
     X, y = np.empty((0, 2)), np.empty(0)
-    model = _supported(model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept)
+    model = _supported(
+        model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept
+    )
     kwargs = dict(
         privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
