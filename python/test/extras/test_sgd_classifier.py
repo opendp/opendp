@@ -14,14 +14,20 @@ from opendp.extras.sklearn.linear_model._make_private_logistic_regression import
 @pytest.fixture
 def model_type():
     pytest.importorskip("sklearn")
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+    from opendp.extras.sklearn.linear_model import SGDClassifier
 
-    return LogisticRegression
+    return SGDClassifier
 
 
 @pytest.fixture
 def expit():
     return pytest.importorskip("scipy.special").expit
+
+
+def _supported(model_type, **kwargs):
+    """Construct the currently implemented subset of sklearn's SGDClassifier."""
+    params = dict(loss="log_loss")
+    return model_type(**(params | kwargs))
 
 
 def _domain(size=None, y_size=None, **features):
@@ -104,7 +110,7 @@ def test_nonfinite_gradients_and_fitting(model_type, fit_intercept):
         )
     assert np.isfinite(gradients).all()
     np.testing.assert_array_equal(gradients[3:], np.zeros((2, 2 + int(fit_intercept))))
-    model = model_type(reference_size=11, max_iter=2, fit_intercept=fit_intercept).fit(
+    model = _supported(model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept).fit(
         X, y, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
     assert np.isfinite(model.coef_).all() and np.isfinite(model.intercept_).all()
@@ -114,12 +120,12 @@ def test_nonfinite_gradients_and_fitting(model_type, fit_intercept):
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
 @pytest.mark.parametrize(
-    "x_size, y_size, reference_size, learning_rate, alpha, l1_ratio, clip_norm",
+    "x_size, y_size, reference_size, eta0, alpha, l1_ratio, clip_norm",
     [
         (3, None, None, 0.3, 0, 0, 10),
         (3, 3, 6, Fraction(3, 5), 2, 0, 10),
-        (None, 3, None, 0.3, 0.75, 1, 10),
-        (None, None, 6, 0.6, 0.75, 0.5, 0.5),
+        (None, 3, None, 0.3, 0.25, 1, 10),
+        (None, None, 6, 0.6, 0.125, 0.5, 0.5),
     ],
 )
 def test_updates_and_privacy_map(
@@ -128,7 +134,7 @@ def test_updates_and_privacy_map(
     x_size,
     y_size,
     reference_size,
-    learning_rate,
+    eta0,
     alpha,
     l1_ratio,
     clip_norm,
@@ -145,12 +151,13 @@ def test_updates_and_privacy_map(
         p=2,
         cardinalities=[2, 3],
     )
-    model = model_type(
+    model = _supported(model_type, 
         max_iter=2,
         fit_intercept=fit_intercept,
-        learning_rate=learning_rate,
+        eta0=eta0,
         clip_norm=clip_norm,
         alpha=alpha,
+        penalty="l1" if l1_ratio == 1 else "elasticnet" if l1_ratio else "l2",
         l1_ratio=l1_ratio,
         reference_size=reference_size,
     )
@@ -158,6 +165,7 @@ def test_updates_and_privacy_map(
     measurement = _make(model, domain, d_in, rho=1e12)
     assert measurement.input_domain == domain
     assert measurement.map(d_in) <= 1e12
+    normalizer = reference_size if reference_size is not None else 3
     expected = np.zeros(2 + int(fit_intercept))
     Xb = np.column_stack([X, np.ones(3)]) if fit_intercept else X
     for _ in range(2):
@@ -165,12 +173,13 @@ def test_updates_and_privacy_map(
         gradients /= np.maximum(
             1, np.linalg.norm(gradients, axis=1, keepdims=True) / clip_norm
         )
-        penalty = alpha * (1 - l1_ratio) * expected
+        penalty = alpha * normalizer * (1 - l1_ratio) * expected
         if fit_intercept:
             penalty[-1] = 0
-        expected -= 0.1 * (gradients.sum(axis=0) + penalty)
+        step_size = eta0 / normalizer
+        expected -= step_size * (gradients.sum(axis=0) + penalty)
         expected[:2] = np.sign(expected[:2]) * np.maximum(
-            np.abs(expected[:2]) - 0.1 * alpha * l1_ratio, 0
+            np.abs(expected[:2]) - step_size * alpha * normalizer * l1_ratio, 0
         )
     actual = measurement(dp.sklearn.SklearnFit(X, y))
     np.testing.assert_allclose(actual, expected, atol=1e-4, rtol=0)
@@ -185,7 +194,7 @@ def test_unsized_empty_fit_has_noise(model_type, fit_intercept):
     from sklearn.base import clone
 
     X, y = np.empty((0, 2)), np.empty(0)
-    model = model_type(reference_size=11, max_iter=2, fit_intercept=fit_intercept)
+    model = _supported(model_type, reference_size=11, max_iter=2, fit_intercept=fit_intercept)
     kwargs = dict(
         privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
@@ -201,27 +210,89 @@ def test_constructor_signature_and_cloning(model_type):
     import inspect
     from sklearn.base import clone
 
+    # Follows sklearn's signature except for the absent learning-rate schedule
+    # and the intentionally retained full-batch optimizer defaults.
     defaults = dict(
-        alpha=1.0,
-        l1_ratio=0.0,
+        loss="hinge",
+        penalty="l2",
+        alpha=0.0001,
+        l1_ratio=0.15,
         fit_intercept=True,
         max_iter=100,
-        learning_rate=0.1,
+        shuffle=True,
+        verbose=0,
+        epsilon=0.1,
+        n_jobs=None,
+        random_state=None,
+        eta0=0.1,
+        power_t=0.5,
+        early_stopping=False,
+        validation_fraction=0.1,
+        n_iter_no_change=5,
+        class_weight=None,
+        warm_start=False,
+        average=False,
         clip_norm=1.0,
         reference_size=None,
     )
     parameters = inspect.signature(model_type).parameters
     assert list(parameters) == list(defaults)
-    assert all(p.kind == inspect.Parameter.KEYWORD_ONLY for p in parameters.values())
+    assert parameters["loss"].kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert all(
+        p.kind == inspect.Parameter.KEYWORD_ONLY
+        for name, p in parameters.items()
+        if name != "loss"
+    )
     assert model_type().get_params() == defaults
+    assert model_type("log_loss").loss == "log_loss"
     model = model_type(fit_intercept=False, max_iter=7)
     assert clone(model).get_params() == defaults | dict(fit_intercept=False, max_iter=7)
     assert model.set_params(max_iter=3, fit_intercept=True) is model
     assert model.max_iter == 3 and model.fit_intercept is True
     with pytest.raises(TypeError, match="positional"):
-        model_type(1.0)
+        model_type("log_loss", "l2")
     with pytest.raises(TypeError, match="n_iters"):
         model_type(n_iters=3)
+    with pytest.raises(TypeError, match="learning_rate"):
+        model_type(learning_rate="constant")
+    with pytest.raises(TypeError, match="tol"):
+        model_type(loss="log_loss", tol=None)
+
+
+def test_unsupported_default_loss(model_type):
+    domain = _domain(size=3, y_size=3)
+    with pytest.raises(ValueError, match="loss"):
+        _make(model_type(), domain)
+    # The supported loss fits without a tolerance override.
+    _make(model_type(loss="log_loss", max_iter=1), domain)
+
+
+@pytest.mark.parametrize(
+    "parameter, value",
+    [
+        ("verbose", 1),
+        ("n_jobs", 2),
+        ("random_state", 0),
+        ("early_stopping", True),
+        ("class_weight", "balanced"),
+        ("warm_start", True),
+        ("average", True),
+    ],
+)
+def test_unsupported_options(model_type, parameter, value):
+    with pytest.raises(ValueError, match=parameter):
+        _make(_supported(model_type, **{parameter: value}), _domain(size=3, y_size=3))
+
+
+def test_irrelevant_l1_ratio_none(model_type):
+    domain = _domain(size=3, y_size=3)
+    # sklearn permits l1_ratio=None when not using elasticnet.
+    _make(_supported(model_type, penalty="l2", l1_ratio=None, max_iter=1), domain)
+    with pytest.raises(ValueError, match="l1_ratio"):
+        _make(
+            _supported(model_type, penalty="elasticnet", l1_ratio=None, max_iter=1),
+            domain,
+        )
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -249,7 +320,7 @@ def test_exact_steps_and_released_coordinates(
     monkeypatch.setattr(impl, "per_example_gradients", observe_gradients)
     monkeypatch.setattr(impl, "make_private_np_sum", observe_sum)
     measurement = _make(
-        model_type(fit_intercept=fit_intercept, max_iter=max_iter, alpha=0),
+        _supported(model_type, fit_intercept=fit_intercept, max_iter=max_iter, alpha=0),
         _domain(3, 3),
     )
     # Zero features keep the coefficient signal at zero, but must not stop training.
@@ -271,7 +342,7 @@ def test_unsized_requires_reference_size():
             1,
             1.0,
             max_iter=1,
-            learning_rate=0.1,
+            eta0=0.1,
             clip_norm=1.0,
         )
 
@@ -279,7 +350,7 @@ def test_unsized_requires_reference_size():
 def test_input_domain_validation(model_type):
     with pytest.raises(ValueError, match="requires a target domain y"):
         _make(
-            model_type(),
+            _supported(model_type),
             dp.sklearn.sklearn_fit_domain(
                 dp.numpy.array2_domain(T=float, num_columns=2)
             ),
@@ -298,9 +369,9 @@ def test_input_domain_validation(model_type):
             dp.numpy.array2_domain(**(options | features)), target
         )
         with pytest.raises(ValueError, match=error):
-            _make(model_type(), domain)
+            _make(_supported(model_type), domain)
     with pytest.raises(ValueError, match="d_in must be even"):
-        _make(model_type(), _domain(3), d_in=1)
+        _make(_supported(model_type), _domain(3), d_in=1)
 
 
 def test_nonatomic_target_validation(model_type, monkeypatch):
@@ -311,7 +382,7 @@ def test_nonatomic_target_validation(model_type, monkeypatch):
         dp.VectorDomain, "element_domain", property(lambda _: element_domain)
     )
     with pytest.raises(ValueError, match="^y must have numeric or boolean elements$"):
-        _make(model_type(), domain)
+        _make(_supported(model_type), domain)
 
 
 @pytest.mark.parametrize(
@@ -321,7 +392,9 @@ def test_nonatomic_target_validation(model_type, monkeypatch):
         ("l1_ratio", [-0.1, 1.1, float("nan"), float("inf")]),
         ("reference_size", [0, -1, 1.5, True, float("nan"), float("inf"), 10**1000]),
         ("max_iter", [0, 1.5, True, float("inf")]),
-        ("learning_rate", [0, float("nan"), float("inf"), "0.1", 10**1000]),
+        ("eta0", [0, float("nan"), float("inf"), "0.1", 10**1000]),
+        ("loss", ["hinge", "modified_huber", None]),
+        ("penalty", ["nuclear", 1]),
         ("clip_norm", [-1, float("nan"), float("inf"), None, 10**1000]),
     ],
 )
@@ -329,7 +402,7 @@ def test_public_parameter_validation(model_type, parameter, values):
     domain = _domain(3)
     for value in values:
         with pytest.raises(ValueError, match=parameter):
-            _make(model_type(**{parameter: value}), domain)
+            _make(_supported(model_type, **{parameter: value}), domain)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -339,7 +412,7 @@ def test_public_parameter_validation(model_type, parameter, values):
 def test_fitting_routes(model_type, data, route, as_list, fit_intercept):
     from sklearn.base import is_classifier
 
-    model = model_type(
+    model = _supported(model_type, 
         max_iter=3,
         fit_intercept=fit_intercept,
         reference_size=37 if route == "standalone" else None,
@@ -388,8 +461,8 @@ def test_convergence_matches_sklearn(model_type, data, fit_intercept):
     reference = LogisticRegression(
         C=1, max_iter=1000, tol=1e-8, fit_intercept=fit_intercept
     ).fit(data.X, data.y)
-    model = model_type(
-        max_iter=150, learning_rate=0.5, clip_norm=10, fit_intercept=fit_intercept
+    model = _supported(model_type, 
+        max_iter=150, eta0=0.5, alpha=0.01, clip_norm=10, fit_intercept=fit_intercept
     )
     theta = _make(model, _domain(100, 100), rho=1e12)(data)
     expected = (

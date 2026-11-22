@@ -110,16 +110,19 @@ def make_private_logistic_regression(
     d_out,
     *,
     max_iter: int,
-    learning_rate: float,
+    eta0: float,
     clip_norm: float,
-    alpha: float = 1.0,
-    l1_ratio: float = 0.0,
+    loss: str = "log_loss",
+    penalty: str | None = "l2",
+    alpha: float = 0.0001,
+    l1_ratio: float = 0.15,
     fit_intercept: bool = True,
     reference_size: int | None = None,
 ) -> Measurement:
     """Construct a measurement releasing logistic weights and an optional intercept.
 
-    Runs exactly max_iter noisy-gradient steps, without early stopping.
+    Runs exactly max_iter full-batch noisy-gradient steps, without early stopping.
+    alpha is for the average loss, not the summed loss.
 
     Accepts SklearnFit with numeric array2_domain features (public column count)
     and numeric or boolean VectorDomain targets, described by SklearnFitDescriptor.
@@ -131,7 +134,7 @@ def make_private_logistic_regression(
 
     fit_desc = input_domain.cast(SklearnFitDescriptor)
     if fit_desc.y is None:
-        raise ValueError("LogisticRegression requires a target domain y")
+        raise ValueError("SGDClassifier requires a target domain y")
     x_desc = fit_desc.X.cast(NPArray2Domain)
     if not isinstance(fit_desc.y, VectorDomain):
         raise ValueError("y_domain must be a VectorDomain")
@@ -177,10 +180,33 @@ def make_private_logistic_regression(
 
     if not math.isfinite(alpha) or alpha < 0:
         raise ValueError("alpha must be finite and nonnegative")
-    if not math.isfinite(l1_ratio) or not 0 <= l1_ratio <= 1:
+    if l1_ratio is None and penalty != "elasticnet":
+        pass  # Ignored unless using elasticnet, as in sklearn.
+    elif (
+        not isinstance(l1_ratio, Real)
+        or not math.isfinite(l1_ratio)
+        or not 0 <= l1_ratio <= 1
+    ):
         raise ValueError("l1_ratio must be finite and in [0, 1]")
 
-    l1_coef, l2_coef = l1_ratio * alpha, (1.0 - l1_ratio) * alpha
+    if loss != "log_loss":
+        raise ValueError('only loss="log_loss" is supported')
+    if penalty not in ("l2", "l1", "elasticnet", None):
+        raise ValueError("penalty must be 'l2', 'l1', 'elasticnet', or None")
+
+    # The training loop sums gradients; sklearn alpha penalizes their mean.
+    # This normalization uses public metadata, not the realized row count.
+    alpha_sum = alpha * normalizer if penalty is not None else 0.0
+    if not math.isfinite(alpha_sum):
+        raise ValueError("alpha times reference_size must be finite")
+    if penalty == "l2":
+        l1_coef, l2_coef = 0.0, alpha_sum
+    elif penalty == "l1":
+        l1_coef, l2_coef = alpha_sum, 0.0
+    elif penalty == "elasticnet":
+        l1_coef, l2_coef = l1_ratio * alpha_sum, (1.0 - l1_ratio) * alpha_sum
+    else:
+        l1_coef, l2_coef = 0.0, 0.0
 
     if (
         isinstance(max_iter, bool)
@@ -188,7 +214,7 @@ def make_private_logistic_regression(
         or max_iter <= 0
     ):
         raise ValueError("max_iter must be a positive integer")
-    for name, value in (("learning_rate", learning_rate), ("clip_norm", clip_norm)):
+    for name, value in (("eta0", eta0), ("clip_norm", clip_norm)):
         try:
             valid = (
                 not isinstance(value, bool)
@@ -200,7 +226,7 @@ def make_private_logistic_regression(
             valid = False
         if not valid:
             raise ValueError(f"{name} must be a finite positive real number")
-    learning_rate, clip_norm = float(learning_rate), float(clip_norm)
+    eta0, clip_norm = float(eta0), float(clip_norm)
     if n is not None and d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "
@@ -232,7 +258,7 @@ def make_private_logistic_regression(
             d=d,
             normalizer=normalizer,
             clip_norm=clip_norm,
-            learning_rate=learning_rate,
+            learning_rate=eta0,
             l1_coef=l1_coef,
             l2_coef=l2_coef,
             fit_intercept=fit_intercept,
