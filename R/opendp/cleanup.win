@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Remove the intermediate static archive after installation/check staging.
+# R CMD check flags symbols in libopendp.a itself, even though the package has
+# already linked against it to produce the final shared library.
+rm -f src/libopendp.a
