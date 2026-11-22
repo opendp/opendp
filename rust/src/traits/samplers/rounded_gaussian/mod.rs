@@ -24,13 +24,16 @@
 //!
 //! is contained in one IEEE rounding cell.
 
-use dashu::{integer::UBig, rational::RBig, rbig};
+use dashu::{integer::UBig, rational::RBig};
 
 use crate::{
     error::Fallible,
     traits::{
         Float,
-        samplers::{PartialSample, PartialUniform01, Uniform01RV, sample_discrete_half_gaussian},
+        samplers::{
+            PartialSample, PartialUniform01, Uniform01RV, sample_uniform_ubig_below,
+            sample_uniform_uint_below,
+        },
     },
 };
 
@@ -48,7 +51,7 @@ fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
     // First term: continue iff U_1 < x.
     let mut y = PartialSample::new(Uniform01RV);
 
-    if !x.greater_than(&mut y)? {
+    if !y.less_than_scaled_uniform(x, 0)? {
         return Ok(true);
     }
 
@@ -59,7 +62,7 @@ fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
         let mut u = PartialSample::new(Uniform01RV);
 
         // Continue iff U_{n+1} < U_n.
-        if !y.greater_than(&mut u)? {
+        if !u.less_than_scaled_uniform(&mut y, 0)? {
             return Ok(accept_on_failure);
         }
 
@@ -70,21 +73,7 @@ fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
 
 /// Return whether `u < x / 2` for lazy uniforms `u` and `x`.
 fn sample_bernoulli_u_lt_x2(u: &mut PartialUniform01, x: &mut PartialUniform01) -> Fallible<bool> {
-    loop {
-        if u.upper().unwrap() * rbig!(2) < x.lower().unwrap() {
-            return Ok(true);
-        }
-
-        if u.lower().unwrap() * rbig!(2) > x.upper().unwrap() {
-            return Ok(false);
-        }
-
-        if u.refinements() <= x.refinements().saturating_add(1) {
-            u.refine()?;
-        } else {
-            x.refine()?;
-        }
-    }
+    u.less_than_scaled_uniform(x, 1)
 }
 
 /// One Bernoulli trial with success probability `exp(-x^2 / 2)`.
@@ -101,7 +90,7 @@ fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<boo
     }
 
     let mut v = PartialSample::new(Uniform01RV);
-    if !x.greater_than(&mut v)? {
+    if !v.less_than_scaled_uniform(x, 0)? {
         return Ok(true);
     }
 
@@ -113,12 +102,12 @@ fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<boo
 
         // Later continuation events use the decreasing-uniform chain:
         //     u_{i+1} < u_i
-        if !w.greater_than(&mut u)? {
+        if !u.less_than_scaled_uniform(&mut w, 0)? {
             return Ok(accept_on_failure);
         }
 
         let mut v = PartialSample::new(Uniform01RV);
-        if !x.greater_than(&mut v)? {
+        if !v.less_than_scaled_uniform(x, 0)? {
             return Ok(accept_on_failure);
         }
 
@@ -153,12 +142,59 @@ pub(super) struct ExactStdNormal {
     pub(super) x: PartialUniform01,
 }
 
+/// Exact Bernoulli(exp(-1/2)), specializing the Bernoulli exponential series.
+fn sample_bernoulli_exp_half() -> Fallible<bool> {
+    sample_bernoulli_exp_half_with(|denominator| match u64::try_from(denominator) {
+        Ok(upper) => Ok(sample_uniform_uint_below::<u64, 8>(upper)? == 0),
+        // No native-counter or run-length cap: retain an exact fallback.
+        Err(_) => Ok(sample_uniform_ubig_below(denominator.clone())?.is_zero()),
+    })
+}
+
+fn sample_bernoulli_exp_half_with(
+    mut reciprocal_trial: impl FnMut(&UBig) -> Fallible<bool>,
+) -> Fallible<bool> {
+    // Continue with probability 1/(2n) at step n, so P[N >= n] = (1/2)^n/n!.
+    // The probability of an even number of successes is therefore exp(-1/2).
+    let mut denominator = UBig::from(2u8);
+    let mut accept_on_failure = true;
+    loop {
+        if !reciprocal_trial(&denominator)? {
+            return Ok(accept_on_failure);
+        }
+        denominator += 2u8;
+        accept_on_failure = !accept_on_failure;
+    }
+}
+
+/// Sample P[K=k] proportional to exp(-k^2/2), for nonnegative integers k.
+/// Reaching k requires 1+3+...+(2k-1) = k^2 Bernoulli(exp(-1/2))
+/// successes; a final failure returns k. Other failures restart the proposal.
+fn sample_standard_half_gaussian_with(mut trial: impl FnMut() -> Fallible<bool>) -> Fallible<UBig> {
+    'proposal: loop {
+        let mut k = UBig::ZERO;
+        loop {
+            if !trial()? {
+                return Ok(k);
+            }
+            let mut remaining = &k << 1usize;
+            while !remaining.is_zero() {
+                if !trial()? {
+                    continue 'proposal;
+                }
+                remaining -= 1u8;
+            }
+            k += 1u8;
+        }
+    }
+}
+
 /// Sample an exact lazy standard normal in Karney form:
 ///
 ///     Z = S * (K + X).
 fn sample_exact_std_normal() -> Fallible<ExactStdNormal> {
     loop {
-        let k = sample_discrete_half_gaussian(RBig::ONE)?;
+        let k = sample_standard_half_gaussian_with(sample_bernoulli_exp_half)?;
         let mut x = PartialSample::new(Uniform01RV);
 
         if !accept_fraction(&k, &mut x)? {
@@ -185,7 +221,7 @@ fn half_gap(lhs: RBig, rhs: RBig) -> RBig {
 /// Returns `(lower, upper)`, where `None` represents an unbounded side.
 /// The returned interval is used only for containment tests; exact midpoint
 /// tie events have probability zero under the continuous Gaussian.
-fn rounding_cell<T: Float>(y: T) -> Fallible<(Option<RBig>, Option<RBig>)> {
+pub(super) fn rounding_cell<T: Float>(y: T) -> Fallible<(Option<RBig>, Option<RBig>)> {
     if y == T::infinity() {
         let max = T::max_value();
         let max_r = max.into_rational()?;
@@ -267,6 +303,12 @@ fn clip_interval(interval: (RBig, RBig), range: &RBig) -> (RBig, RBig) {
 
 type RoundingCell = (Option<RBig>, Option<RBig>);
 
+pub(super) fn interval_inside_cell(interval: &(RBig, RBig), cell: &RoundingCell) -> bool {
+    let lower_in = cell.0.as_ref().is_none_or(|lo| &interval.0 >= lo);
+    let upper_in = cell.1.as_ref().is_none_or(|hi| &interval.1 <= hi);
+    lower_in && upper_in
+}
+
 #[derive(Clone, Copy)]
 enum Endpoint {
     Lower,
@@ -325,14 +367,13 @@ fn affine_trace_inside_cell(
     lower_in && upper_in
 }
 
-/// Pick a candidate float whose rounding cell contains the rational midpoint
-/// of the current interval. Correctness does not rely on this guess; the
+/// Guess a candidate by rounding the lower endpoint, avoiding a rational
+/// midpoint computation. Correctness does not rely on this guess; the
 /// containment test below is authoritative.
 fn candidate_and_cell_from_interval<T: Float>(
     interval: &(RBig, RBig),
 ) -> Fallible<(T, RoundingCell)> {
-    let mid = midpoint(interval.0.clone(), interval.1.clone());
-    let y = T::from_rational(mid);
+    let y = T::from_rational(interval.0.clone());
     Ok((y, rounding_cell(y)?))
 }
 
@@ -372,7 +413,8 @@ pub fn sample_rounded_gaussian<T: Float>(mu: T, scale: T) -> Fallible<T> {
         let interval = normal_interval(&z, &mu, &scale);
         let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
 
-        if affine_trace_inside_cell(&z, &mu, &scale, None, &cell) {
+        // Reuse the exact rational endpoints for the containment certificate.
+        if interval_inside_cell(&interval, &cell) {
             return Ok(y);
         }
 
@@ -401,7 +443,7 @@ pub(crate) fn sample_rounded_gaussian_rational<T: Float>(mu: T, scale: RBig) -> 
         let interval = normal_interval(&z, &mu, &scale);
         let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
 
-        if affine_trace_inside_cell(&z, &mu, &scale, None, &cell) {
+        if interval_inside_cell(&interval, &cell) {
             return Ok(y);
         }
 

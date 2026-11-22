@@ -1,0 +1,7 @@
+# openssl=true
+bytes_per_call,median_ns_per_call,median_ns_per_byte
+1,147.2,147.20
+8,123.8,15.47
+64,125.6,1.96
+256,141.3,0.55
+4096,441.4,0.11

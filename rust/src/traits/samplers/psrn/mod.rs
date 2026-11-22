@@ -82,10 +82,6 @@ impl<D: InverseCDF> PartialSample<D> {
         Ok(())
     }
 
-    pub(crate) fn refinements(&mut self) -> usize {
-        self.refinements
-    }
-
     /// Retrieve a lower bound on the sample.
     pub(crate) fn lower(&self) -> Option<D::Edge> {
         self.edge::<Down>()

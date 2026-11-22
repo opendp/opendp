@@ -1,0 +1,22 @@
+# n=10000, repetitions=5, openssl=true
+mu,scale,sampler,median_ns,min_ns,max_ns
+0,1,continuous_laplace,2078.3,2034.0,2227.8
+0,1,continuous_gaussian,8354.6,8220.2,8521.4
+0,1,discrete_laplace,19430.8,19214.0,20460.5
+0,1,discrete_gaussian,64437.4,63905.2,71447.6
+1,1,continuous_laplace,2053.0,2051.1,2064.8
+1,1,continuous_gaussian,8319.6,8204.0,8376.5
+1,1,discrete_laplace,19361.8,19116.8,20815.7
+1,1,discrete_gaussian,65199.0,64837.5,65615.7
+1000000,0.5,continuous_laplace,2126.4,2099.8,2143.0
+1000000,0.5,continuous_gaussian,8503.2,8375.8,8641.3
+1000000,0.5,discrete_laplace,19584.6,19398.1,19652.4
+1000000,0.5,discrete_gaussian,65959.8,65159.2,71289.4
+0,0.000001,continuous_laplace,2770.4,2754.5,2841.0
+0,0.000001,continuous_gaussian,9137.4,9067.0,9203.4
+0,0.000001,discrete_laplace,19697.5,19515.7,22359.5
+0,0.000001,discrete_gaussian,63700.4,62766.0,64350.7
+0,1000000,continuous_laplace,2006.7,2001.1,2077.2
+0,1000000,continuous_gaussian,8372.2,8280.5,9305.4
+0,1000000,discrete_laplace,19998.0,19754.4,20133.0
+0,1000000,discrete_gaussian,67130.0,66397.1,72951.2
