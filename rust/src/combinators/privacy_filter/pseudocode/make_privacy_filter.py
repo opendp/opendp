@@ -4,6 +4,10 @@ def make_privacy_filter(
     d_in: MI_Distance,
     d_out: MO_Distance,
 ) -> Measurement[DI, MI, MO, OdometerQueryable[MI, MO, Q, A]]:
+    zero = odometer.output_measure.compose([])
+    if not d_out.total_ge(zero):
+        raise "d_out must be nonnegative"
+
     odo_function = odometer.function
     continuation_rule = new_continuation_rule(  # `\label{continuation-rule}`
         d_in, d_out, Q, A, MI_Distance, MO_Distance
