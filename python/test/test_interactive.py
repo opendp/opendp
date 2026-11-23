@@ -184,6 +184,20 @@ def test_privacy_filter():
     assert qbl_filter.privacy_loss(1) == 2.0
 
 
+def test_context_rejects_negative_child_compositor_budget():
+    ctx = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+
+    with pytest.raises(dp.OpenDPException, match="d_out must be nonnegative"):
+        ctx.query(epsilon=-100.0).compositor()
+
+    assert ctx.current_privacy_loss() == 0.0
+
+
 def test_fully_adaptive_composition_d_in():
     o_ac = dp.c.make_fully_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),

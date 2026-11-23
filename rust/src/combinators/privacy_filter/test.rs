@@ -4,7 +4,7 @@ use crate::{
     domains::AtomDomain,
     error::Fallible,
     measurements::make_randomized_response_bool,
-    measures::MaxDivergence,
+    measures::{Approximate, MaxDivergence},
     metrics::DiscreteDistance,
 };
 
@@ -37,6 +37,39 @@ fn test_privacy_filter() -> Fallible<()> {
     assert!(q3.is_err());
     assert!(qbl_filter.privacy_loss(1).is_err());
 
+    Ok(())
+}
+
+#[test]
+fn test_privacy_filter_rejects_invalid_budget() -> Fallible<()> {
+    let odometer = || {
+        make_fully_adaptive_composition::<_, _, _, bool>(
+            AtomDomain::<bool>::default(),
+            DiscreteDistance,
+            MaxDivergence,
+            None,
+        )
+    };
+
+    for d_out in [-100.0, f64::NAN] {
+        assert!(make_privacy_filter(odometer()?, 1, d_out).is_err());
+    }
+
+    let approx_odometer = || {
+        make_fully_adaptive_composition::<_, _, _, bool>(
+            AtomDomain::<bool>::default(),
+            DiscreteDistance,
+            Approximate(MaxDivergence),
+            None,
+        )
+    };
+
+    for d_out in [(-1.0, 1e-6), (1.0, -1e-6), (f64::NAN, 0.0), (0.0, f64::NAN)] {
+        assert!(make_privacy_filter(approx_odometer()?, 1, d_out).is_err());
+    }
+
+    // A zero budget remains valid.
+    assert_eq!(make_privacy_filter(odometer()?, 1, 0.0)?.map(&1)?, 0.0);
     Ok(())
 }
 

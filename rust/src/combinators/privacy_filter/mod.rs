@@ -1,8 +1,9 @@
 use opendp_derive::{bootstrap, proven};
 
 use crate::{
+    combinators::CompositionMeasure,
     core::{
-        Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
+        Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable, PrivacyMap,
     },
     error::Fallible,
@@ -57,7 +58,7 @@ mod ffi;
 pub fn make_privacy_filter<
     DI: 'static + Domain,
     MI: 'static + Metric,
-    MO: 'static + Measure,
+    MO: 'static + CompositionMeasure,
     Q: 'static,
     A: 'static,
 >(
@@ -70,6 +71,12 @@ where
     MO::Distance: Clone + ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
+    // Negative or NaN budgets can cancel privacy loss in a parent composition.
+    let zero = odometer.output_measure.compose(vec![])?;
+    if !d_out.total_ge(&zero)? {
+        return fallible!(MakeMeasurement, "d_out must be nonnegative: {:?}", d_out);
+    }
+
     let continuation_rule = new_continuation_rule::<Q, A, _, _>(d_in.clone(), d_out.clone());
     Measurement::new(
         odometer.input_domain.clone(),

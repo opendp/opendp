@@ -21,7 +21,7 @@ Proves soundness of \texttt{fn make\_privacy\_filter}.
     \item Argument \texttt{d\_out} of type \texttt{MO\_Distance}, the associated distance type of \texttt{MO}.
     \item Generic \texttt{DI} implements \rustdoc{core/trait}{Domain}.
     \item Generic \texttt{MI} implements \rustdoc{core/trait}{Metric}.
-    \item Generic \texttt{MO} implements \rustdoc{core/trait}{Measure}.
+    \item Generic \texttt{MO} implements \rustdoc{combinators/trait}{CompositionMeasure}.
     \item \texttt{MI\_Distance} implements \rustdoc{traits/trait}{ProductOrd}.
     \item \texttt{MO\_Distance} implements \rustdoc{traits/trait}{ProductOrd}.
     \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
@@ -46,6 +46,8 @@ None
 \end{proof}
 
 \begin{proof}[Proof of privacy guarantee]
+    The constructor checks that the filter budget is no smaller than the
+    composition measure's zero, rejecting negative and unordered budgets.
     By the definition of a valid odometer queryable,
     the output of \texttt{make\_privacy\_filter} upholds the privacy guarantee.
 \end{proof}
