@@ -377,7 +377,7 @@ impl DPExpr {
     ///   so negative noisy outputs are preserved instead of being clamped to zero.
     pub fn len(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPLenShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPLenShim { signed })
     }
 
     /// Compute the differentially private count (excluding nulls).
@@ -388,7 +388,7 @@ impl DPExpr {
     ///   so negative noisy outputs are preserved instead of being clamped to zero.
     pub fn count(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPCountShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPCountShim { signed })
     }
 
     /// Compute the differentially private null count (exclusively nulls).
@@ -399,7 +399,7 @@ impl DPExpr {
     ///   so negative noisy outputs are preserved instead of being clamped to zero.
     pub fn null_count(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNullCountShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNullCountShim { signed })
     }
 
     /// Compute the differentially private count of unique elements (including null).
@@ -410,7 +410,7 @@ impl DPExpr {
     ///   so negative noisy outputs are preserved instead of being clamped to zero.
     pub fn n_unique(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNUniqueShim)
+        apply_anonymous_function(vec![self.0, scale, lit(signed)], DPNUniqueShim { signed })
     }
 
     /// Compute the differentially private sum.
@@ -483,7 +483,7 @@ impl DPExpr {
 ///   so negative noisy outputs are preserved instead of being clamped to zero.
 pub fn dp_len(scale: Option<f64>, signed: bool) -> Expr {
     let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-    apply_anonymous_function(vec![scale, lit(signed)], DPFrameLenShim)
+    apply_anonymous_function(vec![scale, lit(signed)], DPFrameLenShim { signed })
 }
 
 pub enum OnceFrameQuery {

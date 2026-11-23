@@ -43,6 +43,12 @@ fn test_dp_frame_len_shim_schema() -> Fallible<()> {
         .collect_schema()?;
     assert_eq!(schema_unsigned.get("len").unwrap(), &DataType::UInt32);
 
+    let schema_signed = lf
+        .clone()
+        .select([dp_len(Some(0.0), true).alias("len")])
+        .collect_schema()?;
+    assert_eq!(schema_signed.get("len").unwrap(), &DataType::Int64);
+
     // execution is still an error
     assert!(lf.select([dp_len(Some(0.0), false)]).collect().is_err());
     Ok(())

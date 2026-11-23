@@ -65,12 +65,20 @@ test_counting_query_dtype!(
 test_counting_query_dtype!(test_dp_n_unique_types, make_expr_dp_n_unique, n_unique, 3);
 
 #[test]
-fn test_counting_shim_schema_unsigned() -> Fallible<()> {
-    // regardless of the source column's dtype, the unsigned shim infers UInt32
+fn test_counting_shim_schema() -> Fallible<()> {
     let lf = df!("A" => [1.0f64, 2.0, 3.0])?.lazy();
-    let expr = col("A").dp().count(Some(0.0), false);
-    let schema = lf.select([expr]).collect_schema()?;
-    assert_eq!(schema.get("A").unwrap(), &DataType::UInt32);
+    for signed in [false, true] {
+        let dtype = if signed { DataType::Int64 } else { DataType::UInt32 };
+        for expr in [
+            col("A").dp().len(Some(0.0), signed),
+            col("A").dp().count(Some(0.0), signed),
+            col("A").dp().null_count(Some(0.0), signed),
+            col("A").dp().n_unique(Some(0.0), signed),
+        ] {
+            let schema = lf.clone().select([expr]).collect_schema()?;
+            assert_eq!(schema.get("A"), Some(&dtype));
+        }
+    }
     Ok(())
 }
 

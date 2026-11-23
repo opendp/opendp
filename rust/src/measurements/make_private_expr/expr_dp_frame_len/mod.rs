@@ -26,7 +26,9 @@ use crate::{
 mod test;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct DPFrameLenShim;
+pub(crate) struct DPFrameLenShim {
+    pub(crate) signed: bool,
+}
 
 impl ColumnsUdf for DPFrameLenShim {
     fn as_any(&self) -> &dyn std::any::Any {
@@ -51,7 +53,10 @@ impl AnonymousColumnsUdf for DPFrameLenShim {
         _: &polars::prelude::Schema,
         _: &[polars::prelude::Field],
     ) -> PolarsResult<polars::prelude::Field> {
-        Ok(Field::new("len".into(), DataType::UInt32))
+        Ok(Field::new(
+            "len".into(),
+            if self.signed { DataType::Int64 } else { DataType::UInt32 },
+        ))
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {

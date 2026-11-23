@@ -25,7 +25,9 @@ use crate::{
 macro_rules! new_make_expr_counting_query {
     ($plugin:ident, $name:literal, $stable_method:ident, $dp_method:ident, $constructor:ident) => {
         #[derive(Clone, Serialize, Deserialize)]
-        pub(crate) struct $plugin;
+        pub(crate) struct $plugin {
+            pub(crate) signed: bool,
+        }
         impl ColumnsUdf for $plugin {
             // makes it possible to downcast the AnonymousFunction trait object back to Self
             fn as_any(&self) -> &dyn std::any::Any {
@@ -50,7 +52,10 @@ macro_rules! new_make_expr_counting_query {
                 let [input, _scale, _signed] = <&[Field; 3]>::try_from(fields)
                     .map_err(|_| polars_err!(InvalidOperation: "{} expects three arguments", Self::NAME))?;
 
-                Ok(Field::new(input.name().clone(), DataType::UInt32))
+                Ok(Field::new(
+                    input.name().clone(),
+                    if self.signed { DataType::Int64 } else { DataType::UInt32 },
+                ))
             }
         }
 
