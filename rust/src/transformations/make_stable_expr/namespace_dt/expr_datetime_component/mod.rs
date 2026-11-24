@@ -76,6 +76,26 @@ where
         }
     }
 
+    // Polars permits calendar components on Date/Datetime and clock components on
+    // Time/Datetime. Reject incompatible combinations before private execution.
+    let is_clock = matches!(
+        temporal_function,
+        TemporalFunction::Hour
+            | TemporalFunction::Minute
+            | TemporalFunction::Second
+            | TemporalFunction::Millisecond
+            | TemporalFunction::Microsecond
+            | TemporalFunction::Nanosecond
+    );
+    if (in_dtype == DataType::Date && is_clock) || (in_dtype == DataType::Time && !is_clock) {
+        return fallible!(
+            MakeTransformation,
+            "{} is not supported on {}",
+            temporal_function,
+            in_dtype
+        );
+    }
+
     let mut output_domain = middle_domain.clone();
     output_domain.column.set_dtype(to_dtype)?;
     // Calendar extraction may produce null even from a non-null temporal column.

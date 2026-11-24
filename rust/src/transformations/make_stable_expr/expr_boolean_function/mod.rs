@@ -76,6 +76,16 @@ where
     let mut output_domain = middle_domain.clone();
     let data_column = &mut output_domain.column;
 
+    if matches!(bool_function, Not) {
+        let dtype = data_column.dtype();
+        if dtype != DataType::Boolean && !dtype.is_integer() {
+            return fallible!(
+                MakeTransformation,
+                "Not is only supported on Boolean or integer columns, got {dtype}"
+            );
+        }
+    }
+
     if matches!(bool_function, IsNull | IsNotNull) {
         data_column.nullable = false;
     }
