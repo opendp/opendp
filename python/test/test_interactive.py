@@ -143,6 +143,30 @@ def test_fully_adaptive_composition():
     assert qbl_comp.privacy_loss(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
 
 
+def test_compositors_reject_uncloneable_distance():
+    space = (
+        dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+        dp.l01inf_distance(dp.absolute_distance(T=float)),
+    )
+    measure = dp.max_divergence()
+    d_in = (1, 1.0, 1.0)
+    message = "Clone is not implemented"
+
+    with pytest.raises(dp.OpenDPException, match=message):
+        dp.c.make_adaptive_composition(*space, measure, d_in, [1.0])
+
+    with pytest.raises(dp.OpenDPException, match=message):
+        dp.c.make_fully_adaptive_composition(*space, measure, d_in)
+
+    odometer = dp.c.make_fully_adaptive_composition(*space, measure)
+    with pytest.raises(dp.OpenDPException, match=message):
+        dp.c.make_privacy_filter(odometer, d_in, 1.0)
+
+    queryable = odometer([0.0])
+    with pytest.raises(dp.OpenDPException, match=message):
+        queryable.privacy_loss(d_in)
+
+
 def test_odometer_supporting_elements():
     o_ac = dp.c.make_fully_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),

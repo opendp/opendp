@@ -10,8 +10,8 @@ pub extern "C" fn opendp_combinators__make_privacy_filter(
     d_out: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let odometer = try_as_ref!(odometer).clone();
-    let d_in = try_as_ref!(d_in).clone();
-    let d_out = try_as_ref!(d_out).clone();
+    let d_in = try_!(try_as_ref!(d_in).try_clone());
+    let d_out = try_!(try_as_ref!(d_out).try_clone());
     super::make_privacy_filter::<AnyDomain, AnyMetric, AnyMeasure, AnyObject, AnyObject>(
         odometer, d_in, d_out,
     )

@@ -136,7 +136,7 @@ pub extern "C" fn opendp_core__odometer_queryable_invoke(
     query: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyOdometerQueryable>());
-    let query = AnyOdometerQuery::Invoke(try_as_ref!(query).clone());
+    let query = AnyOdometerQuery::Invoke(try_!(try_as_ref!(query).try_clone()));
 
     let answer = try_!(queryable.eval(&query));
     if let AnyOdometerAnswer::Invoke(answer) = answer {
@@ -202,7 +202,7 @@ pub extern "C" fn opendp_core__odometer_queryable_privacy_loss(
     d_in: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyOdometerQueryable>());
-    let d_in = try_as_ref!(d_in).clone();
+    let d_in = try_!(try_as_ref!(d_in).try_clone());
     queryable.privacy_loss(d_in).into()
 }
 
@@ -257,6 +257,24 @@ mod tests {
         };
         let res: i32 = res.downcast()?;
         assert_eq!(res, 999);
+        Ok(())
+    }
+
+    #[test]
+    fn test_odometer_query_rejects_uncloneable_type() -> Fallible<()> {
+        let odometer = make_test_any_odometer()?;
+        let arg = AnyObject::new(vec![999]);
+        let mut queryable = Fallible::from(opendp_core__odometer_invoke(&odometer, &arg))?;
+        let invalid = AnyObject::new(());
+
+        assert!(
+            Fallible::from(opendp_core__odometer_queryable_invoke(&mut queryable, &invalid))
+                .is_err()
+        );
+        assert!(
+            Fallible::from(opendp_core__odometer_queryable_privacy_loss(&mut queryable, &invalid))
+                .is_err()
+        );
         Ok(())
     }
 

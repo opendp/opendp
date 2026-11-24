@@ -1100,8 +1100,9 @@ impl ProductOrd for AnyObject {
     }
 }
 
-impl Clone for AnyObject {
-    fn clone(&self) -> Self {
+impl AnyObject {
+    /// Clone the value if its runtime type is supported by the FFI clone dispatcher.
+    pub fn try_clone(&self) -> Fallible<Self> {
         fn clone_plain<T: 'static + Clone>(obj: &AnyObject) -> Fallible<AnyObject> {
             Ok(AnyObject::new(obj.downcast_ref::<T>()?.clone()))
         }
@@ -1162,36 +1163,38 @@ impl Clone for AnyObject {
             }
             TypeContents::TUPLE(type_ids) => {
                 if type_ids.len() != 2 {
-                    unimplemented!("AnyObject Clone: unrecognized tuple length")
+                    return fallible!(Type, "Clone is not implemented for {:?}", self.type_);
                 }
 
                 if type_ids == &vec![TypeId::of::<f64>(), TypeId::of::<ExtrinsicObject>()] {
-                    return clone_tuple2::<f64, ExtrinsicObject>(self).unwrap();
+                    return clone_tuple2::<f64, ExtrinsicObject>(self);
                 }
 
                 dispatch!(clone_tuple2, [
-                    (Type::of_id(&type_ids[0]).unwrap(), @primitives),
-                    (Type::of_id(&type_ids[1]).unwrap(), @primitives)
+                    (Type::of_id(&type_ids[0])?, @primitives),
+                    (Type::of_id(&type_ids[1])?, @primitives)
                 ], (self))
             }
             TypeContents::ARRAY { .. } => {
-                unimplemented!("AnyObject Clone: attempted to clone array")
+                fallible!(Type, "Clone is not implemented for {:?}", self.type_)
             }
-            TypeContents::SLICE(_) => unimplemented!("AnyObject Clone: attempted to clone slice"),
+            TypeContents::SLICE(_) => {
+                fallible!(Type, "Clone is not implemented for {:?}", self.type_)
+            }
             TypeContents::GENERIC { name, args } => {
                 if *name == "HashMap" {
                     if args.len() != 2 {
-                        panic!("HashMaps should have 2 type arguments");
+                        return fallible!(Type, "HashMaps should have 2 type arguments");
                     }
-                    let K = Type::of_id(&args[0]).unwrap();
-                    let V = Type::of_id(&args[1]).unwrap();
+                    let K = Type::of_id(&args[0])?;
+                    let V = Type::of_id(&args[1])?;
                     if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (self))
                     } else {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
                     }
                 } else {
-                    unimplemented!("unrecognized generic {:?}", name)
+                    fallible!(Type, "Clone is not implemented for {:?}", self.type_)
                 }
             }
             TypeContents::VEC(type_id) => {
@@ -1203,7 +1206,7 @@ impl Clone for AnyObject {
                 dispatch!(
                     clone_vec,
                     [(
-                        Type::of_id(type_id).unwrap(),
+                        Type::of_id(type_id)?,
                         [
                             u8,
                             u16,
@@ -1227,7 +1230,13 @@ impl Clone for AnyObject {
                 )
             }
         }
-        .expect(&format!("Clone is not implemented for {:?}", self.type_))
+    }
+}
+
+impl Clone for AnyObject {
+    fn clone(&self) -> Self {
+        self.try_clone()
+            .unwrap_or_else(|err| panic!("Clone is not implemented for {:?}: {err}", self.type_))
     }
 }
 
