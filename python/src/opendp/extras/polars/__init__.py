@@ -141,6 +141,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="noise",
             args=(self.expr, scale),
             is_elementwise=True,
@@ -193,6 +194,7 @@ class DPExpr(object):
         signed = _resolve_signed(signed)
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_len",
             args=(self.expr, scale, signed),
             returns_scalar=True,
@@ -243,6 +245,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -297,6 +300,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_null_count",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -347,6 +351,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_n_unique",
             args=(self.expr, scale, _resolve_signed(signed)),
             returns_scalar=True,
@@ -394,6 +399,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_sum",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -448,6 +454,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_mean",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -495,6 +502,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_quantile",
             args=(self.expr, lit(alpha), lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -540,6 +548,7 @@ class DPExpr(object):
 
         return register_plugin_function(
             plugin_path=lib_path,
+            use_abs_path=True,
             function_name="dp_median",
             args=(self.expr, lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -593,6 +602,7 @@ def dp_len(scale: float | None = None, signed: bool | None = None):
 
     return register_plugin_function(
         plugin_path=lib_path,
+        use_abs_path=True,
         function_name="dp_frame_len",
         args=(scale, _resolve_signed(signed)),
         returns_scalar=True,

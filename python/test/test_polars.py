@@ -225,6 +225,29 @@ def test_private_expr():
     assert re.match("0.*:noise_plugin()", str(e_plan.fill))
 
 
+def test_private_expr_rejects_alternate_plugin_library(tmp_path):
+    from polars.plugins import register_plugin_function
+    from opendp._lib import lib_path
+
+    # Even an identical filename must not establish plugin provenance.
+    alternate = tmp_path / lib_path.name
+    alternate.write_bytes(b"not a shared library")
+    expr = register_plugin_function(
+        plugin_path=alternate,
+        function_name="dp_frame_len",
+        args=(1.0, True),
+        returns_scalar=True,
+        use_abs_path=True,
+    )
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_private_expr(
+            dp.wild_expr_domain([], dp.polars.Margin(by=[])),
+            dp.l01inf_distance(dp.symmetric_distance()),
+            dp.max_divergence(),
+            expr,
+        )
+
+
 def test_private_lazyframe_median():
     lf_domain, lf = example_lf(margin=["D"], invariant="keys", max_length=50)
     candidates = list(range(1, 6))

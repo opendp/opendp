@@ -56,7 +56,7 @@ pub(crate) trait OpenDPPlugin:
 }
 
 #[cfg(feature = "ffi")]
-static OPENDP_LIB_NAME: &str = "opendp";
+use crate::ffi::util::OPENDP_LIB_PATH;
 
 pub(crate) fn match_plugin<'e, KW>(expr: &'e Expr) -> Fallible<Option<&'e Vec<Expr>>>
 where
@@ -76,7 +76,9 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
+            if OPENDP_LIB_PATH.get().map(String::as_str) != Some(lib.as_str())
+                || symbol.as_str() != KW::NAME
+            {
                 return Ok(None);
             }
 
@@ -125,7 +127,9 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
+            if OPENDP_LIB_PATH.get().map(String::as_str) != Some(lib.as_str())
+                || symbol.as_str() != KW::NAME
+            {
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
@@ -191,12 +195,16 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         #[cfg(feature = "ffi")]
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
-            function: FunctionExpr::FfiPlugin { lib, .. },
+            function: FunctionExpr::FfiPlugin { .. },
         } => Expr::Function {
             input: input_exprs,
             function: FunctionExpr::FfiPlugin {
                 flags: KW::function_options(),
-                lib,
+                lib: OPENDP_LIB_PATH
+                    .get()
+                    .expect("plugin matched the registered library")
+                    .as_str()
+                    .into(),
                 symbol: KW::NAME.into(),
                 kwargs: if KW::SHIM {
                     Default::default()

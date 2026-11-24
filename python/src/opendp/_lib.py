@@ -49,7 +49,7 @@ def _load_library():
                 f"Expected exactly one binary to be present in '{lib_dir}'{envvar_info}. Got: {lib_dir_file_names}"
             )
 
-        lib_path = lib_dir / lib_dir_file_names[0]
+        lib_path = (lib_dir / lib_dir_file_names[0]).resolve(strict=True)
         try:
             return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
         except Exception as e:  # pragma: no cover
@@ -126,6 +126,8 @@ _REF_COUNT = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(
 if lib:
     lib._set_total_cmp(_TOTAL_CMP)
     lib._set_ref_count(_REF_COUNT)
+    if not lib._set_polars_lib_path(str(lib_path).encode("utf-8")):
+        raise RuntimeError("Unable to register OpenDP's Polars plugin library")
 
 # Key: Optional module name
 # Value: The opendp extra that provides this module,

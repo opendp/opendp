@@ -62,6 +62,20 @@ static TOTAL_CMP: OnceLock<
     extern "C" fn(*const c_void, *const c_void) -> *mut FfiResult<*mut AnyObject>,
 > = OnceLock::new();
 
+pub(crate) static OPENDP_LIB_PATH: OnceLock<String> = OnceLock::new();
+
+// Called by the trusted binding, before accepting any plugin expressions.
+#[unsafe(no_mangle)]
+pub extern "C" fn _set_polars_lib_path(path: *const c_char) -> std::ffi::c_int {
+    let Ok(path) = to_str(path) else {
+        return 0;
+    };
+    i32::from(
+        std::path::Path::new(path).is_absolute()
+            && OPENDP_LIB_PATH.get_or_init(|| path.to_owned()) == path,
+    )
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn _set_ref_count(callback: extern "C" fn(*const c_void, bool) -> bool) {
     REF_COUNT.set(callback).ok();
