@@ -208,3 +208,36 @@ def test_array2_norm_memory_layout_invariant(p):
     for layout in (np.asfortranarray(data), np.repeat(data, 2, axis=1)[:, ::2]):
         np.testing.assert_array_equal(layout, data)
         np.testing.assert_array_equal(_rows_within_norm(layout, 1.0, p), expected)
+
+
+@pytest.mark.parametrize("p", [1, 2])
+@pytest.mark.parametrize("T,dtype", [("i64", np.int64), ("u64", np.uint64)])
+def test_integer_norm_checks_are_exact_near_large_origins(p, T, dtype):
+    origin = 1 << 60
+    domain = dp.numpy.array2_domain(
+        T=T, norm=1.25, p=p, origin=np.array([origin, 0.5]), nan=False
+    )
+    assert domain.member(np.array([[origin, 0]], dtype=dtype))
+    with pytest.warns(match="must have row norm"):
+        assert not domain.member(np.array([[origin + 128, 0]], dtype=dtype))
+    with pytest.warns(match="must have row norm"):
+        assert not domain.member(np.array([[origin - 64, 0]], dtype=dtype))
+
+    boundary = np.array([[origin + 1, 0]], dtype=dtype)
+    if p == 1:
+        with pytest.warns(match="must have row norm"):
+            assert not domain.member(boundary)
+    else:
+        assert domain.member(boundary)
+
+
+@pytest.mark.parametrize("norm", [float("nan"), float("inf")])
+def test_array2_domain_rejects_nonfinite_norms(norm):
+    with pytest.raises(ValueError, match="norm must be finite"):
+        dp.numpy.array2_domain(T="i64", norm=norm, p=1)
+
+
+@pytest.mark.parametrize("origin", [float("nan"), float("inf"), -float("inf")])
+def test_array2_domain_rejects_nonfinite_origin(origin):
+    with pytest.raises(ValueError, match="origin must be finite"):
+        dp.numpy.array2_domain(T="i64", norm=1.0, p=1, origin=np.array([0.0, origin]))
