@@ -9,6 +9,7 @@ use crate::{
     error::Fallible,
     measurements::{
         MakeNoiseThreshold, NoiseThresholdPrivacyMap, ZExpFamily,
+        then_filter_strict_threshold,
         nature::float::{
             FloatExpFamily, find_nearest_multiple_of_2k, get_min_k, get_rounding_distance,
             integerize_scale, x_mul_2k,
@@ -74,6 +75,7 @@ where
         let t_int = make_float_to_bigint_threshold::<TK, TV, P, QI>(input_space, threshold, k)?;
         let m_noise = distribution.make_noise_threshold(t_int.output_space(), r_threshold)?;
         t_int >> m_noise >> then_deintegerize_hashmap(k)?
+            >> then_filter_strict_threshold(threshold, false)
     }
 }
 

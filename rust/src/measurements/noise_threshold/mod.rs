@@ -39,6 +39,21 @@ where
     ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>;
 }
 
+/// Retain only values that satisfy the threshold in the returned native type.
+/// This deterministic filter is privacy-preserving postprocessing.
+pub(crate) fn then_filter_strict_threshold<K: Hashable, V: Clone + PartialOrd + 'static>(
+    threshold: V,
+    negative: bool,
+) -> Function<HashMap<K, V>, HashMap<K, V>> {
+    Function::new(move |data: &HashMap<K, V>| {
+        let desired = if negative { Ordering::Less } else { Ordering::Greater };
+        data.iter()
+            .filter(|(_, value)| (*value).partial_cmp(&threshold) == Some(desired))
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect()
+    })
+}
+
 pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
     /// # Proof Definition
     /// Given a distribution `self`,

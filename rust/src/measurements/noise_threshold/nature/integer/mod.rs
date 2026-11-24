@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use dashu::{
+    base::Sign,
     integer::{IBig, UBig},
     rational::RBig,
 };
@@ -12,6 +13,7 @@ use crate::{
     error::Fallible,
     measurements::{
         MakeNoiseThreshold, NoiseThresholdPrivacyMap, ZExpFamily,
+        then_filter_strict_threshold,
         nature::{float::integerize_scale, integer::IntExpFamily},
     },
     metrics::{AbsoluteDistance, L0PInfDistance},
@@ -60,10 +62,10 @@ where
 
         let t_int = make_int_to_bigint_threshold::<TK, TV, P, QI>(input_space)?;
         let m_noise =
-            distribution.make_noise_threshold(t_int.output_space(), IBig::from(threshold))?;
+            distribution.make_noise_threshold(t_int.output_space(), IBig::from(threshold.clone()))?;
         let f_native_int = then_saturating_cast_hashmap();
-
-        t_int >> m_noise >> f_native_int
+        let negative = IBig::from(threshold.clone()).sign() == Sign::Negative;
+        t_int >> m_noise >> f_native_int >> then_filter_strict_threshold(threshold, negative)
     }
 }
 

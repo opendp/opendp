@@ -59,3 +59,19 @@ fn test_then_saturating_cast() -> Fallible<()> {
     );
     Ok(())
 }
+
+#[test]
+fn test_integer_threshold_after_saturation() -> Fallible<()> {
+    let high = then_saturating_cast_hashmap::<bool, u8>().eval(&HashMap::from([
+        (false, IBig::from(256)),
+    ]))?;
+    assert_eq!(high[&false], u8::MAX);
+    assert!(then_filter_strict_threshold(u8::MAX, false).eval(&high)?.is_empty());
+
+    let low = then_saturating_cast_hashmap::<bool, i8>().eval(&HashMap::from([
+        (false, IBig::from(-129)),
+    ]))?;
+    assert_eq!(low[&false], i8::MIN);
+    assert!(then_filter_strict_threshold(i8::MIN, true).eval(&low)?.is_empty());
+    Ok(())
+}

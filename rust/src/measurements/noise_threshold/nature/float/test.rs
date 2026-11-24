@@ -77,3 +77,17 @@ fn test_make_float_to_bigint_threshold_rejects_negative_distance() -> Fallible<(
     check::<1>()?;
     check::<2>()
 }
+
+#[test]
+fn test_float_threshold_after_rounding() -> Fallible<()> {
+    let native = then_deintegerize_hashmap::<bool, f64>(-54)?;
+    let converted = native.eval(&HashMap::from([
+        (false, IBig::from(1u64 << 54) + IBig::ONE),
+        (true, IBig::from(1u64 << 54) + IBig::from(8u8)),
+    ]))?;
+    assert_eq!(converted[&false], 1.0);
+    let filtered = then_filter_strict_threshold(1.0f64, false).eval(&converted)?;
+    assert!(!filtered.contains_key(&false));
+    assert!(filtered[&true] > 1.0);
+    Ok(())
+}
