@@ -27,3 +27,15 @@ fn test_bounded() -> Fallible<()> {
     assert_eq!(ident_trans.invoke(&data)?.len(), 3);
     Ok(())
 }
+
+#[test]
+fn test_unbounded_distance_overflow() -> Fallible<()> {
+    let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(3);
+    let trans = make_metric_unbounded(domain, ChangeOneDistance::default())?;
+    assert_eq!(trans.map(&0)?, 0);
+    assert_eq!(trans.map(&1)?, 2);
+    assert_eq!(trans.map(&(u32::MAX / 2))?, u32::MAX - 1);
+    assert!(trans.map(&(u32::MAX / 2 + 1)).is_err());
+    assert!(trans.map(&u32::MAX).is_err());
+    Ok(())
+}

@@ -126,7 +126,10 @@ where
         input_domain,
         input_metric.to_unbounded(),
         Function::new(|arg: &D::Carrier| arg.clone()),
-        StabilityMap::new(|d_in| d_in * 2),
+        StabilityMap::new_fallible(|d_in: &IntDistance| {
+            d_in.checked_mul(2)
+                .ok_or_else(|| err!(Overflow, "unbounded metric distance exceeds the u32 range"))
+        }),
     )
 }
 
