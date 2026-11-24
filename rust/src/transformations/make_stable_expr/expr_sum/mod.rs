@@ -129,7 +129,7 @@ where
     TI::Sum: Zero + TypedLiteral,
 {
     Ok((
-        SeriesDomain::new(name, AtomDomain::<TI::Sum>::default()),
+        SeriesDomain::new(name, AtomDomain::<TI::Sum>::new_non_nan()),
         typed_lit(TI::Sum::zero()),
     ))
 }
