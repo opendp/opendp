@@ -10,7 +10,6 @@ from opendp.combinators import (
     make_fully_adaptive_composition,
     make_privacy_filter,
 )
-from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
     TypedDictDomain,
     _noise_sensitivity,
@@ -27,7 +26,6 @@ from opendp.extras.mbi._utilities import (
 )
 from opendp.measurements import then_noisy_max
 from opendp.measures import max_divergence, zero_concentrated_divergence
-from opendp.metrics import linf_distance
 from opendp.mod import (
     ExtrinsicDomain,
     FrameDistance,
@@ -40,7 +38,7 @@ from opendp.mod import (
     Transformation,
     binary_search,
 )
-from opendp._internal import _make_transformation, _new_pure_function
+from opendp._internal import _new_pure_function
 
 from typing import Any, Optional, Sequence, TypeAlias, cast, TYPE_CHECKING
 
@@ -409,34 +407,9 @@ def _make_aim_scores(
     expectations: dict[tuple[str, ...], float],
     model,  # MarkovRandomField
 ) -> Transformation:
-    """Make a transformation that assigns a score representing how poorly each query is estimated."""
-    from opendp.extras.numpy import NPArrayDDomain
-    import numpy as np
-    from mbi import MarkovRandomField  # type: ignore[import-not-found]
+    from opendp.extras.mbi._utilities._score import make_l1_scores
 
-    model = cast(MarkovRandomField, model)
-    queries = tuple(Count(q.by, q.weight) for q in queries)
-    expectations = dict(expectations)
-
-    for value_domain in input_domain.cast(TypedDictDomain).values():
-        value_domain.cast(NPArrayDDomain)  # pragma: no cover
-
-    def score_query(query: Count, exact: np.ndarray):
-        penalty = expectations[query.by] * prod(exact.shape)
-        synth = model.project(query.by).values
-
-        return (np.linalg.norm((exact - synth).flatten(), 1) - penalty) * query.weight
-
-    return _make_transformation(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        output_domain=vector_domain(atom_domain(T="f64", nan=False)),
-        output_metric=linf_distance(T="f64", monotonic=False),
-        function=lambda exact_tabs: [
-            score_query(query, exact_tabs[query.by]) for query in queries
-        ],
-        stability_map=lambda d_in: max(d_in[q.by][1] * q.weight for q in queries),
-    )
+    return make_l1_scores(input_domain, input_metric, queries, model, expectations)
 
 
 def _expand_queries(queries: Sequence[Count] | int, columns: list[str]) -> list[Count]:

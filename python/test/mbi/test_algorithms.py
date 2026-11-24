@@ -277,29 +277,63 @@ def test_aim_init(kwargs, message):
 
 def test_mst_and_aim_scores_use_l1_sensitivity():
     pytest.importorskip("mbi")
-    import mbi  # type: ignore[import-untyped,import-not-found]
+    import numpy as np
+    from types import SimpleNamespace
     from opendp.extras.mbi._aim import _make_aim_scores
     from opendp.extras.mbi._mst import _make_mst_scores
     from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
 
     clique = ("A", "B")
-    domain = typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(9, 9), T="i32")})
+    domain = typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(2, 2), T="i32")})
     metric = typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32")))
-    model = mirror_descent(mbi.Domain(clique, (9, 9)), [])
-    distance = {clique: (9, 9, 1)}
-
+    model = SimpleNamespace(
+        project=lambda by: SimpleNamespace(values=np.full((2, 2), 10.0))
+    )
     edge = ["A", "B"]
     mst = _make_mst_scores(domain, metric, [edge], model)  # type: ignore[list-item]
     aim = _make_aim_scores(domain, metric, [Count(clique)], {clique: 0.0}, model)
-    assert mst.map(distance) == 9.0
-    assert aim.map(distance) == 9.0
-
-    import numpy as np  # type: ignore[import-not-found]
-
-    exact = {clique: np.zeros((9, 9), dtype=np.int32)}
-    original_score = mst(exact)
+    exact = {clique: np.array([[16, 4], [4, 16]], dtype=np.int32)}
+    distance = {clique: (2, 2, 1)}
     edge[0] = "B"
-    assert mst(exact) == original_score
+    for trans in (mst, aim):
+        assert trans(exact) == [24.0]  # Cellwise L1, not the matrix norm (12).
+        assert 2.0 <= trans.map(distance) < 2.001
+
+
+@pytest.mark.parametrize(
+    "algorithm, synthetic, count, penalty, weight",
+    [
+        ("mst", [2**55 + 16, 0, 0, 0], 4, 0.0, 1.0),
+        ("aim", [1, 1, 0, 0], 2, float(2**54 + 8), 1.5),
+    ],
+)
+def test_mbi_score_rounding(algorithm, synthetic, count, penalty, weight):
+    pytest.importorskip("mbi")
+    import numpy as np
+    from types import SimpleNamespace
+    from opendp.extras.mbi._aim import _make_aim_scores
+    from opendp.extras.mbi._mst import _make_mst_scores
+    from opendp.extras.mbi._utilities import typed_dict_distance, typed_dict_domain
+
+    clique = ("A", "B")
+    domain = typed_dict_domain({clique: dp.numpy.arrayd_domain(shape=(2, 2), T="i32")})
+    metric = typed_dict_distance(dp.l01inf_distance(dp.absolute_distance(T="i32")))
+    model = SimpleNamespace(
+        project=lambda by: SimpleNamespace(
+            values=np.array(synthetic, dtype=np.float64).reshape(2, 2)
+        )
+    )
+    if algorithm == "mst":
+        trans = _make_mst_scores(domain, metric, [clique], model)
+    else:
+        trans = _make_aim_scores(
+            domain, metric, [Count(clique, weight=weight)], {clique: penalty / 4}, model
+        )
+    exact = {clique: np.array([[count, 0], [0, 0]], dtype=np.int32)}
+    before = trans(exact)[0]
+    exact[clique][0, 0] += 1
+    observed = abs(trans(exact)[0] - before)
+    assert weight < observed <= trans.map({clique: (1, 1, 1)})
 
 
 def test_aim_scores_snapshot_workload():
@@ -604,3 +638,41 @@ def test_fixed_noise_scale_search_is_nonnegative(monkeypatch):
 
     assert seen_bounds == [(0.0, None)]
     assert measurement.check(d_in, 0.2)
+
+
+@pytest.mark.parametrize(
+    "T,synthetic,penalty,weight,error",
+    [
+        ("f64", [0.0, 0.0], 0.0, 1.0, "require i32"),
+        ("i32", [[0.0, 0.0]], 0.0, 1.0, "projection shape"),
+        ("i32", [0.0, float("nan")], 0.0, 1.0, "projection must be finite"),
+        ("i32", [0.0, 0.0], float("inf"), 1.0, "penalty and weight"),
+        ("i32", [0.0, 0.0], 0.0, float("inf"), "penalty and weight"),
+        ("i32", [0.0, 0.0], 0.0, 0.0, "penalty and weight"),
+    ],
+)
+def test_l1_score_rejects_invalid_public_inputs(T, synthetic, penalty, weight, error):
+    pytest.importorskip("numpy")
+    from opendp.extras.numpy import NPArrayDDomain
+    from opendp.extras.mbi._utilities._score import _make_l1_score
+
+    domain = NPArrayDDomain(shape=(2,), T=T)
+    with pytest.raises(ValueError, match=error):
+        _make_l1_score(domain, synthetic, penalty=penalty, weight=weight)
+
+
+def test_l1_score_zero_distance_and_weighted_stability():
+    np = pytest.importorskip("numpy")
+    from opendp.extras.numpy import NPArrayDDomain
+    from opendp.extras.mbi._utilities._score import _make_l1_score
+
+    score, stability = _make_l1_score(
+        NPArrayDDomain(shape=(2,), T="i32"), [2.0, 0.0], penalty=0.5, weight=1.5
+    )
+    before = np.array([1, 0], dtype=np.int32)
+    after = np.array([2, 0], dtype=np.int32)
+    assert score(before) == 0.75
+    assert score(after) == -0.75
+    assert stability((0, 0, 0)) == 0.0
+    assert 1.5 <= stability((1, 1, 1)) < 1.501
+    assert abs(score(after) - score(before)) <= stability((1, 1, 1))
