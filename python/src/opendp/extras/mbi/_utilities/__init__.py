@@ -17,6 +17,7 @@ from math import isfinite, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
+    _l01inf_to_lp,
     _make_transformation,
     _new_pure_function,
 )
@@ -30,7 +31,6 @@ from opendp.metrics import (
     absolute_distance,
     frame_distance,
     l01inf_distance,
-    l01inf_to_lp,
     l1_distance,
     l2_distance,
     symmetric_distance,
@@ -429,9 +429,9 @@ def _noise_sensitivity(measure: Measure, distance: tuple[int, int, int]) -> floa
     """Project marginal contribution bounds to the norm used by the noise."""
     if measure == max_divergence():
         # The L1 bound is a u32, exactly representable in f64.
-        return int(l01inf_to_lp(distance, p=1))
+        return int(_l01inf_to_lp(distance, p=1))
 
-    return l01inf_to_lp(distance, p=2)
+    return _l01inf_to_lp(distance, p=2)
 
 
 def row_major_order(keys: Iterator):

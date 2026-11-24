@@ -4,6 +4,7 @@ from sys import float_info
 
 import pytest
 
+from opendp._internal import _float_sum_sensitivity, _l01inf_to_lp
 from opendp.extras._numerics import _pairwise_sum, _pairwise_sum_depth, _round_up
 
 
@@ -30,3 +31,11 @@ def test_pairwise_sum_order():
     values = np.array([1e16, 1.0, -1e16, 1.0])
     # Distinguish the balanced reduction from a left fold.
     assert _pairwise_sum(values) == 0.0
+
+
+def test_float_sum_sensitivity():
+    assert 1.0 < _float_sum_sensitivity(1.0, 4, 16.0, 32.0) < 1.000001
+
+
+def test_l01inf_to_lp():
+    assert _l01inf_to_lp((3, 5, 2), p=2) == 3.0

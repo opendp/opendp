@@ -19,7 +19,6 @@ pub mod polars;
 #[cfg(all(feature = "polars", feature = "contrib"))]
 pub use polars::*;
 
-use opendp_derive::bootstrap;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -34,32 +33,6 @@ use std::fmt::{Debug, Formatter};
 /// The type that represents the distance between datasets.
 /// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
 pub type IntDistance = u32;
-
-#[bootstrap(
-    arguments(p(c_type = "size_t")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Bound an Lp norm from L0, L1 and L-infinity bounds.
-///
-/// # Arguments
-/// * `distance` - (L0, L1, L-infinity) bounds.
-/// * `p` - 1 or 2.
-pub fn l01inf_to_lp(distance: (u32, u32, u32), p: usize) -> Fallible<f64> {
-    use crate::traits::{InfCast, InfSqrt};
-
-    let (l0, l1, linf) = distance;
-    let (l0, l1, linf) = (u64::from(l0), u64::from(l1), u64::from(linf));
-    let total = l1.min(l0 * linf);
-    match p {
-        1 => f64::inf_cast(total),
-        2 if linf == 0 => Ok(0.),
-        2 => {
-            let (q, r) = (total / linf, total % linf);
-            f64::inf_cast(q * linf * linf + r * r)?.inf_sqrt()
-        }
-        _ => fallible!(InvalidDistance, "p must be 1 or 2"),
-    }
-}
 
 /// The smallest number of additions or removals to make two datasets equivalent.
 ///
@@ -523,6 +496,29 @@ pub struct L0PInfDistance<const P: usize, M: Metric>(pub M);
 
 pub type L01InfDistance<M> = L0PInfDistance<1, M>;
 pub type L02InfDistance<M> = L0PInfDistance<2, M>;
+
+/// Bound an Lp norm from L0, L1 and L-infinity bounds.
+///
+/// # Arguments
+/// * `distance` - (L0, L1, L-infinity) bounds.
+/// * `p` - 1 or 2.
+#[opendp_derive::proven]
+pub(crate) fn l01inf_to_lp(distance: (u32, u32, u32), p: usize) -> Fallible<f64> {
+    use crate::traits::{InfCast, InfSqrt};
+
+    let (l0, l1, linf) = distance;
+    let (l0, l1, linf) = (u64::from(l0), u64::from(l1), u64::from(linf));
+    let total = l1.min(l0 * linf);
+    match p {
+        1 => f64::inf_cast(total),
+        2 if linf == 0 => Ok(0.),
+        2 => {
+            let (q, r) = (total / linf, total % linf);
+            f64::inf_cast(q * linf * linf + r * r)?.inf_sqrt()
+        }
+        _ => fallible!(InvalidDistance, "p must be 1 or 2"),
+    }
+}
 
 impl<M: Metric, const P: usize> Debug for L0PInfDistance<P, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {

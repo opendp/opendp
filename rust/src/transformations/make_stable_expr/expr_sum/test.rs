@@ -79,7 +79,7 @@ fn test_float_accumulator() -> Fallible<()> {
     let n = 16;
     assert_eq!(
         <f32 as Accumulator>::relaxation(n, -1., 1.)?,
-        crate::accuracy::float_sum_sensitivity::<f32>(0., n - 1, n as f64, n as f64)?
+        crate::traits::sum::float_sum_sensitivity::<f32>(0., n - 1, n as f64, n as f64)?
     );
     Ok(())
 }

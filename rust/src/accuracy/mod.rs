@@ -18,48 +18,6 @@ use crate::error::Fallible;
 use crate::traits::InfCast;
 use std::fmt::Debug;
 
-#[bootstrap(
-    generics(T(default = "float")),
-    arguments(max_depth(c_type = "size_t")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Bound the Lp sensitivity of floating-point sums, including rounding error.
-/// Assumes finite summands and round-to-nearest addition with gradual underflow.
-///
-/// Let a_j be the exact sum of absolute summands in coordinate j on either input.
-///
-/// # Arguments
-/// * `sensitivity` - Lp sensitivity in exact arithmetic (p >= 1).
-/// * `max_depth` - Upper bound on summation tree depth.
-/// * `max_abs_sum` - Upper bound on the L-infinity norm of a.
-/// * `max_norm` - Upper bound on the Lp norm of a.
-/// # Generics
-/// * `T` - Summation type (f32 or f64).
-pub fn float_sum_sensitivity<T: crate::traits::Float>(
-    sensitivity: f64,
-    max_depth: usize,
-    max_abs_sum: f64,
-    max_norm: f64,
-) -> Fallible<f64> {
-    use crate::traits::{
-        CastInternalRational,
-        sum::{round_up, sum_error},
-    };
-
-    if !sensitivity.is_finite() || sensitivity < 0.0 {
-        return fallible!(
-            InvalidDistance,
-            "sensitivity must be finite and nonnegative"
-        );
-    }
-    let error = sum_error::<T>(
-        max_depth,
-        &max_abs_sum.into_rational()?,
-        &max_norm.into_rational()?,
-    )?;
-    round_up(sensitivity.into_rational()? + error * dashu::rational::RBig::from(2))
-}
-
 #[cfg(all(test, feature = "untrusted"))]
 pub mod test;
 
