@@ -6,20 +6,21 @@
 
 \begin{document}
 \maketitle
+\contrib
 
 This document contains materials associated with \rustdoc{accuracy/fn}{discrete\_laplacian\_scale\_to\_accuracy}.
 
 \begin{definition}
     Let $z$ be the true value of the statistic and $X$ be the random variable the noisy release is drawn from.
     Define $Y = |X - z|$, the distribution of DP errors.
-    Then for any statistical significance level \texttt{alpha}, denoted $\alpha \in [0, 1]$, and \texttt{accuracy}, denoted $a \ge 0$,
+    For a statistical significance level $\alpha\in(0,1]$, a positive accuracy threshold $a$ is sufficient when
     \begin{equation}
-        \alpha = P[Y \ge a]
+        P[Y \ge a]\leq\alpha
     \end{equation}
 \end{definition}
 
 \begin{theorem}
-    For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{L}_\mathbb{Z}(z, s)$,
+    For positive finite scale $s$ and $X\sim\mathcal{L}_\mathbb{Z}(z,s)$, a sufficient real-valued accuracy threshold is
     \begin{equation}
         a = s \cdot ln(2 / (\alpha (e^{1/s} + 1))) + 1
     \end{equation}
@@ -30,21 +31,20 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 Consider that the distribution of $(X - z) \sim \mathcal{L}_\mathbb{Z}(0, s)$.
 Then the PMF of $Y$ is:
 \begin{equation}
-    \forall y \ge 0 \qquad g(y) = (1 + 1[y \ne 0]) \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-y/s}
+    \forall y \in \mathbb{Z}_{\ge 0} \qquad g(y) = (1 + 1[y \ne 0]) \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-y/s}
 \end{equation}
 
 The purpose of the indicator function is to avoid double-counting zero.
 
-Now derive an expression for $\alpha$:
+For positive integers $a$, derive the tail probability:
 \begin{align*}
-    \alpha &= P[Y \ge a] \\
-    &= 1 - P[Y < a] \\
+    P[Y \ge a] &= 1 - P[Y < a] \\
     &= 1 - \sum_{y=0}^{a - 1} g(y) && \text{where $g(y)$ is the distribution of Y} \\
-    &= 1 - \frac{1 - e^{-1/s}}{1 + e^{-1/s}} \left(1 + 2\sum_{y=0}^{a - 1} e^{-y/s}\right) \\
+    &= 1 - \frac{1 - e^{-1/s}}{1 + e^{-1/s}} \left(1 + 2\sum_{y=1}^{a - 1} e^{-y/s}\right) \\
     &= 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
 \end{align*}
 
-Invert to solve for $a$:
+Extend the tail expression to positive real arguments and solve for the crossing at level $\alpha$:
 \begin{align*}
     2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1} &= \alpha \\
     e^{(1 - a)/s} &= \alpha (e^{1/s} + 1) / 2 \\
@@ -52,6 +52,9 @@ Invert to solve for $a$:
     a &= s \cdot ln(2 / (\alpha (e^{1/s} + 1))) + 1
 \end{align*}
 
+The expression is decreasing in $a$. Since $Y$ is integer-valued, the actual tail at a positive real threshold equals the tail at its ceiling, so the threshold is sufficient in exact arithmetic.
+At scale zero the noise is identically zero and the implementation returns zero accuracy.
+The floating-point implementation evaluates the expression numerically; this derivation does not establish a directed-rounding guarantee.
 \end{proof}
 
 \end{document}

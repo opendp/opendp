@@ -6,25 +6,27 @@
 
 \begin{document}
 \maketitle
+\contrib
 
 This document contains materials associated with \rustdoc{accuracy/fn}{accuracy\_to\_discrete\_laplacian\_scale}.
 
 By \rustdoc{accuracy/fn}{discrete\_laplacian\_scale\_to\_accuracy},
-the relationship between $\alpha$, $a$ and $scale$, is:
+for positive integer $a$ and positive scale $s$, the tail probability is:
 
 \begin{equation*}
-    \alpha = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+    P[Y\ge a] = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
 \end{equation*}
 
-A closed-form expression for $s$ doesn't exist,
-so we use a numerical approach by a binary search.
+We use binary search to approximate the crossing of this tail expression (extended to real $a$) at the target $\alpha\in(0,1)$.
 
 A loose upper bound is provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
 
-The binary search finds the smallest $s$ such that
+The binary search approximates the crossing from above, where
 
 \begin{equation*}
     \alpha \le 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
 \end{equation*}
+
+The target tail is at most $\alpha$ on the lower-scale side. Zero scale denotes the degenerate noise distribution; the positive-scale formula is not evaluated at zero. This search is numerical, not a directed-rounding guarantee.
 
 \end{document}

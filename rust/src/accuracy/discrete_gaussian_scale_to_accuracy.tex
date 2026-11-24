@@ -6,23 +6,24 @@
 
 \begin{document}
 \maketitle
+\contrib
 
 This document contains materials associated with \rustdoc{accuracy/fn}{discrete\_gaussian\_scale\_to\_accuracy}.
 
 \begin{definition}
     Let $z$ be the true value of the statistic and $X$ be the random variable the noisy release is drawn from.
     Define $Y = |X - z|$, the distribution of DP errors.
-    Then for any statistical significance level \texttt{alpha}, denoted $\alpha \in [0, 1]$, and \texttt{accuracy}, denoted $a \ge 0$,
+    For a statistical significance level $\alpha\in(0,1]$, a positive accuracy threshold $a$ is sufficient when
     \begin{equation}
-        \alpha = P[Y \ge a]
+        P[Y \ge a]\leq\alpha
     \end{equation}
 \end{definition}
 
 \begin{theorem}
-    For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{N}_\mathbb{Z}(z, s)$,
+    For positive finite scale $s$, when $X \sim \mathcal{N}_\mathbb{Z}(z, s)$,
     \begin{equation}
-        a = argmin_i \left[(1 - \alpha) \cdot \sum_{y\in \mathbb{Z}} e^{-(y/s)^2/2}
-        \le \sum_{x=0}^{i - 1} (1 + 1[x \ne 0]) e^{-(x/s)^2/2} \right]
+        a = \min\left\{i\in\mathbb{Z}_{\ge 1}:(1 - \alpha) \cdot \sum_{y\in \mathbb{Z}} e^{-(y/s)^2/2}
+        \le \sum_{x=0}^{i - 1} (1 + 1[x \ne 0]) e^{-(x/s)^2/2} \right\}
     \end{equation}
 
     That is, the accuracy is the smallest $i$ such that the inequality holds.
@@ -33,22 +34,21 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 Consider that the distribution of $(X - z) \sim \mathcal{N}_\mathbb{Z}(0, s)$.
 Then the PMF of $Y$ is:
 \begin{equation}
-    \forall y \ge 0 \qquad g(y) = \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{y \in \mathbb{Z}} e^{-(y/s)^2/2} }
+    \forall y \in \mathbb{Z}_{\ge 0} \qquad g(y) = \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{y \in \mathbb{Z}} e^{-(y/s)^2/2} }
 \end{equation}
 
 The purpose of the indicator function is to avoid double-counting zero.
 
-Now derive an expression for $\alpha$:
+For positive integer $a$, derive the tail probability:
 \begin{align*}
-    \alpha &= P[Y \ge a] \\
-    &= 1 - P[Y < a] \\
+    P[Y \ge a] &= 1 - P[Y < a] \\
     &= 1 - \sum_{y=0}^{a - 1} g(y) && \text{where $g(y)$ is the distribution of Y} \\
     &= 1 - \sum_{y=0}^{a - 1} \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} }
 \end{align*}
 
-Reorder terms:
+Rearrange the condition $P[Y\ge a]\le\alpha$:
 \begin{align*}
-    (1 - \alpha) \sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} = \sum_{y=0}^{a - 1} (1 + 1[y \ne 0]) e^{-(y/s)^2/2}
+    (1 - \alpha) \sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} \le \sum_{y=0}^{a - 1} (1 + 1[y \ne 0]) e^{-(y/s)^2/2}
 \end{align*}
 
 The accuracy is the smallest $a$ for which the right term is greater than or equal to the left term.
@@ -56,11 +56,13 @@ The accuracy is the smallest $a$ for which the right term is greater than or equ
 
 \section{Implementation}
 
+At scale zero the noise is identically zero and the implementation returns zero accuracy.
+
 The discrete bound only differs significantly from the continuous bound when the scale is small.
 When the scale is small, the terms approach zero relatively quickly, due to the exponential term.
 Since the probability mass away from the origin is monotonically decreasing,
 the left-hand side of the equation can be approximated (down to float error) by summing the masses until underflow.
 
-We then simply run a linear search for the smallest $a$ such that the inequality holds.
+We then run a linear search for the smallest positive integer $a$ such that the numerical inequality holds. The truncation and floating-point evaluation are approximations, not a proof of a conservative numerical bound.
 
 \end{document}

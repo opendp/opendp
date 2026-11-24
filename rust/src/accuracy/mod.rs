@@ -65,6 +65,9 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     alpha: T,
 ) -> Fallible<T> {
     check_scale_and_alpha(scale, alpha)?;
+    if scale == T::zero() {
+        return Ok(T::zero());
+    }
     Ok(-scale * alpha.ln())
 }
 
@@ -88,6 +91,9 @@ pub fn discrete_laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     alpha: T,
 ) -> Fallible<T> {
     check_scale_and_alpha(scale, alpha)?;
+    if scale == T::zero() {
+        return Ok(T::zero());
+    }
 
     let _1 = T::one();
     let _2 = _1 + _1;
@@ -176,6 +182,9 @@ where
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
     check_scale_and_alpha(scale, alpha)?;
+    if scale == 0. {
+        return T::inf_cast(0.);
+    }
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
 
@@ -196,6 +205,9 @@ where
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
     check_scale_and_alpha(scale, alpha)?;
+    if scale == 0. {
+        return T::inf_cast(0.);
+    }
 
     let mut total = (1. - alpha) * tail_bounds::dg_normalization_term(scale);
     let mut i = 0;

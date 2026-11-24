@@ -1,5 +1,3 @@
-use core::f64;
-
 use polars::{
     df,
     prelude::{Column, IntoLazy, NamedFrom, col, len, lit},
@@ -96,13 +94,38 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Column::new(
-        "accuracy".into(),
-        &[Some(accuracy), Some(f64::NAN)],
-    ))?;
+    expected.with_column(Column::new("accuracy".into(), &[Some(accuracy), Some(0.0)]))?;
     println!("{:?}", expected);
     assert_eq!(description, expected);
 
+    Ok(())
+}
+
+#[test]
+fn test_summarize_polars_measurement_postprocessed() -> Fallible<()> {
+    let lf_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
+            .with_margin(Margin::select().with_invariant_keys().with_max_length(10))?;
+
+    let lf = df!("A" => &[3, 4, 5])?.lazy();
+    let meas = make_private_lazyframe(
+        lf_domain,
+        FrameDistance(SymmetricDistance),
+        MaxDivergence,
+        lf.select([(col("A").dp().sum((lit(0), lit(10)), Some(1.0)) / lit(10)).alias("scaled")]),
+        None,
+        None,
+    )?;
+
+    let expected = df![
+        "column" => &["scaled"],
+        "aggregate" => &["Sum"],
+        "distribution" => &["Integer Laplace"],
+        "scale" => &[1.0],
+        // Accuracy is for the underlying noisy sum, not the divided result.
+        "accuracy" => &[discrete_laplacian_scale_to_accuracy(1.0, 0.05)?]
+    ]?;
+    assert_eq!(summarize_polars_measurement(meas, Some(0.05))?, expected);
     Ok(())
 }
 

@@ -457,7 +457,7 @@ behavior can be observed in the query summary:
             │ str     ┆ str       ┆ str             ┆ f64    ┆ f64          │
             ╞═════════╪═══════════╪═════════════════╪════════╪══════════════╡
             │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 7200.0 ┆ 21569.772352 │
-            │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 0.0    ┆ NaN          │
+            │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 0.0    ┆ 0.0          │
             └─────────┴───────────┴─────────────────┴────────┴──────────────┘
 
             >>> print(
