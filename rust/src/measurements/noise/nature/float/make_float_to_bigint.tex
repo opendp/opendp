@@ -39,7 +39,7 @@ None
 
 \begin{proof}
     In the definition of the function on line \ref{line:elementwise-function},
-    \texttt{RBig.try\_from} is infallible when the input is non-nan making the function infallible.
+    NaNs are excluded by the constructor, and clamping to the finite representable interval before conversion ensures that \texttt{RBig.try\_from} succeeds.
     Line \ref{line:rounding-distance} checks that $k$ is not \texttt{i32.MIN},
     which satisfies the precondition for \texttt{find\_nearest\_multiple\_of\_2k} on line \ref{line:find-nearest},
     and ensures that negation is well-defined on line \ref{line:x-mul-2k}.
@@ -52,25 +52,12 @@ None
 
     The stability argument breaks down into three parts:
     \begin{itemize}
-        \item The casting from float to rational on line \ref{line:try-from} is 1-stable,
-        because the real values of the numbers remain un-changed,
-        meaning the distance between adjacent inputs always remains the same.
-        \item The rounding on line \ref{line:find-nearest} can cause an increase in the sensitivity equal to $n^{1/p} \cdot (2^k - 2^{k_{min}})$.
-        \begin{align}
-            & \max_{x \sim x'} d_{Lp}(f(x), f(x'))\\
-            & = \max_{x \sim x'} |\mathrm{round}_k(x) - \mathrm{round}_k(x')|_p\\
-            & \leq \max_{x \sim x'} |(x + 2^{k - 1}) - (x' - 2^{k - 1} + 2^{k_{min}})|_p\\
-            & \leq \max_{x \sim x'} |x - x'|_p + |1_n \cdot (2^{k} - 2^{k_{min}})|_p\\
-            & = \max_{x \sim x'} d_{Lp}(x, x') + n^{1/p} \cdot (2^{k} - 2^{k_{min}})\\
-            & = \texttt{d\_in} + n^{1/p} \cdot (2^{k} - 2^{k_{min}})
-        \end{align}
+        \item Clamping to finite bounds is 1-stable, and conversion to rationals on line \ref{line:try-from} preserves the clamped values.
+        \item By the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_rounding\_distance},
+        rounding to multiples of $2^k$ increases the $L_P$ distance by at most \texttt{rounding\_distance}.
+        This allowance is added to \texttt{d\_in} on line \ref{line:x-mul-2k}.
 
-        This increase in the sensitivity is reflected on line \ref{line:x-mul-2k},
-        which, by the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_rounding\_distance},
-        returns the maximum increase in sensitivity due to rounding,
-        matching the above analysis.
-
-        \item The discarding of the denominator on line \ref{line:find-nearest} is $2^k$-stable,
+        \item The discarding of the denominator on line \ref{line:find-nearest} is $2^{-k}$-stable,
             as the denominator is $2^k$.
             This increase in sensitivity is also reflected on line \ref{line:x-mul-2k},
             where the sensitivity is multiplied by a factor of $2^{-k}$.

@@ -35,13 +35,16 @@ None
 \begin{proof}
   By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$.
 
+  By Lemma~2.19 and Theorem~1.20 of \cite{haney2025concurrent}, the additive accumulator is also valid for concurrent interactive mechanisms.
+  The finite-communication assumption suffices: apply the theorem to arbitrary finite transcript prefixes and extend the privacy inequality to their generated sigma-algebra.
+
   \begin{center}
     \begin{tabular}{ r | l l }
       Adaptivity & Sequential & Concurrent \\
       \hline
       Non-Adaptive & Theorem~1\cite{dwork2006calibrating} & Theorem~1.8\cite{vadhan2021concurrent} \\
       Adaptive & Theorem~1\cite{dwork2006calibrating} & Theorem~1.8\cite{vadhan2021concurrent} \\
-      Fully-Adaptive & None & None
+      Fully-Adaptive & Theorem~1.20\cite{haney2025concurrent} & Theorem~1.20\cite{haney2025concurrent}
     \end{tabular}
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.

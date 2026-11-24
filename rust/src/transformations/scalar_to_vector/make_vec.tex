@@ -18,8 +18,9 @@ The output metric then becomes an Lp distance.
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Number}
-    \item Generic \texttt{Q} implements trait \rustdoc{traits/trait}{Number}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{CheckAtom}
+    \item Generic \texttt{Q} is static and implements trait \texttt{Clone}
+    \item Const-generic \texttt{P} is of type \texttt{usize}
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -34,18 +35,17 @@ None
 \end{theorem}
 
 \begin{proof}
-    The function is infallible, and the output domain trivially follows, since all output vectors are length-one.
-    For all $x$ in the input domain, the output of \texttt{make\_vec} is a vector of length 1, so the output domain is trivially valid.
+    The constructor checks the validity of the input and output metric spaces.
+    The function is infallible and wraps each member of the input domain in a length-one vector,
+    which is a member of the output domain.
     The function is 1-stable because:
 
     \begin{align}
-        \texttt{d\_out}\\
-        = \max_{x \sim x'} d_{Lp}(f(x), f(x'))\\
-        = \max_{x \sim x'} (\sum_i (x_i - x_i')^p)^{1/p}\\
-        = \max_{x \sim x'} ((x_1 - x_1')^p)^{1/p}\\
-        = \max_{x \sim x'} |x_1 - x_1'|\\
-        = \max_{x \sim x'} d_{Abs}(x_1, x_1')\\
-        = 1 \cdot \texttt{d\_in}\\
+        d_{L_p}(f(x), f(x'))
+        &= \left(|x-x'|^p\right)^{1/p}\\
+        &= |x-x'|\\
+        &= d_{\mathrm{Abs}}(x,x')\\
+        &\leq \texttt{d\_in}.
     \end{align}
 
     For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,

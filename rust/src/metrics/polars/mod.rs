@@ -62,15 +62,17 @@ impl Metric for ChangeOneIdDistance {
     type Distance = IntDistance;
 }
 
-/// Frame-distance betweeen datasets.
+/// Frame distance between datasets.
 ///
 /// # Proof Definition
 ///
 /// ## `d`-closeness
 /// For any two datasets $x, x' \in \texttt{D}$,
-/// and for each distance bound $d_i$ of type [`Bounds`],
-/// let $\pi_{d_i}(x)$ and $\pi_{d_i}(x')$ be groupings of $x, x'$ with respect to $d_i$,
-/// and let $\pi_{d_i}(x)_j$ denote the data in group j of $\pi_{d_i}(x)$.
+/// and for each distance bound $d_i$ of type [`Bound`],
+/// let $\pi_{d_i}(x)$ and $\pi_{d_i}(x')$ be groupings of $x,x'$ by the expressions in `d_i.by`.
+/// Index both groupings by the union of their group keys, in the same order.
+/// Let $\pi_{d_i}(x)_j$ denote the data in group $j$, treating an absent group as an empty dataset.
+/// An empty grouping expression set denotes a single group containing the entire dataset.
 ///
 /// Define a vector of per-group distances $s_i$ with respect to grouping $d_i$ as follows:
 ///
@@ -79,12 +81,15 @@ impl Metric for ChangeOneIdDistance {
 /// ```
 ///
 /// Then $x, x'$ are $d_i$-close under the ith frame distance,
-/// where $d_{Fi0}$ is ``num_groups`` and $d_{Fi\infty}$ is ``per_group``,
-/// whenever,
+/// where $d_{Fi0}$ is `num_groups` and $d_{Fi\infty}$ is `per_group`,
+/// whenever
 ///
 /// ```math
 /// |s_i|_0 \leq d_{Fi0} \land |s_i|_\infty \leq d_{Fi\infty}.
 /// ```
+///
+/// A bound of `None` imposes no constraint on its corresponding norm.
+/// Both norms of the empty distance vector are zero.
 ///
 /// Finally, for any two datasets $x, x'$ and any $d$ of type [`Bounds`],
 /// we say that $x, x'$ are $d$-close under the frame distance metric whenever

@@ -17,7 +17,8 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_t
 
 \subsubsection*{Caller-verified}
 \begin{itemize}
-    \item Each item of \texttt{x} is finite.
+    \item Each item of \texttt{x} is non-NaN.
+    \item \texttt{scale} is finite and nonnegative.
 \end{itemize}
 
 \subsection*{Pseudocode}
@@ -29,19 +30,19 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_t
     \label{postcondition}
 
     \begin{itemize}
-        \item If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
-            otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
-            $k$ times by peeling,
+        \item If \texttt{scale} is zero, returns the indices of the best scores by deterministic peeling, after finite clamping and optional negation.
+        \item Otherwise, if replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2020 Definition 4),
+            otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2020 Lemma 1),
+            $\min(k, |x|)$ times by peeling the clamped and optionally negated scores,
             where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
         \item Errors are data-independent, except for exhaustion of entropy.
     \end{itemize}
 \end{theorem}
 
 \begin{proof}
-    By the precondition that each element in $x$ is finite,
-    the conversion into rational is infallible.
+    By the preconditions, clamping the scores to finite bounds and converting them and the scale to rationals is infallible.
 
-    By the postcondition of \rustdoc{measurements/noisy_top_k/exponential/fn}{peel\_permute\_and\_flip},
+    By the postcondition of \rustdoc{measurements/noisy_top_k/fn}{peel\_permute\_and\_flip},
     and the potential negation on line~\ref{negate},
     the postcondition is satisfied.
 

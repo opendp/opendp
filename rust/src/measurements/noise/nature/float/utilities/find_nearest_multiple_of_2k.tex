@@ -52,7 +52,7 @@ $k \neq \texttt{i32.MIN}$
         \item The right shift operator \texttt{>{}>} is equivalent to floor integer division by $2$,
             as the right-most bit is discarded, which always floors in two's complement arithmetic.
         \item Integer floor division is implemented via \rustdoc{measurements/noise/distribution/float/utilities/fn}{floor\_div},
-            because IBig integer division rounds towards zero, giving the wrong result on negative numerators.
+            because IBig integer division rounds towards zero, giving the wrong result on negative numerators. The rational denominator $d>0$ satisfies its precondition.
     \end{itemize}
 
     Therefore the implementation follows the formula, which is equivalent to the postcondition.

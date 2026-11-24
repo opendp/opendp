@@ -8,7 +8,7 @@ def make_float_to_bigint(
     LpDistance[P, RBig],
 ]:
     input_domain, input_metric = input_space
-    if input_domain.element_domain.nullable():
+    if input_domain.element_domain.nan():
         raise "input_domain may not contain NaN elements"
 
     size = input_domain.size
@@ -17,7 +17,9 @@ def make_float_to_bigint(
     )  # |\label{line:rounding-distance}|
 
     def elementwise_function(x_i):  # |\label{line:elementwise-function}|
-        x_i = RBig.try_from(x_i).unwrap_or(RBig.ZERO)  # |\label{line:try-from}|
+        x_i = RBig.try_from(x_i.clamp(T.MIN_FINITE, T.MAX_FINITE)).unwrap_or(
+            RBig.ZERO
+        )  # |\label{line:try-from}|
         return find_nearest_multiple_of_2k(x_i, k)  # |\label{line:find-nearest}|
 
     def stability_map(d_in):

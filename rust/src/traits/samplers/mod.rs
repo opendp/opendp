@@ -98,7 +98,7 @@ impl RngCore for GeneratorOpenDP {
 pub trait Shuffle {
     /// # Proof Definition
     /// For any input `self` of type `Self`,
-    /// mutate `self` such that the elements within are ordered randomly.
+    /// mutate `self` by applying a uniformly random permutation of the input positions.
     /// Returns `Err(e)` if there is insufficient system entropy,
     /// or `Ok(())` otherwise.
     fn shuffle(&mut self) -> Fallible<()>;

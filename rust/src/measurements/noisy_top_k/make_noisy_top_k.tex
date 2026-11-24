@@ -6,6 +6,7 @@
 \author{\MichaelShoemateAuthor}
 \begin{document}
 \maketitle
+\contrib
 
 Proves soundness of \rustdoc{measurements/fn}{make\_noisy\_top\_k}
 in \asOfCommit{mod.rs}{f5bb719}.\\
@@ -35,11 +36,12 @@ None
 \end{theorem}
 
 \begin{proof}[Proof of data-independent errors.]
-    By the postcondition of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k},
+    By the constructor checks and the postcondition of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k},
     the only source of error is due to entropy exhaustion, which could be data-dependent,
     due to differing number of expected random draws depending on the input dataset.
 
-    Therefore, the mechanism only satisfies the requirement for data-independent errors when conditioned on entropy not being exhausted.
+    The following privacy proof assumes an infallible source of independent uniform random bits.
+    It does not establish a guarantee for observable entropy failures.
 \end{proof}
 
 \begin{proof}[Proof of privacy guarantee.]
@@ -51,8 +53,14 @@ None
     Additionally by the checks on lines~\ref{din-non-neg}, \ref{din-non-zero} and \ref{scale-zero},
     the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{privacy\_map} are satisfied.
 
-    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} and adaptive composition,
-    the \dout on line~\ref{fn-privacy-map-call} satisfies the postcondition.
+    Clamping to finite bounds preserves the sign of each coordinate difference and does not increase its magnitude.
+    Thus the range distance after clamping and optional negation is bounded by $\din$ for monotonic scores and $2\din$ otherwise, as computed with upward rounding in the privacy map.
+    For a finite input distance, the score vectors have equal length.
+    For any fixed transcript of selected indices, both vectors have the same coordinates removed,
+    so the range distance of the remaining scores cannot increase.
+    Thus the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} applies at every selection.
+    Adaptive composition of the $\min(k, |x|)$ selections gives the bound
+    on line~\ref{fn-privacy-map-call}.
 \end{proof}
 
 \end{document}

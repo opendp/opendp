@@ -58,7 +58,7 @@ pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
 /// Otherwise, when P is one, represents a discrete laplace random variable.
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad
-/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
+/// P[X = x] = \frac{1 - e^{-1/scale}}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
 ///

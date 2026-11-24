@@ -13,7 +13,7 @@ Proves soundness of \rustdoc{transformations/fn}{make\_quantile\_score\_candidat
 in \asOfCommit{mod.rs}{f5bb719}.
 \texttt{make\_quantile\_score\_candidates} returns a Transformation that
 takes a numeric vector database and a vector of numeric quantile candidates,
-and returns a vector of scores, where higher scores correspond to more accurate candidates.
+and returns a vector of scores, where lower scores correspond to more accurate candidates.
 
 \section{Intuition}
 The quantile score function scores each $c$ in a set of candidates $C$.
@@ -117,7 +117,7 @@ which only uses integers:
 
 This adjustment also increases the sensitivity by a factor $\alpha_{den}$,
 but does not affect the utility.
-We now make the scoring strictly non-negative.
+We now make the scoring non-negative.
 \begin{itemize}
     \item Drop the negation and instead configure the exponential mechanism to minimize the score.
     \item Compute the absolute difference in a function that swaps the order of arguments to keep the sign positive.
@@ -129,10 +129,8 @@ We now make the scoring strictly non-negative.
 
 To prevent a numerical overflow when computing the arguments to \texttt{abs\_diff},
 first choose a data type that the scores are to be represented in.
-If the number of records is greater than can be represented in this data type,
-then sample the dataset down to at most this number of records.
-Notice that when any given record is added or removed,
-the counts differ by no more than they would have without this sampling down.
+Cap each of the less-than and greater-than counts at a public limit $l$.
+Adding or removing one record changes at most one of these capped counts, by at most one.
 In the OpenDP implementation, the dataset size may be no greater than the max value of a Rust usize,
 because each index into the dataset maps to a distinct computer memory address.
 
@@ -141,10 +139,10 @@ and use the remaining bits for counts of up to $l$, where $l$ is the effective d
 From this set-up, we choose an $\alpha_{den}$ such that $\alpha_{den} \cdot l$ is representable.
 Since $\alpha_{num} \le \alpha_{den}$, $\alpha_{num} \cdot l$ is representable.
 Since the dataset size fits in the choice of data type, then $|x|$ is representable.
-Therefore, no quantity in the following equation is not representable.
+Therefore, all quantities in the following equation are representable.
 
 \begin{equation}
-    \textrm{score\_candidates}_i(x, C, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(|\#(x > C_i), l))
+    \textrm{score\_candidates}_i(x, C, \alpha_{num}, \alpha_{den}, l) = \mathrm{abs\_diff}((\alpha_{den}-\alpha_{num}) \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(\#(x > C_i), l))
 \end{equation}
 
 Should we compute counts with a 64-bit integer, we might choose $\alpha_{den}$ to be 10,000.

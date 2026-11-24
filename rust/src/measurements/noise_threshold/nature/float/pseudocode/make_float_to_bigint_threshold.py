@@ -1,7 +1,7 @@
 # type: ignore
 def make_float_to_bigint_threshold(
     input_space: tuple[
-        MapDomain[AtomDomain[TK], MapDomain[TV]],
+        MapDomain[AtomDomain[TK], AtomDomain[TV]],
         L0PInfDistance[P, AbsoluteDistance[QI]],
     ],
     threshold: TV,
@@ -24,7 +24,7 @@ def make_float_to_bigint_threshold(
 
     def value_function(val):  # |\label{line:value-function}|
         try:  # |\label{line:try-from}|
-            val = RBig.try_from(val)
+            val = RBig.try_from(val.clamp(TV.MIN_FINITE, TV.MAX_FINITE))
         except Exception:
             val = RBig.ZERO
 
@@ -42,7 +42,7 @@ def make_float_to_bigint_threshold(
         r_li = RBig.try_from(li)
         if r_li.is_negative():
             raise f"li ({li}) must be non-negative"
-        if r_li > x_mul_2k(r_threshold, -k):  # |\label{line:check-li}|
+        if r_li > r_threshold:  # |\label{line:check-li}|
             raise f"li ({li}) must not be larger than threshold ({threshold})"
         r_li_round = get_rounding_distance(k, 1, P)
         r_li = x_mul_2k(r_li + r_li_round, -k)  # |\label{line:li-x-mul-2k}|
@@ -57,6 +57,6 @@ def make_float_to_bigint_threshold(
         ),
         Function.new(lambda x: {k: value_function(v) for k, v in x.items()}),
         input_metric,
-        L0PI.default(),
+        L0PInfDistance.default(),
         StabilityMap.new_fallible(stability_map),
     )

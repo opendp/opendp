@@ -21,7 +21,7 @@ pub struct IntExpFamily<const P: usize> {
 }
 
 /// # Proof Definition
-/// For any choice of arguments, returns a valid measurement.
+/// For any choice of arguments, returns a valid transformation or an error.
 #[proven(proof_path = "measurements/noise/nature/integer/make_int_to_bigint.tex")]
 fn make_int_to_bigint<T: Integer, const P: usize, QI: Number>(
     (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),

@@ -278,27 +278,33 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
     }
 }
 
-/// The $L_p$ distance between two vector-valued aggregates.
+/// The $L_p$ distance between two vector- or map-valued aggregates.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
+/// For $p\geq 1$, any two vectors $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
 /// we say that $u, v$ are $d$-close under the the $L_p$ distance metric (abbreviated as $d_{LP}$) whenever
 ///
 /// ```math
-/// d_{LP}(u, v) = \|u - v\|_p \leq d
+/// d_{LP}(u, v) = \|u-v\|_p \leq d
 /// ```
 ///
-/// If $u$ and $v$ are different lengths, then
+/// Subtraction of equal infinities is defined to be zero.
+/// The distance between empty vectors is zero.
+/// If vectors $u$ and $v$ are different lengths, then
 /// ```math
 /// d_{LP}(u, v) = \infty
 /// ```
 ///
 /// # Compatible Domains
 ///
-/// * `VectorDomain<D>` for any valid `D`
-/// * `MapDomain<D>` for any valid `D`
+/// * `VectorDomain<AtomDomain<T>>` with non-NaN numeric elements.
+/// * `MapDomain<AtomDomain<K>, AtomDomain<V>>` with non-NaN numeric values.
+/// The mathematical definition requires numeric values; `MetricSpace` checks the NaN restriction.
+///
+/// For maps, align the vectors on the union of keys, treating absent values as zero, and apply the same norm.
+/// This defines a pseudometric on maps: maps differing only by the presence of zero-valued entries have distance zero.
 pub struct LpDistance<const P: usize, Q>(PhantomData<fn() -> Q>);
 impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self {
@@ -389,12 +395,13 @@ pub type L2Distance<Q> = LpDistance<2, Q>;
 /// we say that $u, v$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
 ///
 /// ```math
-/// d_{Abs}(u, v) = |u - v| \leq d
+/// d_{Abs}(u,v)=|u-v|\leq d
 /// ```
+/// Subtraction of equal infinities is defined to be zero.
 ///
 /// # Compatible Domains
 ///
-/// * `AtomDomain<T>` for any valid `T`
+/// * `AtomDomain<T>` with non-NaN numeric elements.
 pub struct AbsoluteDistance<Q>(PhantomData<fn() -> Q>);
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self {
@@ -439,13 +446,17 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 ///
 /// ## $d$-closeness
 /// For any two datasets $x, x' \in \texttt{D}$,
-/// where $x$ and $x'$ are indexed by $1, \ldots, r$, let
+/// align the partitions of $x$ and $x'$ by their keys (using the union of keys for maps or grouped data).
+/// For aligned partitions indexed by $0, \ldots, r$, let
 ///
 /// ```math
 /// s = [d_M(x_0, x'_0), \ldots, d_M(x_r, x'_r)],
 /// ```
 /// where `M` is a valid metric on the indexed space.
-/// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
+/// For absent partitions, use the empty dataset for microdata metrics and zero for numeric map values.
+/// For grouped aggregates with a specified empty-group fill value, use that value instead.
+/// The norms of an empty distance vector are zero.
+/// For numeric maps this is a pseudometric: adding or removing zero-valued entries does not change any of the norms.
 ///
 /// For any $d$ of type ([`IntDistance`], `M::Distance`),
 /// we say that $x, x'$ are $d$-close under the multi-norm distance metric whenever
@@ -475,14 +486,8 @@ impl<M: Metric> Metric for L0InfDistance<M> {
 /// # Proof Definition
 ///
 /// ## $d$-closeness
-/// For any two datasets $x, x' \in \texttt{D}$,
-/// where $x$ and $x'$ are indexed by $0, \ldots, r$, let
-///
-/// ```math
-/// s = [d_M(x_0, x'_0), \ldots, d_M(x_r, x'_r)],
-/// ```
-/// where `M` is a valid metric on the indexed space.
-/// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
+/// Let $s$ be the vector of aligned partition distances defined in [`L0InfDistance`],
+/// with the same conventions for missing partitions and empty vectors.
 ///
 /// For any integer $P > 0$,
 /// and $d$ of type ([`IntDistance`], `M::Distance`, `M::Distance`),
@@ -531,7 +536,7 @@ impl<T: CheckAtom, const P: usize> MetricSpace
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two datasets $u, v \in$ `AtomDomain<T>` and any $d$ of type [`IntDistance`],
+/// For any two elements $u,v$ of the input domain and any $d$ of type [`IntDistance`],
 /// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
 ///
 /// ```math
@@ -539,11 +544,12 @@ impl<T: CheckAtom, const P: usize> MetricSpace
 /// ```
 ///
 /// # Notes
-/// Clearly, `d` is bounded above by 1.
+/// The actual distance is either 0 or 1.
 /// 1 is the expected argument on measurements that use this distance.
 ///
 /// # Compatible Domains
 /// * `AtomDomain<T>` for any valid `T`.
+/// * `BitVectorDomain`.
 #[derive(Clone, Default, PartialEq)]
 pub struct DiscreteDistance;
 
@@ -588,14 +594,17 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 ///
 /// ```math
 /// d_{\infty}(x, x') = \begin{cases}
-///     \infty & \text{if } \texttt{monotonic} \land \exists i,j : (x_i - x'_i)(x_j - x'_j) < 0 \\
-///     \max_i |x_i - x'_i| & \text{otherwise}
+///     \infty & \text{if the vectors have different lengths}\\
+///     \infty & \text{if } \texttt{monotonic} \land \exists i,j : x_i > x'_i \land x_j < x'_j\\
+///     \max_i d_{Abs}(x_i,x'_i) & \text{otherwise}
 /// \end{cases}
 /// ```
 ///
 /// # Notes
 ///
-/// When `monotonic` is `false`, this is simply:
+/// The maximum over an empty vector is zero.
+/// Coordinate distances use [`AbsoluteDistance`], so equal infinities contribute zero.
+/// For equal-length finite vectors and `monotonic` set to `false`, this is simply:
 ///
 /// ```math
 /// d_{\infty}(x, x') = \max_{i} |x_i - x'_i|
@@ -612,7 +621,7 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 /// so many private selection mechanisms (like variations of the exponential mechanism)
 /// have a factor of two in the privacy loss.
 ///
-/// This factor of two is eliminated by the more flexible range distance,
+/// For finite, nonempty score vectors, this factor of two is eliminated by the more flexible range distance,
 /// which in turn has twice the sensitivity when scores vary in different directions:
 /// ```math
 /// d_{\mathrm{Range}}(x, x') = \max_{ij} |(x_i - x'_i) - (x_j - x'_j)|.

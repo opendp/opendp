@@ -505,18 +505,16 @@ impl Margin {
         Ok(true)
     }
 
-    /// # Proof Definition
-    /// Returns the greatest number of groups that may differ
-    /// when at most `l_1` records may be added or removed,
-    /// given optional domain descriptor `max_groups`.
+    /// Heuristic estimate of the number of affected groups for noise-scale calibration.
+    /// Caps `l_1` at the optional per-dataset `max_groups`.
+    /// This is not a general bound on symmetric distance across two datasets.
     pub(crate) fn l_0(&self, l_1: u32) -> u32 {
         self.max_groups.unwrap_or(l_1).min(l_1)
     }
 
-    /// # Proof Definition
-    /// Returns the greatest number of records that may be added or removed in any any one group
-    /// when at most `l_1` records may be added or removed,
-    /// given optional domain descriptor `max_length`.
+    /// Heuristic estimate of per-group change for noise-scale calibration.
+    /// Caps `l_1` at the optional per-dataset `max_length`.
+    /// This is not a general bound on symmetric distance across two datasets.
     pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
         self.max_length.unwrap_or(l_1).min(l_1)
     }
@@ -524,7 +522,7 @@ impl Margin {
 
 #[proven]
 /// # Proof Definition
-/// Return a subset of `sets` whose intersection contains `must_cover`, or None.
+/// Return a subset of `sets` whose union contains `must_cover`, or None.
 ///
 /// While this algorithm also tries to minimize the number of sets returned,
 /// finding the optimal smallest set of sets is not a requirement to prove correctness of this algorithm.

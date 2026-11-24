@@ -51,10 +51,10 @@ Returns a \texttt{Margin} that describes properties of members of \texttt{domain
 
     The number of groups can be no greater than the cardinality of the cartesian product of the keys of each grouping column.
     Therefore the code finds a set of \texttt{max\_groups} descriptors that covers the grouping columns,
-    and then updates \texttt{margin} to the product of the covering.
+    and then updates \texttt{margin} to the product of the covering, or leaves the bound unknown if the product overflows.
 
     On an aside, for utility, while the covering found may not be the smallest,
-    the greedy algorithm will always choose a singleton cover if it is available,
+    the greedy algorithm will choose an exact matching cover if one is available,
     therefore this update to the descriptor cannot increase the descriptor.
 
     Finally, on line \ref{all-invariants}, \texttt{all\_invariants} contains invariants for any margin finer than \texttt{by}.

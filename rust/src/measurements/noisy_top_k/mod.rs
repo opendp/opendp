@@ -33,8 +33,10 @@ mod test;
 /// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
 ///
 /// # Runtime
-/// Per release, worst-case runtime is `O(k n)`, where `n` is the number of scores.
-/// For `k = 1`, this reduces to `O(n)`.
+/// For `n` scores, the number of candidate proposals per release is `O(k n)`
+/// in the worst case for `MaxDivergence` and in expectation for
+/// `ZeroConcentratedDivergence`. Rejection sampling has no fixed worst-case
+/// bound on the number of random draws.
 ///
 /// # Utility
 /// When `scale = 0`, the mechanism returns the exact top-`k` indices.
@@ -128,9 +130,9 @@ where
 
 pub trait TopKMeasure: Measure<Distance = f64> + 'static {
     /// # Proof Definition
-    /// If replacement is set, the function $f$ returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2020 Definition 4),
-    /// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2020 Lemma 1),
-    /// $k$ times by peeling.
+    /// For positive scale, selects using the exponential mechanism if true,
+    /// or permute-and-flip if false (see MS20).
+    /// The selected candidate is removed after each selection in either case.
     const REPLACEMENT: bool;
 
     /// Define
@@ -139,8 +141,10 @@ pub trait TopKMeasure: Measure<Distance = f64> + 'static {
     /// ```
     ///
     /// # Proof Definition
-    /// For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
-    /// return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+    /// For finite score vectors $x,x'$ of the same nonzero length,
+    /// positive finite scale, and $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+    /// return an error or $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+    /// where the scores are taken after finite clamping and any negation,
     /// where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64>;
 }
@@ -167,15 +171,14 @@ impl TopKMeasure for ZeroConcentratedDivergence {
 
 #[proven]
 /// Returns the indices of the noisy top k elements.
-/// Gumbel noise when replacement is true, otherwise exponential noise.
 ///
 /// # Proof Definition
-/// Each value in $x$ must be finite.
-///
-/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
-/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
-/// $k$ times by peeling,
-/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+/// Scores must be non-NaN and scale must be finite and nonnegative.
+/// Clamp scores to finite bounds and optionally negate them before selection.
+/// Select and remove a candidate $\min(k, |x|)$ times, returning original indices.
+/// At zero scale select a maximizer with deterministic tie-breaking.
+/// At positive scale, use the exponential mechanism if replacement is set,
+/// otherwise permute-and-flip (MS20), with $\texttt{scale} = \frac{2\Delta}{\epsilon}$.
 pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + FiniteBounds>(
     x: &[TIA],
     scale: f64,
@@ -199,10 +202,10 @@ pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + Finit
 
 #[proven]
 /// # Proof Definition
-/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
-/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
-/// $k$ times by peeling,
-/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+/// Scale must be nonnegative.
+/// Apply permute_and_flip to the remaining scores $\min(k, |x|)$ times,
+/// removing the selected candidate each time and returning original indices.
+/// At zero scale this is deterministic peeling of maximizers.
 fn peel_permute_and_flip(
     mut x: Vec<RBig>,
     scale: RBig,
@@ -229,9 +232,10 @@ fn peel_permute_and_flip(
 
 #[proven]
 /// # Proof Definition
-/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
-/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
-/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+/// Scores must be nonempty and scale must be nonnegative.
+/// At zero scale return a maximizer with deterministic tie-breaking.
+/// At positive scale, sample from the exponential mechanism if replacement is set,
+/// otherwise permute-and-flip (MS20), with $\texttt{scale} = \frac{2\Delta}{\epsilon}$.
 fn permute_and_flip(x: &[RBig], scale: &RBig, replacement: bool) -> Fallible<usize> {
     let x_is_empty = || err!(FailedFunction, "x is empty");
 
