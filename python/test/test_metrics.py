@@ -2,6 +2,7 @@ import pytest
 
 from opendp.extras.polars import Bound
 from opendp.mod import ExtrinsicDistance, FrameDistance, SymmetricIdDistance
+from opendp.metrics import l01inf_to_lp
 import opendp.prelude as dp
 
 
@@ -67,3 +68,7 @@ def test_bound():
     pytest.importorskip("polars")
     zero_way = dp._get_bound([Bound(by=["A"], per_group=2)], ["A", "B"])
     assert zero_way == Bound(by=["A", "B"], per_group=2)
+
+
+def test_l01inf_to_lp():
+    assert l01inf_to_lp((3, 5, 2), p=2) == 3.0

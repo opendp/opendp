@@ -1,4 +1,4 @@
-use std::ffi::c_char;
+use std::ffi::{c_char, c_void};
 
 use opendp_derive::bootstrap;
 
@@ -7,7 +7,7 @@ use crate::{
     domains::ffi::ExtrinsicElement,
     error::Fallible,
     ffi::{
-        any::{AnyMetric, Downcast},
+        any::{AnyMetric, AnyObject, Downcast},
         util::{self, ExtrinsicObject, Type, c_bool, into_c_char_p, to_str},
     },
     metrics::{AbsoluteDistance, L1Distance, L2Distance},
@@ -360,4 +360,13 @@ pub extern "C" fn opendp_metrics___extrinsic_metric_descriptor(
 ) -> FfiResult<*mut ExtrinsicObject> {
     let metric = try_!(try_as_ref!(metric).downcast_ref::<ExtrinsicDistance>()).clone();
     FfiResult::Ok(util::into_raw(metric.element.value.clone()))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics__l01inf_to_lp(
+    distance: *const AnyObject,
+    p: usize,
+) -> FfiResult<*mut AnyObject> {
+    let distance = *try_!(try_as_ref!(distance).downcast_ref::<(u32, u32, u32)>());
+    super::l01inf_to_lp(distance, p).map(AnyObject::new).into()
 }

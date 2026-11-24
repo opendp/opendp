@@ -68,3 +68,7 @@ def test_accuracy_to_discrete_laplacian_scale():
 
 def test_discrete_gaussian_scale_to_accuracy():
     assert discrete_gaussian_scale_to_accuracy(1.0, 0.5) == 2.0
+
+
+def test_float_sum_sensitivity():
+    assert 1.0 < float_sum_sensitivity(1.0, 4, 16.0, 32.0) < 1.000001

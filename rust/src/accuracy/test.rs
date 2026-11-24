@@ -340,3 +340,22 @@ pub fn test_roundtrip() -> Fallible<()> {
     assert!((accuracy - accuracy_2).abs() < 1e-8);
     Ok(())
 }
+
+#[test]
+fn test_float_sum_sensitivity() -> Fallible<()> {
+    use crate::traits::CastInternalRational;
+    use dashu::rational::RBig;
+
+    for (epsilon, actual) in [
+        (
+            f64::from(f32::EPSILON),
+            float_sum_sensitivity::<f32>(1., 4, 16., 32.)?,
+        ),
+        (f64::EPSILON, float_sum_sensitivity::<f64>(1., 4, 16., 32.)?),
+    ] {
+        let hu = epsilon.into_rational()? * RBig::from(2);
+        let expected = RBig::ONE + &hu / (RBig::ONE - &hu) * RBig::from(64);
+        assert_eq!(actual, f64::inf_cast(expected)?);
+    }
+    Ok(())
+}

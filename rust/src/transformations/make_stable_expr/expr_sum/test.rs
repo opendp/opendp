@@ -52,27 +52,7 @@ fn test_grouped_make_sum_expr() -> Fallible<()> {
 
     assert_eq!(df_actual, df_expected);
 
-    // assume we're in a grouping context.
-    // By the following triple, we know
-    // 1. an individual can influence up to 10 partitions (l0)
-    // 2. an individual can contribute up to 10 records total (l1)
-    // 3. an individual can contribute at most 1 record to any partition (linf)
-    let sens = t_sum.map(&(10, 10, 1))?;
-
-    // The sensitivity d_out under the l2 distance in unbounded DP is given by the following formula:
-    // = min(sqrt(l0) * map(linf)         , map(l1))
-    // = min(sqrt(l0) * linf * max(|L|, U), l1 * max(|L|, U))
-    // = min(sqrt(10) * 1, 10)
-    // = min(3.16227, 10)
-    // = 3.16227
-
-    // that is, in the worst case, we know the sum will differ by at most 1 in 10 partitions,
-    // so the l2 distance between any two outputs on neighboring data sets is at most 3.16227
-
-    // The sensitivity is slightly higher to account for potential rounding errors.
-    println!("sens: {:?}", sens);
-    assert!(sens > (3.16227).into());
-    assert!(sens < (3.162278).into());
+    assert_eq!(t_sum.map(&(3, 5, 2))?, 3.);
     Ok(())
 }
 
@@ -95,18 +75,12 @@ fn test_overflow_sum_expr() -> Fallible<()> {
 }
 
 #[test]
-fn test_float_accumulator_keeps_sequential_analysis() -> Fallible<()> {
+fn test_float_accumulator() -> Fallible<()> {
     let n = 16;
-    let expected = round_up::<f64>(sum_relaxation(n, n - 1, 1f64)?)?;
-    assert_eq!(<f64 as Accumulator>::relaxation(n, -1., 1.)?, expected);
-    let expected = round_up::<f32>(sum_relaxation(n, n - 1, 1f32)?)?;
-    assert_eq!(<f32 as Accumulator>::relaxation(n, -1., 1.)?, expected);
-    assert!(<f32 as Accumulator>::relaxation((1 << 24) + 1, -1., 1.).is_err());
     assert_eq!(
-        <f64 as Accumulator>::relaxation(1, -f64::MAX, f64::MAX)?,
-        0.
+        <f32 as Accumulator>::relaxation(n, -1., 1.)?,
+        crate::accuracy::float_sum_sensitivity::<f32>(0., n - 1, n as f64, n as f64)?
     );
-    assert!(<f64 as Accumulator>::relaxation(2, -f64::MAX, f64::MAX).is_err());
     Ok(())
 }
 

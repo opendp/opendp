@@ -78,3 +78,28 @@ build_extern_accuracy!(
     opendp_accuracy__accuracy_to_discrete_gaussian_scale,
     accuracy_to_discrete_gaussian_scale
 );
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_accuracy__float_sum_sensitivity(
+    sensitivity: f64,
+    max_depth: usize,
+    max_abs_sum: f64,
+    max_norm: f64,
+    T: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: crate::traits::Float>(
+        sensitivity: f64,
+        max_depth: usize,
+        max_abs_sum: f64,
+        max_norm: f64,
+    ) -> FfiResult<*mut AnyObject> {
+        float_sum_sensitivity::<T>(sensitivity, max_depth, max_abs_sum, max_norm)
+            .map(AnyObject::new)
+            .into()
+    }
+
+    let T = try_!(Type::try_from(T));
+    dispatch!(monomorphize, [
+        (T, @floats)
+    ], (sensitivity, max_depth, max_abs_sum, max_norm))
+}

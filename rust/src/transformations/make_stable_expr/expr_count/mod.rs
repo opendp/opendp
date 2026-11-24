@@ -3,8 +3,7 @@ use crate::domains::{
     AtomDomain, Context, ExprDomain, Invariant, Margin, SeriesDomain, WildExprDomain,
 };
 use crate::error::*;
-use crate::metrics::{IntDistance, L01InfDistance, LpDistance};
-use crate::traits::{InfMul, InfSqrt, ProductOrd};
+use crate::metrics::{IntDistance, L01InfDistance, LpDistance, l01inf_to_lp};
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{AggExpr, FunctionExpr};
 use polars_plan::dsl::Expr;
@@ -138,28 +137,7 @@ pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
         return StabilityMap::new(move |_| 0.);
     }
 
-    //  norm_map(d_in) returns d_in^(1/p)
-    let norm_map = move |d_in: f64| match P {
-        1 => Ok(d_in),
-        2 => d_in.inf_sqrt(),
-        _ => {
-            return fallible!(
-                MakeTransformation,
-                "unsupported Lp norm. Must be an L1 or L2 norm."
-            );
-        }
-    };
-
-    // an explanatory example of this math is provided in the tests
-    StabilityMap::new_fallible(
-        move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            // if l0 groups may change, then l0_p denotes how sensitivity scales wrt the norm
-            let l0_p = norm_map(f64::from(*l0))?;
-            let l1_p = f64::from(*l1);
-            let l_inf_p = f64::from(*l_inf);
-
-            // min(l1',    l0' *         l∞')
-            l1_p.total_min(l0_p.inf_mul(&l_inf_p)?)
-        },
-    )
+    StabilityMap::new_fallible(move |d_in: &(IntDistance, IntDistance, IntDistance)| {
+        l01inf_to_lp(*d_in, P)
+    })
 }

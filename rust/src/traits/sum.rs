@@ -1,6 +1,7 @@
 use super::{Float, InfCast};
 use crate::error::Fallible;
 use dashu::{integer::IBig, rational::RBig};
+use opendp_derive::proven;
 
 pub(crate) fn round_up<T: Float + InfCast<RBig>>(bound: RBig) -> Fallible<T> {
     let value = T::inf_cast(bound)?;
@@ -10,32 +11,34 @@ pub(crate) fn round_up<T: Float + InfCast<RBig>>(bound: RBig) -> Fallible<T> {
     Ok(value)
 }
 
-pub(crate) fn sum_magnitude<T: Float>((lower, upper): (T, T)) -> Fallible<T> {
+/// Bound the sum of absolute values of at most size summands in the given interval.
+pub(crate) fn sum_abs_bound<T: Float>(size: usize, (lower, upper): (T, T)) -> Fallible<RBig> {
     if !lower.is_finite() || !upper.is_finite() || lower > upper {
         return fallible!(
             MakeTransformation,
             "floating-point sum requires finite ordered bounds"
         );
     }
-    Ok(lower.abs().max(upper.abs()))
+    Ok(RBig::from(IBig::from(size)) * lower.abs().max(upper.abs()).into_rational()?)
 }
 
+/// Bound the Lp rounding error of a vector of sums.
+#[proven]
 pub(crate) fn sum_error<T: Float>(
-    max_size: usize,
     max_depth: usize,
-    max_magnitude: T,
+    max_abs_sum: &RBig,
+    max_norm: &RBig,
 ) -> Fallible<RBig> {
-    // Higham (1993), §3: https://doi.org/10.1137/0914050.
-    // With gradual underflow, subnormal results of floating-point addition are exact.
-    if !max_magnitude.is_finite() || max_magnitude < T::zero() {
-        return fallible!(
-            MakeTransformation,
-            "summand magnitude must be finite and nonnegative"
-        );
+    if max_abs_sum < &RBig::ZERO || max_norm < &RBig::ZERO {
+        return fallible!(InvalidDistance, "sum magnitude bounds must be nonnegative");
     }
-    if max_size <= 1 || max_magnitude == T::zero() {
+    let max_abs_sum = max_abs_sum.min(max_norm);
+    if max_depth == 0 || max_abs_sum == &RBig::ZERO {
         return Ok(RBig::ZERO);
     }
+
+    // Higham (1993), §3: https://doi.org/10.1137/0914050.
+    // With gradual underflow, subnormal results of floating-point addition are exact.
     let u = T::epsilon().into_rational()? / RBig::from(2);
     let hu = RBig::from(IBig::from(max_depth)) * u;
     if hu >= RBig::ONE {
@@ -44,25 +47,15 @@ pub(crate) fn sum_error<T: Float>(
             "summation error bound requires depth * unit_roundoff < 1"
         );
     }
-    Ok(&hu / (RBig::ONE - &hu)
-        * RBig::from(IBig::from(max_size))
-        * max_magnitude.into_rational()?)
-}
+    let factor = &hu / (RBig::ONE - &hu);
 
-pub(crate) fn sum_relaxation<T: Float>(
-    max_size: usize,
-    max_depth: usize,
-    max_magnitude: T,
-) -> Fallible<RBig> {
-    let error = sum_error(max_size, max_depth, max_magnitude)?;
-    // At the first overflowing addition, the child sums have total error at most E.
-    if RBig::from(IBig::from(max_size)) * max_magnitude.into_rational()? + &error
-        > T::MAX_FINITE.into_rational()?
-    {
+    // Bound intermediate sums, including rounding error.
+    if max_abs_sum * (RBig::ONE + &factor) > T::MAX_FINITE.into_rational()? {
         return fallible!(
             MakeTransformation,
-            "potential intermediate floating-point sum overflow; tighten bounds or length"
+            "potential intermediate floating-point sum overflow"
         );
     }
-    Ok(error * RBig::from(2))
+
+    Ok(factor * max_norm)
 }

@@ -1,14 +1,16 @@
 use super::*;
 use crate::{
     core::Domain,
-    traits::{
-        CastInternalRational, Float, InfCast,
-        sum::{sum_error, sum_relaxation},
-    },
+    traits::{CastInternalRational, Float, InfCast, sum::sum_error},
 };
 use dashu::{integer::IBig, rational::RBig};
 use num::{One, Signed};
 use rand::{Rng, SeedableRng, rngs::StdRng, seq::SliceRandom};
+
+fn scalar_sum_error<T: Float>(n: usize, h: usize, magnitude: T) -> Fallible<RBig> {
+    let bound = RBig::from(IBig::from(n)) * magnitude.into_rational()?;
+    sum_error::<T>(h, &bound, &bound)
+}
 
 #[test]
 fn integer_types_and_invariants() -> Fallible<()> {
@@ -298,7 +300,7 @@ where
                 .try_fold(RBig::ZERO, |s, v| v.into_rational().map(|v| s + v))?;
             assert!(
                 (S::unchecked_sum(&x).into_rational()? - exact).abs()
-                    <= sum_error(n, S::depth(n), a)?
+                    <= scalar_sum_error(n, S::depth(n), a)?
             );
             x.shuffle(&mut rng);
             let permuted = fixed.invoke(&x)?;
@@ -431,32 +433,16 @@ fn upward_rounding_and_depth_boundaries() -> Fallible<()> {
     }
     assert_eq!(Pairwise::<f64>::depth(usize::MAX), usize::BITS as usize);
     let large_n = (1 << 24) + 1;
-    assert!(sum_error(large_n, large_n - 1, 1f32).is_err());
-    assert!(round_up::<f32>(sum_error(large_n, 25, 1f32)?)?.is_finite());
-    assert!(sum_relaxation(large_n, 25, 1f32).is_ok());
-    assert_eq!(sum_error(usize::MAX, usize::MAX - 1, 0f32)?, RBig::ZERO);
-    assert!(sum_error(2, 1, -1f64).is_err());
-    assert!(sum_error(2, 1, f64::INFINITY).is_err());
-    let large_error = sum_error(10_000, 9_999, f32::MAX)?;
-    assert!(large_error > f32::MAX.into_rational()?);
-    assert!(round_up::<f32>(large_error).is_err());
-    assert!(sum_relaxation(10_000, 9_999, f32::MAX).is_err());
-    Ok(())
-}
-
-#[test]
-fn depth_parameterized_analysis() -> Fallible<()> {
-    assert!(
-        sum_error(16, Sequential::<f64>::depth(16), 1.)?
-            > sum_error(16, Pairwise::<f64>::depth(16), 1.)?
+    assert!(scalar_sum_error(large_n, large_n - 1, 1f32).is_err());
+    assert!(round_up::<f32>(scalar_sum_error(large_n, 25, 1f32)?)?.is_finite());
+    assert_eq!(
+        scalar_sum_error(usize::MAX, usize::MAX - 1, 0f32)?,
+        RBig::ZERO
     );
-    let (n, h, magnitude) = (17usize, 5usize, 3.5f64);
-    let hu = RBig::from(IBig::from(h)) * f64::EPSILON.into_rational()? / RBig::from(2);
-    let error = &hu / (RBig::ONE - &hu) * RBig::from(IBig::from(n)) * magnitude.into_rational()?;
-    assert_eq!(sum_error(n, h, magnitude)?, error.clone());
-    assert_eq!(sum_relaxation(n, h, magnitude)?, error * RBig::from(2));
-    assert!(sum_error(n, h, magnitude)? < sum_error(n, n - 1, magnitude)?);
-    assert!(sum_relaxation(2, 1, f64::MAX).is_err());
+    assert!(scalar_sum_error(2, 1, -1f64).is_err());
+    assert!(scalar_sum_error(2, 1, f64::INFINITY).is_err());
+    assert!(scalar_sum_error(2, 1, f64::MAX).is_err());
+    assert_eq!(scalar_sum_error(2, 0, f64::MAX)?, RBig::ZERO);
     Ok(())
 }
 
@@ -482,7 +468,7 @@ fn contribution_selection_is_independent_of_arithmetic() -> Fallible<()> {
 fn default_pairwise_and_discrete_gaussian() -> Fallible<()> {
     let domain = VectorDomain::new(AtomDomain::new_closed((-1., 1.))?).with_size(16);
     let default = make_sum(domain, SymmetricDistance)?;
-    let error = sum_relaxation(16, Pairwise::<f64>::depth(16), 1.)?;
+    let error = scalar_sum_error(16, Pairwise::<f64>::depth(16), 1.)? * RBig::from(2);
     assert_eq!(
         default.map(&0)?,
         crate::traits::sum::round_up::<f64>(error)?

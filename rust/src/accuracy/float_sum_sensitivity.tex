@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn float\_sum\_sensitivity}}
+\author{\MichaelShoemateAuthor}
+
+\begin{document}
+\maketitle
+\contrib
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{T: Float}, \texttt{max\_depth: usize}.
+    \item \texttt{sensitivity}, \texttt{max\_abs\_sum}, \texttt{max\_norm} are of type \texttt{f64}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The function returns \texttt{Err(e)} or \texttt{Ok(out)}, where
+    \texttt{out} is finite and the following holds for all $p\ge1$
+    and pairs of summations satisfying the depth, magnitude and
+    arithmetic conditions in the postcondition of \texttt{sum\_error}.
+    Both summations have finite intermediate results and
+    \[
+        \|s-s'\|_p\le\texttt{sensitivity}
+        \implies \|\widehat{s}-\widehat{s}'\|_p\le\texttt{out},
+    \]
+    where $s,s'$ are the exact sums and $\widehat{s},\widehat{s}'$ are
+    their computed counterparts.
+\end{theorem}
+
+\begin{proof}
+    By the postcondition of \texttt{sum\_error}, neither sum overflows and
+    $\max(\|\widehat{s}-s\|_p,\|\widehat{s}'-s'\|_p)\le E$.
+    If $\|s-s'\|_p\le\texttt{sensitivity}$, then
+    \begin{align*}
+        \|\widehat{s}-\widehat{s}'\|_p
+        &\le\|\widehat{s}-s\|_p+\|s-s'\|_p+\|s'-\widehat{s}'\|_p\\
+        &\le\texttt{sensitivity}+2E
+        \le\texttt{out}.
+    \end{align*}
+    The last inequality is by exact rational arithmetic and upward rounding.
+\end{proof}
+\end{document}

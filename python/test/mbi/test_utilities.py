@@ -6,7 +6,6 @@ import opendp.prelude as dp
 from opendp.extras.mbi._utilities import (
     Marginals,
     SelectPrefixQuery,
-    _noise_sensitivity,
     _snapshot_bounds,
     get_cardinalities,
     get_scale,
@@ -239,13 +238,6 @@ def test_marginal_sensitivities_select_and_measure():
     assert laplace.map(distance) == 9.0
     assert gaussian.map(distance) == pytest.approx(4.5)
     assert gaussian.map({clique: (2, 2, 1)}) == pytest.approx(1.0)
-
-
-def test_noise_sensitivity_rounds_up():
-    sensitivity = _noise_sensitivity(dp.zero_concentrated_divergence(), (2, 2, 1))
-    numerator, denominator = sensitivity.as_integer_ratio()
-    assert numerator**2 >= 2 * denominator**2
-    assert sensitivity == pytest.approx(2**0.5)
 
 
 def test_make_noise_marginal():

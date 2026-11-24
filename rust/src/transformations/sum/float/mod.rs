@@ -4,7 +4,7 @@ use crate::{
     metrics::{AbsoluteDistance, IntDistance},
     traits::{
         CastInternalRational, Float, InfCast,
-        sum::{round_up, sum_magnitude, sum_relaxation},
+        sum::{round_up, sum_abs_bound, sum_error},
     },
 };
 use dashu::{integer::IBig, rational::RBig};
@@ -63,14 +63,11 @@ where
     S: UncheckedSum,
     S::Item: InfCast<RBig>,
 {
-    let magnitude = sum_magnitude((lower, upper))?;
-    let relaxation = sum_relaxation(max_size, S::depth(max_size), magnitude)?;
+    let magnitude = sum_abs_bound(1, (lower, upper))?;
+    let bound = RBig::from(IBig::from(max_size)) * &magnitude;
+    let relaxation = sum_error::<S::Item>(S::depth(max_size), &bound, &bound)? * RBig::from(2);
     let range = upper.into_rational()? - lower.into_rational()?;
-    let sensitivity = if fixed {
-        range
-    } else {
-        magnitude.into_rational()?.max(range)
-    };
+    let sensitivity = if fixed { range } else { magnitude.max(range) };
     Ok(StabilityMap::new_fallible(move |d: &IntDistance| {
         let d = if fixed { *d / 2 } else { *d };
         round_up::<S::Item>(RBig::from(IBig::from(d)) * &sensitivity + &relaxation)

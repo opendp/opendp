@@ -2,7 +2,7 @@
 mod ffi;
 
 use dashu::rational::RBig;
-use num::{Float as _, One};
+use num::{Float as _, One, Zero};
 use opendp_derive::bootstrap;
 
 use crate::core::{Function, StabilityMap, Transformation};
@@ -11,7 +11,7 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{
     ExactIntCast, Float, InfAdd, InfCast, InfDiv, InfMul, InfSub,
-    sum::{round_up, sum_error, sum_magnitude},
+    sum::{round_up, sum_abs_bound, sum_error},
 };
 
 use super::UncheckedSum;
@@ -86,7 +86,8 @@ where
 
     // DERIVE RELAXATION TERM
     // Let x_bar_approx = x_bar + 2e, the approximate mean on finite data types
-    let mean_error = round_up::<S::Item>(sum_error(size, S::depth(size), sum_magnitude(bounds)?)?)?
+    let bound = sum_abs_bound(size, bounds)?;
+    let mean_error = round_up::<S::Item>(sum_error::<S::Item>(S::depth(size), &bound, &bound)?)?
         .inf_div(&size_)?;
 
     // Let L' = L - e, U' = U + e
@@ -102,9 +103,9 @@ where
         .inf_div(&size_)?;
 
     // each deviation is bounded between 0 and range^2
-    let relaxation = round_up::<S::Item>(
-        sum_error(size, S::depth(size), range.inf_mul(&range)?)? * RBig::from(2),
-    )?;
+    let bound = sum_abs_bound(size, (S::Item::zero(), range.inf_mul(&range)?))?;
+    let relaxation =
+        round_up::<S::Item>(sum_error::<S::Item>(S::depth(size), &bound, &bound)? * RBig::from(2))?;
 
     // OVERFLOW CHECKS
     // Bound the magnitude of the sum when computing the mean
