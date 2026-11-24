@@ -19,13 +19,22 @@ def per_example_gradients(data, theta, fit_intercept=True):
     # Python integers wider than NumPy's native types produce object arrays.
     if y.dtype.kind == "O":
         y = y.astype(float)
-    X = np.nan_to_num(data.X, nan=0.0, posinf=0.0, neginf=0.0)
+    # Coerce to f64 before multiplying: NumPy otherwise keeps float32
+    # elementwise products in float32 even when the weights are f64.
+    X = np.nan_to_num(data.X, nan=0.0, posinf=0.0, neginf=0.0).astype(float, copy=False)
     d = X.shape[1]
     gradients = np.empty((X.shape[0], d + (1 if fit_intercept else 0)))
     with np.errstate(all="ignore"):
-        z = np.nan_to_num(
-            X @ theta[:d] + (theta[-1] if fit_intercept else 0.0), nan=0.0
-        )
+        # Accumulate one feature at a time in a fixed order. Every operation
+        # is elementwise across records: adding/removing rows cannot change the
+        # floating-point reduction order for any remaining record.
+        # Batched BLAS matrix multiplication does not have that property.
+        z = np.zeros(X.shape[0], dtype=float)
+        for column, weight in zip(X.T, theta[:d]):
+            z += column * float(weight)
+        if fit_intercept:
+            z += float(theta[-1])
+        z = np.nan_to_num(z, nan=0.0)
         residual = special.expit(z) - y
         np.multiply(residual[:, None], X, out=gradients[:, :d])
         if fit_intercept:
