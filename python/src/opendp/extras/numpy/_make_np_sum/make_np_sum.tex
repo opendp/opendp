@@ -3,105 +3,126 @@
 
 \title{\texttt{fn make\_np\_sum}}
 \author{Michael Shoemate}
+
 \begin{document}
-
 \maketitle
-
 \idealizedNumerics
 \contrib
 
-Proves soundness of \texttt{make\_np\_sum} in \asOfCommit{__init__.py}{f5bb719}.
-
-\texttt{make\_np\_sum} accepts an \texttt{input\_domain} and \texttt{input\_metric},
-and returns a stable Transformation that computes the vector-valued sum with bounded $L_p$ sensitivity.
-
 \section{Hoare Triple}
-
 \subsection*{Preconditions}
-None
-
-\subsection*{Pseudocode}
-\lstinputlisting[language=Python,escapechar=|,firstline=9,lastline=69]{./__init__.py}
+None.
 
 \subsection*{Postcondition}
-
 \begin{theorem}
-\validTransformation{\texttt{(input\_domain, input\_metric)}}{\\ \texttt{make\_np\_sum}}
+    \validTransformation{\texttt{(input\_domain, input\_metric)}}{\\ \texttt{make\_np\_sum}}
 \end{theorem}
 
 \begin{proof}
-Let $x$ and $x'$ be arbitrary members of \texttt{input\_domain}.
-By \ref{domain-check}, \texttt{input\_domain} is an \texttt{NPArray2Domain},
-and by \ref{metric-check}, \texttt{input\_metric} is \texttt{SymmetricDistance}.
-Let $R$ denote \texttt{input\_domain.descriptor.norm},
-and let $O$ denote \texttt{input\_domain.descriptor.origin}.
-By \ref{columns-check}, $x$ and $x'$ have the same fixed number of columns.
-By \ref{norm-check}, $R$ is defined, and by \ref{p-check}, the output metric is the $L^p$ metric with $p \in \{1, 2\}$.
-Because this proof is under \texttt{idealized-numerics}, we ignore machine arithmetic issues such as overflow and treat vector addition as associative and commutative.
-
-\textbf{Data-independent runtime errors.}
-All runtime checks in \texttt{make\_np\_sum} occur before the transformation is returned.
-For any member of \texttt{input\_domain}, the function on line \ref{function} applies \texttt{sum(axis=0)} to a 2-dimensional numpy array, which is defined for every such input.
-Therefore, for every pair $x, x' \in \texttt{input\_domain}$, neither $\texttt{invoke}(x)$ nor $\texttt{invoke}(x')$ raises a runtime error.
-
-\textbf{Appropriate output domain.}
-Each member of \texttt{input\_domain} is a 2-dimensional numpy array whose entries have type \texttt{input\_domain.descriptor.T} and do not contain NaNs.
-Applying \texttt{sum(axis=0)} removes axis zero and returns a 1-dimensional numpy array of the same atomic type.
-Under idealized numerics, summing non-NaN values yields non-NaN values.
-Hence $\function(x)$ is a member of \texttt{output\_domain}.
-
-\textbf{Stability guarantee.}
-Fix any $\din$ and $\dout$ such that $x$ and $x'$ are \din-close under \texttt{input\_metric} and $\texttt{stability\_map}(\din) = \dout$.
-Let $M$ and $M'$ be the multisets of rows in $x$ and $x'$.
-Let $C = M \cap M'$, $A = M \setminus C$, and $B = M' \setminus C$.
-Since addition is commutative, all rows in $C$ cancel, so
+Let $x,x'$ be members of \texttt{input\_domain}.
+Let $R=\texttt{desc.norm}$, $O=\texttt{desc.origin}$,
+$p=\texttt{desc.p}\in\{1,2\}$, and $n$ be the maximum row count used by the constructor.
+Under idealized domain membership, for each row $v$,
 \[
-    \function(x) - \function(x') = \sum_{a \in A} a - \sum_{b \in B} b.
+    \norm{v-O}_p\le R,\qquad
+    \norm{v}_p\le \norm{v-O}_p+\norm{O}_p\le R+\norm{O}_p\le B,
 \]
-By the definition of \texttt{SymmetricDistance},
-\[
-    |A| + |B| = d_{Sym}(x, x') \le \din.
-\]
+where $B=\texttt{row\_bound}$.
 
-Now consider two cases.
-
-\textbf{Case 1: Known size.}
-If \texttt{input\_domain.descriptor.size} is known, then $x$ and $x'$ have the same number of rows, so $|A| = |B|$.
-Let $m = |A| = |B|$.
-Then $2m \le \din$, so $m \le \lfloor \din / 2 \rfloor$.
-Enumerate $A = \{a_1, \ldots, a_m\}$ and $B = \{b_1, \ldots, b_m\}$.
-Since every row lies in the $L^p$ ball of radius $R$ centered at $O$,
+\paragraph{Exact sensitivity.}
+Let $s(x)=\sum_i x_i$.
+Let $M,M'$ be the multisets of rows in $x,x'$,
+$C=M\cap M'$, $A=M\setminus C$, and $A'=M'\setminus C$.
+Then
 \begin{align*}
-    \norm{\function(x) - \function(x')}_p
-    &= \norm{\sum_{i = 1}^{m} (a_i - b_i)}_p \\
-    &\le \sum_{i = 1}^{m} \norm{a_i - b_i}_p && \text{by triangle inequality} \\
-    &\le \sum_{i = 1}^{m} \left(\norm{a_i - O}_p + \norm{b_i - O}_p\right) \\
-    &\le \sum_{i = 1}^{m} 2R \\
-    &= 2mR \\
-    &\le 2 \lfloor \din / 2 \rfloor R.
+    s(x)-s(x') &= \sum_{a\in A}a-\sum_{b\in A'}b,\\
+    |A|+|A'| &= d_{\mathrm{Sym}}(x,x')\le \din,\\
+    |A|,|A'| &\le n.
 \end{align*}
-This is exactly the known-size stability map returned by \texttt{make\_np\_sum}.
 
-\textbf{Case 2: Unknown size.}
-If \texttt{input\_domain.descriptor.size} is unknown, then \texttt{make\_np\_sum} sets
+If \texttt{desc.size} is known, $m=|A|=|A'|\le\min(\lfloor\din/2\rfloor,n)$.
+Enumerate $A=\{a_1,\ldots,a_m\}$ and $A'=\{b_1,\ldots,b_m\}$.
+\begin{align*}
+    \norm{s(x)-s(x')}_p
+    &= \norm{\sum_{i=1}^m(a_i-b_i)}_p\\
+    &\le \sum_{i=1}^m\norm{a_i-b_i}_p\\
+    &\le \sum_{i=1}^m
+        \left(\norm{a_i-O}_p+\norm{b_i-O}_p\right)\\
+    &\le 2mR\\
+    &\le 2\min(\lfloor\din/2\rfloor,n)R.
+\end{align*}
+
+Otherwise,
+\begin{align*}
+    \norm{s(x)-s(x')}_p
+    &= \norm{\sum_{a\in A}a-\sum_{b\in A'}b}_p\\
+    &\le \sum_{a\in A}\norm{a}_p+\sum_{b\in A'}\norm{b}_p\\
+    &\le (|A|+|A'|)B\\
+    &\le \min(\din,2n)B.
+\end{align*}
+Thus $\norm{s(x)-s(x')}_p\le S(\din)$, where
 \[
-    \texttt{stability\_map}(\din) = \din \cdot (R + \norm{O}_p).
+    S(d)=
+    \begin{cases}
+        2\min(\lfloor d/2\rfloor,n)R & \text{if size is known},\\
+        \min(d,2n)B & \text{otherwise}.
+    \end{cases}
 \]
-For every row $v$ in either $A$ or $B$,
+
+\paragraph{Floating-point summation.}
+The cast from \texttt{f32} or \texttt{f64} to \texttt{f64} is exact.
+For $a(x)=\sum_i|x_i|$ (coordinatewise absolute values),
+\begin{align*}
+    \norm{a(x)}_\infty
+    &\le \norm{a(x)}_p\\
+    &\le \sum_i\norm{x_i}_p\\
+    &\le nB.
+\end{align*}
+The same bound holds for $x'$.
+Each level of \texttt{\_pairwise\_sum} reduces $k$ rows to $\lceil k/2\rceil$ rows.
+Hence its summation depth is at most
 \[
-    \norm{v}_p \le \norm{v - O}_p + \norm{O}_p \le R + \norm{O}_p.
+    h=\lceil\log_2\max(1,n)\rceil.
+\]
+Let $U=2^{-53}$ and $H=\texttt{magnitude}\ge nB$.
+By the postcondition of \texttt{sum\_error}, the constructor's public overflow check ensures finite intermediate sums, with
+\[
+    hU<1,\qquad
+    E=\frac{hU}{1-hU}H,\qquad
+    \norm{\function(x)-s(x)}_p\le E.
 \]
 Therefore,
 \begin{align*}
-    \norm{\function(x) - \function(x')}_p
-    &= \norm{\sum_{a \in A} a - \sum_{b \in B} b}_p \\
-    &\le \sum_{a \in A} \norm{a}_p + \sum_{b \in B} \norm{b}_p && \text{by triangle inequality} \\
-    &\le (|A| + |B|)(R + \norm{O}_p) \\
-    &\le \din (R + \norm{O}_p).
+    \norm{\function(x)-\function(x')}_p
+    &\le \norm{\function(x)-s(x)}_p
+        +\norm{s(x)-s(x')}_p
+        +\norm{s(x')-\function(x')}_p\\
+    &\le S(\din)+2E\\
+    &\le \texttt{float\_sum\_sensitivity}
+        \left(\texttt{\_round\_up}(S(\din)),h,H,H\right)\\
+    &=\dout.
 \end{align*}
-This is exactly the unknown-size stability map returned by \texttt{make\_np\_sum}.
+This includes $\din=0$, when the summation orders can differ.
 
-In both cases, $\function(x)$ and $\function(x')$ are $\dout$-close under \texttt{output\_metric}.
+\paragraph{Integer summation.}
+Let $L$ be the maximum representable value of the promoted output type.
+The constructor requires $2nB\le L$.
+For any intermediate sum $t$ over a subset $I$ of rows,
+\[
+    \norm{t}_\infty
+    =\norm{\sum_{i\in I}x_i}_\infty
+    \le \sum_{i\in I}\norm{x_i}_p
+    \le nB\le L.
+\]
+For unsigned input, $t$ is also nonnegative coordinatewise.
+Thus every integer sum is representable and $\function(x)=s(x)$.
+Since $S(\din)\le 2nB\le L$,
+\[
+    \norm{\function(x)-\function(x')}_p
+    \le S(\din)\le \lceil S(\din)\rceil=\dout\le L.
+\]
+
+In both cases, the output is a vector of the declared atomic type, without NaNs or overflow.
 \end{proof}
 
 \end{document}
