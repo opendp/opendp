@@ -7,10 +7,8 @@ from typing import Any, Optional, Sequence, cast, TYPE_CHECKING
 from opendp._internal import _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
 from opendp.combinators import make_adaptive_composition, then_adaptive_composition
-from opendp.domains import atom_domain, vector_domain
 from opendp.extras.mbi._utilities import (
-    TypedDictDistance,
-    TypedDictDomain,
+    Count,
     get_associated_metric,
     make_noise_marginals,
     prior,
@@ -20,7 +18,6 @@ from opendp.extras.mbi._utilities import (
     Marginals,
 )
 from opendp.measurements import make_noisy_max
-from opendp.metrics import linf_distance
 from opendp.mod import (
     ExtrinsicDistance,
     ExtrinsicDomain,
@@ -304,31 +301,8 @@ def _make_mst_scores(
     queries: Sequence[tuple[str, str]],
     model,  # MarkovRandomField
 ):
-    """Make a transformation that assigns a score representing how poorly each query is estimated."""
-    from opendp.extras.numpy import NPArrayDDomain
-    import numpy as np  # type: ignore[import-not-found]
-    from mbi import MarkovRandomField  # type: ignore[import-not-found]
+    from opendp.extras.mbi._utilities._score import make_l1_scores
 
-    queries = tuple((a, b) for a, b in queries)
-
-    for value_domain in input_domain.cast(TypedDictDomain).values():
-        value_domain.cast(NPArrayDDomain)
-
-    input_metric.cast(TypedDictDistance)
-
-    model = cast(MarkovRandomField, model)
-
-    def score_query(query: tuple[str, str], exact) -> float:
-        synth = model.project(query).values
-        return float(np.linalg.norm(exact - synth, 1))
-
-    return _make_transformation(
-        input_domain=input_domain,
-        input_metric=input_metric,
-        output_domain=vector_domain(atom_domain(T="f64", nan=False)),
-        output_metric=linf_distance(T="f64", monotonic=False),
-        function=lambda exact_tabs: [
-            score_query(query, exact_tabs[query]) for query in queries
-        ],
-        stability_map=lambda d_in: max(distance[1] for distance in d_in.values()),
+    return make_l1_scores(
+        input_domain, input_metric, [Count(by) for by in queries], model
     )
