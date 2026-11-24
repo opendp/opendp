@@ -1,6 +1,7 @@
 use super::*;
 
 #[test]
+#[allow(deprecated)]
 fn test_lipschitz_mul() -> Fallible<()> {
     let extension = make_lipschitz_float_mul(
         AtomDomain::new_non_nan(),

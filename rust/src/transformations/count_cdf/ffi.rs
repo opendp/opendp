@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::{convert::TryFrom, os::raw::c_char};
 
 use crate::{

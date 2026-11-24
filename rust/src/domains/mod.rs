@@ -132,14 +132,16 @@ impl<T: CheckAtom> AtomDomain<T> {
         }
     }
 }
-impl<T: CheckAtom + PartialOrd + Debug> AtomDomain<T> {
+impl<T: CheckAtom + PartialOrd + Debug + ProductOrd> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
             nan: false,
         })
     }
+}
 
+impl<T: CheckAtom + PartialOrd + Debug> AtomDomain<T> {
     pub fn get_closed_bounds(&self) -> Fallible<(T, T)> {
         let bounds = self.bounds.as_ref().ok_or_else(|| {
             err!(
@@ -205,7 +207,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
-impl<T: PartialOrd + Debug + CheckNull> Bounds<T> {
+impl<T: PartialOrd + Debug + CheckNull + ProductOrd> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
     }
@@ -262,6 +264,8 @@ impl<T: PartialOrd + Debug + CheckNull> Bounds<T> {
         }
         Ok(Bounds { lower, upper })
     }
+}
+impl<T> Bounds<T> {
     pub fn lower(&self) -> Option<&T> {
         match &self.lower {
             Bound::Included(v) => Some(v),
@@ -668,6 +672,21 @@ mod contrib {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_bounds_require_supported_type() -> Fallible<()> {
+        let domain = AtomDomain::new_closed((0i32, 1))?;
+        assert!(domain.member(&1)?);
+        assert!(!domain.member(&2)?);
+        #[cfg(feature = "polars")]
+        {
+            let date = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+            assert!(AtomDomain::new_closed((date, date))?.member(&date)?);
+            let time = chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap();
+            assert!(AtomDomain::new_closed((time, time))?.member(&time)?);
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_bounded_float_nan_membership() -> Fallible<()> {

@@ -1,7 +1,10 @@
 use super::*;
 #[test]
+#[allow(deprecated)]
 fn test_cdf() -> Fallible<()> {
     let cdf_func = make_cdf::<f64>()?;
+    assert!(cdf_func.eval(&vec![])?.is_empty());
+    assert!(cdf_func.eval(&vec![0.0]).is_err());
     let cdf = cdf_func.eval(&vec![2.23, 3.4, 5., 2.7])?;
     assert_eq!(
         cdf,
@@ -68,4 +71,32 @@ fn test_quantile_int() -> Fallible<()> {
     let quantiles = quantile_func.eval(&vec![2, 3, 5])?;
     assert_eq!(quantiles, vec![10, 50, 50]);
     Ok(())
+}
+
+#[test]
+fn test_quantiles_degenerate_and_noisy_counts() -> Fallible<()> {
+    let f = make_quantiles_from_counts(vec![7i32], vec![0.5f64], Interpolation::Linear)?;
+    assert_eq!(f.eval(&vec![])?, vec![7]);
+    assert_eq!(f.eval(&vec![1, 2])?, vec![7]);
+
+    let f = make_quantiles_from_counts(
+        vec![0i32, 10, 20],
+        vec![0.0f64, 0.5, 1.0],
+        Interpolation::Linear,
+    )?;
+    assert_eq!(f.eval(&vec![-1, 10])?, vec![0, 15, 20]);
+    assert_eq!(f.eval(&vec![0, -1])?, vec![0, 10, 20]);
+    assert_eq!(f.eval(&vec![i32::MAX, i32::MAX])?, vec![0, 10, 20]);
+    Ok(())
+}
+
+#[test]
+fn test_quantiles_reject_nan_parameters() {
+    assert!(
+        make_quantiles_from_counts(vec![f64::NAN], vec![0.5f64], Interpolation::Nearest).is_err()
+    );
+    assert!(
+        make_quantiles_from_counts(vec![0.0f64, 1.0], vec![f64::NAN], Interpolation::Linear)
+            .is_err()
+    );
 }

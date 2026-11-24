@@ -13,6 +13,10 @@ use crate::{
 mod ffi;
 
 #[bootstrap(features("contrib"), generics(TA(default = "float")))]
+#[deprecated(
+    since = "0.17.0",
+    note = "Use a cumulative sum and normalization instead."
+)]
 /// Postprocess a noisy array of float summary counts into a cumulative distribution.
 ///
 /// # Generics
@@ -26,7 +30,12 @@ pub fn make_cdf<TA: Float>() -> Fallible<Function<Vec<TA>, Vec<TA>>> {
                 Some(*acc)
             })
             .collect::<Vec<TA>>();
-        let sum = cumsum[cumsum.len() - 1];
+        let Some(&sum) = cumsum.last() else {
+            return Ok(Vec::new());
+        };
+        if sum.is_zero() || !sum.is_finite() {
+            return fallible!(FailedFunction, "total count must be finite and nonzero");
+        }
         Ok(cumsum.into_iter().map(|v| v / sum).collect())
     }))
 }
@@ -43,6 +52,7 @@ pub enum Interpolation {
     generics(F(default = "float"))
 )]
 /// Postprocess a noisy array of summary counts into quantiles.
+/// Negative counts are clamped to zero. If no positive mass remains, use equal mass per interior bin.
 ///
 /// # Arguments
 /// * `bin_edges` - The edges that the input data was binned into before counting.
@@ -64,26 +74,23 @@ where
     if bin_edges.len().is_zero() {
         return fallible!(MakeTransformation, "bin_edges.len() must be positive");
     }
-    if bin_edges.windows(2).any(|w| w[0] >= w[1]) {
+    if bin_edges.iter().any(|v| v.is_null()) || bin_edges.windows(2).any(|w| !(w[0] < w[1])) {
         return fallible!(MakeTransformation, "bin_edges must be increasing");
     }
-    if alphas.windows(2).any(|w| w[0] >= w[1]) {
+    if alphas.iter().any(|a| !(F::zero()..=F::one()).contains(a)) {
+        return fallible!(MakeTransformation, "alphas must be in [0, 1]");
+    }
+    if alphas.windows(2).any(|w| !(w[0] < w[1])) {
         return fallible!(MakeTransformation, "alphas must be increasing");
     }
-    if let Some(lower) = alphas.first() {
-        if lower.is_sign_negative() {
-            return fallible!(
-                MakeTransformation,
-                "alphas must be greater than or equal to zero"
-            );
-        }
-    }
-    if let Some(upper) = alphas.last() {
-        if upper > &F::one() {
-            return fallible!(
-                MakeTransformation,
-                "alphas must be less than or equal to one"
-            );
+    if matches!(interpolation, Interpolation::Linear) {
+        for &edge in &bin_edges {
+            if !F::round_cast(edge)?.is_finite() {
+                return fallible!(
+                    MakeTransformation,
+                    "linear interpolation requires finite bin edges"
+                );
+            }
         }
     }
 
@@ -95,26 +102,42 @@ where
                 "there must be one more bin edge than there are counts"
             );
         }
-        if arg.is_empty() {
-            return Ok(vec![bin_edges[0].clone(); alphas.len()]);
-        }
         // if args includes extremal bins for (-inf, edge_0] and [edge_n, inf), discard them
         let arg = if bin_edges.len() + 1 == arg.len() {
             &arg[1..arg.len() - 1]
         } else {
             &arg[..]
         };
-        // compute the cumulative sum of the input counts
-        let cumsum = (arg.iter())
-            .scan(TA::zero(), |acc, v| {
-                *acc += v.clone();
-                Some(acc.clone())
-            })
+        if arg.is_empty() {
+            return Ok(vec![bin_edges[0]; alphas.len()]);
+        }
+
+        // Convert before summing to avoid overflow in narrow integer accumulators.
+        let mut counts = arg
+            .iter()
+            .copied()
             .map(F::round_cast)
             .collect::<Fallible<Vec<F>>>()?;
-
-        // reuse the last element of the cumsum
+        for count in &mut counts {
+            if !count.is_finite() {
+                return fallible!(FailedFunction, "counts must be finite");
+            }
+            *count = count.max(F::zero());
+        }
+        if counts.iter().all(|v| v.is_zero()) {
+            counts.fill(F::one());
+        }
+        let cumsum: Vec<F> = counts
+            .into_iter()
+            .scan(F::zero(), |acc, v| {
+                *acc += v;
+                Some(*acc)
+            })
+            .collect();
         let sum = cumsum[cumsum.len() - 1];
+        if !sum.is_finite() {
+            return fallible!(FailedFunction, "total count must be finite");
+        }
 
         let cdf: Vec<F> = cumsum.into_iter().map(|v| v / sum).collect();
 
@@ -126,6 +149,10 @@ where
             .into_iter()
             .zip(&alphas)
             .map(|(idx, &alpha)| {
+                // The zero quantile is the first edge, even if the first bin is empty.
+                if alpha.is_zero() {
+                    return Ok(bin_edges[0]);
+                }
                 // Want to find the cumulative values to the left and right of edge
                 // When no elements less than edge, consider cumulative value to be zero
                 let left_cdf = if idx == 0 { F::zero() } else { cdf[idx - 1] };
@@ -143,7 +170,6 @@ where
                         let right_edge = F::round_cast(bin_edges[idx + 1])?;
 
                         // find the interpolant between the bin edges.
-                        // denominator is never zero because bin edges is strictly increasing
                         let t = (alpha - left_cdf) / (right_cdf - left_cdf);
                         let v = (F::one() - t) * left_edge + t * right_edge;
                         TA::round_cast(v)

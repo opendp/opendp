@@ -481,7 +481,8 @@ def test_lipschitz_b_ary_tree():
         >> dp.t.make_consistent_b_ary_tree(branching_factor)
     )
 
-    meas_cdf = meas_base >> dp.t.make_cdf()
+    with pytest.deprecated_call(match="make_cdf"):
+        meas_cdf = meas_base >> dp.t.make_cdf()
     meas_quantiles = meas_base >> dp.t.make_quantiles_from_counts(
         bin_edges=[0.0, 10.0, 13.0, 17.0, 26.0, 70.0, 84.0, 100.0],
         alphas=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
