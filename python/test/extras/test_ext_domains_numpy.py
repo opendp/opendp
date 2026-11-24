@@ -70,6 +70,18 @@ def test_array2_domain_member():
     assert empty_domain.member(np.zeros((0, 2)))
 
 
+def test_array2_domain_max_size():
+    assert dp.numpy.array2_domain(T=float).descriptor.max_size == 2**32 - 1
+    assert dp.numpy.array2_domain(T=float, size=2).descriptor.max_size == 2
+    with pytest.raises(ValueError, match="size must not exceed max_size"):
+        dp.numpy.array2_domain(T=float, size=3, max_size=2)
+
+    domain = dp.numpy.array2_domain(T=float, max_size=2, num_columns=1)
+    assert domain.member(np.zeros((2, 1)))
+    with pytest.warns(match="must have at most 2 rows"):
+        assert not domain.member(np.zeros((3, 1)))
+
+
 def test_array2_domain_cardinalities():
     with pytest.raises(ValueError, match="cardinalities ndim"):
         dp.numpy.array2_domain(cardinalities=np.array(2), T=int)

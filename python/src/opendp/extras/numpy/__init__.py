@@ -68,6 +68,7 @@ def array2_domain(
     p: Literal[1, 2, None] = None,
     origin=None,
     size: int | None = None,
+    max_size: int | None = None,
     num_columns: int | None = None,
     nan: Optional[bool] = None,
     cardinalities: list[int] | numpy.ndarray | None = None,
@@ -78,7 +79,8 @@ def array2_domain(
     :param norm: each row in x is bounded by the norm
     :param p: designates L`p` norm
     :param origin: center of the norm region. Assumed to be at zero
-    :param size: number of rows in data
+    :param size: exact number of rows in data
+    :param max_size: public upper bound on rows; defaults to size, or the u32 maximum for unsized data
     :param num_columns: number of columns in the data
     :param nan: whether NaN values are allowed
     :param cardinalities: cardinalities of the categorical columns
@@ -133,6 +135,11 @@ def array2_domain(
         raise ValueError("origin must be a scalar, ndarray or None")
 
     _check_nonnegative_int(size, "size")
+    _check_nonnegative_int(max_size, "max_size")
+    if max_size is None:
+        max_size = size if size is not None else 2**32 - 1
+    if size is not None and size > max_size:
+        raise ValueError("size must not exceed max_size")
     _check_nonnegative_int(num_columns, "num_columns")
 
     if isinstance(cardinalities, list):
@@ -198,6 +205,8 @@ def array2_domain(
                 raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
+        if len(x) > max_size:
+            raise ValueError(f"must have at most {max_size} rows")
 
         if cardinalities is not None:
             n_unique = np.array([len(np.unique(x_i)) for x_i in x.T])
@@ -212,6 +221,7 @@ def array2_domain(
         norm=norm,
         p=p,
         size=size,
+        max_size=max_size,
         num_columns=num_columns,
         nan=nan,
         cardinalities=cardinalities,
@@ -231,6 +241,8 @@ class NPArray2Domain:
     """designates L`p` norm"""
     size: int | None
     """number of rows in data"""
+    max_size: int
+    """public upper bound on the number of rows"""
     num_columns: int | None
     """number of columns in the data"""
     nan: bool
