@@ -1,0 +1,162 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_logarithmic\_exp}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib Proves soundness of \texttt{fn sample\_logarithmic\_exp} in \texttt{mod.rs}.
+This proof uses the exact geometric-exp sampler and exact rational Bernoulli sampler
+to realize the logarithmic distribution.
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\texttt{x} $\in \mathbb{Q} \land$ \texttt{x} $> 0$
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_logarithmic_exp.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
+\texttt{sample\_logarithmic\_exp} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed on $\mathbb{N}_{>0}$ with
+\[
+\forall k \in \mathbb{N}_{>0}, \qquad
+\Pr[\texttt{out} = k]
+=
+\frac{e^{-\texttt{x}k}}{k \log(1 / (1 - e^{-\texttt{x}}))}.
+\]
+\end{theorem}
+
+\section{Proof}
+
+Assume the preconditions are met and write $\lambda = e^{-x} \in (0, 1)$.
+
+\begin{lemma}
+\label{err-e}
+\texttt{sample\_logarithmic\_exp} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+Since \texttt{x} $> 0$, the precondition on
+\rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast}
+is met. By its definition, it can only return an error due to a lack of system entropy.
+
+If \texttt{k} on line \ref{line:k} is nonzero, then \texttt{k} is a positive integer, so
+the preconditions on \rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_rational}
+are met when called with probability $1/\texttt{k}$ on line \ref{line:bern}. By its definition,
+it can only return an error due to a lack of system entropy.
+
+The only source of errors in \texttt{sample\_logarithmic\_exp} is from the invocation of these
+functions, therefore \texttt{sample\_logarithmic\_exp} only returns \texttt{Err(e)} when there is
+a lack of system entropy.
+\end{proof}
+
+We now condition on not returning an error and fix any iteration of the loop.
+
+\begin{itemize}
+    \item Let $g$ be a realization of a random variable $G \sim Geometric(1 - e^{-x})$,
+    supported on $\mathbb{N}_0$.
+    \item If $g > 0$, let $b$ be a realization of a random variable
+    $B \sim Bernoulli(1/g)$.
+\end{itemize}
+
+\begin{lemma}
+\label{one-step-return}
+For any $k \in \mathbb{N}_{>0}$, the probability that a single iteration of the loop returns $k$ is
+\[
+(1 - e^{-x}) \frac{e^{-xk}}{k}.
+\]
+\end{lemma}
+
+\begin{proof}
+A single iteration returns $k$ exactly when:
+\begin{enumerate}
+    \item the geometric draw equals $k$, and
+    \item the Bernoulli draw with success probability $1/k$ succeeds.
+\end{enumerate}
+Therefore,
+\begin{align*}
+\Pr[\text{single iteration returns } k]
+&= \Pr[G = k] \Pr[B = \top \mid G = k] \\
+&= (1 - e^{-x}) e^{-xk} \cdot \frac{1}{k}.
+\end{align*}
+\end{proof}
+
+\begin{lemma}
+\label{one-step-accept}
+The probability that a single iteration of the loop returns some value in $\mathbb{N}_{>0}$ is
+\[
+(1 - e^{-x}) \log\!\left(\frac{1}{1 - e^{-x}}\right).
+\]
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{one-step-return},
+\begin{align*}
+\Pr[\text{single iteration returns a value}]
+&= \sum_{k=1}^{\infty} (1 - e^{-x}) \frac{e^{-xk}}{k} \\
+&= (1 - e^{-x}) \sum_{k=1}^{\infty} \frac{(e^{-x})^k}{k}.
+\end{align*}
+Since $e^{-x} \in (0, 1)$, the power-series identity
+\[
+\sum_{k=1}^{\infty} \frac{z^k}{k} = \log\!\left(\frac{1}{1-z}\right)
+\quad \text{for } z \in (0, 1)
+\]
+applies with $z = e^{-x}$, giving
+\[
+\Pr[\text{single iteration returns a value}]
+=
+(1 - e^{-x}) \log\!\left(\frac{1}{1 - e^{-x}}\right).
+\]
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{sample\_logarithmic\_exp} is \texttt{Ok(out)}, then \texttt{out} is distributed on $\mathbb{N}_{>0}$ with
+\[
+\forall k \in \mathbb{N}_{>0}, \qquad
+\Pr[\texttt{out} = k]
+=
+\frac{e^{-xk}}{k \log(1 / (1 - e^{-x}))}.
+\]
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{one-step-return}, the probability that a fixed loop iteration returns $k$ is
+\[
+r_k := (1 - e^{-x}) \frac{e^{-xk}}{k}.
+\]
+By Lemma~\ref{one-step-accept}, the probability that a fixed loop iteration returns any value is
+\[
+a := (1 - e^{-x}) \log\!\left(\frac{1}{1 - e^{-x}}\right).
+\]
+
+Since loop iterations are independent, the probability that the algorithm returns $k$ on the
+$t$-th iteration is
+\[
+(1-a)^{t-1} r_k.
+\]
+Summing over all $t \ge 1$,
+\begin{align*}
+\Pr[\texttt{out} = k]
+&= \sum_{t=1}^{\infty} (1-a)^{t-1} r_k \\
+&= \frac{r_k}{a} \\
+&= \frac{(1 - e^{-x}) e^{-xk}/k}{(1 - e^{-x}) \log(1 / (1 - e^{-x}))} \\
+&= \frac{e^{-xk}}{k \log(1 / (1 - e^{-x}))}.
+\end{align*}
+Thus \texttt{out} has the claimed distribution.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}

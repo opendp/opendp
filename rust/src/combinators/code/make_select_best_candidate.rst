@@ -1,0 +1,12 @@
+>>> import opendp.prelude as dp
+>>> dp.enable_features("contrib")
+>>> space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
+>>> scorer = space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+>>> m_scored_candidate = dp.c.make_composition([scorer, scorer])
+>>> m_best = dp.c.make_select_best_candidate(m_scored_candidate, mean=2.0)
+>>> score, candidate = m_best([10.0, 12.0, 15.0])
+>>> assert isinstance(score, float)
+>>> assert isinstance(candidate, (int, float))
+>>> assert m_best.map(1) == 3 * m_scored_candidate.map(1)
+>>> m_one = dp.c.make_select_best_candidate(m_scored_candidate, mean=1.0)
+>>> assert m_one.map(1) == m_scored_candidate.map(1)
