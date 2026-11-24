@@ -1,39 +1,45 @@
 # type: ignore
-def make_canonical_noise(
-    input_domain: AtomDomain[f64],
-    input_metric: AbsoluteDistance[f64],
-    d_in: f64,
-    d_out: tuple[f64, f64],
-):
-    assert not input_domain.nan(), "input data must be non-nan"  # `\label{non-nan}`
-    assert (
-        not d_in.is_sign_negative() and d_in.is_finite()
-    )  # `\label{sensitivity-check}`
+def make_canonical_noise(input_domain, input_metric, d_in, d_out):
+    assert not input_domain.nan()
+    assert d_in >= 0 and d_in.is_finite()
 
-    tradeoff, fixed_point = approximate_to_tradeoff(d_out)
-    r_d_in = RBig.try_from(d_in)
+    epsilons = sorted(set(CANONICAL_EPSILONS + d_out.certificate_endpoints()))
+    samples = [(epsilon, d_out.delta(epsilon)) for epsilon in epsilons]
+    # q is an outward-certified LOWER bound. Reciprocal arithmetic is exact.
+    constraints = [
+        (RBig(1) - RBig(delta), RBig(exp_lower(epsilon))) for epsilon, delta in samples
+    ]
 
-    def function(arg: f64) -> f64:  # `\label{function}`
-        try:  # `\label{try-cast-arg}`
-            arg = RBig.try_from(arg)
-        except Exception:
-            arg = RBig(0)
+    def tradeoff(alpha):
+        return max(max(RBig(0), a - q * alpha, (a - alpha) / q) for a, q in constraints)
 
-        canonical_rv = CanonicalRV(  # `\label{canonical-rv}`
-            shift=arg, scale=r_d_in, tradeoff=tradeoff, fixed_point=fixed_point
+    fixed_point = max(a / (RBig(1) + q) for a, q in constraints)
+    assert RBig(0) < fixed_point < RBig(1) / RBig(2)
+
+    # Compile prefix minima once. The implementation stores the final minimum
+    # as exact profile slack, with a conservative log core for the remainder.
+    profile = log_step_profile_with_prefix_minima(samples)
+    scale = RBig(d_in)
+
+    def function(arg):
+        rv = CanonicalRV(
+            shift=RBig(clamp_finite(arg)),
+            scale=scale,
+            tradeoff=tradeoff,
+            fixed_point=fixed_point,
         )
-        return PartialSample.new(canonical_rv).value()  # `\label{sample-value}`
+        return PartialSample.new(rv).value()
 
-    def privacy_map(d_in_p: f64) -> f64:  # `\label{privacy-map}`
-        assert 0 <= d_in_p <= d_in
-        if d_in == 0:
-            return (0.0, 0.0)
-        return d_out
+    def privacy_map(distance):
+        assert 0 <= distance <= d_in
+        if distance == 0:
+            return PrivacyGuarantee().with_profile(perfect_privacy_log_profile())
+        return PrivacyGuarantee().with_profile(profile.clone())
 
     return Measurement.new(
         input_domain,
-        function,
         input_metric,
-        output_measure=approximate(max_divergence()),
-        privacy_map=privacy_map,
+        MultiDP.with_profile(profile_purity(samples, d_in)),
+        function,
+        privacy_map,
     )

@@ -23,11 +23,13 @@ pub trait InverseCDF: Sized {
     type Edge: PartialOrd + Debug;
 
     /// # Proof Definition
-    /// Given a random variable `self` (of type `Self`),
-    /// return `Ok(out)` where `out` is the inverse cumulative distribution function evaluated at `uniform`
-    /// with error in direction `R`, or `None`.
+    /// Given a random variable `self` (of type `Self`) and `uniform` in [0, 1],
+    /// return `Err(e)`, `Ok(None)` if a bound is unavailable, or `Ok(Some(out))`,
+    /// where `out` bounds the inverse cumulative distribution function evaluated at `uniform`
+    /// in direction `R`.
     ///
-    /// The error between `out` and the exactly-computed CDF decreases monotonically as `refinements` increases.
+    /// For fixed `uniform`, the error between `out` and the exact inverse CDF must not increase
+    /// as `refinements` increases, whenever both bounds are available.
     fn inverse_cdf<R: ODPRound>(
         &self,
         uniform: RBig,
