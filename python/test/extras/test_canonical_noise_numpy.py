@@ -125,28 +125,40 @@ def test_confidence_interval():
     d_out = 0.1, 1e-8
 
     size = 1000
-    samples = sample_tulap_fast(n=10_000, shift=Z, d_in=d_in, d_out=d_out) / size
     tulap = BinomialCND(Z, d_in=d_in, d_out=d_out, size=size)
 
     alpha = 0.05
-    ci = tulap.confidence_interval(alpha=alpha)
-    # scipy functions give slightly different numbers on 1.13 vs 1.14
-    assert np.allclose(
-        ci,
-        [
-            0.06555402885319662,
-            0.13444597114680337,
-        ],
+    lower, upper = tulap.confidence_interval(alpha=alpha)
+    assert lower < Z / size < upper
+    assert tulap.p_value(lower) == pytest.approx(alpha, abs=1e-5)
+    assert tulap.p_value(upper) == pytest.approx(alpha, abs=1e-5)
+
+    one_sided_lower = tulap.confidence_interval(alpha=alpha, side="lower")
+    one_sided_upper = tulap.confidence_interval(alpha=alpha, side="upper")
+    assert one_sided_lower < Z / size < one_sided_upper
+    assert tulap.p_value(one_sided_lower, tail="right") == pytest.approx(
+        alpha, abs=1e-5
     )
+    assert tulap.p_value(one_sided_upper, tail="left") == pytest.approx(alpha, abs=1e-5)
 
-    empirical_alpha = (np.less(samples, ci[0]) | np.greater(samples, ci[1])).mean()  # type: ignore[index]
-    assert empirical_alpha < alpha
 
-    lower = tulap.confidence_interval(alpha=alpha, side="lower")
-    assert np.allclose(lower, 0.07261474401027863)
+def test_confidence_interval_binomial_coverage():
+    # At Z=0, theta=0.2 is accepted by the left-tail test.
+    # The old inversion incorrectly excluded it from the upper interval.
+    size, theta, alpha = 10, 0.2, 0.05
+    d_out = (10.0, 0.0)
+    for z in (0.0, 0.5):
+        cnd = BinomialCND(z, 1.0, d_out, size)
+        upper = cnd.confidence_interval(alpha, side="upper")
+        assert upper >= theta
+        assert cnd.p_value(upper, tail="left") == pytest.approx(alpha, abs=1e-5)
 
-    empirical_alpha = np.less(samples, lower).mean()
-    assert empirical_alpha < alpha
+    # Extreme observations may put the decision boundary outside [0, 1].
+    for z, endpoint in [(-0.5, 0.0), (size + 0.5, 1.0)]:
+        cnd = BinomialCND(z, 1.0, d_out, size)
+        assert cnd.confidence_interval(alpha, side="lower") == endpoint
+        assert cnd.confidence_interval(alpha, side="upper") == endpoint
+        assert cnd.confidence_interval(alpha) == (endpoint, endpoint)
 
 
 def test_oneside_pvalue():

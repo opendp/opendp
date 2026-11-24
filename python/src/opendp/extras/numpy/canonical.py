@@ -155,10 +155,25 @@ def two_sided_confidence_interval(
     :return: confidence interval bounds
     """
     mle = max(min(Z / size, 1.0), 0.0)
-    predicate = lambda B: two_sided_pvalue(B * size, d_in, d_out, size, mle) > alpha
+    predicate = lambda theta: two_sided_pvalue(Z, d_in, d_out, size, theta) > alpha
 
-    L = binary_search(predicate, bounds=(0.0, mle)) if mle > 0 else 0.0
-    U = binary_search(predicate, bounds=(mle, 1.0)) if mle < 1 else 1.0
+    if not predicate(mle):
+        # No accepted null at the split point: use the conservative equal-tailed interval.
+        return (
+            one_sided_confidence_interval(Z, d_in, d_out, size, alpha / 2, "lower"),
+            one_sided_confidence_interval(Z, d_in, d_out, size, alpha / 2, "upper"),
+        )
+
+    L = (
+        binary_search(predicate, bounds=(0.0, mle))
+        if not predicate(0.0) and mle > 0
+        else 0.0
+    )
+    U = (
+        binary_search(predicate, bounds=(mle, 1.0))
+        if not predicate(1.0) and mle < 1
+        else 1.0
+    )
 
     return float(L), float(U)
 
@@ -184,13 +199,22 @@ def one_sided_confidence_interval(
     :param side: configure interval type
     :return: lower or upper confidence interval bound
     """
-    mle = max(min(Z / size, 1.0), 0.0)
-    tail = {"lower": "left", "upper": "right"}.get(side)
+    tail = {"lower": "right", "upper": "left"}.get(side)
     if tail is None:
         raise ValueError(
             f"tail must be 'lower' or 'upper', not {tail}"
         )  # pragma: no cover
-    pred = lambda B: one_sided_pvalue(B * size, d_in, d_out, size, mle, tail) > alpha  # type: ignore[arg-type]
+    pred = lambda theta: one_sided_pvalue(Z, d_in, d_out, size, theta, tail) > alpha  # type: ignore[arg-type]
+    if side == "lower":
+        if pred(0.0):
+            return 0.0
+        if not pred(1.0):
+            return 1.0
+    else:
+        if pred(1.0):
+            return 1.0
+        if not pred(0.0):
+            return 0.0
     return float(binary_search(pred, bounds=(0.0, 1.0)))
 
 
