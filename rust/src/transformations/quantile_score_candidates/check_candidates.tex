@@ -16,7 +16,7 @@ in \asOfCommit{mod.rs}{f5bb719}.
 \section{Hoare Triple}
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
-None
+Generic \texttt{T} implements trait \texttt{Number}.
 
 \subsubsection*{Caller-verified}
 None
@@ -44,8 +44,9 @@ None
         \item \texttt{candidates} is non-empty, by the check on line \ref{empty}
         \item \texttt{candidates} is strictly increasing,
             because there is no window where the left candidate is not less than the right candidate
-        \item \texttt{candidates} is totally ordered,
-            because no comparisons may fail
+        \item The singleton case is checked by comparing the first candidate with itself on line \ref{first}.
+            For longer sequences, every candidate participates in an adjacent comparison on line \ref{windows}.
+            Thus no candidate is NaN, and the numeric candidates are totally ordered.
     \end{enumerate}
     Therefore the postcondition holds.
 \end{proof}
