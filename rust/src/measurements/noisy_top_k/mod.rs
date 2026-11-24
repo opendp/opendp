@@ -197,6 +197,58 @@ pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + Finit
     peel_permute_and_flip(y, scale, k, replacement)
 }
 
+/// Select at most `k` candidates before a synthetic threshold is selected.
+///
+/// This is the sampling primitive for unknown-domain top-k selection, not a
+/// standalone DP measurement. In particular, its privacy guarantee depends on
+/// how the candidate set and threshold are constructed by the calling plan.
+/// Candidate positions are preserved in the returned Boolean mask.
+pub(crate) fn top_k_mask<TIA: Clone + CastInternalRational + ProductOrd + FiniteBounds>(
+    scores: &[TIA],
+    k: usize,
+    threshold: f64,
+    scale: f64,
+    replacement: bool,
+) -> Fallible<Vec<bool>> {
+    if scores.is_empty() {
+        return fallible!(FailedFunction, "top_k_mask requires nonempty scores");
+    }
+    if !threshold.is_finite() || threshold.is_sign_negative() {
+        return fallible!(FailedFunction, "threshold must be finite and non-negative");
+    }
+    if !scale.is_finite() || scale.is_sign_negative() {
+        return fallible!(FailedFunction, "scale must be finite and non-negative");
+    }
+
+    let mut values = scores
+        .iter()
+        .cloned()
+        .map(|value| {
+            value
+                .total_clamp(TIA::MIN_FINITE, TIA::MAX_FINITE)?
+                .into_rational()
+        })
+        .collect::<Fallible<Vec<RBig>>>()?;
+    let synthetic_index = values.len();
+    let minimum = values.iter().min().expect("nonempty scores").clone();
+    values.push(minimum + threshold.into_rational()?);
+
+    let mut mask = vec![false; synthetic_index];
+    // Keep a map of remaining candidates because peeling removes each winner.
+    let mut positions: Vec<usize> = (0..=synthetic_index).collect();
+    let scale = scale.into_rational()?;
+    for _ in 0..k.min(synthetic_index) {
+        let selected = permute_and_flip(&values, &scale, replacement)?;
+        let original = positions.remove(selected);
+        if original == synthetic_index {
+            break;
+        }
+        mask[original] = true;
+        values.remove(selected);
+    }
+    Ok(mask)
+}
+
 #[proven]
 /// # Proof Definition
 /// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
