@@ -175,3 +175,30 @@ fn test_select_rejects_noncanonical_projection_options() -> Fallible<()> {
     assert!(make_stable_lazyframe(domain, FrameDistance(SymmetricDistance), query).is_err());
     Ok(())
 }
+
+#[test]
+fn test_select_preserves_identifier() -> Fallible<()> {
+    use crate::metrics::SymmetricIdDistance;
+    let lf = df!("ID" => [1i32, 2], "x" => [4i32, 5])?.lazy();
+    let domain = LazyFrameDomain::new_from_schema((*lf.clone().collect_schema()?).clone())?;
+    let metric = FrameDistance(SymmetricIdDistance {
+        identifier: col("ID"),
+    });
+    let t = make_stable_lazyframe::<_, FrameDistance<SymmetricIdDistance>>(
+        domain.clone(),
+        metric.clone(),
+        lf.clone().select([col("ID"), col("x")]),
+    )?;
+    assert_eq!(t.invoke(&lf)?.collect()?, lf.clone().collect()?);
+
+    // Changing an identifier is still forbidden.
+    assert!(
+        make_stable_lazyframe::<_, FrameDistance<SymmetricIdDistance>>(
+            domain,
+            metric,
+            lf.select([col("x").alias("ID")]),
+        )
+        .is_err()
+    );
+    Ok(())
+}
