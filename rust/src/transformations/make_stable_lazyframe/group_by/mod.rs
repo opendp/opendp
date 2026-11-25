@@ -14,6 +14,7 @@ use polars::prelude::*;
 use polars_plan::dsl::WindowType;
 
 use super::StableDslPlan;
+use opendp_derive::proven;
 
 #[cfg(test)]
 mod test;
@@ -29,49 +30,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     input_metric: FrameDistance<M>,
     plan: DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
-    #[cfg(patch_polars)]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        predicates,
-        aggs,
-        apply,
-        maintain_order,
-        options,
-    } = plan
-    else {
-        return fallible!(MakeTransformation, "Expected group-by in logical plan");
-    };
-    #[cfg(not(patch_polars))]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        maintain_order,
-        options,
-    } = plan
-    else {
-        return fallible!(MakeTransformation, "Expected group-by in logical plan");
-    };
-
-    if apply.is_some() {
-        return fallible!(
-            MakeTransformation,
-            "Apply is not currently supported in the logical plan. Please open an issue if this would be useful to you."
-        );
-    }
-
-    #[cfg(patch_polars)]
-    if !predicates.is_empty() {
-        // This is equivalent to running a filter after, as far as I can tell.
-        // Possibly useful to support.
-        return fallible!(
-            MakeTransformation,
-            "Having is not currently supported in logical plan. Please open an issue if this would be useful to you."
-        );
-    }
-
+    let (input, keys, aggs, maintain_order) = match_ordinary_group_by(&plan)?;
     if maintain_order {
         return fallible!(
             MakeTransformation,
@@ -79,17 +38,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
-        return fallible!(
-            MakeTransformation,
-            "Unsupported stable group-by options: {options:?}"
-        );
-    }
-
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain, input_metric)?;
+    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<M>) = t_prior.output_space();
 
     // create a transformation for each expression
@@ -105,13 +54,13 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             let t_key: Transformation<_, _, _, L01InfDistance<M>> = key
                 .clone()
                 .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))?;
-            Ok(t_key.invoke(&input)?.expr)
+            if !has_canonical_representatives(&t_key.output_domain.column.dtype()) {
+                return fallible!(MakeTransformation,
+                    "Floating-point grouping keys may emit permutation-dependent representatives (signed zeros or NaN payloads).");
+            }
+            Ok(t_key.invoke(input)?.expr)
         })
         .collect::<Fallible<Vec<_>>>()?;
-
-    // check that aggregations are infallible. Aggregations are allowed to resize data
-    aggs.iter()
-        .try_for_each(|e| check_infallible(e, Resize::Allow))?;
 
     if middle_metric.0.identifier().is_some() {
         return fallible!(
@@ -120,56 +69,26 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    // use Polars to compute the output dtype
-    let series_domains = middle_domain
-        .simulate_schema(|lf| lf.group_by(&stable_keys).agg(&aggs))?
-        .iter_fields()
-        .map(SeriesDomain::new_from_field)
-        .collect::<Fallible<_>>()?;
+    let grouping_keys = keys.iter().cloned().collect();
+    let output_domain = group_by_output_domain(&middle_domain, &grouping_keys, &stable_keys, aggs)?;
 
-    let h_keys = keys.iter().cloned().collect();
-    let output_domain = FrameDomain::new_with_margins(
-        series_domains,
-        (middle_domain.margins.iter().cloned())
-            .filter(|m| m.by.is_subset(&h_keys))
-            .map(|mut m| {
-                m.by = materialize_grouping_keys(&m.by)?;
-                m.invariant = None;
-                Ok(m)
-            })
-            .collect::<Fallible<_>>()?,
-    )?;
-
+    let aggs = aggs.to_vec();
     let t_group_agg = Transformation::new(
         middle_domain,
         middle_metric.clone(),
         output_domain,
         middle_metric.clone(),
         Function::new(move |plan: &DslPlan| {
-            #[cfg(patch_polars)]
-            let output = DslPlan::GroupBy {
-                input: Arc::new(plan.clone()),
-                keys: stable_keys.clone(),
-                predicates: vec![],
-                aggs: aggs.clone(),
-                apply: None,
-                maintain_order: false,
-                options: options.clone(),
-            };
-            #[cfg(not(patch_polars))]
-            let output = DslPlan::GroupBy {
-                input: Arc::new(plan.clone()),
-                keys: stable_keys.clone(),
-                aggs: aggs.clone(),
-                apply: None,
-                maintain_order: false,
-                options: options.clone(),
-            };
-            output
+            group_by_plan(
+                plan.clone(),
+                stable_keys.clone(),
+                aggs.clone(),
+                maintain_order,
+            )
         }),
         StabilityMap::new_fallible(move |d_in: &Bounds| {
             let contributed_rows = d_in.get_bound(&HashSet::new()).per_group;
-            let contributed_groups = d_in.get_bound(&h_keys).num_groups;
+            let contributed_groups = d_in.get_bound(&grouping_keys).num_groups;
 
             let Some(influenced_groups) = option_min(contributed_rows, contributed_groups) else {
                 return fallible!(
@@ -189,12 +108,114 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     t_prior >> t_group_agg
 }
 
+/// Match a group-by without apply, HAVING, slicing or dynamic/rolling options.
+pub(super) fn match_ordinary_group_by(
+    plan: &DslPlan,
+) -> Fallible<(&DslPlan, &[Expr], &[Expr], bool)> {
+    let DslPlan::GroupBy {
+        input,
+        keys,
+        aggs,
+        apply,
+        maintain_order,
+        options,
+        #[cfg(patch_polars)]
+        predicates,
+    } = plan
+    else {
+        return fallible!(MakeTransformation, "Expected group-by in logical plan");
+    };
+
+    if apply.is_some() {
+        return fallible!(
+            MakeTransformation,
+            "Apply is not currently supported in the logical plan. Please open an issue if this would be useful to you."
+        );
+    }
+
+    #[cfg(patch_polars)]
+    if !predicates.is_empty() {
+        return fallible!(
+            MakeTransformation,
+            "Having is not currently supported in logical plan. Please open an issue if this would be useful to you."
+        );
+    }
+
+    if options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
+        return fallible!(
+            MakeTransformation,
+            "Unsupported stable group-by options: {options:?}"
+        );
+    }
+
+    Ok((input.as_ref(), keys, aggs, *maintain_order))
+}
+
+/// Shared domain analysis for a group-by with already validated grouping keys.
+/// Original keys identify input margins; execution keys are the expressions
+/// actually evaluated by Polars. No metric conversion or stability map occurs here.
+/// # Proof Definition
+/// Given corresponding original and validated execution keys, return the output
+/// domain of the aggregation, checking the aggregation expressions for infallibility.
+#[proven]
+pub(super) fn group_by_output_domain(
+    domain: &DslPlanDomain,
+    original_keys: &HashSet<Expr>,
+    keys: &[Expr],
+    aggs: &[Expr],
+) -> Fallible<DslPlanDomain> {
+    aggs.iter()
+        .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+
+    FrameDomain::new_with_margins(
+        domain
+            .simulate_schema(|lf| lf.group_by(keys).agg(aggs))?
+            .iter_fields()
+            .map(SeriesDomain::new_from_field)
+            .collect::<Fallible<_>>()?,
+        domain
+            .margins
+            .iter()
+            .filter(|m| m.by.is_subset(original_keys))
+            .cloned()
+            .map(|mut m| {
+                m.by = materialize_grouping_keys(&m.by)?;
+                m.invariant = None;
+                Ok(m)
+            })
+            .collect::<Fallible<_>>()?,
+    )
+}
+
+/// Build an ordinary group-by from the expressions certified by the caller.
+pub(super) fn group_by_plan(
+    input: DslPlan,
+    keys: Vec<Expr>,
+    aggs: Vec<Expr>,
+    maintain_order: bool,
+) -> DslPlan {
+    DslPlan::GroupBy {
+        input: Arc::new(input),
+        keys,
+        #[cfg(patch_polars)]
+        predicates: vec![],
+        aggs,
+        apply: None,
+        maintain_order,
+        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
+    }
+}
+
 /// Express a subset of validated grouping keys as their materialized output columns.
 /// Re-evaluating a grouping expression after aggregation may describe different groups.
 pub(super) fn materialize_grouping_keys(by: &HashSet<Expr>) -> Fallible<HashSet<Expr>> {
     by.iter()
         .map(|key| Ok(col(key.clone().meta().output_name()?)))
         .collect()
+}
+
+pub(super) fn has_canonical_representatives(dtype: &DataType) -> bool {
+    !crate::polars::contains_float(dtype)
 }
 
 #[derive(Clone, Copy)]

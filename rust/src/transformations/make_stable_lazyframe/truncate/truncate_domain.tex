@@ -44,25 +44,16 @@ Truncation keys are stable row-by-row transformations of the data.
     This is reflected in line \ref{line:invariant-filter}.
 
     Now consider the case where \texttt{truncation} is a groupby operation.
-    Since each group becomes one row in the resulting dataset,
-    an arbitrary black-box function may be applied to each group,
-    so long as erors from the black-box function (the aggregates) are data-independent.
-    Line \ref{line:infallible} ensures that the aggregates are infallible.
-
-    The schema of members of the output domain is determined by the keys and aggregates of the groupby operation,
-    which is computed on line \ref{line:simulate-schema}.
-    Only margins whose grouping expressions are a subset of the original grouping keys are retained.
-    For each such margin, line \ref{line:materialized-margin} replaces every key expression
-    with \texttt{col(output\_name)} for that expression.
-    A group key is evaluated on the input and stored under its output name by the groupby operation,
-    so grouping output rows by these materialized columns uses the same labels as the original input grouping.
-    Evaluating the original expression again on the output is not generally equivalent.
-
-    Each original row contributes to at most one output row,
-    and each output row retains its original grouping labels.
-    Therefore the upper bounds on group lengths and the number of groups remain valid for the translated margins,
-    even when the aggregates change other columns.
-    Among preserved margins, invariants are discarded.
+    The grouping keys have already been checked to be stable row-by-row.
+    The constructor rejects grouping keys with noncanonical representatives.
+    On line \ref{line:group-by-domain}, the common groupby domain analysis checks
+    that aggregates are infallible, infers the output
+    schema and translates retained margins to materialized output columns,
+    as established by
+    \rustdoc{transformations/make_stable_lazyframe/group_by/fn}{group\_by\_output\_domain}.
+    The original and executed keys are identical for truncation.
+    This argument does not require the ordinary groupby's stability map:
+    identifier-to-row distance conversion is proved separately.
 \end{proof}
 
 \end{document}

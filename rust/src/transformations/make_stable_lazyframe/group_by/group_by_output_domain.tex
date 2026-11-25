@@ -1,0 +1,52 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn group\_by\_output\_domain}}
+\author{\MichaelShoemateAuthor}
+\begin{document}
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+Types matching pseudocode.
+
+\subsubsection*{Caller-verified}
+The execution keys are stable row-by-row expressions with canonical representatives.
+For every original key there is a corresponding execution key that preserves its values
+and output name on the input domain, so the original margins describe the same partition.
+The group-by uses ordinary options and no apply or having clause.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/group_by_output_domain.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+If the constructor succeeds, ordinary group-by on the execution keys with the
+given aggregations produces a member of the returned domain or raises a
+data-independent runtime exception, subject to the existing infallibility checker.
+Retained margins describe the corresponding materialized output keys.
+\end{theorem}
+
+\begin{proof}
+    The caller supplies validated row-by-row grouping expressions with canonical representatives, preserving the values and output names of the original keys on the input domain.
+    By line \ref{line:infallible-aggs} the aggregates are infallible.
+    By the postcondition of \texttt{DslPlan.simulate\_schema},
+    \texttt{series\_domains} follows the expected schema of members in the output domain.
+    The output column domains preserve the schema while allowing infallible black-box aggregation.
+
+    Only margins whose original grouping expressions are a subset of the grouping keys are preserved.
+    On line \ref{line:materialized-margin}, each preserved key becomes \texttt{col(output\_name)}.
+    Polars evaluates a grouping expression on the input and stores its value in the output column with that name.
+    The translated margin therefore partitions output rows by the same labels as the original margin partitions input rows.
+    Each input row contributes to at most one output row,
+    so the upper bounds on group lengths and the number of groups remain valid.
+    Re-evaluating the original expression after aggregation is not generally equivalent
+    and must not inherit the original margin.
+    Among these margins, invariants are discarded.
+
+    It has been shown that for every element $x$ in \texttt{domain}, the group-by result on $x$ is in the returned domain or raises a data-independent runtime exception.
+\end{proof}
+\end{document}

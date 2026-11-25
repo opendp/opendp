@@ -1,13 +1,7 @@
 use std::collections::HashSet;
 
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
-use crate::{
-    error::Fallible,
-    metrics::Bound,
-    polars::literal_value_of,
-    traits::InfAdd,
-    transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
-};
+use super::super::group_by::{Resize, check_infallible, match_ordinary_group_by};
+use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
@@ -103,33 +97,7 @@ fn match_group_by_truncation(
     plan: &DslPlan,
     identifier: &Expr,
 ) -> Option<(DslPlan, Truncation, Bound)> {
-    #[cfg(patch_polars)]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        options,
-        ..
-    } = plan.clone()
-    else {
-        return None;
-    };
-    #[cfg(not(patch_polars))]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        options,
-        ..
-    } = plan.clone()
-    else {
-        return None;
-    };
-    if apply.is_some() || options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
-        return None;
-    }
+    let (input, keys, aggs, _) = match_ordinary_group_by(plan).ok()?;
 
     let (ids, by) = (keys.iter().cloned()).partition::<HashSet<_>, _>(|expr| expr == identifier);
 
@@ -138,8 +106,11 @@ fn match_group_by_truncation(
     }
 
     Some((
-        (*input).clone(),
-        Truncation::GroupBy { keys, aggs },
+        input.clone(),
+        Truncation::GroupBy {
+            keys: keys.to_vec(),
+            aggs: aggs.to_vec(),
+        },
         Bound {
             by,
             per_group: Some(1),
@@ -273,7 +244,7 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
 #[proven]
 fn match_num_groups_predicate(
     ranks: &Expr,
-    partition_by: &Vec<Expr>,
+    partition_by: &[Expr],
     identifier: &Expr,
     threshold: u32,
 ) -> Fallible<Option<Bound>> {
@@ -286,7 +257,7 @@ fn match_num_groups_predicate(
     else {
         return Ok(None);
     };
-    if partition_by != &vec![identifier.clone()] {
+    if partition_by != std::slice::from_ref(identifier) {
         return fallible!(
             MakeTransformation,
             "num_groups truncation must use the identifier in the over clause"
@@ -361,7 +332,7 @@ fn match_num_groups_predicate(
 #[proven]
 fn match_per_group_predicate(
     mut enumeration: &Expr,
-    partition_by: &Vec<Expr>,
+    partition_by: &[Expr],
     identifier: &Expr,
     threshold: u32,
 ) -> Fallible<Option<Bound>> {

@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{
     Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
     SymmetricIdDistance,
 };
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
 use matching::Truncation;
@@ -15,7 +14,9 @@ use opendp_derive::proven;
 use polars::prelude::*;
 
 use super::StableDslPlan;
-use super::group_by::{Resize, check_infallible, materialize_grouping_keys};
+use super::group_by::{
+    group_by_output_domain, group_by_plan, has_canonical_representatives, materialize_grouping_keys,
+};
 
 #[cfg(test)]
 mod test;
@@ -55,7 +56,8 @@ pub fn make_stable_truncate(
     let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
         t_prior.output_space();
 
-    (truncation_bounds.iter().flat_map(|b| &b.by)).try_for_each(|key| {
+    let grouping_keys: HashSet<_> = truncation_bounds.iter().flat_map(|b| &b.by).collect();
+    for key in grouping_keys {
         // check that each grouping key/over key is infallible row-by-row
         make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
             WildExprDomain {
@@ -64,9 +66,8 @@ pub fn make_stable_truncate(
             },
             L0PInfDistance(middle_metric.0.clone()),
             key.clone(),
-        )
-        .map(|_| ())
-    })?;
+        )?;
+    }
 
     let output_domain = (truncations.iter())
         .try_fold(middle_domain.clone(), |domain, truncation| {
@@ -76,14 +77,15 @@ pub fn make_stable_truncate(
     // The matcher permits filters followed by an optional final group-by.
     // Only that final group-by changes the expressions naming the output groups.
     let has_group_by = matches!(truncations.last(), Some(Truncation::GroupBy { .. }));
-    let output_bys = truncation_bounds
-        .iter()
+    let bounds = truncation_bounds
+        .into_iter()
         .map(|bound| {
-            if has_group_by {
-                materialize_grouping_keys(&bound.by)
+            let output_by = if has_group_by {
+                materialize_grouping_keys(&bound.by)?
             } else {
-                Ok(bound.by.clone())
-            }
+                bound.by.clone()
+            };
+            Ok((bound, output_by))
         })
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -95,30 +97,11 @@ pub fn make_stable_truncate(
         Function::new(move |plan: &DslPlan| {
             (truncations.iter()).fold(plan.clone(), |plan, truncation| match truncation {
                 Truncation::Filter(predicate) => DslPlan::Filter {
-                    input: Arc::new(plan.clone()),
+                    input: Arc::new(plan),
                     predicate: predicate.clone(),
                 },
                 Truncation::GroupBy { keys, aggs } => {
-                    #[cfg(patch_polars)]
-                    let output = DslPlan::GroupBy {
-                        input: Arc::new(plan),
-                        keys: keys.clone(),
-                        aggs: aggs.clone(),
-                        predicates: vec![],
-                        apply: None,
-                        maintain_order: false,
-                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
-                    };
-                    #[cfg(not(patch_polars))]
-                    let output = DslPlan::GroupBy {
-                        input: Arc::new(plan),
-                        keys: keys.clone(),
-                        aggs: aggs.clone(),
-                        apply: None,
-                        maintain_order: false,
-                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
-                    };
-                    output
+                    group_by_plan(plan, keys.clone(), aggs.clone(), false)
                 }
             })
         }),
@@ -126,8 +109,8 @@ pub fn make_stable_truncate(
             let total_num_ids = id_bounds.get_bound(&Default::default()).per_group;
 
             // each truncation is used to derive row bounds
-            let new_bounds = (truncation_bounds.iter())
-                .zip(&output_bys)
+            let new_bounds = bounds
+                .iter()
                 .map(|(truncation_bound, output_by)| {
                     // Input certificates still refer to the original grouping expressions.
                     let mut row_bound = truncate_id_bound(
@@ -149,7 +132,7 @@ pub fn make_stable_truncate(
 /// Returns the domain that spans all outputs when truncation is applied to all members of the input domain.
 #[proven]
 fn truncate_domain(mut domain: DslPlanDomain, truncation: &Truncation) -> Fallible<DslPlanDomain> {
-    match &truncation {
+    match truncation {
         Truncation::Filter { .. } => {
             domain.margins.iter_mut().for_each(|m| {
                 // after filtering you no longer know partition lengths or keys
@@ -160,30 +143,18 @@ fn truncate_domain(mut domain: DslPlanDomain, truncation: &Truncation) -> Fallib
             Ok(domain)
         }
         Truncation::GroupBy { keys, aggs } => {
-            // each agg expression must be infallible
-            aggs.iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-
-            // derive new output domain
-            FrameDomain::new_with_margins(
-                domain
-                    .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
-                    .iter_fields()
-                    .map(SeriesDomain::new_from_field)
-                    .collect::<Fallible<_>>()?,
-                domain
-                    .margins
-                    .into_iter()
-                    // only keep margins that are a subset of the truncation keys
-                    .filter(|m| m.by.is_subset(&HashSet::from_iter(keys.clone())))
-                    // discard invariants as multiverses are mixed
-                    .map(|mut m| {
-                        m.by = materialize_grouping_keys(&m.by)?;
-                        m.invariant = None;
-                        Ok(m)
-                    })
-                    .collect::<Fallible<_>>()?,
-            )
+            // The input identifier metric is unordered even within an id.
+            // Validate the entire aggregation before dropping identifiers.
+            let schema = domain.schema();
+            for key in keys {
+                if !has_canonical_representatives(&key.clone().to_field(&schema)?.dtype) {
+                    return fallible!(
+                        MakeTransformation,
+                        "Floating-point grouping keys may emit permutation-dependent representatives (signed zeros or NaN payloads)."
+                    );
+                }
+            }
+            group_by_output_domain(&domain, &keys.iter().cloned().collect(), keys, aggs)
         }
     }
 }

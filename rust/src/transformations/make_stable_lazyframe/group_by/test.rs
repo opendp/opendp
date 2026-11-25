@@ -6,32 +6,38 @@ use crate::metrics::SymmetricDistance;
 use crate::transformations::make_stable_lazyframe;
 
 #[test]
-fn test_check_infallible() -> Fallible<()> {
-    // failure to cast causes a data-dependent error
-    assert!(check_infallible(&lit("a").strict_cast(DataType::Int32), Resize::Allow).is_err());
-
-    // Sample-and-aggregate cannot validate temporal input ranges.
-    assert!(check_infallible(&col("t").dt().year(), Resize::Allow).is_err());
-    assert!(check_infallible(&col("t").dt().hour(), Resize::Allow).is_err());
-
-    Ok(())
-}
-
-#[test]
-fn test_check_infallible_resize() -> Fallible<()> {
-    // col doesn't resize, so passes the ban
-    assert!(check_infallible(&col("A"), Resize::Ban).is_ok());
-    // sum results in a broadcastable scalar, so it passes the ban
-    assert!(check_infallible(&col("A").sum(), Resize::Ban).is_ok());
-    // unique resizes, so fails the ban
-    assert!(check_infallible(&col("A").unique(), Resize::Ban).is_err());
-    // resizing behind an aggregation is allowed, though, because it can broadcast
-    assert!(check_infallible(&col("A").unique().sum(), Resize::Ban).is_ok());
-    // while resizing is generally allowed, binary ops ban resizing
-    assert!(check_infallible(&(col("A").unique() + col("B")), Resize::Allow).is_err());
-    // the sum results in a broadcastable scalar, so it passes the binary op resize ban
-    assert!(check_infallible(&(col("A").unique().sum() + col("B")), Resize::Ban).is_ok());
-
+fn test_group_by_output_margins() -> Fallible<()> {
+    for (key, name) in [
+        (col("A"), "A"),
+        (col("A").alias("key"), "key"),
+        (col("A") + col("B"), "A"),
+    ] {
+        let domain = DslPlanDomain::new(vec![
+            SeriesDomain::new("A", AtomDomain::<i32>::default()),
+            SeriesDomain::new("B", AtomDomain::<i32>::default()),
+        ])?
+        .with_margin(
+            Margin::by([key.clone()])
+                .with_max_groups(4)
+                .with_max_length(3)
+                .with_invariant_lengths(),
+        )?
+        .with_margin(Margin::by([col("B")]).with_max_groups(8))?;
+        let output = group_by_output_domain(
+            &domain,
+            &HashSet::from([key.clone()]),
+            &[key],
+            &[col("B").sum()],
+        )?;
+        assert_eq!(
+            output.margins,
+            vec![
+                Margin::by([col(name)])
+                    .with_max_groups(4)
+                    .with_max_length(3)
+            ]
+        );
+    }
     Ok(())
 }
 
@@ -68,49 +74,68 @@ fn test_group_by_materializes_computed_margin_keys() -> Fallible<()> {
 }
 
 #[test]
-fn test_group_by_materializes_aliased_margin_keys() -> Fallible<()> {
-    let key = col("A").alias("key");
-    let lf = df!("A" => [1i32, 2])?.lazy();
-    let domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-        .with_margin(Margin::by([key.clone()]).with_max_groups(2))?;
-    let t: Transformation<_, _, _, FrameDistance<SymmetricDistance>> = make_stable_lazyframe(
+fn test_stable_group_by_categorical() -> Fallible<()> {
+    use crate::domains::{CategoricalDomain, LazyFrameDomain};
+    use crate::metrics::SymmetricDistance;
+    use crate::transformations::make_stable_lazyframe;
+
+    let categories = Categories::global();
+    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
+    let series = Series::new("category".into(), ["B", "A", "B"]).cast(&dtype)?;
+    let lf = DataFrame::new(vec![series.into_column()])?.lazy();
+    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "category",
+        CategoricalDomain::default(),
+    )])?;
+
+    let t = make_stable_lazyframe(
         domain,
         FrameDistance(SymmetricDistance),
-        lf.group_by([key]).agg([]),
+        lf.clone().group_by(["category"]).agg([len()]),
     )?;
 
+    let actual = t.invoke(&lf)?.collect()?;
+    let labels = actual.column("category")?.cast(&DataType::String)?;
+    let counts = actual.column("len")?.u32()?;
+    let groups: std::collections::HashMap<_, _> = labels
+        .str()?
+        .into_no_null_iter()
+        .zip(counts.into_no_null_iter())
+        .collect();
     assert_eq!(
-        t.output_domain.margins,
-        vec![Margin::by([col("key")]).with_max_groups(2)]
+        groups,
+        std::collections::HashMap::from([("A", 1), ("B", 2)])
     );
     Ok(())
 }
 
 #[test]
-fn test_group_by_preserves_plain_margin_keys() -> Fallible<()> {
-    let lf = df!("A" => [1i32, 2], "B" => [3i32, 4])?.lazy();
-    let margin = Margin::by([col("A")])
-        .with_max_groups(2)
-        .with_max_length(1)
-        .with_invariant_lengths();
-    let domain = LazyFrameDomain::new(vec![
-        SeriesDomain::new("A", AtomDomain::<i32>::default()),
-        SeriesDomain::new("B", AtomDomain::<i32>::default()),
-    ])?
-    .with_margin(margin.clone())?;
-    let t: Transformation<_, _, _, FrameDistance<SymmetricDistance>> = make_stable_lazyframe(
-        domain,
-        FrameDistance(SymmetricDistance),
-        lf.group_by([col("A")]).agg([col("B").sum()]),
-    )?;
+fn test_check_infallible() -> Fallible<()> {
+    // failure to cast causes a data-dependent error
+    assert!(check_infallible(&lit("a").strict_cast(DataType::Int32), Resize::Allow).is_err());
 
-    assert_eq!(
-        t.output_domain.margins,
-        vec![Margin {
-            invariant: None,
-            ..margin
-        }]
-    );
+    // Sample-and-aggregate cannot validate temporal input ranges.
+    assert!(check_infallible(&col("t").dt().year(), Resize::Allow).is_err());
+    assert!(check_infallible(&col("t").dt().hour(), Resize::Allow).is_err());
+
+    Ok(())
+}
+
+#[test]
+fn test_check_infallible_resize() -> Fallible<()> {
+    // col doesn't resize, so passes the ban
+    assert!(check_infallible(&col("A"), Resize::Ban).is_ok());
+    // sum results in a broadcastable scalar, so it passes the ban
+    assert!(check_infallible(&col("A").sum(), Resize::Ban).is_ok());
+    // unique resizes, so fails the ban
+    assert!(check_infallible(&col("A").unique(), Resize::Ban).is_err());
+    // resizing behind an aggregation is allowed, though, because it can broadcast
+    assert!(check_infallible(&col("A").unique().sum(), Resize::Ban).is_ok());
+    // while resizing is generally allowed, binary ops ban resizing
+    assert!(check_infallible(&(col("A").unique() + col("B")), Resize::Allow).is_err());
+    // the sum results in a broadcastable scalar, so it passes the binary op resize ban
+    assert!(check_infallible(&(col("A").unique().sum() + col("B")), Resize::Ban).is_ok());
+
     Ok(())
 }
 
@@ -144,30 +169,5 @@ fn test_check_infallible_pow_and_qcut() -> Fallible<()> {
         assert!(check_infallible(&qcut.first(), Resize::Allow).is_err());
     }
 
-    Ok(())
-}
-
-#[test]
-fn test_stable_group_by_categorical() -> Fallible<()> {
-    use crate::domains::{CategoricalDomain, LazyFrameDomain};
-    use crate::metrics::SymmetricDistance;
-    use crate::transformations::make_stable_lazyframe;
-
-    let categories = Categories::global();
-    let dtype = DataType::Categorical(categories.clone(), categories.mapping());
-    let series = Series::new("category".into(), ["B", "A", "B"]).cast(&dtype)?;
-    let lf = DataFrame::new(vec![series.into_column()])?.lazy();
-    let domain = LazyFrameDomain::new(vec![SeriesDomain::new(
-        "category",
-        CategoricalDomain::default(),
-    )])?;
-
-    let t = make_stable_lazyframe(
-        domain,
-        FrameDistance(SymmetricDistance),
-        lf.clone().group_by(["category"]).agg([len()]),
-    )?;
-
-    assert_eq!(t.invoke(&lf)?.collect()?.height(), 2);
     Ok(())
 }

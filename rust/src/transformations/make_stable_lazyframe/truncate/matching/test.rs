@@ -239,7 +239,7 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
         num_groups: Some(10),
     });
 
-    let check = |expr: Expr| match_num_groups_predicate(&expr, &vec![col("ID")], &col("ID"), 10);
+    let check = |expr: Expr| match_num_groups_predicate(&expr, &[col("ID")], &col("ID"), 10);
     assert_eq!(
         check(col("A").rank(
             RankOptions {
@@ -275,7 +275,7 @@ fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
     });
 
     let check =
-        |expr: Expr| match_per_group_predicate(&expr, &vec![col("A"), col("ID")], &col("ID"), 10);
+        |expr: Expr| match_per_group_predicate(&expr, &[col("A"), col("ID")], &col("ID"), 10);
 
     let range = int_range(lit(0), len(), 1, DataType::Int64);
     assert_eq!(check(range.clone())?, bound);
@@ -293,8 +293,24 @@ fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
 fn test_match_per_group_predicate_id() -> Fallible<()> {
     let range = int_range(lit(0), len(), 1, DataType::Int64);
     // no matches should error
-    assert!(match_per_group_predicate(&range, &vec![col("A")], &col("ID"), 10).is_err());
+    assert!(match_per_group_predicate(&range, &[col("A")], &col("ID"), 10).is_err());
     // multiple matches should pass
-    assert!(match_per_group_predicate(&range, &vec![col("ID"); 2], &col("ID"), 0)?.is_some());
+    assert!(match_per_group_predicate(&range, &[col("ID"), col("ID")], &col("ID"), 0)?.is_some());
+    Ok(())
+}
+
+#[cfg(patch_polars)]
+#[test]
+fn test_group_by_truncation_rejects_having() -> Fallible<()> {
+    let mut plan = df!("ID" => [1i32], "A" => [2i32])?
+        .lazy()
+        .group_by([col("ID")])
+        .agg([col("A").sum()])
+        .logical_plan;
+    let DslPlan::GroupBy { predicates, .. } = &mut plan else {
+        panic!("expected group-by");
+    };
+    predicates.push(col("A").gt(lit(0)));
+    assert!(match_group_by_truncation(&plan, &col("ID")).is_none());
     Ok(())
 }

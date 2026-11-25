@@ -11,31 +11,10 @@ def truncate_domain(
             # Upper bounds on the number of rows and groups remain valid.
             return domain
         case Truncation.GroupBy(keys, aggs):
-            for agg in aggs:
-                # True means resize is allowed
-                check_infallible(agg, True)  # |\label{line:infallible}|
-
-            def with_truncation(lf):
-                return lf.group_by(keys).agg(aggs)
-
-            def output_margin(m):
-                m.by = materialize_grouping_keys(
-                    m.by
-                )  # |\label{line:materialized-margin}|
-                m.invariant = None
-                return m
-
-            # derive new output domain
-            return FrameDomain.new_with_margins(
-                [  # |\label{line:simulate-schema}|
-                    Seriesdomain.new_from_field(f)
-                    for f in domain.simulate_schema(with_truncation)
-                ],
-                margins=[
-                    # discard invariants as multiverses are mixed
-                    output_margin(m.clone())
-                    for m in domain.margins
-                    # only keep margins that are a subset of the truncation keys
-                    if m.by.is_subset(HashSet.from_iter(keys))
-                ],
+            schema = domain.schema()
+            for key in keys:
+                if not has_canonical_representatives(key.to_field(schema).dtype):
+                    raise ValueError("noncanonical grouping key")
+            return group_by_output_domain(  # |\label{line:group-by-domain}|
+                domain, set(keys), keys, aggs
             )

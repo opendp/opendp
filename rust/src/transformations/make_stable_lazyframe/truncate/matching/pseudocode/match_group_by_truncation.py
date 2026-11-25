@@ -11,7 +11,7 @@ def match_group_by_truncation(
     apply = plan.apply
     options = plan.options
 
-    if apply is not None or options != GroupbyOptions.default():
+    if apply is not None or plan.predicates or options != GroupbyOptions.default():
         return None  # |\label{line:check_apply}|
 
     ids, by = partition(
