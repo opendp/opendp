@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod accuracy;
 pub(crate) mod options;
+pub(crate) mod permute;
 pub mod preflight;
 
 #[cfg(test)]
@@ -58,6 +59,18 @@ pub(crate) trait OpenDPPlugin:
 #[cfg(feature = "ffi")]
 static OPENDP_LIB_NAME: &str = "opendp";
 
+#[cfg(feature = "ffi")]
+static POLARS_PLUGIN_PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+#[cfg(feature = "ffi")]
+#[unsafe(no_mangle)]
+pub extern "C" fn _set_polars_plugin_path(path: *const std::ffi::c_char) -> bool {
+    let Ok(path) = crate::ffi::util::to_str(path) else {
+        return false;
+    };
+    POLARS_PLUGIN_PATH.get_or_init(|| path.to_owned()) == path
+}
+
 pub(crate) fn match_plugin<'e, KW>(expr: &'e Expr) -> Fallible<Option<&'e Vec<Expr>>>
 where
     KW: OpenDPPlugin,
@@ -75,9 +88,15 @@ where
                 },
             ..
         } => {
-            // check that the plugin is from the opendp library and the plugin has a matching name
             if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
+            }
+            // FFI plugins must be rebound to the registered OpenDP library.
+            if POLARS_PLUGIN_PATH.get().is_none() {
+                return fallible!(
+                    FailedFunction,
+                    "OpenDP Polars plugin path is not configured"
+                );
             }
 
             if kwargs.len() > 3 {
@@ -124,9 +143,15 @@ where
                 },
             ..
         } => {
-            // check that the plugin is from the opendp library and the plugin has a matching name
             if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
+            }
+            // FFI plugins must be rebound to the registered OpenDP library.
+            if POLARS_PLUGIN_PATH.get().is_none() {
+                return fallible!(
+                    FailedFunction,
+                    "OpenDP Polars plugin path is not configured"
+                );
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
                 .map_err(|e| err!(FailedFunction, "{}", e))?;
@@ -191,12 +216,16 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         #[cfg(feature = "ffi")]
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
-            function: FunctionExpr::FfiPlugin { lib, .. },
+            function: FunctionExpr::FfiPlugin { .. },
         } => Expr::Function {
             input: input_exprs,
             function: FunctionExpr::FfiPlugin {
                 flags: KW::function_options(),
-                lib,
+                lib: POLARS_PLUGIN_PATH
+                    .get()
+                    .expect("plugin path is registered before matching")
+                    .as_str()
+                    .into(),
                 symbol: KW::NAME.into(),
                 kwargs: if KW::SHIM {
                     Default::default()
@@ -353,6 +382,14 @@ impl PrivacyNamespace for Expr {
 
 pub struct DPExpr(Expr);
 impl DPExpr {
+    /// Return a uniformly random permutation of this expression's rows.
+    ///
+    /// Randomness is cryptographically secure. This operation materializes
+    /// its input and an O(n) index buffer.
+    pub fn permute(self) -> Expr {
+        permute::apply_permute(self.0)
+    }
+
     /// Add noise to the expression.
     ///
     /// `scale` must not be negative or inf.
