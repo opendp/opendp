@@ -76,7 +76,7 @@ fn test_truncate_domain_computed_group_keys() -> Fallible<()> {
             .with_invariant_keys(),
     )?;
 
-    let output = group_by_output_domain(&domain, &[col("ID"), key.clone()], &[col("B").sum()])?;
+    let output = prepare_group_by(&domain, &[col("ID"), key.clone()], &mut [col("B").sum()])?;
 
     // A now contains the former A + B, while B contains sum(B). Evaluating
     // the same expression on those new columns describes different groups.
@@ -98,7 +98,7 @@ fn test_truncate_domain_aliased_group_keys() -> Fallible<()> {
     ])?
     .with_margin(Margin::by([key.clone()]).with_max_groups(4))?;
 
-    let output = group_by_output_domain(&domain, &[col("ID"), key.clone()], &[])?;
+    let output = prepare_group_by(&domain, &[col("ID"), key.clone()], &mut [])?;
 
     // An alias names an output column; it is not a request to evaluate the
     // original input-column expression again against the output schema.
@@ -122,7 +122,7 @@ fn test_truncate_domain_plain_group_keys() -> Fallible<()> {
     ])?
     .with_margin(margin.clone())?;
 
-    let output = group_by_output_domain(&domain, &[col("ID"), col("A")], &[])?;
+    let output = prepare_group_by(&domain, &[col("ID"), col("A")], &mut [])?;
 
     assert_eq!(
         output.margins,
@@ -141,8 +141,12 @@ fn test_truncate_domain_rejects_duplicate_output_key_names() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?;
-    let error = group_by_output_domain(&domain, &[col("ID"), col("A"), col("A") + col("B")], &[])
-        .unwrap_err();
+    let error = prepare_group_by(
+        &domain,
+        &[col("ID"), col("A"), col("A") + col("B")],
+        &mut [],
+    )
+    .unwrap_err();
 
     // Both A and A + B emit column A, so no unambiguous output schema or
     // partition certificates can be constructed for this query.

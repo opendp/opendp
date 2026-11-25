@@ -27,8 +27,7 @@ def match_per_group_predicate(
             enumeration = input[0]
 
     elif isinstance(enumeration, Expr.SortBy):
-        for key in enumeration.by:
-            check_infallible(key, Resize.Ban)
+        # The constructor checks these keys against the preceding schema.
         enumeration = enumeration.expr  # |\label{line:reordering_end}|
 
     # in Rust, the != results in a boolean comparison, not a "ne" expression

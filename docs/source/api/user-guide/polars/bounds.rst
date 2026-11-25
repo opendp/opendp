@@ -86,7 +86,7 @@ the statistics of interest.
             ...     .group_by(pl.col.PIDENT)  # truncation begins here
             ...     .agg(
             ...         pl.col.HWUSUAL.mean()
-            ...     )  # arbitrary expressions can be used here
+            ...     )
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()

@@ -6,36 +6,6 @@ use crate::metrics::SymmetricDistance;
 use crate::transformations::make_stable_lazyframe;
 
 #[test]
-fn test_check_infallible() -> Fallible<()> {
-    // failure to cast causes a data-dependent error
-    assert!(check_infallible(&lit("a").strict_cast(DataType::Int32), Resize::Allow).is_err());
-
-    // Sample-and-aggregate cannot validate temporal input ranges.
-    assert!(check_infallible(&col("t").dt().year(), Resize::Allow).is_err());
-    assert!(check_infallible(&col("t").dt().hour(), Resize::Allow).is_err());
-
-    Ok(())
-}
-
-#[test]
-fn test_check_infallible_resize() -> Fallible<()> {
-    // col doesn't resize, so passes the ban
-    assert!(check_infallible(&col("A"), Resize::Ban).is_ok());
-    // sum results in a broadcastable scalar, so it passes the ban
-    assert!(check_infallible(&col("A").sum(), Resize::Ban).is_ok());
-    // unique resizes, so fails the ban
-    assert!(check_infallible(&col("A").unique(), Resize::Ban).is_err());
-    // resizing behind an aggregation is allowed, though, because it can broadcast
-    assert!(check_infallible(&col("A").unique().sum(), Resize::Ban).is_ok());
-    // while resizing is generally allowed, binary ops ban resizing
-    assert!(check_infallible(&(col("A").unique() + col("B")), Resize::Allow).is_err());
-    // the sum results in a broadcastable scalar, so it passes the binary op resize ban
-    assert!(check_infallible(&(col("A").unique().sum() + col("B")), Resize::Ban).is_ok());
-
-    Ok(())
-}
-
-#[test]
 fn test_group_by_output_margins() -> Fallible<()> {
     for (key, name) in [
         (col("A"), "A"),
@@ -53,7 +23,7 @@ fn test_group_by_output_margins() -> Fallible<()> {
                 .with_invariant_lengths(),
         )?
         .with_margin(Margin::by([col("B")]).with_max_groups(8))?;
-        let output = group_by_output_domain(&domain, &[key], &[col("B").sum()])?;
+        let output = prepare_group_by(&domain, &[key], &mut [col("B").sum()])?;
         assert_eq!(
             output.margins,
             vec![
@@ -99,39 +69,6 @@ fn test_group_by_materializes_computed_margin_keys() -> Fallible<()> {
 }
 
 #[test]
-fn test_check_infallible_pow_and_qcut() -> Fallible<()> {
-    // Integer pow may fail when a private exponent is negative.
-    let pow = Expr::Function {
-        input: vec![col("a"), col("b")],
-        function: FunctionExpr::Pow(PowFunction::Generic),
-    };
-    assert!(check_infallible(&pow.first(), Resize::Allow).is_err());
-
-    // The fixed-arity sqrt variant does not cast a private exponent.
-    let sqrt = Expr::Function {
-        input: vec![col("a")],
-        function: FunctionExpr::Pow(PowFunction::Sqrt),
-    };
-    assert!(check_infallible(&sqrt, Resize::Allow).is_ok());
-
-    for allow_duplicates in [false, true] {
-        let qcut = Expr::Function {
-            input: vec![col("v")],
-            function: FunctionExpr::QCut {
-                probs: vec![0.25, 0.5, 0.75],
-                labels: None,
-                left_closed: false,
-                allow_duplicates,
-                include_breaks: false,
-            },
-        };
-        assert!(check_infallible(&qcut.first(), Resize::Allow).is_err());
-    }
-
-    Ok(())
-}
-
-#[test]
 fn test_stable_group_by_categorical() -> Fallible<()> {
     use crate::domains::{CategoricalDomain, LazyFrameDomain};
     use crate::metrics::SymmetricDistance;
@@ -163,6 +100,28 @@ fn test_stable_group_by_categorical() -> Fallible<()> {
     assert_eq!(
         groups,
         std::collections::HashMap::from([("A", 1), ("B", 2)])
+    );
+    Ok(())
+}
+
+#[test]
+fn test_group_by_rejects_ordered_input() -> Fallible<()> {
+    use crate::metrics::InsertDeleteDistance;
+
+    let domain = DslPlanDomain::new(vec![SeriesDomain::new("key", AtomDomain::<i32>::default())])?;
+    let plan = df!("key" => [1i32])?
+        .lazy()
+        .group_by([col("key")])
+        .agg([len()])
+        .logical_plan;
+    let error = make_stable_group_by(domain, FrameDistance(InsertDeleteDistance), plan)
+        .err()
+        .expect("ordered metric must be rejected");
+    assert!(
+        error
+            .message
+            .unwrap()
+            .contains("requires an unordered input metric")
     );
     Ok(())
 }

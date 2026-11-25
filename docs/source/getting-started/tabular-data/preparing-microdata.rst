@@ -194,9 +194,10 @@ Group By / Agg (Stable)
 the private ``group_by/agg`` or ``select`` aggregation. This is a
 generalization of the *sample and aggregate* framework.
 
-The approach is appealing because arbitrary expressions can be used in
+The approach is appealing because many aggregation expressions can be used in
 the ``agg`` argument, but it comes with the drawback that a large amount
-of data is needed to get reasonable utility.
+of data is needed to get reasonable utility. OpenDP automatically inserts a uniform permutation where needed to make
+aggregations independent of Polars' row-order optimizations.
 
 The following query demonstrates how you can use the approach to compute
 arbitrary statistics, by first computing a statistic of interest (the

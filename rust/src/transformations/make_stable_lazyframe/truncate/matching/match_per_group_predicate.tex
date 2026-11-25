@@ -35,6 +35,7 @@ None
 \begin{proof}
     Reorderings of an enumeration, like reversal, shuffling and sorting are also valid enumerations,
     so lines \ref{line:reordering_start}-\ref{line:reordering_end} ignore these reorderings and re-assign the enumeration to the input of the reordering.
+    The constructor checks sort keys against the preceding schema before using the bound.
 
     Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
     an error is only raised if the predicate is unambiguously a \texttt{num\_groups} truncation predicate.
