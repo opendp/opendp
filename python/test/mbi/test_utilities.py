@@ -189,6 +189,24 @@ def test_make_stable_marginals_nullable_bucket():
     ]
 
 
+@pytest.mark.parametrize("values", [[], [0, 1, 0]])
+def test_make_stable_marginals_total_count(values):
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
+
+    transformation = make_stable_marginals(
+        dp.lazyframe_domain(
+            [dp.series_domain("A", dp.atom_domain(T="i32", bounds=(0, 1)))]
+        ),
+        dp.frame_distance(dp.symmetric_distance()),
+        [()],
+    )
+    result = transformation(pl.LazyFrame({"A": values}, schema={"A": pl.Int32}))
+    assert result[()].shape == ()
+    assert result[()].item() == len(values)
+    assert transformation.map([dp.polars.Bound(per_group=2)]) == {(): (1, 2, 2)}
+
+
 def test_make_stable_marginals_snapshots_cliques():
     pytest.importorskip("mbi")
     import polars as pl  # type: ignore[import-not-found]

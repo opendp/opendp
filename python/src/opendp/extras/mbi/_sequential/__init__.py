@@ -1,6 +1,7 @@
 """Release multiple algorithms sequentially."""
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Any, Optional, Sequence, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
@@ -57,8 +58,10 @@ class Sequential(Algorithm):
                 msg = "algorithms and weights must contain the same number of elements"
                 raise ValueError(msg)
 
-            if any(w <= 0 for w in self.weights):
-                raise ValueError(f"weights ({self.weights}) must be positive")
+            if any(not isfinite(w) or w <= 0 for w in self.weights):
+                raise ValueError(
+                    f"weights ({self.weights}) must be finite and positive"
+                )
 
             self.weights = tuple(self.weights)
 
