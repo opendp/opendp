@@ -7,15 +7,31 @@
 \begin{document}
 \maketitle
 
-\contrib
-
 Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\_tail\_to\_alpha}.
+
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{scale} is of type \texttt{RBig}
+    \item Argument \texttt{tail} is of type \texttt{RBig}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/conservative_continuous_gaussian_tail_to_alpha.py}
+
+\subsection*{Postcondition}
 
 \begin{definition}
     \label{gaussian}
-    Define $X \sim \mathcal{N}(0, s)$, a random variable following the continuous gaussian distribution:
+    Define $X \sim \mathcal{N}(0, \texttt{scale})$, where $\texttt{scale} > 0$. Then $X$ follows the continuous gaussian distribution:
     \begin{equation}
-        f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\sigma}\right)^2}
+        f(x) = \frac{1}{\texttt{scale} \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\texttt{scale}}\right)^2}
     \end{equation}
 \end{definition}
 
@@ -49,24 +65,45 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\
     Upon completion, the greatest discovered error is at most 1 ulp.
 \end{proof}
 
-\begin{theorem}
-    Assume $X \sim \mathcal{N}(0, s)$, and $t > 0$.
+\begin{lemma}\label{lem:tail-mass}
+    Assume $X \sim \mathcal{N}(0, \texttt{scale})$ and $\texttt{tail} \ge 0$. Then
     \begin{equation}
-        \alpha = P[X \ge t] = \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right)
+        \alpha = P[X > \texttt{tail}] = \frac{1}{2} \mathrm{erfc}\left(\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right)
     \end{equation}
+\end{lemma}
+
+\begin{proof}
+    The strict postcondition $P[X > \texttt{tail}]$ is intentional, because dependent proofs use this exact event.
+    The argument in this theorem is about the ideal continuous gaussian random variable $X$.
+    For this reference distribution, continuity implies $P[X > \texttt{tail}] = P[X \ge \texttt{tail}]$.
+    This equality is used only within the theorem, and not for any discretized or postprocessed implementation,
+    where $P[X > \texttt{tail}]$ and $P[X \ge \texttt{tail}]$ may differ due to point masses.
+
+    \begin{align*}
+        \alpha &= P[X > \texttt{tail}] \\
+        &= P[X \ge \texttt{tail}] && \text{because } X \text{ is continuous} \\
+        &= \int_{\texttt{tail}}^{\infty} \frac{1}{\texttt{scale} \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\texttt{scale}}\right)^2} dx && \text{by } \ref{gaussian} \\
+        &= \frac{1}{\sqrt{\pi}} \int_{\texttt{tail} / (\texttt{scale} \sqrt{2})}^{\infty} e^{-u^2} du && \text{with } u = \frac{x}{\texttt{scale} \sqrt{2}} \\
+        &= \frac{1}{2} \left(1 - \mathrm{erf}\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right) && \text{by } \ref{erf} \\
+        &= \frac{1}{2} \mathrm{erfc}\left(\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right) && \text{by } \ref{erfc}
+    \end{align*}
+\end{proof}
+
+\begin{theorem}\label{thm:postcondition}
+    For any inputs \texttt{scale} and \texttt{tail} satisfying the preconditions, \\
+    \texttt{conservative\_continuous\_gaussian\_tail\_to\_alpha} either:
+    \begin{itemize}
+        \item returns \texttt{Err(e)}, or
+        \item returns \texttt{Ok(out)} with $\texttt{out} \ge \Pr[X > \texttt{tail}]$, where $X \sim \mathcal{N}(0, \texttt{scale})$.
+    \end{itemize}
 \end{theorem}
 
 \begin{proof}
-    \begin{align*}
-        \alpha &= P[X \ge t] \\
-        &= \frac{1}{\sigma \sqrt{2 \pi}} \int_{t}^{\infty} e^{-\frac{1}{2}\left( \frac{t}{\sigma}\right)^2} dt && \text{by } \ref{gaussian} \\
-        &= \frac{1}{2} \left(1 + \mathrm{erf}\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erf} \\
-        &= \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erfc}
-    \end{align*}
-
-    The implementation of this bound uses conservative rounding down within erfc, as erfc is monotonically decreasing.
-    The outcome of erfc is increased by one 32-bit float ulp, which guarantees a conservatively larger value, by \ref{erfc-err}.
-    Therefore the entire computation results in a conservatively larger bound on the mass of the tail of the continuous gaussian distribution.
+    \texttt{check\_tail\_arguments} returns \texttt{Err(e)} unless $\texttt{scale} > 0$ and $\texttt{tail} \ge 0$.
+    Otherwise, if no remaining operation returns \texttt{Err(e)}, the implementation computes $\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}$ with conservative downward rounding into a non-negative 32-bit float, so the input to \texttt{erfc} is no greater than the exact value.
+    Since \texttt{erfc} is monotonically decreasing, this yields a value no smaller than $\mathrm{erfc}\!\left(\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right)$.
+    The outcome of \texttt{erfc} is then rounded up and increased by one 32-bit float ulp, which compensates for implementation error by Lemma~\ref{erfc-err}, and divided by $2.0$ with conservative upward rounding.
+    Therefore the returned result is at least $\Pr[X > \texttt{tail}]$ by Lemma~\ref{lem:tail-mass}.
 \end{proof}
 
 \end{document}
