@@ -1151,6 +1151,7 @@ class LazyFrameQuery:
         """Summarize the statistics released by this query.
 
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
+        Accuracy describes each underlying DP mechanism, before any postprocessing.
 
         If a threshold is configured for censoring small/sensitive groups,
         a threshold column will be included,
