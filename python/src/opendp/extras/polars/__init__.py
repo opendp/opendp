@@ -828,6 +828,9 @@ class LazyFrameQuery:
         # so running the computation doesn't affect privacy.
         # This doesn't have to cover all possible APIs that may execute the query,
         #    but it does give a simple sanity check for the obvious cases.
+        if name == "collect":
+            # Use the query method instead of Polars' executing collect.
+            return object.__getattribute__(self, "collect")
         if name in _LAZY_EXECUTION_METHODS:
             raise ValueError("You must call `.release()` before executing a query.")
 
@@ -857,6 +860,32 @@ class LazyFrameQuery:
 
             return _wrap
         return attr
+
+    def collect(self):
+        """Build a stable eager DataFrame query without releasing private data."""
+        query = object.__getattribute__(self, "_query")
+        plan = object.__getattribute__(self, "polars_plan")
+        domain, metric = query._stable_space()
+
+        # Retain the input adjacency relation whenever possible. Bounded
+        # metrics become their corresponding unbounded frame metrics; Rust
+        # accounts for the change in the stability map.
+        if isinstance(metric, FrameDistance):
+            mo = "MI"
+        else:
+            inner = {
+                "SymmetricDistance": "SymmetricDistance",
+                "SymmetricIdDistance": "SymmetricIdDistance",
+                "ChangeOneDistance": "SymmetricDistance",
+                "ChangeOneIdDistance": "SymmetricIdDistance",
+            }.get(str(metric.type))
+            if inner is None:
+                raise ValueError(f"Unsupported metric for collect: {metric}")
+            mo = f"FrameDistance<{inner}>"
+
+        stable = make_stable_lazyframe(domain, metric, plan, MO=mo)
+        chain = stable >> make_collect(*stable.output_space)
+        return query._append(chain)
 
     # These definitions are primarily for mypy:
     # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
@@ -1010,7 +1039,9 @@ class LazyFrameQuery:
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
         """
-        input_metric = self._query._chain[1]
+        chain = self._query._chain
+        space = chain if isinstance(chain, tuple) else chain.output_space
+        input_metric = space[1]
 
         if isinstance(by, str):
             raise ValueError(
@@ -1050,7 +1081,9 @@ class LazyFrameQuery:
         :param by: when grouped by these grouping columns
         :param keep: which groups to keep for each identifier
         """
-        input_metric = self._query._chain[1]
+        chain = self._query._chain
+        space = chain if isinstance(chain, tuple) else chain.output_space
+        input_metric = space[1]
 
         if isinstance(by, str):
             raise ValueError(
@@ -1082,8 +1115,12 @@ class LazyFrameQuery:
         # access attributes of self without getting intercepted by Self.__getattribute__
         polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
-        input_domain, input_metric = query._chain
-        d_in, d_out = query._d_in, query._d_out
+        input_domain, input_metric = query._stable_space()
+        d_in = query._stable_distance()
+        d_out = query._d_out
+
+        def _complete(measurement):
+            return query._append(measurement)._chain
 
         def _make(scale, threshold=None):
             return make_private_lazyframe(
@@ -1100,7 +1137,7 @@ class LazyFrameQuery:
             m_zero = _make(0.0, threshold=None)
             if m_zero.check(d_in, d_out):
                 # if the zero scale measurement is already private, return it
-                return m_zero
+                return _complete(m_zero)
         except OpenDPException:
             pass
 
@@ -1118,7 +1155,7 @@ class LazyFrameQuery:
 
             # attempt to return without setting a threshold
             try:
-                return _make(scale, threshold=None)
+                return _complete(_make(scale, threshold=None))
             except OpenDPException:
                 pass
 
@@ -1129,7 +1166,7 @@ class LazyFrameQuery:
             )
 
             # return a measurement with the discovered scale and threshold
-            return _make(scale, threshold)
+            return _complete(_make(scale, threshold))
 
         # when no delta parameter is involved,
         # finding a suitable measurement just comes down to finding scale
@@ -1139,7 +1176,7 @@ class LazyFrameQuery:
             bounds=(0.0, None),
             T=float,
         )
-        return _make(scale)
+        return _complete(_make(scale))
 
     def release(self) -> OnceFrame:
         """Release the query. The query must be part of a context."""
@@ -1230,8 +1267,9 @@ class LazyFrameQuery:
         from .contingency_table import ContingencyTableQuery
 
         query: Query = object.__getattribute__(self, "_query")
-        input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
-        d_in, d_out = query._d_in, query._d_out
+        input_domain, input_metric = query._stable_space()
+        d_in = query._stable_distance()
+        d_out = query._d_out
 
         t_plan = make_stable_lazyframe(
             input_domain,
@@ -1252,8 +1290,10 @@ class LazyFrameQuery:
             algorithm=algorithm,
         )
 
+        chain = query._append(t_plan >> m_table)._chain
+
         return ContingencyTableQuery(
-            chain=t_plan >> m_table,
+            chain=chain,
             output_measure=query._output_measure,
             context=query._context,
             oneway_scale=oneway_scale,
@@ -1382,3 +1422,8 @@ class Bound(object):
             return False
 
         return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]
+
+
+# Python-backed stable frame conversions and eager null replacement.
+from opendp.extras.polars._make_frame_conversions import make_collect, make_lazy  # noqa: E402,F401
+from opendp.extras.polars._make_dataframe_fill_null import make_dataframe_fill_null  # noqa: E402,F401
