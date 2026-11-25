@@ -65,6 +65,7 @@ from opendp.mod import (
     _PartialConstructor,
     Odometer,
     OdometerQueryable,
+    OpenDPException,
     Queryable,
     Transformation,
     Measure,
@@ -574,13 +575,33 @@ class Context(object):
 
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
-        answer = self.queryable(query)
+        if self.d_mids is None:
+            answer = self.queryable(query)
+            self.d_mids_consumed.append(query.map(self.d_in))
+            return answer
 
-        # pop won't fail if queryable returned an answer
-        self.d_mids_consumed.append(
-            query.map(self.d_in) if self.d_mids is None else self.d_mids.pop(0)  # type: ignore[arg-type]
-        )
-        return answer
+        # Mirror the adaptive compositor's pre-invocation checks. Reserve the
+        # allocation before invocation because even a failed release may spend it.
+        domain, metric = self.query_space or self.accountant.input_space
+        if query.input_domain != domain:
+            raise OpenDPException(
+                "DomainMismatch", "query input domain differs from context"
+            )
+        if query.input_metric != metric:
+            raise OpenDPException(
+                "MetricMismatch", "query input metric differs from context"
+            )
+        if query.output_measure != self.accountant.output_measure:
+            raise OpenDPException(
+                "MeasureMismatch", "query output measure differs from context"
+            )
+        if not self.d_mids:
+            raise OpenDPException("FailedFunction", "out of queries")
+        if not query.check(self.d_in, self.d_mids[0]):
+            raise OpenDPException("FailedFunction", "insufficient budget for query")
+
+        self.d_mids_consumed.append(self.d_mids.pop(0))
+        return self.queryable(query)
 
     def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
         """Starts a new Query to be executed in this context.
