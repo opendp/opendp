@@ -2,7 +2,7 @@ use crate::core::{StabilityMap, Transformation};
 use crate::domains::{Context, ExprDomain, Invariant, Margin, WildExprDomain};
 use crate::metrics::{L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
-use crate::traits::{InfCast, Number};
+use crate::traits::{CastInternalRational, InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
     StableExpr, check_candidates, score_candidates_constants, score_candidates_map,
@@ -17,6 +17,7 @@ use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
+use dashu::rational::RBig;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
 use polars::prelude::{AnyValue, LiteralValue, NamedFrom, PolarsPhysicalType, Scalar};
 use polars::series::Series;
@@ -76,7 +77,7 @@ where
         );
     }
 
-    let candidates = candidates.strict_cast(&active_series.dtype())?;
+    let candidates = cast_quantile_candidates(&candidates, &active_series.dtype())?;
 
     match active_series.dtype() {
         UInt32 => validate::<UInt32Type>(&candidates),
@@ -160,6 +161,66 @@ where
                 Ok((*l0, out_li))
             }),
         )?
+}
+
+// Compare public candidates exactly, without rounding large integers through floats.
+#[derive(PartialEq)]
+enum CandidateValue {
+    Finite(RBig),
+    Infinity(bool),
+}
+
+fn candidate_value(value: AnyValue<'_>) -> Fallible<CandidateValue> {
+    use AnyValue::*;
+    let rational = match value {
+        Float32(v) if v.is_infinite() => return Ok(CandidateValue::Infinity(v.is_sign_positive())),
+        Float64(v) if v.is_infinite() => return Ok(CandidateValue::Infinity(v.is_sign_positive())),
+        UInt8(v) => v.into_rational(),
+        UInt16(v) => v.into_rational(),
+        UInt32(v) => v.into_rational(),
+        UInt64(v) => v.into_rational(),
+        UInt128(v) => v.into_rational(),
+        Int8(v) => v.into_rational(),
+        Int16(v) => v.into_rational(),
+        Int32(v) => v.into_rational(),
+        Int64(v) => v.into_rational(),
+        Int128(v) => v.into_rational(),
+        Float32(v) => v.into_rational(),
+        Float64(v) => v.into_rational(),
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "candidates must be numeric and non-null"
+            );
+        }
+    }?;
+    Ok(CandidateValue::Finite(rational))
+}
+
+pub(crate) fn cast_quantile_candidates(candidates: &Series, dtype: &DataType) -> Fallible<Series> {
+    let casted = candidates.strict_cast(dtype)?;
+    if candidates.dtype() != dtype {
+        for (original, converted) in candidates.iter().zip(casted.iter()) {
+            // Finite Float64 candidates may be rounded to Float32.
+            // All other casts must preserve the candidate's exact value.
+            let equivalent = match (&original, &converted) {
+                (AnyValue::Float64(from), AnyValue::Float32(to))
+                    if from.is_finite() && to.is_finite() =>
+                {
+                    true
+                }
+                _ => candidate_value(original)? == candidate_value(converted)?,
+            };
+            if !equivalent {
+                return fallible!(
+                    MakeTransformation,
+                    "candidates cannot be represented exactly as {}",
+                    dtype
+                );
+            }
+        }
+    }
+    Ok(casted)
 }
 
 fn validate<T: 'static + PolarsPhysicalType>(candidates: &Series) -> Fallible<()>

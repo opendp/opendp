@@ -29,6 +29,54 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 }
 
 #[test]
+fn test_quantile_candidate_casts() -> Fallible<()> {
+    let floats = Series::new("".into(), [1.0f64, 2.0]);
+    let casted = cast_quantile_candidates(&floats, &DataType::Int64)?;
+    assert_eq!(
+        casted.i64()?.into_no_null_iter().collect::<Vec<_>>(),
+        vec![1, 2]
+    );
+
+    let ints = Series::new("".into(), [1i64, 2]);
+    assert_eq!(
+        cast_quantile_candidates(&ints, &DataType::Int32)?.dtype(),
+        &DataType::Int32
+    );
+
+    let fractional = Series::new("".into(), [1.1f64, 2.9]);
+    assert!(cast_quantile_candidates(&fractional, &DataType::Int64).is_err());
+
+    // Large integers cannot always be represented exactly as f64.
+    let large = Series::new("".into(), [(1u64 << 53) + 1]);
+    assert!(cast_quantile_candidates(&large, &DataType::Float64).is_err());
+
+    let max_uint = Series::new("".into(), [u64::MAX]);
+    assert!(cast_quantile_candidates(&max_uint, &DataType::Float64).is_err());
+
+    let out_of_range = Series::new("".into(), [i64::MAX]);
+    assert!(cast_quantile_candidates(&out_of_range, &DataType::Int32).is_err());
+
+    let rounded_floats = Series::new("".into(), [0.1f64, 0.2, 0.3]);
+    let casted = cast_quantile_candidates(&rounded_floats, &DataType::Float32)?;
+    assert_eq!(
+        casted.f32()?.into_no_null_iter().collect::<Vec<_>>(),
+        vec![0.1f32, 0.2, 0.3]
+    );
+
+    // Rounding is allowed, but overflowing a finite candidate to infinity is not.
+    let overflowing_float = Series::new("".into(), [f64::MAX]);
+    assert!(cast_quantile_candidates(&overflowing_float, &DataType::Float32).is_err());
+
+    // Exactly representable values may be larger than 2**53.
+    let exact_large = Series::new("".into(), [(1u64 << 53) + 2]);
+    assert!(cast_quantile_candidates(&exact_large, &DataType::Float64).is_ok());
+
+    let infinity = Series::new("".into(), [f32::INFINITY]);
+    assert!(cast_quantile_candidates(&infinity, &DataType::Float64).is_ok());
+    Ok(())
+}
+
+#[test]
 fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let candidates = Series::new(
