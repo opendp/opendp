@@ -30,6 +30,11 @@ The nonempty matched truncation pipeline is produced by \rustdoc{transformations
 \end{theorem}
 
 \begin{proof}[Appropriate Output Domain]
+    By line \ref{line:validate-sort-keys}, every structural candidate
+    carries the exact sort keys extracted by matching. The constructor
+    checks those keys for permutation equivariance and supported scalar
+    ranking dtypes against the preceding plan's output schema.
+    The rank-validated bounds are extracted on line \ref{line:check-certificates}.
     By line \ref{line:stable-keys},
     the identifier and all grouping keys must be stable row-by-row expressions.
     In particular, filtering other rows must not change the identifier of a retained row.
@@ -37,10 +42,10 @@ The nonempty matched truncation pipeline is produced by \rustdoc{transformations
     On line \ref{line:check-rewrites}, per-group truncation rewrites only partition keys;
     number-of-groups truncation uses the same key extractor as matching to replace
     whole occurrences of the grouping expressions in the dense rank input.
-    Legacy sort keys are checked for permutation equivariance against the preceding plan's schema.
     The rank structure and threshold are unchanged, and the corresponding bounds
     are expressed using these same execution keys, including the terminal group-by bound.
     Line \ref{line:allowed_keys_check} checks that filter grouping keys are retained by the final group-by.
+    Both checks precede stability accounting.
     Filters remove rows without changing the schema, preserving margin upper
     bounds but potentially invalidating margin invariants.
     On line \ref{line:truncation}, if a terminal groupby is present, the shared
@@ -60,7 +65,8 @@ The nonempty matched truncation pipeline is produced by \rustdoc{transformations
         d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) \le \texttt{total\_num\_ids}.
     \end{equation}
 
-    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations},
+    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations}
+    and the key validation on line \ref{line:validate-sort-keys},
     for each \texttt{truncation\_bound} on line \ref{line:truncation-bound},
     \begin{align*}
         \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\

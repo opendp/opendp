@@ -29,27 +29,36 @@ None
     For a given filter predicate and identifier expression,
     returns an error if the predicate contains a mis-specified truncation,
     none if the predicate is not a truncation,
-    otherwise the per-identifier bounds on user contribution.
+    otherwise candidate per-identifier contribution bounds together with their deferred validation obligations.
 \end{theorem}
 
 \begin{proof}
-    Truncation predicates are rooted by one of three expressions:
-    \begin{enumerate}
-        \item \texttt{AllHorizontal}, which is a vector-valued ``and'' expression. If all elements of the vector are truncation predicates,
-        as checked on line \ref{line:check_all}, their intersection is also a truncation.
-        \item \texttt{BinaryExpr} where the operator is ``and''. If both operands are truncation predicates,
-        as checked on line \ref{line:check_both}, their intersection is also a truncation.
-        \item \texttt{BinaryExpr} where the operator is a comparison. The logic for this case is more involved.
-    \end{enumerate}
+    Both \texttt{AllHorizontal} and binary conjunctions retain only rows
+    satisfying every child predicate. Line \ref{line:check_all} requires every
+    child to be a truncation; all of their candidate bounds are then retained.
 
     In the comparison case, the algorithm first matches through the comparison operator
     to identify what should be the ``over'' and ``threshold'' expressions.
     Since window expressions are not valid row-by-row functions,
     they are unambiguously truncation expressions.
-    Therefore, if the ``over'' expression is a window expression, as checked on line \ref{line:check_over},
+    Therefore, if the ``over'' expression is a window with the
+    \texttt{GroupsToRows} mapping, as checked on line \ref{line:check_over},
     then any further failures to match the truncation predicates can now be raised as errors.
+    This check covers \texttt{Expr::Over} and \texttt{Expr::Window}
+    in the two supported Polars AST variants.
+    The matcher additionally excludes window expressions with an \texttt{order\_by}
+    expression on line \ref{line:check_order_by}. Such an expression is evaluated by
+    Polars but is not part of the certified truncation ranking or partitioning keys;
+    an unchecked order-by expression could fail depending on private values.
 
-    \texttt{threshold\_value} on line \ref{line:threshold_value} is resolved to the literal u32 upper bound on contributions.
+    The threshold must be an integer scalar representable as a \texttt{u32}.
+    In particular, fractional literals cannot be silently rounded during extraction.
+    On line \ref{line:threshold_value}, normalize the public comparison threshold:
+    dense and ordinal ranks are one-based, while permuted indices are zero-based.
+    A strict one-based comparison subtracts one (saturating at zero);
+    an inclusive zero-based comparison adds one (rejecting overflow).
+    Otherwise the threshold is already the contribution bound.
+    Both matchers receive this normalized bound; they reject unsupported enumerations.
 
     By the postconditions of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate},
     and \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate},
@@ -57,6 +66,7 @@ None
     If both are not defined, then the predicate is not a truncation,
     and an error is raised on line \ref{line:check_bounds}.
 
-    Otherwise, the matched bound is returned on line \ref{line:return}, satisfying the postcondition.
+    Otherwise, the matched bound and its deferred checks are returned on line \ref{line:return}.
+    The caller validates every candidate before use.
 \end{proof}
 \end{document}

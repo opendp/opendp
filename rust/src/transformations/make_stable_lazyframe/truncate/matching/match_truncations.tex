@@ -29,8 +29,9 @@ None
     For any choice of LazyFrame plan,
     returns the plan with the truncations removed,
     the filter predicates in execution order and an optional terminal group-by,
-    and per-id bounds using the original grouping expressions.
-    Returns none if no truncation is matched. The caller must certify the grouping expressions row-by-row
+    and candidate per-id bounds and their deferred validation obligations using the original grouping expressions.
+    Returns none if no truncation is matched. Sort-key validity is not checked during structural matching.
+    The caller must validate ranking against the stable input schema and certify the grouping expressions row-by-row
     before using the bounds for stability accounting.
     If a groupby truncation is present, its caller must check that the grouping keys are retained,
     and express these bounds in terms of the materialized output columns
@@ -43,7 +44,7 @@ None
     \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation}.
     It then repeatedly removes filter predicates, by the postcondition of
     \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate},
-    recording their bounds.
+    recording their candidate bounds and deferred checks.
     Each filter only removes rows, so it preserves all earlier contribution bounds.
     A terminal group-by preserves these bounds only for grouping labels it retains:
     the caller must check each filter bound's grouping expressions against the final group-by keys
@@ -52,7 +53,7 @@ None
     Line \ref{line:match_group_by_truncation_check} rejects another group-by
     beneath the matched filters. The filters and bounds are reversed to restore
     execution order, and the terminal group-by bound (if any) is appended.
-    The caller certifies the partition keys against the stable input domain
+    The caller certifies all candidate bounds against the stable input domain
     before using them for stability accounting.
 \end{proof}
 

@@ -1,6 +1,8 @@
+use crate::polars::PrivacyNamespace;
+use polars::prelude::all_horizontal;
 use polars::{
     df,
-    prelude::{IntoLazy, RankOptions, all_horizontal, as_struct, col},
+    prelude::{Categories, Field, IntoLazy, RankOptions, as_struct, col},
 };
 
 use super::*;
@@ -36,12 +38,15 @@ fn test_match_truncations_ok() -> Fallible<()> {
         })
     );
     assert_eq!(
-        truncation_bounds,
+        truncation_bounds
+            .into_iter()
+            .map(|matched| matched.bound)
+            .collect::<Vec<_>>(),
         vec![
             Bound {
                 by: HashSet::from([col("A")]),
                 per_group: None,
-                num_groups: Some(10),
+                num_groups: Some(9),
             },
             Bound {
                 by: HashSet::from([col("A")]),
@@ -125,7 +130,7 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
         Bound {
             by: HashSet::from([col("A")]),
             per_group: None,
-            num_groups: Some(10),
+            num_groups: Some(9),
         },
         Bound {
             by: HashSet::from([col("A")]),
@@ -139,60 +144,58 @@ fn test_match_truncation_predicate_tree() -> Fallible<()> {
         descending: false,
     };
     let truncate_num_groups = col("A").rank(rank_opt, None).over([col("ID")]).lt(lit(10));
-    let truncate_per_group = int_range(lit(0), len(), 1, DataType::Int64)
-        .over([col("A"), col("ID")])
-        .lt(lit(11));
+    let truncate_per_group = random_enumeration().over([col("A"), col("ID")]).lt(lit(11));
 
-    assert_eq!(
-        match_truncation_predicate(
-            &truncate_num_groups.clone().and(truncate_per_group.clone()),
-            &col("ID")
-        )?,
-        Some(bounds.clone())
-    );
-
-    assert_eq!(
-        match_truncation_predicate(
-            &all_horizontal([truncate_num_groups.clone(), truncate_per_group.clone()])?,
-            &col("ID")
-        )?,
-        Some(bounds)
-    );
-
-    assert!(
-        match_truncation_predicate(
-            &all_horizontal([truncate_num_groups.clone(), col("D").lt(4)])?,
-            &col("ID")
-        )?
-        // Any non-truncation predicate should return None, failure to match.
-        // Want to ensure no other non-row-by-row or fallible predicates get through.
-        .is_none()
-    );
+    let check = |predicate: Expr| -> Fallible<_> {
+        Ok(match_truncation_predicate(&predicate, &col("ID"))?
+            .map(|matched| matched.into_iter().map(|m| m.bound).collect::<Vec<_>>()))
+    };
+    let a = truncate_num_groups;
+    let b = truncate_per_group;
+    let ordinary = col("D").lt(4);
+    for predicate in [a.clone().and(b.clone()), all_horizontal([a.clone(), b])?] {
+        assert_eq!(check(predicate)?, Some(bounds.clone()));
+    }
+    for predicate in [
+        a.clone().and(ordinary.clone()),
+        all_horizontal([a, ordinary])?,
+    ] {
+        assert!(check(predicate)?.is_none());
+    }
 
     Ok(())
 }
 
 #[test]
 fn test_match_truncation_predicate_op() -> Fallible<()> {
-    let bound = Bound {
-        by: HashSet::from([col("A")]),
-        per_group: Some(12),
-        num_groups: None,
-    };
+    let permutation = random_enumeration().over([col("A"), col("ID")]);
+    let ranks = as_struct(vec![
+        col("A").alias("__sort0"),
+        random_enumeration().alias("__tie"),
+    ])
+    .rank(
+        RankOptions {
+            method: RankMethod::Ordinal,
+            descending: false,
+        },
+        None,
+    )
+    .over([col("A"), col("ID")]);
 
-    let check = |expr: Expr| {
-        assert_eq!(
-            match_truncation_predicate(&expr, &col("ID")),
-            Ok(Some(vec![bound.clone()]))
-        );
-    };
-    let over = int_range(lit(0), len(), 1, DataType::Int64).over([col("A"), col("ID")]);
-
-    check(over.clone().lt_eq(lit(11)));
-    check(over.clone().lt(lit(12)));
-    check(lit(12).gt(over.clone()));
-    check(lit(11).gt_eq(over.clone()));
-
+    for (predicate, expected) in [
+        (permutation.clone().lt_eq(lit(11)), 12),
+        (permutation.clone().lt(lit(12)), 12),
+        (lit(12).gt(permutation.clone()), 12),
+        (lit(11).gt_eq(permutation.clone()), 12),
+        (permutation.clone().lt(lit(u32::MAX)), u32::MAX),
+        (ranks.clone().lt(lit(2)), 1),
+        (ranks.lt_eq(lit(u32::MAX)), u32::MAX),
+    ] {
+        let bounds = match_truncation_predicate(&predicate, &col("ID"))?.unwrap();
+        assert_eq!(bounds[0].bound.by, HashSet::from([col("A")]));
+        assert_eq!(bounds[0].bound.per_group, Some(expected));
+    }
+    assert!(match_truncation_predicate(&permutation.lt_eq(lit(u32::MAX)), &col("ID")).is_err());
     Ok(())
 }
 
@@ -232,35 +235,144 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
 }
 
 #[test]
-fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
-    let bound = Some(Bound {
-        by: HashSet::from([col("A")]),
-        per_group: Some(10),
-        num_groups: None,
-    });
+fn test_truncation_window_rejects_order_by() -> Fallible<()> {
+    let rank = col("A").rank(
+        RankOptions {
+            method: RankMethod::Dense,
+            descending: false,
+        },
+        None,
+    );
 
+    // An order-by expression is evaluated by Polars even though it is not
+    // part of the ranker or partitioning keys. A strict cast can fail on
+    // private values, so this cannot be certified as a truncation.
+    let ordered = rank
+        .clone()
+        .over_with_options(
+            Some(vec![col("ID")]),
+            Some((
+                vec![col("secret").strict_cast(DataType::Int64)],
+                Default::default(),
+            )),
+            WindowMapping::GroupsToRows,
+        )?
+        .lt_eq(lit(1));
+    assert!(match_truncation_predicate(&ordered, &col("ID"))?.is_none());
+
+    let ordinary = rank.over([col("ID")]).lt_eq(lit(1));
+    assert!(match_truncation_predicate(&ordinary, &col("ID"))?.is_some());
+    Ok(())
+}
+
+#[test]
+fn test_dense_rank_threshold_is_one_based() -> Fallible<()> {
+    let ranks = col("A")
+        .rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+        .over([col("ID")]);
+    for enumeration in [ranks.clone(), random_enumeration().over([col("ID")])] {
+        assert!(match_truncation_predicate(&enumeration.lt(lit(2.5f64)), &col("ID")).is_err());
+    }
+    for k in [0u32, 1, 2, 10, u32::MAX] {
+        for (predicate, expected) in [
+            (ranks.clone().lt(lit(k)), k.saturating_sub(1)),
+            (ranks.clone().lt_eq(lit(k)), k),
+        ] {
+            let bound = match_truncation_predicate(&predicate, &col("ID"))?
+                .expect("expected num_groups truncation");
+            assert_eq!(bound[0].bound.num_groups, Some(expected));
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
     let check =
         |expr: Expr| match_per_group_predicate(&expr, &[col("A"), col("ID")], &col("ID"), 10);
 
     let range = int_range(lit(0), len(), 1, DataType::Int64);
-    assert_eq!(check(range.clone())?, bound);
-    assert_eq!(check(range.clone().reverse())?, bound);
-    assert_eq!(check(range.clone().shuffle(None))?, bound);
-    assert_eq!(
-        check(range.clone().sort_by([col("D")], Default::default()))?,
-        bound
-    );
-    assert!(check(int_range(lit(0), len(), 1, DataType::Int64).head(None))?.is_none());
+    assert!(check(range.clone()).is_err());
+    // Unsupported reorderings are not recognized as truncations.
+    assert!(check(range.shuffle(None))?.is_none());
     Ok(())
 }
 
 #[test]
 fn test_match_per_group_predicate_id() -> Fallible<()> {
-    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    let range = random_enumeration();
     // no matches should error
     assert!(match_per_group_predicate(&range, &[col("A")], &col("ID"), 10).is_err());
     // multiple matches should pass
     assert!(match_per_group_predicate(&range, &[col("ID"), col("ID")], &col("ID"), 0)?.is_some());
+    Ok(())
+}
+
+fn random_enumeration() -> Expr {
+    int_range(lit(0), len(), 1, DataType::Int64).dp().permute()
+}
+
+#[test]
+fn test_match_invalid_random_truncation_ranks() -> Fallible<()> {
+    let tie = random_enumeration().alias("__tie");
+    for (keys, method) in [
+        (vec![col("A")], RankMethod::Ordinal),
+        (vec![tie.clone(), col("A")], RankMethod::Ordinal),
+        (vec![col("A"), tie], RankMethod::Dense),
+    ] {
+        let ranks = as_struct(keys).rank(
+            RankOptions {
+                method,
+                descending: false,
+            },
+            None,
+        );
+        assert!(match_per_group_predicate(&ranks, &[col("ID")], &col("ID"), 1)?.is_none());
+    }
+    Ok(())
+}
+
+#[test]
+fn test_ordinal_rank_key_dtypes() -> Fallible<()> {
+    let categories = Categories::global();
+    let categorical = DataType::Categorical(categories.clone(), categories.mapping());
+    let schema = Schema::from_iter([
+        Field::new("category".into(), categorical),
+        Field::new("score".into(), DataType::Float64),
+        Field::new("list".into(), DataType::List(Box::new(DataType::Int32))),
+    ]);
+    let range = int_range(lit(0), len(), 1, DataType::Int64);
+    let rank = |key: Expr| {
+        as_struct(vec![
+            key.alias("__sort"),
+            range.clone().dp().permute().alias("__tie"),
+        ])
+        .rank(
+            RankOptions {
+                method: RankMethod::Ordinal,
+                descending: false,
+            },
+            None,
+        )
+    };
+
+    let check = |key| -> Fallible<Bound> {
+        match_per_group_predicate(&rank(key), &[col("ID")], &col("ID"), 1)?
+            .expect("expected ordinal rank")
+            .validate_ranking(&schema)
+    };
+    for key in [col("category"), col("list")] {
+        assert!(check(key).is_err());
+    }
+    // Numeric priorities remain admitted, including floating-point priorities.
+    assert!(check(col("score")).is_ok());
     Ok(())
 }
 

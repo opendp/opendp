@@ -35,7 +35,7 @@ def match_truncations(plan: DslPlan, identifier: Expr) -> Optional[MatchedTrunca
     bounds.reverse()  # |\label{line:bounds_reverse}|
 
     if group_by is not None:
-        bounds.append(group_bound)
+        bounds.append(MatchedBound(group_bound, []))
 
     if not filters and group_by is None:
         return None

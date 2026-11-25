@@ -14,7 +14,7 @@ def make_stable_truncate(
     stable_input = t_prior(matched.input)
     identifier = middle_metric[0].identifier
     keys = {identifier}
-    keys.update(key for bound in matched.bounds for key in bound.by)
+    keys.update(key for bound in matched.bounds for key in bound.bound.by)
     stable_keys = {}
     for key in keys:
         t_key = make_stable_expr(  # |\label{line:stable-keys}|
@@ -31,13 +31,24 @@ def make_stable_truncate(
         stable_keys[key] = stable_key
 
     filters, group_by = matched.filters, matched.group_by
-    schema = middle_domain.schema()
     for index, predicate in enumerate(filters):  # |\label{line:check-rewrites}|
-        filters[index] = rewrite_windows(predicate, stable_keys, schema)
+        filters[index] = rewrite_windows(predicate, stable_keys)
 
-    truncation_bounds = matched.bounds
-    for bound in truncation_bounds:
-        bound.by = {stable_keys[key] for key in bound.by}
+    schema = middle_domain.schema()
+    validated_bounds = []
+    for candidate in matched.bounds:  # |\label{line:validate-sort-keys}|
+        candidate.bound.by = {stable_keys[key] for key in candidate.bound.by}
+        for key in candidate.sort_keys:
+            if contains_categorical(key.to_field(schema).dtype):
+                raise ValueError("SortBy truncation cannot use Categorical keys")
+            if not rank_key_dtype_supported(key.to_field(schema).dtype):
+                raise ValueError("Unsupported SortBy truncation key dtype")
+            if not is_permutation_equivariant(key, schema):
+                raise ValueError(
+                    "SortBy truncation keys must be permutation-equivariant"
+                )
+        validated_bounds.append(candidate.bound)  # |\label{line:check-certificates}|
+    truncation_bounds = validated_bounds
 
     if group_by is not None:
         group_by.keys = [stable_keys[key] for key in group_by.keys]
