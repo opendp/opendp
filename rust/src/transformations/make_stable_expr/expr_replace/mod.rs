@@ -209,29 +209,32 @@ pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
 
     // Do not assume every dtype can be converted to a String. In particular,
     // Polars' Duration -> String conversion panics on i64::MIN.
-    if matches!(to, DataType::String) {
-        return !matches!(
-            from,
-            DataType::String
-                | DataType::Boolean
-                | DataType::UInt8
-                | DataType::UInt16
-                | DataType::UInt32
-                | DataType::UInt64
-                | DataType::Int8
-                | DataType::Int16
-                | DataType::Int32
-                | DataType::Int64
-                | DataType::Int128
-                | DataType::Float32
-                | DataType::Float64
-                | DataType::Enum(_, _)
-                | DataType::Categorical(_, _)
-                | DataType::Unknown(UnknownKind::Int(_) | UnknownKind::Float | UnknownKind::Str)
-        );
-    }
-    if matches!(to, DataType::Categorical(_, _)) {
-        return false;
+    match to {
+        DataType::String => {
+            return !matches!(
+                from,
+                DataType::String
+                    | DataType::Boolean
+                    | DataType::UInt8
+                    | DataType::UInt16
+                    | DataType::UInt32
+                    | DataType::UInt64
+                    | DataType::Int8
+                    | DataType::Int16
+                    | DataType::Int32
+                    | DataType::Int64
+                    | DataType::Int128
+                    | DataType::Float32
+                    | DataType::Float64
+                    | DataType::Enum(_, _)
+                    | DataType::Categorical(_, _)
+                    | DataType::Unknown(
+                        UnknownKind::Int(_) | UnknownKind::Float | UnknownKind::Str
+                    )
+            );
+        }
+        DataType::Categorical(_, _) => return false,
+        _ => {}
     }
 
     if let DataType::Unknown(child) = from {
