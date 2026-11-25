@@ -155,6 +155,7 @@ pub extern "C" fn opendp_domains___series_domain_get_element_domain(
         DataType::Categorical(_, _) => {
             _series_domain_get_element_domain::<CategoricalDomain>(series_domain)
         }
+        DataType::Enum(_, _) => _series_domain_get_element_domain::<EnumDomain>(series_domain),
         DataType::Datetime(_, _) => {
             _series_domain_get_element_domain::<DatetimeDomain>(series_domain)
         }

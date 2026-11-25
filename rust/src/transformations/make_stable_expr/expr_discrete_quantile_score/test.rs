@@ -2,7 +2,7 @@ use super::*;
 use polars::prelude::*;
 
 use crate::{
-    domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
+    domains::{ArrayDomain, AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::apply_anonymous_function,
 };
@@ -45,6 +45,10 @@ fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
 
     let m_quant: Transformation<_, _, _, L0InfDistance<LInfDistance<f64>>> =
         expr.make_stable(lf_domain.select(), L0PInfDistance(SymmetricDistance))?;
+
+    let (output_domain, _) = m_quant.output_space();
+    let array_domain = output_domain.column.element_domain::<ArrayDomain>()?;
+    assert!(!array_domain.nullable);
 
     let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
 

@@ -100,6 +100,13 @@ where
         );
     }
     let array_domain = middle_domain.column.element_domain::<ArrayDomain>()?;
+    if array_domain.nullable {
+        return fallible!(
+            MakeMeasurement,
+            "{} requires non-nullable array elements",
+            NoisyMaxPlugin::NAME
+        );
+    }
 
     use DataType::*;
     let privacy_map = match array_domain.element_domain.dtype() {

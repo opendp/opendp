@@ -51,48 +51,36 @@ impl PartialEq for SeriesDomain {
     }
 }
 
+// Polars stores dates as days since the Unix epoch; Chrono counts from CE.
+// Polars' own date32_to_date_opt does not check this addition for overflow.
+fn date_from_days(days: i32) -> Option<NaiveDate> {
+    days.checked_add(719_163)
+        .and_then(NaiveDate::from_num_days_from_ce_opt)
+}
+
+// Polars stores times as nanoseconds since midnight. Check the range
+// before converting to u32 components to avoid wrapping invalid times.
+fn time_from_nanos(nanos: i64) -> Option<NaiveTime> {
+    if !(0..86_400_000_000_000).contains(&nanos) {
+        return None;
+    }
+    NaiveTime::from_num_seconds_from_midnight_opt(
+        (nanos / 1_000_000_000) as u32,
+        (nanos % 1_000_000_000) as u32,
+    )
+}
+
 impl Domain for SeriesDomain {
     type Carrier = Series;
+
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
-        if &self.name != &value.name() {
+        if &self.name != value.name()
+            || !self.element_domain.matches_dtype(value.dtype())
+            || (!self.nullable && value.null_count() > 0)
+        {
             return Ok(false);
         }
-
-        macro_rules! atom_member {
-            ($ty:ty, $polars_ty:ty) => {{
-                let atom_domain = self.atom_domain::<<$ty as ToOwned>::Owned>()?;
-
-                let chunked = value.0.unpack::<$polars_ty>()?;
-                if !self.nullable && chunked.null_count() > 0 {
-                    return Ok(false);
-                }
-
-                for arr in chunked.downcast_iter() {
-                    for v in arr.values_iter() {
-                        if !atom_domain.member(&v.to_owned())? {
-                            return Ok(false);
-                        }
-                    }
-                }
-                Ok(true)
-            }};
-        }
-
-        match self.dtype() {
-            DataType::UInt8 => atom_member!(u8, UInt8Type),
-            DataType::UInt16 => atom_member!(u16, UInt16Type),
-            DataType::UInt32 => atom_member!(u32, UInt32Type),
-            DataType::UInt64 => atom_member!(u64, UInt64Type),
-            DataType::Int8 => atom_member!(i8, Int8Type),
-            DataType::Int16 => atom_member!(i16, Int16Type),
-            DataType::Int32 => atom_member!(i32, Int32Type),
-            DataType::Int64 => atom_member!(i64, Int64Type),
-            DataType::Float32 => atom_member!(f32, Float32Type),
-            DataType::Float64 => atom_member!(f64, Float64Type),
-            DataType::Boolean => atom_member!(bool, BooleanType),
-            DataType::String => atom_member!(str, StringType),
-            _ => return fallible!(NotImplemented, "unsupported dtype: {:?}", self.dtype()),
-        }
+        self.element_domain.check_values(value)
     }
 }
 
@@ -147,15 +135,13 @@ impl SeriesDomain {
             }),
             DataType::Time => Arc::new(AtomDomain::<NaiveTime>::default()),
             DataType::Categorical(_, _) => Arc::new(CategoricalDomain::default()),
-            DataType::Enum(categories, _) => {
-                let categories = categories.categories().non_null_values_iter().collect();
-                Arc::new(EnumDomain::new(categories)?)
-            }
+            DataType::Enum(categories, _) => Arc::new(EnumDomain::from(categories)),
             DataType::Array(dtype, size) => {
                 let element_domain = Self::new_element_domain(*dtype)?;
                 Arc::new(ArrayDomain {
                     element_domain,
                     size,
+                    nullable: true,
                 })
             }
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
@@ -276,6 +262,19 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     fn dtype(&self) -> DataType;
 
     /// # Proof Definition
+    /// Check dtype compatibility, including nested encoding metadata.
+    fn matches_dtype(&self, dtype: &DataType) -> bool {
+        &self.dtype() == dtype
+    }
+
+    /// # Proof Definition
+    /// Check the logical values of a Series after `matches_dtype` succeeds.
+    ///
+    /// The caller checks outer nullability. Implementations skip null slots,
+    /// but must validate all present values and any nested nullability.
+    fn check_values(&self, value: &Series) -> Fallible<bool>;
+
+    /// # Proof Definition
     /// Returns the domain elements in the physical backing store.
     ///
     /// Polars Series represents nullity via a separate validity bit vector,
@@ -293,17 +292,29 @@ impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
     fn dtype(&self) -> DataType {
         T::dtype()
     }
+
+    fn check_values(&self, value: &Series) -> Fallible<bool> {
+        T::check_values(self, value)
+    }
+
     fn inner_domain(&self) -> &Self {
         self
     }
 
     const NULLABLE: bool = false;
 }
+
 impl<D: SeriesElementDomain<InnerDomain = D>> SeriesElementDomain for OptionDomain<D> {
     type InnerDomain = D;
 
     fn dtype(&self) -> DataType {
-        self.inner_domain().dtype()
+        SeriesElementDomain::dtype(self.inner_domain())
+    }
+    fn matches_dtype(&self, dtype: &DataType) -> bool {
+        SeriesElementDomain::matches_dtype(self.inner_domain(), dtype)
+    }
+    fn check_values(&self, value: &Series) -> Fallible<bool> {
+        SeriesElementDomain::check_values(self.inner_domain(), value)
     }
     fn inner_domain(&self) -> &D {
         &self.element_domain
@@ -312,66 +323,18 @@ impl<D: SeriesElementDomain<InnerDomain = D>> SeriesElementDomain for OptionDoma
     const NULLABLE: bool = true;
 }
 
-impl SeriesElementDomain for CategoricalDomain {
-    type InnerDomain = Self;
-
-    fn dtype(&self) -> DataType {
-        let categories = Categories::global();
-        DataType::Categorical(categories.clone(), categories.mapping())
-    }
-    fn inner_domain(&self) -> &Self {
-        self
-    }
-
-    const NULLABLE: bool = false;
-}
-
-impl SeriesElementDomain for EnumDomain {
-    type InnerDomain = Self;
-
-    fn dtype(&self) -> DataType {
-        let categories = self.categories().str().unwrap().iter().map(|v| v.unwrap());
-        let categories = FrozenCategories::new(categories).unwrap();
-        DataType::Enum(categories.clone(), categories.mapping().clone())
-    }
-    fn inner_domain(&self) -> &Self {
-        self
-    }
-
-    const NULLABLE: bool = false;
-}
-
-impl SeriesElementDomain for DatetimeDomain {
-    type InnerDomain = Self;
-
-    fn dtype(&self) -> DataType {
-        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
-    }
-    fn inner_domain(&self) -> &Self {
-        self
-    }
-
-    const NULLABLE: bool = false;
-}
-
-impl SeriesElementDomain for ArrayDomain {
-    type InnerDomain = Self;
-
-    fn dtype(&self) -> DataType {
-        DataType::Array(Box::new(self.element_domain.dtype()), self.size)
-    }
-    fn inner_domain(&self) -> &Self {
-        self
-    }
-
-    const NULLABLE: bool = false;
-}
-
 /// Object-safe version of [`SeriesElementDomain`].
 pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
     /// # Proof Definition
     /// Returns the datatype of rows of members in the domain.
     fn dtype(&self) -> DataType;
+
+    /// Check recursive dtype compatibility.
+    fn matches_dtype(&self, dtype: &DataType) -> bool;
+
+    /// Check logical values once `matches_dtype` succeeds.
+    /// The caller enforces outer nullability; null-slot payloads are ignored.
+    fn check_values(&self, value: &Series) -> Fallible<bool>;
 
     /// This method makes it possible to downcast a trait object of Self
     /// (dyn DynSeriesElementDomain) to its concrete type.
@@ -389,7 +352,13 @@ pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
 }
 impl<D: 'static + SeriesElementDomain> DynSeriesElementDomain for D {
     fn dtype(&self) -> DataType {
-        D::dtype(&self)
+        <D as SeriesElementDomain>::dtype(self)
+    }
+    fn matches_dtype(&self, dtype: &DataType) -> bool {
+        <D as SeriesElementDomain>::matches_dtype(self, dtype)
+    }
+    fn check_values(&self, value: &Series) -> Fallible<bool> {
+        <D as SeriesElementDomain>::check_values(self, value)
     }
     fn as_any(&self) -> &dyn Any {
         self
@@ -423,6 +392,12 @@ pub trait PrimitiveDataType: 'static + Send + Sync {
     /// `Polars` is the Polars marker type that corresponds to `Self`.
     type Polars: PolarsDataType;
 
+    /// Check logical values once the Polars dtype has been validated.
+    /// Ignore physical payloads of null slots; outer nullability is checked separately.
+    fn check_values(domain: &AtomDomain<Self>, value: &Series) -> Fallible<bool>
+    where
+        Self: Sized + CheckAtom;
+
     /// # Proof Definition
     /// Return an instance of the DataType enum of the variant that corresponds to `Self`.
     ///
@@ -432,6 +407,19 @@ pub trait PrimitiveDataType: 'static + Send + Sync {
     }
 }
 
+// Iterate logical values: Arrow's physical values in null slots are not valid
+// members and must never be passed to AtomDomain::member.
+macro_rules! member_primitive_series {
+    ($domain:ident, $series:ident, $polars_ty:ty) => {{
+        for value in $series.0.unpack::<$polars_ty>()?.iter().flatten() {
+            if !$domain.member(&value.to_owned())? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }};
+}
+
 macro_rules! impl_dtype_from {
     ($ty:ty, $dt:ty) => {
         impl NumericDataType for $ty {
@@ -439,6 +427,9 @@ macro_rules! impl_dtype_from {
         }
         impl PrimitiveDataType for $ty {
             type Polars = $dt;
+            fn check_values(domain: &AtomDomain<Self>, series: &Series) -> Fallible<bool> {
+                member_primitive_series!(domain, series, $dt)
+            }
         }
     };
 }
@@ -454,13 +445,41 @@ impl_dtype_from!(f32, Float32Type);
 impl_dtype_from!(f64, Float64Type);
 impl PrimitiveDataType for bool {
     type Polars = BooleanType;
+    fn check_values(domain: &AtomDomain<Self>, series: &Series) -> Fallible<bool> {
+        member_primitive_series!(domain, series, BooleanType)
+    }
 }
 impl PrimitiveDataType for String {
     type Polars = StringType;
+    fn check_values(domain: &AtomDomain<Self>, series: &Series) -> Fallible<bool> {
+        member_primitive_series!(domain, series, StringType)
+    }
 }
 impl PrimitiveDataType for NaiveDate {
     type Polars = DateType;
+    fn check_values(domain: &AtomDomain<Self>, series: &Series) -> Fallible<bool> {
+        for days in series.date()?.physical().iter().flatten() {
+            let Some(date) = date_from_days(days) else {
+                return Ok(false);
+            };
+            if !domain.member(&date)? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
 }
 impl PrimitiveDataType for NaiveTime {
     type Polars = TimeType;
+    fn check_values(domain: &AtomDomain<Self>, series: &Series) -> Fallible<bool> {
+        for nanos in series.time()?.physical().iter().flatten() {
+            let Some(time) = time_from_nanos(nanos) else {
+                return Ok(false);
+            };
+            if !domain.member(&time)? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
 }

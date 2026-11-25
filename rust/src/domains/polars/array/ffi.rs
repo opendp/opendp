@@ -12,7 +12,7 @@ use super::ArrayDomain;
 
 #[bootstrap(
     name = "array_domain",
-    arguments(categories(rust_type = "Series")),
+    arguments(nullable(default = true)),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `ArrayDomain`.
@@ -21,22 +21,24 @@ use super::ArrayDomain;
 /// # Arguments
 /// * `element_domain` - The domain of each element in the array.
 /// * `width` - The width of the array.
+/// * `nullable` - Whether elements within an array may be null.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__array_domain(
     element_domain: *const AnyDomain,
     width: u32,
+    nullable: bool,
 ) -> FfiResult<*mut AnyDomain> {
     let element_domain = try_as_ref!(element_domain);
 
     fn monomorphize<D: DynSeriesElementDomain + Clone>(
         element_domain: &AnyDomain,
         width: u32,
+        nullable: bool,
     ) -> Fallible<AnyDomain> {
         let element_domain = try_!(element_domain.downcast_ref::<D>()).clone();
-        Ok(AnyDomain::new(ArrayDomain::new(
-            element_domain,
-            width as usize,
-        )))
+        Ok(AnyDomain::new(
+            ArrayDomain::new(element_domain, width as usize).with_nullable(nullable),
+        ))
     }
 
     let D = element_domain.type_.clone();
@@ -48,8 +50,8 @@ pub extern "C" fn opendp_domains__array_domain(
             AtomDomain<i8>, AtomDomain<i16>, AtomDomain<i32>, AtomDomain<i64>,
             AtomDomain<f32>, AtomDomain<f64>,
             AtomDomain<NaiveTime>, AtomDomain<NaiveDate>,
-            CategoricalDomain, DatetimeDomain, EnumDomain
+            CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain
         ])
-    ], (element_domain, width))
+    ], (element_domain, width, nullable))
     .into()
 }
