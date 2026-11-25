@@ -47,6 +47,14 @@ def make_stable_truncate(
                 raise ValueError(
                     "SortBy truncation keys must be permutation-equivariant"
                 )
+        if candidate.bound.num_groups is not None:
+            for key in candidate.bound.by:
+                if contains_categorical(key.to_field(schema).dtype):
+                    raise ValueError(
+                        "num_groups truncation cannot use Categorical keys"
+                    )
+                if not rank_key_dtype_supported(key.to_field(schema).dtype):
+                    raise ValueError("Unsupported num_groups truncation key dtype")
         validated_bounds.append(candidate.bound)  # |\label{line:check-certificates}|
     truncation_bounds = validated_bounds
 

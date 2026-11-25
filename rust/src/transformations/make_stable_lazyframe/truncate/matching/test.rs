@@ -208,29 +208,93 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
     });
 
     let check = |expr: Expr| match_num_groups_predicate(&expr, &[col("ID")], &col("ID"), 10);
-    assert_eq!(
-        check(col("A").rank(
+    let dense = |expr: Expr| {
+        expr.rank(
             RankOptions {
                 method: RankMethod::Dense,
                 descending: false,
             },
             None,
-        ))?,
-        bound
-    );
+        )
+    };
+    let keys = as_struct(vec![col("A")]);
+    let hashed = as_struct(vec![
+        keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+        keys.clone().alias("__opendp_key"),
+    ]);
+    for expr in [col("A"), keys.clone(), hashed] {
+        assert_eq!(check(dense(expr))?, bound);
+    }
+    assert!(check(keys.clone())?.is_none());
 
-    assert_eq!(
-        check(as_struct(vec![col("A")]).rank(
+    // Extra struct fields affect ranking but must not disappear from the
+    // certified grouping keys.
+    let positional = as_struct(vec![
+        keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+        keys.clone().alias("__opendp_key"),
+        int_range(lit(0), len(), 1, DataType::Int64).alias("__position"),
+    ]);
+    assert!(check(dense(positional)).is_err());
+
+    // Likewise, an additional hash input cannot be discarded.
+    let malformed_hash = Expr::Function {
+        input: vec![keys.clone(), col("B")],
+        function: FunctionExpr::Hash(0, 0, 0, 0),
+    };
+    let malformed = as_struct(vec![
+        malformed_hash.alias("__opendp_hash"),
+        keys.alias("__opendp_key"),
+    ]);
+    assert!(check(dense(malformed)).is_err());
+    Ok(())
+}
+
+#[test]
+fn test_hashed_dense_rank_rejects_categorical_keys() -> Fallible<()> {
+    let categories = Categories::global();
+    let schema = Schema::from_iter([
+        Field::new(
+            "category".into(),
+            DataType::Categorical(categories.clone(), categories.mapping()),
+        ),
+        Field::new("name".into(), DataType::String),
+        Field::new("list".into(), DataType::List(Box::new(DataType::Int32))),
+    ]);
+    let rank = |keys: Vec<Expr>| {
+        let keys = as_struct(keys);
+        as_struct(vec![
+            keys.clone().hash(0, 0, 0, 0).alias("__opendp_hash"),
+            keys.alias("__opendp_key"),
+        ])
+        .rank(
             RankOptions {
                 method: RankMethod::Dense,
-                descending: true,
+                descending: false,
             },
             None,
-        ))?,
-        bound
-    );
+        )
+    };
+    let check = |expr: Expr| {
+        match_num_groups_predicate(&expr, &[col("ID")], &col("ID"), 1)?
+            .map(|bound| MatchedBound::new(bound).validate_ranking(&schema))
+            .transpose()
+    };
 
-    assert!(check(as_struct(vec![col("A")]))?.is_none());
+    assert!(check(rank(vec![col("category")])).is_err());
+    assert!(check(rank(vec![col("list")])).is_err());
+    assert!(check(rank(vec![col("name")]))?.is_some());
+
+    // Direct ranks also depend on categorical physical code assignments.
+    assert!(
+        check(as_struct(vec![col("category")]).rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        ))
+        .is_err()
+    );
     Ok(())
 }
 

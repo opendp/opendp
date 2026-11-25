@@ -60,6 +60,23 @@ impl MatchedBound {
                 );
             }
         }
+        if self.bound.num_groups.is_some() {
+            for key in &self.bound.by {
+                let dtype = key.clone().to_field(schema)?.dtype;
+                if contains_categorical(&dtype) {
+                    return fallible!(
+                        MakeTransformation,
+                        "num_groups truncation cannot use Categorical keys; cast to String or Enum first."
+                    );
+                }
+                if !rank_key_dtype_supported(&dtype) {
+                    return fallible!(
+                        MakeTransformation,
+                        "Unsupported num_groups truncation key dtype: {dtype}"
+                    );
+                }
+            }
+        }
         Ok(self.bound)
     }
 }
@@ -363,6 +380,13 @@ fn match_num_groups_predicate(
 
 /// Grouping expressions in the single input to a dense rank.
 pub(super) fn num_groups_keys(input_item: &Expr) -> Fallible<&[Expr]> {
+    fn strip_alias(expr: &Expr) -> &Expr {
+        match expr {
+            Expr::Alias(inner, _) => strip_alias(inner),
+            other => other,
+        }
+    }
+
     Ok(match input_item {
         // Treat as_struct as a special case that represents multiple columns.
         // Could still actually have a struct column via to_struct(to_struct(...)).
@@ -378,19 +402,24 @@ pub(super) fn num_groups_keys(input_item: &Expr) -> Fallible<&[Expr]> {
                 input: hash_input,
                 function: FunctionExpr::Hash(_, _, _, _),
                 ..
-            }) = input.get(0)
+            }) = input.first().map(strip_alias)
             {
-                if hash_input.get(0) == input.get(1) {
-                    let Some(Expr::Function {
-                        input: true_input,
-                        function: FunctionExpr::AsStruct,
-                        ..
-                    }) = hash_input.get(0)
+                if hash_input.first() == input.get(1).map(strip_alias) {
+                    // Every field affecting the rank must be determined by the grouping keys.
+                    let (
+                        [_, _],
+                        [
+                            Expr::Function {
+                                input: true_input,
+                                function: FunctionExpr::AsStruct,
+                                ..
+                            },
+                        ],
+                    ) = (input.as_slice(), hash_input.as_slice())
                     else {
                         return fallible!(
                             MakeTransformation,
-                            "expected hash input to be a struct, found {:?}",
-                            hash_input
+                            "hashed num_groups rank must contain exactly two struct fields and one struct-valued hash input"
                         );
                     };
                     return Ok(true_input);

@@ -46,8 +46,17 @@ None
     Special consideration is made for structs, which are considered multiple grouping columns.
 
     Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
-    The hash chooses a deterministic priority for the grouping columns,
-    rather than a cryptographically uniform random sample.
+    Field aliases are ignored when checking this relationship: they prevent duplicate
+    field names in Polars without changing the values.
+    The shape check on line \ref{line:check_hash_shape} requires exactly two fields
+    (the hash and the complete grouping key), and exactly one struct-valued hash input. Without these checks, unrecognized
+    fields could affect the dense ranks but be omitted from the returned bound.
+    Before the bound is used, the caller restricts each dense-rank grouping
+    key to supported scalar dtypes, excluding nested and categorical keys
+    in both hashed and non-hashed ranks.
+    Physical categorical codes can depend on input row order, so ranking or hashing
+    these codes need not be permutation invariant.
+    This deterministically orders grouping columns by hash and then by the original keys; it does not produce a uniformly random sample.
     The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
     which prevents different combinations of grouping keys from being assigned the same rank,
     preventing more distinct groups being kept than is permitted.
@@ -55,7 +64,7 @@ None
     This predicate corresponds to a \texttt{num\_groups} truncation predicate,
     because the over expression groups by the \texttt{identifier} column,
     and within each group, a dense ranking is applied to unique combinations of the grouping columns.
-    If the only rows kept are those corresponding to grouping keys assigned dense ranks less than \texttt{threshold},
+    If the only rows kept are those corresponding to grouping keys assigned dense ranks at most \texttt{threshold},
     then each user identifier will have at most \texttt{threshold} unique combinations of the grouping columns
     after filtering by the predicate.
 
