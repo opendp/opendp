@@ -660,9 +660,12 @@ def test_polars_collect_early():
         split_evenly_over=1,
     )
 
-    # catch the user trying to collect before release
-    with pytest.raises(ValueError):
-        context.query().collect()
+    # Building a stable collection query does not expose or release rows.
+    collected = context.query().collect()
+    assert isinstance(collected, dp.Query)
+    assert isinstance(collected._chain, dp.Transformation)
+    assert isinstance(collected._chain.output_domain, dp.DataFrameDomain)
+    assert context.current_privacy_loss() == []
 
     with pytest.raises(ValueError):
         context.query().describe()

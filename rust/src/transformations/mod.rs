@@ -3,6 +3,12 @@
 //! The different [`crate::core::Transformation`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Transformation` does.
 
+// Native collection must not link Polars execution into Python wheels.
+#[cfg(all(feature = "contrib", feature = "polars", not(feature = "polars-ffi")))]
+mod frame_conversions;
+#[cfg(all(feature = "contrib", feature = "polars", not(feature = "polars-ffi")))]
+pub use frame_conversions::*;
+
 #[cfg(all(feature = "contrib", feature = "polars"))]
 mod make_stable_lazyframe;
 #[cfg(all(feature = "contrib", feature = "polars"))]
