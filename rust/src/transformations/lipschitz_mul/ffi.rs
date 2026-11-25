@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::ffi::c_void;
 
 use dashu::integer::IBig;

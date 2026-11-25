@@ -21,6 +21,7 @@ mod test;
     generics(TA(suppress)),
     derived_types(TA = "$get_atom(get_carrier_type(input_domain))")
 )]
+#[deprecated(since = "0.17.0", note = "Use Polars instead.")]
 /// Make a transformation that multiplies an aggregate by a constant.
 ///
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
