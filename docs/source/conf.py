@@ -61,6 +61,10 @@ def setup(app):
     app.connect("autodoc-process-docstring", docstring)
 
 
+# The sklearn optional dependency is mocked; imported decorators have no source
+# page, so following them would create broken links in the viewcode index.
+viewcode_follow_imported_members = False
+
 # This prevents the RuntimeTypeDescriptors from expanding and making the signatures on API docs unreadable
 autodoc_typehints = "description"
 

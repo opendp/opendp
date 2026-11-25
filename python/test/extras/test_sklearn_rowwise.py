@@ -19,7 +19,11 @@ dp.enable_features("contrib")
 class IdentityFitted(MeasurementMixin, TransformationMixin, BaseEstimator):
     def make_measurement(self, domain, metric, measure, d_in, d_out):
         return _make_measurement(
-            domain, metric, measure, lambda data: 7, lambda d: d_out * d / d_in
+            domain,
+            metric,
+            measure,
+            lambda data: 7,
+            lambda d: d_out * d / d_in,
         )
 
     def _ingest_release(self, release):
@@ -64,16 +68,14 @@ def test_fitted_transform_query_needs_no_frozen_wrapper_or_budget():
 
 
 def test_custom_rowwise_respects_hbc():
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
-    )
+    from opendp.extras.sklearn.linear_model._sgd_classifier import SGDClassifier
 
     fitted = IdentityFitted()
     fitted.release_ = 7
-    trusted = LogisticRegression(classes=(0, 1))
+    trusted = SGDClassifier(classes=(0, 1))
     trusted._ingest_release(np.array([2.0, -1.0, 0.0]))
 
-    class Override(LogisticRegression):
+    class Override(SGDClassifier):
         def predict(self, X):
             return np.repeat(X[:1, 0], len(X))
 
@@ -102,8 +104,8 @@ def test_custom_rowwise_respects_hbc():
 
 
 @pytest.mark.parametrize("route", ["standalone", "context"])
-def test_public_logistic_fitting_and_inference_without_hbc(route):
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+def test_public_sgd_fitting_and_inference_without_hbc(route):
+    from opendp.extras.sklearn.linear_model import SGDClassifier
 
     X = np.array([[1.0, 0.0], [0.0, 2.0]])
     y = np.array([0, 1], dtype=np.int32)
@@ -112,7 +114,7 @@ def test_public_logistic_fitting_and_inference_without_hbc(route):
     privacy_loss = dp.loss_of(rho=1.0)
     dp.disable_features("honest-but-curious")
     try:
-        model = LogisticRegression(classes=(0, 1), max_iter=1, reference_size=2)
+        model = SGDClassifier(classes=(0, 1), max_iter=1, reference_size=2)
         if route == "standalone":
             fitted = model.fit(
                 X,
@@ -151,11 +153,11 @@ def test_arbitrary_sklearn_estimator_lacks_rowwise_support():
 
 
 def test_predictions_are_rowwise_with_aligned_targets():
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1), loss="log_loss")
     model._ingest_release(np.array([2.0, -1.0, 0.0]))
     input_domain = domain(y=True)
     X = np.array([[1.0, 0.0], [0.0, 2.0]], dtype=np.float64)
@@ -163,6 +165,7 @@ def test_predictions_are_rowwise_with_aligned_targets():
     data = dp.sklearn.SklearnFit(X, y)
     for method, expected in (
         ("predict", [[1], [0]]),
+        ("decision_function", [[2.0], [-2.0]]),
         ("predict_proba", None),
     ):
         trans = predict_transform(model, input_domain, method)
@@ -177,12 +180,36 @@ def test_predictions_are_rowwise_with_aligned_targets():
         assert trans.output_domain.member(result)
 
 
+def test_hinge_rowwise_decision_function():
+    from opendp.extras.sklearn.linear_model import SGDClassifier
+
+    model = SGDClassifier(classes=(0, 1))
+    model._ingest_release(np.array([2.0, -1.0, 0.0]))
+    X = np.array([[1.0, 0.0], [0.0, 2.0]])
+    data = dp.sklearn.SklearnFit(X)
+    for method, values in (
+        ("predict", [[1], [0]]),
+        ("decision_function", [[2.0], [-2.0]]),
+    ):
+        trans = predict_transform(model, domain(), method)
+        np.testing.assert_array_equal(trans(data).X, values)
+        assert trans.map(1) == 1
+    assert not hasattr(model, "predict_proba")
+    with pytest.raises(TypeError, match="no sklearn 'predict_proba' method"):
+        predict_transform(model, domain(), "predict_proba")
+    with pytest.raises(ValueError, match="does not support rowwise inference"):
+        model.rowwise_output_domain(
+            dp.numpy.array2_domain(T=dp.f64, num_columns=2),
+            method="predict_proba",
+        )
+
+
 def test_query_predicts_without_freezing_or_spending_privacy():
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1))
     model._ingest_release(np.array([2.0, -1.0, 0.0]))
     X = np.array([[1.0, 0.0], [0.0, 2.0]], dtype=np.float64)
     ctx = dp.Context.compositor(
@@ -203,9 +230,9 @@ def test_query_predicts_without_freezing_or_spending_privacy():
 
 
 def test_rowwise_queries_chain_without_privacy_distances():
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+    from opendp.extras.sklearn.linear_model import SGDClassifier
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1), loss="log_loss")
     model._ingest_release(np.array([2.0, -1.0, 0.0]))
     data = dp.sklearn.SklearnFit(np.array([[1.0, 0.0], [0.0, 2.0]]))
     query = dp.Query((domain(), dp.symmetric_distance()), dp.max_divergence())
@@ -217,15 +244,19 @@ def test_rowwise_queries_chain_without_privacy_distances():
 
 
 def test_empty_inference_and_sklearn_tie_breaking():
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1), loss="log_loss")
     model._ingest_release(np.zeros(3))
     assert model.predict(np.zeros((1, 2))).tolist() == [0]
 
-    for method, width in (("predict", 1), ("predict_proba", 2)):
+    for method, width in (
+        ("predict", 1),
+        ("decision_function", 1),
+        ("predict_proba", 2),
+    ):
         empty = np.empty((0, 2))
         assert getattr(model, method)(empty).shape[0] == 0
         trans = predict_transform(model, domain(), method)
@@ -235,11 +266,11 @@ def test_empty_inference_and_sklearn_tie_breaking():
 
 
 def test_rowwise_transform_snapshots_coefficients():
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1))
     model._ingest_release(np.array([2.0, -1.0, 0.0]))
     trans = predict_transform(model, domain(), "predict")
     data = dp.sklearn.SklearnFit(np.array([[1.0, 0.0]]))
@@ -303,10 +334,10 @@ def test_invalid_rowwise_output_domain_and_missing_public_width():
         predict_transform(UnknownWidth(), domain(), "transform")
 
 
-def test_logistic_regression_rejects_invalid_inference_contracts():
-    from opendp.extras.sklearn.linear_model import LogisticRegression
+def test_sgd_classifier_rejects_invalid_inference_contracts():
+    from opendp.extras.sklearn.linear_model import SGDClassifier
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1))
     model._ingest_release(np.zeros(3))
     with pytest.raises(ValueError, match="feature count"):
         model.rowwise_output_domain(
@@ -335,12 +366,12 @@ def test_trusted_rowwise_validates_frozen_and_module_identity(monkeypatch):
     """Only exact reviewed classes are trusted."""
     from sklearn.frozen import FrozenEstimator
     from opendp.extras.sklearn._rowwise import _trusted_rowwise
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
     import sys
 
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1))
     model._ingest_release(np.zeros(3))
     assert _trusted_rowwise(model)
     assert _trusted_rowwise(FrozenEstimator(model))
@@ -350,9 +381,9 @@ def test_trusted_rowwise_validates_frozen_and_module_identity(monkeypatch):
 
     assert not _trusted_rowwise(UnsafeFrozen(model))
 
-    module = sys.modules[LogisticRegression.__module__]
+    module = sys.modules[SGDClassifier.__module__]
     with monkeypatch.context() as patch:
-        patch.setattr(module, "LogisticRegression", object())
+        patch.setattr(module, "SGDClassifier", object())
         assert not _trusted_rowwise(model)
 
 
@@ -361,8 +392,8 @@ def test_trusted_rowwise_recursively_checks_composites(monkeypatch):
     import sys
     from types import ModuleType
     from opendp.extras.sklearn._rowwise import _trusted_rowwise
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
     def composite_class(module_name, name):
@@ -376,7 +407,7 @@ def test_trusted_rowwise_recursively_checks_composites(monkeypatch):
     ColumnTransformer = composite_class(
         "opendp.extras.sklearn.compose", "ColumnTransformer"
     )
-    model = LogisticRegression(classes=(0, 1))
+    model = SGDClassifier(classes=(0, 1))
     model._ingest_release(np.zeros(3))
 
     pipeline = Pipeline()

@@ -3,14 +3,14 @@ from pathlib import Path
 import pytest
 
 
-def test_logistic_regression_lazy_export():
+def test_sgd_classifier_lazy_export():
     pytest.importorskip("sklearn")
-    from opendp.extras.sklearn.linear_model import LogisticRegression
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression as implementation,
+    from opendp.extras.sklearn.linear_model import SGDClassifier
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier as implementation,
     )
 
-    assert LogisticRegression is implementation
+    assert SGDClassifier is implementation
 
 
 def test_sklearn_hbc_fallback_is_only_for_unreviewed_rowwise_inference():
