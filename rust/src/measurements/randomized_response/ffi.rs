@@ -6,19 +6,15 @@ use std::os::raw::c_char;
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyMeasurement, AnyObject, Downcast};
-use crate::ffi::util::{Type, c_bool, to_bool};
+use crate::ffi::util::Type;
 use crate::measurements::{make_randomized_response, make_randomized_response_bool};
 use crate::traits::Hashable;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_randomized_response_bool(
     prob: f64,
-    constant_time: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let constant_time = to_bool(constant_time);
-    make_randomized_response_bool(prob, constant_time)
-        .into_any()
-        .into()
+    make_randomized_response_bool(prob).into_any().into()
 }
 
 #[unsafe(no_mangle)]

@@ -1,6 +1,6 @@
 # type: ignore
 def make_randomized_response(categories: set[T], prob: f64):
-    input_domain = AtomDomain(bool)
+    input_domain = AtomDomain(T)
     input_metric = DiscreteMetric()
     output_measure = MaxDivergence()
 
@@ -14,11 +14,21 @@ def make_randomized_response(categories: set[T], prob: f64):
     if not (1 / num_categories <= prob <= 1):  # |\label{line:range}|
         raise ValueError("probability must be within [1/num_categories, 1]")
 
+    if prob == 1 / num_categories:
+        randomize_prob = 1.0
+    else:
+        randomize_prob = min(
+            (1.0).inf_sub(prob).inf_mul(num_categories).inf_div(num_categories - 1),
+            1.0,
+        )
+    threshold = bernoulli_u64_threshold(randomize_prob)
+
     # prepare constant: |\label{line:map}|
-    if prob == 1.0:
+    q = bernoulli_u64_probability(threshold)
+    if q == 0.0:
         c = float("inf")
     else:
-        c = p.inf_div((1).neg_inf_sub(prob)).inf_mul(num_categories.inf_sub(1)).inf_ln()
+        c = (1.0).inf_sub(q).inf_mul(num_categories).inf_div(q).inf_ln_1p()
 
     def privacy_map(d_in: u32) -> QO:
         if d_in == 0:
@@ -26,20 +36,10 @@ def make_randomized_response(categories: set[T], prob: f64):
         else:
             return c
 
-    def function(truth: bool) -> bool:  # |\label{line:fn}|
-        index = categories.index(truth)
-        sample = usize.sample_uniform_int_below(
-            len(num_categories) - (0 if index == -1 else 1)
-        )
-
-        if index != -1 and sample >= index:
-            sample += 1
-
-        lie = categories[sample]
-
-        be_honest = sample_bernoulli_float(prob, false)
-        is_member = index != -1
-        return truth if be_honest and is_member else lie
+    def function(truth: T) -> T:  # |\label{line:fn}|
+        sample = usize.sample_uniform_int_below(num_categories)
+        randomize = sample_bernoulli_u64(threshold)
+        return categories[sample] if randomize or truth not in categories else truth
 
     return Measurement(
         input_domain, function, input_metric, output_measure, privacy_map

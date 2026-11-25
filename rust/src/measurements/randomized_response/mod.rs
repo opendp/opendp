@@ -10,22 +10,12 @@ use crate::domains::AtomDomain;
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::samplers::sample_bernoulli_float;
-use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
+use crate::traits::samplers::{
+    bernoulli_u64_probability, bernoulli_u64_threshold, sample_bernoulli_u64,
+};
+use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfLn1P, InfMul, InfSub};
 
-// There are two constructors:
-// 1. make_randomized_response_bool
-//    a simple implementation specifically for booleans
-// 2. make_randomized_response
-//    for any categorical type with t > 1 categories
-//
-// The general rule is eps = (p / p').ln(), where p' = (1 - p) / (t - 1), and t = # categories
-// See paper for more details: http://csce.uark.edu/~xintaowu/publ/DPL-2014-003.pdf
-//
-// In the case of a balanced coin flip,
-//     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
-
-#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
+#[bootstrap(features("contrib"))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Citations
@@ -40,22 +30,18 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
-/// * `constant_time` - Set to true to enable constant time. Slower.
 pub fn make_randomized_response_bool(
     prob: f64,
-    constant_time: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
-    // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
     }
 
+    let threshold = bernoulli_u64_threshold(prob);
+
     let privacy_constant = if prob == 1.0 {
         f64::INFINITY
     } else {
-        // d_out = min(d_in, 1) * ln(p / p')
-        //             where p' = 1 - p
-        //       = min(d_in, 1) * ln(p / (1 - p))
         prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?.inf_ln()?
     };
 
@@ -63,16 +49,14 @@ pub fn make_randomized_response_bool(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
-        Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
-        }),
+        Function::new_fallible(move |arg: &bool| Ok(arg ^ !sample_bernoulli_u64(threshold)?)),
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
 
 #[bootstrap(
     features("contrib"),
-    arguments(categories(rust_type = "Vec<T>"), constant_time(default = false)),
+    arguments(categories(rust_type = "Vec<T>")),
     generics(T(example = "$get_first(categories)"))
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
@@ -86,7 +70,7 @@ pub fn make_randomized_response_bool(
 ///
 /// # Utility
 /// If the input is a member of `categories`,
-/// the mechanism returns the truthful category with probability `prob`,
+/// the mechanism returns the truthful category with approximately probability `prob`,
 /// so the expected 0-1 loss is `O(1 - prob)`.
 /// Otherwise, the output is sampled uniformly from `categories`.
 ///
@@ -115,18 +99,29 @@ pub fn make_randomized_response<T: Hashable>(
         );
     }
 
-    // d_out = min(d_in, 1) * (p / p').ln()
-    //              where p' = the probability of categories off the diagonal
-    //                       = (1 - p) / (t - 1)
-    //              where t  = num_categories
-    //       = min(d_in, 1) * (p / (1 - p) * (t - 1)).ln()
+    // Mix truthful reporting with a uniform draw from all categories.
+    // Round the uniform-mixture probability up to preserve the requested privacy bound.
+    let randomize_prob = if prob == num_categories.recip() {
+        1.0
+    } else {
+        (1.0)
+            .inf_sub(&prob)?
+            .inf_mul(&num_categories)?
+            .inf_div(&(num_categories - 1.0))?
+            .min(1.0)
+    };
+    let threshold = bernoulli_u64_threshold(randomize_prob);
 
-    let privacy_constant = if prob == 1.0 {
+    // Bound privacy loss using the actual mixture probability.
+    let q = bernoulli_u64_probability(threshold);
+    let privacy_constant = if q == 0.0 {
         f64::INFINITY
     } else {
-        prob.inf_div(&(1.0).neg_inf_sub(&prob)?)?
-            .inf_mul(&num_categories.inf_sub(&1.0)?)?
-            .inf_ln()?
+        1.0f64
+            .inf_sub(&q)?
+            .inf_mul(&num_categories)?
+            .inf_div(&q)?
+            .inf_ln_1p()?
     };
 
     Measurement::new(
@@ -134,25 +129,14 @@ pub fn make_randomized_response<T: Hashable>(
         DiscreteDistance,
         MaxDivergence,
         Function::new_fallible(move |truth: &T| {
-            // find index of truth in category set, or None
-            let index = categories.iter().position(|cat| cat == truth);
-
-            // randomly sample a lie from among the categories with equal probability
-            // if truth in categories, sample among n - 1 categories
-            let mut sample =
-                sample_uniform_uint_below(categories.len() - if index.is_some() { 1 } else { 0 })?;
-            // shift the sample by one if index is greater or equal to the index of truth
-            if let Some(i) = index {
-                if sample >= i {
-                    sample += 1
-                }
+            let sample = sample_uniform_uint_below(categories.len())?;
+            let randomize = sample_bernoulli_u64(threshold)?;
+            Ok(if randomize || !categories.contains(truth) {
+                &categories[sample]
+            } else {
+                truth
             }
-            let lie = &categories[sample];
-
-            // return the truth if we chose to be honest and the truth is in the category set
-            let be_honest = sample_bernoulli_float(prob, false)?;
-            let is_member = index.is_some();
-            Ok(if be_honest && is_member { truth } else { lie }.clone())
+            .clone())
         }),
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
