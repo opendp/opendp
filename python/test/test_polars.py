@@ -933,14 +933,12 @@ def test_cut():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
+            margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
-    # Use public keys in the stabilized Enum encoding.
-    keys = pl.DataFrame({"x": [0, 1, 2, 3]}, schema={"x": pl.UInt8})
     actual = (
         context.query()
         .group_by(*by)
         .agg(dp.len(signed=True))
-        .with_keys(keys)
         .release()
         .collect()
         .sort("x")
@@ -984,16 +982,18 @@ def test_cut_direct_enum_group_by():
     data = pl.LazyFrame({"x": [2.0, 0.5, 0.5]})
     context = dp.Context.compositor(
         data=data,
-        privacy_unit=dp.unit_of(contributions=1),
+        privacy_unit=dp.unit_of(
+            contributions=[dp.polars.Bound(by=[by], per_group=1, num_groups=1)]
+        ),
         privacy_loss=dp.loss_of(epsilon=10000.0),
         split_evenly_over=1,
+        margins=[dp.polars.Margin(by=[by], invariant="keys")],
     )
-    keys = pl.DataFrame({"x": ["low", "high"]}, schema={"x": pl.Enum(["low", "high"])})
+    assert context.accountant.input_domain.get_margin([by]).invariant == "keys"
     actual = (
         context.query()
         .group_by(by)
         .agg(dp.len(signed=True))
-        .with_keys(keys)
         .release()
         .collect()
         .with_columns(pl.col("x").cast(pl.String))

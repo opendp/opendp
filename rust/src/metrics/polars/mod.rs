@@ -173,7 +173,8 @@ impl Bounds {
 
 #[derive(Clone, PartialEq, Default, Debug)]
 pub struct Bound {
-    /// The columns to group by.
+    /// The execution expressions to group by.
+    /// User expressions can be stabilized against a frame domain before constructing this bound.
     pub by: HashSet<Expr>,
 
     /// The greatest number of contributions that can be made by one unit to any one group.

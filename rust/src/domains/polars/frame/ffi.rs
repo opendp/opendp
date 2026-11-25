@@ -94,8 +94,34 @@ pub extern "C" fn opendp_domains___lazyframe_domain_get_margin(
 ) -> FfiResult<*mut AnyObject> {
     let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
     let by = try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>());
-    let margin = lazyframe_domain.get_margin(&HashSet::from_iter(by.iter().cloned()));
+    let by = HashSet::from_iter(by.iter().cloned());
+    #[cfg(feature = "contrib")]
+    let by = try_!(lazyframe_domain.stabilize_grouping(&by));
+    let margin = lazyframe_domain.get_margin(&by);
     Ok(AnyObject::new(margin)).into()
+}
+
+#[cfg(feature = "contrib")]
+#[bootstrap(
+    name = "_stabilize_polars_bounds",
+    features("contrib"),
+    arguments(bounds(rust_type = "Bounds")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Stabilize user-declared contribution-bound grouping expressions against a domain.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___stabilize_polars_bounds(
+    lazyframe_domain: *const AnyDomain,
+    bounds: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    use crate::metrics::Bounds;
+
+    let domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let mut bounds = try_!(try_as_ref!(bounds).downcast_ref::<Bounds>()).clone();
+    for bound in &mut bounds.0 {
+        bound.by = try_!(domain.stabilize_grouping(&bound.by));
+    }
+    Ok(AnyObject::new(bounds)).into()
 }
 
 #[bootstrap()]

@@ -243,11 +243,45 @@ impl<F: Frame> FrameDomain<F> {
         }
     }
 
+    /// Stabilize user-supplied grouping expressions against the frame schema.
+    ///
+    /// Use the result as the grouping keys in low-level margin and distance descriptors.
+    /// The expressions are analyzed on an empty frame, without reading private data.
+    #[cfg(feature = "contrib")]
+    pub fn stabilize_grouping(&self, by: &HashSet<Expr>) -> Fallible<HashSet<Expr>> {
+        use crate::domains::{Context, WildExprDomain};
+        use crate::metrics::{L0PInfDistance, L01InfDistance, SymmetricDistance};
+        use crate::transformations::make_stable_expr;
+
+        let domain = WildExprDomain {
+            columns: self.series_domains.clone(),
+            context: Context::RowByRow,
+        };
+        let plan = DataFrame::empty_with_schema(&self.schema()).lazy().logical_plan;
+        by.iter()
+            .map(|key| {
+                let t = make_stable_expr::<_, L01InfDistance<SymmetricDistance>>(
+                    domain.clone(),
+                    L0PInfDistance(SymmetricDistance),
+                    key.clone(),
+                )?;
+                Ok(t.invoke(&plan)?.expr)
+            })
+            .collect()
+    }
+
     /// # Proof Definition
-    /// Errors if another margin with same `by` keys is present,
-    /// otherwise returns an equivalent FrameDomain, but with `margin`.
+    /// Attach a margin whose descriptors refer to the stabilized grouping expressions
+    /// (when the `contrib` feature is enabled).
+    /// Errors if another margin with the same stored grouping keys is present.
     #[must_use]
     pub fn with_margin(mut self, margin: Margin) -> Fallible<Self> {
+        #[cfg(feature = "contrib")]
+        let margin = Margin {
+            by: self.stabilize_grouping(&margin.by)?,
+            ..margin
+        };
+        #[cfg(not(feature = "contrib"))]
         (margin.by.iter())
             .map(|e| e.clone().meta().root_names())
             .flatten()
@@ -268,6 +302,7 @@ impl<F: Frame> FrameDomain<F> {
     /// # Proof Definition
     /// Return margin descriptors when grouped by `by`
     /// that can be inferred from `self`.
+    /// The grouping expressions must be in execution form, as stored in the domain.
     ///
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.

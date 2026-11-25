@@ -1329,7 +1329,7 @@ class Margin:
     """
 
     by: Sequence = field(default_factory=list)
-    """Polars expressions describing the grouping columns."""
+    """Grouping expressions, interpreted as stabilized by OpenDP when attached to a domain."""
 
     max_length: int | None = None
     """An upper bound on the number of records in any one group.
@@ -1383,7 +1383,9 @@ class Bound(object):
     """
 
     by: Sequence = field(default_factory=list)
-    """Polars expressions describing the grouping columns."""
+    """Grouping expressions. Context construction stabilizes these against the input domain.
+    Low-level distance arguments must already describe the execution grouping expressions.
+    """
 
     per_group: int | None = None
     """The greatest number of records an individual may contribute to any one group.

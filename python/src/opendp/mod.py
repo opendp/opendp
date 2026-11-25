@@ -1017,7 +1017,7 @@ class LazyFrameDomain(Domain):
         return _lazyframe_domain_get_series_domain(self, name)
 
     def get_margin(self, by: Sequence[Any]):
-        """Get the margin descriptor of the frame when grouped by the given columns"""
+        """Get the margin descriptor for the stabilized grouping expressions."""
         from opendp.domains import _lazyframe_domain_get_margin
         from opendp._convert import _check_polars_by
 

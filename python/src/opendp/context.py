@@ -534,6 +534,8 @@ class Context(object):
 
         When ``data`` is a Polars LazyFrame, queries are specified as a Polars compute plan.
         In addition, ``margins`` may be specified, which contain descriptors for the data under grouping.
+        Margin and contribution-bound grouping expressions refer to their stabilized OpenDP
+        interpretation, including any casts or encoding changes introduced by stabilization.
 
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
@@ -548,6 +550,16 @@ class Context(object):
         if margins:
             for margin in margins:
                 domain = with_margin(domain, margin)
+
+        if isinstance(domain, LazyFrameDomain) and str(privacy_unit[0].type).startswith(
+            "FrameDistance<"
+        ):
+            from opendp.domains import _stabilize_polars_bounds
+
+            privacy_unit = (
+                privacy_unit[0],
+                _stabilize_polars_bounds(domain, privacy_unit[1]),
+            )
 
         accountant, d_mids, d_out = _normalize_compositor(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
