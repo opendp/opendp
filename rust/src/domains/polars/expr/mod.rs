@@ -301,6 +301,14 @@ impl<Q: ProductOrd, const P: usize> MetricSpace for (ExprDomain, LpDistance<P, Q
                 "LpDistance is only well defined for numeric data"
             );
         }
+        let permits_nan = match column.dtype() {
+            DataType::Float32 => column.atom_domain::<f32>()?.nan(),
+            DataType::Float64 => column.atom_domain::<f64>()?.nan(),
+            _ => false,
+        };
+        if permits_nan {
+            return fallible!(MetricSpace, "LpDistance requires non-nan elements");
+        }
         Ok(())
     }
 }
@@ -349,6 +357,29 @@ mod test {
     use super::*;
     use crate::domains::AtomDomain;
     use polars::lazy::dsl::len;
+
+    #[test]
+    fn test_lp_metric_space_rejects_nan() -> Fallible<()> {
+        for p in [1, 2] {
+            let check = |column: SeriesDomain| -> Fallible<()> {
+                let domain = ExprDomain {
+                    column,
+                    context: Context::RowByRow,
+                };
+                if p == 1 {
+                    (domain, LpDistance::<1, f64>::default()).check_space()
+                } else {
+                    (domain, LpDistance::<2, f64>::default()).check_space()
+                }
+            };
+            assert!(check(SeriesDomain::new("a", AtomDomain::<f64>::default())).is_err());
+            assert!(check(SeriesDomain::new("a", AtomDomain::<f32>::default())).is_err());
+            assert!(check(SeriesDomain::new("a", AtomDomain::<f64>::new_non_nan())).is_ok());
+            assert!(check(SeriesDomain::new("a", AtomDomain::<f32>::new_non_nan())).is_ok());
+            assert!(check(SeriesDomain::new("a", AtomDomain::<i32>::default())).is_ok());
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_member_select() -> Fallible<()> {

@@ -329,6 +329,9 @@ impl<T: CheckAtom, const P: usize, Q> MetricSpace
     for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
 {
     fn check_space(&self) -> Fallible<()> {
+        if P == 0 {
+            return fallible!(MetricSpace, "LpDistance requires P >= 1");
+        }
         if self.0.element_domain.nan() {
             fallible!(MetricSpace, "LpDistance requires non-nan elements")
         } else {
@@ -342,6 +345,9 @@ where
     K: Eq + Hash,
 {
     fn check_space(&self) -> Fallible<()> {
+        if P == 0 {
+            return fallible!(MetricSpace, "LpDistance requires P >= 1");
+        }
         if self.0.value_domain.nan() {
             return fallible!(MetricSpace, "LpDistance requires non-nan elements");
         } else {
@@ -732,3 +738,37 @@ impl EventLevelMetric for SymmetricDistance {}
 impl EventLevelMetric for InsertDeleteDistance {}
 impl EventLevelMetric for ChangeOneDistance {}
 impl EventLevelMetric for HammingDistance {}
+
+#[cfg(test)]
+mod lp_metric_tests {
+    use super::*;
+
+    #[test]
+    fn reject_zero_exponent() {
+        let domain = VectorDomain::new(AtomDomain::<f64>::new_non_nan());
+        assert!(
+            (domain.clone(), LpDistance::<0, f64>::default())
+                .check_space()
+                .is_err()
+        );
+        assert!(
+            (domain, LpDistance::<1, f64>::default())
+                .check_space()
+                .is_ok()
+        );
+        let domain = MapDomain::new(
+            AtomDomain::<i32>::default(),
+            AtomDomain::<f64>::new_non_nan(),
+        );
+        assert!(
+            (domain.clone(), LpDistance::<0, f64>::default())
+                .check_space()
+                .is_err()
+        );
+        assert!(
+            (domain, LpDistance::<1, f64>::default())
+                .check_space()
+                .is_ok()
+        );
+    }
+}
