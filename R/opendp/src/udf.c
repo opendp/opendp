@@ -95,6 +95,8 @@ static int count_formals(SEXP function)
     return count;
 }
 
+static bool ref_count_callback(const void *ptr, bool increment);
+
 static CallbackContext *new_callback_context(SEXP function, const char *type_name, int accepts_internal)
 {
     CallbackContext *ctx = (CallbackContext *)malloc(sizeof(CallbackContext));
@@ -105,11 +107,13 @@ static CallbackContext *new_callback_context(SEXP function, const char *type_nam
     ctx->ref_count = 1;
     ctx->accepts_internal = accepts_internal;
     ctx->function = function;
-    ctx->type_name = heap_strdup(type_name);
+    ctx->type_name = NULL;
 
-    // The callback may outlive the current R call stack, so hold on to the
-    // closure until Rust releases the userdata.
+    // Register the preserved closure before allocating its type string:
+    // R errors longjmp past ordinary C cleanup.
     R_PreserveObject(function);
+    opendp_register_resource(ctx, opendp_release_ref_counted);
+    ctx->type_name = heap_strdup(type_name);
     return ctx;
 }
 
@@ -184,6 +188,22 @@ static bool ref_count_callback(const void *ptr, bool increment)
     }
 
     return false;
+}
+
+void opendp_release_ref_counted(void *ptr)
+{
+    ref_count_callback(ptr, false);
+}
+
+static void extrinsic_object_cleanup(void *obj)
+{
+    opendp_data__extrinsic_object_free((ExtrinsicObject *)obj);
+}
+
+SEXP owned_extrinsic_object_to_sexp(ExtrinsicObject *obj)
+{
+    opendp_register_resource(obj, extrinsic_object_cleanup);
+    return extrinsic_object_to_sexp(obj);
 }
 
 typedef struct CompareContext {
@@ -262,75 +282,52 @@ typedef struct CallbackInvocation {
     CallbackContext *ctx;
     const AnyObject *arg;
     c_bool is_internal;
+    bool is_transition;
     FfiResult_____AnyObject *result;
 } CallbackInvocation;
 
-static void callback_exec(void *data)
+static SEXP callback_exec(void *data)
 {
     CallbackInvocation *invocation = (CallbackInvocation *)data;
-    // Convert the Rust-owned argument into an R value, evaluate the closure,
-    // then convert the result back using the callback's declared output type.
-    SEXP arg = PROTECT(anyobjectptr_to_sexp((AnyObject *)invocation->arg));
-    SEXP call = PROTECT(lang2(invocation->ctx->function, arg));
-    int error_occurred = 0;
-    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-    if (error_occurred)
-    {
-        char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined function", message);
-        free(message);
-        UNPROTECT(3);
-        return;
-    }
-    SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
-    AnyObject *result = sexp_to_anyobjectptr(out, type_name);
-    invocation->result = wrap_success(result);
-    UNPROTECT(4);
-}
-
-static void transition_exec(void *data)
-{
-    CallbackInvocation *invocation = (CallbackInvocation *)data;
-    SEXP arg = PROTECT(anyobjectptr_to_sexp((AnyObject *)invocation->arg));
+    // Convert the borrowed Rust argument, evaluate the R closure, then
+    // transfer the result back to Rust.
+    SEXP arg = PROTECT(borrowed_anyobjectptr_to_sexp((AnyObject *)invocation->arg));
+    bool accepts_internal = invocation->is_transition && invocation->ctx->accepts_internal;
     SEXP call;
-    // Transition callbacks optionally accept the Rust-side `is_internal` flag.
-    // The current R API infers that shape from closure arity.
-    if (invocation->ctx->accepts_internal)
+    if (accepts_internal)
     {
         SEXP is_internal = PROTECT(ScalarLogical((bool)invocation->is_internal));
         call = PROTECT(lang3(invocation->ctx->function, arg, is_internal));
-        int error_occurred = 0;
-        SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-        if (error_occurred)
-        {
-            char *message = get_last_error_message();
-            invocation->result = wrap_failure_details("Exception in user-defined transition", message);
-            free(message);
-            UNPROTECT(4);
-            return;
-        }
-        SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
-        AnyObject *result = sexp_to_anyobjectptr(out, type_name);
-        invocation->result = wrap_success(result);
-        UNPROTECT(5);
-        return;
     }
+    else
+        call = PROTECT(lang2(invocation->ctx->function, arg));
 
-    call = PROTECT(lang2(invocation->ctx->function, arg));
     int error_occurred = 0;
     SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
     if (error_occurred)
     {
         char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined transition", message);
+        const char *context = invocation->is_transition
+            ? "Exception in user-defined transition"
+            : "Exception in user-defined function";
+        invocation->result = wrap_failure_details(context, message);
         free(message);
-        UNPROTECT(3);
-        return;
+        UNPROTECT(accepts_internal ? 4 : 3);
+        return R_NilValue;
     }
+
     SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
     AnyObject *result = sexp_to_anyobjectptr(out, type_name);
     invocation->result = wrap_success(result);
-    UNPROTECT(4);
+    UNPROTECT(accepts_internal ? 5 : 4);
+    return R_NilValue;
+}
+
+// Retained callbacks may run after the generated R wrapper returns.
+// Each invocation needs a fresh scope within the R error boundary.
+static void scoped_callback_exec(void *data)
+{
+    (void)opendp_with_scope(callback_exec, data);
 }
 
 static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void *userdata)
@@ -339,15 +336,15 @@ static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void
     if (!ctx || ctx->tag != TAG_CALLBACK_CONTEXT)
         return wrap_failure("callback context is invalid");
 
-    // R_ToplevelExec converts R exceptions into a failed return instead of
-    // unwinding through the foreign stack.
+    // R_ToplevelExec catches R errors before they can unwind through Rust.
     CallbackInvocation invocation = {
         .ctx = ctx,
         .arg = arg,
         .is_internal = false,
+        .is_transition = false,
         .result = NULL
     };
-    if (!R_ToplevelExec(callback_exec, &invocation))
+    if (!R_ToplevelExec(scoped_callback_exec, &invocation))
     {
         char *message = get_last_error_message();
         FfiResult_____AnyObject *result = wrap_failure_details(
@@ -373,9 +370,10 @@ static FfiResult_____AnyObject *transition_stub(
         .ctx = ctx,
         .arg = arg,
         .is_internal = is_internal,
+        .is_transition = true,
         .result = NULL
     };
-    if (!R_ToplevelExec(transition_exec, &invocation))
+    if (!R_ToplevelExec(scoped_callback_exec, &invocation))
     {
         char *message = get_last_error_message();
         FfiResult_____AnyObject *result = wrap_failure_details(
@@ -408,20 +406,6 @@ TransitionFn sexp_to_transitionfn(SEXP function, const char *type_name)
         .userdata = {(const void *)ctx}
     };
     return wrapped;
-}
-
-void callbackfn_release(CallbackFn *function)
-{
-    if (!function)
-        return;
-    ref_count_callback(function->userdata._0, false);
-}
-
-void transitionfn_release(TransitionFn *transition)
-{
-    if (!transition)
-        return;
-    ref_count_callback(transition->userdata._0, false);
 }
 
 void init_udf_support(void)
