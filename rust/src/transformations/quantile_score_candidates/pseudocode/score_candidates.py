@@ -5,12 +5,12 @@ def score_candidates(
     alpha_num: u64,
     alpha_den: u64,
     size_limit: u64,
-) -> Iterator[usize]:
+) -> Iterator[u64]:
     # count of the number of records between...
     #  (-inf, c1), [c1, c2), [c2, c3), ..., [ck, inf)
-    hist_ro = [0] * candidates.len() + 1  # histogram of right-open intervals
+    hist_ro = [0] * (candidates.len() + 1)  # histogram of right-open intervals
     #  (-inf, c1], (c1, c2], (c2, c3], ..., (ck, inf)
-    hist_lo = [0] * candidates.len() + 1  # histogram of left-open intervals
+    hist_lo = [0] * (candidates.len() + 1)  # histogram of left-open intervals
 
     for x_i in x:
         idx_lt = candidates.partition_point(lambda c: c < x_i)
@@ -29,12 +29,12 @@ def score_candidates(
     for ro, lo in zip(hist_ro, hist_lo):  # `\label{zip-hist}`
         # cumsum the right-open histogram to get the total number of records less than the candidate
         lt += ro  # `\label{lt-cumsum}`
-        # cumsum the right-open histogram to get the total number of records lt or equal to the candidate
+        # cumsum the left-open histogram to get the total number of records lt or equal to the candidate
         le += lo  # `\label{le-cumsum}`
 
         gt = n - le  # `\label{gt}`
 
-        # the number of records equal to the candidate is the difference between the two cumsums
+        # cap each count to avoid overflow
         lt_lim, gt_lim = lt.min(size_limit), gt.min(size_limit)  # `\label{lt-gt-lim}`
 
         # a_den * |    (1 - a)         * #(x < c)    -            a * #(x > c)|

@@ -11,7 +11,7 @@
 
 Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound}
 in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{truncate\_id\_bound} returns an uppper bound on dataset distances in terms of the symmetric distance metric.
+\texttt{truncate\_id\_bound} returns an upper bound on dataset distances in terms of the symmetric distance metric.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -20,7 +20,7 @@ None
 
 \subsubsection*{Caller-verified}
 \begin{itemize}
-    \item $\texttt{id\_bound.by} = \texttt{truncate.by}$
+    \item $\texttt{id\_bound.by} = \texttt{truncation.by}$
 \end{itemize}
 
 
@@ -76,19 +76,19 @@ None
     We can also directly bound the number of contributed groups by \texttt{id\_bound.num\_groups}:
     \begin{align*}
         &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
-        &= ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
+        &\le ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
         &\le \texttt{id\_bound.num\_groups}
     \end{align*}
-    This is a valid upper bound on the number of contributed groups, because truncation is applied independently to each group.
+    Indeed, a group with nonzero symmetric distance must also have nonzero symmetric-ID distance.
 
     Therefore, we take the minimum of the two upper bounds.
     \begin{align*}
         &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
-        &\min(\texttt{num\_groups\_via\_truncation}, \texttt{id\_bound.num\_groups}) \\
+        &\le \min(\texttt{num\_groups\_via\_truncation}, \texttt{id\_bound.num\_groups}) \\
         &= \texttt{row\_bound.num\_groups} \hspace{2cm} \text{by line } \ref{line:num-groups}
     \end{align*}
 
     In the implementation, any of the input bounds could be missing.
-    When a bound is missing, any output bounds that require it are not claimed.
+    When a bound is missing, any output bounds that require it are not claimed. The integer products are checked for overflow; on error no bound is returned.
 \end{proof}
 \end{document}

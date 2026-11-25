@@ -18,7 +18,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/distributi
 None
 
 \subsubsection*{Caller-verified}
-None
+$b>0$.
 
 \subsection*{Pseudocode}
 In the following pseudocode, define $/$ as zero integer division, as used by the Rust Dashu dependency's IBig.
@@ -39,8 +39,8 @@ and Python's integer division, which is the desired floor integer division.
         \item If $a \geq 0$ then zero integer division and floor integer division are equivalent.
             Therefore the result is $floor(a / b)$.
         \item If $a < 0$ then $b - 1$ is subtracted before zero integer division.
-            This shifts the problematic upper elements that would round up into the range that rounds down,
-            while the lower elements that would round down now round up, resulting in the correct floor division.
+            Write $-a=qb+r$ with $q\geq 0$ and $0\leq r<b$.
+            Truncating $(a-b+1)/b$ towards zero gives $-q$ if $r=0$ and $-q-1$ otherwise, which is $\lfloor a/b\rfloor$.
             Therefore the result is $floor(a / b)$.
     \end{itemize}
     In all cases, the result is $floor(a / b)$.

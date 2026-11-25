@@ -102,7 +102,7 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
-/// That is, $\epsilon$ is the greatest possible $d$
+/// That is, $\epsilon$ bounds the max divergence
 /// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -113,17 +113,18 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
 /// $Y, Y'$ are $d$-close under the max divergence measure whenever
 ///
-/// $D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d$.
+/// $D_\infty(Y, Y') = \sup_{S:\Pr[Y\in S]>0} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d$.
+/// The supremum is over measurable events $S$.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(MaxDivergence)).into()
 }
 
 #[bootstrap(name = "smoothed_max_divergence")]
-/// Privacy measure used to define $\epsilon(\delta)$-approximate differential privacy.
+/// Privacy measure used to define $\delta(\epsilon)$-approximate differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
-/// That is, a privacy profile $\epsilon(\delta)$ is no smaller than $d(\delta)$ for all possible choices of $\delta$,
+/// That is, a privacy profile $\delta(\epsilon)$ is no smaller than $d(\epsilon)$ for all possible choices of $\epsilon$,
 /// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -138,7 +139,7 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 /// $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
 /// for any choice of non-negative $\epsilon$, and $\delta = d(\epsilon)$,
 ///
-/// $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
+/// $\Pr[Y \in S] \leq e^\epsilon \Pr[Y' \in S] + \delta$ for every measurable event $S$.
 ///
 /// Note that $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
@@ -162,7 +163,7 @@ pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut A
 /// For any two distributions $Y, Y'$ and any 2-tuple $d$ of non-negative numbers $\epsilon$ and $\delta$,
 /// $Y, Y'$ are $d$-close under the fixed smoothed max divergence measure whenever
 ///
-/// $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
+/// $\Pr[Y \in S] \leq e^\epsilon \Pr[Y' \in S] + \delta$ for every measurable event $S$.
 ///
 /// Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
@@ -196,13 +197,11 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
 /// For any two distributions $Y, Y'$ and 2-tuple $d = (d', \delta)$,
 /// where $d'$ is the distance with respect to privacy measure PM,
 /// $Y, Y'$ are $d$-close under the approximate PM measure whenever,
-/// for any choice of $\delta \in [0, 1]$,
-/// there exist events $E$ (depending on $Y$) and $E'$ (depending on $Y'$)
-/// such that $\Pr[E] \ge 1 - \delta$, $\Pr[E'] \ge 1 - \delta$, and
-///
-/// $D_{\mathrm{PM}}^\delta(Y|_E, Y'|_{E'}) = D_{\mathrm{PM}}(Y|_E, Y'|_{E'})$
-///
-/// where $Y|_E$ denotes the distribution of $Y$ conditioned on the event $E$.
+/// for $0\leq\delta<1$, there exist probability distributions $P,Q$ and residual distributions $R,R'$ such that
+/// $Y=(1-\delta)P+\delta R$ and $Y'=(1-\delta)Q+\delta R'$ in distribution,
+/// and $P,Q$ are $d'$-close under PM.
+/// For $\delta\geq1$ the bound is vacuous.
+/// For zero-concentrated divergence the same witnesses must also satisfy the reverse divergence bound.
 ///
 /// Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
@@ -276,7 +275,7 @@ pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\rho$ when also quantified over all adjacent datasets.
-/// That is, $\rho$ is the greatest possible $d$
+/// That is, $\rho$ bounds the normalized Rényi divergence uniformly over orders and
 /// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -288,7 +287,9 @@ pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
 /// $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
 /// for every possible choice of $\alpha \in (1, \infty)$,
 ///
-/// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha$.
+/// $D_\alpha(Y, Y') = \frac{1}{\alpha - 1} \ln \mathbb{E}_{x \sim Y} \left[\left(\frac{p(x)}{q(x)}\right)^{\alpha-1}\right] \leq d \cdot \alpha$.
+/// Here $p$ and $q$ are densities of $Y$ and $Y'$ with respect to a common dominating measure (for example, the sum of their laws).
+/// The ratio is infinite when $p(x)>0$ and $q(x)=0$; its value where $p(x)=0$ does not affect the expectation.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(ZeroConcentratedDivergence)).into()
@@ -310,7 +311,9 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
 /// $Y, Y'$ are $d$-close under the Rényi divergence measure if,
 /// for any given $\alpha \in (1, \infty)$,
 ///
-/// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d(\alpha)$
+/// $D_\alpha(Y, Y') = \frac{1}{\alpha - 1} \ln \mathbb{E}_{x \sim Y} \left[\left(\frac{p(x)}{q(x)}\right)^{\alpha-1}\right] \leq d(\alpha)$.
+/// Here $p$ and $q$ are densities of $Y$ and $Y'$ with respect to a common dominating measure (for example, the sum of their laws).
+/// The ratio is infinite when $p(x)>0$ and $q(x)=0$; its value where $p(x)=0$ does not affect the expectation.
 ///
 /// Note that this $\epsilon$ and $\alpha$ are not privacy parameters $\epsilon$ and $\alpha$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.

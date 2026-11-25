@@ -132,7 +132,7 @@ pub trait Measure: Default + Clone + PartialEq + Debug {
 /// A map evaluating the privacy of a [`Measurement`].
 ///
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
-/// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
+/// and returns an upper bound on distances between output distributions on input datasets at distance at most the supplied input distance.
 pub struct PrivacyMap<MI: Metric, MO: Measure>(
     pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
 );
@@ -152,9 +152,9 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     }
 
     /// # Proof Definition
-    /// Creates a privacy map from `d_in` to `d_out`
-    /// where `d_out = MO.inf_cast(d_in).inf_mul(c) >= d_in * c`,
-    /// or returns an error.
+    /// Creates a privacy map that, for nonnegative input distances `d_in` and constant `c`,
+    /// returns an upper bound on `d_in * c`, or an error when the map is evaluated.
+    /// Evaluating the map with a negative constant returns an error.
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
@@ -186,7 +186,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 /// A map evaluating the stability of a [`Transformation`].
 ///
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
-/// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
+/// and returns an upper bound on distances between output datasets on input datasets at distance at most the supplied input distance.
 pub struct StabilityMap<MI: Metric, MO: Metric>(
     pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
 );
@@ -208,9 +208,9 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     }
 
     /// # Proof Definition
-    /// Creates a stability map from `d_in` to `d_out`
-    /// where `d_out = MO.inf_cast(d_in).inf_mul(c) >= d_in * c`,
-    /// or returns an error.
+    /// Creates a stability map that, for nonnegative input distances `d_in` and constant `c`,
+    /// returns an upper bound on `d_in * c`, or an error when the map is evaluated.
+    /// Evaluating the map with a negative constant returns an error.
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,

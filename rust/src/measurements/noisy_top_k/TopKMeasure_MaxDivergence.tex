@@ -24,7 +24,7 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKM
     \item Method \texttt{privacy\_map}
         \begin{itemize}
             \item \texttt{d\_in} is non-null and positive.
-            \item \texttt{scale} is non-null and positive.
+            \item \texttt{scale} is finite and positive.
         \end{itemize}
 \end{itemize}
 
@@ -37,8 +37,8 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKM
     The implementation is consistent with the associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
     \begin{enumerate}
         \item Method \texttt{privacy\_map}:
-        For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
-        return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+        For any finite score vectors $x, x'$ of the same nonzero length where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+        return an error or $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
         where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
     \end{enumerate}
 \end{theorem}
@@ -46,12 +46,15 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKM
 \begin{proof}
     Since \texttt{Self::REPLACEMENT} is false, then by the postcondition of \texttt{noisy\_top\_k},
     \texttt{noisy\_top\_k} returns a sample from $\mathcal{M}_{PF}$.
-    In the case that scores are not monotonic,
-    by \cite{mckenna2020permute} Theorem~1, $\mathcal{M}_{PF}$ satisfies $\epsilon$-DP,
-    because the range distance is equal to $2 \cdot \Delta$.
-    Otherwise in the case that scores are monotonic,
-    by \cite{mckenna2020permute} Remark~1, $\mathcal{M}_{PF}$ satisfies $\epsilon/2$-DP,
-    but the range distance is equal to $\Delta$, thus satisfying $\epsilon$-DP.
+    The selection distribution is invariant under adding a constant to every score, and
+    \[
+        d_{\mathrm{Range}}(x,x')=2\min_{c\in\mathbb R}\|x-x'-c\mathbf{1}\|_\infty.
+    \]
+    By Theorem~1 of \cite{mckenna2020permute}, permute-and-flip with scale $s$
+    and score sensitivity $\Delta$ satisfies $2\Delta/s$-DP.
+    Taking $\Delta=d_{\mathrm{Range}}(x,x')/2$ yields the bound
+    $d_{\mathrm{Range}}(x,x')/s\leq d_{\mathrm{in}}/s$.
+    The directed division in \texttt{privacy\_map} upper bounds this quantity.
 \end{proof}
 \bibliographystyle{plain}
 \bibliography{references.bib}

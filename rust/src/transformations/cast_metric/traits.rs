@@ -12,13 +12,14 @@ use crate::metrics::{ChangeOneIdDistance, SymmetricIdDistance};
 /// UnorderedMetric is implemented for metrics that compute the distance between datasets in a way that is insensitive to row ordering.
 ///
 /// # Proof Definition
-/// For any choice of x and x' where x' = shuffle(x), then $d(x, x') = 0$.
+/// Permuting the rows of a dataset does not change its distance to any dataset.
 pub trait UnorderedMetric: EventLevelMetric {
     /// OrderedMetric denotes the associated metric that is sensitive to row ordering.
     ///
     /// # Proof Definition
-    /// For any choice of datasets x and x' where d(x, x') > 0 for an OrderedMetric d, and x and x' only differ by the reordering of rows,
-    /// then d'(x, x') = 0 for a corresponding UnorderedMetric d'.
+    /// For any datasets $x,x'$ at distance at most $d$ under `Self`,
+    /// there exists a coupling of their uniformly random row permutations $X,X'$
+    /// such that $d_{\mathrm{ordered}}(X,X')\leq d$ almost surely.
     type OrderedMetric: Metric<Distance = Self::Distance> + Default;
 }
 impl UnorderedMetric for SymmetricDistance {
@@ -31,13 +32,13 @@ impl UnorderedMetric for ChangeOneDistance {
 /// OrderedMetric is implemented for metrics that compute the distance between datasets in a way that is sensitive to row ordering.
 ///
 /// # Proof Definition
-/// For any choice of x and x' where x' only differs by the reordering of rows, then $d(x, x') > 0$.
+/// Unlike an unordered metric, the distance can depend on row ordering.
 pub trait OrderedMetric: EventLevelMetric {
     /// UnorderedMetric denotes the associated metric that is insensitive to row ordering.
     ///
     /// # Proof Definition
-    /// For any choice of datasets x, x' where d(x, x') > 0 for an OrderedMetric d and only differs by the reordering of rows,
-    /// then d'(x, x') = 0 for a corresponding UnorderedMetric d'.
+    /// For any datasets $x,x'$ at distance at most $d$ under `Self`,
+    /// their distance under the associated unordered metric is at most $d$.
     type UnorderedMetric: Metric<Distance = Self::Distance> + Default;
 }
 impl OrderedMetric for InsertDeleteDistance {
@@ -47,15 +48,16 @@ impl OrderedMetric for HammingDistance {
     type UnorderedMetric = ChangeOneDistance;
 }
 
-/// BoundedMetric is implemented for metrics that compute the distance between datasets via record edits.
+/// BoundedMetric is implemented for metrics that compute the distance between datasets via replacements of units (records or identifiers).
 ///
 /// # Proof Definition
-/// For any choice of x and x' where x' differs solely by the edit of one record, then $d(x, x') = 1$.
+/// Replacing one unit produces datasets at distance at most one.
 pub trait BoundedMetric: MicrodataMetric {
-    /// UnboundedMetric denotes the associated metric that measures edit distance.
+    /// UnboundedMetric denotes the associated metric that measures additions and removals.
     ///
     /// # Proof Definition
-    /// For any choice of datasets x, x' where d(x, x') = 1 for a BoundedMetric d, then d'(x, x') = 2 for the corresponding UnboundedMetric d'.
+    /// For any datasets $x,x'$ at distance at most $d$ under `Self`,
+    /// their distance under `self.to_unbounded()` is at most $2d$.
     type UnboundedMetric: UnboundedMetric;
     fn to_unbounded(&self) -> Self::UnboundedMetric;
 }
@@ -81,10 +83,10 @@ impl BoundedMetric for ChangeOneIdDistance {
     }
 }
 
-/// UnboundedMetric is implemented for metrics that compute the distance between datasets via record additions and removals.
+/// UnboundedMetric is implemented for metrics that compute the distance between datasets via additions and removals of units (records or identifiers).
 ///
 /// # Proof Definition
-/// For any choice of x and x' where x' differs solely by the addition or removal of one record, then $d(x, x') = 1$.
+/// Adding or removing one unit produces datasets at distance at most one.
 pub trait UnboundedMetric: MicrodataMetric {}
 impl UnboundedMetric for SymmetricDistance {}
 impl UnboundedMetric for InsertDeleteDistance {}

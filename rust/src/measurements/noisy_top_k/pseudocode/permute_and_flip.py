@@ -1,13 +1,13 @@
 # type: ignore
 def permute_and_flip(x: list[RBig], scale: RBig, replacement: bool):
     if scale.is_zero():  # `\label{zero-scale}`
-        return max(range(x.len()), key=lambda i: x[i])
+        return max(range(x.len()), key=lambda i: (x[i], i))
 
     # begin nonzero scale `\label{nonzero-scale}`
     x_max = max(x)
     permutation = list(range(x.len()))
 
-    sequence = range(0, len(x)) if replacement else repeat(0)
+    sequence = repeat(0) if replacement else range(0, len(x))
 
     for left in sequence:
         right = left + sample_uniform_uint_below(x.len() - left)

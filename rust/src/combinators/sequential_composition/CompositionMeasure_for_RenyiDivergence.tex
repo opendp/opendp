@@ -36,13 +36,18 @@ None
   The new curve constructed on line \ref{line:curve} composes all epsilon parameters at a given fixed \texttt{alpha}.
   By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that for any choice of \texttt{alpha}, $\sum_i \texttt{d\_mid}_i(\texttt{alpha}) \le \texttt{compose(d\_mids)}(\alpha)$.
 
+  For each fixed $\alpha>1$, Theorem~1.22(2) of \cite{haney2025concurrent} establishes validity of the additive interactive RDP accumulator.
+  Consequently, a filter enforcing the composed curve pointwise against a public target curve is at least as restrictive as each fixed-order filter.
+  The additional rejections are postprocessing of the public privacy parameters and the analyst's view.
+  The guarantee thus holds at every order.
+
   \begin{center}
     \begin{tabular}{ r | l l }
       Adaptivity & Sequential & Concurrent \\
       \hline
       Non-Adaptive & Proposition~1\cite{mironov2017renyi} & Theorem~2\cite{lyu2022interactive} \\
-      Adaptive & - & - \\
-      Fully-Adaptive & Theorem~4.3\cite{feldman2022individual} & Theorem~1.22\cite{vadhan2021concurrent}
+      Adaptive & Proposition~1\cite{mironov2017renyi} & Theorem~2\cite{lyu2022interactive} \\
+      Fully-Adaptive & Theorem~4.3\cite{feldman2022individual} & Theorem~1.22\cite{haney2025concurrent}
     \end{tabular}
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.

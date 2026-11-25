@@ -31,7 +31,7 @@ pub fn find_nearest_multiple_of_2k(x: RBig, k: i32) -> IBig {
 /// the result of $x / y$ is rounded towards zero.
 ///
 /// # Proof Definition
-/// Return `floor(a / b)`, where $/$ denotes real division.
+/// For `b > 0`, return `floor(a / b)`, where $/$ denotes real division.
 fn floor_div(a: IBig, b: UBig) -> IBig {
     if Sign::Positive == a.sign() {
         a / b
@@ -42,9 +42,9 @@ fn floor_div(a: IBig, b: UBig) -> IBig {
 
 #[proven(proof_path = "measurements/noise/nature/float/utilities/get_min_k.tex")]
 /// # Proof Definition
-/// Return the `k` where $2^k$ is the smallest distance between adjacent non-equal values in `T`.
+/// Return the `k` where $2^k$ is the smallest positive distance between finite values in `T`.
 ///
-/// (Adjacent non-equal values are subnormal neighbors.)
+/// (This distance is attained by adjacent subnormal values.)
 pub(crate) fn get_min_k<T: Float>() -> i32
 where
     i32: ExactIntCast<T::Bits>,
@@ -58,8 +58,8 @@ where
 /// Let $D$ denote the space of `size`-dimensional vectors whose elements are in $\mathbb{Z} 2^{k_{min}}$,
 /// where $2^{k_{min}}$ is the smallest distance between adjacent non-equal values in `T`.
 /// Let $\mathrm{round}_k$ be a function that rounds each element to the nearest multiple of $2^k$,
-/// with ties rounding down.
-/// Return $\max_{x, x' \in D} ||\mathrm{round}_k(x) - \mathrm{round}_k(x')||_P - ||x - x'||_P$,
+/// with ties rounding toward positive infinity.
+/// Return an upper bound on $\max_{x, x' \in D} (\|\mathrm{round}_k(x) - \mathrm{round}_k(x')\|_P - \|x - x'\|_P)$,
 /// the increase in the sensitivity due to rounding.
 pub fn get_rounding_distance<T: Float, const P: usize>(
     k: i32,
@@ -119,7 +119,7 @@ pub fn x_mul_2k(x: RBig, k: i32) -> RBig {
 }
 
 /// # Proof Definition
-/// Return `Err(e)` if scale is not finite,
+/// Return `Err(e)` if scale is not finite or `k == i32::MIN`,
 /// otherwise return `Ok(scale * 2^-k)`
 pub fn integerize_scale(scale: f64, k: i32) -> Fallible<RBig> {
     if k == i32::MIN {

@@ -1,7 +1,7 @@
 # type: ignore
 def noisy_top_k(
     x: list[TIA],
-    scale: RBig,
+    scale: f64,
     k: usize,
     negate: bool,
     replacement: bool,
@@ -9,5 +9,8 @@ def noisy_top_k(
     sign = Sign.from_(negate)
     scale = scale.into_rational()
 
-    y = [x_i.into_rational() * sign for x_i in x]  # `\label{negate}`
+    y = [  # `\label{negate}`
+        x_i.total_clamp(TIA.MIN_FINITE, TIA.MAX_FINITE).into_rational() * sign
+        for x_i in x
+    ]
     return peel_permute_and_flip(y, scale, k, replacement)

@@ -211,21 +211,18 @@ pub(crate) fn score_candidates_map<T: Integer + ExactIntCast<IntDistance>>(
 /// # Proof Definition
 ///
 /// Under the precondition that `x` is totally ordered,
-/// that `x` has no greater than $2^{64}$ elements,
+/// that `x` has fewer than $2^{64}$ elements,
 /// that `candidates` is strictly increasing,
-/// that `alpha_numer / alpha_denom <= 1`,
-/// and that `size_limit * alpha_denom < 2^{64}`,
+/// that `alpha_num <= alpha_den`,
+/// and that `size_limit * alpha_den < 2^{64}`,
 /// computes the score of each candidate in `candidates` on the dataset `x`.
 ///
 /// The score for each `c` in `candidates` is computed as follows:
-/// |alpha_denom * min(#(x < c), size_limit) -
-///  alpha_numer * min(#(x > c)), size_limit)|
+/// |(alpha_den - alpha_num) * min(#(x < c), size_limit) -
+///  alpha_num * min(#(x > c), size_limit)|
 ///
 /// # Intuition
-/// Lower score is better.
-/// Score is roughly |observed_value - ideal_value|, where ideal_value is a rescaled `alpha`-quantile.
-/// We want greater scores when observed value is near ideal value.
-/// The further away the observed value is from the ideal value, the more negative it gets
+/// Smaller scores correspond to better quantile candidates.
 ///
 /// # Arguments
 /// * `x` - dataset to score against. Must be non-null

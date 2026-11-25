@@ -16,7 +16,7 @@ use crate::{
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
-/// That is, $\epsilon$ is the greatest possible $d$
+/// That is, $\epsilon$ bounds the max divergence
 /// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -30,8 +30,9 @@ use crate::{
 /// $Y, Y'$ are $d$-close under the max divergence measure whenever
 ///
 /// ```math
-/// D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
-/// ```
+/// D_\infty(Y, Y') = \sup_{S:\Pr[Y\in S]>0} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d.
+/// ``
+/// The supremum is over measurable events $S$.`
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct MaxDivergence;
 
@@ -58,7 +59,7 @@ impl Measure for MaxDivergence {
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
 /// we say that $Y, Y'$ are $d$-close under the smoothed max divergence measure
 /// whenever, for every non-negative $\epsilon$, with $\delta = d(\epsilon)$,
-/// and for every event $S \subseteq \mathrm{Supp}(Y)$,
+/// and for every measurable event $S$,
 ///
 /// ```math
 /// \Pr[Y \in S] \le e^\epsilon \Pr[Y' \in S] + \delta.
@@ -178,11 +179,19 @@ impl PrivacyProfile {
 /// For any two distributions $Y, Y'$ and 2-tuple $d = (d', \delta)$,
 /// where $d'$ is the distance with respect to privacy measure PM,
 /// we say that $Y, Y'$ are $d$-close under the approximate PM measure
-/// whenever they satisfy the privacy guarantee of PM with parameter $d'$,
-/// up to slack $\delta$.
+/// whenever, for $0\leq\delta<1$, there exist probability distributions $P,Q$ on the output space
+/// and residual probability distributions $R,R'$ such that
 ///
-/// The exact interpretation of the slack depends on the underlying privacy
-/// measure PM.
+/// ```math
+/// Y=(1-\delta)P+\delta R,\qquad Y'=(1-\delta)Q+\delta R',
+/// ```
+///
+/// and $P,Q$ are $d'$-close under PM.
+/// Here the equalities denote equality in distribution.
+/// For $\delta\geq1$ the approximate bound is vacuous.
+///
+/// For `PM = ZeroConcentratedDivergence`, the same witnesses must also satisfy
+/// the reverse divergence bound, as in [approximate zCDP](https://proceedings.mlr.press/v202/whitehouse23a.html).
 ///
 /// ### Special case: `PM = MaxDivergence`
 /// When $d = (\epsilon, \delta)$ and `PM = MaxDivergence`,
@@ -190,7 +199,7 @@ impl PrivacyProfile {
 ///
 /// ```math
 /// \Pr[Y \in S] \le e^\epsilon \Pr[Y' \in S] + \delta
-/// \quad\text{for every event } S \subseteq \mathrm{Supp}(Y).
+/// \quad\text{for every measurable event } S.
 /// ```
 ///
 /// The profile form of this notion, where $\delta$ is a function of $\epsilon$,
@@ -208,7 +217,7 @@ impl<M: Measure> Measure for Approximate<M> {
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\rho$ when also quantified over all adjacent datasets.
-/// That is, $\rho$ is the greatest possible $d$
+/// That is, $\rho$ bounds the normalized Rényi divergence uniformly over orders and
 /// over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
@@ -224,10 +233,12 @@ impl<M: Measure> Measure for Approximate<M> {
 ///
 /// ```math
 /// D_\alpha(Y, Y') = \frac{1}{\alpha - 1}
-/// \ln \mathbb{E}_{x \sim Y'} \left[ \left(
-/// \dfrac{\Pr[Y = x]}{\Pr[Y' = x]}
-/// \right)^\alpha \right] \le d \cdot \alpha.
+/// \ln \mathbb{E}_{x \sim Y} \left[ \left(
+/// \frac{p(x)}{q(x)}
+/// \right)^{\alpha-1} \right] \le d \cdot \alpha.
 /// ```
+/// Here $p$ and $q$ are densities of $Y$ and $Y'$ with respect to a common dominating measure (for example, the sum of their laws).
+/// The ratio is infinite when $p(x)>0$ and $q(x)=0$; its value where $p(x)=0$ does not affect the expectation.
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct ZeroConcentratedDivergence;
 
@@ -253,10 +264,12 @@ impl Measure for ZeroConcentratedDivergence {
 ///
 /// ```math
 /// D_\alpha(Y, Y') = \frac{1}{\alpha - 1}
-/// \ln \mathbb{E}_{x \sim Y'} \left[ \left(
-/// \dfrac{\Pr[Y = x]}{\Pr[Y' = x]}
-/// \right)^\alpha \right] \le d(\alpha).
+/// \ln \mathbb{E}_{x \sim Y} \left[ \left(
+/// \frac{p(x)}{q(x)}
+/// \right)^{\alpha-1} \right] \le d(\alpha).
 /// ```
+///
+/// The densities and ratio convention are as in [`ZeroConcentratedDivergence`].
 ///
 /// Note that this $\epsilon$ and $\alpha$ are not privacy parameters
 /// until quantified over all adjacent datasets,

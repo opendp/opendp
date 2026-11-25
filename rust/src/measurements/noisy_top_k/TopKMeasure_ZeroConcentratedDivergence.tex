@@ -6,6 +6,7 @@
 \author{\MichaelShoemateAuthor}
 \begin{document}
 \maketitle
+\contrib
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -21,7 +22,7 @@
     \item Method \texttt{privacy\_map}
         \begin{itemize}
             \item \texttt{d\_in} is non-null and positive.
-            \item \texttt{scale} is non-null and positive.
+            \item \texttt{scale} is finite and positive.
         \end{itemize}
 \end{itemize}
 
@@ -34,16 +35,19 @@
     The implementation is consistent with all associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
     \begin{enumerate}
         \item Method \texttt{privacy\_map}:
-        For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
-        return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+        For any finite score vectors $x, x'$ of the same nonzero length where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+        return an error or $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
         where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
     \end{enumerate}
 \end{theorem}
 
 \begin{proof}[Proof of postcondition: \texttt{privacy\_map}]
 
-    \cite{Dong2019OptimalDP} Proposition~2 shows that the exponential mechanism satisfies Bounded Range.
-    \cite{cesar2020bounding} Lemma 3.2 shows that Bounded Range satisfies .
+    By the postcondition of \texttt{noisy\_top\_k}, for $k=1$ the output probabilities are proportional to $\exp(x_i/\texttt{scale})$.
+    The log probability ratio between corresponding outputs on $x$ and $x'$ is $(x_i-x'_i)/\texttt{scale}$ plus a constant independent of $i$.
+    Its range has width at most $\epsilon=d_{\mathrm{in}}/\texttt{scale}$.
+    By Lemma~3.2 of \cite{cesar2020bounding}, $\epsilon$-bounded range implies $\epsilon^2/8$-zCDP.
+    The directed arithmetic in \texttt{privacy\_map} upper bounds this quantity.
 \end{proof}
 
 \bibliographystyle{plain}
