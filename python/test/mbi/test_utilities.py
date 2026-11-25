@@ -124,6 +124,12 @@ def test_get_scale():
             ),
             "input_domain columns must be lower bounded by zero",
         ),
+        (
+            dp.lazyframe_domain(
+                [dp.series_domain("A", dp.atom_domain(T="f64", bounds=(0.0, 3.0)))]
+            ),
+            "input_domain columns must have integer bounds",
+        ),
     ],
     ids=ids,
 )
@@ -149,6 +155,38 @@ def test_make_stable_marginals():
             dp.frame_distance(dp.symmetric_distance()),
             cliques=[("A",)],
         )
+
+
+def test_make_stable_marginals_nullable_bucket():
+    pl = pytest.importorskip("polars")
+    domain = dp.lazyframe_domain(
+        [
+            dp.series_domain(
+                "A", dp.option_domain(dp.atom_domain(T="i32", bounds=(0, 3)))
+            ),
+            dp.series_domain("B", dp.atom_domain(T="i32", bounds=(0, 2))),
+        ]
+    )
+    assert get_cardinalities(domain) == {"A": 5, "B": 3}
+    data = pl.LazyFrame(
+        {"A": [0, None, 3, None], "B": [0, 1, 2, 1]},
+        schema={"A": pl.Int32, "B": pl.Int32},
+    )
+
+    transformation = make_stable_marginals(
+        domain,
+        dp.frame_distance(dp.symmetric_distance()),
+        cliques=[("A",), ("A", "B")],
+    )
+    result = transformation(data)
+    assert result[("A",)].tolist() == [1, 0, 0, 1, 2]
+    assert result[("A", "B")].tolist() == [
+        [1, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 1],
+        [0, 2, 0],
+    ]
 
 
 def test_make_stable_marginals_snapshots_cliques():

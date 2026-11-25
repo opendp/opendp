@@ -278,7 +278,8 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
         raise ValueError("input_domain must be dp.LazyFrameDomain")
 
     def get_cardinality(col):
-        element_domain = input_domain.get_series_domain(col).element_domain
+        series_domain = input_domain.get_series_domain(col)
+        element_domain = series_domain.element_domain
         if not isinstance(element_domain, AtomDomain):
             raise ValueError("input_domain columns must contain atomic data")
 
@@ -286,9 +287,12 @@ def get_cardinalities(input_domain: LazyFrameDomain) -> dict[str, int]:
         if bounds is None:
             raise ValueError("input_domain columns must be bounded")
         lower, upper = bounds
+        if type(lower) is not int or type(upper) is not int:
+            raise ValueError("input_domain columns must have integer bounds")
         if lower != 0:
             raise ValueError("input_domain columns must be lower bounded by zero")
-        return upper + 1
+        # Reserve the last index for nulls when the column is nullable.
+        return upper + 1 + int(series_domain.nullable)
 
     return {col: get_cardinality(col) for col in input_domain.columns}
 
@@ -318,7 +322,14 @@ def make_stable_marginals(
         y = np.zeros(shape(clique), dtype=np.int32)
         # u32 counts are clipped before narrowing to i32: numpy treats
         # uint32->int32 as a same-kind cast and silently wraps instead of erroring.
-        y[tuple(x[clique].to_numpy().T)] = (
+        # Casting before filling avoids float/NaN conversion of nullable integer keys.
+        keys = x.select(
+            [
+                pl.col(col).cast(pl.UInt64).fill_null(cardinalities[col] - 1)
+                for col in clique
+            ]
+        )
+        y[tuple(keys.to_numpy().T)] = (
             x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32).to_numpy()
         )
         return y
