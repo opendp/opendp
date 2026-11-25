@@ -16,7 +16,6 @@ use polars_plan::plans::visitor::TreeWalker;
 
 use super::StableDslPlan;
 use super::group_by::{group_by_plan, materialize_grouping_keys, prepare_group_by};
-use super::permutation::is_permutation_equivariant;
 
 #[cfg(test)]
 mod test;
@@ -55,7 +54,7 @@ pub(super) fn make_stable_truncate(
         context: Context::RowByRow,
     };
     let identifier = &middle_metric.0.identifier;
-    let keys = std::iter::once(identifier).chain(matched.bounds.iter().flat_map(|b| &b.by));
+    let keys = std::iter::once(identifier).chain(matched.bounds.iter().flat_map(|b| &b.bound.by));
     let mut stable_keys = HashMap::new();
     for key in keys.collect::<HashSet<_>>() {
         let t_key = make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
@@ -73,23 +72,27 @@ pub(super) fn make_stable_truncate(
     let MatchedTruncations {
         mut filters,
         mut group_by,
-        mut bounds,
+        bounds,
         ..
     } = matched;
 
     // Rewrite only the grouping keys of each matched truncation.
-    let schema = middle_domain.schema();
     for predicate in &mut filters {
-        *predicate = rewrite_windows(predicate.clone(), &stable_keys, &schema)?;
+        *predicate = rewrite_windows(predicate.clone(), &stable_keys)?;
     }
-    for bound in &mut bounds {
-        bound.by = bound
-            .by
-            .iter()
-            .map(|key| stable_keys[key].clone())
-            .collect();
-    }
-    let truncation_bounds = bounds;
+    let schema = middle_domain.schema();
+    let truncation_bounds = bounds
+        .into_iter()
+        .map(|mut candidate| {
+            candidate.bound.by = candidate
+                .bound
+                .by
+                .iter()
+                .map(|key| stable_keys[key].clone())
+                .collect();
+            candidate.validate_ranking(&schema)
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
     if let Some(group_by) = &mut group_by {
         for key in &mut group_by.keys {
@@ -165,11 +168,7 @@ pub(super) fn make_stable_truncate(
 
 // Visit the matched predicate's windows, without rewriting the rank priorities,
 // comparison thresholds or other non-grouping expressions.
-fn rewrite_windows(
-    mut expr: Expr,
-    keys: &HashMap<Expr, Expr>,
-    schema: &Schema,
-) -> PolarsResult<Expr> {
+fn rewrite_windows(mut expr: Expr, keys: &HashMap<Expr, Expr>) -> PolarsResult<Expr> {
     let (function, partition_by) = match &mut expr {
         #[cfg(patch_polars)]
         Expr::Over {
@@ -183,20 +182,8 @@ fn rewrite_windows(
             partition_by,
             ..
         } => (function, partition_by),
-        _ => {
-            return expr.map_children(
-                &mut |child, _| rewrite_windows(child, keys, schema),
-                &mut (),
-            );
-        }
+        _ => return expr.map_children(&mut |child, _| rewrite_windows(child, keys), &mut ()),
     };
-    if let Expr::SortBy { by, .. } = function.as_ref()
-        && by
-            .iter()
-            .any(|key| !is_permutation_equivariant(key, schema))
-    {
-        polars_bail!(ComputeError: "SortBy truncation keys must be permutation-equivariant expressions.");
-    }
     if let Expr::Function {
         input,
         function: FunctionExpr::Rank { options, .. },

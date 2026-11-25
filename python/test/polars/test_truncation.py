@@ -1,3 +1,5 @@
+from collections import Counter
+
 import opendp.prelude as dp
 import pytest
 import re
@@ -62,8 +64,7 @@ def test_frame_distance():
     assert query.summarize()["scale"][0] == 4.000000000000001  # type: ignore[index]
 
 
-@pytest.mark.parametrize("keep", ["first", "last", "sample"])
-def test_truncate_per_group(keep):
+def test_truncate_per_group():
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
         privacy_unit=dp.unit_of(contributions=1, identifier="id"),
@@ -71,7 +72,7 @@ def test_truncate_per_group(keep):
         split_evenly_over=1,
     )
 
-    query = context.query().truncate_per_group(2, keep=keep).select(dp.len(signed=True))
+    query = context.query().truncate_per_group(2).select(dp.len(signed=True))
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
     context = dp.Context.compositor(
@@ -94,33 +95,107 @@ def test_truncate_per_group(keep):
 
     query = (
         context.query()
-        .truncate_per_group(2, by=["alpha"], keep=keep)
+        .truncate_per_group(2, by=["alpha"])
         .group_by("alpha")
         .agg(dp.len(signed=True))
     )
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
-def test_truncate_per_group_sort_by():
-    context = dp.Context.compositor(
-        data=pl.LazyFrame(
-            {
-                "alpha": ["A", "B", "C"] * 100,
-                "id": [1, 2, 3] * 100,
-                "sort": [3, 2, 1] * 100,
-            }
-        ),
-        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
+@pytest.mark.parametrize("descending", [False, True])
+def test_truncate_per_group_sort_by(descending):
+    data = pl.LazyFrame(
+        {
+            "id": [1, 1, 1, 1, 2, 2],
+            "group": [0, 0, 0, 1, 0, 0],
+            "score": [3, 1, 1, 5, 2, 9],
+        }
     )
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .truncate_per_group(
+                1,
+                by=["group"],
+                keep=dp.polars.SortBy(pl.col("score"), descending=descending),
+            )
+        )
+        actual = _run_truncation(frame, query)
+        assert actual.height == 3
+        scores = {
+            (identifier, group): score
+            for identifier, group, score in actual.iter_rows()
+        }
+        assert scores == {
+            (1, 0): 3 if descending else 1,
+            (1, 1): 5,
+            (2, 0): 9 if descending else 2,
+        }
 
-    query = (
-        context.query()
-        .truncate_per_group(2, keep=dp.polars.SortBy(pl.col("sort")))
-        .select(dp.len(signed=True))
+
+def test_truncate_per_group_sort_by_negated_computed_key():
+    data = pl.LazyFrame({"id": [1, 1, 1, 2, 2], "score": [1, 3, 2, 8, 7]})
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .with_columns(priority=pl.col("score").cast(pl.Float64))
+            .truncate_per_group(1, keep=dp.polars.SortBy(-pl.col("priority")))
+        )
+        actual = _run_truncation(frame, query)
+        assert dict(actual.select("id", "score").iter_rows()) == {1: 3, 2: 8}
+
+
+def test_truncate_per_group_sort_by_rejects_unsupported_options():
+    data = pl.LazyFrame({"id": [1, 1], "a": [1, 2], "b": [2, 1]})
+    query = _truncation_context(data).query()
+    with pytest.raises(ValueError, match="Mixed descending directions"):
+        query.truncate_per_group(
+            1, keep=dp.polars.SortBy(["a", "b"], descending=[False, True])
+        )
+
+
+@pytest.mark.parametrize("descending, expected", [(False, 100), (True, 3)])
+def test_truncate_per_group_sort_by_native_null_order_per_key(descending, expected):
+    data = pl.LazyFrame(
+        {
+            "id": [1, 1, 1, 1],
+            "first": [1, 1, None, 1],
+            "second": [None, 3, 100, 2],
+        }
     )
-    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .truncate_per_group(
+                1,
+                keep=dp.polars.SortBy(["first", "second"], descending=descending),
+            )
+        )
+        actual = _run_truncation(frame, query)
+        assert actual["second"].to_list() == [expected]
+
+
+@pytest.mark.parametrize(
+    "scores",
+    [
+        [-0.0, 0.0, 1.0],
+        [float("nan"), 0.0, 1.0],
+    ],
+)
+def test_truncate_per_group_sort_by_float_edge_cases(scores):
+    data = pl.LazyFrame({"id": [1, 1, 1], "score": scores, "row": [0, 1, 2]})
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .truncate_per_group(2, keep=dp.polars.SortBy("score"))
+        )
+        actual = _run_truncation(frame, query)
+        expected = set(data.sort("score").head(2).collect()["row"].to_list())
+        assert set(actual["row"].to_list()) == expected
 
 
 def test_truncate_error_messages():
@@ -199,3 +274,64 @@ def test_truncation_contingency():
         )
     )
     synth_query.release()
+
+
+@pytest.mark.parametrize("keep", ["first", "last"])
+def test_truncate_per_group_rejects_physical_order(keep):
+    data = pl.LazyFrame({"id": [1, 1], "value": [1, 2]})
+    with pytest.raises(ValueError, match="keep must be 'sample' or SortBy"):
+        _truncation_context(data).query().truncate_per_group(1, keep=keep)
+
+
+def _truncation_context(data):
+    return dp.Context.compositor(
+        data=data,
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+
+def _run_truncation(data, query):
+    input_domain, input_metric = query._query._chain
+    transformation = dp.t.make_stable_lazyframe(
+        input_domain,
+        input_metric,
+        query.polars_plan,
+        MO="FrameDistance<SymmetricDistance>",
+    )
+    return transformation(data).collect()
+
+
+@pytest.mark.parametrize("k, sort", [(0, False), (1, False), (10, False), (2, True)])
+def test_truncate_per_group_counts(k, sort):
+    data = pl.LazyFrame(
+        {
+            "id": [1, 1, 1, 1, 2, 2],
+            "group": [0, 0, 0, 1, 0, 1],
+            "payload": [10, 11, 12, 13, 14, 15],
+        }
+    )
+    # All priorities within each group tie. Ordinal ranks must still keep k rows.
+    keep = dp.polars.SortBy("group") if sort else "sample"
+    expected = {
+        (1, 0): min(k, 3),
+        (1, 1): min(k, 1),
+        (2, 0): min(k, 1),
+        (2, 1): min(k, 1),
+    }
+    query = (
+        _truncation_context(data).query().truncate_per_group(k, by=["group"], keep=keep)
+    )
+    actual = _run_truncation(data, query)
+    assert Counter(actual.select("id", "group").iter_rows()) == Counter(expected)
+    rows = actual.rows()
+    assert len(set(rows)) == len(rows)
+    assert set(rows) <= set(data.collect().rows())
+
+
+def test_group_by_truncation_automatic_permutation():
+    data = pl.LazyFrame({"id": [1, 1, 2], "x": [1.0, 3.0, 5.0]})
+    query = _truncation_context(data).query().group_by("id").agg(pl.col("x").mean())
+    actual = _run_truncation(data, query).sort("id")
+    assert actual["x"].to_list() == [2.0, 5.0]
