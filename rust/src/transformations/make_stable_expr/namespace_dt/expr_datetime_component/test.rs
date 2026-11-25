@@ -167,3 +167,47 @@ fn test_leap_second() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_reject_invalid_temporal_component_dtypes() -> Fallible<()> {
+    let metric = FrameDistance(SymmetricDistance);
+    let time = df!("t" => &[NaiveTime::from_str("12:34:56").unwrap()])?.lazy();
+    let time_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "t",
+        AtomDomain::<NaiveTime>::default(),
+    )])?;
+    assert!(
+        make_stable_lazyframe(
+            time_domain.clone(),
+            metric.clone(),
+            time.clone().select([col("t").dt().year()])
+        )
+        .is_err()
+    );
+    assert!(
+        make_stable_lazyframe(
+            time_domain,
+            metric.clone(),
+            time.select([col("t").dt().hour()])
+        )
+        .is_ok()
+    );
+
+    let date = df!("d" => &[NaiveDate::from_str("2000-01-02").unwrap()])?.lazy();
+    let date_domain = LazyFrameDomain::new(vec![SeriesDomain::new(
+        "d",
+        AtomDomain::<NaiveDate>::default(),
+    )])?;
+    assert!(
+        make_stable_lazyframe(
+            date_domain.clone(),
+            metric.clone(),
+            date.clone().select([col("d").dt().hour()])
+        )
+        .is_err()
+    );
+    assert!(
+        make_stable_lazyframe(date_domain, metric, date.select([col("d").dt().year()])).is_ok()
+    );
+    Ok(())
+}

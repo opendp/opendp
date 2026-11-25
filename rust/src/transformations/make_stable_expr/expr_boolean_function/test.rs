@@ -237,3 +237,29 @@ fn test_not_i64() -> Fallible<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_not_rejects_unsupported_dtypes() -> Fallible<()> {
+    let (domain, _) = get_f64_i64_data()?;
+    let metric = FrameDistance(SymmetricDistance);
+    assert!(
+        col("f64")
+            .not()
+            .make_stable(domain.clone().row_by_row(), metric.clone())
+            .is_err()
+    );
+    assert!(
+        col("i64")
+            .not()
+            .make_stable(domain.row_by_row(), metric)
+            .is_ok()
+    );
+    let (domain, _) = get_bool_data()?;
+    assert!(
+        col("bool")
+            .not()
+            .make_stable(domain.row_by_row(), FrameDistance(SymmetricDistance))
+            .is_ok()
+    );
+    Ok(())
+}
