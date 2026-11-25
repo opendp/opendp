@@ -1,3 +1,8 @@
+..
+
+    >>> import pytest
+    >>> np = pytest.importorskip("numpy")
+
 Randomized Response
 ===================
 
@@ -366,9 +371,6 @@ but all bitvectors must have the same length and may only have a limited number 
         :sync: python
 
         .. code:: pycon
-
-            >>> import pytest
-            >>> np = pytest.importorskip("numpy")
 
             >>> # construct the measurement
             >>> m_rr = dp.m.make_randomized_response_bitvec(

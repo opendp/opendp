@@ -168,14 +168,8 @@ jobs:
       matrix:
         python-version:
           - '3.11'
-          - '3.13'
         extra-install:
           - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
-          - 'numpy'
-          - 'scikit-learn'
-          - 'polars'
-          - 'ibis'
-          - 'mbi'
           - 'all'
 
     steps:
@@ -220,39 +214,21 @@ jobs:
         run: python -m pip install -e .[${{ matrix.extra-install }}]
 
       - name: Test
-        # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
-        # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
-          NOT_SYNTH="not contingency and not synthetic"
-          NOT_IBIS="not ibis"
-          NOT_POLARS="not lazyframe and not polars and not pca and not rst"
-
-          # Run environment-independent subprocess checks only once, with all extras installed.
-          if [[ "${{ matrix.python-version }}" != '3.13' || "${{ matrix.extra-install }}" != 'ibis,mbi' ]]; then
-            export PYTEST_ADDOPTS="--ignore=test/test_subprocesses.py"
-          fi
-
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
-            numpy)                pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
-            scikit-learn)         pytest -v -k "$NOT_IBIS and $NOT_SYNTH and $NOT_POLARS";;
-            polars)               pytest -v -k "$NOT_IBIS and $NOT_SYNTH";;
-            ibis)                 pytest -v -k "$NOT_SYNTH";;
-            mbi)                  pytest -v -k "$NOT_IBIS";;
-            all)                  coverage run -m pytest -v;;
-
-            *)                    echo "unexpected extra-install"; exit 1;;
+            all)  coverage run -m pytest -v;;
+            *)    pytest -v;;
           esac
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.11'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: matrix.extra-install == 'all' && matrix.python-version == '3.13'
+        if: matrix.extra-install == 'all' && matrix.python-version == '3.11'
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report

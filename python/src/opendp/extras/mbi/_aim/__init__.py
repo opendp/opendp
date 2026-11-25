@@ -52,17 +52,17 @@ if TYPE_CHECKING:  # pragma: no cover
 class AIM(Algorithm):
     """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_.
 
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("mbi")
+
     Adaptively chooses and estimates the least-well-approximated marginal.
     The stronger the correlation amongst a clique of columns,
     the more likely AIM is to select the clique.
 
     The algorithm starts with a small per-step privacy budget,
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
-
-    ..
-
-        >>> import pytest  # `pip install 'opendp[mbi]'` is necessary
-        >>> _ = pytest.importorskip("mbi")
 
     .. code:: pycon
 

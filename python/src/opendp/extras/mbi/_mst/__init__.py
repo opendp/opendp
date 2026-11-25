@@ -41,15 +41,15 @@ if TYPE_CHECKING:  # pragma: no cover
 class MST(Algorithm):
     """MST mechanism from `MMS21 <https://arxiv.org/abs/2108.04978>`_.
 
+    ..
+
+        >>> import pytest
+        >>> _ = pytest.importorskip("mbi")
+
     MST greedily chooses pairs of columns that are most poorly represented
     by the DP contingency table in a way that guarantees all columns become
     connected by a minimum spanning tree.
     MST then releases all of the selected marginals.
-
-    ..
-
-        >>> import pytest  # `pip install 'opendp[mbi]'` is necessary
-        >>> _ = pytest.importorskip("mbi")
 
     .. code:: pycon
 

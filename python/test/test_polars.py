@@ -446,7 +446,7 @@ def test_onceframe_shuffle(monkeypatch, height):
     monkeypatch.setattr(OnceFrame, "_take_lazy", lambda _: expected.lazy())
     import opendp._data as data
 
-    original_shuffle = data._shuffle_dataframe
+    original_shuffle = data._shuffle_dataframe  # type: ignore[attr-defined]
     calls = []
 
     def shuffle(frame):

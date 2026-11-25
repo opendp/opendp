@@ -1,7 +1,7 @@
 First, create a measurement with the Polars API:
 
 >>> import opendp.prelude as dp
->>> import polars as pl
+>>> import pytest; pl = pytest.importorskip("polars")  # Or just: "import polars as pl"
 >>> dp.enable_features("contrib")
 ...
 >>> lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})

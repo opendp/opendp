@@ -53,7 +53,7 @@ def test_lazyframe_domain_series():
 
 
 def test_lazyframe_domain_margins():
-    import_optional_dependency("polars")
+    pytest.importorskip("polars")
     atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     series_domain_a = dp.series_domain("A", atom_domain)
     series_domain_b = dp.series_domain("B", atom_domain)
