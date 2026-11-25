@@ -933,6 +933,7 @@ class LazyFrameQuery:
         Start a group-by operation.
 
         OpenDP requires grouping keys to be stable row-by-row expressions.
+        Bounds and margins are matched against the stabilized grouping expressions.
         Floating-point keys must be cast to a non-floating-point type.
         """
         ...

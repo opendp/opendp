@@ -1,21 +1,21 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{
     Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
     SymmetricIdDistance,
 };
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
-use matching::Truncation;
+use matching::{GroupByTruncation, MatchedTruncations, num_groups_keys};
 use opendp_derive::proven;
 use polars::prelude::*;
+use polars_plan::plans::visitor::TreeWalker;
 
 use super::StableDslPlan;
-use super::group_by::{Resize, check_infallible, materialize_grouping_keys};
+use super::group_by::{group_by_output_domain, group_by_plan, materialize_grouping_keys};
 
 #[cfg(test)]
 mod test;
@@ -28,11 +28,11 @@ pub(crate) use matching::match_truncations;
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
-/// * `plan` - The LazyFrame to transform.
-pub fn make_stable_truncate(
+/// * `matched` - The matched input, truncations and bounds.
+pub(super) fn make_stable_truncate(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<SymmetricIdDistance>,
-    plan: DslPlan,
+    matched: MatchedTruncations,
 ) -> Fallible<
     Transformation<
         DslPlanDomain,
@@ -41,51 +41,81 @@ pub fn make_stable_truncate(
         FrameDistance<SymmetricDistance>,
     >,
 > {
-    // the identifier is protected from changes, so we can use the identifier from the input metric
-    // instead of the identifier from the middle_metric to match truncations
-    let (input, truncations, truncation_bounds) =
-        match_truncations(plan, &input_metric.0.identifier)?;
-
-    if truncations.is_empty() {
-        // should be unreachable in practice, but makes this function self-contained
-        return fallible!(MakeTransformation, "failed to match truncation");
-    };
-
-    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let t_prior = matched
+        .input
+        .clone()
+        .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
         t_prior.output_space();
 
-    (truncation_bounds.iter().flat_map(|b| &b.by)).try_for_each(|key| {
-        // check that each grouping key/over key is infallible row-by-row
-        make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
-            WildExprDomain {
-                columns: middle_domain.series_domains.clone(),
-                context: Context::RowByRow,
-            },
+    let stable_input = t_prior.invoke(&matched.input)?;
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::RowByRow,
+    };
+    let identifier = &middle_metric.0.identifier;
+    let keys = std::iter::once(identifier).chain(matched.bounds.iter().flat_map(|b| &b.by));
+    let mut stable_keys = HashMap::new();
+    for key in keys.collect::<HashSet<_>>() {
+        let t_key = make_stable_expr::<_, L01InfDistance<SymmetricIdDistance>>(
+            expr_domain.clone(),
             L0PInfDistance(middle_metric.0.clone()),
             key.clone(),
-        )
-        .map(|_| ())
-    })?;
+        )?;
+        let stable_key = t_key.invoke(&stable_input)?.expr;
+        if key == identifier && stable_key != *key {
+            return fallible!(MakeTransformation, "The identifier cannot be rewritten.");
+        }
+        stable_keys.insert(key.clone(), stable_key);
+    }
 
-    let output_domain = (truncations.iter())
-        .try_fold(middle_domain.clone(), |domain, truncation| {
-            truncate_domain(domain, truncation)
-        })?;
+    let MatchedTruncations {
+        mut filters,
+        mut group_by,
+        mut bounds,
+        ..
+    } = matched;
 
-    // The matcher permits filters followed by an optional final group-by.
-    // Only that final group-by changes the expressions naming the output groups.
-    let has_group_by = matches!(truncations.last(), Some(Truncation::GroupBy { .. }));
-    let output_bys = truncation_bounds
-        .iter()
-        .map(|bound| {
-            if has_group_by {
-                materialize_grouping_keys(&bound.by)
-            } else {
-                Ok(bound.by.clone())
+    // Rewrite only the grouping keys of each matched truncation.
+    for predicate in &mut filters {
+        *predicate = rewrite_windows(predicate.clone(), &stable_keys)?;
+    }
+    for bound in &mut bounds {
+        bound.by = bound
+            .by
+            .iter()
+            .map(|key| stable_keys[key].clone())
+            .collect();
+    }
+    let truncation_bounds = bounds;
+
+    if let Some(group_by) = &mut group_by {
+        for key in &mut group_by.keys {
+            *key = stable_keys[&*key].clone();
+        }
+        let allowed_keys: HashSet<_> = group_by.keys.iter().cloned().collect();
+        for bound in &truncation_bounds {
+            if !bound.by.is_subset(&allowed_keys) {
+                return fallible!(
+                    MakeTransformation,
+                    "Filter truncation keys ({:?}) must be a subset of groupby truncation keys ({:?}). Otherwise the groupby truncation may invalidate filter truncation.",
+                    bound.by,
+                    allowed_keys
+                );
             }
-        })
-        .collect::<Fallible<Vec<_>>>()?;
+        }
+    }
+
+    let output_domain = if let Some(GroupByTruncation { keys, aggs }) = &group_by {
+        // Filters preserve schema and margin upper bounds.
+        // Group-by preparation already discards margin invariants.
+        group_by_output_domain(&middle_domain, keys, aggs)?
+    } else {
+        let mut domain = middle_domain.clone();
+        domain.margins.iter_mut().for_each(|m| m.invariant = None);
+        domain
+    };
+    let has_group_by = group_by.is_some();
 
     let t_truncate = Transformation::new(
         middle_domain,
@@ -93,49 +123,35 @@ pub fn make_stable_truncate(
         output_domain,
         FrameDistance(SymmetricDistance),
         Function::new(move |plan: &DslPlan| {
-            (truncations.iter()).fold(plan.clone(), |plan, truncation| match truncation {
-                Truncation::Filter(predicate) => DslPlan::Filter {
-                    input: Arc::new(plan.clone()),
+            let plan = filters
+                .iter()
+                .fold(plan.clone(), |plan, predicate| DslPlan::Filter {
+                    input: Arc::new(plan),
                     predicate: predicate.clone(),
-                },
-                Truncation::GroupBy { keys, aggs } => {
-                    #[cfg(patch_polars)]
-                    let output = DslPlan::GroupBy {
-                        input: Arc::new(plan),
-                        keys: keys.clone(),
-                        aggs: aggs.clone(),
-                        predicates: vec![],
-                        apply: None,
-                        maintain_order: false,
-                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
-                    };
-                    #[cfg(not(patch_polars))]
-                    let output = DslPlan::GroupBy {
-                        input: Arc::new(plan),
-                        keys: keys.clone(),
-                        aggs: aggs.clone(),
-                        apply: None,
-                        maintain_order: false,
-                        options: Arc::new(ORDINARY_GROUP_BY_OPTIONS),
-                    };
-                    output
+                });
+            match &group_by {
+                Some(GroupByTruncation { keys, aggs }) => {
+                    group_by_plan(plan, keys.clone(), aggs.clone(), false)
                 }
-            })
+                None => plan,
+            }
         }),
         StabilityMap::new_fallible(move |id_bounds: &Bounds| {
             let total_num_ids = id_bounds.get_bound(&Default::default()).per_group;
 
             // each truncation is used to derive row bounds
-            let new_bounds = (truncation_bounds.iter())
-                .zip(&output_bys)
-                .map(|(truncation_bound, output_by)| {
-                    // Input certificates still refer to the original grouping expressions.
+            let new_bounds = truncation_bounds
+                .iter()
+                .map(|truncation_bound| {
+                    // Look up the bound on the actual execution keys.
                     let mut row_bound = truncate_id_bound(
                         id_bounds.get_bound(&truncation_bound.by),
                         truncation_bound.clone(),
                         total_num_ids,
                     )?;
-                    row_bound.by = output_by.clone();
+                    if has_group_by {
+                        row_bound.by = materialize_grouping_keys(&row_bound.by)?;
+                    }
                     Ok(row_bound)
                 })
                 .collect::<Fallible<Vec<Bound>>>()?;
@@ -145,47 +161,50 @@ pub fn make_stable_truncate(
     t_prior >> t_truncate
 }
 
-/// # Proof Definition
-/// Returns the domain that spans all outputs when truncation is applied to all members of the input domain.
-#[proven]
-fn truncate_domain(mut domain: DslPlanDomain, truncation: &Truncation) -> Fallible<DslPlanDomain> {
-    match &truncation {
-        Truncation::Filter { .. } => {
-            domain.margins.iter_mut().for_each(|m| {
-                // after filtering you no longer know partition lengths or keys
-                m.invariant = None;
-            });
-
-            // upper bounds on the per-group length and num groups remains valid
-            Ok(domain)
-        }
-        Truncation::GroupBy { keys, aggs } => {
-            // each agg expression must be infallible
-            aggs.iter()
-                .try_for_each(|e| check_infallible(e, Resize::Allow))?;
-
-            // derive new output domain
-            FrameDomain::new_with_margins(
-                domain
-                    .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
-                    .iter_fields()
-                    .map(SeriesDomain::new_from_field)
-                    .collect::<Fallible<_>>()?,
-                domain
-                    .margins
-                    .into_iter()
-                    // only keep margins that are a subset of the truncation keys
-                    .filter(|m| m.by.is_subset(&HashSet::from_iter(keys.clone())))
-                    // discard invariants as multiverses are mixed
-                    .map(|mut m| {
-                        m.by = materialize_grouping_keys(&m.by)?;
-                        m.invariant = None;
-                        Ok(m)
-                    })
-                    .collect::<Fallible<_>>()?,
-            )
+// Visit the matched predicate's windows, without rewriting the rank priorities,
+// comparison thresholds or other non-grouping expressions.
+fn rewrite_windows(mut expr: Expr, keys: &HashMap<Expr, Expr>) -> PolarsResult<Expr> {
+    let (function, partition_by) = match &mut expr {
+        #[cfg(patch_polars)]
+        Expr::Over {
+            function,
+            partition_by,
+            ..
+        } => (function, partition_by),
+        #[cfg(not(patch_polars))]
+        Expr::Window {
+            function,
+            partition_by,
+            ..
+        } => (function, partition_by),
+        _ => return expr.map_children(&mut |child, _| rewrite_windows(child, keys), &mut ()),
+    };
+    if let Expr::Function {
+        input,
+        function: FunctionExpr::Rank { options, .. },
+    } = Arc::make_mut(function)
+        && options.method == RankMethod::Dense
+    {
+        let [rank_input] = input.as_mut_slice() else {
+            polars_bail!(ComputeError: "Expected a single matched rank input");
+        };
+        let by = num_groups_keys(rank_input).map_err(|e| polars_err!(ComputeError: "{}", e))?;
+        *rank_input = replace_keys(rank_input.clone(), by, keys)?;
+    } else {
+        for key in partition_by {
+            *key = keys[&*key].clone();
         }
     }
+    Ok(expr)
+}
+
+// The shared dense-rank key extractor identifies the exact grouping
+// expressions, including both occurrences within hashed ranks.
+fn replace_keys(expr: Expr, by: &[Expr], keys: &HashMap<Expr, Expr>) -> PolarsResult<Expr> {
+    if by.contains(&expr) {
+        return Ok(keys[&expr].clone());
+    }
+    expr.map_children(&mut |child, _| replace_keys(child, by, keys), &mut ())
 }
 
 /// # Proof Definition

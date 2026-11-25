@@ -28,66 +28,32 @@ None
 \begin{theorem}[Postcondition]
     For any choice of LazyFrame plan,
     returns the plan with the truncations removed,
-    the truncations that were removed in the order they are applied,
-    and per-id bounds on row and/or group contributions using the original grouping expressions.
-    If a groupby truncation is present, its caller must express these bounds in terms of the materialized output columns
+    the filter predicates in execution order and an optional terminal group-by,
+    and per-id bounds using the original grouping expressions.
+    Returns none if no truncation is matched. The caller must certify the grouping expressions row-by-row
+    before using the bounds for stability accounting.
+    If a groupby truncation is present, its caller must check that the grouping keys are retained,
+    and express these bounds in terms of the materialized output columns
     before using them as output distance bounds.
 \end{theorem}
 
 \begin{proof}
-
-    The algorithm maintains three invariants:
-    \begin{itemize}
-        \item \texttt{input} is the LazyFrame plan with truncations removed
-        \item \texttt{truncations} is a list of truncations in reverse-order
-        \item \texttt{bounds} is a list of per-id bounds on row and/or group contributions
-    \end{itemize}
-
-    In order to ensure that all per-id bounds remain valid after successive truncations,
-    the group-by truncation may only be applied last in the truncation pipeline,
-    as the group-by truncation rewrites all columns in the data,
-    and potentially overwrites user identifiers.
-
-    Since parsing the query plan happens in reverse order,
-    the algorithm starts by attempting to parse a group-by truncation on line \ref{line:match_group_by_truncation}.
-    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation},
-    if the group-by truncation is present, it will be returned as a tuple of
-    \texttt{input}, (the execution plan with the group-by truncation removed),
-    \texttt{truncation}, (the group-by truncation) and
-    \texttt{per\_id\_bounds} (the per-id bounds on row contributions).
-    The state of the algorithm is then updated on lines \ref{line:match_group_by_truncation_start}-\ref{line:match_group_by_truncation_end},
-    maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
-
-    Another limitation of the group-by truncation is that bounds on row contributions when grouped by a given set of columns
-    are no longer valid if those columns are changed in the group-by truncation.
-    Therefore, \texttt{allowed\_keys} on line \ref{line:allowed_keys} contains the original grouping expressions
-    whose values are materialized by the group-by truncation.
-    This guarantees preservation of their grouping labels, not equivalence when those expressions are re-evaluated on the output.
-    The caller must translate each retained expression to its materialized output column.
-    The subset check is necessary for this correspondence.
-
-    If a group-by truncation is not present, no update is made to the state.
-
-    The algorithm then attempts to repeatedly parse filter truncations on line \ref{line:match_filter_truncation}.
-    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate} on line \ref{line:match_truncation_predicate},
-    the return is a list of per-id contribution bounds if the predicate consists solely of truncations,
-    otherwise none.
-    This ensures that the algorithm rejects predicates that contain conditions that are not truncations.
-
-    Line \ref{line:allowed_keys_check} checks that the truncation predicate is valid,
-    by ensuring that the truncation predicate is a subset of the allowed keys.
-    The algorithm then updates the state on lines \ref{line:match_filter_truncation_start}-\ref{line:match_filter_truncation_end},
-    maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
-    Finally, since the descent through the query plan is in reverse order,
-    line \ref{line:truncations_reverse} ensures that the truncation order is correct.
-    The check on line \ref{line:match_group_by_truncation_check} rejects a groupby truncation below the already matched stages.
-    This keeps the accepted pipeline limited to filters followed by at most one final groupby,
-    so that no later matched truncation reinterprets the materialized output columns.
-    The reversal on line \ref{line:bounds_reverse} puts the bounds in the order used by the caller.
-
-    Since the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds} are maintained,
-    and the algorithm only matches through truncations,
-    the postcondition is satisfied.
+    The matcher first removes an optional terminal group-by and obtains its
+    per-id contribution bound, by the postcondition of
+    \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation}.
+    It then repeatedly removes filter predicates, by the postcondition of
+    \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate},
+    recording their bounds.
+    Each filter only removes rows, so it preserves all earlier contribution bounds.
+    A terminal group-by preserves these bounds only for grouping labels it retains:
+    the caller must check each filter bound's grouping expressions against the final group-by keys
+    after stabilizing the expressions.
+    The caller must translate these expressions into the corresponding materialized output columns.
+    Line \ref{line:match_group_by_truncation_check} rejects another group-by
+    beneath the matched filters. The filters and bounds are reversed to restore
+    execution order, and the terminal group-by bound (if any) is appended.
+    The caller certifies the partition keys against the stable input domain
+    before using them for stability accounting.
 \end{proof}
 
 \end{document}

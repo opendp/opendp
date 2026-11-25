@@ -32,16 +32,16 @@ None
 \end{theorem}
 
 \begin{proof}[Appropriate Output Domain]
-    By line \ref{line:stable-keys} the grouping keys are stable row-by-row transformations of the data.
-    By line \ref{line:infallible-aggs} the aggregates are infallible.
-    Therefore the function does not raise data-dependent errors.
-
+    By line \ref{line:stable-keys}, the execution keys are stable row-by-row expressions.
+    The domain analysis on line \ref{line:group-by-domain} excludes floating-point grouping keys.
+    Both margin propagation and contribution-bound lookup use only the execution keys.
+    The domain analysis requires infallible aggregates.
     By the postcondition of \texttt{DslPlan.simulate\_schema},
     \texttt{series\_domains} follows the expected schema of members in the output domain.
     The output column domains preserve the schema while allowing infallible black-box aggregation.
 
-    Only margins whose original grouping expressions are a subset of the grouping keys are preserved.
-    On line \ref{line:materialized-margin}, each preserved key becomes \texttt{col(output\_name)}.
+    Only margins whose grouping expressions are a subset of the execution keys are preserved.
+    In the domain analysis, each preserved key becomes \texttt{col(output\_name)}.
     Polars evaluates a grouping expression on the input and stores its value in the output column with that name.
     The translated margin therefore partitions output rows by the same labels as the original margin partitions input rows.
     Each input row contributes to at most one output row,
@@ -50,7 +50,7 @@ None
     and must not inherit the original margin.
     Among these margins, invariants are discarded.
 
-    It has been shown that for every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+    Therefore the group-by result is in the derived output domain or raises a data-independent runtime exception.
 \end{proof}
 
 

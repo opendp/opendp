@@ -1,13 +1,7 @@
 use std::collections::HashSet;
 
-use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
-use crate::{
-    error::Fallible,
-    metrics::Bound,
-    polars::literal_value_of,
-    traits::InfAdd,
-    transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
-};
+use super::super::group_by::{Resize, check_infallible, match_ordinary_group_by};
+use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
@@ -21,9 +15,17 @@ use polars::prelude::{
 mod test;
 
 #[derive(PartialEq, Debug)]
-pub(crate) enum Truncation {
-    Filter(Expr),
-    GroupBy { keys: Vec<Expr>, aggs: Vec<Expr> },
+pub(crate) struct GroupByTruncation {
+    pub(super) keys: Vec<Expr>,
+    pub(super) aggs: Vec<Expr>,
+}
+
+#[derive(Debug)]
+pub(crate) struct MatchedTruncations {
+    pub(super) input: DslPlan,
+    pub(super) filters: Vec<Expr>,
+    pub(super) group_by: Option<GroupByTruncation>,
+    pub(super) bounds: Vec<Bound>,
 }
 
 /// Matches multiple truncations in a compute plan.
@@ -33,22 +35,20 @@ pub(crate) enum Truncation {
 /// For any choice of LazyFrame plan,
 /// returns the plan with the truncations removed,
 /// the truncations that were removed,
-/// and per-id bounds on row and/or group contributions.
+/// and per-id bounds on row and group contributions.
+/// The caller must check that all filter grouping keys are retained by the final group-by.
+/// Returns None if no truncations match.
 #[proven]
 pub(crate) fn match_truncations(
     mut plan: DslPlan,
     identifier: &Expr,
-) -> Fallible<(DslPlan, Vec<Truncation>, Vec<Bound>)> {
-    let mut truncations = vec![];
+) -> Fallible<Option<MatchedTruncations>> {
+    let mut filters = vec![];
     let mut bounds = vec![];
-
-    let allowed_keys =
-        match_group_by_truncation(&plan, identifier).map(|(input, truncate, new_bound)| {
-            plan = input;
-            truncations.push(truncate);
-            bounds.push(new_bound.clone());
-            new_bound.by
-        });
+    let group_by = match_group_by_truncation(&plan, identifier).map(|(input, group_by, bound)| {
+        plan = input;
+        (group_by, bound)
+    });
 
     // match until not a filter truncation
     while let DslPlan::Filter { input, predicate } = plan.clone() {
@@ -56,23 +56,8 @@ pub(crate) fn match_truncations(
             break;
         };
 
-        // When filter truncation is behind a groupby truncation,
-        // if the groupby group keys don't cover the filter truncation keys,
-        // then the groupby aggs can overwrite the filter truncation keys,
-        // invalidating the filter truncation bounds.
-        if let Some(allowed_keys) = &allowed_keys {
-            new_bounds.iter().try_for_each(|bound| if bound.by.is_subset(allowed_keys) {
-                Ok(())
-            } else {
-                fallible!(
-                    MakeTransformation,
-                    "Filter truncation keys ({:?}) must be a subset of groupby truncation keys ({:?}). Otherwise the groupby truncation may invalidate filter truncation.",
-                    bound.by, allowed_keys
-                )
-            })?
-        }
         plan = input.as_ref().clone();
-        truncations.push(Truncation::Filter(predicate.clone()));
+        filters.push(predicate);
         bounds.extend(new_bounds);
     }
 
@@ -84,11 +69,26 @@ pub(crate) fn match_truncations(
         );
     }
     // since the parse descends to the source,
-    // truncations and bounds are in reverse order
-    truncations.reverse();
+    // filters and bounds are in reverse order
+    filters.reverse();
     bounds.reverse();
 
-    Ok((plan, truncations, bounds))
+    let group_by = if let Some((group_by, bound)) = group_by {
+        bounds.push(bound);
+        Some(group_by)
+    } else {
+        None
+    };
+
+    if filters.is_empty() && group_by.is_none() {
+        return Ok(None);
+    }
+    Ok(Some(MatchedTruncations {
+        input: plan,
+        filters,
+        group_by,
+        bounds,
+    }))
 }
 
 /// Matches a truncation via a groupby.
@@ -102,46 +102,25 @@ pub(crate) fn match_truncations(
 fn match_group_by_truncation(
     plan: &DslPlan,
     identifier: &Expr,
-) -> Option<(DslPlan, Truncation, Bound)> {
-    #[cfg(patch_polars)]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        options,
-        ..
-    } = plan.clone()
-    else {
-        return None;
-    };
-    #[cfg(not(patch_polars))]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        options,
-        ..
-    } = plan.clone()
-    else {
-        return None;
-    };
-    if apply.is_some() || options.as_ref() != &ORDINARY_GROUP_BY_OPTIONS {
-        return None;
-    }
+) -> Option<(DslPlan, GroupByTruncation, Bound)> {
+    let (input, keys, aggs, _) = match_ordinary_group_by(plan).ok()?;
 
-    let (ids, by) = (keys.iter().cloned()).partition::<HashSet<_>, _>(|expr| expr == identifier);
-
-    if ids.is_empty() {
+    if !keys.contains(identifier) {
         return None;
     }
 
     Some((
-        (*input).clone(),
-        Truncation::GroupBy { keys, aggs },
+        input.clone(),
+        GroupByTruncation {
+            keys: keys.to_vec(),
+            aggs: aggs.to_vec(),
+        },
         Bound {
-            by,
+            by: keys
+                .iter()
+                .filter(|key| *key != identifier)
+                .cloned()
+                .collect(),
             per_group: Some(1),
             num_groups: None,
         },
@@ -273,7 +252,7 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
 #[proven]
 fn match_num_groups_predicate(
     ranks: &Expr,
-    partition_by: &Vec<Expr>,
+    partition_by: &[Expr],
     identifier: &Expr,
     threshold: u32,
 ) -> Fallible<Option<Bound>> {
@@ -286,7 +265,7 @@ fn match_num_groups_predicate(
     else {
         return Ok(None);
     };
-    if partition_by != &vec![identifier.clone()] {
+    if partition_by != std::slice::from_ref(identifier) {
         return fallible!(
             MakeTransformation,
             "num_groups truncation must use the identifier in the over clause"
@@ -308,12 +287,23 @@ fn match_num_groups_predicate(
         );
     };
 
-    let by = match input_item.clone() {
+    let by = num_groups_keys(input_item)?.iter().cloned().collect();
+
+    Ok(Some(Bound {
+        by,
+        per_group: None,
+        num_groups: Some(threshold),
+    }))
+}
+
+/// Grouping expressions in the single input to a dense rank.
+pub(super) fn num_groups_keys(input_item: &Expr) -> Fallible<&[Expr]> {
+    Ok(match input_item {
         // Treat as_struct as a special case that represents multiple columns.
         // Could still actually have a struct column via to_struct(to_struct(...)).
         Expr::Function {
             function: FunctionExpr::AsStruct,
-            mut input,
+            input,
             ..
         } => {
             // If the first field is a hash of the second field,
@@ -338,19 +328,13 @@ fn match_num_groups_predicate(
                             hash_input
                         );
                     };
-                    input = true_input.clone();
+                    return Ok(true_input);
                 }
             }
-            input.into_iter().collect()
+            input
         }
-        input => HashSet::from([input.clone()]),
-    };
-
-    Ok(Some(Bound {
-        by,
-        per_group: None,
-        num_groups: Some(threshold),
-    }))
+        input => std::slice::from_ref(input),
+    })
 }
 
 /// # Proof Definition
@@ -361,7 +345,7 @@ fn match_num_groups_predicate(
 #[proven]
 fn match_per_group_predicate(
     mut enumeration: &Expr,
-    partition_by: &Vec<Expr>,
+    partition_by: &[Expr],
     identifier: &Expr,
     threshold: u32,
 ) -> Fallible<Option<Bound>> {

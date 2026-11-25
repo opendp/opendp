@@ -933,12 +933,14 @@ def test_cut():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
-            margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
+    # Use public keys in the stabilized Enum encoding.
+    keys = pl.DataFrame({"x": [0, 1, 2, 3]}, schema={"x": pl.UInt8})
     actual = (
         context.query()
         .group_by(*by)
         .agg(dp.len(signed=True))
+        .with_keys(keys)
         .release()
         .collect()
         .sort("x")
@@ -985,12 +987,13 @@ def test_cut_direct_enum_group_by():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=10000.0),
         split_evenly_over=1,
-        margins=[dp.polars.Margin(by=[by], invariant="keys")],
     )
+    keys = pl.DataFrame({"x": ["low", "high"]}, schema={"x": pl.Enum(["low", "high"])})
     actual = (
         context.query()
         .group_by(by)
         .agg(dp.len(signed=True))
+        .with_keys(keys)
         .release()
         .collect()
         .with_columns(pl.col("x").cast(pl.String))
@@ -999,6 +1002,26 @@ def test_cut_direct_enum_group_by():
     pl_testing.assert_frame_equal(
         actual, pl.DataFrame({"x": ["high", "low"], "len": [1, 2]})
     )
+
+
+def test_cut_truncation_bounds():
+    by = pl.col("x").cut([1.0], labels=["low", "high"])
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"id": [1, 1, 1], "x": [2.0, 0.5, 0.5]}),
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    keys = pl.DataFrame({"x": ["low", "high"]}, schema={"x": pl.Enum(["low", "high"])})
+    query = (
+        context.query()
+        .truncate_per_group(1, by=[by])
+        .truncate_num_groups(2, by=[by], keep="first")
+        .group_by(by)
+        .agg(dp.len(signed=True))
+        .with_keys(keys)
+    )
+    assert query.summarize()["scale"][0] == pytest.approx(2.0)
 
 
 @pytest.mark.xfail(raises=AssertionError)

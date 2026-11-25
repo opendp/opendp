@@ -15,6 +15,7 @@ use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
+use crate::polars::{contains_categorical, contains_float};
 use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::StableDslPlan;
 use crate::transformations::make_stable_expr;
@@ -22,7 +23,7 @@ use crate::transformations::traits::UnboundedMetric;
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use matching::find_len_expr;
-use polars::prelude::{DataType, DslPlan, JoinType, UniqueKeepStrategy, col, lit};
+use polars::prelude::{DslPlan, JoinType, UniqueKeepStrategy, col, lit};
 use polars_plan::dsl::Expr;
 
 #[cfg(test)]
@@ -71,6 +72,7 @@ where
     // 1: establish stability of `group_by`
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
+    let stable_input = t_prior.invoke(&input)?;
 
     let group_by_keys = group_by
         .iter()
@@ -101,12 +103,12 @@ where
                 );
             }
 
-            Ok(t_key.invoke(&input)?.expr)
+            Ok(t_key.invoke(&stable_input)?.expr)
         })
         .collect::<Fallible<Vec<_>>>()?;
 
     // 2: prepare for release of `aggs`
-    let group_by_id = HashSet::from_iter(group_by.iter().cloned());
+    let group_by_id = HashSet::from_iter(group_by_keys.iter().cloned());
     // Do not infer max_groups from the public key frame: it may change
     // between measurement construction and invocation, invalidating the bound.
     let margin = middle_domain.get_margin(&group_by_id);
@@ -347,29 +349,6 @@ where
             function,
             privacy_map,
         )?
-}
-
-/// Polars groups signed zeros and NaNs together but may release an original
-/// representative, so floating-point values cannot occur in private group keys.
-fn contains_float(dtype: &DataType) -> bool {
-    match dtype {
-        DataType::Float16 | DataType::Float32 | DataType::Float64 => true,
-        DataType::Array(inner, _) | DataType::List(inner) => contains_float(inner),
-        DataType::Struct(fields) => fields.iter().any(|field| contains_float(field.dtype())),
-        _ => false,
-    }
-}
-
-/// Reject data-dependent categorical encodings at any depth in a grouping key.
-fn contains_categorical(dtype: &DataType) -> bool {
-    match dtype {
-        DataType::Categorical(_, _) => true,
-        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
-        DataType::Struct(fields) => fields
-            .iter()
-            .any(|field| contains_categorical(field.dtype())),
-        _ => false,
-    }
 }
 
 fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
