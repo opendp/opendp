@@ -1,8 +1,5 @@
-use dashu::{
-    base::Sign,
-    integer::{IBig, UBig},
-    rational::RBig,
-};
+use dashu::{base::Sign, integer::UBig, rational::RBig};
+use num::Zero;
 use opendp_derive::{bootstrap, proven};
 
 use crate::{
@@ -11,11 +8,11 @@ use crate::{
     error::Fallible,
     measurements::{
         DiscreteGaussian, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
-        NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
+        NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature, threshold_delta,
     },
     measures::{Approximate, ZeroConcentratedDivergence},
-    metrics::{AbsoluteDistance, L2Distance, L02InfDistance},
-    traits::{InfPowI, InfSqrt, InfSub},
+    metrics::{AbsoluteDistance, L01InfDistance, L2Distance, L02InfDistance, majorizing_counts},
+    traits::{InfCast, InfSqrt},
 };
 
 #[cfg(feature = "ffi")]
@@ -62,7 +59,7 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-/// * `threshold` - Release noisy values strictly beyond this threshold in its signed direction.
+/// * `threshold` - Retain noisy values strictly beyond this threshold in its signed direction, before rounding or saturation to the output type.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
@@ -152,19 +149,64 @@ impl
                     );
                 }
 
-                let d_instability = &threshold - li;
+                // Relax the L2 constraint to an integer L1 bound.
+                let l1 = (l2 * RBig::try_from(f64::from(*l0).inf_sqrt()?)?)
+                    .floor()
+                    .into_parts()
+                    .1;
+                let delta = threshold_delta(*l0, l1, li, threshold.clone(), |tail| {
+                    conservative_discrete_gaussian_tail_to_alpha(scale.clone(), tail)
+                })?;
+                Ok((rho, delta))
+            },
+        ))
+    }
+}
 
-                let delta_single =
-                    conservative_discrete_gaussian_tail_to_alpha(scale.clone(), d_instability)?;
-
-                let delta_joint: f64 = (1.0).inf_sub(
-                    &(1.0)
-                        .neg_inf_sub(&delta_single)?
-                        .neg_inf_powi(IBig::from(*l0))?,
-                )?;
-
-                // delta is only sensibly at most 1
-                Ok((rho, delta_joint.min(1.0)))
+#[proven(
+    proof_path = "measurements/noise_threshold/distribution/gaussian/NoiseThresholdPrivacyMap_L01Inf_for_ZExpFamily2.tex"
+)]
+impl
+    NoiseThresholdPrivacyMap<
+        L01InfDistance<AbsoluteDistance<RBig>>,
+        Approximate<ZeroConcentratedDivergence>,
+    > for ZExpFamily<2>
+{
+    fn noise_threshold_privacy_map(
+        &self,
+        _input_metric: &L01InfDistance<AbsoluteDistance<RBig>>,
+        _output_measure: &Approximate<ZeroConcentratedDivergence>,
+        threshold: UBig,
+    ) -> Fallible<
+        PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<ZeroConcentratedDivergence>>,
+    > {
+        let scale = self.scale.clone();
+        if scale < RBig::ZERO {
+            return fallible!(MakeMeasurement, "scale ({scale}) must be non-negative");
+        }
+        Ok(PrivacyMap::new_fallible(
+            move |(l0, l1, li): &(u32, RBig, RBig)| {
+                let (Sign::Positive, l1) = l1.floor().into_parts() else {
+                    return fallible!(FailedMap, "l1 sensitivity must be non-negative");
+                };
+                let (Sign::Positive, li) = li.floor().into_parts() else {
+                    return fallible!(FailedMap, "l-infinity sensitivity must be non-negative");
+                };
+                let s = l1.min(&li * *l0);
+                let b = li.min(s.clone());
+                if s.is_zero() {
+                    return Ok((0., 0.));
+                }
+                if scale.is_zero() {
+                    return Ok((f64::INFINITY, 1.));
+                }
+                let (q, r) = majorizing_counts(s.clone(), b.clone());
+                let squared = RBig::from(q * &b * &b + &r * &r);
+                let rho = f64::inf_cast(squared / (RBig::from(2) * &scale * &scale))?;
+                let delta = threshold_delta(*l0, s, b, threshold.clone(), |tail| {
+                    conservative_discrete_gaussian_tail_to_alpha(scale.clone(), tail)
+                })?;
+                Ok((rho, delta))
             },
         ))
     }

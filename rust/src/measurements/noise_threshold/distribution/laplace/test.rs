@@ -14,7 +14,7 @@ use num::{One, Zero};
 #[test]
 fn test_make_laplace_threshold_native_types() -> Fallible<()> {
     macro_rules! test_make_laplace_type {
-        ($($ty:ty),+) => {$(
+        ($delta:expr; $($ty:ty),+) => {$(
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
             let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
@@ -25,13 +25,16 @@ fn test_make_laplace_threshold_native_types() -> Fallible<()> {
             assert_eq!(release.len(), 1);
             assert!(!release.contains_key(&false));
             assert!(release.contains_key(&true));
-            assert_eq!(meas.map(&(1, <$ty>::one(), <$ty>::one()))?, (1.0, 1.1102230246251565e-16));
+            let (loss, delta) = meas.map(&(1, <$ty>::one(), <$ty>::one()))?;
+            assert_eq!(loss, 1.0);
+            assert!((delta / $delta - 1.).abs() < 1e-12);
         )+}
     }
 
     test_make_laplace_type!(
-        u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, f32, f64
+        1.4100291223853398e-22; u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128
     );
+    test_make_laplace_type!(2.621442831681732e-22; f32, f64);
     Ok(())
 }
 
@@ -46,10 +49,9 @@ fn test_make_laplace_threshold_bigint() -> Fallible<()> {
     assert_eq!(release.len(), 1);
     assert!(!release.contains_key(&false));
     assert!(release.contains_key(&true));
-    assert_eq!(
-        meas.map(&(1, rbig!(1), rbig!(1)))?,
-        (1.0, 1.1102230246251565e-16)
-    );
+    let (loss, delta) = meas.map(&(1, rbig!(1), rbig!(1)))?;
+    assert_eq!(loss, 1.0);
+    assert!((delta / 1.4100291223853398e-22 - 1.).abs() < 1e-12);
     Ok(())
 }
 
@@ -69,9 +71,15 @@ fn test_make_laplace_threshold_float_map() -> Fallible<()> {
     assert!(m_float.map(&(1, -1., -1.)).is_err());
     assert_eq!(m_float.map(&(1, -0., -0.))?, (0.0, 0.0));
     assert_eq!(m_float.map(&(1, 0., 0.))?, (0.0, 0.0));
-    assert_eq!(m_float.map(&(1, 1., 1.))?, (1.0, 6.17049020433802e-5));
-    assert_eq!(m_float.map(&(1, 2., 2.))?, (2.0, 0.0001677313139513137));
-    assert_eq!(m_float.map(&(1, 3., 3.))?, (3.0, 0.0004559409827773475));
+    let (loss, delta) = m_float.map(&(1, 1., 1.))?;
+    assert_eq!(loss, 1.0);
+    assert!((delta / 6.170490204333978e-5 - 1.).abs() < 1e-12);
+    let (loss, delta) = m_float.map(&(1, 2., 2.))?;
+    assert_eq!(loss, 2.0);
+    assert!((delta / 0.00016773131395125593 - 1.).abs() < 1e-12);
+    let (loss, delta) = m_float.map(&(1, 3., 3.))?;
+    assert_eq!(loss, 3.0);
+    assert!((delta / 0.0004559409827772581 - 1.).abs() < 1e-12);
     assert!(
         m_float
             .map(&(1, f64::MAX, f64::MAX))
@@ -115,9 +123,15 @@ fn test_make_laplace_threshold_int_map() -> Fallible<()> {
     // bounds don't match float case because float case uses
     // a looser continuous approximation to tail bound
     assert_eq!(m_int.map(&(1, 0, 0))?, (0.0, 0.0));
-    assert_eq!(m_int.map(&(1, 1, 1))?, (1.0, 3.319000812207484e-5));
-    assert_eq!(m_int.map(&(1, 2, 2))?, (2.0, 9.021979596468555e-5));
-    assert_eq!(m_int.map(&(1, 3, 3))?, (3.0, 0.00024524283193794183));
+    let (loss, delta) = m_int.map(&(1, 1, 1))?;
+    assert_eq!(loss, 1.0);
+    assert!((delta / 3.319000812206423e-5 - 1.).abs() < 1e-12);
+    let (loss, delta) = m_int.map(&(1, 2, 2))?;
+    assert_eq!(loss, 2.0);
+    assert!((delta / 9.021979596461533e-5 - 1.).abs() < 1e-12);
+    let (loss, delta) = m_int.map(&(1, 3, 3))?;
+    assert_eq!(loss, 3.0);
+    assert!((delta / 0.00024524283193789656 - 1.).abs() < 1e-12);
 
     Ok(())
 }
@@ -191,7 +205,9 @@ fn test_laplace_threshold_int() -> Fallible<()> {
     assert_eq!(m_thresh.map(&(1, 1, 1))?, (f64::INFINITY, 1.0));
 
     let m_thresh = make_laplace_threshold(input_domain, input_metric, 1.0, 10, None)?;
-    assert_eq!(m_thresh.map(&(1, 1, 1))?, (1.0, 3.319000812207484e-5));
+    let (loss, delta) = m_thresh.map(&(1, 1, 1))?;
+    assert_eq!(loss, 1.0);
+    assert!((delta / 3.319000812206423e-5 - 1.).abs() < 1e-12);
     Ok(())
 }
 

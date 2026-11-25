@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../../lib.sty}
 
-\title{\texttt{MakeNoise<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PInfDistance<P, AbsoluteDistance<QI>>, MO> for FloatExpFamily<P>}}
+\title{\texttt{MakeNoise<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PInfDistance<Q, AbsoluteDistance<QI>>, MO> for FloatExpFamily<P>}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -27,14 +27,14 @@ and then converting back to the nearest float, or saturating to positive or nega
 \begin{itemize}
     \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
     \item Generic \texttt{TV} implements trait \rustdoc{traits/trait}{Float}
-    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Const-generics \texttt{P} and \texttt{Q} are of type \texttt{usize}
     \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Number}
     \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
     \item Type \texttt{i32} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<<T as FloatBits>::Bits>},
         This requirement means that the raw bits of \texttt{T} can be exactly cast to an \texttt{i32}.
     \item Type \texttt{RBig} implements traits \texttt{TryFrom<T>} and \texttt{TryFrom<QI>}.
         This is for fallible exact casting from input sensitivity to a rational in the privacy map.
-    \item Type \texttt{ZExpFamily<P>} implements traits \rustdoc{measurements/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>}
+    \item Type \texttt{ZExpFamily<P>} implements traits \rustdoc{measurements/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PInfDistance<Q, AbsoluteDistance<RBig>>, MO>}
         This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
 \end{itemize}
 
@@ -46,7 +46,7 @@ None
 
 \subsection*{Postcondition}
 \begin{theorem}
-    \validMeasurement{(\texttt{self, input\_space, MO, TK, TV, P, QI})}{\texttt{make\_noise}}
+    \validMeasurement{(\texttt{self, input\_space, MO, TK, TV, P, Q, QI})}{\texttt{make\_noise}}
 \end{theorem}
 
 \begin{proof}

@@ -201,32 +201,10 @@ the release of these keys incurs zero privacy loss.
 
 We now adapt the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7)
 to consider the case of stable key release from line \ref{line:privacy-map-threshold}.
-Consider $S$ to be the set of labels that are common between $x$ and $x'$.
-Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
-(where only stable partitions are released).
-We then lower bound the probability of the mechanism returning an event $E$.
-In the following, $c_j$ denotes the exact count for partition $j$,
-and $Z_j$ is a random variable distributed according to the distribution used to release a noisy count.
-
-\begin{align*}
-    \Pr[E] &= \prod_{j \in x \backslash x'} \Pr[c_j + Z_j \le T] \\
-    &\ge \prod_{j \in x \backslash x'} \Pr[\Delta_\infty + Z_j \le T] \\
-    &\ge \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0}
-\end{align*}
-
-The probability of returning a set of stable partitions ($\Pr[E]$)
-is the probability of not returning any of the unstable partitions.
-We now solve for the choice of threshold $T$ such that $\Pr[E] \ge 1 - \delta$.
-
-\begin{align*}
-    \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0} &= \Pr[Z_j \le T - \Delta_\infty]^{\Delta_0} \\
-    &= (1 - \Pr[Z_j > T - \Delta_\infty])^{\Delta_0}
-\end{align*}
-
-Let \texttt{d\_instability} denote the distance to instability of $T - \Delta_\infty$.
-By the postcondition of \\ \texttt{integrate\_discrete\_noise\_tail},
-the probability that a random noise sample exceeds \texttt{d\_instability} is at most \texttt{delta\_single}.
-Therefore $\delta = 1 - (1 - \texttt{delta\_single})^{\Delta_0}$.
+For the keys present on one side of a neighboring pair only, their positive counts $a_i$ satisfy the joint $L_0,L_1,L_\infty$ contribution bounds.
+By independence, the probability of releasing any of these keys is $1-\prod_i F(T-a_i)$.
+By the postconditions of \texttt{integrate\_discrete\_noise\_tail} and \texttt{threshold\_delta}, this probability is bounded by \texttt{delta\_joint}.
+Independence ensures the common-key mechanism is unchanged by conditioning on no unstable-key release.
 This gives a probabilistic-DP or probabilistic-zCDP guarantee,
 which implies approximate-DP or approximate-zCDP guarantees respectively.
 This privacy loss is then added to \texttt{d\_out}.

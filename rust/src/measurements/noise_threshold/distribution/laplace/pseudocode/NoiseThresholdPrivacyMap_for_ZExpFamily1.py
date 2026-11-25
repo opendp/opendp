@@ -38,32 +38,15 @@ class ZExpFamily1:
             if li > threshold:  # |\label{line:threshold-check}|
                 raise f"threshold must not be smaller than {li}"
 
-            d_instability = threshold - li  # |\label{line:distance-to-instability}|
-
-            try:
-                alpha_disc = conservative_discrete_laplacian_tail_to_alpha(
-                    scale, d_instability
+            def tail(t):
+                alpha_disc = try_or_none(
+                    conservative_discrete_laplacian_tail_to_alpha, scale, t
                 )
-            except Exception:
-                alpha_disc = None
-
-            try:
-                alpha_cont = conservative_continuous_laplacian_tail_to_alpha(
-                    scale,
-                    d_instability,
+                alpha_cont = try_or_none(
+                    conservative_continuous_laplacian_tail_to_alpha, scale, t
                 )
-            except Exception:
-                alpha_cont = None
+                return option_min(alpha_disc, alpha_cont)
 
-            delta_single = option_min(alpha_disc, alpha_cont)
-            if delta_single is None:
-                raise "failed to compute tail bound in privacy map"
-
-            delta_joint: f64 = (1.0).inf_sub(
-                (1.0).neg_inf_sub(delta_single).neg_inf_powi(IBig.from_(l0)),
-            )
-
-            # delta is only sensibly at most 1
-            return epsilon, delta_joint.min(1.0)
+            return epsilon, threshold_delta(l0, l1, li, threshold, tail)
 
         return PrivacyMap.new_fallible(privacy_map)

@@ -497,6 +497,14 @@ pub struct L0PInfDistance<const P: usize, M: Metric>(pub M);
 pub type L01InfDistance<M> = L0PInfDistance<1, M>;
 pub type L02InfDistance<M> = L0PInfDistance<2, M>;
 
+/// Decompose a total into saturated coordinates and one remainder.
+pub(crate) fn majorizing_counts<T>(total: T, cap: T) -> (T, T)
+where
+    T: Clone + std::ops::Div<Output = T> + std::ops::Rem<Output = T>,
+{
+    (total.clone() / cap.clone(), total % cap)
+}
+
 /// Bound an Lp norm from L0, L1 and L-infinity bounds.
 ///
 /// # Arguments
@@ -513,7 +521,7 @@ pub(crate) fn l01inf_to_lp(distance: (u32, u32, u32), p: usize) -> Fallible<f64>
         1 => f64::inf_cast(total),
         2 if linf == 0 => Ok(0.),
         2 => {
-            let (q, r) = (total / linf, total % linf);
+            let (q, r) = majorizing_counts(total, linf);
             f64::inf_cast(q * linf * linf + r * r)?.inf_sqrt()
         }
         _ => fallible!(InvalidDistance, "p must be 1 or 2"),

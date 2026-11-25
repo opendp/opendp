@@ -1,0 +1,35 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+\title{\texttt{NoiseThresholdPrivacyMap} for Gaussian noise with $L_{0,1,\infty}$ bounds}
+\author{\MichaelShoemateAuthor}
+\begin{document}
+\maketitle
+\contrib
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+The types are as in the implementation signature.
+\subsubsection*{Caller-verified}
+None.
+\subsection*{Postcondition}
+The postcondition of \texttt{NoiseThresholdPrivacyMap}.
+\begin{proof}
+Negative scales and sensitivities are rejected. Integer differences permit flooring the $L_1$ and $L_\infty$ bounds.
+Write $s=\min(l_1,l_0l_\infty)$, $b=\min(l_\infty,s)$.
+If $s=0$, the nonzero maps are identical; if $s>0$ and the scale is zero, the returned bound is vacuous.
+Otherwise write $s=qb+r$ with $0\le r<b$.
+By the majorization argument in \texttt{l01inf\_to\_lp},
+\[
+\|x-x'\|_2^2\le qb^2+r^2.
+\]
+The Gaussian noise mechanism on the common keys therefore satisfies $\rho$-zCDP for
+\[
+\rho=\frac{qb^2+r^2}{2\sigma^2},
+\]
+rounded upward.
+On each side, the unstable-key values obey the original integer sensitivity bounds.
+By the postcondition of \texttt{threshold\_delta}, the probability of releasing any unstable key is at most the returned delta.
+Conditioning on its complement does not affect the common-key mechanism, by independence.
+This establishes the claimed approximate zCDP guarantee.
+\end{proof}
+\end{document}

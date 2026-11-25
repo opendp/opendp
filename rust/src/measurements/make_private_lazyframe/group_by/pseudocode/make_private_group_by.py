@@ -192,12 +192,14 @@ def make_private_group_by(
             if li >= threshold_value:
                 raise f"Threshold must be greater than {li}."
 
-            d_instability = threshold_value.neg_inf_sub(li)
-            delta_single = integrate_discrete_noise_tail(
-                noise.distribution, noise.scale, d_instability
-            )
-            delta_joint = (1).inf_sub(
-                (1).neg_inf_sub(delta_single).neg_inf_powi(IBig.from_(l0))
+            delta_joint = threshold_delta(
+                l0,
+                l1,
+                li,
+                threshold_value,
+                lambda t: integrate_discrete_noise_tail(
+                    noise.distribution, noise.scale, t
+                ),
             )
             d_out = MO.add_delta(d_out, delta_joint)
         else:

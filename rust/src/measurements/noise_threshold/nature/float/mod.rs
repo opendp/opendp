@@ -24,10 +24,10 @@ mod test;
 #[proven(
     proof_path = "measurements/noise_threshold/nature/float/MakeNoiseThreshold_MapDomain_for_FloatExpFamily.tex"
 )]
-impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
+impl<TK, TV, const P: usize, const Q: usize, QI: Number, MO: 'static + Measure>
     MakeNoiseThreshold<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<Q, AbsoluteDistance<QI>>,
         MO,
     > for FloatExpFamily<P>
 where
@@ -35,26 +35,26 @@ where
     TV: Float,
     RBig: TryFrom<TV> + TryFrom<QI>,
     i32: ExactIntCast<TV::Bits>,
-    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
+    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<Q, AbsoluteDistance<RBig>>, MO>,
 {
     type Threshold = TV;
     fn make_noise_threshold(
         self,
         input_space: (
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PInfDistance<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<Q, AbsoluteDistance<QI>>,
         ),
         threshold: TV,
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PInfDistance<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<Q, AbsoluteDistance<QI>>,
             MO,
             HashMap<TK, TV>,
         >,
     > {
         let FloatExpFamily { scale, k } = self;
-        let distribution = ZExpFamily {
+        let distribution = ZExpFamily::<P> {
             scale: integerize_scale(scale, k)?,
         };
 
@@ -71,7 +71,7 @@ where
 
         let r_threshold = x_mul_2k(r_threshold, -k).floor();
 
-        let t_int = make_float_to_bigint_threshold::<TK, TV, P, QI>(input_space, threshold, k)?;
+        let t_int = make_float_to_bigint_threshold::<TK, TV, Q, QI>(input_space, threshold, k)?;
         let m_noise = distribution.make_noise_threshold(t_int.output_space(), r_threshold)?;
         t_int >> m_noise >> then_deintegerize_hashmap(k)?
     }

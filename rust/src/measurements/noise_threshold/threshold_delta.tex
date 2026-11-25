@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../lib.sty}
+\title{\texttt{fn threshold\_delta}}
+\author{\MichaelShoemateAuthor}
+\begin{document}
+\maketitle
+\contrib
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+The arguments are as in the Rust signature.
+\subsubsection*{Caller-verified}
+For a symmetric discrete noise distribution $Z$ with log-concave mass function,
+\texttt{tail(t)} returns an upper bound on $\Pr[Z>t]$ or an error.
+
+\subsection*{Postcondition}
+\begin{theorem}
+On success, the output upper bounds
+\[
+\max_{\substack{a\in\mathbb Z_{\ge0}^{n}\\
+\sum_i a_i\le l_1,\ a_i\le b}}
+\left(1-\prod_{i:a_i>0}F(T-a_i)\right),
+\]
+where $n=l_0$, $b=l_\infty$, $T=\texttt{threshold}$, and $F$ is the CDF of $Z$.
+\end{theorem}
+
+\begin{proof}
+Let $s=\min(l_1,nb)$, replace $b$ by $\min(b,s)$, and set $h(a)=-\log F(T-a)$.
+The cases $s=0$ and $b=1$ are immediate.
+Otherwise $h$ is increasing and discretely convex since the CDF of a log-concave mass function is log-concave.
+Thus a maximizer spends $s$ and has support $m\in[\lceil s/b\rceil,\min(n,s)]\cap\mathbb Z$.
+Subtract one from every positive coordinate, and write
+\[
+s-m=q(b-1)+r,\qquad 0\le r<b-1.
+\]
+By weak majorization (as in \texttt{l01inf\_to\_lp}), the maximum of $\sum_{i:a_i>0}h(a_i)$ at fixed $m$ is
+\[
+H(m)=mh(1)+q(h(b)-h(1))+h(1+r)-h(1).
+\]
+Between successive breakpoints $r=0$, the expression is discretely convex:
+the same formula extends to $r=b-1$ at the adjacent breakpoint.
+At the breakpoints,
+\[
+H(m)=mh(1)+\frac{s-m}{b-1}(h(b)-h(1)),
+\]
+which is affine in $m$.
+Hence it suffices to evaluate the interval endpoints and the first and last feasible breakpoints.
+For each candidate, the probability is $1-\prod_i(1-p_i)$, where $p_i=\Pr[Z>T-a_i]$.
+The function $u(x,y)=x+y-xy$ is increasing in both arguments on $[0,1]$.
+The implementation evaluates $u$ exactly over rational representations of the supplied bounds and rounds upward.
+Binary doubling therefore conservatively combines independent events without cancellation.
+The maximum of the candidate bounds proves the result.
+\end{proof}
+\end{document}

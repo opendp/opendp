@@ -4,13 +4,13 @@ class FloatExpFamily:
         self,
         input_space: tuple[
             MapDomain[AtomDomain[TK], MapDomain[TV]],
-            L0PInfDistance[P, AbsoluteDistance[QI]],
+            L0PInfDistance[Q, AbsoluteDistance[QI]],
         ],
         threshold: TV,
     ) -> Measurement[
         MapDomain[AtomDomain[TK], AtomDomain[TV]],
         HashMap[TK, TV],
-        L0PInfDistance[P, AbsoluteDistance[QI]],
+        L0PInfDistance[Q, AbsoluteDistance[QI]],
         MO,
     ]:
         scale, k = self.scale, self.k
