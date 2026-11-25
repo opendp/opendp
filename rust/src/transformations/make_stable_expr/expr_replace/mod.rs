@@ -6,6 +6,7 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::polars::contains_categorical;
 
 use super::StableExpr;
 
@@ -63,8 +64,9 @@ where
         );
     }
 
+    reject_reserved_replace_name(&middle_domain.column.name)?;
     let dtype = middle_domain.column.dtype();
-    if matches!(dtype, DataType::Categorical(_, _)) {
+    if contains_categorical(&dtype) {
         return fallible!(
             MakeTransformation,
             "replace cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
@@ -105,11 +107,33 @@ where
             output_domain,
             middle_metric,
             Function::then_expr(move |expr| Expr::Function {
-                input: vec![expr.clone(), old.clone(), new.clone()],
+                input: vec![
+                    expr,
+                    Expr::Literal(old_lit.clone()),
+                    Expr::Literal(new_lit.clone()),
+                ],
                 function: FunctionExpr::Replace,
             }),
             StabilityMap::new(Clone::clone),
         )?
+}
+
+/// Polars uses these names in the join implementing multi-value replacement.
+pub(crate) fn reject_reserved_replace_name(name: &PlSmallStr) -> Fallible<()> {
+    if [
+        "__POLARS_REPLACE_OLD",
+        "__POLARS_REPLACE_NEW",
+        "__POLARS_REPLACE_MASK",
+    ]
+    .contains(&name.as_str())
+    {
+        return fallible!(
+            MakeTransformation,
+            "replace cannot be applied to column {}: reserved by Polars' replacement join",
+            name
+        );
+    }
+    Ok(())
 }
 
 /// # Proof Definition
@@ -179,21 +203,43 @@ pub(crate) fn literal_is_nullable(literal: &LiteralValue) -> bool {
 /// # Proof Definition
 /// Returns whether casting is fallible between two data types.
 pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
-    if matches!(from, DataType::Null)
-        || matches!(to, DataType::String | DataType::Categorical(_, _))
-    {
+    if matches!(from, DataType::Null) {
         return false;
+    }
+
+    // Do not assume every dtype can be converted to a String. In particular,
+    // Polars' Duration -> String conversion panics on i64::MIN.
+    match to {
+        DataType::String => {
+            return !matches!(
+                from,
+                DataType::String
+                    | DataType::Boolean
+                    | DataType::UInt8
+                    | DataType::UInt16
+                    | DataType::UInt32
+                    | DataType::UInt64
+                    | DataType::Int8
+                    | DataType::Int16
+                    | DataType::Int32
+                    | DataType::Int64
+                    | DataType::Int128
+                    | DataType::Float32
+                    | DataType::Float64
+                    | DataType::Enum(_, _)
+                    | DataType::Categorical(_, _)
+                    | DataType::Unknown(
+                        UnknownKind::Int(_) | UnknownKind::Float | UnknownKind::Str
+                    )
+            );
+        }
+        DataType::Categorical(_, _) => return false,
+        _ => {}
     }
 
     if let DataType::Unknown(child) = from {
         return match child {
-            UnknownKind::Int(v) => {
-                return if let Ok(v) = i64::try_from(*v) {
-                    AnyValue::Int64(v).cast(&to).is_null()
-                } else {
-                    to != &DataType::UInt64
-                };
-            }
+            UnknownKind::Int(v) => AnyValue::Int128(*v).cast(to).is_null(),
             UnknownKind::Float => !to.is_float(),
             UnknownKind::Str => !to.is_string(),
             UnknownKind::Any => true,

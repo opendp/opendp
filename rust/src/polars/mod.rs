@@ -37,6 +37,20 @@ pub mod accuracy;
 pub(crate) mod options;
 pub mod preflight;
 
+/// Returns whether a dtype contains a data-dependent categorical encoding at any depth.
+pub(crate) fn contains_categorical(dtype: &polars::prelude::DataType) -> bool {
+    use polars::prelude::DataType;
+
+    match dtype {
+        DataType::Categorical(_, _) => true,
+        DataType::Array(inner, _) | DataType::List(inner) => contains_categorical(inner),
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|field| contains_categorical(field.dtype())),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod test;
 
