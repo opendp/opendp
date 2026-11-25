@@ -1016,7 +1016,7 @@ def test_cut_truncation_bounds():
     query = (
         context.query()
         .truncate_per_group(1, by=[by])
-        .truncate_num_groups(2, by=[by], keep="first")
+        .truncate_num_groups(2, by=[by], keep="sample")
         .group_by(by)
         .agg(dp.len(signed=True))
         .with_keys(keys)

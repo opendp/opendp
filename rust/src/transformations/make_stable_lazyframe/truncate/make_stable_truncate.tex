@@ -34,6 +34,7 @@ The nonempty matched truncation pipeline is produced by \rustdoc{transformations
     carries the exact sort keys extracted by matching. The constructor
     checks those keys for permutation equivariance and supported scalar
     ranking dtypes against the preceding plan's output schema.
+    It applies the same dtype restriction to number-of-groups ranking keys.
     The rank-validated bounds are extracted on line \ref{line:check-certificates}.
     By line \ref{line:stable-keys},
     the identifier and all grouping keys must be stable row-by-row expressions.

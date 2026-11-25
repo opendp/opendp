@@ -29,25 +29,25 @@ def match_num_groups_predicate(
     if isinstance(input_item, Expr.Function) and isinstance(
         input_item.function, FunctionExpr.AsStruct
     ):  # |\label{line:extract_grouping_columns}|
-        # If the first field is a hash of the second field,
-        # then interpret the grouping columns as the hash input.
-        # The second field disambiguates hash collisions when ranking.
         fields = input_item.input
-        if (
-            fields
-            and isinstance(fields[0], Expr.Function)
-            and isinstance(fields[0].function, FunctionExpr.Hash)
-        ):  # |\label{line:check_hash}|
-            hash_inputs = fields[0].input
-            second = fields[1] if len(fields) > 1 else None
-            if (hash_inputs[0] if hash_inputs else None) == second:
-                inner = hash_inputs[0] if hash_inputs else None
-                if not isinstance(inner, Expr.Function) or not isinstance(
-                    inner.function, FunctionExpr.AsStruct
-                ):
-                    raise f"expected hash input to be a struct, found {hash_inputs}"
-                fields = inner.input
+        # Hash and key fields may have distinct aliases to avoid name collisions.
+        if fields:
+            first = strip_alias(fields[0])
+            second = strip_alias(fields[1]) if len(fields) > 1 else None
+            if isinstance(first, Expr.Function) and isinstance(
+                first.function, FunctionExpr.Hash
+            ):  # |\label{line:check_hash}|
+                if (first.input[0] if first.input else None) == second:
+                    # |\label{line:check_hash_shape}|
+                    if (
+                        len(fields) != 2
+                        or len(first.input) != 1
+                        or not isinstance(second, Expr.Function)
+                        or not isinstance(second.function, FunctionExpr.AsStruct)
+                    ):
+                        raise "hashed rank requires two fields and one struct-valued hash input"
 
+                    fields = second.input
         by = set(fields)
     else:
         by = {input_item}

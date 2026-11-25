@@ -303,6 +303,30 @@ def _run_truncation(data, query):
     return transformation(data).collect()
 
 
+@pytest.mark.parametrize(
+    "keep, k", [("sample", 0), ("sample", 1), ("sample", 4), ("first", 1), ("last", 1)]
+)
+def test_truncate_num_groups_keeps_k_groups(keep, k):
+    data = pl.LazyFrame({"id": [1, 1, 1, 1, 2, 2], "group": [0, 1, 1, 2, 0, 1]})
+    for frame in [data, data.reverse()]:
+        query = (
+            _truncation_context(frame)
+            .query()
+            .truncate_num_groups(k, by=["group"], keep=keep)
+        )
+        actual = _run_truncation(frame, query)
+        for identifier, total_groups in [(1, 3), (2, 2)]:
+            selected = actual.filter(pl.col("id") == identifier)
+            groups = set(selected["group"].to_list())
+            assert len(groups) == min(k, total_groups)
+            if keep == "first":
+                assert groups == {0}
+            elif keep == "last":
+                assert groups == {total_groups - 1}
+            # A retained group includes all its rows, including duplicates.
+            assert selected.height == len(groups) + (identifier == 1 and 1 in groups)
+
+
 @pytest.mark.parametrize("k, sort", [(0, False), (1, False), (10, False), (2, True)])
 def test_truncate_per_group_counts(k, sort):
     data = pl.LazyFrame(
