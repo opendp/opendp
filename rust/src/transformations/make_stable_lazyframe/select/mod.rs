@@ -79,24 +79,28 @@ where
         .map(|t| t.output_domain.column.clone())
         .collect();
 
-    if let Some(identifier) = middle_metric.0.identifier() {
-        let names = (t_exprs.iter())
-            .map(|t| t.output_domain.column.name.clone())
-            .collect::<HashSet<_>>();
-        if !names.is_disjoint(&HashSet::from_iter(identifier.meta().root_names())) {
-            return fallible!(
-                MakeTransformation,
-                "identifiers ({names:?}) may not be modified"
-            );
-        }
-    }
-
     let retained_columns = exprs
         .iter()
         .zip(t_exprs.iter())
         .filter(|(expr, t)| is_identity(expr, &t.output_domain.column.name))
         .map(|(_, t)| t.output_domain.column.name.clone())
         .collect::<HashSet<_>>();
+
+    if let Some(identifier) = middle_metric.0.identifier() {
+        let identifier_columns = identifier.meta().root_names();
+        let modified_identifiers = t_exprs
+            .iter()
+            .map(|t| t.output_domain.column.name.clone())
+            .filter(|name| identifier_columns.contains(name))
+            .filter(|name| !retained_columns.contains(name))
+            .collect::<HashSet<_>>();
+        if !modified_identifiers.is_empty() {
+            return fallible!(
+                MakeTransformation,
+                "identifiers ({modified_identifiers:?}) may not be modified"
+            );
+        }
+    }
 
     let changed_columns = middle_domain
         .series_domains

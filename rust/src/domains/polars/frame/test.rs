@@ -256,3 +256,13 @@ fn test_find_min_covering_nonoptimal() -> Fallible<()> {
     assert_eq!(intersection, must_cover);
     Ok(())
 }
+
+#[test]
+fn test_find_min_covering_large_weights() {
+    let a = HashSet::from([1u32, 2]);
+    let b = HashSet::from([1u32, 3]);
+    for weight in [1 << 31, (1 << 31) + 1, u32::MAX] {
+        let covering = find_min_covering(HashSet::from([1]), vec![(&a, 1), (&b, weight)]).unwrap();
+        assert_eq!(covering, vec![(&a, 1)]);
+    }
+}

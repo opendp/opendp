@@ -40,7 +40,7 @@ where
     let margin = Margin {
         by: old_margin.by,
         max_length: Some(1),
-        max_groups: Some(1),
+        max_groups: old_margin.max_groups,
         invariant: old_margin.invariant,
     };
 

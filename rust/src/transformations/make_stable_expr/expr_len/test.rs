@@ -15,6 +15,10 @@ fn test_select_make_expr_len() -> Fallible<()> {
 
     let t_sum: Transformation<_, _, _, L2Distance<f64>> =
         len().make_stable(expr_domain, L0PInfDistance(SymmetricDistance))?;
+    assert_eq!(
+        t_sum.output_domain.context.aggregation("len")?.max_groups,
+        Some(10)
+    );
     let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
     assert_eq!(expr_res, len());
 
@@ -32,6 +36,10 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
     // Get resulting sum (expression result)
     let t_sum: Transformation<_, _, _, L2Distance<f64>> =
         len().make_stable(expr_domain, L0PInfDistance(SymmetricDistance))?;
+    assert_eq!(
+        t_sum.output_domain.context.aggregation("len")?.max_groups,
+        None
+    );
     let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf

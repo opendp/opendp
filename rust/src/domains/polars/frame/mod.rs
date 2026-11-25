@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -545,9 +546,9 @@ pub(crate) fn find_min_covering<T: Hash + Eq>(
                     // choose the set that covers the most uncovered elements
                     set.intersection(&must_cover).count(),
                     // of those, prioritize smaller sets
-                    -(set.len() as i32),
+                    Reverse(set.len()),
                     // of those, prioritize lower weight
-                    -(*weight as i32),
+                    Reverse(*weight),
                 )
             })
             // If sets is non-empty, and the "best set" overlaps with the must_cover set,
