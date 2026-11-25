@@ -1,8 +1,5 @@
-use dashu::{
-    base::Sign,
-    integer::{IBig, UBig},
-    rational::RBig,
-};
+use dashu::{base::Sign, integer::UBig, rational::RBig};
+use num::Zero;
 use opendp_derive::{bootstrap, proven};
 
 use crate::{
@@ -14,11 +11,11 @@ use crate::{
     error::Fallible,
     measurements::{
         DiscreteLaplace, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
-        NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
+        NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature, threshold_delta,
     },
     measures::{Approximate, MaxDivergence},
     metrics::{AbsoluteDistance, L1Distance, L01InfDistance},
-    traits::{InfPowI, InfSub, option_min},
+    traits::option_min,
 };
 
 #[cfg(feature = "ffi")]
@@ -61,7 +58,7 @@ mod test;
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
-/// * `threshold` - Release noisy counts strictly greater than this value (or strictly less when negative).
+/// * `threshold` - Retain noisy counts strictly greater than this value (or strictly less when negative), before rounding or saturation to the output type.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
@@ -143,7 +140,7 @@ impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximat
                     return Ok((f64::INFINITY, 1.0));
                 }
 
-                let rho = noise_privacy_map.eval(&RBig::from(l1))?;
+                let rho = noise_privacy_map.eval(&RBig::from(l1.clone()))?;
 
                 if li > threshold {
                     return fallible!(
@@ -152,30 +149,22 @@ impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximat
                     );
                 }
 
-                let d_instability = &threshold - li;
-
-                let delta_single = option_min(
-                    conservative_discrete_laplacian_tail_to_alpha(
-                        scale.clone(),
-                        d_instability.clone(),
+                let delta = threshold_delta(*l0, l1, li, threshold.clone(), |d_instability| {
+                    option_min(
+                        conservative_discrete_laplacian_tail_to_alpha(
+                            scale.clone(),
+                            d_instability.clone(),
+                        )
+                        .ok(),
+                        conservative_continuous_laplacian_tail_to_alpha(
+                            scale.clone(),
+                            d_instability.into(),
+                        )
+                        .ok(),
                     )
-                    .ok(),
-                    conservative_continuous_laplacian_tail_to_alpha(
-                        scale.clone(),
-                        d_instability.into(),
-                    )
-                    .ok(),
-                )
-                .ok_or_else(|| err!(FailedMap, "failed to compute tail bound in privacy map"))?;
-
-                let delta_joint: f64 = (1.0).inf_sub(
-                    &(1.0)
-                        .neg_inf_sub(&delta_single)?
-                        .neg_inf_powi(IBig::from(*l0))?,
-                )?;
-
-                // delta is only sensibly at most 1
-                Ok((rho, delta_joint.min(1.0)))
+                    .ok_or_else(|| err!(FailedMap, "failed to compute tail bound in privacy map"))
+                })?;
+                Ok((rho, delta))
             },
         ))
     }

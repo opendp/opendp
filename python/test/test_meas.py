@@ -210,7 +210,7 @@ def test_make_count_by_ptr():
         >> dp.m.then_laplace_threshold(scale=2.0, threshold=28)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
-    assert meas.map(1) == (0.5, 5.175928103895444e-07)
+    assert meas.map(1) == pytest.approx((0.5, 5.175928103683417e-7), rel=1e-12, abs=0)
     assert meas.check(1, (1.0, 1e-6))
 
 
@@ -323,7 +323,9 @@ def test_laplace_threshold_int():
     assert "9" in release
     # delta is the mass of the right tail of integer laplace greater than 28 with conservative arithmetic
     # 5 = 10 / 2 = Δ / σ
-    assert meas.map((1, 10, 10)) == (5.0, 4.659221997116436e-05)
+    loss, delta = meas.map((1, 10, 10))
+    assert loss == 5.0
+    assert delta == pytest.approx(4.65922199711331e-5, rel=1e-12, abs=0)
 
 
 def test_laplace_threshold_float():
@@ -338,7 +340,9 @@ def test_laplace_threshold_float():
     print(meas.map((1, 10, 10)))
     # delta is the mass of the right tail of continuous laplace greater than 28 with conservative arithmetic
     # the looser continuous laplace is used because discrete laplace tail bound is not computable with large constants
-    assert meas.map((1, 10, 10)) == (5.0, 6.17049020433802e-05)
+    loss, delta = meas.map((1, 10, 10))
+    assert loss == 5.0
+    assert delta == pytest.approx(6.170490204333978e-5, rel=1e-12, abs=0)
 
 
 def test_gaussian_threshold_int():
@@ -353,7 +357,9 @@ def test_gaussian_threshold_int():
     # delta is the mass of the right tail of continuous gaussian greater than 28 with conservative arithmetic
     # the continuous gaussian is used because discrete gaussian tail bound is not analytic
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
-    assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
+    loss, delta = meas.map((1, 10, 10))
+    assert loss == 12.5
+    assert delta == pytest.approx(1.1285884059538422e-19, rel=1e-5, abs=0)
 
 
 def make_noise_threshold_zCDP(domain, metric, scale, threshold):
@@ -376,7 +382,9 @@ def test_gaussian_threshold_float(constructor):
     # delta is the mass of the right tail of continuous gaussian greater than 28 with conservative arithmetic
     # the continuous gaussian is used because discrete gaussian tail bound is not analytic
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
-    assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
+    loss, delta = meas.map((1, 10, 10))
+    assert loss == 12.5
+    assert delta == pytest.approx(1.1285884059538422e-19, rel=1e-5, abs=0)
 
 
 def test_canonical_noise():
@@ -386,3 +394,12 @@ def test_canonical_noise():
     assert m_cnd.map(1.0) == (1.0, 1e-6)
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
+
+
+def test_gaussian_threshold_l01inf():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
+    metric = dp.l01inf_distance(dp.absolute_distance(T=int))
+    meas = dp.m.make_gaussian_threshold(domain, metric, scale=1.0, threshold=10)
+    rho, delta = meas.map((10, 10, 5))
+    assert rho == 25.0
+    assert delta == pytest.approx(5.733030615892655e-7, rel=1e-5, abs=0)

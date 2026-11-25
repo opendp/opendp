@@ -10,16 +10,16 @@ use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
+use crate::measurements::{PrivateExpr, threshold_delta};
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance};
 use crate::polars::options::ORDINARY_GROUP_BY_OPTIONS;
-use crate::traits::{AlertingMul, InfAdd, InfMul, InfPowI, InfSub, option_min};
+use crate::traits::{AlertingMul, InfAdd, InfMul, option_min};
 use crate::transformations::StableDslPlan;
 use crate::transformations::make_stable_expr;
 use crate::transformations::traits::UnboundedMetric;
-use dashu::integer::{IBig, UBig};
+use dashu::integer::UBig;
 use dashu::rational::RBig;
 use matching::find_len_expr;
 use polars::prelude::{DataType, DslPlan, JoinType, UniqueKeepStrategy, col, lit};
@@ -319,13 +319,12 @@ where
                 return fallible!(FailedMap, "threshold must be greater than {:?}", li);
             }
 
-            let d_instability = threshold_value.neg_inf_sub(&li)?;
-            let delta_single =
-                integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
-            let delta_joint = (1.0).inf_sub(
-                &(1.0)
-                    .neg_inf_sub(&delta_single)?
-                    .neg_inf_powi(IBig::from(l0))?,
+            let delta_joint = threshold_delta(
+                l0,
+                UBig::from(l1),
+                UBig::from(li),
+                UBig::from(*threshold_value),
+                |tail| integrate_discrete_noise_tail(noise.distribution, noise.scale, tail),
             )?;
             d_out = MO::add_delta(d_out, delta_joint)?;
         } else {
@@ -418,10 +417,9 @@ where
 fn integrate_discrete_noise_tail(
     distribution: NoiseDistribution,
     scale: f64,
-    tail_bound: u32,
+    tail_bound: UBig,
 ) -> Fallible<f64> {
     let scale = RBig::try_from(scale)?;
-    let tail_bound = UBig::from(tail_bound);
     match distribution {
         NoiseDistribution::Laplace => {
             conservative_discrete_laplacian_tail_to_alpha(scale, tail_bound)

@@ -105,3 +105,49 @@ fn test_noise_threshold_shuffles_colliding_keys() -> Fallible<()> {
     );
     Ok(())
 }
+
+#[test]
+fn test_threshold_delta_exhaustive() -> Fallible<()> {
+    // Discrete Laplace with exp(-1/scale) = 1/2.
+    fn p(t: u32) -> f64 {
+        2f64.powi(-(t as i32)) / 3.
+    }
+    fn exhaustive(n: u32, s: u32, b: u32, t: u32) -> f64 {
+        if n == 0 || s == 0 {
+            return 0.;
+        }
+        (0..=s.min(b))
+            .map(|a| {
+                let first = if a == 0 { 0. } else { p(t - a) };
+                let rest = exhaustive(n - 1, s - a, b, t);
+                first + (1. - first) * rest
+            })
+            .fold(0., f64::max)
+    }
+    for n in 0..=5 {
+        for s in 0..=15 {
+            for b in 0..=5 {
+                let t = 7;
+                let expected = exhaustive(n, s, b, t);
+                let actual =
+                    threshold_delta(n, UBig::from(s), UBig::from(b), UBig::from(t), |x| {
+                        Ok(p(count(x)?))
+                    })?;
+                assert!(
+                    (actual - expected).abs() < 1e-14,
+                    "{n}, {s}, {b}: {actual} != {expected}"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_threshold_delta_rare_events() -> Fallible<()> {
+    let p = 1e-24;
+    assert_eq!(repeated_probability(p, 1)?, p);
+    let joint = repeated_probability(p, 100)?;
+    assert!(joint >= 99.99 * p && joint <= 100.01 * p);
+    Ok(())
+}

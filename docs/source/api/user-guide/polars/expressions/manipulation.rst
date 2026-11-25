@@ -594,7 +594,7 @@ differ from that of the input.
             │ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---       │
             │ str    ┆ str          ┆ str             ┆ f64   ┆ u32       │
             ╞════════╪══════════════╪═════════════════╪═══════╪═══════════╡
-            │ len    ┆ Frame Length ┆ Integer Laplace ┆ 144.0 ┆ 2973      │
+            │ len    ┆ Frame Length ┆ Integer Laplace ┆ 144.0 ┆ 2938      │
             └────────┴──────────────┴─────────────────┴───────┴───────────┘
 
 

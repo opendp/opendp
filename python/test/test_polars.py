@@ -827,7 +827,7 @@ def test_polars_grouped_quantile_max_groups_contribution_bound():
             "aggregate": ["Frame Length", "0.5-Quantile"],
             "distribution": ["Integer Laplace", "ExponentialMin"],
             "scale": [4.2, 4.2],
-            "threshold": [84, None],
+            "threshold": [75, None],
         },
         schema_overrides={"threshold": pl.UInt32},
     )

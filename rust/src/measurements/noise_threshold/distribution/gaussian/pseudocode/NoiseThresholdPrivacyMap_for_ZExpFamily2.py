@@ -37,18 +37,14 @@ class ZExpFamily2:
             if li > threshold:  # |\label{line:threshold-check}|
                 raise f"threshold must not be smaller than {li}"
 
-            d_instability = threshold - li  # |\label{line:distance-to-instability}|
-
-            delta_single = conservative_discrete_gaussian_tail_to_alpha(
-                scale,
-                d_instability,
+            l1 = (l2 * RBig.try_from(f64.from_(l0).inf_sqrt())).floor()
+            delta = threshold_delta(
+                l0,
+                l1,
+                li,
+                threshold,
+                lambda t: conservative_discrete_gaussian_tail_to_alpha(scale, t),
             )
-
-            delta_joint: f64 = (1.0).inf_sub(
-                (1.0).neg_inf_sub(delta_single).neg_inf_powi(IBig.from_(l0)),
-            )
-
-            # delta is only sensibly at most 1
-            return rho, delta_joint.min(1.0)
+            return rho, delta
 
         return PrivacyMap.new_fallible(privacy_map)

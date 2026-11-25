@@ -24,10 +24,10 @@ mod test;
 #[proven(
     proof_path = "measurements/noise_threshold/nature/integer/MakeNoiseThreshold_MapDomain_for_IntExpFamily.tex"
 )]
-impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
+impl<TK, TV, const P: usize, const Q: usize, QI: Number, MO: 'static + Measure>
     MakeNoiseThreshold<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<Q, AbsoluteDistance<QI>>,
         MO,
     > for IntExpFamily<P>
 where
@@ -36,29 +36,29 @@ where
     IBig: From<TV>,
     RBig: TryFrom<QI>,
     UBig: TryFrom<TV>,
-    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
+    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<Q, AbsoluteDistance<RBig>>, MO>,
 {
     type Threshold = TV;
     fn make_noise_threshold(
         self,
         input_space: (
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PInfDistance<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<Q, AbsoluteDistance<QI>>,
         ),
         threshold: TV,
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PInfDistance<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<Q, AbsoluteDistance<QI>>,
             MO,
             HashMap<TK, TV>,
         >,
     > {
-        let distribution = ZExpFamily {
+        let distribution = ZExpFamily::<P> {
             scale: integerize_scale(self.scale, 0)?,
         };
 
-        let t_int = make_int_to_bigint_threshold::<TK, TV, P, QI>(input_space)?;
+        let t_int = make_int_to_bigint_threshold::<TK, TV, Q, QI>(input_space)?;
         let m_noise =
             distribution.make_noise_threshold(t_int.output_space(), IBig::from(threshold))?;
         let f_native_int = then_saturating_cast_hashmap();

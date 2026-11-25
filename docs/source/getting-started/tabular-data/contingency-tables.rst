@@ -115,7 +115,7 @@ Before releasing, you can view the noise scale and threshold to be used when est
             227.68399153212334
 
             >>> query.oneway_threshold
-            1364
+            1329
 
 In this setting, the scale and threshold are reasonably small.
 To make the threshold smaller, consider adding more key-sets

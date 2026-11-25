@@ -17,7 +17,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
         ($($ty:ty),+) => {$(
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
-            let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
+            let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<$ty>::default());
             let meas = make_gaussian_threshold(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
 
             let data = HashMap::from([(false, <$ty>::zero()), (true, <$ty>::inf_cast(100)?)]);
@@ -25,7 +25,9 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
             assert_eq!(release.len(), 1);
             assert!(!release.contains_key(&false));
             assert!(release.contains_key(&true));
-            assert_eq!(meas.map(&(1, <$ty>::one(), <$ty>::one()))?, (0.5, 1.1102230246251565e-16));
+            let (loss, delta) = meas.map(&(1, <$ty>::one(), <$ty>::one()))?;
+            assert_eq!(loss, 0.5);
+            assert_eq!(delta, f64::from(f32::from_bits(1)) / 2.);
         )+}
     }
 
@@ -38,7 +40,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_threshold_bigint() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<RBig>::default());
     let meas = make_gaussian_threshold(domain, metric, 1., ibig!(50), None)?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
@@ -46,10 +48,9 @@ fn test_make_gaussian_threshold_bigint() -> Fallible<()> {
     assert_eq!(release.len(), 1);
     assert!(!release.contains_key(&false));
     assert!(release.contains_key(&true));
-    assert_eq!(
-        meas.map(&(1, rbig!(1), rbig!(1)))?,
-        (0.5, 1.1102230246251565e-16)
-    );
+    let (loss, delta) = meas.map(&(1, rbig!(1), rbig!(1)))?;
+    assert_eq!(loss, 0.5);
+    assert_eq!(delta, f64::from(f32::from_bits(1)) / 2.);
     Ok(())
 }
 
@@ -59,9 +60,15 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
         assert!(map(&(1, -1., -1.)).is_err());
         assert_eq!(map(&(1, -0., -0.))?, (0.0, 0.0));
         assert_eq!(map(&(1, 0., 0.))?, (0.0, 0.0));
-        assert_eq!(map(&(1, 1., 1.))?, (0.5, 1.1102230246251565e-16));
-        assert_eq!(map(&(1, 2., 2.))?, (2.0, 6.661338147750939e-16));
-        assert_eq!(map(&(1, 3., 3.))?, (4.5, 1.2798651027878805e-12));
+        let (loss, delta) = map(&(1, 1., 1.))?;
+        assert_eq!(loss, 0.5);
+        assert!((delta / 1.1285884059538422e-19 - 1.).abs() < 1e-5);
+        let (loss, delta) = map(&(1, 2., 2.))?;
+        assert_eq!(loss, 2.0);
+        assert!((delta / 6.220960574271819e-16 - 1.).abs() < 1e-5);
+        let (loss, delta) = map(&(1, 3., 3.))?;
+        assert_eq!(loss, 4.5);
+        assert!((delta / 1.279812543885835e-12 - 1.).abs() < 1e-5);
         assert!(
             map(&(1, f64::MAX, f64::MAX))
                 .unwrap_err()
@@ -86,7 +93,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
         Ok(())
     }
 
-    let metric = L0PInfDistance(AbsoluteDistance::<f64>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<f64>::default());
     let m_float = make_gaussian_threshold(
         MapDomain::new(
             AtomDomain::<bool>::default(),
@@ -118,7 +125,7 @@ fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
     let meas = make_gaussian_threshold(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<u32>::default()),
-        L0PInfDistance(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance::<2, _>(AbsoluteDistance::<f64>::default()),
         f64::MAX,
         50,
         None,
@@ -132,7 +139,7 @@ fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily::<2> {
         scale: rbig!(23948285282902934157),
     };
@@ -150,7 +157,7 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily { scale: rbig!(0) };
 
     let meas: Measurement<_, _, Approximate<ZeroConcentratedDivergence>, _> =
@@ -169,7 +176,7 @@ fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
 #[test]
 fn test_gaussian_threshold_strict() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<i32>::default());
 
     let positive = make_gaussian_threshold(domain.clone(), metric.clone(), 0.0, 10, None)?;
     assert_eq!(
@@ -189,7 +196,7 @@ fn test_gaussian_threshold_strict() -> Fallible<()> {
 fn test_gaussian_threshold_delta_empirical() -> Fallible<()> {
     const N: u32 = 2048;
     let domain = MapDomain::new(AtomDomain::<u32>::default(), AtomDomain::<i32>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<i32>::default());
 
     // Match N, scale, positive threshold, and tolerance in
     // make_private_lazyframe/group_by/test.rs::test_stable_keys_delta_empirical.
@@ -212,7 +219,7 @@ fn test_gaussian_threshold_delta_empirical() -> Fallible<()> {
 #[test]
 fn test_gaussian_threshold_zero_valued_keys() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
-    let metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
+    let metric = L0PInfDistance::<2, _>(AbsoluteDistance::<i32>::default());
 
     for threshold in [-1, 1] {
         let measurement =
@@ -232,5 +239,22 @@ fn test_gaussian_threshold_zero_valued_keys() -> Fallible<()> {
             "opposite-sign values must still be sampled"
         );
     }
+    Ok(())
+}
+
+#[test]
+fn test_gaussian_threshold_l01inf() -> Fallible<()> {
+    use crate::metrics::L01InfDistance;
+    let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
+    let meas = make_gaussian_threshold(
+        domain,
+        L01InfDistance::<AbsoluteDistance<i32>>::default(),
+        1.,
+        10,
+        None,
+    )?;
+    let (rho, delta) = meas.map(&(10, 10, 5))?;
+    assert_eq!(rho, 25.);
+    assert!((delta / 5.733030615892655e-7 - 1.).abs() < 1e-5);
     Ok(())
 }

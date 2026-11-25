@@ -141,8 +141,8 @@ zero-valued entry ``"a": 0.0`` is never sampled or released.
             >>> #  3 kinds: Δ_0, Δ_1, Δ_∞
             >>> sensitivity = 1, 1.0, 1.0
             >>> lap_eps_del = m_lap.map(d_in=sensitivity)
-            >>> print("(ε, δ):", lap_eps_del)
-            (ε, δ): (1.0, 2.801398224505647e-09)
+            >>> print(f"(ε, δ): ({lap_eps_del[0]:.3g}, {lap_eps_del[1]:.3g})")
+            (ε, δ): (1, 2.8e-09)
 
 ``d_in`` carries three different kinds of sensitivity.
 
@@ -180,11 +180,11 @@ The analogous constructor for gaussian noise is
             >>> # we must know the sensitivity of `aggregated` to determine privacy params
             >>> #  3 kinds: Δ_0, Δ_1, Δ_∞
             >>> sensitivity = 1, 1.0, 1.0
-            >>> print("(ρ, δ):", m_gauss.map(d_in=sensitivity))
-            (ρ, δ): (0.5, 1.1102230246251565e-16)
+            >>> rho, delta = m_gauss.map(d_in=sensitivity)
+            >>> rho, delta < 1e-20
+            (0.5, True)
 
-In this case, :math:`\Delta_1` in ``d_in`` is replaced with
-:math:`\Delta_2`.
+Gaussian thresholding accepts either ``l01inf_distance`` or ``l02inf_distance``. In this example, :math:`\Delta_1` in ``d_in`` is replaced with :math:`\Delta_2`.
 
 - :math:`\Delta_0`: how many values an individual may influence
 - :math:`\Delta_2`: the euclidean influence an individual may have over
@@ -198,7 +198,7 @@ privacy with :math:`\rho` and :math:`\delta` (in the
 ``Approximate<ZeroConcentratedDivergence>`` measure).
 
 Notice how much smaller :math:`\delta` is this time (``2.8e-9`` vs
-``1.1e-16``). This is because the laplace distribution is a “fat-tailed”
+less than ``1e-20``). This is because the laplace distribution is a “fat-tailed”
 distribution, meaning more of the mass of the distribution is in the
 tails. The tails of the gaussian distribution decay much more quickly,
 resulting in a much smaller :math:`\delta`.
@@ -220,8 +220,9 @@ compare with the thresholded laplace mechanism:
             ...     m_gauss_profile, delta=lap_eps_del[1]
             ... )
 
-            >>> print("(ε, δ):", m_gauss_approx.map(sensitivity))
-            (ε, δ): (6.3035767282855915, 2.801398224505647e-09)
+            >>> eps, delta = m_gauss_approx.map(sensitivity)
+            >>> print(f"(ε, δ): ({eps:.3g}, {delta:.3g})")
+            (ε, δ): (6.3, 2.8e-09)
 
 In this setting, at the same level of :math:`\delta` as the thresholded
 laplace mechanism, the privacy loss of the thresholded gaussian
@@ -239,16 +240,13 @@ number of partitions.
         .. code:: pycon
 
             >>> sensitivity_spread = 100, 10.0, 0.001
-            >>> print(
-            ...     "laplace  (ε, δ):", m_lap.map(d_in=sensitivity_spread)
-            ... )
-            laplace  (ε, δ): (0.1, 1.0316078580263621e-07)
+            >>> eps, delta = m_lap.map(d_in=sensitivity_spread)
+            >>> print(f"laplace  (ε, δ): ({eps:.3g}, {delta:.3g})")
+            laplace  (ε, δ): (0.1, 1.03e-07)
 
-            >>> print(
-            ...     "gaussian (ε, δ):",
-            ...     m_gauss_approx.map(d_in=sensitivity_spread),
-            ... )
-            gaussian (ε, δ): (0.049969691134438526, 2.801398224505647e-09)
+            >>> eps, delta = m_gauss_approx.map(d_in=sensitivity_spread)
+            >>> print(f"gaussian (ε, δ): ({eps:.3g}, {delta:.3g})")
+            gaussian (ε, δ): (0.05, 2.8e-09)
 
 In this alternative world where individuals may have a small influence
 on many partitions, the thresholded gaussian mechanism dominates in
@@ -299,8 +297,9 @@ floats, while the discrete measurements accept and emit integers.
 
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
-            >>> print("(ε, δ):", m_dlap.map(d_in=sensitivity))
-            (ε, δ): (1.0, 3.319000812207484e-05)
+            >>> eps, delta = m_dlap.map(d_in=sensitivity)
+            >>> print(f"(ε, δ): ({eps:.3g}, {delta:.3g})")
+            (ε, δ): (1, 3.32e-05)
 
 ``make_gaussian_threshold`` on a discrete support is the analogous
 measurement for Gaussian noise:
@@ -336,8 +335,9 @@ measurement for Gaussian noise:
 
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
-            >>> print("(ρ, δ):", m_dgauss.map(d_in=sensitivity))
-            (ρ, δ): (0.5, 1.1102230246251565e-16)
+            >>> rho, delta = m_dgauss.map(d_in=sensitivity)
+            >>> rho, delta < 1e-18
+            (0.5, True)
 
 The continuous mechanisms use these discrete samplers internally.
 
@@ -378,8 +378,9 @@ the threshold are discarded.
 
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
-            >>> print("(ε, δ):", m_dlap.map(d_in=sensitivity))
-            (ε, δ): (1.0, 3.319000812207484e-05)
+            >>> eps, delta = m_dlap.map(d_in=sensitivity)
+            >>> print(f"(ε, δ): ({eps:.3g}, {delta:.3g})")
+            (ε, δ): (1, 3.32e-05)
 
 Bit depth
 ---------
