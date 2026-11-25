@@ -3,11 +3,10 @@ def make_randomized_response_bitvec(
     input_domain: BitVectorDomain,
     input_metric: DiscreteDistance,
     f: f64,
-    constant_time: bool,
 ):
     output_measure = MaxDivergence(f64)
 
-    if f <= 0.0 or f > 1:  # |\label{line:range}|
+    if not (0.0 < f <= 1):  # |\label{line:range}|
         raise Exception("Probability must be in (0.0, 1]")
 
     m = input_domain.max_weight
@@ -21,20 +20,18 @@ def make_randomized_response_bitvec(
             "make_randomized_response_bitvec requires a size on the input_domain"
         )
 
-    epsilon = 2 * m * log((2 - f) / f)
+    threshold = bitvec_flip_threshold(f)
+    q = bernoulli_u64_probability(threshold)
+    # Compute epsilon with directed rounding from the quantized flip probability.
+    epsilon = 2 * m * log((1 - q) / q)
 
     def privacy_map(d_in: IntDistance):  # |\label{line:map}|
         if d_in == 0:
             return 0.0
-        if d_in > 1:
-            raise ValueError("d_in must be 0 or 1.")
         return epsilon
 
     def function(arg: BitVector) -> BitVector:  # |\label{line:fn}|
-        noise_vector = [
-            bool.sample_bernoulli(f / 2, constant_time) for _ in range(len(arg))
-        ]
-        return xor(arg, noise_vector)
+        return [bit ^ sample_bernoulli_u64(threshold) for bit in arg]
 
     return Measurement(
         input_domain, function, input_metric, output_measure, privacy_map

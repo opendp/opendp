@@ -5,6 +5,22 @@ use crate::traits::samplers::test::{
 use super::*;
 use dashu::rbig;
 
+#[test]
+fn bernoulli_u64_threshold_boundaries() -> Fallible<()> {
+    assert_eq!(bernoulli_u64_threshold(0.5), 1u128 << 63);
+    assert_eq!(bernoulli_u64_threshold(1.0), BERNOULLI_U64_DENOMINATOR);
+    assert_eq!(bernoulli_u64_threshold(f64::from_bits(1)), 1);
+    assert_eq!(bernoulli_u64_threshold(0.0), 0);
+    assert_eq!(bernoulli_u64_threshold(2f64.powi(-64)), 1);
+    assert_eq!(
+        bernoulli_u64_threshold(f64::from_bits(0.5f64.to_bits() + 1)),
+        (1u128 << 63) + 2048
+    );
+    assert!(!sample_bernoulli_u64(0)?);
+    assert!(sample_bernoulli_u64(BERNOULLI_U64_DENOMINATOR)?);
+    Ok(())
+}
+
 pub const N_RATIONAL: usize = 2 * BASE_N;
 pub const N_FLOAT: usize = 3 * BASE_N;
 
