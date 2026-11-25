@@ -280,6 +280,8 @@ def test_query_argument_binding():
 
 
 def test_query_keyword_only_after_default():
+    from opendp.context import PartialChain
+
     def make_keyword_only(input_domain, input_metric, default=1, *, required):
         return _make_measurement(
             input_domain,
@@ -294,8 +296,12 @@ def test_query_keyword_only_after_default():
         (dp.atom_domain(T=int), dp.absolute_distance(T=int)),
         dp.max_divergence(),
     )
-    assert query.keyword_only()._chain(3)(10) == 4
-    assert query.keyword_only(default=2)._chain(3)(10) == 5
+    first = query.keyword_only()._chain
+    second = query.keyword_only(default=2)._chain
+    assert isinstance(first, PartialChain)
+    assert isinstance(second, PartialChain)
+    assert first(3)(10) == 4
+    assert second(3)(10) == 5
 
 
 @pytest.mark.parametrize(

@@ -4,21 +4,52 @@ from numbers import Integral, Real
 from opendp.mod import AtomDomain, Measure, Domain, Metric, Measurement, VectorDomain
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
-from opendp._internal import _new_pure_function
+from opendp._internal import _make_transformation, _new_pure_function
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.extras.numpy import NPArray2Domain, make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
-from opendp.typing import _NUMERIC_TYPES
+from opendp.typing import _ELEMENTARY_TYPES, _NUMERIC_TYPES
 
 
-def per_example_gradients(data, theta, fit_intercept=True):
+def _normalize_classes(classes):
+    """Sort and snapshot two distinct, representable public class labels."""
+    np = import_optional_dependency("numpy")
+    labels = np.asarray(classes)
+    # Compare Python scalars, not NumPy's potentially lossy mixed-type equality.
+    original = [
+        value.item() if isinstance(value, np.generic) else value
+        for value in np.asarray(classes, dtype=object).flat
+    ]
+    if (
+        labels.shape != (2,)
+        or labels.dtype.type not in _ELEMENTARY_TYPES
+        or labels.dtype.kind not in "biufU"
+        or original != labels.tolist()
+        or (
+            labels.dtype.kind == "f"
+            and any(
+                not value.is_integer() or not -(2**63) <= value < 2**63
+                for value in labels.tolist()
+            )
+        )
+        or labels[0] == labels[1]
+    ):
+        raise ValueError("classes must contain two distinct public discrete labels")
+    return np.sort(labels)
+
+
+def per_example_gradients(data, theta, fit_intercept=True, *, classes=(0, 1)):
     """Compute finite gradients independently for each aligned SklearnFit record."""
     np = import_optional_dependency("numpy")
     special = import_optional_dependency("scipy.special")
-    y = np.asarray(data.y)
-    # Python integers wider than NumPy's native types produce object arrays.
-    if y.dtype.kind == "O":
-        y = y.astype(float)
+    # Compare labels without a data-dependent common dtype or lossy integer cast.
+    y = np.asarray(
+        [value.item() if isinstance(value, np.generic) else value for value in data.y],
+        dtype=object,
+    )
+    negative, positive = np.asarray(classes).tolist()
+    is_positive = y == positive
+    known = (y == negative) | is_positive
     X = np.nan_to_num(data.X, nan=0.0, posinf=0.0, neginf=0.0)
     d = X.shape[1]
     gradients = np.empty((X.shape[0], d + (1 if fit_intercept else 0)))
@@ -26,12 +57,12 @@ def per_example_gradients(data, theta, fit_intercept=True):
         z = np.nan_to_num(
             X @ theta[:d] + (theta[-1] if fit_intercept else 0.0), nan=0.0
         )
-        residual = special.expit(z) - y
+        residual = special.expit(z) - is_positive
         np.multiply(residual[:, None], X, out=gradients[:, :d])
         if fit_intercept:
             gradients[:, -1] = residual
-    # Missing/nonfinite targets contribute nothing, including to the intercept.
-    gradients[~np.isfinite(y)] = 0.0
+    # Unknown labels contribute nothing, including to the intercept.
+    gradients[~known] = 0.0
     # Saturate overflow and remove NaNs before entering the clipping domain.
     return np.nan_to_num(gradients, copy=False)
 
@@ -52,25 +83,26 @@ def log_regression_train(
     l1_coef,
     l2_coef,
     fit_intercept,
+    classes,
 ):
-    dp.assert_features("contrib", "honest-but-curious", "idealized-numerics")
+    dp.assert_features("contrib", "idealized-numerics")
 
     np = import_optional_dependency("numpy")
     num_coordinates = d + (1 if fit_intercept else 0)
     theta = np.zeros(num_coordinates)
     for d_mid in d_mids:
-        gradient = dp.t.make_user_transformation(
+        gradient = _make_transformation(
             input_domain,
             input_metric,
             dp.numpy.array2_domain(
                 num_columns=num_coordinates, size=n, nan=False, T=float
             ),
             dp.symmetric_distance(),
-            function=lambda data, th=theta: per_example_gradients(
-                data, th, fit_intercept
+            lambda data, th=theta: per_example_gradients(
+                data, th, fit_intercept, classes=classes
             ),
             # One aligned (X[i], y[i]) record produces one gradient row.
-            stability_map=lambda b_in: b_in,
+            lambda b_in: b_in,
         )
         clamp = make_np_clamp(
             gradient.output_domain, gradient.output_metric, clip_norm, 2
@@ -116,18 +148,20 @@ def make_private_logistic_regression(
     l1_ratio: float = 0.0,
     fit_intercept: bool = True,
     reference_size: int | None = None,
+    classes=(0, 1),
 ) -> Measurement:
     """Construct a measurement releasing logistic weights and an optional intercept.
 
     Runs exactly max_iter noisy-gradient steps, without early stopping.
 
     Accepts SklearnFit with numeric array2_domain features (public column count)
-    and numeric or boolean VectorDomain targets, described by SklearnFitDescriptor.
-    Labels are expected to be 0/1.
+    and numeric, boolean or string VectorDomain targets. Classes are public;
+    targets outside the two configured classes contribute zero gradients.
     """
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
+    classes = _normalize_classes(classes)
 
     fit_desc = input_domain.cast(SklearnFitDescriptor)
     if fit_desc.y is None:
@@ -137,18 +171,20 @@ def make_private_logistic_regression(
         raise ValueError("y_domain must be a VectorDomain")
     y_atom = fit_desc.y.element_domain
     if not isinstance(y_atom, AtomDomain):
-        raise ValueError("y must have numeric or boolean elements")
+        raise ValueError("y must have numeric, boolean or string elements")
     y_type, y_size = y_atom.carrier_type, fit_desc.y.size
-    target_types = _NUMERIC_TYPES | {"bool"}
+    target_types = _NUMERIC_TYPES | {"bool", "String"}
     if x_desc.T not in _NUMERIC_TYPES or y_type not in target_types:
-        raise ValueError("X and y must have numeric element types (y may be boolean)")
+        raise ValueError("X must have numeric element types and y must be atomic")
+    if (y_type == "String") != (classes.dtype.kind == "U"):
+        raise ValueError("classes must match the target domain's label type")
     if x_desc.size is not None and y_size is not None and x_desc.size != y_size:
         raise ValueError("X and y domains must have matching row counts")
     # Alignment makes the record count public if either field has a fixed size.
     n = x_desc.size if x_desc.size is not None else y_size
     d = x_desc.num_columns
-    if d is None:
-        raise ValueError("X_domain must specify num_columns")
+    if d is None or d < 1:
+        raise ValueError("X_domain must specify a positive num_columns")
     normalizer = reference_size if reference_size is not None else n
     if normalizer is None:
         raise ValueError("reference_size is required for unsized domains")
@@ -236,5 +272,6 @@ def make_private_logistic_regression(
             l1_coef=l1_coef,
             l2_coef=l2_coef,
             fit_intercept=fit_intercept,
+            classes=classes,
         )
     )

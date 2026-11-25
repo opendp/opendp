@@ -120,6 +120,10 @@ nitpick_ignore = [
     ("py:class", "sklearn.decomposition.PCA"),
     # Base class of the sklearn estimators is in a private module
     ("py:class", "opendp.extras.sklearn._estimator.DPEstimator"),
+    # Internal sklearn mixins do not have public documentation targets.
+    ("py:class", "opendp.extras.sklearn._estimator.MeasurementMixin"),
+    ("py:class", "opendp.extras.sklearn._estimator.TransformationMixin"),
+    ("py:class", "sklearn.base.BaseEstimator"),
     # Standard library reference fails to resolve
     ("py:class", "abc.ABC"),
     # I think the problem is that Sphinx is making parameter list documentation,
