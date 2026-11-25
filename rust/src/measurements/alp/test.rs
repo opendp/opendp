@@ -10,21 +10,9 @@ fn index_identify_functions<T>(n: usize) -> Vec<HashFunction<T>> {
 }
 
 #[test]
-fn test_exponent_next_power_of_two() -> Fallible<()> {
-    assert_eq!(exponent_next_power_of_two(1 as u64), 0);
-
-    assert_eq!(exponent_next_power_of_two(2 as u64), 1);
-
-    assert_eq!(exponent_next_power_of_two(3 as u64), 2);
-
-    assert_eq!(exponent_next_power_of_two(7 as u64), 3);
-
-    Ok(())
-}
-
-#[test]
 fn test_hash() -> Fallible<()> {
     assert_eq!(hash(3, 4, 5, 64), 17);
+    assert_eq!(hash(3, 4, 5, 0), 0);
     assert_eq!(hash(3, 4, 5, 63), 8);
 
     assert_eq!(hash(1, u64::MAX, 0, 2), 3);
@@ -184,8 +172,81 @@ fn test_construct_and_post_process() -> Fallible<()> {
 }
 
 #[test]
-fn test_scale_and_round_exponent_regression() -> Fallible<()> {
-    assert_eq!(scale_and_round(1u64, 1.0, 7.0)?, 7);
+fn test_scale_and_round_rational() -> Fallible<()> {
+    let rate = AlpParameters::new(1.0, 7.0)?.rate;
+    assert_eq!(scale_and_round(1u64, &rate, 10)?, 7);
+    assert_eq!(scale_and_round(0u64, &rate, 10)?, 0);
+    assert_eq!(scale_and_round(-7i64, &rate, 10)?, 0);
+    assert_eq!(scale_and_round(u128::MAX, &rate, 10)?, 10);
+    assert_eq!(scale_and_round(1u64, &rate, 0)?, 0);
+
+    // A rate below the old precision cutoff and a count above u64::MAX
+    // still yield the exact integral scaled count.
+    let rate = AlpParameters::new(1.0, 2f64.powi(-64))?.rate;
+    assert_eq!(scale_and_round(1u128 << 65, &rate, 3)?, 2);
+    Ok(())
+}
+
+#[test]
+fn test_alp_small_projection_and_large_counts() -> Fallible<()> {
+    // This selects a one-bit projection (hash width zero).
+    let small = make_alp_queryable::<u32, u32>(
+        MapDomain::default(),
+        L01InfDistance::default(),
+        1.0 / 16.0,
+        1,
+        Some(1),
+        None,
+        None,
+    )?;
+    let mut x = HashMap::new();
+    small.invoke(&x)?;
+    x.insert(42, 1);
+    small.invoke(&x)?;
+
+    // Large counts need not fit into u64 or usize.
+    let large = make_alp_state_with_hashers::<u32, u128>(
+        MapDomain::default(),
+        L01InfDistance::default(),
+        1.0,
+        1.0,
+        2,
+        index_identify_functions(2),
+    )?;
+    large.invoke(&HashMap::from([(42, u128::MAX)]))?;
+    Ok(())
+}
+
+#[test]
+fn test_alp_reject_nonfinite_parameters() -> Fallible<()> {
+    let create = |scale, alpha| {
+        make_alp_state_with_hashers::<u32, u32>(
+            MapDomain::default(),
+            L01InfDistance::default(),
+            scale,
+            alpha,
+            1,
+            index_identify_functions(1),
+        )
+    };
+    assert!(create(f64::INFINITY, 1.0).is_err());
+    assert!(create(f64::NAN, 1.0).is_err());
+    assert!(create(1.0, f64::NAN).is_err());
+    assert!(create(1.0, f64::INFINITY).is_err());
+    assert!(create(1.0, 0.0).is_err());
+
+    assert!(
+        make_alp_state::<u32, u32>(
+            MapDomain::default(),
+            L01InfDistance::default(),
+            1.0,
+            1,
+            Some(1),
+            None,
+            Some(0),
+        )
+        .is_err()
+    );
     Ok(())
 }
 
