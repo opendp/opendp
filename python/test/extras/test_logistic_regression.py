@@ -71,6 +71,44 @@ def test_gradients_and_row_stability(expit, fit_intercept):
     )
 
 
+@pytest.mark.parametrize("fit_intercept", [True, False])
+def test_gradient_stability_adversarial_blas_cancellation(fit_intercept):
+    pytest.importorskip("scipy.special")
+    # This witness changes unchanged rows under NumPy 2.3.5 / OpenBLAS.
+    weights = np.array([1e16, -1e16, -10.0, 3.0, -3.0, 0.0, -1.0, 10.0])
+    theta = np.append(weights, 0.0) if fit_intercept else weights
+    X = np.ones((3, 8))
+    y = np.zeros(3)
+    before = per_example_gradients(dp.sklearn.SklearnFit(X, y), theta, fit_intercept)
+    single = per_example_gradients(
+        dp.sklearn.SklearnFit(X[:1], y[:1]), theta, fit_intercept
+    )
+    np.testing.assert_array_equal(before, np.repeat(single, len(X), axis=0))
+
+    extended = dp.sklearn.SklearnFit(np.vstack([X, np.zeros((1, 8))]), np.zeros(4))
+    after = per_example_gradients(extended, theta, fit_intercept)
+    np.testing.assert_array_equal(after[:3], before)
+    order = [3, 0, 1, 2]
+    permuted = dp.sklearn.SklearnFit(extended.X[order], extended.y[order])
+    np.testing.assert_array_equal(
+        per_example_gradients(permuted, theta, fit_intercept), after[order]
+    )
+
+
+def test_gradient_float32_products_widen_before_multiplication():
+    pytest.importorskip("scipy.special")
+    v = np.finfo(np.float32).max
+    X = np.array([[v, -v], [v, v]], dtype=np.float32)
+    theta = np.array([2.0, 2.0])
+    y = np.zeros(2)
+    gradients = per_example_gradients(
+        dp.sklearn.SklearnFit(X, y), theta, fit_intercept=False
+    )
+    # A row's logits must be computed in float64, as with X @ float64 theta.
+    np.testing.assert_array_equal(gradients[0], X[0].astype(float) * 0.5)
+    np.testing.assert_array_equal(gradients[1], X[1].astype(float))
+
+
 def test_gradients_with_wide_integer_targets():
     pytest.importorskip("scipy.special")
     # NumPy infers object dtype for Python integers beyond its native range.
