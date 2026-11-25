@@ -41,21 +41,37 @@ fn generate_module(
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
-    let all = module
+    // Class finalizers call these native destructors directly, using captured
+    // function pointers so they still work during Python interpreter teardown.
+    // Generating Python wrappers for them leaves unused, uncovered functions.
+    let native_finalizers = [
+        "object_free",
+        "extrinsic_object_free",
+        "_measurement_free",
+        "_odometer_free",
+        "_transformation_free",
+        "_function_free",
+        "_domain_free",
+        "_metric_free",
+        "_measure_free",
+    ];
+    let exported = module
         .iter()
-        .filter(|func| func.has_ffi)
+        .filter(|func| func.has_ffi && !native_finalizers.contains(&func.name.as_str()))
+        .collect::<Vec<_>>();
+    let all = exported
+        .iter()
         .map(|func| format!("    \"{}\"", func.name))
         .chain(
-            module
+            exported
                 .iter()
-                .filter(|func| func.supports_partial && func.has_ffi)
+                .filter(|func| func.supports_partial)
                 .map(|func| format!("    \"{}\"", func.name.replacen("make_", "then_", 1))),
         )
         .collect::<Vec<_>>()
         .join(",\n");
-    let functions = module
+    let functions = exported
         .into_iter()
-        .filter(|func| func.has_ffi)
         .map(|func| generate_function(&module_name, &func, typemap, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
