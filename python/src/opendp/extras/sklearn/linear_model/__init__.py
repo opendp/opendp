@@ -26,11 +26,11 @@ from opendp.mod import Measure
 # Keep low-level constructors importable without sklearn. Autodoc can supply
 # its mocked sklearn dependency here to document the estimator as well.
 if import_optional_dependency("sklearn", raise_error=False) is not None:
-    from opendp.extras.sklearn.linear_model._logistic_regression import (
-        LogisticRegression,
+    from opendp.extras.sklearn.linear_model._sgd_classifier import (
+        SGDClassifier,
     )
 
-__all__ = ["LinearRegression", "LogisticRegression"]
+__all__ = ["LinearRegression", "SGDClassifier"]
 
 
 class LinearRegression:

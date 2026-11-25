@@ -38,10 +38,11 @@ def _normalize_classes(classes):
     return np.sort(labels)
 
 
-def per_example_gradients(data, theta, fit_intercept=True, *, classes=(0, 1)):
+def per_example_gradients(
+    data, theta, fit_intercept=True, loss="log_loss", *, classes=(0, 1)
+):
     """Compute finite gradients independently for each aligned SklearnFit record."""
     np = import_optional_dependency("numpy")
-    special = import_optional_dependency("scipy.special")
     # Compare labels without a data-dependent common dtype or lossy integer cast.
     y = np.asarray(
         [value.item() if isinstance(value, np.generic) else value for value in data.y],
@@ -57,7 +58,13 @@ def per_example_gradients(data, theta, fit_intercept=True, *, classes=(0, 1)):
         z = np.nan_to_num(
             X @ theta[:d] + (theta[-1] if fit_intercept else 0.0), nan=0.0
         )
-        residual = special.expit(z) - is_positive
+        if loss == "hinge":
+            signed_y = np.where(is_positive, 1.0, -1.0)
+            residual = np.where(signed_y * z < 1.0, -signed_y, 0.0)
+        else:
+            residual = (
+                import_optional_dependency("scipy.special").expit(z) - is_positive
+            )
         np.multiply(residual[:, None], X, out=gradients[:, :d])
         if fit_intercept:
             gradients[:, -1] = residual
@@ -67,7 +74,7 @@ def per_example_gradients(data, theta, fit_intercept=True, *, classes=(0, 1)):
     return np.nan_to_num(gradients, copy=False)
 
 
-def log_regression_train(
+def sgd_classifier_train(
     queryable,
     *,
     input_domain,
@@ -83,6 +90,7 @@ def log_regression_train(
     l1_coef,
     l2_coef,
     fit_intercept,
+    loss,
     classes,
 ):
     dp.assert_features("contrib", "idealized-numerics")
@@ -99,7 +107,7 @@ def log_regression_train(
             ),
             dp.symmetric_distance(),
             lambda data, th=theta: per_example_gradients(
-                data, th, fit_intercept, classes=classes
+                data, th, fit_intercept, loss=loss, classes=classes
             ),
             # One aligned (X[i], y[i]) record produces one gradient row.
             lambda b_in: b_in,
@@ -134,7 +142,7 @@ def log_regression_train(
     return theta
 
 
-def make_private_logistic_regression(
+def make_private_sgd_classifier(
     input_domain: "Domain",
     input_metric: "Metric",
     output_measure: "Measure",
@@ -142,21 +150,21 @@ def make_private_logistic_regression(
     d_out,
     *,
     max_iter: int,
-    learning_rate: float,
+    eta0: float,
     clip_norm: float,
-    alpha: float = 1.0,
-    l1_ratio: float = 0.0,
+    loss: str = "hinge",
+    penalty: str | None = "l2",
+    alpha: float = 0.0001,
+    l1_ratio: float = 0.15,
     fit_intercept: bool = True,
     reference_size: int | None = None,
     classes=(0, 1),
 ) -> Measurement:
-    """Construct a measurement releasing logistic weights and an optional intercept.
+    """Release binary linear-classifier weights via full-batch noisy gradients.
 
-    Runs exactly max_iter noisy-gradient steps, without early stopping.
-
-    Accepts SklearnFit with numeric array2_domain features (public column count)
-    and numeric, boolean or string VectorDomain targets. Classes are public;
-    targets outside the two configured classes contribute zero gradients.
+    Supports hinge and logistic loss with fixed iterations and public scaling.
+    Accepts SklearnFit with numeric features and numeric, boolean or string targets.
+    Classes are public; unknown labels contribute zero gradients.
     """
     import opendp.prelude as dp
 
@@ -165,7 +173,7 @@ def make_private_logistic_regression(
 
     fit_desc = input_domain.cast(SklearnFitDescriptor)
     if fit_desc.y is None:
-        raise ValueError("LogisticRegression requires a target domain y")
+        raise ValueError("SGDClassifier requires a target domain y")
     x_desc = fit_desc.X.cast(NPArray2Domain)
     if not isinstance(fit_desc.y, VectorDomain):
         raise ValueError("y_domain must be a VectorDomain")
@@ -213,10 +221,33 @@ def make_private_logistic_regression(
 
     if not math.isfinite(alpha) or alpha < 0:
         raise ValueError("alpha must be finite and nonnegative")
-    if not math.isfinite(l1_ratio) or not 0 <= l1_ratio <= 1:
+    if l1_ratio is None and penalty != "elasticnet":
+        pass  # Ignored unless using elasticnet, as in sklearn.
+    elif (
+        not isinstance(l1_ratio, Real)
+        or not math.isfinite(l1_ratio)
+        or not 0 <= l1_ratio <= 1
+    ):
         raise ValueError("l1_ratio must be finite and in [0, 1]")
 
-    l1_coef, l2_coef = l1_ratio * alpha, (1.0 - l1_ratio) * alpha
+    if loss not in ("hinge", "log_loss"):
+        raise ValueError('loss must be "hinge" or "log_loss"')
+    if penalty not in ("l2", "l1", "elasticnet", None):
+        raise ValueError("penalty must be 'l2', 'l1', 'elasticnet', or None")
+
+    # The training loop sums gradients; sklearn alpha penalizes their mean.
+    # This normalization uses public metadata, not the realized row count.
+    alpha_sum = alpha * normalizer if penalty is not None else 0.0
+    if not math.isfinite(alpha_sum):
+        raise ValueError("alpha times reference_size must be finite")
+    if penalty == "l2":
+        l1_coef, l2_coef = 0.0, alpha_sum
+    elif penalty == "l1":
+        l1_coef, l2_coef = alpha_sum, 0.0
+    elif penalty == "elasticnet":
+        l1_coef, l2_coef = l1_ratio * alpha_sum, (1.0 - l1_ratio) * alpha_sum
+    else:
+        l1_coef, l2_coef = 0.0, 0.0
 
     if (
         isinstance(max_iter, bool)
@@ -224,7 +255,7 @@ def make_private_logistic_regression(
         or max_iter <= 0
     ):
         raise ValueError("max_iter must be a positive integer")
-    for name, value in (("learning_rate", learning_rate), ("clip_norm", clip_norm)):
+    for name, value in (("eta0", eta0), ("clip_norm", clip_norm)):
         try:
             valid = (
                 not isinstance(value, bool)
@@ -236,7 +267,7 @@ def make_private_logistic_regression(
             valid = False
         if not valid:
             raise ValueError(f"{name} must be a finite positive real number")
-    learning_rate, clip_norm = float(learning_rate), float(clip_norm)
+    eta0, clip_norm = float(eta0), float(clip_norm)
     if n is not None and d_in % 2 != 0:
         raise ValueError(
             f"For sized data, d_in must be even: one change is a substitution "
@@ -257,7 +288,7 @@ def make_private_logistic_regression(
     return dp.c.make_adaptive_composition(
         input_domain, input_metric, output_measure, d_in, d_mids=d_mids
     ) >> _new_pure_function(
-        lambda queryable: log_regression_train(
+        lambda queryable: sgd_classifier_train(
             queryable,
             input_domain=input_domain,
             input_metric=input_metric,
@@ -268,10 +299,11 @@ def make_private_logistic_regression(
             d=d,
             normalizer=normalizer,
             clip_norm=clip_norm,
-            learning_rate=learning_rate,
+            learning_rate=eta0,
             l1_coef=l1_coef,
             l2_coef=l2_coef,
             fit_intercept=fit_intercept,
+            loss=loss,
             classes=classes,
         )
     )
