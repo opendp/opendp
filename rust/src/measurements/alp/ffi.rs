@@ -1,7 +1,5 @@
 use std::ffi::c_void;
 
-use num::ToPrimitive;
-
 use crate::{
     core::{FfiResult, MetricSpace},
     domains::{AtomDomain, MapDomain},
@@ -11,7 +9,7 @@ use crate::{
         util::{self, Type, TypeContents},
     },
     metrics::{AbsoluteDistance, L01InfDistance},
-    traits::{DistanceConstant, Hashable, InfCast, Integer},
+    traits::{Hashable, InfCast, Integer},
 };
 
 #[unsafe(no_mangle)]
@@ -35,7 +33,7 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
     ) -> Fallible<AnyMeasurement>
     where
         K: 'static + Hashable,
-        CI: 'static + Integer + DistanceConstant<CI> + InfCast<f64> + ToPrimitive,
+        CI: 'static + Integer,
         f64: InfCast<CI>,
         (
             MapDomain<AtomDomain<K>, AtomDomain<CI>>,
