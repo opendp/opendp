@@ -188,7 +188,7 @@ impl<MI: 'static + Metric, MO: 'static + Measure> PrivacyMap<MI, MO> {
 /// A `StabilityMap` is implemented as a function that takes an input [`Metric::Distance`],
 /// and returns the smallest upper bound on distances between output datasets on neighboring input datasets.
 pub struct StabilityMap<MI: Metric, MO: Metric>(
-    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
 );
 
 impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
@@ -198,12 +198,10 @@ impl<MI: Metric, MO: Metric> Clone for StabilityMap<MI, MO> {
 }
 
 impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
-    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
         StabilityMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(
-        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
-    ) -> Self {
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         StabilityMap(Arc::new(map))
     }
 
