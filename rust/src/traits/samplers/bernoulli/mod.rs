@@ -7,7 +7,9 @@ use crate::{
     traits::{ExactIntCast, Float, InfDiv},
 };
 
-use super::{fill_bytes, sample_geometric_buffer, sample_uniform_ubig_below};
+use super::{
+    fill_bytes, sample_from_uniform_bytes, sample_geometric_buffer, sample_uniform_ubig_below,
+};
 
 #[cfg(test)]
 mod test;
@@ -21,6 +23,28 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
     let mut buffer = [0u8; 1];
     fill_bytes(&mut buffer)?;
     Ok(buffer[0] & 1 == 1)
+}
+
+pub(crate) const BERNOULLI_U64_DENOMINATOR: u128 = 1u128 << 64;
+
+/// Round a binary64 probability upward to a multiple of 2^-64.
+/// Multiplication by a power of two is exact for binary64 inputs.
+pub(crate) fn bernoulli_u64_threshold(prob: f64) -> u128 {
+    debug_assert!((0.0..=1.0).contains(&prob));
+    (prob * BERNOULLI_U64_DENOMINATOR as f64).ceil() as u128
+}
+
+/// Recover the exact grid probability for a threshold returned by `bernoulli_u64_threshold`.
+pub(crate) fn bernoulli_u64_probability(threshold: u128) -> f64 {
+    threshold as f64 / BERNOULLI_U64_DENOMINATOR as f64
+}
+
+/// # Proof Definition
+/// For a threshold in [0, 2^64], return true with probability threshold / 2^64
+/// by comparing one uniform u64 draw against the threshold, or fail due to insufficient entropy.
+pub(crate) fn sample_bernoulli_u64(threshold: u128) -> Fallible<bool> {
+    debug_assert!(threshold <= BERNOULLI_U64_DENOMINATOR);
+    Ok(u128::from(sample_from_uniform_bytes::<u64, 8>()?) < threshold)
 }
 
 #[proven]
