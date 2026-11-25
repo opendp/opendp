@@ -126,6 +126,13 @@ _REF_COUNT = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(
 if lib:
     lib._set_total_cmp(_TOTAL_CMP)
     lib._set_ref_count(_REF_COUNT)
+    if hasattr(lib, "_set_polars_plugin_path"):
+        lib._set_polars_plugin_path.argtypes = [ctypes.c_char_p]
+        lib._set_polars_plugin_path.restype = ctypes.c_bool
+        if not lib._set_polars_plugin_path(str(lib_path.resolve()).encode()):
+            raise RuntimeError(
+                "Unable to configure OpenDP Polars plugin path"
+            )  # pragma: no cover
 
 # Key: Optional module name
 # Value: The opendp extra that provides this module,
