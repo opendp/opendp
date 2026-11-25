@@ -37,13 +37,14 @@ The nonempty matched truncation pipeline is produced by \rustdoc{transformations
     On line \ref{line:check-rewrites}, per-group truncation rewrites only partition keys;
     number-of-groups truncation uses the same key extractor as matching to replace
     whole occurrences of the grouping expressions in the dense rank input.
+    Legacy sort keys are checked for permutation equivariance against the preceding plan's schema.
     The rank structure and threshold are unchanged, and the corresponding bounds
     are expressed using these same execution keys, including the terminal group-by bound.
     Line \ref{line:allowed_keys_check} checks that filter grouping keys are retained by the final group-by.
     Filters remove rows without changing the schema, preserving margin upper
     bounds but potentially invalidating margin invariants.
     On line \ref{line:truncation}, if a terminal groupby is present, the shared
-    group-by domain analysis checks grouping keys and certifies
+    group-by preparation checks grouping keys, rewrites and certifies
     the aggregates, infers the output schema, translates retained margins to
     materialized output columns, and discards their invariants, as established in
     the output-domain argument for

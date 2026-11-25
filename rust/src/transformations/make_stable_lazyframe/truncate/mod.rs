@@ -15,7 +15,8 @@ use polars::prelude::*;
 use polars_plan::plans::visitor::TreeWalker;
 
 use super::StableDslPlan;
-use super::group_by::{group_by_output_domain, group_by_plan, materialize_grouping_keys};
+use super::group_by::{group_by_plan, materialize_grouping_keys, prepare_group_by};
+use super::permutation::is_permutation_equivariant;
 
 #[cfg(test)]
 mod test;
@@ -77,8 +78,9 @@ pub(super) fn make_stable_truncate(
     } = matched;
 
     // Rewrite only the grouping keys of each matched truncation.
+    let schema = middle_domain.schema();
     for predicate in &mut filters {
-        *predicate = rewrite_windows(predicate.clone(), &stable_keys)?;
+        *predicate = rewrite_windows(predicate.clone(), &stable_keys, &schema)?;
     }
     for bound in &mut bounds {
         bound.by = bound
@@ -106,10 +108,10 @@ pub(super) fn make_stable_truncate(
         }
     }
 
-    let output_domain = if let Some(GroupByTruncation { keys, aggs }) = &group_by {
+    let output_domain = if let Some(GroupByTruncation { keys, aggs }) = &mut group_by {
         // Filters preserve schema and margin upper bounds.
         // Group-by preparation already discards margin invariants.
-        group_by_output_domain(&middle_domain, keys, aggs)?
+        prepare_group_by(&middle_domain, keys, aggs)?
     } else {
         let mut domain = middle_domain.clone();
         domain.margins.iter_mut().for_each(|m| m.invariant = None);
@@ -163,7 +165,11 @@ pub(super) fn make_stable_truncate(
 
 // Visit the matched predicate's windows, without rewriting the rank priorities,
 // comparison thresholds or other non-grouping expressions.
-fn rewrite_windows(mut expr: Expr, keys: &HashMap<Expr, Expr>) -> PolarsResult<Expr> {
+fn rewrite_windows(
+    mut expr: Expr,
+    keys: &HashMap<Expr, Expr>,
+    schema: &Schema,
+) -> PolarsResult<Expr> {
     let (function, partition_by) = match &mut expr {
         #[cfg(patch_polars)]
         Expr::Over {
@@ -177,8 +183,20 @@ fn rewrite_windows(mut expr: Expr, keys: &HashMap<Expr, Expr>) -> PolarsResult<E
             partition_by,
             ..
         } => (function, partition_by),
-        _ => return expr.map_children(&mut |child, _| rewrite_windows(child, keys), &mut ()),
+        _ => {
+            return expr.map_children(
+                &mut |child, _| rewrite_windows(child, keys, schema),
+                &mut (),
+            );
+        }
     };
+    if let Expr::SortBy { by, .. } = function.as_ref()
+        && by
+            .iter()
+            .any(|key| !is_permutation_equivariant(key, schema))
+    {
+        polars_bail!(ComputeError: "SortBy truncation keys must be permutation-equivariant expressions.");
+    }
     if let Expr::Function {
         input,
         function: FunctionExpr::Rank { options, .. },

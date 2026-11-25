@@ -5,7 +5,7 @@ use crate::error::*;
 // Restrict private casts to reviewed dtype pairs. Unsupported casts must be
 // rejected rather than relying on Polars' non-strict behavior to be infallible.
 // Return whether a non-null input may produce null.
-pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<bool> {
+pub(crate) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<bool> {
     use DataType::*;
 
     let allowed = match (from, to) {
@@ -55,7 +55,7 @@ pub(super) fn check_private_cast(from: &DataType, to: &DataType) -> Fallible<boo
 
 // The only mixed-dtype implicit promotions currently certified for binary
 // expressions and fill_null are between primitive numeric/boolean columns.
-pub(super) fn is_numeric_coercion(from: &DataType, to: &DataType) -> bool {
+pub(crate) fn is_numeric_coercion(from: &DataType, to: &DataType) -> bool {
     let numeric =
         |dtype: &DataType| dtype.is_primitive_numeric() || matches!(dtype, DataType::Boolean);
     numeric(from) && numeric(to)

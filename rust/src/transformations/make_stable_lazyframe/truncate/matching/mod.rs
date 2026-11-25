@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::super::group_by::{Resize, check_infallible, match_ordinary_group_by};
+use super::super::group_by::match_ordinary_group_by;
 use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
@@ -372,11 +372,7 @@ fn match_per_group_predicate(
                     .ok_or_else(|| err!(MakeTransformation, "expected one input"))?;
             }
         }
-        Expr::SortBy { expr, by, .. } => {
-            by.iter()
-                .try_for_each(|key| check_infallible(key, Resize::Ban))?;
-            enumeration = expr.as_ref()
-        }
+        Expr::SortBy { expr, .. } => enumeration = expr.as_ref(),
         _ => (),
     };
 

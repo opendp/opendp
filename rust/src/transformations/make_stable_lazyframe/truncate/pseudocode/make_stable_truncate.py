@@ -31,8 +31,9 @@ def make_stable_truncate(
         stable_keys[key] = stable_key
 
     filters, group_by = matched.filters, matched.group_by
+    schema = middle_domain.schema()
     for index, predicate in enumerate(filters):  # |\label{line:check-rewrites}|
-        filters[index] = rewrite_windows(predicate, stable_keys)
+        filters[index] = rewrite_windows(predicate, stable_keys, schema)
 
     truncation_bounds = matched.bounds
     for bound in truncation_bounds:
@@ -48,9 +49,7 @@ def make_stable_truncate(
                 )
 
     if group_by is not None:  # |\label{line:truncation}|
-        output_domain = group_by_output_domain(
-            middle_domain, group_by.keys, group_by.aggs
-        )
+        output_domain = prepare_group_by(middle_domain, group_by.keys, group_by.aggs)
     else:
         output_domain = middle_domain.clone()
         for margin in output_domain.margins:
