@@ -1463,6 +1463,21 @@ def test_enum_domain():
     # check that domain is as expected
     assert observed == expected
 
+    enum_element = dp.enum_domain(enum_dtype.categories)
+    series_domain = dp.series_domain("alpha", dp.option_domain(enum_element))
+    assert series_domain.element_domain == enum_element
+
+
+def test_nested_array_domain_inference():
+    from opendp.extras.polars import _series_domain_from_field
+
+    dtype = pl.Array(pl.Array(pl.Int32, 2), 3)
+    inner = dp.array_domain(dp.atom_domain(T="i32"), 2)
+    outer = dp.array_domain(inner, 3)
+    expected = dp.series_domain("A", dp.option_domain(outer))
+    assert _series_domain_from_field(("A", dtype)) == expected
+    assert inner != dp.array_domain(dp.atom_domain(T="i32"), 2, nullable=False)
+
 
 @pytest.mark.xfail(
     reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed"

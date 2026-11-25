@@ -1,6 +1,8 @@
-use polars::prelude::{TimeUnit, TimeZone};
+use polars::prelude::{DataType, Series, TimeUnit, TimeZone};
 
 use crate::{core::Domain, error::Fallible};
+
+use super::SeriesElementDomain;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -25,4 +27,23 @@ impl Domain for DatetimeDomain {
         // all integers correspond to valid datetimes in the domain
         Ok(true)
     }
+}
+
+impl SeriesElementDomain for DatetimeDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+
+    fn check_values(&self, _: &Series) -> Fallible<bool> {
+        // All i64 timestamps are in the domain once the time unit and zone match.
+        Ok(true)
+    }
+
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
 }
