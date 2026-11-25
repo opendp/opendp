@@ -85,8 +85,8 @@ the statistics of interest.
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .group_by(pl.col.PIDENT)  # truncation begins here
             ...     .agg(
-            ...         pl.col.HWUSUAL.mean()
-            ...     )  # arbitrary expressions can be used here
+            ...         pl.col.HWUSUAL.dp.permute().mean()
+            ...     )  # a uniform permutation makes this mean stable under unordered ids
             ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()

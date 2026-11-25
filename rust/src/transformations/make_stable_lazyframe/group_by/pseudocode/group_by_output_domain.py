@@ -1,7 +1,10 @@
 # type: ignore
 def group_by_output_domain(domain, original_keys, keys, aggs):
-    for agg in aggs:  # |\label{line:infallible-aggs}|
-        check_infallible(agg, Resize.Allow)
+    schema = domain.schema()
+    for (
+        agg
+    ) in aggs:  # |\label{line:infallible-aggs}\label{line:permutation-invariance}|
+        check_permutation_invariance(agg, schema)
 
     output_schema = domain.simulate_schema(  # |\label{line:simulate-schema}|
         lambda lf: lf.group_by(keys).agg(aggs)

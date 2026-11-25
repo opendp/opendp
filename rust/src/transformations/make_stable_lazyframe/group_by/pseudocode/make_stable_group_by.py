@@ -2,9 +2,10 @@
 def make_stable_group_by(
     input_domain: DslPlanDomain, input_metric: FrameDistance[M], plan: DslPlan
 ) -> Transformation[DslPlanDomain, DslPlanDomain, FrameDistance[M], FrameDistance[M]]:
+    if M.ORDERED:
+        raise "Sample-and-aggregate requires an unordered input metric"
+
     input, keys, aggs, maintain_order = match_ordinary_group_by(plan)
-    if maintain_order:
-        raise "maintain_order is wasted compute because row ordering is protected information"
 
     t_prior = input.make_stable(input_domain, input_metric)
     middle_domain, middle_metric = t_prior.output_space()

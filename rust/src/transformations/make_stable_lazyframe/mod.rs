@@ -30,6 +30,9 @@ mod group_by;
 mod h_stack;
 
 #[cfg(feature = "contrib")]
+mod permutation;
+
+#[cfg(feature = "contrib")]
 pub(crate) mod select;
 
 #[cfg(feature = "contrib")]

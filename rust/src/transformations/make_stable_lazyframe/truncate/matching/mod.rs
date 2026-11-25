@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use super::super::group_by::{Resize, check_infallible, match_ordinary_group_by};
+use super::super::group_by::match_ordinary_group_by;
+use super::super::permutation::is_permutation_equivariant;
 use crate::{error::Fallible, metrics::Bound, polars::literal_value_of, traits::InfAdd};
 use opendp_derive::proven;
 #[cfg(not(patch_polars))]
@@ -360,8 +361,12 @@ fn match_per_group_predicate(
             }
         }
         Expr::SortBy { expr, by, .. } => {
-            by.iter()
-                .try_for_each(|key| check_infallible(key, Resize::Ban))?;
+            if by.iter().any(|key| !is_permutation_equivariant(key)) {
+                return fallible!(
+                    MakeTransformation,
+                    "SortBy truncation keys must be permutation-equivariant expressions."
+                );
+            }
             enumeration = expr.as_ref()
         }
         _ => (),

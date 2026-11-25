@@ -47,7 +47,7 @@ Truncation keys are stable row-by-row transformations of the data.
     The grouping keys have already been checked to be stable row-by-row.
     The constructor rejects grouping keys with noncanonical representatives.
     On line \ref{line:group-by-domain}, the common groupby domain analysis checks
-    that aggregates are infallible, infers the output
+    that aggregates are infallible and permutation invariant, infers the output
     schema and translates retained margins to materialized output columns,
     as established by
     \rustdoc{transformations/make_stable_lazyframe/group_by/fn}{group\_by\_output\_domain}.

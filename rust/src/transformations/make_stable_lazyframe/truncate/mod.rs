@@ -14,9 +14,8 @@ use opendp_derive::proven;
 use polars::prelude::*;
 
 use super::StableDslPlan;
-use super::group_by::{
-    group_by_output_domain, group_by_plan, has_canonical_representatives, materialize_grouping_keys,
-};
+use super::group_by::{group_by_output_domain, group_by_plan, materialize_grouping_keys};
+use super::permutation::has_canonical_representatives;
 
 #[cfg(test)]
 mod test;

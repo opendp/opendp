@@ -26,13 +26,22 @@ The group-by uses ordinary options and no apply or having clause.
 \begin{theorem}
 If the constructor succeeds, ordinary group-by on the execution keys with the
 given aggregations produces a member of the returned domain or raises a
-data-independent runtime exception, subject to the existing infallibility checker.
+data-independent runtime exception. Each aggregation depends only on its
+own group and is invariant in distribution under permutations of its input rows.
 Retained margins describe the corresponding materialized output keys.
 \end{theorem}
 
 \begin{proof}
     The caller supplies validated row-by-row grouping expressions with canonical representatives, preserving the values and output names of the original keys on the input domain.
     By line \ref{line:infallible-aggs} the aggregates are infallible.
+    The check also excludes positional inputs and data-dependent quantile
+    parameters, ensuring that aggregates depend only on their respective groups.
+    On line \ref{line:permutation-invariance}, the checker certifies that
+    row-aligned inputs commute with permutations and that order-sensitive
+    reducers consume an invariant scalar or a trusted uniformly shuffled input.
+    In particular, the shuffle distribution does not depend on the original
+    physical row order.
+
     By the postcondition of \texttt{DslPlan.simulate\_schema},
     \texttt{series\_domains} follows the expected schema of members in the output domain.
     The output column domains preserve the schema while allowing infallible black-box aggregation.
