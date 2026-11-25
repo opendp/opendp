@@ -13,7 +13,7 @@ use crate::error::*;
 pub struct Queryable<Q: ?Sized, A>(Rc<RefCell<dyn FnMut(&Self, Query<Q>) -> Fallible<Answer<A>>>>);
 
 impl<Q: ?Sized, A> Queryable<Q, A> {
-    pub fn eval(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval(&self, query: &Q) -> Fallible<A> {
         match self.eval_query(Query::External(query))? {
             Answer::External(ext) => Ok(ext),
             Answer::Internal(_) => fallible!(
@@ -23,7 +23,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
-    pub fn eval_wrap(&mut self, query: &Q, wrapper: Option<Wrapper>) -> Fallible<A> {
+    pub fn eval_wrap(&self, query: &Q, wrapper: Option<Wrapper>) -> Fallible<A> {
         if let Some(w) = wrapper {
             wrap(w, || self.eval(query))
         } else {
@@ -32,7 +32,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn eval_internal<'a, AI: 'static>(&mut self, query: &'a dyn Any) -> Fallible<AI> {
+    pub(crate) fn eval_internal<AI: 'static>(&self, query: &dyn Any) -> Fallible<AI> {
         match self.eval_query(Query::Internal(query))? {
             Answer::Internal(value) => value.downcast::<AI>().map(|v| *v).map_err(|_| {
                 err!(
@@ -49,7 +49,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
     }
 
     #[inline]
-    pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
+    pub(crate) fn eval_query(&self, query: Query<Q>) -> Fallible<Answer<A>> {
         let mut transition = self.0.as_ref().try_borrow_mut().map_err(|_| {
             err!(
                 FailedFunction,
@@ -124,7 +124,7 @@ impl Wrapper {
     /// Creates a recursive wrapper that recursively applies itself to child queryables.
     /// `hook` is called any time the wrapped queryable or any of its children are queried.
     pub fn new_recursive_pre_hook(hook: impl FnMut() -> Fallible<()> + Clone + 'static) -> Wrapper {
-        RecursiveWrapper(Rc::new(move |recursive_wrapper, mut inner_qbl| {
+        RecursiveWrapper(Rc::new(move |recursive_wrapper, inner_qbl| {
             let mut hook = hook.clone();
             Ok(Queryable::new_raw(move |_, query: Query<dyn Any>| {
                 // call the hook
@@ -228,7 +228,7 @@ pub trait IntoPolyQueryable {
 }
 
 impl<Q: 'static, A: 'static> IntoPolyQueryable for Queryable<Q, A> {
-    fn into_poly(mut self) -> PolyQueryable {
+    fn into_poly(self) -> PolyQueryable {
         Queryable::new_raw(move |_self: &PolyQueryable, query: Query<dyn Any>| {
             Ok(match query {
                 Query::External(q) => {
@@ -265,7 +265,7 @@ pub trait FromPolyQueryable {
 }
 
 impl<Q: 'static, A: 'static> FromPolyQueryable for Queryable<Q, A> {
-    fn from_poly(mut self_: PolyQueryable) -> Self {
+    fn from_poly(self_: PolyQueryable) -> Self {
         Queryable::new_raw(move |_self: &Queryable<Q, A>, query: Query<Q>| {
             Ok(match query {
                 Query::External(query) => {
@@ -301,7 +301,7 @@ impl FromPolyQueryable for PolyQueryable {
 
 impl<Q: ?Sized> Queryable<Q, Box<dyn Any>> {
     /// Evaluates a polymorphic query and downcasts to the given type.
-    pub fn eval_poly<A: 'static>(&mut self, query: &Q) -> Fallible<A> {
+    pub fn eval_poly<A: 'static>(&self, query: &Q) -> Fallible<A> {
         self.eval(query)?
             .downcast()
             .map_err(|_| {

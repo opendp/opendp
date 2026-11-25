@@ -205,7 +205,7 @@ where
             self.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
-                    let mut inner_qbl = function.eval(arg)?;
+                    let inner_qbl = function.eval(arg)?;
 
                     Ok(Queryable::new_raw(
                         move |_self, query: Query<AnyObject>| match query {
@@ -251,7 +251,7 @@ where
             self.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
-                    let mut inner_qbl = function.eval(arg)?;
+                    let inner_qbl = function.eval(arg)?;
 
                     Ok(Queryable::new_raw(
                         move |_self, query: Query<Q>| match query {

@@ -577,7 +577,7 @@ impl From<LazyFrame> for OnceFrame {
 }
 
 impl OnceFrame {
-    pub fn collect(mut self) -> Fallible<DataFrame> {
+    pub fn collect(self) -> Fallible<DataFrame> {
         if let Answer::External(OnceFrameAnswer::Collect(dataframe)) =
             self.eval_query(Query::External(&OnceFrameQuery::Collect))?
         {
