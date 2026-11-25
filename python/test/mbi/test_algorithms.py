@@ -501,7 +501,22 @@ def test_mst_init(kwargs, message):
             "algorithms ([False]) must be instances of Algorithm",
         ),
         (dict(algorithms=[MST()], weights=[]), "algorithms and weights must contain"),
-        (dict(algorithms=[MST()], weights=[0]), "weights ([0]) must be positive"),
+        (
+            dict(algorithms=[MST()], weights=[0]),
+            "weights ([0]) must be finite and positive",
+        ),
+        (
+            dict(algorithms=[MST()], weights=[float("nan")]),
+            "must be finite and positive",
+        ),
+        (
+            dict(algorithms=[MST()], weights=[float("inf")]),
+            "must be finite and positive",
+        ),
+        (
+            dict(algorithms=[MST()], weights=[float("-inf")]),
+            "must be finite and positive",
+        ),
     ],
     ids=ids,
 )

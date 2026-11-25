@@ -322,6 +322,10 @@ def make_stable_marginals(
         y = np.zeros(shape(clique), dtype=np.int32)
         # u32 counts are clipped before narrowing to i32: numpy treats
         # uint32->int32 as a same-kind cast and silently wraps instead of erroring.
+        counts = x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32)
+        if not clique:
+            y[()] = counts.item()
+            return y
         # Casting before filling avoids float/NaN conversion of nullable integer keys.
         keys = x.select(
             [
@@ -329,13 +333,16 @@ def make_stable_marginals(
                 for col in clique
             ]
         )
-        y[tuple(keys.to_numpy().T)] = (
-            x["len"].clip(upper_bound=np.iinfo(np.int32).max).cast(pl.Int32).to_numpy()
-        )
+        y[tuple(keys.to_numpy().T)] = counts.to_numpy()
         return y
 
     def function(data):
-        dfs = pl.collect_all([data.group_by(c).agg(pl.len()) for c in cliques_snapshot])
+        dfs = pl.collect_all(
+            [
+                data.group_by(c).agg(pl.len()) if c else data.select(pl.len())
+                for c in cliques_snapshot
+            ]
+        )
         return {c: pivot(m, c) for m, c in zip(dfs, cliques_snapshot)}
 
     def count_sensitivity(
@@ -347,6 +354,9 @@ def make_stable_marginals(
 
         bound: Bound = _get_bound(bounds, [pl.col(c) for c in clique])
         l0 = min(bound.num_groups if bound.num_groups is not None else total, total)
+        if not clique:
+            # The total count contains only one cell, regardless of the number of rows.
+            l0 = min(l0, 1)
         linf = min(bound.per_group if bound.per_group is not None else total, total)
         return l0, min(total, l0 * linf), linf
 
