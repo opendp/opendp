@@ -1,25 +1,32 @@
 >>> import opendp.prelude as dp
 >>> dp.enable_features("contrib")
+>>> bounds = (0.0, 100.0)
+>>> range_ = max(abs(bounds[0]), bounds[1])
+>>> epsilon = 1.0
 >>> threshold = 23
->>> space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-...
->>> # For demonstration purposes-- construct a measurement that releases
->>> # a tuple with a differentially private score and value.
->>> # The tuple released must satisfy the privacy guarantee from the map.
->>> import numpy as np
->>> m_mock = space >> dp.m.then_user_measurement(
-...     dp.max_divergence(),
-...     lambda x: (np.random.laplace(loc=x), "arbitrary candidate"),
-...     lambda d_in: d_in,
-...     TO="(f64, ExtrinsicObject)"
+>>> input_space = (
+...     dp.vector_domain(dp.atom_domain(T=float)),
+...     dp.symmetric_distance(),
 ... )
 ...
->>> m_private_selection = dp.c.make_select_private_candidate(
-...     m_mock, threshold=threshold, stop_probability=0
+>>> # For demonstration purposes, construct a measurement that releases
+>>> # a tuple with a private score and candidate, using only OpenDP
+>>> # transformations and measurements.
+>>> m_count = (
+...     input_space
+...     >> dp.t.then_count()
+...     >> dp.m.then_laplace(scale=2.0 / epsilon)
 ... )
+>>> m_sum = (
+...     input_space
+...     >> dp.t.then_impute_constant(0.0)
+...     >> dp.t.then_clamp(bounds)
+...     >> dp.t.then_sum()
+...     >> dp.m.then_laplace(scale=2.0 * range_ / epsilon)
+... )
+>>> m_scored_candidate = dp.c.make_composition([m_count, m_sum])
 ...
->>> score, candidate = m_private_selection(20)
-...
->>> assert score >= threshold
->>> assert m_private_selection.map(1) == 2 * m_mock.map(1)
->>> assert isinstance(candidate, str)
+>>> legacy = dp.c.make_select_private_candidate(
+...     m_scored_candidate, stop_probability=0.01, threshold=threshold
+... )
+>>> assert legacy.map(1) == 2 * m_scored_candidate.map(1)

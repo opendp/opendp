@@ -1,0 +1,41 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn choose}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn choose} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+None.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/choose.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any \texttt{best} and \texttt{next}, \texttt{choose(best, next)} returns:
+\begin{itemize}
+    \item \texttt{best} unchanged if \texttt{next[0]} is NaN;
+    \item \texttt{next} if \texttt{best = None} and \texttt{next[0]} is not NaN;
+    \item otherwise the higher-scoring of \texttt{best} and \texttt{next}, breaking ties in favor
+    of \texttt{next}.
+\end{itemize}
+\end{theorem}
+
+\section{Proof}
+The function has three branches:
+\begin{itemize}
+    \item line \ref{line:nan-guard} returns \texttt{best} unchanged on NaN;
+    \item line \ref{line:best-none} returns \texttt{next} when there is no current best;
+    \item line \ref{line:compare} returns \texttt{best} only when its score is strictly larger,
+    and otherwise the final return chooses \texttt{next}, which implements the stated tie-break.
+\end{itemize}
+
+\end{document}

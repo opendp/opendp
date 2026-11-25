@@ -1,0 +1,75 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn log\_mean\_hi}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn log\_mean\_hi} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{mean} $> 0$ and \texttt{mean} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/log_mean_hi.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{mean} such that the given precondition holds,
+\texttt{log\_mean\_hi} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \ge \log(\texttt{mean}).
+\]
+\end{theorem}
+
+\section{Proof}
+Assume the precondition is met.
+
+\begin{lemma}
+\label{err-e}
+\texttt{log\_mean\_hi} only returns \texttt{Err(e)} if the guard on line \ref{line:guard} fails
+or if a later fallible helper call returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+The function explicitly returns an error when the guard on line \ref{line:guard} fails.
+Under the precondition, this branch is not taken.
+The only remaining fallible operations are the calls on lines \ref{line:minus_one_hi}
+and \ref{line:ln1p_hi}.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{log\_mean\_hi} is \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge \log(\texttt{mean}).
+\]
+\end{lemma}
+
+\begin{proof}
+By the proof definition of \texttt{inf\_sub},
+\[
+\texttt{mean\_minus\_one\_hi} \ge \texttt{mean} - 1.
+\]
+Since \texttt{mean} $> 0$, both arguments to $\ln(1+\cdot)$ lie in $(-1,\infty)$.
+By the proof definition of \texttt{inf\_ln\_1p},
+\[
+\texttt{out}
+=
+\texttt{mean\_minus\_one\_hi.inf\_ln\_1p()}
+\ge
+\ln((\texttt{mean} - 1) + 1)
+= \log(\texttt{mean}).
+\]
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}
