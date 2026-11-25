@@ -32,7 +32,7 @@ def _domain(size=None, y_size=None, **features):
 
 
 def _make(model, domain, d_in=2, rho=1.0):
-    return model.make(
+    return model.make_measurement(
         domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(), d_in, rho
     )
 
@@ -82,10 +82,7 @@ def test_gradients_with_wide_integer_targets():
     assert np.isfinite(gradients).all()
     np.testing.assert_array_equal(
         gradients,
-        np.array(
-            [[-(2**100), -(2**101), -(2**100)], [-(2**100), 0, 2**100], [1, 2, 0.5]],
-            dtype=float,
-        ),
+        np.array([[0, 0, 0], [0, 0, 0], [1, 2, 0.5]], dtype=float),
     )
 
 
@@ -104,7 +101,9 @@ def test_nonfinite_gradients_and_fitting(model_type, fit_intercept):
         )
     assert np.isfinite(gradients).all()
     np.testing.assert_array_equal(gradients[3:], np.zeros((2, 2 + int(fit_intercept))))
-    model = model_type(reference_size=11, max_iter=2, fit_intercept=fit_intercept).fit(
+    model = model_type(
+        classes=(0, 1), reference_size=11, max_iter=2, fit_intercept=fit_intercept
+    ).fit(
         X, y, privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
     assert np.isfinite(model.coef_).all() and np.isfinite(model.intercept_).all()
@@ -146,6 +145,7 @@ def test_updates_and_privacy_map(
         cardinalities=[2, 3],
     )
     model = model_type(
+        classes=(0, 1),
         max_iter=2,
         fit_intercept=fit_intercept,
         learning_rate=learning_rate,
@@ -185,7 +185,9 @@ def test_unsized_empty_fit_has_noise(model_type, fit_intercept):
     from sklearn.base import clone
 
     X, y = np.empty((0, 2)), np.empty(0)
-    model = model_type(reference_size=11, max_iter=2, fit_intercept=fit_intercept)
+    model = model_type(
+        classes=(0, 1), reference_size=11, max_iter=2, fit_intercept=fit_intercept
+    )
     kwargs = dict(
         privacy_unit=dp.unit_of(contributions=1), privacy_loss=dp.loss_of(rho=1.0)
     )
@@ -202,6 +204,7 @@ def test_constructor_signature_and_cloning(model_type):
     from sklearn.base import clone
 
     defaults = dict(
+        classes=(0, 1),
         alpha=1.0,
         l1_ratio=0.0,
         fit_intercept=True,
@@ -212,16 +215,19 @@ def test_constructor_signature_and_cloning(model_type):
     )
     parameters = inspect.signature(model_type).parameters
     assert list(parameters) == list(defaults)
+    assert parameters["classes"].default is inspect.Parameter.empty
+    with pytest.raises(TypeError, match="classes"):
+        model_type()
     assert all(p.kind == inspect.Parameter.KEYWORD_ONLY for p in parameters.values())
-    assert model_type().get_params() == defaults
-    model = model_type(fit_intercept=False, max_iter=7)
+    assert model_type(classes=(0, 1)).get_params() == defaults
+    model = model_type(classes=(0, 1), fit_intercept=False, max_iter=7)
     assert clone(model).get_params() == defaults | dict(fit_intercept=False, max_iter=7)
     assert model.set_params(max_iter=3, fit_intercept=True) is model
     assert model.max_iter == 3 and model.fit_intercept is True
     with pytest.raises(TypeError, match="positional"):
-        model_type(1.0)
+        model_type(1.0, classes=(0, 1))
     with pytest.raises(TypeError, match="n_iters"):
-        model_type(n_iters=3)
+        model_type(classes=(0, 1), n_iters=3)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -237,8 +243,8 @@ def test_exact_steps_and_released_coordinates(
         impl.make_private_np_sum,
     )
 
-    def observe_gradients(data, theta, fit_intercept):
-        result = original_gradients(data, theta, fit_intercept)
+    def observe_gradients(data, theta, fit_intercept, *, classes):
+        result = original_gradients(data, theta, fit_intercept, classes=classes)
         gradients.append(result)
         return result
 
@@ -249,7 +255,9 @@ def test_exact_steps_and_released_coordinates(
     monkeypatch.setattr(impl, "per_example_gradients", observe_gradients)
     monkeypatch.setattr(impl, "make_private_np_sum", observe_sum)
     measurement = _make(
-        model_type(fit_intercept=fit_intercept, max_iter=max_iter, alpha=0),
+        model_type(
+            classes=(0, 1), fit_intercept=fit_intercept, max_iter=max_iter, alpha=0
+        ),
         _domain(3, 3),
     )
     # Zero features keep the coefficient signal at zero, but must not stop training.
@@ -279,7 +287,7 @@ def test_unsized_requires_reference_size():
 def test_input_domain_validation(model_type):
     with pytest.raises(ValueError, match="requires a target domain y"):
         _make(
-            model_type(),
+            model_type(classes=(0, 1)),
             dp.sklearn.sklearn_fit_domain(
                 dp.numpy.array2_domain(T=float, num_columns=2)
             ),
@@ -288,19 +296,20 @@ def test_input_domain_validation(model_type):
     options = dict(T=float, num_columns=2, size=3)
     cases: list[tuple[dict, dp.Domain, str]] = [
         ({"T": str}, targets, "numeric element types"),
-        ({}, dp.vector_domain(dp.atom_domain(T=str)), "numeric element types"),
+        ({}, dp.vector_domain(dp.atom_domain(T=str)), "classes must match"),
         ({}, dp.numpy.array2_domain(T=float), "VectorDomain"),
         ({}, dp.vector_domain(dp.atom_domain(T=float), size=2), "matching row counts"),
-        ({"num_columns": None}, targets, "specify num_columns"),
+        ({"num_columns": None}, targets, "positive num_columns"),
+        ({"num_columns": 0}, targets, "positive num_columns"),
     ]
     for features, target, error in cases:
         domain = dp.sklearn.sklearn_fit_domain(
             dp.numpy.array2_domain(**(options | features)), target
         )
         with pytest.raises(ValueError, match=error):
-            _make(model_type(), domain)
+            _make(model_type(classes=(0, 1)), domain)
     with pytest.raises(ValueError, match="d_in must be even"):
-        _make(model_type(), _domain(3), d_in=1)
+        _make(model_type(classes=(0, 1)), _domain(3), d_in=1)
 
 
 def test_nonatomic_target_validation(model_type, monkeypatch):
@@ -310,8 +319,10 @@ def test_nonatomic_target_validation(model_type, monkeypatch):
     monkeypatch.setattr(
         dp.VectorDomain, "element_domain", property(lambda _: element_domain)
     )
-    with pytest.raises(ValueError, match="^y must have numeric or boolean elements$"):
-        _make(model_type(), domain)
+    with pytest.raises(
+        ValueError, match="y must have numeric, boolean or string elements"
+    ):
+        _make(model_type(classes=(0, 1)), domain)
 
 
 @pytest.mark.parametrize(
@@ -329,7 +340,7 @@ def test_public_parameter_validation(model_type, parameter, values):
     domain = _domain(3)
     for value in values:
         with pytest.raises(ValueError, match=parameter):
-            _make(model_type(**{parameter: value}), domain)
+            _make(model_type(classes=(0, 1), **{parameter: value}), domain)
 
 
 @pytest.mark.parametrize("fit_intercept", [True, False])
@@ -340,6 +351,7 @@ def test_fitting_routes(model_type, data, route, as_list, fit_intercept):
     from sklearn.base import is_classifier
 
     model = model_type(
+        classes=(0, 1),
         max_iter=3,
         fit_intercept=fit_intercept,
         reference_size=37 if route == "standalone" else None,
@@ -389,7 +401,11 @@ def test_convergence_matches_sklearn(model_type, data, fit_intercept):
         C=1, max_iter=1000, tol=1e-8, fit_intercept=fit_intercept
     ).fit(data.X, data.y)
     model = model_type(
-        max_iter=150, learning_rate=0.5, clip_norm=10, fit_intercept=fit_intercept
+        classes=(0, 1),
+        max_iter=150,
+        learning_rate=0.5,
+        clip_norm=10,
+        fit_intercept=fit_intercept,
     )
     theta = _make(model, _domain(100, 100), rho=1e12)(data)
     expected = (
@@ -398,3 +414,45 @@ def test_convergence_matches_sklearn(model_type, data, fit_intercept):
         else reference.coef_[0]
     )
     np.testing.assert_allclose(theta, expected, atol=0.03, rtol=0)
+
+
+def test_public_classes(model_type):
+    X = np.ones((3, 2))
+    y = ["positive", "negative", "unknown"]
+    data = dp.sklearn.SklearnFit(X, y)
+    classes = ("negative", "positive")
+    gradients = per_example_gradients(data, np.zeros(3), classes=classes)
+    np.testing.assert_array_equal(gradients, [[-0.5] * 3, [0.5] * 3, [0.0] * 3])
+
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(T=float, num_columns=2),
+        dp.vector_domain(dp.atom_domain(T=str)),
+    )
+    model = model_type(classes=classes[::-1], reference_size=3, max_iter=1)
+    for invalid in (
+        [],
+        ("same", "same"),
+        (0, np.nan),
+        (0, "positive"),
+        (0.1, 0.2),
+        (np.uint64(2**63 + 1), np.int64(-1)),
+    ):
+        with pytest.raises(ValueError, match="classes"):
+            _make(model_type(classes=invalid, reference_size=3), _domain(), d_in=1)
+    model.fit(
+        X,
+        y,
+        domain=domain,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=1.0),
+    )
+    np.testing.assert_array_equal(model.classes_, classes)
+    np.testing.assert_array_equal(
+        model.predict(X),
+        model.classes_[(model.predict_proba(X)[:, 1] > 0.5).astype(int)],
+    )
+    predicted = model.rowwise_output_domain(
+        domain.cast(dp.sklearn.SklearnFitDescriptor).X, method="predict"
+    )
+    assert predicted.member(model.predict(X)[:, None])
+    assert model.score(X[:2], y[:2]) == 0.5

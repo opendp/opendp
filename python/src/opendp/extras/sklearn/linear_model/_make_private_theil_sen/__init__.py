@@ -1,7 +1,7 @@
 from opendp.mod import Domain, Measure, Metric
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
-from opendp._internal import _new_pure_function
+from opendp._internal import _make_transformation, _new_pure_function
 from opendp.typing import _NUMERIC_TYPES
 
 
@@ -74,29 +74,27 @@ def make_pairwise_predict(
         # to record replacements. Each replacement can change one matched pair.
         stability_map = lambda d_in: 2 * runs * (d_in // 2)
 
-    return dp.t.make_user_transformation(
-        input_domain=input_domain,
-        input_metric=input_metric,
+    return _make_transformation(
+        input_domain,
+        input_metric,
         # Outputs are Nx2 float numpy arrays, but are half as long.
-        output_domain=dp.numpy.array2_domain(num_columns=2, T="f64"),
+        dp.numpy.array2_domain(num_columns=2, T="f64"),
         # Neighboring output datasets also differ by additions/removals.
-        output_metric=dp.symmetric_distance(),
+        dp.symmetric_distance(),
         # Apply the function `runs` times.
-        function=lambda x: np.vstack(
-            [pairwise_predict(x, x_cuts) for _ in range(runs)]
-        ),
-        stability_map=stability_map,
+        lambda x: np.vstack([pairwise_predict(x, x_cuts) for _ in range(runs)]),
+        stability_map,
     )
 
 
 def make_select_column(j, T="f64"):
-    return dp.t.make_user_transformation(
-        input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
-        input_metric=dp.symmetric_distance(),
-        output_domain=dp.vector_domain(dp.atom_domain(T=T)),
-        output_metric=dp.symmetric_distance(),
-        function=lambda x: x[:, j],
-        stability_map=lambda b_in: b_in,
+    return _make_transformation(
+        dp.numpy.array2_domain(num_columns=2, T=T),
+        dp.symmetric_distance(),
+        dp.vector_domain(dp.atom_domain(T=T)),
+        dp.symmetric_distance(),
+        lambda x: x[:, j],
+        lambda b_in: b_in,
     )
 
 

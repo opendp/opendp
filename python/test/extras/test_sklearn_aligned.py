@@ -111,13 +111,15 @@ def test_numpy_targets_remain_arrays_in_callback():
         received.append(value.y)
         return value
 
-    transform = dp.t.make_user_transformation(
+    from opendp._internal import _make_transformation
+
+    transform = _make_transformation(
         domain,
         dp.symmetric_distance(),
         domain,
         dp.symmetric_distance(),
-        function=callback,
-        stability_map=lambda d: d,
+        callback,
+        lambda d: d,
     )
     result = transform(data)
     assert len(received) == 1

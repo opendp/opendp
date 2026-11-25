@@ -2,14 +2,24 @@ import pytest
 import doctest
 import re
 from importlib.util import find_spec
+from pathlib import Path
 
 import opendp.prelude as dp
 
-if find_spec("sklearn") is None:
-    collect_ignore = [  # pragma: no cover
-        "src/opendp/extras/sklearn/_estimator.py",
-        "src/opendp/extras/sklearn/linear_model/_logistic_regression.py",
-    ]
+
+def pytest_ignore_collect(collection_path, config):
+    """Do not doctest optional extras when their dependencies are absent."""
+    extras = Path(__file__).parent / "src" / "opendp" / "extras"
+    try:
+        module = collection_path.relative_to(extras).parts[0]
+    except (ValueError, IndexError):
+        return None
+
+    dependencies = {"sklearn": "sklearn", "scipy": "scipy"}
+    package = dependencies.get(module)
+    if package is not None and find_spec(package) is None:  # pragma: no cover
+        return True
+    return None
 
 
 @pytest.fixture(autouse=True)

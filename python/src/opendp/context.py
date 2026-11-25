@@ -760,6 +760,7 @@ class Query(object):
                 and param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
             ]
 
+            new_chain: Any  # Registered constructors have dynamic return types.
             if len(missing) == 1 and not isinstance(self._chain, PartialChain):
 
                 def fill_param(value):
@@ -816,7 +817,7 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
-    def sklearn(self, estimator):
+    def sklearn(self, estimator, *, method=None):
         """Construct a measurement that releases a new fitted estimator clone.
 
         Use the current chain's output domain/metric and stability, and this query's
@@ -824,18 +825,22 @@ class Query(object):
         leaving the supplied estimator unchanged.
         """
         from sklearn.base import clone
-        from opendp.extras.sklearn._estimator import DPEstimator
+        from opendp._internal import _new_pure_function
+        from opendp.extras.sklearn._estimator import (
+            MeasurementMixin,
+            TransformationMixin,
+        )
 
-        if not isinstance(estimator, DPEstimator):
-            raise ValueError(
+        if method is None and not isinstance(estimator, MeasurementMixin):
+            raise TypeError(
                 "sklearn(...) expects an estimator with OpenDP fitting capability"
             )
+        if method is not None and not isinstance(estimator, TransformationMixin):
+            raise TypeError("Stage must implement TransformationMixin")
         if isinstance(self._chain, tuple):
             input_domain, input_metric = self._chain
-            d_mid = self._d_in
         elif isinstance(self._chain, Transformation):
             input_domain, input_metric = self._chain.output_space
-            d_mid = self._chain.map(self._d_in)
         elif isinstance(self._chain, PartialChain):
             raise ValueError(
                 "sklearn(...) requires all arguments in the input query to be specified."
@@ -845,8 +850,23 @@ class Query(object):
                 f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
+        if method is not None:
+            from opendp.extras.sklearn._rowwise import _make_rowwise_transform
+
+            trans = _make_rowwise_transform(
+                input_domain, input_metric, estimator, method=method
+            )
+            return self.new_with(
+                chain=trans if isinstance(self._chain, tuple) else self._chain >> trans
+            )
+
+        d_mid = (
+            self._d_in
+            if isinstance(self._chain, tuple)
+            else self._chain.map(self._d_in)
+        )
         prototype = clone(estimator)
-        measurement = prototype.make(
+        measurement = prototype.make_measurement(
             input_domain, input_metric, self._output_measure, d_mid, self._d_out
         )
 
@@ -855,7 +875,7 @@ class Query(object):
             fitted._ingest_release(release)
             return fitted
 
-        measurement = measurement >> ingest
+        measurement = measurement >> _new_pure_function(ingest, TO="ExtrinsicObject")
         return self.new_with(
             chain=(
                 measurement
