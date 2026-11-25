@@ -23,8 +23,8 @@ fn test_privacy_odometer() -> Fallible<()> {
     // pass dataset in and receive a queryable
     let mut odometer = root.invoke(&true)?;
 
-    let rr_poly_query = make_randomized_response_bool(0.5, false)?.into_poly();
-    let rr_query = make_randomized_response_bool(0.5, false)?;
+    let rr_poly_query = make_randomized_response_bool(0.5)?.into_poly();
+    let rr_query = make_randomized_response_bool(0.5)?;
 
     // pass queries into the odometer queryable
     let _answer1: bool = odometer.invoke_poly(rr_poly_query.clone())?;
@@ -108,7 +108,7 @@ fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
             d_in,
         )
     };
-    let m_rr = make_randomized_response_bool(0.75, false)?;
+    let m_rr = make_randomized_response_bool(0.75)?;
     let d_mid = m_rr.map(&1)?;
 
     let mut qbl = odometer(Some(1))?.invoke(&true)?;
@@ -125,11 +125,11 @@ fn test_fully_adaptive_constructor_d_in() -> Fallible<()> {
 
 #[test]
 fn test_fully_adaptive_failed_postprocessing_counts_privacy_loss() -> Fallible<()> {
-    let rr = make_randomized_response_bool(0.75, false)?;
+    let rr = make_randomized_response_bool(0.75)?;
     let budget = rr.map(&1)?;
     let failing = (rr.clone()
         >> Function::new_fallible(|_: &bool| {
-            make_randomized_response_bool(-1.0, false)?;
+            make_randomized_response_bool(-1.0)?;
             Ok(false)
         }))?;
     let mut qbl = make_fully_adaptive_composition(
