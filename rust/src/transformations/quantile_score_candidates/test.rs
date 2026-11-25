@@ -53,6 +53,9 @@ fn test_quantile_score_candidates_offset() -> Fallible<()> {
 
 #[test]
 fn test_validate_candidates() -> Fallible<()> {
+    check_candidates(&vec![1.0])?;
+    assert!(check_candidates(&vec![f64::NAN]).is_err());
+
     let candidates = vec![1, 2, 3];
     check_candidates(&candidates)?;
 
