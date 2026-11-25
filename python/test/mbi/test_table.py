@@ -1,4 +1,5 @@
 import re
+from dataclasses import replace
 from opendp.extras.mbi import (
     Fixed,
     AIM,
@@ -22,117 +23,105 @@ import opendp.prelude as dp
 import warnings
 
 from ..helpers import ids
+from .helpers import effective_estimator, fast_estimator, get_model, tv_distance
 
 
+# Pairwise coverage of algorithm, privacy measure, key discovery and one-way mode.
 @pytest.mark.parametrize(
-    "privacy_loss", [{"epsilon": 5.0}, {"rho": 0.2}], ids=["DP", "zCDP"]
-)
-@pytest.mark.parametrize("approximate", [True, False], ids=["approximate", "pure"])
-@pytest.mark.parametrize(
-    "algorithm",
+    "name, measure, discover, oneway",
     [
-        AIM(queries=2),
-        MST(),
-        Fixed(queries=[Count(("C",)), Count(("A", "B"))]),
-        Sequential(algorithms=[Fixed(queries=[Count(("A", "B"))]), AIM()]),
+        ("Fixed", "epsilon", False, "unkeyed"),
+        ("Fixed", "rho", True, "all"),
+        ("MST", "epsilon", True, "unkeyed"),
+        ("MST", "rho", False, "all"),
+        ("AIM", "epsilon", False, "all"),
+        ("AIM", "rho", True, "unkeyed"),
+        ("Sequential", "epsilon", True, "unkeyed"),
+        ("Sequential", "rho", False, "all"),
     ],
-    ids=["AIM", "MST", "Fixed", "Sequential"],
 )
-def test_fit_effectiveness(algorithm, privacy_loss, approximate):
+def test_fit_configuration(name, measure, discover, oneway):
     pytest.importorskip("mbi")
-    # mutating `parameter` interferes with other pytest parameterizations
-    privacy_loss = privacy_loss.copy()
-
-    cuts = {"A": [-2, -1, 0, 1, 2]}
-    keys: dict[str, list] = {"B": ["a", "b", "c", "d", "e", "f"]}
-    if approximate:
-        privacy_loss["delta"] = 1e-8
-    else:
-        keys["C"] = [0, 1, 2, 3, 4, 5, 6, 7]
-
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
-    cov = np.array([[1.0, 0.75, 0.0], [0.75, 1.0, 0.0], [0.0, 0.0, 1.0]])
-
-    rng = np.random.default_rng(1)
-    data_np = rng.multivariate_normal(mean=[0.0] * 3, cov=cov, size=10_000)
-
-    categories_B = list("abcdef")
-    edges_B = np.linspace(-2, 2, num=5)
-    edges_C = np.linspace(-3, 3, num=7)
-    data_dict = {
-        # continuous float
-        "A": data_np.T[0],
-        # categorical string
-        "B": np.array(categories_B)[np.digitize(data_np.T[1], bins=edges_B)],
-        # categorical int
-        "C": np.digitize(data_np.T[2], bins=edges_C),
-    }
-    data_lf = pl.LazyFrame(data_dict)
-    lookup_B = {"a": -2.5, "b": -1.5, "c": -0.5, "d": 0.5, "e": 1.5, "f": 2.5, None: 0}
-    lookup_C = dict(zip(range(8), np.linspace(-3.5, 3.5, 8)))
-    lookup_C[None] = np.float64(0)  # type: ignore[index]
-    # synthesize() resamples A uniformly within its bins, which inflates var(A) by ~0.15,
-    # so compare A at bin midpoints on both sides, like B and C
-    midpoints_A = np.linspace(-2.5, 2.5, 6)
-    to_mid_A = lambda a: midpoints_A[np.digitize(a, cuts["A"], right=True)]
-
-    roundtrip_np = np.stack(
-        [
-            to_mid_A(data_dict["A"]),
-            [lookup_B[i] for i in data_dict["B"]],
-            [lookup_C[i] for i in data_dict["C"]],
-        ]
+    fixed = Fixed(queries=[Count(("A", "B"))], estimator=fast_estimator)
+    aim = AIM(queries=2, rounds=2, estimator=fast_estimator)
+    algorithm = replace(
+        {
+            "Fixed": fixed,
+            "MST": MST(estimator=fast_estimator),
+            "AIM": aim,
+            "Sequential": Sequential(
+                algorithms=[fixed, fixed, aim],
+                weights=[1, 4, 1],
+                estimator=fast_estimator,
+            ),
+        }[name],
+        oneway=oneway,
     )
-    assert np.linalg.norm(cov - np.cov(roundtrip_np)) < 0.5
+    if not discover and name in ("Fixed", "MST"):
+        algorithm = replace(algorithm, estimator=effective_estimator)
 
+    loss = {measure: 5.0 if measure == "epsilon" else 0.2}
+    keys: dict[str, list] = {"B": ["a", "b"]}
+    if discover:
+        loss["delta"] = 1e-8
+    else:
+        keys["C"] = [0, 1]
+
+    # A-B-C binary Markov chain with independent 10% flips on each edge.
+    counts = np.array([81, 9, 1, 9, 9, 1, 9, 81]).reshape(2, 2, 2)
+    a, b, c = np.repeat(
+        np.indices((2, 2, 2)).reshape(3, -1), counts.ravel() * 100, axis=1
+    )
     context = dp.Context.compositor(
-        data=data_lf,
+        data=pl.LazyFrame({"A": a - 0.5, "B": np.array(["a", "b"])[b], "C": c}),
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(**privacy_loss),
+        privacy_loss=dp.loss_of(**loss),
     )
-
-    table: ContingencyTable = (
-        context.query(**privacy_loss)
-        .contingency_table(cuts=cuts, keys=keys, algorithm=algorithm)
+    table = (
+        context.query(**loss)
+        .contingency_table(cuts={"A": [0.0]}, keys=keys, algorithm=algorithm)
         .release()
     )
 
-    try:
-        std = table.std(("A",))
-        assert isinstance(std, float)
-        # a coarser marginal that covers "A" (e.g. ("A", "B")) can now
-        # legitimately inform this estimate, not just a direct ("A",) release,
-        # so this is a loose sanity bound rather than a tight calibration
-        assert 0 < std < 20
-    except ValueError:
-        pass
+    assert table.keys["A"].to_list() == ["(-inf, 0.0]", "(0.0, inf]"]
+    assert table.keys["B"].to_list() == ["a", "b", None]
+    assert table.keys["C"].to_list() == [0, 1, None]
+    assert ("C" in table.thresholds) == discover
+    projection = np.asarray(table.project(("A", "B", "C")))
+    assert projection.shape == (2, 3, 3)
+    assert np.isfinite(projection).all() and (projection >= 0).all()
+    assert projection.sum() == pytest.approx(table.project([]))
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        synthetic_df = table.synthesize()
-
-    synthetic_list = [
-        to_mid_A(synthetic_df["A"]),
-        [lookup_B[c] for c in synthetic_df["B"]],
-        [lookup_C[c] for c in synthetic_df["C"]],
-    ]
-    cov_syn = np.cov(np.stack(synthetic_list))
-    cov_ref = np.cov(roundtrip_np)
-
-    def test_cov(clique):
-        idx = {"A": 0, "B": 1, "C": 2}
-        i, j = idx[clique[0]], idx[clique[-1]]
-        assert abs(cov_ref[i, j] - cov_syn[i, j]) < 0.2, (
-            f"{clique} cov drifted: {cov_ref[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
+    if name in ("Fixed", "Sequential"):
+        assert ("A", "B") in table.marginals.cliques()
+    if name == "Sequential":
+        first, second = table.marginals.by_clique[("A", "B")][:2]
+        assert first.stddev / second.stddev == pytest.approx(
+            4.0 if measure == "epsilon" else 2.0
         )
+    if not discover and name in ("Fixed", "MST"):
+        expected = np.pad(counts, ((0, 0), (0, 1), (0, 1)))
+        # Independence has TV error 0.4 on either edge.
+        for axis in (2,) if name == "Fixed" else (0, 1, 2):
+            assert (
+                tv_distance(projection.sum(axis=axis), expected.sum(axis=axis)) < 0.08
+            )
+        if name == "MST":
+            assert {cl for cl in table.marginals.cliques() if len(cl) == 2} == {
+                ("A", "B"),
+                ("B", "C"),
+            }
 
-    # in an MRF, a missing 2-way marginal does not imply independence
-    # max-entropy does not guarantee spurious correlations won't be formed on undetermined pairs
-    test_cov(("A", "B"))
-    for clique in (cl for cl in table.marginals.cliques() if 0 < len(cl) <= 2):
-        test_cov(clique)
+
+def test_deindex_keys():
+    np = pytest.importorskip("numpy")
+    pl = pytest.importorskip("polars")
+
+    keys = pl.Series(["a", "b", None])
+    assert _deindex(np.array([2, 0, 1, 0]), keys).to_list() == [None, "a", "b", "a"]
 
 
 def test_contingency_table_snapshots_mutable_algorithm():
@@ -182,7 +171,9 @@ def test_contingency_table_cut_enum_indexing(oneway, with_null):
         context.query(epsilon=10.0)
         .contingency_table(
             cuts={"A": [0.5]},
-            algorithm=Fixed(queries=[Count(("A",))], oneway=oneway),
+            algorithm=Fixed(
+                queries=[Count(("A",))], oneway=oneway, estimator=fast_estimator
+            ),
         )
         .release()
     )
@@ -243,6 +234,7 @@ def test_contingency_table_project():
         model=model,
     )
 
+    assert table.project("A").dtype == np.float64
     assert np.allclose(table.project("A"), A_exact)
     assert np.allclose(table.project("B"), B_exact)
 
@@ -264,6 +256,19 @@ def test_contingency_table_project():
         "len": np.array(AB_exact).ravel().astype(float),
     }
     assert_frame_equal(table.project_melted(("A", "B")), pl.DataFrame(expected))
+
+    for method in ("round", "sample"):
+        synthetic = table.synthesize(rows=800, method=method)
+        assert synthetic.height == 800
+        assert synthetic.schema == {"A": pl.String, "B": pl.String}
+        actual = np.array(
+            [
+                synthetic.filter((pl.col("A") == a) & (pl.col("B") == b)).height
+                for a in A_keys
+                for b in B_keys
+            ]
+        )
+        assert tv_distance(actual, np.ravel(AB_exact)) < 0.12
 
 
 def test_contingency_table_reuse_requires_hbc(monkeypatch):
@@ -305,7 +310,7 @@ def test_make_contingency_table_multi_fit():
         .select("A", "B")
         .contingency_table(
             keys={"A": list(range(5)), "B": list(range(10))},
-            algorithm=Fixed(queries=[Count(("A", "B"))]),
+            algorithm=Fixed(queries=[Count(("A", "B"))], estimator=fast_estimator),
         )
         .release()
     )
@@ -316,7 +321,11 @@ def test_make_contingency_table_multi_fit():
     table2: ContingencyTable = (
         context.query(rho=0.05)
         .select("B", "C")
-        .contingency_table(keys={"C": list(range(20))}, table=table)
+        .contingency_table(
+            keys={"C": list(range(20))},
+            table=table,
+            algorithm=AIM(estimator=fast_estimator, rounds=2),
+        )
         .release()
     )
 
@@ -338,13 +347,6 @@ def test_make_contingency_table_invalid_d_out():
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=(1.0, 1e-8),
         )
-
-
-def get_model(domain: dict[str, int]):
-    from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
-
-    clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], tables={})
-    return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)
 
 
 def test_contingency_table_invalid_shape():
@@ -476,7 +478,11 @@ def test_contingency_table_minimum_variance_weighted_total():
         table: ContingencyTable = (
             context.query(epsilon=1.0, delta=1e-8)
             .contingency_table(
-                algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9)
+                algorithm=Fixed(
+                    queries=[Count(("A",))],
+                    oneway_split=0.9,
+                    estimator=fast_estimator,
+                )
             )
             .release()
         )
@@ -503,7 +509,11 @@ def test_fixed_unkeyed_does_not_release_zero_way_total():
 
     table: ContingencyTable = (
         context.query(epsilon=1.0, delta=1e-8)
-        .contingency_table(algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9))
+        .contingency_table(
+            algorithm=Fixed(
+                queries=[Count(("A",))], oneway_split=0.9, estimator=fast_estimator
+            )
+        )
         .release()
     )
 
@@ -515,14 +525,14 @@ def test_fixed_unkeyed_does_not_release_zero_way_total():
 
 def test_contingency_table_std_ignores_zero_way_total():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
     A_lm = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=1.0)
     total_lm = LinearMeasurement(np.array([8.0]), clique=(), stddev=0.01)
 
-    model = mirror_descent(Domain(("A",), (2,)), [A_lm, total_lm])
+    model = get_model({"A": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"])},
         cuts={},
@@ -537,7 +547,7 @@ def test_contingency_table_std_ignores_zero_way_total():
 
 def test_contingency_table_std_sums_independent_identity_measurements():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
@@ -549,7 +559,7 @@ def test_contingency_table_std_sums_independent_identity_measurements():
     )
     full = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=2.0)
 
-    model = mirror_descent(Domain(("A",), (2,)), [prefix, full])
+    model = get_model({"A": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"])},
         cuts={},
@@ -561,7 +571,7 @@ def test_contingency_table_std_sums_independent_identity_measurements():
     # two independent full identity measurements over the same clique each
     # contribute precision independently, summing by inverse variance
     full2 = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=4.0)
-    model2 = mirror_descent(Domain(("A",), (2,)), [full, full2])
+    model2 = get_model({"A": 2})
     table2 = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"])},
         cuts={},
@@ -574,7 +584,7 @@ def test_contingency_table_std_sums_independent_identity_measurements():
 
 def test_contingency_table_std_larger_measurement_informs_smaller_projection():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
@@ -583,8 +593,7 @@ def test_contingency_table_std_larger_measurement_informs_smaller_projection():
     AB_lm = LinearMeasurement(
         np.array([1.0, 2.0, 3.0, 4.0]), clique=("A", "B"), stddev=2.0
     )
-    domain = Domain(("A", "B"), (2, 2))
-    model = mirror_descent(domain, [AB_lm])
+    model = get_model({"A": 2, "B": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"]), "B": pl.Series("B", ["b1", "b2"])},
         cuts={},
@@ -592,20 +601,23 @@ def test_contingency_table_std_larger_measurement_informs_smaller_projection():
         model=model,
     )
 
-    expected = AB_lm.stddev * (domain.size(("A", "B")) / domain.size(("A",))) ** 0.5
+    expected = (
+        AB_lm.stddev
+        * (model.domain.size(("A", "B")) / model.domain.size(("A",))) ** 0.5
+    )
     assert table.std(("A",)) == pytest.approx(expected)
 
 
 def test_contingency_table_std_smaller_measurement_does_not_inform_larger_projection():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
     # a measurement over (A,) alone cannot provide per-cell uncertainty
     # for the larger clique (A, B)
     A_lm = LinearMeasurement(np.array([1.0, 2.0]), clique=("A",), stddev=1.0)
-    model = mirror_descent(Domain(("A", "B"), (2, 2)), [A_lm])
+    model = get_model({"A": 2, "B": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"]), "B": pl.Series("B", ["b1", "b2"])},
         cuts={},
@@ -619,15 +631,14 @@ def test_contingency_table_std_smaller_measurement_does_not_inform_larger_projec
 
 def test_contingency_table_std_of_total():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
     # any complete identity measurement informs the zero-way total, since
     # a nonempty clique is always a superset of the empty attrs set
     A_lm = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=1.0)
-    domain = Domain(("A",), (2,))
-    model = mirror_descent(domain, [A_lm])
+    model = get_model({"A": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"])},
         cuts={},
@@ -635,7 +646,7 @@ def test_contingency_table_std_of_total():
         model=model,
     )
 
-    expected = A_lm.stddev * domain.size(("A",)) ** 0.5
+    expected = A_lm.stddev * model.domain.size(("A",)) ** 0.5
     assert table.std(()) == pytest.approx(expected)
 
 
@@ -866,7 +877,10 @@ def test_synthesize_with_cuts(monkeypatch, dtype_str, cutset):
     )
     table: ContingencyTable = (
         context.query(epsilon=5.0)
-        .contingency_table(cuts={"A": cutset}, algorithm=Fixed(queries=[Count(("A",))]))
+        .contingency_table(
+            cuts={"A": cutset},
+            algorithm=Fixed(queries=[Count(("A",))], estimator=fast_estimator),
+        )
         .release()
     )
 
@@ -903,12 +917,12 @@ def test_project_melted_empty():
 
 def test_project_melted_unknown_attr():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
     A_lm = LinearMeasurement(np.array([3.0, 5.0]), clique=("A",), stddev=1.0)
-    model = mirror_descent(Domain(("A",), (2,)), [A_lm])
+    model = get_model({"A": 2})
     table = ContingencyTable(
         keys={"A": pl.Series("A", ["a1", "a2"])},
         cuts={},

@@ -15,6 +15,7 @@ import opendp.prelude as dp
 import pytest
 
 from ..helpers import ids
+from .helpers import effective_estimator, get_model, tv_distance
 
 
 @pytest.mark.parametrize(
@@ -35,9 +36,7 @@ from ..helpers import ids
 )
 def test_algorithm_err_elements(algorithm):
     pytest.importorskip("mbi")
-    import mbi  # type: ignore[import-untyped,import-not-found]
-
-    model = mirror_descent(mbi.Domain(("A",), (2,)), [])
+    model = get_model({"A": 2})
 
     msg = "input_domain columns must be bounded"
     with pytest.raises(ValueError, match=re.escape(msg)):
@@ -335,7 +334,6 @@ def test_aim_scores_snapshot_workload():
 def test_aim_exhaustion():
     # tests how algorithm behaves when all workload queries are ineligible for selection
     pytest.importorskip("mbi")
-    import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
     m_aim = dp.mbi.AIM(max_size=1e-10).make_marginals(
@@ -347,61 +345,40 @@ def test_aim_exhaustion():
         d_in=[dp.polars.Bound(per_group=1)],
         d_out=1.0,
         marginals=Marginals(),
-        model=dp.mbi.mirror_descent(mbi.Domain(("A",), (2,)), []),
+        model=get_model({"A": 2}),
     )
 
-    m_aim(pl.LazyFrame({"A": [0]}))
+    marginals, _ = m_aim(pl.LazyFrame({"A": [0]}))
+    assert not marginals.cliques()
 
 
 def test_aim_selects_correlated_pairs():
     pytest.importorskip("mbi")
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
+    from itertools import combinations
 
-    # eight columns in four perfectly correlated pairs: B{i} == A{i}
-    n = 20_000
-    rng = np.random.default_rng(1)
-    columns = [f"{letter}{i}" for i in range(4) for letter in "AB"]
-    data = {}
-    for i in range(4):
-        data[f"A{i}"] = rng.integers(0, 4, n)
-        data[f"B{i}"] = data[f"A{i}"].copy()
-    df = pl.DataFrame({c: data[c] for c in columns})
-
+    # Two independent, perfectly correlated binary pairs.
+    a = np.tile([0, 0, 1, 1], 5000)
+    b = np.tile([0, 1, 0, 1], 5000)
+    data = {"A": a, "B": a, "C": b, "D": b}
     context = dp.Context.compositor(
-        data=df.lazy(),
+        data=pl.LazyFrame(data),
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(rho=0.002),
+        privacy_loss=dp.loss_of(rho=0.02),
     )
     table = (
-        context.query(rho=0.002)
-        .select(*columns)
+        context.query(rho=0.02)
         .contingency_table(
-            keys={c: [0, 1, 2, 3] for c in columns},
-            algorithm=dp.mbi.AIM(queries=2),
+            keys={c: [0, 1] for c in data},
+            algorithm=AIM(queries=2, rounds=6, estimator=effective_estimator),
         )
         .release()
     )
-
-    selected = {frozenset(clique) for clique in table.marginals.cliques()}
-    found = sum(frozenset((f"A{i}", f"B{i}")) in selected for i in range(4))
-    assert found >= 3, f"only {found}/4 correlated pairs selected"
-
-    # mean total variation distance over all two-way marginals;
-    # the independence model scores ~0.107 here
-    synthetic = table.synthesize().drop_nulls()
-    errors = []
-    for i, left in enumerate(columns):
-        for right in columns[i + 1 :]:
-            p = np.bincount(
-                df[left].to_numpy() * 4 + df[right].to_numpy(), minlength=16
-            ) / len(df)
-            q = np.bincount(
-                synthetic[left].to_numpy() * 4 + synthetic[right].to_numpy(),
-                minlength=16,
-            ) / len(synthetic)
-            errors.append(0.5 * np.abs(p - q).sum())
-    assert np.mean(errors) < 0.04
+    assert {("A", "B"), ("C", "D")} <= set(table.marginals.cliques())
+    for left, right in combinations(data, 2):
+        expected = np.bincount(data[left] * 3 + data[right], minlength=9)
+        assert tv_distance(table.project((left, right)).ravel(), expected) < 0.08
 
 
 @pytest.mark.parametrize(
@@ -410,7 +387,6 @@ def test_aim_selects_correlated_pairs():
 )
 def test_aim_penalty_is_per_clique(monkeypatch, output_measure, ratio):
     pytest.importorskip("mbi")
-    import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
     from opendp.extras.mbi import _aim
     from opendp.extras.mbi._aim import _expand_queries, _make_aim_select
@@ -457,7 +433,7 @@ def test_aim_penalty_is_per_clique(monkeypatch, output_measure, ratio):
         d_out=0.1,
         d_measure=0.9,
         queries=queries,
-        model=mirror_descent(mbi.Domain(columns, (4, 4, 4)), []),
+        model=get_model(dict.fromkeys(columns, 4)),
         max_size=80.0,
     )
 
