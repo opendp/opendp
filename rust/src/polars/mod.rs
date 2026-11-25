@@ -41,6 +41,32 @@ pub mod preflight;
 #[cfg(test)]
 mod test;
 
+/// Recursively check a dtype, including nested containers.
+fn dtype_contains(
+    dtype: &polars::prelude::DataType,
+    predicate: fn(&polars::prelude::DataType) -> bool,
+) -> bool {
+    use polars::prelude::DataType;
+    predicate(dtype)
+        || match dtype {
+            DataType::Array(inner, _) | DataType::List(inner) => dtype_contains(inner, predicate),
+            DataType::Struct(fields) => fields
+                .iter()
+                .any(|field| dtype_contains(field.dtype(), predicate)),
+            _ => false,
+        }
+}
+
+pub(crate) fn contains_float(dtype: &polars::prelude::DataType) -> bool {
+    use polars::prelude::DataType;
+    dtype_contains(dtype, DataType::is_float)
+}
+
+pub(crate) fn contains_categorical(dtype: &polars::prelude::DataType) -> bool {
+    use polars::prelude::DataType;
+    dtype_contains(dtype, |dtype| matches!(dtype, DataType::Categorical(_, _)))
+}
+
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
 pub(crate) trait OpenDPPlugin: 'static + Clone + AnonymousColumnsUdf {

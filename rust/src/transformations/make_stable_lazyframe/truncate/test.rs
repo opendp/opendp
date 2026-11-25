@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain},
     metrics::SymmetricDistance,
@@ -74,13 +76,7 @@ fn test_truncate_domain_computed_group_keys() -> Fallible<()> {
             .with_invariant_keys(),
     )?;
 
-    let output = truncate_domain(
-        domain,
-        &Truncation::GroupBy {
-            keys: vec![col("ID"), key.clone()],
-            aggs: vec![col("B").sum()],
-        },
-    )?;
+    let output = group_by_output_domain(&domain, &[col("ID"), key.clone()], &[col("B").sum()])?;
 
     // A now contains the former A + B, while B contains sum(B). Evaluating
     // the same expression on those new columns describes different groups.
@@ -102,13 +98,7 @@ fn test_truncate_domain_aliased_group_keys() -> Fallible<()> {
     ])?
     .with_margin(Margin::by([key.clone()]).with_max_groups(4))?;
 
-    let output = truncate_domain(
-        domain,
-        &Truncation::GroupBy {
-            keys: vec![col("ID"), key.clone()],
-            aggs: vec![],
-        },
-    )?;
+    let output = group_by_output_domain(&domain, &[col("ID"), key.clone()], &[])?;
 
     // An alias names an output column; it is not a request to evaluate the
     // original input-column expression again against the output schema.
@@ -132,13 +122,7 @@ fn test_truncate_domain_plain_group_keys() -> Fallible<()> {
     ])?
     .with_margin(margin.clone())?;
 
-    let output = truncate_domain(
-        domain,
-        &Truncation::GroupBy {
-            keys: vec![col("ID"), col("A")],
-            aggs: vec![],
-        },
-    )?;
+    let output = group_by_output_domain(&domain, &[col("ID"), col("A")], &[])?;
 
     assert_eq!(
         output.margins,
@@ -157,14 +141,8 @@ fn test_truncate_domain_rejects_duplicate_output_key_names() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?;
-    let error = truncate_domain(
-        domain,
-        &Truncation::GroupBy {
-            keys: vec![col("ID"), col("A"), col("A") + col("B")],
-            aggs: vec![],
-        },
-    )
-    .unwrap_err();
+    let error = group_by_output_domain(&domain, &[col("ID"), col("A"), col("A") + col("B")], &[])
+        .unwrap_err();
 
     // Both A and A + B emit column A, so no unambiguous output schema or
     // partition certificates can be constructed for this query.
@@ -369,5 +347,73 @@ fn test_truncate_materializes_each_bound_grouping_subset() -> Fallible<()> {
     // per (A + B, C). Four different C values still contribute to output A.
     let output = t.invoke(&lf)?.group_by([col("A")]).agg([len()]).collect()?;
     assert_eq!(output.column("len")?.u32()?.get(0), Some(4));
+    Ok(())
+}
+
+#[test]
+fn test_truncate_rewrites_grouping_keys() -> Fallible<()> {
+    let lf = df!(
+        "ID" => [7i32, 7, 7],
+        "text" => ["1", "2", "not a number"],
+        "value" => [10i32, 20, 30],
+    )?
+    .lazy();
+    let domain = LazyFrameDomain::new_from_schema((*lf.clone().collect_schema()?).clone())?;
+    let strict_key = col("text").strict_cast(DataType::Int64);
+    let stable_key = col("text").cast(DataType::Int64);
+    let stabilize = |plan| {
+        make_stable_lazyframe::<_, FrameDistance<SymmetricDistance>>(
+            domain.clone(),
+            SymmetricIdDistance {
+                identifier: col("ID"),
+            },
+            plan,
+        )
+    };
+    let rank = strict_key
+        .clone()
+        .rank(
+            RankOptions {
+                method: RankMethod::Dense,
+                descending: false,
+            },
+            None,
+        )
+        .over([col("ID")])
+        .lt_eq(lit(1));
+
+    let t = stabilize(lf.clone().filter(rank.clone()))?;
+    assert_eq!(t.invoke(&lf)?.collect()?.height(), 1);
+    let bounds = t.map(&1)?;
+    assert!(
+        bounds
+            .0
+            .iter()
+            .any(|b| b.by == HashSet::from([stable_key.clone()]))
+    );
+    assert!(bounds.0.iter().all(|b| !b.by.contains(&strict_key)));
+
+    // Syntactically distinct keys agree after stabilization.
+    let plan = lf
+        .clone()
+        .filter(rank)
+        .group_by([col("ID"), stable_key])
+        .agg([col("value").sum()]);
+    let t = stabilize(plan)?;
+    assert_eq!(t.invoke(&lf)?.collect()?.height(), 1);
+    assert!(
+        t.map(&1)?
+            .0
+            .iter()
+            .any(|b| b.by == HashSet::from([col("text")]))
+    );
+
+    // The invalid cast becomes null instead of raising on private data.
+    let plan = lf
+        .clone()
+        .group_by([col("ID"), strict_key])
+        .agg([col("value").sum()]);
+    let t = stabilize(plan)?;
+    assert_eq!(t.invoke(&lf)?.collect()?.column("text")?.null_count(), 1);
     Ok(())
 }

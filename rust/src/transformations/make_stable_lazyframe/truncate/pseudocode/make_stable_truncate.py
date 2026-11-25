@@ -2,67 +2,61 @@
 def make_stable_truncate(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance[SymmetricIdDistance],
-    plan: DslPlan,
+    matched: MatchedTruncations,
 ) -> Transformation[
     DslPlanDomain,
     DslPlanDomain,
     FrameDistance[SymmetricIdDistance],
     FrameDistance[SymmetricDistance],
 ]:
-    # the identifier is protected from changes, so we can use the identifier from the input metric
-    # instead of the identifier from the middle_metric to match truncations
-    input, truncations, truncation_bounds = match_truncations(
-        plan, input_metric[0].identifier
-    )
-
-    if truncations.is_empty():
-        return ValueError("failed to match truncation")
-
-    t_prior = input.make_stable(input_domain, input_metric)
+    t_prior = matched.input.make_stable(input_domain, input_metric)
     middle_domain, middle_metric = t_prior.output_space()
+    stable_input = t_prior(matched.input)
+    identifier = middle_metric[0].identifier
+    keys = {identifier}
+    keys.update(key for bound in matched.bounds for key in bound.by)
+    stable_keys = {}
+    for key in keys:
+        t_key = make_stable_expr(  # |\label{line:stable-keys}|
+            WildExprDomain(
+                columns=middle_domain.series_domains,
+                context=Context.RowByRow,
+            ),
+            L0PInfDistance(middle_metric[0]),
+            key,
+        )
+        stable_key = t_key(stable_input).expr
+        if key == identifier and stable_key != key:
+            raise ValueError("The identifier cannot be rewritten.")
+        stable_keys[key] = stable_key
 
+    filters, group_by = matched.filters, matched.group_by
+    for index, predicate in enumerate(filters):  # |\label{line:check-rewrites}|
+        filters[index] = rewrite_windows(predicate, stable_keys)
+
+    truncation_bounds = matched.bounds
     for bound in truncation_bounds:
-        for key in bound.by:
-            # raises if the key is not infallible row-by-row
-            make_stable_expr(  # |\label{line:stable-keys}|
-                WildExprDomain(
-                    columns=middle_domain.series_domains,
-                    context=Context.RowByRow,
-                ),
-                L0PInfDistance(middle_metric[0]),
-                key,
-            )
+        bound.by = {stable_keys[key] for key in bound.by}
 
-    output_domain = middle_domain.clone()
-    for truncation in truncations:  # |\label{line:truncation}|
-        output_domain = truncate_domain(output_domain, truncation)
+    if group_by is not None:
+        group_by.keys = [stable_keys[key] for key in group_by.keys]
+        allowed_keys = set(group_by.keys)
+        for bound in truncation_bounds:  # |\label{line:allowed_keys_check}|
+            if not bound.by.issubset(allowed_keys):
+                raise ValueError(
+                    "filter truncation keys must be a subset of groupby keys"
+                )
 
-    # The matcher permits only filters followed by an optional final group-by.
-    has_group_by = isinstance(truncations[-1], Truncation.GroupBy)
-    output_bys = [  # |\label{line:output-bys}|
-        materialize_grouping_keys(bound.by) if has_group_by else bound.by
-        for bound in truncation_bounds
-    ]
+    if group_by is not None:  # |\label{line:truncation}|
+        output_domain = group_by_output_domain(
+            middle_domain, group_by.keys, group_by.aggs
+        )
+    else:
+        output_domain = middle_domain.clone()
+        for margin in output_domain.margins:
+            margin.invariant = None
 
-    def function(plan: DslPlan) -> DslPlan:
-        for truncation in truncations:
-            match truncation:
-                case Truncation.Filter(predicate):
-                    plan = DslPlan.Filter(
-                        input=plan,
-                        predicate=predicate,
-                    )
-
-                case Truncation.GroupBy(keys, aggs):
-                    plan = DslPlan.GroupBy(
-                        input=plan,
-                        keys=keys,
-                        aggs=aggs,
-                        apply=None,
-                        maintain_order=False,
-                        options=GroupbyOptions.default(),
-                    )
-        return plan
+    has_group_by = group_by is not None
 
     def stability_map(id_bounds: Bounds) -> Bounds:
         # |\label{line:total-ids}|
@@ -70,19 +64,27 @@ def make_stable_truncate(
 
         # each truncation is used to derive row bounds
         new_bounds = []
-        for truncation_bound, output_by in zip(  # |\label{line:truncation-bound}|
-            truncation_bounds, output_bys
-        ):
-            # Look up the per-id bound using the original input expression.
+        for truncation_bound in truncation_bounds:  # |\label{line:truncation-bound}|
+            # Look up the per-id bound using the certified execution expression.
             row_bound = truncate_id_bound(  # |\label{line:truncate-id-bound}|
                 id_bounds.get_bound(truncation_bound.by),  # |\label{line:id-bound-by}|
                 truncation_bound,
                 total_num_ids,
             )
             # Describe the resulting rows using materialized output columns.
-            row_bound.by = output_by  # |\label{line:output-bound-by}|
+            if has_group_by:
+                row_bound.by = materialize_grouping_keys(
+                    row_bound.by
+                )  # |\label{line:output-bound-by}|
             new_bounds.append(row_bound)
         return Bounds(new_bounds)
+
+    def function(plan):
+        for predicate in filters:
+            plan = DslPlan.Filter(input=plan, predicate=predicate)
+        if group_by is not None:
+            plan = group_by_plan(plan, group_by.keys, group_by.aggs, False)
+        return plan
 
     t_truncate = Transformation.new(
         middle_domain,

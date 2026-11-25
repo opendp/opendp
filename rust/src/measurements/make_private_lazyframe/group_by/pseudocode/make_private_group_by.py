@@ -14,6 +14,7 @@ def make_private_group_by(
     # 1: establish stability of `group_by` |\label{line:input_stability}|
     t_prior = input.make_stable(input_domain, input_metric)  # |\label{line:tprior}|
     middle_domain, middle_metric = t_prior.output_space()
+    stable_input = t_prior(input)
 
     group_by_keys = []
     for expr in group_by:  # |\label{line:group-by-stability}|
@@ -29,9 +30,9 @@ def make_private_group_by(
         if t_group_by.output_domain.column.dtype() == DataType.Categorical:
             raise "Categorical grouping keys have data-dependent encodings. Cast to String or Enum first."
 
-        group_by_keys.append(t_group_by.invoke(input).expr)
+        group_by_keys.append(t_group_by.invoke(stable_input).expr)
 
-    group_by_id = HashSet.from_iter(group_by)  # |\label{line:groupcols}|
+    group_by_id = HashSet.from_iter(group_by_keys)  # |\label{line:groupcols}|
     margin = middle_domain.get_margin(group_by_id)  # |\label{line:margin}|
 
     # 2: prepare for release of `aggs` |\label{line:prep-release-aggs}|

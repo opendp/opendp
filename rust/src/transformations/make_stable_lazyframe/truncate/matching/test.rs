@@ -21,17 +21,19 @@ fn test_match_truncations_ok() -> Fallible<()> {
         .group_by([col("ID"), col("A")])
         .agg([col("B").sum()]);
 
-    let (_, truncations, truncation_bounds) =
-        match_truncations(plan.logical_plan.clone(), &col("ID")).unwrap();
+    let MatchedTruncations {
+        filters,
+        group_by,
+        bounds: truncation_bounds,
+        ..
+    } = match_truncations(plan.logical_plan.clone(), &col("ID"))?.expect("expected truncations");
+    assert_eq!(filters, vec![truncate_num_groups]);
     assert_eq!(
-        truncations,
-        vec![
-            Truncation::Filter(truncate_num_groups),
-            Truncation::GroupBy {
-                keys: vec![col("ID"), col("A")],
-                aggs: vec![col("B").sum()]
-            },
-        ]
+        group_by,
+        Some(GroupByTruncation {
+            keys: vec![col("ID"), col("A")],
+            aggs: vec![col("B").sum()],
+        })
     );
     assert_eq!(
         truncation_bounds,
@@ -89,68 +91,31 @@ fn test_match_truncations_phony_filter() -> Fallible<()> {
         .filter(col("B").lt(lit(0)));
 
     // no error, but doesn't match as a truncation due to leading filter
-    assert!(
-        match_truncations(plan.logical_plan.clone(), &col("ID"))?
-            .1
-            .is_empty()
-    );
+    assert!(match_truncations(plan.logical_plan.clone(), &col("ID"))?.is_none());
     Ok(())
 }
 
 #[test]
-fn test_match_group_by_truncation_no_grouping() -> Fallible<()> {
+fn test_match_group_by_truncation() -> Fallible<()> {
     let lf = df!["A" => [1], "B" => [1], "ID" => [1]]?.lazy();
-
-    let plan = lf.clone().group_by([col("ID")]).agg([col("B").sum()]);
-
-    let (_, truncation, bound) = match_group_by_truncation(&plan.logical_plan, &col("ID")).unwrap();
-    assert_eq!(
-        truncation,
-        Truncation::GroupBy {
-            keys: vec![col("ID")],
-            aggs: vec![col("B").sum()]
-        }
-    );
-
-    assert_eq!(
-        bound,
-        Bound {
-            by: HashSet::new(),
-            per_group: Some(1),
-            num_groups: None,
-        }
-    );
-
-    Ok(())
-}
-
-#[test]
-fn test_match_group_by_truncation_with_grouping() -> Fallible<()> {
-    let lf = df!["A" => [1], "B" => [1], "ID" => [1]]?.lazy();
-
-    let plan = lf
-        .clone()
-        .group_by([col("ID"), col("A")])
-        .agg([col("B").sum()]);
-
-    let (_, truncation, bound) = match_group_by_truncation(&plan.logical_plan, &col("ID")).unwrap();
-    assert_eq!(
-        truncation,
-        Truncation::GroupBy {
-            keys: vec![col("ID"), col("A")],
-            aggs: vec![col("B").sum()]
-        }
-    );
-
-    assert_eq!(
-        bound,
-        Bound {
-            by: HashSet::from([col("A")]),
-            per_group: Some(1),
-            num_groups: None,
-        }
-    );
-
+    for (keys, by) in [
+        (vec![col("ID")], HashSet::new()),
+        (vec![col("ID"), col("A")], HashSet::from([col("A")])),
+    ] {
+        let aggs = vec![col("B").sum()];
+        let plan = lf.clone().group_by(keys.clone()).agg(aggs.clone());
+        let (_, truncation, bound) =
+            match_group_by_truncation(&plan.logical_plan, &col("ID")).unwrap();
+        assert_eq!(truncation, GroupByTruncation { keys, aggs });
+        assert_eq!(
+            bound,
+            Bound {
+                by,
+                per_group: Some(1),
+                num_groups: None
+            }
+        );
+    }
     Ok(())
 }
 
@@ -239,7 +204,7 @@ fn test_match_num_groups_predicate() -> Fallible<()> {
         num_groups: Some(10),
     });
 
-    let check = |expr: Expr| match_num_groups_predicate(&expr, &vec![col("ID")], &col("ID"), 10);
+    let check = |expr: Expr| match_num_groups_predicate(&expr, &[col("ID")], &col("ID"), 10);
     assert_eq!(
         check(col("A").rank(
             RankOptions {
@@ -275,7 +240,7 @@ fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
     });
 
     let check =
-        |expr: Expr| match_per_group_predicate(&expr, &vec![col("A"), col("ID")], &col("ID"), 10);
+        |expr: Expr| match_per_group_predicate(&expr, &[col("A"), col("ID")], &col("ID"), 10);
 
     let range = int_range(lit(0), len(), 1, DataType::Int64);
     assert_eq!(check(range.clone())?, bound);
@@ -293,8 +258,24 @@ fn test_match_per_group_predicate_enumerations() -> Fallible<()> {
 fn test_match_per_group_predicate_id() -> Fallible<()> {
     let range = int_range(lit(0), len(), 1, DataType::Int64);
     // no matches should error
-    assert!(match_per_group_predicate(&range, &vec![col("A")], &col("ID"), 10).is_err());
+    assert!(match_per_group_predicate(&range, &[col("A")], &col("ID"), 10).is_err());
     // multiple matches should pass
-    assert!(match_per_group_predicate(&range, &vec![col("ID"); 2], &col("ID"), 0)?.is_some());
+    assert!(match_per_group_predicate(&range, &[col("ID"), col("ID")], &col("ID"), 0)?.is_some());
+    Ok(())
+}
+
+#[cfg(patch_polars)]
+#[test]
+fn test_group_by_truncation_rejects_having() -> Fallible<()> {
+    let mut plan = df!("ID" => [1i32], "A" => [2i32])?
+        .lazy()
+        .group_by([col("ID")])
+        .agg([col("A").sum()])
+        .logical_plan;
+    let DslPlan::GroupBy { predicates, .. } = &mut plan else {
+        panic!("expected group-by");
+    };
+    predicates.push(col("A").gt(lit(0)));
+    assert!(match_group_by_truncation(&plan, &col("ID")).is_none());
     Ok(())
 }
