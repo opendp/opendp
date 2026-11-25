@@ -13,10 +13,11 @@ from typing import (
     TYPE_CHECKING,
 )
 from functools import reduce
-from math import inf, isfinite, nextafter, sqrt
+from math import isfinite, sqrt
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
+    _l01inf_to_lp,
     _make_transformation,
     _new_pure_function,
 )
@@ -438,11 +439,10 @@ def make_noise_marginal(
 def _noise_sensitivity(measure: Measure, distance: tuple[int, int, int]) -> float | int:
     """Project marginal contribution bounds to the norm used by the noise."""
     if measure == max_divergence():
-        return distance[1]
+        # The L1 bound is a u32, exactly representable in f64.
+        return int(_l01inf_to_lp(distance, p=1))
 
-    l0, l1, linf = distance
-    # sqrt may round down; advance by one representable float.
-    return min(l1, nextafter(sqrt(l0 * linf**2), inf))
+    return _l01inf_to_lp(distance, p=2)
 
 
 def row_major_order(keys: Iterator):

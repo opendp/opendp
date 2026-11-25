@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn l01inf\_to\_lp}}
+\author{\MichaelShoemateAuthor}
+
+\begin{document}
+\maketitle
+\contrib
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item $(l_0,l_1,b)=\texttt{distance}$ is of type \texttt{(u32,u32,u32)}.
+    \item \texttt{p} is of type \texttt{usize}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \texttt{Err(e)} or \texttt{Ok(out)}, where $p\in\{1,2\}$ and,
+    for any finite real vector $v$,
+    \[
+        \|v\|_0\le l_0\land\|v\|_1\le l_1\land\|v\|_\infty\le b
+        \implies \|v\|_p\le\texttt{out}.
+    \]
+\end{theorem}
+
+\begin{proof}
+    Let $s=\min(l_1,l_0b)$. Then $\|v\|_1\le s$.
+    If $b=0$, $\|v\|_2=0$. Otherwise, write
+    $s=qb+r$, $0\le r<b$, and let
+    \[
+        w=(\underbrace{b,\ldots,b}_{q},r,0,\ldots,0).
+    \]
+    Pad $w$ and the decreasing rearrangement $z$ of $|v|$ with zeros
+    to a common length (omitting $r$ if zero).
+    For each $k$,
+    \[
+        \sum_{i=1}^k z_i\le\min(kb,s)=\sum_{i=1}^k w_i.
+    \]
+    By weak majorization and the convex increasing
+    function $t\mapsto t^2$ on $[0,\infty)$ gives
+    \[
+        \|v\|_2^2\le\|w\|_2^2=qb^2+r^2.
+    \]
+    Since $s\le l_0b$, this bound is attained by $w$ whenever the
+    dimension permits.
+
+    Integer arithmetic is exact in \texttt{u64} because
+    \begin{align*}
+        l_0b&\le(2^{32}-1)^2<2^{64},\\
+        qb^2+r^2&\le sb\le l_1b<2^{64}.
+    \end{align*}
+    The cast of $s$ is exact. For $p=2$, the cast and square root
+    round upward. Other $p$ are rejected.
+\end{proof}
+\end{document}

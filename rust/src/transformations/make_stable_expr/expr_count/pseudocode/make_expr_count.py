@@ -1,6 +1,6 @@
 # type: ignore
 def make_expr_count(
-    input_domain: ExprDomain, input_metric: PartitionDistance[MI], expr: Expr
+    input_domain: WildExprDomain, input_metric: L01InfDistance[MI], expr: Expr
 ) -> Transformation:
     match expr:  # `\label{match-strategy}`
         case Agg(Count(input, include_nulls)):
@@ -28,21 +28,19 @@ def make_expr_count(
     t_prior = input.make_stable(input_domain, input_metric)  # `\label{t-prior}`
     middle_domain, middle_metric = t_prior.output_space()
 
-    by, margin = middle_domain.context.grouping("count")  # `\label{alignment}`
+    margin = middle_domain.context.aggregation(str(strategy))  # `\label{alignment}`
 
-    output_domain = ExprDomain.new(  # `\label{output-domain}`
+    output_domain = ExprDomain(  # `\label{output-domain}`
         column=SeriesDomain.new(  # `\label{output-series}`
             middle_domain.column.name,
             AtomDomain.default(u32),
         ),
-        context=Context.Grouping(
-            by=by,
+        context=Context.Aggregation(
             margin=Margin(
-                max_partition_length=1,
-                max_num_partitions=margin.max_num_partitions,
-                max_partition_contributions=None,
-                max_influenced_partitions=margin.max_influenced_partitions,
-                public_info=margin.public_info,
+                by=margin.by,
+                max_length=1,
+                max_groups=margin.max_groups,
+                invariant=margin.invariant,
             ),
         ),
     )
@@ -55,9 +53,7 @@ def make_expr_count(
         case _:
             will_count_all = False
 
-    public_info = (
-        margin.public_info if will_count_all else None
-    )  # `\label{public-info}`
+    invariant = margin.invariant if will_count_all else None  # `\label{invariant}`
 
     def function(e: Expr) -> Expr:  # `\label{function}`
         match strategy:
@@ -72,9 +68,9 @@ def make_expr_count(
 
     return t_prior >> Transformation.new(  # `\label{count-trans}`
         middle_domain,
-        output_domain,  # `\label{output-domain-usage}`
-        Function.then_expr(function),
         middle_metric,
+        output_domain,  # `\label{output-domain-usage}`
         LpDistance.default(),
-        counting_query_stability_map(public_info),  # `\label{stability-map}`
+        Function.then_expr(function).fill_with(typed_lit(u32(0))),
+        counting_query_stability_map(invariant),  # `\label{stability-map}`
     )

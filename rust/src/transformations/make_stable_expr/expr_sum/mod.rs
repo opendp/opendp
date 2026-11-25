@@ -2,14 +2,14 @@ use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, Context, Margin, WildExprDomain};
 use crate::domains::{ExprDomain, Invariant::Lengths, NumericDataType, SeriesDomain};
 use crate::error::*;
-use crate::metrics::{IntDistance, L01InfDistance, LpDistance};
+use crate::metrics::{IntDistance, L01InfDistance, LpDistance, l01inf_to_lp};
 use crate::traits::{
-    AlertingAbs, CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSqrt, InfSub, Number,
-    ProductOrd,
-    sum::{round_up, sum_magnitude, sum_relaxation},
+    CheckAtom, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, Number, ProductOrd,
+    sum::{round_up, sum_abs_bound, sum_error},
 };
 use crate::transformations::int_sum_size_limit;
 use crate::transformations::traits::UnboundedMetric;
+use dashu::rational::RBig;
 use num::Zero;
 use polars::prelude::*;
 use polars_plan::plans::{TypedLiteral, typed_lit};
@@ -140,7 +140,7 @@ fn sum_stability_map<MI, const P: usize, TI>(
 where
     MI: UnboundedMetric,
     TI: Summand,
-    f64: InfCast<TI::Sum> + InfCast<u32>,
+    f64: InfCast<TI::Sum>,
 {
     let margin = domain.context.aggregation("sum")?;
     let (l, u) = domain.column.atom_domain::<TI>()?.get_closed_bounds()?;
@@ -161,17 +161,12 @@ where
         )
     })?)?;
 
-    let pp_relaxation = f64::inf_cast(TI::Sum::relaxation(max_size, l, u)?)?;
+    let pp_relaxation = TI::Sum::relaxation(max_size, l, u)?;
 
-    let norm_map = move |d_in: f64| match P {
-        1 => Ok(d_in),
-        2 => d_in.inf_sqrt(),
-        _ => return fallible!(MakeTransformation, "unsupported Lp norm"),
-    };
-
-    let pp_map = move |d_in: &IntDistance| match invariant {
-        Some(Lengths) => TI::Sum::inf_cast(*d_in / 2)?.inf_mul(&u.inf_sub(&l)?),
-        _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
+    let (lower, upper) = (f64::neg_inf_cast(l)?, f64::inf_cast(u)?);
+    let sensitivity = match invariant {
+        Some(Lengths) => upper.inf_sub(&lower)?,
+        _ => upper.max(-lower),
     };
 
     let max_groups = if pp_relaxation.is_zero() {
@@ -185,16 +180,15 @@ where
         })?
     };
 
+    let relaxation = l01inf_to_lp((max_groups, max_groups, 1), P)?.inf_mul(&pp_relaxation)?;
     Ok(StabilityMap::new_fallible(
-        move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            let mcg_p = norm_map(f64::from(max_groups))?;
-            let l0_p = norm_map(f64::from(*l0))?;
-            let l1_p = f64::inf_cast(pp_map(l1)?)?;
-            let l_inf_p = f64::inf_cast(pp_map(l_inf)?)?;
-
-            let relaxation = mcg_p.inf_mul(&pp_relaxation)?;
-
-            l1_p.total_min(l0_p.inf_mul(&l_inf_p)?)?
+        move |&(l0, l1, linf): &(IntDistance, IntDistance, IntDistance)| {
+            let distance = match invariant {
+                Some(Lengths) => (l0, l1 / 2, linf / 2),
+                _ => (l0, l1, linf),
+            };
+            l01inf_to_lp(distance, P)?
+                .inf_mul(&sensitivity)?
                 .inf_add(&relaxation)
         },
     ))
@@ -225,20 +219,17 @@ impl_summand!(f32, f32);
 impl_summand!(f64, f64);
 
 pub trait Accumulator: Number + NumericDataType + Sized {
-    fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self>;
+    fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<f64>;
 }
 
 macro_rules! impl_accumulator_for_float {
     ($t:ty) => {
         impl Accumulator for $t {
-            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
+            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<f64> {
                 // ChunkAgg::sum left-folds chunk totals: N singleton chunks need depth N-1.
                 let max_depth = size_limit.saturating_sub(1);
-                round_up(sum_relaxation(
-                    size_limit,
-                    max_depth,
-                    sum_magnitude((lower, upper))?,
-                )?)
+                let bound = sum_abs_bound(size_limit, (lower, upper))?;
+                round_up(sum_error::<$t>(max_depth, &bound, &bound)? * RBig::from(2))
             }
         }
     };
@@ -250,14 +241,14 @@ impl_accumulator_for_float!(f64);
 macro_rules! impl_accumulator_for_int {
     ($($t:ty)+) => {
         $(impl Accumulator for $t {
-            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<Self> {
+            fn relaxation(size_limit: usize, lower: Self, upper: Self) -> Fallible<f64> {
                 if size_limit > int_sum_size_limit((lower, upper)) {
                     return fallible!(
                         MakeTransformation,
                         "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds or by using a data type with greater bit-depth."
                     );
                 }
-                Ok(0)
+                Ok(0.)
             }
         })+
     };

@@ -366,3 +366,77 @@ pub extern "C" fn opendp_internal___exponential_bounds_search(
     )
     .into()
 }
+
+#[bootstrap(
+    generics(T(default = "float")),
+    arguments(max_depth(c_type = "size_t")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Bound the Lp sensitivity of floating-point sums, including rounding error.
+/// Assumes finite summands and round-to-nearest addition with gradual underflow.
+///
+/// Let a_j be the exact sum of the absolute values of the summands in coordinate j,
+/// on either input. The norm bounds apply to a, not to the vector of final sums.
+///
+/// # Arguments
+/// * `sensitivity` - Lp sensitivity in exact arithmetic (p >= 1).
+/// * `max_depth` - Upper bound on summation tree depth.
+/// * `l_inf_bound` - Upper bound on the L-infinity norm of a.
+/// * `lp_bound` - Upper bound on the Lp norm of a.
+/// # Generics
+/// * `T` - Summation type (f32 or f64).
+fn _float_sum_sensitivity<T: crate::traits::Float>(
+    sensitivity: f64,
+    max_depth: usize,
+    l_inf_bound: f64,
+    lp_bound: f64,
+) -> Fallible<f64> {
+    crate::traits::sum::float_sum_sensitivity::<T>(sensitivity, max_depth, l_inf_bound, lp_bound)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_internal___float_sum_sensitivity(
+    sensitivity: f64,
+    max_depth: usize,
+    l_inf_bound: f64,
+    lp_bound: f64,
+    T: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: crate::traits::Float>(
+        sensitivity: f64,
+        max_depth: usize,
+        l_inf_bound: f64,
+        lp_bound: f64,
+    ) -> FfiResult<*mut AnyObject> {
+        _float_sum_sensitivity::<T>(sensitivity, max_depth, l_inf_bound, lp_bound)
+            .map(AnyObject::new)
+            .into()
+    }
+
+    let T = try_!(Type::try_from(T));
+    dispatch!(monomorphize, [
+        (T, @floats)
+    ], (sensitivity, max_depth, l_inf_bound, lp_bound))
+}
+
+#[bootstrap(
+    arguments(p(c_type = "size_t")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Bound an Lp norm from L0, L1 and L-infinity bounds.
+///
+/// # Arguments
+/// * `distance` - (L0, L1, L-infinity) bounds.
+/// * `p` - 1 or 2.
+fn _l01inf_to_lp(distance: (u32, u32, u32), p: usize) -> Fallible<f64> {
+    crate::metrics::l01inf_to_lp(distance, p)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_internal___l01inf_to_lp(
+    distance: *const AnyObject,
+    p: usize,
+) -> FfiResult<*mut AnyObject> {
+    let distance = *try_!(try_as_ref!(distance).downcast_ref::<(u32, u32, u32)>());
+    _l01inf_to_lp(distance, p).map(AnyObject::new).into()
+}

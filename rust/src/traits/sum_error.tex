@@ -1,0 +1,87 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn sum\_error}}
+\author{\MichaelShoemateAuthor}
+
+\begin{document}
+\maketitle
+\contrib
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{T: Float}, either \texttt{f32} or \texttt{f64}.
+    \item $h=\texttt{max\_depth}$ is of type \texttt{usize}.
+    \item $A=\texttt{l\_inf\_bound}$ and $B=\texttt{lp\_bound}$ are of type \texttt{\&RBig}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    The function returns \texttt{Err(e)} or \texttt{Ok(out)}.
+    In the latter case, for every $p\ge1$ and vector of sums
+    \[
+        s_j=\sum_i x_{ji},\qquad a_j=\sum_i |x_{ji}|,
+        \qquad \|a\|_\infty\le A,\quad \|a\|_p\le B,
+    \]
+    evaluated by binary summation trees of depth at most $h$ with finite
+    leaves of type $T$ and round-to-nearest addition with gradual underflow,
+    all intermediate sums are finite and
+    $\|\widehat{s}-s\|_p\le\texttt{out}$,
+    where $\widehat{s}$ is the vector of computed sums.
+\end{theorem}
+
+\begin{lemma}\label{accuracy-bound}
+    Let $u=\texttt{T::epsilon()}/2$, $hu<1$, and $\gamma_h=hu/(1-hu)$.
+    For a nonoverflowing summation tree of depth at most $h$,
+    \[
+        \left|\widehat{s}-\sum_i x_i\right|\le\gamma_h\sum_i|x_i|.
+    \]
+\end{lemma}
+
+\begin{proof}
+    Each addition has $\operatorname{fl}(a+b)=(a+b)(1+\delta)$,
+    $|\delta|\le u$ \href{https://doi.org/10.1137/0914050}{(Higham, 1993)}.
+    Subnormal additions are exact.
+    For the path $P_i$ from $x_i$ to the root, set
+    $\theta_i=\prod_{k\in P_i}(1+\delta_k)-1$. Since $|P_i|\le h$,
+    \begin{align*}
+        |\theta_i|
+        &\le \max\{(1+u)^h-1,1-(1-u)^h\}\\
+        &\le (1-hu)^{-1}-1=\gamma_h,\\
+        \left|\widehat{s}-\sum_i x_i\right|
+        &=\left|\sum_i x_i\theta_i\right|
+        \le\gamma_h\sum_i|x_i|.
+    \end{align*}
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+    Let $C=\min(A,B)\ge\|a\|_\infty$.
+    If $h=0$ or $C=0$, the sum is exact and finite, and \texttt{out}=0.
+    Otherwise, the exact rational checks ensure
+    \[
+        hu<1,\qquad C(1+\gamma_h)\le T_{\max},
+    \]
+    where $T_{\max}$ is the largest finite value of type $T$.
+
+    At a hypothetical first overflowing addition, its child sums
+    $\widehat{s}_L,\widehat{s}_R$ are finite.
+    By Lemma~\ref{accuracy-bound}, with $a_L,a_R$ their absolute-summand sums,
+    \begin{align*}
+        |\widehat{s}_L+\widehat{s}_R|
+        &\le(1+\gamma_h)(a_L+a_R)\\
+        &\le(1+\gamma_h)C\le T_{\max},
+    \end{align*}
+    a contradiction. Thus the lemma applies to each coordinate:
+    \[
+        |\widehat{s}_j-s_j|\le\gamma_h a_j
+        \implies \|\widehat{s}-s\|_p
+        \le\gamma_h\|a\|_p\le\gamma_h B=\texttt{out}.
+    \]
+\end{proof}
+\end{document}
