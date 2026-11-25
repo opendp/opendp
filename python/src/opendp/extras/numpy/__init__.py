@@ -14,6 +14,7 @@ The members of this module will then be accessible at ``dp.numpy``.
 from __future__ import annotations
 from typing import Literal, Optional
 from dataclasses import dataclass, asdict
+import math
 
 from opendp.mod import Domain
 from opendp.typing import (
@@ -24,7 +25,7 @@ from opendp.typing import (
 )
 from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
-from opendp.extras.numpy._norm import _rows_within_norm
+from opendp.extras.numpy._norm import _rows_within_norm, _integer_rows_within_norm
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp  # noqa: F401
 
@@ -45,6 +46,8 @@ def _check_norm_and_p(norm: float | None, p: int | None):
             raise ValueError("norm must be float")  # pragma: no cover
         if norm < 0.0:
             raise ValueError("norm must be non-negative")  # pragma: no cover
+        if not math.isfinite(norm):
+            raise ValueError("norm must be finite")
 
     if p not in {None, 1, 2}:
         raise ValueError("p must be 1 or 2")  # pragma: no cover
@@ -126,6 +129,8 @@ def array2_domain(
         if origin.ndim not in {0, 1}:
             raise ValueError("origin must have 0 or 1 dimensions")  # pragma: no cover
 
+        if not np.isfinite(origin).all():
+            raise ValueError("origin must be finite")
         # Do not retain a reference to the caller's array.
         origin = origin.copy()
 
@@ -192,9 +197,13 @@ def array2_domain(
             raise ValueError("must not contain NaN values")
 
         if norm is not None:
-            with np.errstate(all="ignore"):
-                centered = x - origin
-            if not _rows_within_norm(centered, norm, p).all():
+            if x.dtype.kind in {"i", "u"}:
+                valid = _integer_rows_within_norm(x, origin, norm, p)
+            else:
+                with np.errstate(all="ignore"):
+                    centered = x - origin
+                valid = _rows_within_norm(centered, norm, p).all()
+            if not valid:
                 raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
