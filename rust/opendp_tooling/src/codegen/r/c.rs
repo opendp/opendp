@@ -320,7 +320,8 @@ fn r_to_c(arg: &Argument) -> String {
 
     let rust_type = (arg.rust_type.clone())
         .map(|rt| match rt {
-            TypeRecipe::Name(v) => v,
+            TypeRecipe::Name(v) if v.chars().all(|c| c.is_ascii_uppercase()) || v == "OptionT" => v,
+            TypeRecipe::Name(v) => format!("parse_runtime_type({v:?})"),
             TypeRecipe::None => "R_NilValue".to_string(),
             _ => format!("T_{name}"),
         })
@@ -371,13 +372,11 @@ fn c_to_r(arg: Argument) -> String {
         // mutate the c_type to that of the data stored inside the result
         (inner.c_type.as_mut()).map(|ct| *ct = ct["FfiResult<".len()..ct.len() - 1].to_string());
 
-        // when the rust_type is set, also mutate the
-        if let Some(TypeRecipe::Nest { origin, args }) = inner.rust_type {
-            if origin != "FfiResult" {
-                panic!("expected FfiResult, found {}", origin)
+        // An explicit return-type recipe may already describe the payload.
+        if let Some(TypeRecipe::Nest { origin, args }) = &inner.rust_type {
+            if origin == "FfiResult" {
+                inner.rust_type = Some(args[0].clone());
             }
-            // once the result is handled, you're left with the type of the data inside the result
-            inner.rust_type = Some(args[0].clone());
         }
 
         // name the variable used to hold the successful unwrapped return value
