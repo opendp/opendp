@@ -25,7 +25,10 @@ The implementation computes the inverse CDF of the canonical noise random variab
 \end{itemize}
 
 \subsubsection*{Caller-verified}
-Argument \texttt{uniform} is in $[0, 1]$.
+The argument \texttt{uniform} is in $[0,1]$.
+The scale is nonnegative, and \texttt{self.tradeoff}, whenever it succeeds,
+evaluates a fixed symmetric nontrivial tradeoff function $f$ exactly,
+with fixed point \texttt{self.fixed\_point} in $[0,1/2)$.
 
 \subsection*{Pseudocode}
 
@@ -34,30 +37,31 @@ Argument \texttt{uniform} is in $[0, 1]$.
 \subsection*{Postcondition}
 
 \begin{theorem}
-Given a random variable \texttt{self} (of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}),
-the algorithm returns \texttt{Some(out)} where \texttt{out} is the inverse cumulative distribution function of \texttt{CanonicalRV} (which includes a rescale and shift) evaluated at \texttt{uniform}
-with error in direction \texttt{R}, or \texttt{None}.
-
-The error between \texttt{out} and the exactly-computed CDF decreases monotonically as \texttt{refinements} increases.
+Let $F_f$ be the canonical CDF for $f$ and let $s$ and $t$ be the
+scale and shift, respectively.
+For $u=\texttt{uniform}\in(0,1)$, the function returns
+\[
+    t+sF_f^{-1}(u)
+\]
+exactly, or propagates an error from evaluating $f$.
+At $u\in\{0,1\}$ it returns \texttt{None} (a bound is unavailable).
+Whenever a bound is available, its error is zero, independently of
+the requested rounding direction and number of refinements.
 \end{theorem}
 
 \begin{proof}
+The caller-verified conditions establish the preconditions of
+\texttt{quantile\_cnd}. By its postcondition, on line~\ref{f_inv}
+an available result is the deterministic quantile $F_f^{-1}(u)$,
+not a random sample. Unavailable bounds and errors are propagated.
 
-By the definition of \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV},
-\begin{itemize}
-    \item \texttt{self.tradeoff} is a symmetric nontrivial tradeoff function
-    \item \texttt{self.fixed\_point} is the fixed point of \texttt{self.tradeoff}, where \texttt{tradeoff(fixed\_point) = fixed\_point}.
-\end{itemize}
-
-Therefore the preconditions of \texttt{quantile\_cnd} are met,
-so \texttt{f\_inv} on line \ref{f_inv} is a sample from the canonical noise distribution with shift of zero and scale of one.
-
-The function then returns the outcome, scaled by \texttt{self.scale} and shifted by \texttt{self.shift}.
-
-Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic,
-so making use of refinements is not necessary,
-as the error in computing the inverse CDF is already zero, satisfying the monotonicity property of the error.
-
+For $s>0$, the quantile of $t+sN$ for $N$ with CDF $F_f$ is
+$t+sF_f^{-1}(u)$. For $s=0$, this expression is the quantile of the
+point mass at $t$ for every interior $u$.
+All arithmetic is exact, so the returned value satisfies both rounding
+directions and its error cannot increase with refinements.
+Sampling occurs when the quantile is evaluated at a uniform random
+variable, not in this inverse-CDF implementation.
 \end{proof}
 
 \end{document}

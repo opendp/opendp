@@ -49,6 +49,16 @@ pub struct Interval<S: DirectedScalar> {
     hi: S,
 }
 
+impl Interval<SoftFloat> {
+    /// Enclose an exact rational without narrowing through a native float.
+    pub(crate) fn from_rational(value: &dashu::rational::RBig) -> Fallible<Self> {
+        Self::new(
+            SoftFloat::from_rational(value, Direction::Down),
+            SoftFloat::from_rational(value, Direction::Up),
+        )
+    }
+}
+
 impl<S: DirectedScalar> Interval<S> {
     pub fn new(lo: S, hi: S) -> Fallible<Self> {
         if lo > hi {

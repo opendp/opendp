@@ -52,6 +52,14 @@ macro_rules! directed {
 }
 
 impl SoftFloat {
+    pub(super) fn from_rational(value: &dashu::rational::RBig, direction: Direction) -> Self {
+        let repr = match direction {
+            Direction::Down => value.to_float::<Down, 2>(PRECISION).value().with_rounding::<Zero>(),
+            Direction::Up => value.to_float::<Up, 2>(PRECISION).value().with_rounding::<Zero>(),
+        };
+        Self { repr }
+    }
+
     fn from_result<R: Round>(result: FpResult<FBig<R>>) -> Fallible<Self> {
         // Provider exhaustion is not an f64 range error. Only final narrowing
         // classifies finite results relative to the f64 boundaries.

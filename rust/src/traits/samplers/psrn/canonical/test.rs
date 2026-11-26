@@ -2,7 +2,6 @@ use num::FromPrimitive;
 
 use crate::{
     error::Fallible,
-    measurements::approximate_to_tradeoff,
     traits::samplers::{
         PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
     },
@@ -10,15 +9,35 @@ use crate::{
 
 use super::*;
 
+fn approximate_tradeoff(
+    epsilon: f64,
+    delta: f64,
+) -> Fallible<(impl Fn(RBig) -> Fallible<RBig>, RBig)> {
+    let delta = RBig::try_from(delta)?;
+    let exp_epsilon = RBig::try_from(
+        crate::traits::SInterval::point(epsilon)?
+            .exp()?
+            .lower_f64()?,
+    )?;
+    let fixed_point = (RBig::ONE.clone() - &delta) / (RBig::ONE.clone() + &exp_epsilon);
+
+    let tradeoff = move |alpha: RBig| {
+        let first = RBig::ONE.clone() - &delta - &exp_epsilon * &alpha;
+        let second = (RBig::ONE.clone() - &delta - alpha) / &exp_epsilon;
+        Ok(first.max(second).max(RBig::ZERO.clone()))
+    };
+    Ok((tradeoff, fixed_point))
+}
+
 #[test]
 fn test_sample_cnd_interval_progression() -> Fallible<()> {
-    let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
+    let (tradeoff, fixed_point) = approximate_tradeoff(1.0, 1e-6)?;
     let scale = &RBig::ONE;
     let mut cnd = PartialSample::new(CanonicalRV {
         shift: RBig::ZERO,
         scale: &scale,
         tradeoff: &tradeoff,
-        fixed_point: &c,
+        fixed_point: &fixed_point,
     });
     let (l, r) = assert_ordered_progression(&mut cnd, 20)?;
     let (l, r) = (l.to_f64().value(), r.to_f64().value());
@@ -40,13 +59,13 @@ fn F_f(x: f64, f: impl Fn(f64) -> f64 + Clone, c: f64) -> f64 {
 
 #[test]
 fn test_cnd_psrn() -> Fallible<()> {
-    let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
+    let (tradeoff, fixed_point) = approximate_tradeoff(1.0, 1e-6)?;
     let scale = &RBig::ONE;
     let cnd = CanonicalRV {
         shift: RBig::ZERO,
         scale: &scale,
         tradeoff: &tradeoff,
-        fixed_point: &c,
+        fixed_point: &fixed_point,
     };
     let samples = (0..5000)
         .map(|_| PartialSample::new(cnd.clone()).value())
@@ -54,8 +73,31 @@ fn test_cnd_psrn() -> Fallible<()> {
 
     let samples = <[f64; 5000]>::try_from(samples).unwrap();
 
-    let f_tradeoff = |x: f64| -> f64 { tradeoff(RBig::from_f64(x).unwrap()).to_f64().value() };
-    let f_c = c.to_f64().value();
+    let f_tradeoff = |x: f64| -> f64 {
+        tradeoff(RBig::from_f64(x).unwrap())
+            .unwrap()
+            .to_f64()
+            .value()
+    };
+    let f_c = fixed_point.to_f64().value();
     check_kolmogorov_smirnov(samples, |x| F_f(x, f_tradeoff, f_c))?;
+    Ok(())
+}
+
+#[test]
+fn test_unit_slope_tail_skips_exactly() -> Fallible<()> {
+    use std::cell::Cell;
+
+    let delta = RBig::ONE / RBig::from(1u128 << 80);
+    let c = (RBig::ONE - &delta) / RBig::from(2);
+    let calls = Cell::new(0);
+    let f = |alpha: RBig| {
+        calls.set(calls.get() + 1);
+        Ok((RBig::ONE - &delta - alpha).max(RBig::ZERO))
+    };
+    let magnitude = RBig::from(1u128 << 78);
+    assert_eq!(quantile_cnd(rbig!(1 / 4), &f, &c)?, Some(-&magnitude));
+    assert_eq!(quantile_cnd(rbig!(3 / 4), &f, &c)?, Some(magnitude));
+    assert_eq!(calls.get(), 2);
     Ok(())
 }
