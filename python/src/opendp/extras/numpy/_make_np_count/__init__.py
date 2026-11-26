@@ -25,8 +25,8 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
     return _make_transformation(
         input_domain,
         input_metric,
-        dp.atom_domain(T=int),
-        dp.absolute_distance(T=int),
+        dp.atom_domain(T=dp.i64),
+        dp.absolute_distance(T=dp.i64),
         lambda x: x.shape[0] if size is None else size,
         lambda d_in: d_in if size is None else 0,
     )

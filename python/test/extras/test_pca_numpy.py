@@ -72,8 +72,7 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
         ({"num_columns": 0}, "one feature"),
         ({"norm": 0.0}, "positive finite L2 radius"),
         ({"norm": None, "p": None}, "requires an L2-bounded input domain"),
-        ({"size": None}, "known input-domain size"),
-        ({"num_columns": None}, "known input-domain size"),
+        ({"num_columns": None}, "known input-domain num_columns"),
         *[
             ({"center": center}, "center must be None or 'origin'")
             for center in ("mean", "zero", False, 0, [0.0, 0.0])
@@ -134,12 +133,12 @@ def _capture_sscp_rows(monkeypatch):
 
 
 def _observe_private_mean(monkeypatch, *, replacement):
-    """Observe real DP mean execution, then replace its output with a public point."""
+    """Observe a DP offset sum, then replace it to produce a public mean offset."""
     np = pytest.importorskip("numpy")
     from opendp._internal import _make_transformation, _new_pure_function
     from opendp.extras.sklearn import decomposition
 
-    original = decomposition.make_private_np_mean
+    original = decomposition.make_private_np_sum
     observations = []
 
     def record(input_domain, input_metric, *args, **kwargs):
@@ -155,9 +154,9 @@ def _observe_private_mean(monkeypatch, *, replacement):
             )
             return data
 
-        def observe_mean(mean):
-            observations[-1]["mean"] = np.array(mean, copy=True)
-            return np.array(replacement, dtype=float)
+        def observe_sum(total):
+            observations[-1]["sum"] = np.array(total, copy=True)
+            return np.array(replacement, dtype=float) * input_domain.descriptor.size
 
         identity = _make_transformation(
             input_domain,
@@ -167,9 +166,9 @@ def _observe_private_mean(monkeypatch, *, replacement):
             observe_rows,
             lambda distance: distance,
         )
-        return identity >> measurement >> _new_pure_function(observe_mean)
+        return identity >> measurement >> _new_pure_function(observe_sum)
 
-    monkeypatch.setattr(decomposition, "make_private_np_mean", record)
+    monkeypatch.setattr(decomposition, "make_private_np_sum", record)
     return observations
 
 
@@ -209,7 +208,7 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
         origin=origin if bound is not None else None,
     )
     assert domain.member(data)
-    means = _observe_private_mean(monkeypatch, replacement=origin)
+    means = _observe_private_mean(monkeypatch, replacement=np.zeros_like(origin))
     sscp = _capture_sscp_rows(monkeypatch)
     measurement = make_private_pca(
         domain,
@@ -234,11 +233,11 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
     np.testing.assert_allclose(release.mean, origin, atol=1e-12)
     if center is None:
         assert len(means) == 1
-        np.testing.assert_allclose(means[0]["rows"], origin + expected, atol=1e-12)
+        np.testing.assert_allclose(means[0]["rows"], expected, atol=1e-12)
         mean_desc = means[0]["domain"].descriptor
         assert mean_desc.p == 1
         assert mean_desc.norm > np.sqrt(2) * radius  # Upward-rounded sensitivity bound.
-        np.testing.assert_array_equal(mean_desc.origin, origin)
+        np.testing.assert_array_equal(mean_desc.origin, np.zeros_like(origin))
     else:
         assert means == []
     assert measurement.map(2) <= 1.0
@@ -263,7 +262,7 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
         p=2,
         origin=origin,
     )
-    means = _observe_private_mean(monkeypatch, replacement=public_point)
+    means = _observe_private_mean(monkeypatch, replacement=public_point - origin)
     sscp = _capture_sscp_rows(monkeypatch)
     release = make_private_pca(
         domain,
@@ -272,7 +271,7 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
         2,
         1.0,
     )(data)
-    assert len(means) == 1 and "mean" in means[0]  # An actual DP mean was evaluated.
+    assert len(means) == 1 and "sum" in means[0]  # An actual DP sum was evaluated.
     np.testing.assert_allclose(release.mean, projected, atol=1e-12)
     assert np.linalg.norm(release.mean - origin) <= 1 + 1e-12
     expected = data - projected
@@ -298,16 +297,20 @@ def test_pca_fixed_budget_split_at_input_distance(
     budget = 0.9
     measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
     factor = (d_in / 2) ** (2 if is_zcdp else 1)
-    allocations = []
-    original_eigen = decomposition.then_private_eigendecomposition
+    value_scales, vector_scales = [], []
+    original_values = decomposition.then_private_eigenvalues
+    original_vectors = decomposition.then_private_eigenvectors
 
-    def record_eigen(output_measure, values, vectors, **kwargs):
-        allocations.append((values, vectors, len(kwargs["weights"])))
-        return original_eigen(output_measure, values, vectors, **kwargs)
+    def record_values(output_measure, scale):
+        value_scales.append(scale)
+        return original_values(output_measure, scale)
 
-    monkeypatch.setattr(
-        decomposition, "then_private_eigendecomposition", record_eigen
-    )
+    def record_vectors(output_measure, scale, weights):
+        vector_scales.append((scale, len(weights)))
+        return original_vectors(output_measure, scale, weights)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvalues", record_values)
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", record_vectors)
     means = _observe_private_mean(monkeypatch, replacement=np.zeros(width))
     data = _legacy_data() if width == 4 else np.linspace(0.2, 0.8, 10)[:, None]
     domain = dp.numpy.array2_domain(
@@ -328,17 +331,23 @@ def test_pca_fixed_budget_split_at_input_distance(
         num_components=2 if width == 4 else None,
     )
     measurement(data)
-    eigen_budget = budget * 2 / 3 if center is None else budget
+    eigen_stages = 2 if width == 4 else 1
+    share = budget / (eigen_stages + int(center is None))
+    eigen_budget = share * eigen_stages
     if center is None:
         assert len(means) == 1
         mean_budget = means[0]["map_at_two"] * factor
         assert means[0]["domain"].descriptor.p == (2 if is_zcdp else 1)
-        assert mean_budget <= budget / 3
-        assert mean_budget == pytest.approx(budget / 3)
+        assert mean_budget <= share
+        assert mean_budget == pytest.approx(share)
     else:
         assert means == []
-    values, vectors, components = allocations[-1]
-    assert components == (2 if width == 4 else 1)
+    values = value_scales[-1]
+    if width == 4:
+        vectors, components = vector_scales[-1]
+        assert components == 2
+    else:
+        assert not vector_scales
     # Unit-radius SSCP at one replacement has nuclear sensitivity 2
     # and Frobenius sensitivity sqrt(2); a scalar has sensitivity 1.
     nuclear = 2.0 if width == 4 else 1.0
@@ -371,39 +380,34 @@ def test_pca_many_samples_rounding_stays_within_budget(
     import numpy as np
     from opendp._internal import _make_measurement
     from opendp.extras._utilities import to_then
-    from opendp.extras.sklearn._make_eigendecomposition import (
-        make_private_eigendecomposition,
-    )
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
 
     eigen_maps = []
     measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
-    factor = (d_in / 2) ** (2 if is_zcdp else 1)
 
-    def record_eigen(
-        input_domain, input_metric, output_measure, values, vectors, **kwargs
-    ):
-        actual = make_private_eigendecomposition(
-            input_domain, input_metric, output_measure, values, vectors, **kwargs
+    def record_vectors(input_domain, input_metric, output_measure, scale, weights):
+        actual = make_private_eigenvectors(
+            input_domain, input_metric, output_measure, scale, weights
         )
         eigen_maps.append(
-            actual.map((2.0, np.nextafter(np.sqrt(2.0), np.inf))) * factor
+            actual.map((float(d_in), np.nextafter(np.sqrt(2.0), np.inf) * d_in / 2))
         )
-        # Keep the real stage's privacy map; skip only the expensive sampler.
+        # Keep the real privacy map but skip the expensive sampler.
         return _make_measurement(
             input_domain,
             input_metric,
             actual.output_measure,
-            lambda data: (np.ones(width), np.eye(width)),
+            lambda data: np.eye(width)[:, : len(weights)],
             actual.map,
         )
 
     monkeypatch.setattr(
-        decomposition, "then_private_eigendecomposition", to_then(record_eigen)
+        decomposition, "then_private_eigenvectors", to_then(record_vectors)
     )
     _observe_private_mean(monkeypatch, replacement=np.zeros(width))
     domain = dp.numpy.array2_domain(
         T=float,
-        size=10,
+        size=width,
         num_columns=width,
         norm=1,
         p=2,
@@ -417,9 +421,9 @@ def test_pca_many_samples_rounding_stays_within_budget(
         budget,
         center=center,
     )
-    measurement(np.zeros((10, width)))  # Also construct the lazy private-mean stage.
+    measurement(np.zeros((width, width)))  # Also construct the lazy private-mean stage.
     eigen_budget = budget * 2 / 3 if center is None else budget
-    assert eigen_maps and eigen_maps[-1] <= eigen_budget
+    assert eigen_maps and eigen_maps[-1] <= eigen_budget / 2
     assert measurement.check(d_in, budget)
     assert measurement.map(d_in) <= budget
 
@@ -438,7 +442,7 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
             "one-feature origin PCA needs neither a private mean nor a vector sample"
         )
 
-    monkeypatch.setattr(decomposition, "make_private_np_mean", unexpected)
+    monkeypatch.setattr(decomposition, "make_private_np_sum", unexpected)
     monkeypatch.setattr(eigenvector, "then_private_eigenvector", unexpected)
     domain = dp.numpy.array2_domain(
         T=float, size=10, num_columns=1, norm=1, p=2, nan=False
@@ -498,7 +502,6 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
     changed = model.__dict__.copy()
     release = measurement(dp.sklearn.SklearnFit(data))
     assert model.__dict__ == changed
-    assert release.n_components == 2
     assert release.components.shape == (2, 4)
     assert len(means) == (1 if center is None else 0)
     np.testing.assert_allclose(release.mean, point if center is None else np.zeros(4))
@@ -510,46 +513,68 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
     assert model.n_components_ == 2
 
 
-@pytest.mark.parametrize("variance", [0.0, 1.0])
-def test_pca_mle_one_feature_retains_one_component(variance):
-    import numpy as np
-    from opendp.extras.sklearn.decomposition import PCA, PCARelease
-
-    model = PCA(n_components="mle")
-    model._ingest_release(
-        PCARelease(
-            mean=np.zeros(1),
-            singular_values=np.array([variance**0.5]),
-            components=np.ones((1, 1)),
-            n_samples=2,
-            n_components="mle",
-        )
-    )
-    assert model.n_components_ == 1
-    assert model.components_.shape == (1, 1)
-    np.testing.assert_array_equal(model.explained_variance_, [variance])
-
-
 @pytest.mark.parametrize(
-    "n_components,expected", [(1, 1), (0.8, 1), ("mle", 1), (None, 2)]
+    "selection, spectrum, size, expected",
+    [
+        ("mle", [0.0], 2, 1),
+        ("mle", [1.0], 2, 1),
+        (0.8, [0.0, 0.0], 10, 1),
+        (0.8, [9.0, 1.0, 0.0], 10, 1),
+        (0.99, [3.0, 2.0, 1.0], 2, 2),
+        (None, [3.0, 2.0, 1.0], 2, 2),
+        (1, [0.0, 0.0], 10, 1),
+    ],
 )
-def test_pca_zero_released_variance(n_components, expected):
+def test_pca_selects_components_before_sampling(
+    monkeypatch, selection, spectrum, size, expected
+):
     np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition import PCARelease
+    from opendp._internal import _new_pure_function
+    from opendp.extras._utilities import to_then
+    from opendp.extras.sklearn._make_eigenvalues import make_private_eigenvalues
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
 
-    model = dp.sklearn.decomposition.PCA(n_components=n_components, whiten=True)
-    model._ingest_release(
-        PCARelease(
-            mean=np.zeros(2),
-            singular_values=np.zeros(2),
-            components=np.eye(2),
-            n_samples=10,
-            n_components=n_components,
+    width = len(spectrum)
+    weights_seen = []
+
+    def values(input_domain, input_metric, output_measure, scale):
+        return make_private_eigenvalues(
+            input_domain, input_metric, output_measure, scale
+        ) >> _new_pure_function(lambda _: np.array(spectrum[::-1]))
+
+    def vectors(input_domain, input_metric, output_measure, scale, weights):
+        measurement = make_private_eigenvectors(
+            input_domain, input_metric, output_measure, scale, weights
         )
+
+        def observe(result):
+            weights_seen.append(list(weights))
+            return result
+
+        return measurement >> _new_pure_function(observe)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvalues", to_then(values))
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", to_then(vectors))
+    domain = dp.numpy.array2_domain(
+        T=float, size=size, num_columns=width, norm=1, p=2, nan=False
     )
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        2,
+        1.0,
+        center="origin",
+        num_components=selection,
+    )
+    assert measurement.check(2, 1.0)
+    release = measurement(np.zeros((size, width)))
+    assert release.components.shape == (expected, width)
+    assert weights_seen == ([[1.0] * expected] if width > 1 else [])
+    model = decomposition.PCA(n_components=selection, whiten=True)
+    model._ingest_release(release)
     assert model.n_components_ == expected
-    np.testing.assert_array_equal(model.explained_variance_ratio_, np.zeros(expected))
-    assert np.isfinite(model.transform(np.ones((1, 2)))).all()
+    assert np.isfinite(model.transform(np.ones((1, width)))).all()
 
 
 @pytest.mark.parametrize(
@@ -594,13 +619,14 @@ def _legacy_data():
     return data
 
 
-def test_pca_standalone_requires_public_size():
-    with pytest.raises(ValueError, match="known input-domain size"):
-        decomposition.PCA(clip_norm=1.0).fit(
-            _legacy_data(),
-            privacy_unit=dp.unit_of(contributions=2),
-            privacy_loss=dp.loss_of(epsilon=1),
-        )
+def test_pca_standalone_infers_unknown_size_domain():
+    model = decomposition.PCA(n_components=1, clip_norm=1.0).fit(
+        _legacy_data(),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1),
+    )
+    assert model.n_samples_ >= 2
+    assert model.components_.shape == (1, 4)
 
 
 def test_pca_standalone_recovers_centered_principal_component():
@@ -644,9 +670,8 @@ def _released_pca(*, whiten):
         PCARelease(
             mean=np.array([0.5, -1.0, 2.0]),
             singular_values=np.sqrt(np.array([4.0, 2.0, 1.0]) * 9),
-            components=np.eye(3),
+            components=np.eye(3)[:2],
             n_samples=10,
-            n_components=2,
         )
     )
     return model
@@ -907,9 +932,8 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
         PCARelease(
             mean=np.zeros(3),
             singular_values=np.array([3.0, 0.0, 0.0]),
-            components=np.eye(3),
+            components=np.eye(3)[:2],
             n_samples=10,
-            n_components=2,
         )
     )
     domain = dp.sklearn.sklearn_fit_domain(
@@ -922,24 +946,22 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
 
 
 @pytest.mark.parametrize(
-    "width, num_components, expected",
-    [(1, None, 1), (3, 1, 1), (3, 2, 2), (3, None, 3)],
+    "width, expected",
+    [(1, 1), (3, 1), (3, 2), (3, 3)],
 )
 @pytest.mark.parametrize("is_zcdp", [False, True])
-def test_matrix_eigendecomposition_components_and_privacy_map(
-    width, num_components, expected, is_zcdp
-):
+def test_matrix_eigendecomposition_components_and_privacy_map(width, expected, is_zcdp):
     np = pytest.importorskip("numpy")
     from opendp.extras.numpy import _symmetric_matrix_domain
 
-    measurement = (
-        _symmetric_matrix_domain(num_features=width),
-        dp.schatten12_distance(),
-    ) >> decomposition.then_private_eigendecomposition(
-        dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
-        2.0,
-        4.0,
-        weights=[1.0] * expected,
+    space = _symmetric_matrix_domain(num_features=width), dp.schatten12_distance()
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    measurement = dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(measure, 2.0),
+            space
+            >> decomposition.then_private_eigenvectors(measure, 4.0, [1.0] * expected),
+        ]
     )
     values, vectors = measurement(np.diag(np.arange(width, dtype=float)))
     assert values.shape == (width,)
@@ -961,15 +983,14 @@ def test_eigendecomposition_composes_with_sscp(size, is_zcdp):
     domain = dp.numpy.array2_domain(
         norm=2.0, p=2, num_columns=3, size=size, nan=False, T=float
     )
-    measurement = (
-        (domain, dp.symmetric_distance())
-        >> then_np_sscp()
-        >> decomposition.then_private_eigendecomposition(
-            dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
-            8.0,
-            8.0,
-            [1.0] * 3,
-        )
+    sscp = (domain, dp.symmetric_distance()) >> then_np_sscp()
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    space = sscp.output_space
+    measurement = sscp >> dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(measure, 8.0),
+            space >> decomposition.then_private_eigenvectors(measure, 8.0, [1.0] * 3),
+        ]
     )
     expected = (0.625 if size is None else 0.375) if is_zcdp else 2.0
     assert measurement.map(2) == pytest.approx(expected)
@@ -995,3 +1016,95 @@ def test_eigendecomposition_bingham_concentration():
     )
     assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
     assert eigenvector.map(sscp.map(1)) == 0.0
+
+
+@pytest.mark.parametrize("is_zcdp", [False, True])
+@pytest.mark.parametrize("center", [None, "origin"])
+@pytest.mark.parametrize("d_in", [1, 3])
+def test_pca_unknown_size_uses_private_count_and_centered_sum(
+    monkeypatch, is_zcdp, center, d_in
+):
+    np = pytest.importorskip("numpy")
+    from opendp._internal import _new_pure_function
+
+    # Fix the released count below the actual count and replace the noisy
+    # offset sum with a public value. Keep the actual mechanisms and maps.
+    count_constructor = decomposition.make_private_np_count
+    sum_constructor = decomposition.make_private_np_sum
+    observed = []
+    origin = np.array([100.0, -200.0])
+
+    def count(*args, **kwargs):
+        return count_constructor(*args, **kwargs) >> _new_pure_function(lambda _: 3)
+
+    def offsets(input_domain, input_metric, *args, **kwargs):
+        measurement = sum_constructor(input_domain, input_metric, *args, **kwargs)
+        observed.append((input_domain.descriptor, measurement.map(d_in)))
+        return measurement >> _new_pure_function(lambda _: [0.75, 0.0])
+
+    monkeypatch.setattr(decomposition, "make_private_np_count", count)
+    monkeypatch.setattr(decomposition, "make_private_np_sum", offsets)
+    domain = dp.numpy.array2_domain(
+        T=float, num_columns=2, norm=1.0, p=2, origin=origin, nan=False
+    )
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    measurement = decomposition.make_private_pca(
+        domain, dp.symmetric_distance(), measure, d_in, 1.0, center=center
+    )
+    assert measurement.check(d_in, 1.0)
+    assert measurement.map(0) == 0.0
+    release = measurement(np.tile(origin, (5, 1)))
+    assert release.n_samples == 3
+    if center is None:
+        descriptor, spent = observed[-1]
+        assert descriptor.size is None
+        assert np.all(descriptor.origin == 0)
+        assert descriptor.p == (2 if is_zcdp else 1)
+        assert spent <= 0.25
+        np.testing.assert_allclose(release.mean, origin + [0.25, 0.0])
+    else:
+        assert not observed
+        np.testing.assert_array_equal(release.mean, origin)
+    model = decomposition.PCA()
+    model._ingest_release(release)
+    assert model.n_samples_ == 3
+    np.testing.assert_allclose(
+        model.explained_variance_, release.singular_values**2 / 2
+    )
+
+
+@pytest.mark.parametrize(
+    "num_components, expected_count, expected_width",
+    [(None, 2, 2), (3, 3, 3), ("mle", 4, None), (0.9, 2, None)],
+)
+def test_pca_unknown_size_empty_input_and_count_floor(
+    monkeypatch, num_components, expected_count, expected_width
+):
+    np = pytest.importorskip("numpy")
+    from opendp._internal import _new_pure_function
+
+    original = decomposition.make_private_np_count
+
+    def count(*args, **kwargs):
+        return original(*args, **kwargs) >> _new_pure_function(lambda _: -10)
+
+    monkeypatch.setattr(decomposition, "make_private_np_count", count)
+    domain = dp.numpy.array2_domain(T=float, num_columns=4, norm=1.0, p=2, nan=False)
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        2,
+        1.0,
+        num_components=num_components,
+    )
+    assert measurement.check(2, 1.0)
+    release = measurement(np.empty((0, 4)))
+    assert release.n_samples == expected_count
+    model = decomposition.PCA()
+    model._ingest_release(release)
+    assert model.n_samples_ == expected_count
+    assert 1 <= model.n_components_ <= min(4, expected_count)
+    if expected_width is not None:
+        assert model.n_components_ == expected_width
+    assert np.isfinite(model.mean_).all()

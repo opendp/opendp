@@ -34,14 +34,12 @@ from opendp._internal import _make_measurement, _make_transformation, _new_pure_
 from opendp._lib import import_optional_dependency
 from opendp.context import _check_sized_contributions, register
 from opendp.extras._utilities import to_then
-from opendp.extras.numpy._make_np_mean import make_private_np_mean
+from opendp.extras.numpy._make_np_count import make_private_np_count
+from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.extras.numpy._make_np_sscp import then_np_sscp
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
-from opendp.extras.sklearn._make_eigendecomposition import (
-    then_private_eigendecomposition,
-)
 from opendp.extras.sklearn._make_eigenvalues import then_private_eigenvalues
 from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.mod import Domain, Measure, Measurement, Metric
@@ -58,7 +56,6 @@ class PCARelease:
     singular_values: numpy.ndarray
     components: numpy.ndarray
     n_samples: int
-    n_components: int | float | str | None = None
 
 
 def make_private_pca(
@@ -74,11 +71,12 @@ def make_private_pca(
 ) -> Measurement:
     """Construct a Measurement that releases differentially private PCA parameters.
 
-    Fitting requires an input domain with known size.
+    The input domain must have a known feature count. If size is not public,
+    privately estimate it and use the released count for normalization.
     An L2 domain bound or ``clip_norm`` is required.
     Bounds and clipping are relative to the public domain origin (zero by default).
 
-    :param input_domain: Input array domain with public size and feature count.
+    :param input_domain: Input array domain with public feature count and optional public size.
     :param input_metric: Symmetric distance on input rows.
     :param output_measure: Max divergence or zero-concentrated divergence.
     :param d_in: Positive integral symmetric distance; use two edits per row replacement.
@@ -111,16 +109,19 @@ def make_private_pca(
 
     desc = input_domain.cast(dp.numpy.NPArray2Domain)
     n_samples, n_features = desc.size, desc.num_columns
-    if n_samples is None or n_features is None:
-        raise ValueError("PCA requires known input-domain size and num_columns")
-    if n_samples < 2 or n_features < 1:
+    if n_features is None:
+        raise ValueError("PCA requires known input-domain num_columns")
+    if (n_samples is not None and n_samples < 2) or n_features < 1:
         raise ValueError("PCA requires at least two samples and one feature")
     if isinstance(num_components, bool):
         raise ValueError(
             "num_components must be None, an integer, a fraction, or 'mle'"
         )
     if isinstance(num_components, int):
-        if not 1 <= num_components <= min(n_samples, n_features):
+        max_components = (
+            n_features if n_samples is None else min(n_samples, n_features)
+        )
+        if not 1 <= num_components <= max_components:
             raise ValueError(
                 "num_components must be between 1 and min(n_samples, n_features)"
             )
@@ -128,18 +129,21 @@ def make_private_pca(
         if not 0 < num_components < 1:
             raise ValueError("num_components must be in (0, 1) when fractional")
     elif isinstance(num_components, str) and num_components == "mle":
-        if n_samples < n_features:
+        if n_samples is not None and n_samples < n_features:
             raise ValueError("num_components='mle' requires n_samples >= n_features")
     elif num_components is not None:
         raise ValueError(
             "num_components must be None, an integer, a fraction, or 'mle'"
         )
-    num_eigenvectors = (
+    # The released count must satisfy the estimator's public component constraints.
+    minimum_count = max(
+        2,
         num_components
         if isinstance(num_components, int)
-        else min(n_samples, n_features)
+        else n_features
+        if num_components == "mle"
+        else 0,
     )
-    weights = [1.0] * num_eigenvectors
 
     origin = np.array(
         0.0 if desc.origin is None else desc.origin, dtype=float, copy=True
@@ -173,10 +177,16 @@ def make_private_pca(
         nan=False,
     )
     estimate_mean = center is None
-    mean_budget = _smaller(float(d_out) / 3) if estimate_mean else 0.0
-    eigen_budget = _smaller(float(d_out) / 3 * 2) if estimate_mean else float(d_out)
+    estimate_count = n_samples is None
+    # Divide the allowance among the active private stages in privacy-loss units.
+    eigen_stages = 1 + int(n_features > 1)
+    num_stages = int(estimate_count) + int(estimate_mean) + eigen_stages
+    share = float(d_out) if num_stages == 1 else _smaller(float(d_out) / num_stages)
+    count_budget = share if estimate_count else 0.0
+    mean_budget = share if estimate_mean else 0.0
+    eigen_budget = share if eigen_stages == 1 else _smaller(share * eigen_stages)
 
-    def eigendecomposition(reference):
+    def eigendecomposition(reference, released_count):
         t_reclip = (
             make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference)
             if estimate_mean
@@ -193,58 +203,81 @@ def make_private_pca(
         if t_reclip is not None:
             t_center = t_reclip >> t_center
         t_sscp = t_center >> then_np_sscp()
-        # Allocate equally in privacy-loss units, not numerical scales.
-        # The one-feature case needs no private eigenvector sample.
-        stage_budget = eigen_budget
-        if n_features > 1:
-            stage_budget = _smaller(stage_budget / 2)
+        # The count and reference are already public conditional on earlier
+        # releases. Compute SSCP once, then compose on the matrix space.
+        stage_budget = (
+            _smaller(eigen_budget / eigen_stages)
+            if eigen_stages > 1
+            else eigen_budget
+        )
         sensitivity = t_sscp.map(d_in)
         space = t_sscp.output_space
-        eigvals_scale = dp.binary_search_param(
+        m_values = dp.binary_search_chain(
             lambda scale: space >> then_private_eigenvalues(output_measure, scale),
             d_in=sensitivity,
             d_out=stage_budget,
             T=float,
         )
-        eigvecs_scale = (
-            dp.binary_search_param(
-                lambda scale: space
-                >> then_private_eigenvectors(
-                    output_measure, scale, weights=weights
-                ),
-                d_in=sensitivity,
-                d_out=stage_budget,
-                T=float,
-            )
-            if n_features > 1
-            else eigvals_scale
-        )
-        measurement = t_sscp >> then_private_eigendecomposition(
+        compositor = dp.c.make_adaptive_composition(
+            *space,
             output_measure,
-            eigvals_scale,
-            eigvecs_scale,
-            weights=weights,
+            d_in=sensitivity,
+            d_mids=[stage_budget] * eigen_stages,
         )
 
-        return measurement >> _new_pure_function(
-            lambda out: PCARelease(
+        def function(C):
+            qbl = compositor(C)
+            singular_values = np.sqrt(np.maximum(qbl(m_values), 0))[::-1]
+            k = _select_num_components(num_components, singular_values, released_count)
+            if n_features == 1:
+                vectors = np.ones((1, 1))
+            else:
+                # Uniform relative concentration is the default policy.
+                # Selection (and any future weighting policy) uses only releases.
+                weights = [1.0] * k
+                m_vectors = dp.binary_search_chain(
+                    lambda scale: space
+                    >> then_private_eigenvectors(output_measure, scale, weights),
+                    d_in=sensitivity,
+                    d_out=stage_budget,
+                    T=float,
+                )
+                vectors = qbl(m_vectors)
+            return PCARelease(
                 mean=np.array(reference, copy=True),
-                singular_values=np.sqrt(np.maximum(out[0], 0))[::-1],
-                components=out[1].T,
-                n_samples=n_samples,
-                n_components=num_components,
+                singular_values=singular_values,
+                components=vectors.T,
+                n_samples=released_count,
             )
+
+        return t_sscp >> _make_measurement(
+            *space,
+            output_measure,
+            function,
+            lambda distance: (
+                0.0 if distance == (0.0, 0.0) else compositor.map(distance)
+            ),
         )
 
-    if not estimate_mean:
-        measurement = eigendecomposition(origin)
-    else:
+    if estimate_count:
+        m_count = dp.binary_search_chain(
+            lambda scale: make_private_np_count(
+                ball_domain, input_metric, output_measure, scale
+            ),
+            d_in=d_in,
+            d_out=count_budget,
+            T=float,
+        ) >> _new_pure_function(lambda count: max(minimum_count, count))
+
+    if estimate_mean:
         # The Gaussian mean can use the original L2 ball. Laplace needs
         # ||x-c||_1 <= sqrt(d) R, rounded upwards.
         mean_radius = (
             radius
             if is_zcdp
-            else np.nextafter(np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf)
+            else np.nextafter(
+                np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
+            )
         )
         mean_domain = dp.numpy.array2_domain(
             **(
@@ -252,7 +285,7 @@ def make_private_pca(
                 | {
                     "norm": mean_radius,
                     "p": 2 if is_zcdp else 1,
-                    "origin": origin,
+                    "origin": None,
                     "T": float,
                 }
             )
@@ -262,11 +295,14 @@ def make_private_pca(
             input_metric,
             mean_domain,
             input_metric,
-            lambda data: np.asarray(data, dtype=float),
+            lambda data: np.asarray(data, dtype=float) - origin,
             lambda distance: distance,
         )
-        m_mean = dp.binary_search_chain(
-            lambda scale: t_mean >> make_private_np_mean(mean_domain, input_metric, scale),
+        # Release a sum of offsets. This avoids dependence on the public
+        # origin in the insertion/deletion sensitivity bound.
+        m_sum = dp.binary_search_chain(
+            lambda scale: t_mean
+            >> make_private_np_sum(mean_domain, input_metric, output_measure, scale),
             d_in=d_in,
             d_out=mean_budget,
             T=float,
@@ -278,26 +314,42 @@ def make_private_pca(
             p=2,
             origin=origin,
         )
-        m_mean = m_mean >> _new_pure_function(lambda mean: projection(mean[None, :])[0])
+
+    if not estimate_count and not estimate_mean:
+        measurement = eigendecomposition(origin, n_samples)
+    else:
         compositor = dp.c.make_adaptive_composition(
             ball_domain,
             input_metric,
             output_measure,
             d_in=d_in,
-            d_mids=[mean_budget, eigen_budget],
+            d_mids=(
+                ([count_budget] if estimate_count else [])
+                + ([mean_budget] if estimate_mean else [])
+                + [eigen_budget]
+            ),
         )
 
         def function(data):
             qbl = compositor(data)
-            reference = qbl(m_mean)
-            return qbl(eigendecomposition(reference))
+            released_count = qbl(m_count) if estimate_count else n_samples
+            reference = origin
+            if estimate_mean:
+                reference = projection(
+                    (origin + np.asarray(qbl(m_sum)) / released_count)[None, :]
+                )[0]
+            return qbl(eigendecomposition(reference, released_count))
 
         measurement = _make_measurement(
             ball_domain,
             input_metric,
             output_measure,
             function,
-            lambda distance: 0.0 if distance < 2 else compositor.map(distance),
+            lambda distance: (
+                0.0
+                if distance < (1 if estimate_count else 2)
+                else compositor.map(distance)
+            ),
         )
 
     return t_clip >> measurement if t_clip is not None else measurement
@@ -320,7 +372,7 @@ class PCA(
     Accepts dense NumPy arrays and provides the transformation interface of
     `sklearn.decomposition.PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
 
-    Fitting requires an input domain with known size.
+    If dataset size is not public, fitting privately estimates it.
     An L2 domain bound or ``clip_norm`` is required.
     Pure epsilon-DP and zero-concentrated DP are supported.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
@@ -329,6 +381,10 @@ class PCA(
         ``min(n_samples, n_features)``; a fraction of released variance in (0, 1);
         'mle' to estimate the dimension; or None for all available components.
         'mle' requires ``n_samples >= n_features`` and retains at least one component.
+        When size is private, the noisy count is lower-bounded by two and by
+        any minimum sample count implied by the public component request.
+        A fractional request is capped at the available component count,
+        which may retain less than the requested fraction of the released variance.
     :param whiten: Whether to scale projections by the inverse square roots of
         the released variances. Defaults to False.
     :param clip_norm: Public positive finite L2 clipping radius around the domain
@@ -345,7 +401,7 @@ class PCA(
     :ivar noise_variance_: Mean discarded variance in the probabilistic PCA model.
     :ivar n_components_: Number of retained components.
     :ivar n_features_in_: Number of fitted input features.
-    :ivar n_samples_: Public number of samples used in fitting.
+    :ivar n_samples_: Public sample count, or a lower-bounded private estimate.
 
     Example:
 
@@ -420,7 +476,6 @@ class PCA(
     def _ingest_release(self, release: PCARelease) -> None:
         np = import_optional_dependency("numpy")
         import_optional_dependency("sklearn")
-        from sklearn.decomposition._pca import _infer_dimension
         from sklearn.utils.extmath import svd_flip
 
         n_samples = release.n_samples
@@ -439,27 +494,10 @@ class PCA(
             else np.zeros_like(explained_variance)
         )
 
-        # Public parameters were validated when the measurement was constructed.
-        n_components = release.n_components
-        if n_components is None:
-            n_components = min(n_samples, n_features)
-        elif n_components == "mle":
-            # sklearn may select zero for one feature or a zero spectrum.
-            n_components = max(1, _infer_dimension(explained_variance, n_samples))
-        elif isinstance(n_components, float):
-            # With no released variance, one component is sufficient.
-            n_components = (
-                1
-                if total_variance == 0
-                else np.searchsorted(
-                    np.cumsum(explained_variance_ratio), n_components, side="right"
-                )
-                + 1
-            )
-        n_components = min(int(n_components), n_samples, n_features)
+        n_components = components.shape[0]
 
         self.mean_ = mean
-        self.components_ = components[:n_components, :]
+        self.components_ = components
         self.n_components_ = n_components
         self.explained_variance_ = explained_variance[:n_components]
         self.explained_variance_ratio_ = explained_variance_ratio[:n_components]
@@ -557,6 +595,30 @@ class PCA(
         if desc.T not in ("f32", "f64"):
             raise ValueError("Rowwise PCA inference requires floating-point input")
         return dp.numpy.array2_domain(T=float, size=desc.size, num_columns=output_width)
+
+
+def _select_num_components(request, singular_values, n_samples):
+    """Select a component count from the released spectrum and count."""
+    np = import_optional_dependency("numpy")
+    from sklearn.decomposition._pca import _infer_dimension
+
+    max_components = min(n_samples, len(singular_values))
+    if request is None:
+        return max_components
+    if isinstance(request, int):
+        return request
+    variance = singular_values**2 / (n_samples - 1)
+    if request == "mle":
+        k = max(1, _infer_dimension(variance, n_samples))
+    else:
+        total = np.sum(variance)
+        k = (
+            1
+            if total == 0
+            else np.searchsorted(np.cumsum(variance / total), request, side="right")
+            + 1
+        )
+    return min(int(k), max_components)
 
 
 def _smaller(v):
