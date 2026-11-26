@@ -12,6 +12,8 @@ mod profile_to_tradeoff;
 mod renyidp;
 #[cfg(feature = "ffi")]
 mod renyidp_ffi;
+#[cfg(feature = "ffi")]
+mod zcdp_ffi;
 
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
@@ -164,6 +166,7 @@ pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
     renyi: Option<RenyiRepresentation>,
+    zcdp: Option<ZCDPRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -205,6 +208,15 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a rho-zCDP representation with additive source-delta semantics.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64, source_delta: f64) -> Fallible<Self> {
+        check_rho(rho)?;
+        check_delta(source_delta)?;
+        self.zcdp = Some(ZCDPRepresentation { rho, source_delta });
+        Ok(self)
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         Ok(self.delta_batch(&[epsilon])?[0])
@@ -240,6 +252,11 @@ impl PrivacyGuarantee {
                 *bound = bound.min(value);
             }
         }
+        if let Some(repr) = self.zcdp {
+            for (bound, &query) in bounds.iter_mut().zip(epsilon) {
+                *bound = bound.min(renyidp::delta_via_zCDP(repr.rho, repr.source_delta, query)?);
+            }
+        }
         Ok(bounds)
     }
 
@@ -262,6 +279,11 @@ impl PrivacyGuarantee {
                 *bound = bound.min(value);
             }
         }
+        if let Some(repr) = self.zcdp {
+            for (bound, &query) in bounds.iter_mut().zip(delta) {
+                *bound = bound.min(renyidp::epsilon_via_zCDP(repr.rho, repr.source_delta, query)?);
+            }
+        }
         Ok(bounds)
     }
 
@@ -278,6 +300,11 @@ impl PrivacyGuarantee {
             let values = repr.as_profile()?.log_delta(epsilon)?;
             for (bound, value) in bounds.iter_mut().zip(values) {
                 *bound = bound.min(value);
+            }
+        }
+        if let Some(repr) = self.zcdp {
+            for (bound, &query) in bounds.iter_mut().zip(epsilon) {
+                *bound = bound.min(delta_to_log_upper_unchecked(renyidp::delta_via_zCDP(repr.rho, repr.source_delta, query)?)?);
             }
         }
         Ok(bounds)
@@ -300,6 +327,11 @@ impl PrivacyGuarantee {
             let values = repr.as_profile()?.epsilon_from_log_delta(log_delta)?;
             for (bound, value) in bounds.iter_mut().zip(values) {
                 *bound = bound.min(value);
+            }
+        }
+        if let Some(repr) = self.zcdp {
+            for (bound, &query) in bounds.iter_mut().zip(log_delta) {
+                *bound = bound.min(renyidp::epsilon_via_zCDP(repr.rho, repr.source_delta, log_to_delta_lower_budget(query)?)?);
             }
         }
         Ok(bounds)
@@ -336,6 +368,10 @@ impl PrivacyGuarantee {
                                     alpha,
                                 )
                             })
+                            .transpose()?,
+                        self.zcdp
+                            .as_ref()
+                            .map(|repr| renyidp::beta_via_zCDP(repr.rho, repr.source_delta, alpha))
                             .transpose()?,
                     ],
                     f64::max,
@@ -390,6 +426,15 @@ impl PrivacyGuarantee {
                         )
                     })
                     .transpose()?,
+                self.zcdp
+                    .as_ref()
+                    .map(|repr| {
+                        invert_beta_callback(
+                            |alpha| renyidp::beta_via_zCDP(repr.rho, repr.source_delta, alpha),
+                            beta,
+                        )
+                    })
+                    .transpose()?,
             ],
             f64::max,
         )
@@ -412,6 +457,7 @@ impl std::fmt::Debug for PrivacyGuarantee {
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
             .field("renyi", &self.renyi.is_some())
+            .field("zcdp", &self.zcdp.is_some())
             .finish()
     }
 }
@@ -431,6 +477,12 @@ impl RenyiRepresentation {
             crate::measures::rdp_to_approxdp::batch::rdp_log_delta_batch(curve.as_ref(), epsilons)
         }).with_delta_slack(self.source_delta)
     }
+}
+
+#[derive(Clone, Copy)]
+struct ZCDPRepresentation {
+    rho: f64,
+    source_delta: f64,
 }
 
 fn combine_bounds<const N: usize>(
@@ -704,7 +756,7 @@ fn check_beta(beta: f64) -> Fallible<()> {
 }
 
 fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
-    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+    if !value.is_finite() || value < 0.0 || value > 1.0 {
         return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
     }
     Ok(())
@@ -718,4 +770,16 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
         );
     }
     Ok(())
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() || rho < 0.0 {
+        return fallible!(FailedMap, "rho must be non-negative and not NaN");
+    }
+    Ok(())
+}
+
+fn log_to_delta_lower_budget(log_delta: f64) -> Fallible<f64> {
+    if log_delta < -1024.0 { return Ok(0.0); }
+    SInterval::point(log_delta)?.exp()?.lower_f64()
 }

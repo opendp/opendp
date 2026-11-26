@@ -1,4 +1,5 @@
 pub(crate) mod rdp_to_approxdp;
+pub(crate) mod zcdp;
 //! Various definitions of Measures (and associated Distances).
 //!
 //! A Privacy Measure is used to measure the distance between distributions.
