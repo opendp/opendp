@@ -67,6 +67,39 @@ def _load_library():
 lib, lib_path = _load_library()
 
 
+def _exception_to_ffi(err):
+    from opendp.mod import OpenDPException
+
+    variant = b"FFI" if isinstance(err, Exception) else b"Interrupted"
+    message = b""
+    try:
+        if isinstance(err, OpenDPException):
+            if isinstance(err.variant, str):
+                name = str.encode(err.variant, errors="backslashreplace")
+                if b"\0" not in name:
+                    variant = name
+            diagnostic = err.message
+        else:
+            diagnostic = str(err)
+        if diagnostic is None:
+            message = None
+        elif isinstance(diagnostic, str):
+            message = str.encode(diagnostic, errors="backslashreplace")
+    except BaseException:
+        # Diagnostics must not prevent retention of the original exception.
+        pass
+
+    lib.ffiresult_err.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.POINTER(ExtrinsicObject),
+    ]
+    lib.ffiresult_err.restype = ctypes.c_void_p
+    return lib.ffiresult_err(
+        variant, message, ctypes.byref(ExtrinsicObject(ctypes.py_object(err)))
+    )
+
+
 def _total_cmp(left, right):
     try:
         # compare equality first in case order not supported
@@ -89,17 +122,8 @@ def _total_cmp(left, right):
         c_out.__class__ = ctypes.POINTER(AnyObject)
         return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-    except Exception:
-        import traceback
-
-        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-        lib.ffiresult_err.restype = ctypes.c_void_p
-        return lib.ffiresult_err(
-            ctypes.c_char_p(
-                "Continued stack trace from Exception in user-defined function".encode()
-            ),
-            ctypes.c_char_p(traceback.format_exc().encode()),
-        )
+    except BaseException as err:
+        return _exception_to_ffi(err)
 
 
 _TOTAL_CMP = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.py_object)(
@@ -278,6 +302,7 @@ class FfiError(ctypes.Structure):
         ("variant", ctypes.c_char_p),
         ("message", ctypes.c_char_p),
         ("backtrace", ctypes.c_char_p),
+        ("callback", ctypes.c_void_p),
     ]
 
 
@@ -359,9 +384,18 @@ def unwrap(result, type_) -> Any:
     variant = _c_char_p_to_str(err_contents.variant) or "Core"
     message = _c_char_p_to_str(err_contents.message)
     backtrace = _c_char_p_to_str(err_contents.backtrace)
+    callback = (
+        ctypes.cast(err_contents.callback, ctypes.POINTER(ExtrinsicObject)).contents.ptr
+        if err_contents.callback
+        else None
+    )
 
     if not _error_free(err):
         raise OpenDPException("Failed to free error.")  # pragma: no cover
+
+    # The original exception wins even if Rust changed its variant with WithVariant.
+    if callback is not None:
+        raise callback
 
     # Rust stack traces follow from here:
     pl = import_optional_dependency("polars", raise_error=False)

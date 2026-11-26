@@ -1,5 +1,7 @@
 import pytest
 
+import opendp.prelude as dp
+
 from opendp.typing import *
 from opendp._convert import (
     py_to_c,
@@ -18,6 +20,7 @@ from opendp._convert import (
 )
 from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
 from opendp.extras.polars import Margin, Bound
+from opendp.mod import OpenDPException
 
 
 @pytest.mark.parametrize(
@@ -115,6 +118,83 @@ def test_overflow():
 
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
+
+
+@pytest.mark.parametrize(
+    "original",
+    [
+        OpenDPException("Overflow", "callback failed"),
+        ValueError("[Overflow] : callback failed"),
+        OpenDPException("Overflow", object()),
+        OpenDPException("FailedCast"),
+        KeyboardInterrupt(),
+        SystemExit(1),
+    ],
+)
+def test_callback_error_round_trip(original):
+    def callback(_):
+        raise original
+
+    with pytest.raises(type(original)) as error:
+        dp.new_function(callback, int)(1)
+    assert error.value is original
+
+
+def test_search_interruption_is_not_recoverable():
+    original = KeyboardInterrupt()
+    calls = []
+
+    def predicate(value):
+        calls.append(value)
+        if value == 0:
+            raise ValueError("initial parameter unavailable")
+        raise original
+
+    with pytest.raises(KeyboardInterrupt) as error:
+        dp.binary_search(predicate, T=int)
+    assert error.value is original
+    assert calls[-1] != 0
+    assert sum(value != 0 for value in calls) == 1
+
+
+@pytest.mark.parametrize("T, reject_float", [(int, False), (None, False), (None, True)])
+def test_structured_search_interruption(T, reject_float):
+    original = dp.OpenDPException("Interrupted", "cancelled")
+    calls = []
+
+    def predicate(value):
+        calls.append(value)
+        if reject_float and isinstance(value, float):
+            raise TypeError("integer required")
+        raise original
+
+    with pytest.raises(dp.OpenDPException) as error:
+        dp.binary_search(predicate, T=T)
+    assert error.value.variant == "Interrupted"
+    assert len(calls) == (2 if reject_float else 1)
+
+
+def test_callback_retains_unprintable_exception():
+    import gc
+    import weakref
+
+    class UnprintableError(Exception):
+        def __str__(self):
+            raise RuntimeError("broken formatter")
+
+    references = []
+
+    def callback(_):
+        error = UnprintableError()
+        references.append(weakref.ref(error))
+        raise error
+
+    with pytest.raises(UnprintableError) as caught:
+        dp.new_function(callback, int)(1)
+    assert caught.value is references[0]()
+    del caught
+    gc.collect()
+    assert references[0]() is None
 
 
 def test_check_and_cast_scalar():

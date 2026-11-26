@@ -40,48 +40,57 @@ static char *heap_strdup(const char *value)
     return copy;
 }
 
-static char *get_last_error_message(void)
-{
-    int error_occurred = 0;
-    SEXP call = PROTECT(lang1(install("geterrmessage")));
-    SEXP message = PROTECT(R_tryEval(call, R_GlobalEnv, &error_occurred));
-    if (error_occurred)
-    {
-        UNPROTECT(2);
-        return heap_strdup("unknown R error");
-    }
-    char *result = heap_strdup(sexp_to_charptr(message));
-    UNPROTECT(2);
-    return result;
-}
-
 static FfiResult_____AnyObject *wrap_success(AnyObject *obj)
 {
-    FfiResult_____AnyObject *result = (FfiResult_____AnyObject *)malloc(sizeof(FfiResult_____AnyObject));
-    if (!result)
-        error("failed to allocate callback result");
-    result->tag = Ok_____AnyObject;
-    result->ok = obj;
-    return result;
-}
-
-static FfiResult_____AnyObject *wrap_failure_details(const char *message, const char *backtrace)
-{
-    FfiResult_____AnyObject *result = (FfiResult_____AnyObject *)malloc(sizeof(FfiResult_____AnyObject));
-    FfiError *err = (FfiError *)malloc(sizeof(FfiError));
-    if (!result || !err)
-        error("failed to allocate callback error");
-    err->variant = heap_strdup("FailedFunction");
-    err->message = heap_strdup(message);
-    err->backtrace = heap_strdup(backtrace);
-    result->tag = Err_____AnyObject;
-    result->err = err;
-    return result;
+    return (FfiResult_____AnyObject *)ffiresult_ok(obj);
 }
 
 static FfiResult_____AnyObject *wrap_failure(const char *message)
 {
-    return wrap_failure_details(message, "backtrace disabled");
+    return (FfiResult_____AnyObject *)ffiresult_err("FFI", message, NULL);
+}
+
+typedef struct ErrorBoundary {
+    SEXP (*exec)(void *);
+    void *data;
+    FfiResult_____AnyObject *failure;
+} ErrorBoundary;
+
+static SEXP boundary_body(void *data)
+{
+    ErrorBoundary *boundary = (ErrorBoundary *)data;
+    return opendp_with_scope(boundary->exec, boundary->data);
+}
+
+static SEXP boundary_handler(SEXP condition, void *data)
+{
+    ErrorBoundary *boundary = (ErrorBoundary *)data;
+    PROTECT(condition);
+    SEXP details = PROTECT(get_private_func(".callback_error_details"));
+    SEXP call = PROTECT(lang2(details, condition));
+    SEXP values = PROTECT(Rf_eval(call, R_BaseEnv));
+    SEXP message = VECTOR_ELT(values, 1);
+    boundary->failure = (FfiResult_____AnyObject *)ffiresult_err(
+        Rf_translateCharUTF8(STRING_ELT(VECTOR_ELT(values, 0), 0)),
+        message == R_NilValue ? NULL : Rf_translateCharUTF8(STRING_ELT(message, 0)),
+        NULL
+    );
+    UNPROTECT(4);
+    return R_NilValue;
+}
+
+static void boundary_exec(void *data)
+{
+    R_tryCatchError(boundary_body, data, boundary_handler, data);
+}
+
+static FfiResult_____AnyObject *run_with_error_boundary(SEXP (*exec)(void *), void *data)
+{
+    ErrorBoundary boundary = {.exec = exec, .data = data, .failure = NULL};
+    // Never unwind through Rust, even if converting the condition itself fails.
+    if (!R_ToplevelExec(boundary_exec, &boundary))
+        return wrap_failure("R callback error could not be converted");
+    return boundary.failure;
 }
 
 static int count_formals(SEXP function)
@@ -210,6 +219,7 @@ typedef struct CompareContext {
     SEXP left;
     SEXP right;
     int cmp;
+    FfiResult_____AnyObject *result;
 } CompareContext;
 
 static void compare_exec(void *data)
@@ -251,6 +261,17 @@ static void compare_exec(void *data)
     error("objects are not comparable");
 }
 
+static SEXP compare_and_convert_exec(void *data)
+{
+    CompareContext *ctx = (CompareContext *)data;
+    compare_exec(ctx);
+    SEXP cmp = PROTECT(ScalarInteger(ctx->cmp));
+    SEXP type_name = PROTECT(parse_runtime_type("i8"));
+    ctx->result = wrap_success(sexp_to_anyobjectptr(cmp, type_name));
+    UNPROTECT(2);
+    return R_NilValue;
+}
+
 static FfiResult_____AnyObject *total_cmp_callback(const void *left_ptr, const void *right_ptr)
 {
     RetainedSexp *left = (RetainedSexp *)left_ptr;
@@ -259,23 +280,9 @@ static FfiResult_____AnyObject *total_cmp_callback(const void *left_ptr, const v
     if (!left || !right || left->tag != TAG_RETAINED_SEXP || right->tag != TAG_RETAINED_SEXP)
         return wrap_failure("extrinsic comparison expects retained R objects");
 
-    CompareContext ctx = {.left = left->value, .right = right->value, .cmp = 0};
-    if (!R_ToplevelExec(compare_exec, &ctx))
-    {
-        char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined comparison",
-            message
-        );
-        free(message);
-        return result;
-    }
-
-    SEXP cmp = PROTECT(ScalarInteger(ctx.cmp));
-    SEXP type_name = PROTECT(mkString("i8"));
-    AnyObject *result = sexp_to_anyobjectptr(cmp, type_name);
-    UNPROTECT(2);
-    return wrap_success(result);
+    CompareContext ctx = {.left = left->value, .right = right->value, .cmp = 0, .result = NULL};
+    FfiResult_____AnyObject *failure = run_with_error_boundary(compare_and_convert_exec, &ctx);
+    return failure ? failure : ctx.result;
 }
 
 typedef struct CallbackInvocation {
@@ -302,32 +309,12 @@ static SEXP callback_exec(void *data)
     else
         call = PROTECT(lang2(invocation->ctx->function, arg));
 
-    int error_occurred = 0;
-    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-    if (error_occurred)
-    {
-        char *message = get_last_error_message();
-        const char *context = invocation->is_transition
-            ? "Exception in user-defined transition"
-            : "Exception in user-defined function";
-        invocation->result = wrap_failure_details(context, message);
-        free(message);
-        UNPROTECT(accepts_internal ? 4 : 3);
-        return R_NilValue;
-    }
-
+    SEXP out = PROTECT(Rf_eval(call, R_GlobalEnv));
     SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
     AnyObject *result = sexp_to_anyobjectptr(out, type_name);
     invocation->result = wrap_success(result);
     UNPROTECT(accepts_internal ? 5 : 4);
     return R_NilValue;
-}
-
-// Retained callbacks may run after the generated R wrapper returns.
-// Each invocation needs a fresh scope within the R error boundary.
-static void scoped_callback_exec(void *data)
-{
-    (void)opendp_with_scope(callback_exec, data);
 }
 
 static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void *userdata)
@@ -344,17 +331,8 @@ static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void
         .is_transition = false,
         .result = NULL
     };
-    if (!R_ToplevelExec(scoped_callback_exec, &invocation))
-    {
-        char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined function",
-            message
-        );
-        free(message);
-        return result;
-    }
-    return invocation.result;
+    FfiResult_____AnyObject *failure = run_with_error_boundary(callback_exec, &invocation);
+    return failure ? failure : invocation.result;
 }
 
 static FfiResult_____AnyObject *transition_stub(
@@ -373,17 +351,8 @@ static FfiResult_____AnyObject *transition_stub(
         .is_transition = true,
         .result = NULL
     };
-    if (!R_ToplevelExec(scoped_callback_exec, &invocation))
-    {
-        char *message = get_last_error_message();
-        FfiResult_____AnyObject *result = wrap_failure_details(
-            "Exception in user-defined transition",
-            message
-        );
-        free(message);
-        return result;
-    }
-    return invocation.result;
+    FfiResult_____AnyObject *failure = run_with_error_boundary(callback_exec, &invocation);
+    return failure ? failure : invocation.result;
 }
 
 CallbackFn sexp_to_callbackfn(SEXP function, const char *type_name)

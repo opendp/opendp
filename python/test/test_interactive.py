@@ -86,13 +86,16 @@ def test_plugin_queryable_list():
 
 
 def test_plugin_queryable_error():
+    original = ValueError("test clean stack trace")
+
     def transition(_query, _is_internal):
-        raise ValueError("test clean stack trace")
+        raise original
 
     qbl = dp.new_queryable(transition, "Vec<i32>", int)
 
-    with pytest.raises(dp.OpenDPException):
+    with pytest.raises(ValueError, match="test clean stack trace") as error:
         qbl([2, 3])
+    assert error.value is original
 
     with pytest.raises(TypeError):
         qbl(2)

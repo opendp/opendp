@@ -36,7 +36,7 @@ def test_user_metric_total_cmp_native_distance():
         match="d_in from the privacy map must be no greater than the d_in",
     ):
         m_comp.map(2)
-    with pytest.raises(dp.OpenDPException, match="not comparable"):
+    with pytest.raises(ValueError, match="not comparable"):
         m_comp.map(float("nan"))
 
 
@@ -52,7 +52,7 @@ def test_user_metric_total_cmp_custom_distance():
         d_in=Dist(),
         d_mids=[1.0],
     )
-    with pytest.raises(dp.OpenDPException, match="comparison failed!"):
+    with pytest.raises(ValueError, match="comparison failed!"):
         m_comp.map(Dist())
 
     assert isinstance(m_comp.input_metric, ExtrinsicDistance)

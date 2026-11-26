@@ -1628,7 +1628,9 @@ def _call_rust_search(
 
     try:
         return search(wrapped)
-    except OpenDPException as err:
+    except Exception as err:
+        if isinstance(err, OpenDPException) and err.variant == "Interrupted":
+            raise
         if first_exception is not None:
             exc = first_exception
             if (bounds is None or bounds == (None, None)) and not had_success:
@@ -1638,11 +1640,12 @@ def _call_rust_search(
                     f"This exception is raised when the predicate is evaluated at {center}."
                 )
             raise exc
-        if err.variant == "Search":
-            raise ValueError(err.message)
-        if err.variant == "Type":
-            raise TypeError(err.message)
-        raise err
+        if isinstance(err, OpenDPException):
+            if err.variant == "Search":
+                raise ValueError(err.message)
+            if err.variant == "Type":
+                raise TypeError(err.message)
+        raise
 
 
 # when return sign is false, only return float
@@ -1807,6 +1810,8 @@ def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[i
         # predicate succeeded with a float, assume it wants floats
         return float
     except Exception as e:
+        if isinstance(e, OpenDPException) and e.variant == "Interrupted":
+            raise
         if not _is_type_error(e):
             # it didn't reject the type, but did fail with a different error
             return float
@@ -1817,6 +1822,8 @@ def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[i
         # predicate is happy with an int, assume it wants ints
         return int
     except Exception as e:
+        if isinstance(e, OpenDPException) and e.variant == "Interrupted":
+            raise
         if not _is_type_error(e):
             # it didn't reject the type, but did fail with a different error
             return int

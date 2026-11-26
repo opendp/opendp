@@ -62,10 +62,10 @@ test_that("user-defined callback errors surface cleanly", {
     function_ = \(arg) stop("boom from postprocess", call. = FALSE),
     .TO = f64
   )
-  expect_error(
-    postprocess(arg = 1.),
-    "FailedFunction|boom from postprocess"
-  )
+  caught <- tryCatch(postprocess(arg = 1.), error = identity)
+  expect_s3_class(caught, "opendp_error")
+  expect_identical(caught$variant, "FFI")
+  expect_identical(caught$raw_message, "boom from postprocess")
 
   meas <- make_user_measurement(
     input_domain = atom_domain(.T = i32),
@@ -77,7 +77,7 @@ test_that("user-defined callback errors surface cleanly", {
   )
   expect_error(
     meas(arg = 1L),
-    "FailedFunction|boom from release"
+    "boom from release"
   )
 
   meas_with_bad_map <- make_user_measurement(
@@ -90,8 +90,67 @@ test_that("user-defined callback errors surface cleanly", {
   )
   expect_error(
     meas_with_bad_map(d_in = 1L),
-    "FailedFunction|boom from privacy map"
+    "boom from privacy map"
   )
+})
+
+test_that("Rust overflow survives R callbacks and transitions", {
+  enable_features("contrib", "honest-but-curious")
+  sum_trans <- make_sum(
+    vector_domain(atom_domain(.T = i32, bounds = c(0L, 100L))),
+    symmetric_distance()
+  )
+  fail <- \(.arg) sum_trans(d_in = 100000000L)
+  original <- tryCatch(fail(1L), error = identity)
+  expect_identical(original$variant, "Overflow")
+  fn <- new_function(function_ = fail, .TO = i32)
+  q <- new_queryable(fail, .Q = i32, .A = i32)
+  for (invoke in list(\() fn(arg = 1L), \() q(query = 1L))) {
+    caught <- tryCatch(invoke(), error = identity)
+    expect_s3_class(caught, "opendp_error")
+    expect_identical(caught$variant, "Overflow")
+    expect_identical(caught$raw_message, original$raw_message)
+  }
+})
+
+test_that("untyped callback messages are not parsed as variants", {
+  enable_features("contrib", "honest-but-curious")
+  message <- "[Overflow] : callback \u03bb"
+  fn <- new_function(function_ = \(.arg) stop(message, call. = FALSE), .TO = i32)
+  caught <- tryCatch(fn(arg = 1L), error = identity)
+  expect_identical(caught$variant, "FFI")
+  expect_identical(caught$raw_message, message)
+})
+
+test_that("nullable Rust diagnostics survive error cleanup and callbacks", {
+  enable_features("contrib", "honest-but-curious")
+  quantiles <- make_quantiles_from_counts(c(0L, 1L, 2L), 0.5)
+  caught <- tryCatch(quantiles(arg = c(0L, 0L)), error = identity)
+  expect_identical(caught$variant, "FailedCast")
+  expect_null(caught$raw_message)
+  gc()
+  expect_match(conditionMessage(caught), "FailedCast")
+
+  fn <- new_function(function_ = \(.arg) quantiles(arg = c(0L, 0L)), .TO = i32)
+  caught <- tryCatch(fn(arg = 1L), error = identity)
+  expect_identical(caught$variant, "FailedCast")
+  expect_null(caught$raw_message)
+})
+
+test_that("extrinsic comparison results and failures cross the callback boundary", {
+  enable_features("contrib", "honest-but-curious")
+  domain <- user_domain("ComparisonDomain", member = \(.x) TRUE)
+  metric <- user_distance("ComparisonDistance")
+  trans <- make_user_transformation(
+    input_domain = domain, input_metric = metric,
+    output_domain = domain, output_metric = metric,
+    function_ = identity, stability_map = identity
+  )
+  expect_true(trans(d_in = 1L, d_out = 1L))
+  expect_false(trans(d_in = 2L, d_out = 1L))
+  caught <- tryCatch(trans(d_in = NaN, d_out = 1L), error = identity)
+  expect_identical(caught$variant, "FFI")
+  expect_match(conditionMessage(caught), "objects are not comparable")
 })
 
 test_that("user-defined callbacks surface conversion failures cleanly", {
@@ -103,7 +162,7 @@ test_that("user-defined callbacks surface conversion failures cleanly", {
   )
   expect_error(
     postprocess(arg = 1L),
-    "FailedFunction|integer"
+    "integer"
   )
 
   meas <- make_user_measurement(
@@ -116,7 +175,7 @@ test_that("user-defined callbacks surface conversion failures cleanly", {
   )
   expect_error(
     meas(arg = 1L),
-    "FailedFunction|integer"
+    "integer"
   )
 })
 
@@ -208,13 +267,20 @@ test_that("callback userdata is released when later argument conversion raises",
 
   # Retained callback entry points must work after their creating scope ends.
   direct <- getNativeSymbolInfo("test_callback_without_wrapper", fixture)$address
-  release <- getNativeSymbolInfo("opendp_release_ref_counted", "opendp")$address
   to_object <- getNativeSymbolInfo("sexp_to_anyobjectptr", "opendp")$address
   object_free <- getNativeSymbolInfo("opendp_data__object_free", "opendp")$address
+  error_free <- getNativeSymbolInfo("opendp_core___error_free", "opendp")$address
+  function_free <- getNativeSymbolInfo("opendp_core___function_free", "opendp")$address
   runtime_type <- getFromNamespace("rt_parse", "opendp")("i32")
   for (transition in c(FALSE, TRUE)) {
     converter <- getNativeSymbolInfo(
       if (transition) "sexp_to_transitionfn" else "sexp_to_callbackfn", "opendp"
+    )$address
+    constructor <- getNativeSymbolInfo(
+      if (transition) "opendp_core__new_queryable" else "opendp_core__new_function", "opendp"
+    )$address
+    evaluate <- getNativeSymbolInfo(
+      if (transition) "opendp_core__queryable_eval" else "opendp_core__function_eval", "opendp"
     )$address
     called <- 0L
     callback <- function(arg, is_internal = FALSE) {
@@ -223,11 +289,15 @@ test_that("callback userdata is released when later argument conversion raises",
       if (transition) expect_false(is_internal)
       8L
     }
-    expect_true(.Call(
-      direct, callback, transition, scope, converter, forget,
-      release, to_object, object_free, runtime_type
-    ))
+    invoke_direct <- function(fn) {
+      .Call(
+        direct, fn, transition, scope, converter, constructor,
+        evaluate, function_free, to_object, object_free, error_free, runtime_type
+      )
+    }
+    expect_true(invoke_direct(callback))
     expect_equal(called, 1L)
+    expect_false(invoke_direct(\(arg) stop("callback failed", call. = FALSE)))
   }
 })
 
@@ -334,7 +404,7 @@ test_that("extrinsic domain member errors surface cleanly", {
 
   expect_error(
     domain(member = 1L),
-    "FailedFunction|boom from member"
+    "boom from member"
   )
 })
 

@@ -1,6 +1,5 @@
 #include <R.h>
 #include <Rinternals.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include "convert.h"
 
@@ -55,9 +54,9 @@ typedef struct {
     SEXP function;
     int transition;
     void *converter;
-    void (*forget)(void *);
-    CallbackFn callback;
-    TransitionFn transition_callback;
+    void *constructor;
+    bool (*free_error)(FfiError *);
+    void *callable;
 } DirectCallbackContext;
 
 static SEXP retain_callback(void *data)
@@ -65,28 +64,42 @@ static SEXP retain_callback(void *data)
     DirectCallbackContext *ctx = (DirectCallbackContext *)data;
     if (ctx->transition)
     {
-        ctx->transition_callback = ((TransitionFn (*)(SEXP, const char *))ctx->converter)(ctx->function, "i32");
-        ctx->forget((void *)ctx->transition_callback.userdata._0);
+        TransitionFn callback = ((TransitionFn (*)(SEXP, const char *))ctx->converter)(ctx->function, "i32");
+        FfiResult_____AnyObject result = ((FfiResult_____AnyObject (*)(const TransitionFn *, const char *, const char *))ctx->constructor)(&callback, "i32", "i32");
+        if (result.tag != Ok_____AnyObject)
+        {
+            ctx->free_error(result.err);
+            Rf_error("failed to construct test queryable");
+        }
+        ctx->callable = result.ok;
     }
     else
     {
-        ctx->callback = ((CallbackFn (*)(SEXP, const char *))ctx->converter)(ctx->function, "i32");
-        ctx->forget((void *)ctx->callback.userdata._0);
+        CallbackFn callback = ((CallbackFn (*)(SEXP, const char *))ctx->converter)(ctx->function, "i32");
+        FfiResult_____AnyFunction result = ((FfiResult_____AnyFunction (*)(const CallbackFn *, const char *))ctx->constructor)(&callback, "i32");
+        if (result.tag != Ok_____AnyFunction)
+        {
+            ctx->free_error(result.err);
+            Rf_error("failed to construct test function");
+        }
+        ctx->callable = result.ok;
     }
     return R_NilValue;
 }
 
-// Call the retained callback after the creating scope has ended. No generated
-// wrapper scope exists to own the result of its borrowed argument conversion.
+// Rust retains the callback and consumes its result. Evaluate after the
+// creating scope has ended, with no generated R wrapper scope.
 SEXP test_callback_without_wrapper(
     SEXP function, SEXP transition, SEXP scope, SEXP converter,
-    SEXP forget, SEXP release, SEXP to_object, SEXP object_free, SEXP runtime_type)
+    SEXP constructor, SEXP evaluate, SEXP callable_free, SEXP to_object,
+    SEXP object_free, SEXP error_free, SEXP runtime_type)
 {
     DirectCallbackContext ctx = {
         .function = function,
         .transition = Rf_asLogical(transition),
         .converter = R_ExternalPtrAddr(converter),
-        .forget = R_ExternalPtrAddr(forget)
+        .constructor = R_ExternalPtrAddr(constructor),
+        .free_error = R_ExternalPtrAddr(error_free)
     };
     SEXP (*with_scope)(SEXP (*)(void *), void *) = R_ExternalPtrAddr(scope);
     with_scope(retain_callback, &ctx);
@@ -95,29 +108,20 @@ SEXP test_callback_without_wrapper(
     AnyObject *arg = ((AnyObject *(*)(SEXP, SEXP))R_ExternalPtrAddr(to_object))(value, runtime_type);
     UNPROTECT(1);
 
-    const void *userdata = ctx.transition
-        ? ctx.transition_callback.userdata._0 : ctx.callback.userdata._0;
-    FfiResult_____AnyObject *result = ctx.transition
-        ? ctx.transition_callback.callback(arg, false, userdata)
-        : ctx.callback.callback(arg, userdata);
-    int success = result && result->tag == Ok_____AnyObject;
+    FfiResult_____AnyObject result = ctx.transition
+        ? ((FfiResult_____AnyObject (*)(AnyObject *, const AnyObject *))R_ExternalPtrAddr(evaluate))(ctx.callable, arg)
+        : ((FfiResult_____AnyObject (*)(const AnyFunction *, const AnyObject *, const char *))R_ExternalPtrAddr(evaluate))(ctx.callable, arg, "i32");
+    int success = result.tag == Ok_____AnyObject;
     FfiResult_____c_void (*free_object)(AnyObject *) = R_ExternalPtrAddr(object_free);
-    if (result)
-    {
-        if (success)
-            free_object(result->ok);
-        else
-        {
-            // The existing R callback stub allocates FfiError with C malloc.
-            FfiError *err = result->err;
-            free(err->variant);
-            free(err->message);
-            free(err->backtrace);
-            free(err);
-        }
-        free(result);
-    }
+    if (success)
+        free_object(result.ok);
+    else
+        ctx.free_error(result.err);
+
     free_object(arg);
-    ((void (*)(void *))R_ExternalPtrAddr(release))((void *)userdata);
+    if (ctx.transition)
+        free_object(ctx.callable);
+    else
+        ((FfiResult_____c_void (*)(AnyFunction *))R_ExternalPtrAddr(callable_free))(ctx.callable);
     return ScalarLogical(success);
 }
