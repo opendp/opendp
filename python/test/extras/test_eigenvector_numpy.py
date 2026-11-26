@@ -135,8 +135,9 @@ def test_eigenvectors():
     )
     sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
     # Row norm B = 4, one replacement has nuclear sensitivity 2B^2.
-    concentrations = [1.0 / (2 * 4.0**2)] * 3
-    meas = sp_sscp >> then_private_eigenvectors(concentrations)
+    meas = sp_sscp >> then_private_eigenvectors(
+        dp.max_divergence(), scale=2 * 4.0**2 / 3, weights=[1.0] * 4
+    )
     assert meas.map(2) == pytest.approx(3.0)
 
     data = np.random.normal(size=(1000, num_columns))
@@ -201,13 +202,17 @@ def test_joint_eigenvector_rejects_invalid_spaces():
     with pytest.raises(ValueError, match="joint nuclear/Frobenius"):
         _make_np_sscp_projection(matrix, incorrect_metric, np.eye(2))
     with pytest.raises(ValueError, match="NPSymmetricMatrixDomain"):
-        make_private_eigenvectors(invalid, metric, [])
+        make_private_eigenvectors(invalid, metric, dp.max_divergence(), 1.0, [1.0])
     with pytest.raises(ValueError, match="joint nuclear/Frobenius"):
-        make_private_eigenvectors(matrix, incorrect_metric, [])
-    with pytest.raises(ValueError, match="at most"):
-        make_private_eigenvectors(matrix, metric, [0.0, 0.0])
-    with pytest.raises(ValueError, match="non-negative"):
-        make_private_eigenvectors(matrix, metric, [float("nan")])
+        make_private_eigenvectors(
+            matrix, incorrect_metric, dp.max_divergence(), 1.0, [1.0]
+        )
+    with pytest.raises(ValueError, match="weights"):
+        make_private_eigenvectors(matrix, metric, dp.max_divergence(), 1.0, [1.0] * 3)
+    with pytest.raises(ValueError, match="positive and finite"):
+        make_private_eigenvectors(
+            matrix, metric, dp.max_divergence(), float("nan"), [1.0]
+        )
 
 
 @pytest.mark.parametrize(
@@ -226,15 +231,27 @@ def test_joint_projection_rejects_invalid_matrix(projection, message):
         _make_np_sscp_projection(domain, dp.schatten12_distance(), projection)
 
 
-def test_joint_eigenvector_composition_map():
-    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
+def test_joint_eigenvector_composition_map(monkeypatch):
+    from opendp.extras.sklearn import _make_eigenvector as eigenvector
 
-    measurement = make_private_eigenvectors(
+    concentrations = []
+    original = eigenvector.then_private_eigenvector
+
+    def record(concentration):
+        concentrations.append(concentration)
+        return original(concentration)
+
+    monkeypatch.setattr(eigenvector, "then_private_eigenvector", record)
+    measurement = eigenvector.make_private_eigenvectors(
         _symmetric_matrix_domain(num_features=3),
         dp.schatten12_distance(),
-        [1.0, 2.0],
+        dp.max_divergence(),
+        1.0 / 3,
+        [1.0, 2.0, 100.0],
     )
     assert measurement.map((0.0, 0.0)) == 0.0
     assert measurement.map((2.0, 3.0)) == pytest.approx(6.0)
     assert measurement.map((5.0, 0.5)) == pytest.approx(3.0 / np.sqrt(2.0))
     assert measurement(np.eye(3)).shape == (3, 3)
+    normalizer = 3.0
+    np.testing.assert_allclose(concentrations, np.array([1.0, 2.0]) * 3 / normalizer)

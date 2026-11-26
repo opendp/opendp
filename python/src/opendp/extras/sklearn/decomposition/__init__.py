@@ -18,6 +18,7 @@ OpenDP :class:`~opendp.context.Context` query.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from numbers import Integral
 from typing import TYPE_CHECKING
 
 from sklearn.base import (
@@ -31,14 +32,15 @@ from sklearn.utils.validation import check_array, check_is_fitted, validate_data
 
 from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 from opendp._lib import import_optional_dependency
-from opendp.context import register
+from opendp.context import _check_sized_contributions, register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
+from opendp.extras.numpy._make_np_sscp import then_np_sscp
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
 from opendp.extras.sklearn._make_eigendecomposition import (
-    then_private_np_eigendecomposition,
+    then_private_eigendecomposition,
 )
 from opendp.mod import Domain, Measure, Measurement, Metric
 
@@ -77,7 +79,7 @@ def make_private_pca(
     :param input_domain: Input array domain with public size and feature count.
     :param input_metric: Symmetric distance on input rows.
     :param output_measure: Max divergence (pure epsilon-DP).
-    :param d_in: Input distance to protect, either 1 or 2; use 2 for row replacement.
+    :param d_in: Positive integral symmetric distance; use two edits per row replacement.
     :param d_out: Positive epsilon privacy allowance at ``d_in``.
     :param clip_norm: Public positive finite L2 clipping radius, or None to use the domain's L2 bound.
     :param center: None for a privately estimated mean, or 'origin' for the public domain origin.
@@ -93,8 +95,10 @@ def make_private_pca(
         raise ValueError("PCA currently supports symmetric_distance() only")
     if output_measure != dp.max_divergence():
         raise ValueError("PCA currently supports max_divergence() only")
-    if d_in not in (1, 2):
-        raise ValueError("PCA currently supports d_in=1 or d_in=2")
+    if isinstance(d_in, bool) or not isinstance(d_in, Integral) or d_in <= 0:
+        raise ValueError("d_in must be a positive integer")
+    d_in = int(d_in)
+    _check_sized_contributions(input_domain, input_metric, d_in)
     if d_out <= 0:
         raise ValueError("d_out must be positive")
     if center is not None and not (isinstance(center, str) and center == "origin"):
@@ -125,10 +129,12 @@ def make_private_pca(
         raise ValueError(
             "num_components must be None, an integer, a fraction, or 'mle'"
         )
-    num_samples = min(
-        num_components if isinstance(num_components, int) else n_features,
-        n_features - 1,
+    num_eigenvectors = (
+        num_components
+        if isinstance(num_components, int)
+        else min(n_samples, n_features)
     )
+    weights = [1.0] * num_eigenvectors
 
     origin = np.array(
         0.0 if desc.origin is None else desc.origin, dtype=float, copy=True
@@ -166,8 +172,6 @@ def make_private_pca(
     eigen_budget = _smaller(float(d_out) / 3 * 2) if estimate_mean else float(d_out)
 
     def eigendecomposition(reference):
-        # Low-level mechanisms are calibrated at two symmetric edits.
-        budget_at_two = 2 * eigen_budget / float(d_in)
         t_reclip = (
             make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference)
             if estimate_mean
@@ -183,23 +187,16 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
-        while True:
-            eigvals_epsilon = budget_at_two / 2 if num_samples else budget_at_two
-            eigvecs_epsilons = (
-                [_smaller(budget_at_two / 2 / num_samples)] * num_samples
-                if num_samples
-                else []
-            )
-            measurement = t_center >> then_private_np_eigendecomposition(
-                eigvals_epsilon,
-                eigvecs_epsilons,
-            )
-            spent = measurement.map(d_in)
-            if spent <= eigen_budget:
-                break
-            # Directed-rounding error can accumulate across many samples.
-            # Reduce all allocations together, preserving the fixed split.
-            budget_at_two = _smaller(budget_at_two * (eigen_budget / spent))
+        t_sscp = t_center >> then_np_sscp()
+        measurement = dp.binary_search_chain(
+            lambda scale: t_sscp
+            >> then_private_eigendecomposition(
+                output_measure, scale, scale, weights=weights
+            ),
+            d_in=d_in,
+            d_out=eigen_budget,
+            T=float,
+        )
 
         return measurement >> _new_pure_function(
             lambda out: PCARelease(
@@ -240,9 +237,8 @@ def make_private_pca(
         )
         m_mean = dp.binary_search_chain(
             lambda scale: t_l1 >> make_private_np_mean(l1_domain, input_metric, scale),
-            # Fixed-size sums have zero sensitivity at one symmetric edit.
-            d_in=2,
-            d_out=2 * mean_budget / float(d_in),
+            d_in=d_in,
+            d_out=mean_budget,
             T=float,
         )
         projection = make_np_clamp(
@@ -271,7 +267,7 @@ def make_private_pca(
             input_metric,
             output_measure,
             function,
-            compositor.map,
+            lambda distance: 0.0 if distance < 2 else compositor.map(distance),
         )
 
     return t_clip >> measurement if t_clip is not None else measurement
@@ -430,7 +426,7 @@ class PCA(
                 )
                 + 1
             )
-        n_components = int(n_components)
+        n_components = min(int(n_components), n_samples, n_features)
 
         self.mean_ = mean
         self.components_ = components[:n_components, :]

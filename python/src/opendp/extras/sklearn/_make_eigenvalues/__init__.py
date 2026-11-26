@@ -1,7 +1,7 @@
-from opendp.extras._utilities import to_then, with_privacy
-from opendp.mod import Domain, Metric, Transformation
+from opendp.extras._utilities import to_then
+from opendp.mod import Domain, Measure, Measurement, Metric, Transformation
 from opendp._lib import import_optional_dependency
-from opendp._internal import _make_transformation
+from opendp._internal import _make_transformation, _new_pure_function
 
 # planning to make this public, but may make more API changes
 
@@ -36,7 +36,27 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
     )
 
 
-# generate then and private variants of the constructor
 then_eigenvalues = to_then(make_eigenvalues)
-make_private_eigenvalues = with_privacy(make_eigenvalues)
+
+
+def make_private_eigenvalues(
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    scale: float,
+) -> Measurement:
+    """Release all eigenvalues with independent Laplace noise, sorted ascending."""
+    import opendp.prelude as dp
+
+    np = import_optional_dependency("numpy")
+    if output_measure != dp.max_divergence():
+        raise ValueError("eigenvalues currently support max_divergence() only")
+    return (
+        make_eigenvalues(input_domain, input_metric)
+        >> dp.m.then_laplace(scale)
+        >> dp.as_array()
+        >> _new_pure_function(np.sort)
+    )
+
+
 then_private_eigenvalues = to_then(make_private_eigenvalues)

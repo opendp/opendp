@@ -1,10 +1,10 @@
-from typing import Sequence
+from collections.abc import Sequence
 from dataclasses import asdict
 
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
-from opendp.mod import Domain, Metric, Transformation, Measurement
+from opendp.mod import Domain, Measure, Metric, Transformation, Measurement
 from opendp._internal import _make_measurement, _make_transformation
 
 
@@ -182,8 +182,21 @@ _then_np_sscp_projection = to_then(_make_np_sscp_projection)
 
 
 def make_private_eigenvectors(
-    input_domain: Domain, input_metric: Metric, concentrations: Sequence[float]
+    input_domain: Domain,
+    input_metric: Metric,
+    output_measure: Measure,
+    scale: float,
+    weights: Sequence[float],
 ) -> Measurement:
+    """Release leading eigenvectors (columns) of a symmetric matrix.
+
+    The scale is the inverse of the sum of the Bingham concentrations.
+    Weights give relative concentrations, one per requested component in
+    leading-component order. They must be finite and nonnegative.
+    At least one sampled vector must have positive weight, if any are sampled.
+    The last vector of a full basis follows by postprocessing; its weight
+    is ignored because it consumes no privacy expenditure.
+    """
     np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
@@ -196,19 +209,38 @@ def make_private_eigenvectors(
     if input_metric != dp.schatten12_distance():
         raise ValueError("expected joint nuclear/Frobenius distance input metric")
 
-    input_desc = input_domain.descriptor
-    if len(concentrations) > input_desc.num_features - 1:
-        raise ValueError(
-            f"must specify at most {input_desc.num_features - 1} concentrations"
-        )
-    if any(not np.isfinite(c) or c < 0 for c in concentrations):
-        raise ValueError("concentrations must be finite and non-negative")
+    if output_measure != dp.max_divergence():
+        raise ValueError("eigenvectors currently support max_divergence() only")
+    if not np.isfinite(scale) or scale <= 0:
+        raise ValueError("scale must be positive and finite")
 
-    privacy_measure = dp.max_divergence()
+    input_desc = input_domain.descriptor
+    dimension = input_desc.num_features
+    weights = np.asarray(weights, dtype=float)
+    if (
+        weights.ndim != 1
+        or not 1 <= len(weights) <= dimension
+        or not np.isfinite(weights).all()
+        or np.any(weights < 0)
+    ):
+        raise ValueError(
+            "weights must be finite, nonnegative, and match the component count"
+        )
+    num_components = len(weights)
+    weights = weights[: dimension - 1]
+    if len(weights):
+        normalizer = np.linalg.norm(weights, ord=1)
+        if not np.isfinite(normalizer) or normalizer <= 0:
+            raise ValueError("sampled weights must have a positive finite norm")
+        concentrations = (weights / normalizer / scale).tolist()
+    else:
+        concentrations = []
+    if any(not np.isfinite(c) for c in concentrations):
+        raise ValueError("concentrations must be finite")
     m_compose = dp.c.make_adaptive_composition(
         input_domain,
         input_metric,
-        privacy_measure,
+        output_measure,
         (1.0, 1.0),
         list(concentrations),
     )
@@ -249,7 +281,7 @@ def make_private_eigenvectors(
         if P.shape[0] == 1:
             theta = np.vstack((theta, P))
 
-        return theta.T
+        return theta.T[:, :num_components]
 
     return _make_measurement(
         input_domain,

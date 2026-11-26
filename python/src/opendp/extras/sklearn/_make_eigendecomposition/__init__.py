@@ -1,81 +1,48 @@
 from __future__ import annotations
-from typing import Sequence
+
+from collections.abc import Sequence
 
 from opendp.context import register
-from opendp.extras.sklearn._make_eigenvector import (
-    _score_range,
-    then_private_eigenvectors,
-)
-from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
-from opendp.extras.numpy._make_np_sscp import make_np_sscp
-
 from opendp.extras._utilities import to_then
-from opendp.mod import Domain, Metric, Measurement
+from opendp.extras.sklearn._make_eigenvalues import make_private_eigenvalues
+from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
+from opendp.mod import Domain, Measure, Metric, Measurement
 
 
-def make_private_np_eigendecomposition(
+def make_private_eigendecomposition(
     input_domain: Domain,
     input_metric: Metric,
-    eigvals_epsilon: float,
-    eigvecs_epsilons: Sequence[float],
-    num_components: int | None = None,
+    output_measure: Measure,
+    eigvals_scale: float,
+    eigvecs_scale: float,
+    weights: Sequence[float],
 ) -> Measurement:
-    """Construct a Measurement that releases eigenvalues and eigenvectors.
+    """Privately estimate the eigendecomposition of a symmetric matrix.
 
-    :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
-    :param input_metric: instance of `symmetric_distance()`
-    :param eigvals_epsilon: eigvals ε-expenditure per changed record in the input data
-    :param eigvecs_epsilons: eigvecs ε-expenditures per changed record in the input data
-    :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
+    :param input_domain: Symmetric matrix domain with a known dimension.
+    :param input_metric: Joint nuclear and Frobenius distance.
+    :param output_measure: Max divergence (pure epsilon-DP).
+    :param eigvals_scale: Laplace noise scale for the eigenvalues.
+    :param eigvecs_scale: Inverse aggregate Bingham concentration.
+    :param weights: Relative Bingham concentrations, one per requested eigenvector.
+        The final weight of a full basis is ignored. All eigenvalues are returned.
 
-    :return: a Measurement that computes a tuple of (eigvals, eigvecs)
+    :return: A tuple of eigenvalues (ascending) and eigenvectors (columns,
+        estimated in leading-component order).
     """
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "idealized-numerics")
-    input_desc = input_domain.descriptor
-
-    if input_desc.size is None:
-        raise ValueError("input_domain's size must be known")  # pragma: no cover
-
-    if input_desc.num_columns is None:
-        raise ValueError("input_domain's num_columns must be known")  # pragma: no cover
-
-    if input_desc.p != 2:
-        raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
-
-    if input_desc.num_columns < 1:
-        raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
-
-    if num_components is not None and num_components < 1:
-        raise ValueError("num_components must be least one")  # pragma: no cover
-
-    # if number of components is not specified, default to num_columns
-    num_components = num_components or input_desc.num_columns
-
-    t_sscp = make_np_sscp(input_domain, input_metric)
-    sensitivity = t_sscp.map(2)
-
-    t_eigvals = t_sscp.output_space >> then_eigenvalues()
-    m_eigvals = (
-        dp.binary_search_chain(  # type: ignore[misc]
-            lambda s: t_eigvals >> dp.m.then_laplace(s),
-            d_in=sensitivity,
-            d_out=eigvals_epsilon,
-        )
-        >> dp.as_array()
+    return dp.c.make_composition(
+        [
+            make_private_eigenvalues(
+                input_domain, input_metric, output_measure, eigvals_scale
+            ),
+            make_private_eigenvectors(
+                input_domain, input_metric, output_measure, eigvecs_scale, weights
+            ),
+        ]
     )
-    score_range = _score_range(sensitivity)
-    concentrations = [
-        0.0 if score_range == 0 else epsilon / score_range
-        for epsilon in eigvecs_epsilons
-    ]
-    m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
-        concentrations,
-    )
-    return t_sscp >> dp.c.make_composition([m_eigvals, m_eigvecs])
 
 
-# generate then variant of the constructor
-then_private_np_eigendecomposition = to_then(make_private_np_eigendecomposition)
-register(make_private_np_eigendecomposition)
+then_private_eigendecomposition = to_then(make_private_eigendecomposition)
+register(make_private_eigendecomposition)
