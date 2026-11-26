@@ -27,6 +27,8 @@ from opendp._internal import _extrinsic_domain
 from opendp.extras.numpy._norm import _rows_within_norm
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp  # noqa: F401
+from opendp.extras.numpy._make_dataframe_to_numpy import make_dataframe_to_numpy  # noqa: F401
+from opendp.extras.numpy._make_numpy_to_dataframe import make_numpy_to_dataframe  # noqa: F401
 
 
 if typing.TYPE_CHECKING:  # pragma: no cover
