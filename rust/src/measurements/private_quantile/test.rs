@@ -14,6 +14,7 @@ fn test_private_quantile_unsized() -> Fallible<()> {
         candidates.clone(),
         0.75,
         0.0,
+        None,
     )?;
     assert_eq!(m_q75.invoke(&(0..100).collect())?, 75);
     // since scale is zero, no noise is added, so eta is 0
@@ -26,6 +27,7 @@ fn test_private_quantile_unsized() -> Fallible<()> {
         candidates.clone(),
         0.75,
         1.0,
+        None,
     )?;
     assert!((50..100).contains(&m_q75.invoke(&(0..100).collect())?));
     // (d_in * alpha / scale * 2)^2 / 8 = (1 * (3 / 4) / 1 * 2)^2 / 8
@@ -45,6 +47,7 @@ fn test_private_quantile_sized() -> Fallible<()> {
         candidates.clone(),
         0.75,
         0.0,
+        None,
     )?;
     assert_eq!(m_q75.invoke(&(0..100).collect())?, 75);
     assert_eq!(m_q75.map(&2)?, f64::INFINITY);
@@ -56,6 +59,7 @@ fn test_private_quantile_sized() -> Fallible<()> {
         candidates,
         0.75,
         1.0,
+        None,
     )?;
     assert!((50..100).contains(&m_q75.invoke(&(0..100).collect())?));
     // (d_in / scale)^2 / 8 = (2 / 1)^2 / 8 = 1 / 2
