@@ -20,6 +20,7 @@ from opendp.mod import (
     Transformation,
     Measurement,
     PrivacyProfile,
+    PrivacyGuarantee,
     Queryable,
     OdometerQueryable,
     Function,
@@ -174,6 +175,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if c_type == AnyObjectPtr:
         if isinstance(value, PrivacyProfile):
             return value.curve
+        if isinstance(value, PrivacyGuarantee):
+            return value.guarantee
         if isinstance(value, ctypes.POINTER(AnyObject)):
             return value
 
@@ -213,7 +216,12 @@ def c_to_py(value: Any) -> Any:
 
         obj_type = object_type(value)
 
-        if obj_type in {"PrivacyProfile", "AnyOdometerQueryable", "AnyQueryable"}:
+        if obj_type in {
+            "PrivacyProfile",
+            "PrivacyGuarantee",
+            "AnyOdometerQueryable",
+            "AnyQueryable",
+        }:
             if not isinstance(value, AnyObjectPtr):
                 # Opaque wrappers escape conversion. Callback/nested pointers
                 # are borrowed, so give the wrapper an independently owned clone.
@@ -224,6 +232,9 @@ def c_to_py(value: Any) -> Any:
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(_ptr=cast(AnyObjectPtr, value))
+
+        if obj_type == PrivacyGuarantee.__name__:
+            return PrivacyGuarantee(_ptr=cast(AnyObjectPtr, value))
 
         if obj_type == "AnyOdometerQueryable":
             return OdometerQueryable(value)

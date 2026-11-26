@@ -771,6 +771,19 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
             type_name = VECTOR_ELT(get_args(type_name), 0);
     }
 
+    if (str_equal(c_origin, "PrivacyProfile"))
+    {
+        AnyObject *result = sexp_to_privacyprofileptr(data);
+        UNPROTECT(2);
+        return result;
+    }
+    if (str_equal(c_origin, "PrivacyGuarantee"))
+    {
+        AnyObject *result = sexp_to_privacyguaranteeptr(data);
+        UNPROTECT(2);
+        return result;
+    }
+
     const char *c_type_name = rt_to_string(type_name);
 
     FfiSlice slice = sexp_to_slice(data, type_name);
@@ -805,7 +818,8 @@ AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name)
     if (!isNull(type_name))
     {
         const char *c_origin = sexp_to_charptr(get_origin(type_name));
-        if (!str_equal(c_origin, "PrivacyProfile"))
+        if (!str_equal(c_origin, "PrivacyProfile") &&
+            !str_equal(c_origin, "PrivacyGuarantee"))
             opendp_register_resource(obj, anyobject_cleanup);
     }
     return obj;
@@ -836,6 +850,7 @@ static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned)
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (!owned && (str_equal(c_origin, "PrivacyProfile") ||
+                   str_equal(c_origin, "PrivacyGuarantee") ||
                    str_equal(c_origin, "AnyOdometerQueryable") ||
                    str_equal(c_origin, "AnyQueryable")))
     {
@@ -852,6 +867,13 @@ static SEXP anyobjectptr_to_sexp_impl(AnyObject *obj, int owned)
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         UNPROTECT(2);
         return profile;
+    }
+
+    if (str_equal(c_origin, "PrivacyGuarantee"))
+    {
+        SEXP guarantee = privacyguaranteeptr_to_sexp(obj, R_NilValue);
+        UNPROTECT(2);
+        return guarantee;
     }
 
     if (str_equal(c_origin, "AnyOdometerQueryable"))

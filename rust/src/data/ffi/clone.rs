@@ -1,5 +1,5 @@
 use super::*;
-use crate::ffi::any::AnyOdometerQueryable;
+use crate::{ffi::any::AnyOdometerQueryable, measures::PrivacyGuarantee};
 
 /// Clone an opaque object that must outlive a borrowed callback argument.
 /// Unlike ordinary values, these objects cannot be copied into R vectors.
@@ -16,7 +16,12 @@ pub extern "C" fn opendp_data__clone_opaque_object(
         clone_plain,
         [(
             obj.type_,
-            [PrivacyProfile, AnyQueryable, AnyOdometerQueryable]
+            [
+                PrivacyProfile,
+                PrivacyGuarantee,
+                AnyQueryable,
+                AnyOdometerQueryable
+            ]
         )],
         (obj)
     )

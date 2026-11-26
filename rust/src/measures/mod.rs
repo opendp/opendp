@@ -9,6 +9,9 @@ pub(crate) mod ffi;
 pub(crate) mod curves;
 pub use curves::*;
 
+#[cfg(test)]
+mod test;
+
 use std::fmt::Debug;
 
 use crate::core::{Function, Measure};
@@ -72,6 +75,44 @@ pub struct SmoothedMaxDivergence;
 
 impl Measure for SmoothedMaxDivergence {
     type Distance = PrivacyProfile;
+}
+
+/// Preference used when selecting a noise distribution. It does not restrict
+/// the privacy facts returned by a measurement.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AccountingPreference {
+    #[default]
+    Auto,
+    PureDp,
+    Zcdp,
+}
+
+/// Privacy measure whose distance contains all independently certified privacy
+/// facts returned by a privacy map.
+#[derive(Clone, Debug, Default)]
+pub struct MultiDP {
+    preference: AccountingPreference,
+}
+
+impl MultiDP {
+    pub fn new(preference: AccountingPreference) -> Self {
+        Self { preference }
+    }
+
+    pub fn preference(&self) -> AccountingPreference {
+        self.preference
+    }
+}
+
+impl PartialEq for MultiDP {
+    fn eq(&self, _other: &Self) -> bool {
+        // A preference changes mechanism selection, not the privacy relation.
+        true
+    }
+}
+
+impl Measure for MultiDP {
+    type Distance = PrivacyGuarantee;
 }
 
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.

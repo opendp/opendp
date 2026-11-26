@@ -18,7 +18,7 @@ use crate::{
     traits::ProductOrd,
 };
 
-use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
+use super::{PrivacyGuarantee, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -505,4 +505,135 @@ pub extern "C" fn opendp_measures___new_privacy_profile(
     FfiResult::Ok(AnyObject::new_raw(try_!(
         profile.with_delta_slack(delta_slack)
     )))
+}
+
+#[bootstrap(
+    name = "_new_privacy_guarantee",
+    features("contrib"),
+    returns(rust_type = "PrivacyGuarantee")
+)]
+/// Construct an empty PrivacyGuarantee aggregate.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___new_privacy_guarantee() -> FfiResult<*mut AnyObject> {
+    FfiResult::Ok(AnyObject::new_raw(PrivacyGuarantee::new()))
+}
+
+#[bootstrap(
+    name = "_privacy_guarantee_with_approx_dp",
+    features("contrib"),
+    arguments(this(rust_type = "PrivacyGuarantee")),
+    returns(rust_type = "PrivacyGuarantee")
+)]
+/// Attach a single independently certified approximate-DP bound.
+/// Validates the parameters, not whether the certificate holds.
+///
+/// # Arguments
+/// * `this` - The guarantee, whose profile representation is retained.
+/// * `epsilon` - Finite, nonnegative source epsilon.
+/// * `delta` - Source delta in [0, 1]; zero certifies pure DP.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___privacy_guarantee_with_approx_dp(
+    this: *const AnyObject,
+    epsilon: f64,
+    delta: f64,
+) -> FfiResult<*mut AnyObject> {
+    let this = try_!(try_as_ref!(this).downcast_ref::<PrivacyGuarantee>()).clone();
+    FfiResult::Ok(AnyObject::new_raw(try_!(
+        this.with_approx_dp(epsilon, delta)
+    )))
+}
+
+#[bootstrap(
+    name = "_privacy_guarantee_with_profile",
+    features("contrib"),
+    arguments(
+        this(rust_type = "PrivacyGuarantee"),
+        profile(rust_type = "PrivacyProfile")
+    ),
+    returns(rust_type = "PrivacyGuarantee")
+)]
+/// Attach a PrivacyProfile representation to a PrivacyGuarantee aggregate.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___privacy_guarantee_with_profile(
+    this: *const AnyObject,
+    profile: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let this = try_!(try_as_ref!(this).downcast_ref::<PrivacyGuarantee>()).clone();
+    let profile = try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>()).clone();
+    FfiResult::Ok(AnyObject::new_raw(this.with_profile(profile)))
+}
+
+#[bootstrap(
+    name = "privacy_guarantee_delta",
+    arguments(curve(rust_type = "PrivacyGuarantee"), epsilon(rust_type = "Vec<f64>")),
+    returns(rust_type = "Vec<f64>")
+)]
+/// Query aggregate delta at given epsilons.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__privacy_guarantee_delta(
+    curve: *const AnyObject,
+    epsilon: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let epsilon = try_!(try_as_ref!(epsilon).downcast_ref::<Vec<f64>>());
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyGuarantee>())
+        .delta_batch(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_guarantee_epsilon",
+    arguments(curve(rust_type = "PrivacyGuarantee"), delta(rust_type = "Vec<f64>")),
+    returns(rust_type = "Vec<f64>")
+)]
+/// Query aggregate epsilon at given deltas.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__privacy_guarantee_epsilon(
+    curve: *const AnyObject,
+    delta: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let delta = try_!(try_as_ref!(delta).downcast_ref::<Vec<f64>>());
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyGuarantee>())
+        .epsilon_batch(delta)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_guarantee_log_delta",
+    arguments(curve(rust_type = "PrivacyGuarantee"), epsilon(rust_type = "Vec<f64>")),
+    returns(rust_type = "Vec<f64>")
+)]
+/// Query aggregate log delta at given epsilons.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__privacy_guarantee_log_delta(
+    curve: *const AnyObject,
+    epsilon: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let epsilon = try_!(try_as_ref!(epsilon).downcast_ref::<Vec<f64>>());
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyGuarantee>())
+        .log_delta_batch(epsilon)
+        .map(AnyObject::new)
+        .into()
+}
+
+#[bootstrap(
+    name = "privacy_guarantee_epsilon_from_log_delta",
+    arguments(
+        curve(rust_type = "PrivacyGuarantee"),
+        log_delta(rust_type = "Vec<f64>")
+    ),
+    returns(rust_type = "Vec<f64>")
+)]
+/// Query aggregate epsilon at given log-delta budgets.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__privacy_guarantee_epsilon_from_log_delta(
+    curve: *const AnyObject,
+    log_delta: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let log_delta = try_!(try_as_ref!(log_delta).downcast_ref::<Vec<f64>>());
+    try_!(try_as_ref!(curve).downcast_ref::<PrivacyGuarantee>())
+        .epsilon_from_log_delta_batch(log_delta)
+        .map(AnyObject::new)
+        .into()
 }
