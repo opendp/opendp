@@ -16,3 +16,10 @@ fn test_error_from_polars_error() {
         Some("ColumnNotFound(ErrString(\"A\"))".to_string())
     );
 }
+
+#[test]
+fn test_interruption_survives_reclassification() {
+    let error: Fallible<()> = fallible!(Interrupted, "callback interrupted");
+    let result = error.with_variant(ErrorVariant::FailedFunction);
+    assert_eq!(result.unwrap_err().variant, ErrorVariant::Interrupted);
+}

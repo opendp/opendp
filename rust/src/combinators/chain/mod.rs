@@ -58,6 +58,8 @@ pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struc
             mode, ERROR_URL, explanation
         )),
         backtrace: err!(@backtrace),
+        #[cfg(feature = "ffi")]
+        callback: None,
     }
 }
 

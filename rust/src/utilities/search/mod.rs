@@ -7,7 +7,7 @@ use std::{
 use num::{CheckedAdd, CheckedSub, One, Zero};
 
 use crate::{
-    error::Fallible,
+    error::{ErrorVariant, Fallible},
     traits::{ExactIntCast, FiniteBounds},
 };
 
@@ -350,18 +350,33 @@ where
 {
     let center = T::zero();
     let center_result = predicate(&center);
+    if matches!(&center_result, Err(error) if error.variant == ErrorVariant::Interrupted) {
+        return center_result.map(|_| None);
+    }
 
     if let Ok(at_center) = center_result.as_ref() {
         match fallible_signed_band_search(predicate, center.clone(), *at_center, 1) {
             Ok(Some(bounds)) => return Ok(Some(bounds)),
             Ok(None) => return fallible_signed_band_search(predicate, center, *at_center, -1),
+            Err(error) if error.variant == ErrorVariant::Interrupted => return Err(error),
             Err(_) => {}
         }
     }
 
-    let exception_predicate = |value: &T| predicate(value).is_ok();
-
-    let exception_bounds = match exponential_bounds_search(&exception_predicate) {
+    let exception_predicate = |value: &T| match predicate(value) {
+        Ok(_) => Ok(true),
+        Err(error) if error.variant == ErrorVariant::Interrupted => Err(error),
+        Err(_) => Ok(false),
+    };
+    let at_center = center_result.is_ok();
+    let exception_bounds =
+        match fallible_signed_band_search(&exception_predicate, center.clone(), at_center, 1)? {
+            Some(bounds) => Some(bounds),
+            None => {
+                fallible_signed_band_search(&exception_predicate, center.clone(), at_center, -1)?
+            }
+        };
+    let exception_bounds = match exception_bounds {
         Some(bounds) => bounds,
         None => match center_result {
             Ok(_) => return fallible!(Search, "predicate always fails"),
@@ -369,10 +384,8 @@ where
         },
     };
 
-    let (center, sign) = signed_fallible_binary_search_with_bounds(
-        |value| Ok(exception_predicate(value)),
-        exception_bounds,
-    )?;
+    let (center, sign) =
+        signed_fallible_binary_search_with_bounds(exception_predicate, exception_bounds)?;
     let at_center = predicate(&center)?;
     fallible_signed_band_search(predicate, center, at_center, sign)
 }

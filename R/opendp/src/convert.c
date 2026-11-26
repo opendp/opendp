@@ -76,24 +76,21 @@ ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
     return output_obj;
 }
 
+static void error_cleanup(void *data)
+{
+    opendp_core___error_free((FfiError *)data);
+}
+
 SEXP extract_error(FfiError *err)
 {
-    const char *message = err->message ? err->message : "";
-    const char *backtrace = err->backtrace;
-    int show_backtrace = backtrace && !str_equal(backtrace, "backtrace disabled");
-    size_t msg_len = strlen(err->variant) + strlen(message) + 6;
-    if (show_backtrace)
-        msg_len += strlen(backtrace) + 1;
-    char *msg = (char *)R_alloc(msg_len, sizeof(char));
-    if (show_backtrace)
-        snprintf(msg, msg_len, "[%s] : %s\n%s", err->variant, message, backtrace);
-    else
-        snprintf(msg, msg_len, "[%s] : %s", err->variant, message);
-
-    // error() longjmps, so release the Rust error only after copying its text
-    // and before transferring control back to R.
-    opendp_core___error_free(err);
-    error("%s", msg);
+    opendp_register_resource(err, error_cleanup);
+    SEXP raise = PROTECT(get_private_func(".stop_opendp_error"));
+    SEXP variant = PROTECT(ScalarString(mkCharCE(err->variant, CE_UTF8)));
+    SEXP message = PROTECT(err->message ? ScalarString(mkCharCE(err->message, CE_UTF8)) : R_NilValue);
+    SEXP backtrace = PROTECT(err->backtrace ? ScalarString(mkCharCE(err->backtrace, CE_UTF8)) : R_NilValue);
+    SEXP call = PROTECT(lang4(raise, variant, message, backtrace));
+    Rf_eval(call, R_BaseEnv);
+    UNPROTECT(5);
     return R_NilValue;
 }
 
