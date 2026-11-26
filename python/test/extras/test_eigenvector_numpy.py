@@ -14,7 +14,9 @@ def test_private_eigenvector():
         _symmetric_matrix_domain(num_features=4, T=float),
         dp.schatten12_distance(),
     )
-    meas = space >> then_private_eigenvector(concentration=25_000.0)
+    meas = space >> then_private_eigenvector(
+        dp.max_divergence(), concentration=25_000.0
+    )
 
     data = np.random.normal(size=(4, 4))
     data += data.T
@@ -48,7 +50,9 @@ def test_private_eigenvector_acceptance_probability(monkeypatch):
         _symmetric_matrix_domain(num_features=2, T=float),
         dp.schatten12_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
+    meas = space >> eigenvector.then_private_eigenvector(
+        dp.max_divergence(), concentration=1.0
+    )
 
     # For C = diag(1, 0) and concentration = 1:
     #   A = diag(0, 1), b = sqrt(2), Omega = diag(1, 1 + sqrt(2)).
@@ -73,7 +77,9 @@ def test_private_eigenvector_distribution(monkeypatch):
         _symmetric_matrix_domain(num_features=2, T=float),
         dp.schatten12_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
+    meas = space >> eigenvector.then_private_eigenvector(
+        dp.max_divergence(), concentration=1.0
+    )
 
     # With concentration = 1, the Bingham density is proportional to
     # exp(-sin(theta)**2), so 2 * theta follows von Mises(0, 0.5).
@@ -93,7 +99,9 @@ def test_private_eigenvector_isotropic_matrix(width, value, dtype):
     domain = _symmetric_matrix_domain(
         num_features=width, T=dp.f32 if dtype == np.float32 else dp.f64
     )
-    measurement = make_private_eigenvector(domain, dp.schatten12_distance(), 0.25)
+    measurement = make_private_eigenvector(
+        domain, dp.schatten12_distance(), dp.max_divergence(), 0.25
+    )
     vector = measurement(np.eye(width, dtype=dtype) * value)
     assert np.isfinite(vector).all()
     assert np.linalg.norm(vector) == pytest.approx(1.0)
@@ -115,7 +123,7 @@ def test_eigenvector_integration():
         space
         >> then_np_clamp(norm=1.0, p=2)
         >> then_np_sscp()
-        >> then_private_eigenvector(1.0)
+        >> then_private_eigenvector(dp.max_divergence(), 1.0)
     )
 
     data = np.random.normal(size=(1000, num_columns))
@@ -156,9 +164,13 @@ def test_private_eigenvector_rejects_wrong_metric_and_bad_concentration():
 
     domain = _symmetric_matrix_domain(num_features=2)
     with pytest.raises(ValueError, match="joint nuclear/Frobenius"):
-        make_private_eigenvector(domain, dp.symmetric_distance(), 1.0)
+        make_private_eigenvector(
+            domain, dp.symmetric_distance(), dp.max_divergence(), 1.0
+        )
     with pytest.raises(ValueError, match="finite and non-negative"):
-        make_private_eigenvector(domain, dp.schatten12_distance(), -1.0)
+        make_private_eigenvector(
+            domain, dp.schatten12_distance(), dp.max_divergence(), -1.0
+        )
 
 
 def test_projected_sscp_has_identity_joint_stability():
@@ -196,7 +208,7 @@ def test_joint_eigenvector_rejects_invalid_spaces():
     metric = dp.schatten12_distance()
     incorrect_metric = dp.l2_distance(T=float)
     with pytest.raises(ValueError, match="NPSymmetricMatrixDomain"):
-        make_private_eigenvector(invalid, metric, 0.0)
+        make_private_eigenvector(invalid, metric, dp.max_divergence(), 0.0)
     with pytest.raises(ValueError, match="NPSymmetricMatrixDomain"):
         _make_np_sscp_projection(invalid, metric, np.eye(2))
     with pytest.raises(ValueError, match="joint nuclear/Frobenius"):
@@ -231,27 +243,30 @@ def test_joint_projection_rejects_invalid_matrix(projection, message):
         _make_np_sscp_projection(domain, dp.schatten12_distance(), projection)
 
 
-def test_joint_eigenvector_composition_map(monkeypatch):
+@pytest.mark.parametrize("is_zcdp", [False, True])
+def test_joint_eigenvector_composition_map(monkeypatch, is_zcdp):
     from opendp.extras.sklearn import _make_eigenvector as eigenvector
 
     concentrations = []
     original = eigenvector.then_private_eigenvector
 
-    def record(concentration):
+    def record(output_measure, concentration):
         concentrations.append(concentration)
-        return original(concentration)
+        return original(output_measure, concentration)
 
     monkeypatch.setattr(eigenvector, "then_private_eigenvector", record)
     measurement = eigenvector.make_private_eigenvectors(
         _symmetric_matrix_domain(num_features=3),
         dp.schatten12_distance(),
-        dp.max_divergence(),
+        dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
         1.0 / 3,
         [1.0, 2.0, 100.0],
     )
     assert measurement.map((0.0, 0.0)) == 0.0
-    assert measurement.map((2.0, 3.0)) == pytest.approx(6.0)
-    assert measurement.map((5.0, 0.5)) == pytest.approx(3.0 / np.sqrt(2.0))
+    assert measurement.map((2.0, 3.0)) == pytest.approx(4.5 if is_zcdp else 6.0)
+    assert measurement.map((5.0, 0.5)) == pytest.approx(
+        9.0 / 16 if is_zcdp else 3.0 / np.sqrt(2.0)
+    )
     assert measurement(np.eye(3)).shape == (3, 3)
-    normalizer = 3.0
+    normalizer = np.sqrt(5) if is_zcdp else 3.0
     np.testing.assert_allclose(concentrations, np.array([1.0, 2.0]) * 3 / normalizer)

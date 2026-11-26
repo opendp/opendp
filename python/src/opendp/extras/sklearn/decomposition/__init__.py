@@ -42,6 +42,8 @@ from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMix
 from opendp.extras.sklearn._make_eigendecomposition import (
     then_private_eigendecomposition,
 )
+from opendp.extras.sklearn._make_eigenvalues import then_private_eigenvalues
+from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.mod import Domain, Measure, Measurement, Metric
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -78,9 +80,9 @@ def make_private_pca(
 
     :param input_domain: Input array domain with public size and feature count.
     :param input_metric: Symmetric distance on input rows.
-    :param output_measure: Max divergence (pure epsilon-DP).
+    :param output_measure: Max divergence or zero-concentrated divergence.
     :param d_in: Positive integral symmetric distance; use two edits per row replacement.
-    :param d_out: Positive epsilon privacy allowance at ``d_in``.
+    :param d_out: Positive epsilon or rho privacy allowance at ``d_in``.
     :param clip_norm: Public positive finite L2 clipping radius, or None to use the domain's L2 bound.
     :param center: None for a privately estimated mean, or 'origin' for the public domain origin.
     :param num_components: Number of components, fraction of released variance in (0, 1), 'mle', or None for all available components.
@@ -93,8 +95,11 @@ def make_private_pca(
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("PCA currently supports symmetric_distance() only")
-    if output_measure != dp.max_divergence():
-        raise ValueError("PCA currently supports max_divergence() only")
+    is_zcdp = output_measure == dp.zero_concentrated_divergence()
+    if not is_zcdp and output_measure != dp.max_divergence():
+        raise ValueError(
+            "PCA supports max_divergence() or zero_concentrated_divergence()"
+        )
     if isinstance(d_in, bool) or not isinstance(d_in, Integral) or d_in <= 0:
         raise ValueError("d_in must be a positive integer")
     d_in = int(d_in)
@@ -188,14 +193,37 @@ def make_private_pca(
         if t_reclip is not None:
             t_center = t_reclip >> t_center
         t_sscp = t_center >> then_np_sscp()
-        measurement = dp.binary_search_chain(
-            lambda scale: t_sscp
-            >> then_private_eigendecomposition(
-                output_measure, scale, scale, weights=weights
-            ),
-            d_in=d_in,
-            d_out=eigen_budget,
+        # Allocate equally in privacy-loss units, not numerical scales.
+        # The one-feature case needs no private eigenvector sample.
+        stage_budget = eigen_budget
+        if n_features > 1:
+            stage_budget = _smaller(stage_budget / 2)
+        sensitivity = t_sscp.map(d_in)
+        space = t_sscp.output_space
+        eigvals_scale = dp.binary_search_param(
+            lambda scale: space >> then_private_eigenvalues(output_measure, scale),
+            d_in=sensitivity,
+            d_out=stage_budget,
             T=float,
+        )
+        eigvecs_scale = (
+            dp.binary_search_param(
+                lambda scale: space
+                >> then_private_eigenvectors(
+                    output_measure, scale, weights=weights
+                ),
+                d_in=sensitivity,
+                d_out=stage_budget,
+                T=float,
+            )
+            if n_features > 1
+            else eigvals_scale
+        )
+        measurement = t_sscp >> then_private_eigendecomposition(
+            output_measure,
+            eigvals_scale,
+            eigvecs_scale,
+            weights=weights,
         )
 
         return measurement >> _new_pure_function(
@@ -211,32 +239,34 @@ def make_private_pca(
     if not estimate_mean:
         measurement = eigendecomposition(origin)
     else:
-        # Bound ||x-c||_1 <= sqrt(d) R without changing the L2-clipped rows.
-        # Round both sqrt and multiplication upwards for conservative sensitivity.
-        l1_radius = np.nextafter(
-            np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
+        # The Gaussian mean can use the original L2 ball. Laplace needs
+        # ||x-c||_1 <= sqrt(d) R, rounded upwards.
+        mean_radius = (
+            radius
+            if is_zcdp
+            else np.nextafter(np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf)
         )
-        l1_domain = dp.numpy.array2_domain(
+        mean_domain = dp.numpy.array2_domain(
             **(
                 asdict(ball_domain.descriptor)
                 | {
-                    "norm": l1_radius,
-                    "p": 1,
+                    "norm": mean_radius,
+                    "p": 2 if is_zcdp else 1,
                     "origin": origin,
                     "T": float,
                 }
             )
         )
-        t_l1 = _make_transformation(
+        t_mean = _make_transformation(
             ball_domain,
             input_metric,
-            l1_domain,
+            mean_domain,
             input_metric,
             lambda data: np.asarray(data, dtype=float),
             lambda distance: distance,
         )
         m_mean = dp.binary_search_chain(
-            lambda scale: t_l1 >> make_private_np_mean(l1_domain, input_metric, scale),
+            lambda scale: t_mean >> make_private_np_mean(mean_domain, input_metric, scale),
             d_in=d_in,
             d_out=mean_budget,
             T=float,
@@ -292,7 +322,7 @@ class PCA(
 
     Fitting requires an input domain with known size.
     An L2 domain bound or ``clip_norm`` is required.
-    Only pure epsilon-DP is supported.
+    Pure epsilon-DP and zero-concentrated DP are supported.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to

@@ -21,9 +21,9 @@ def make_private_eigendecomposition(
 
     :param input_domain: Symmetric matrix domain with a known dimension.
     :param input_metric: Joint nuclear and Frobenius distance.
-    :param output_measure: Max divergence (pure epsilon-DP).
-    :param eigvals_scale: Laplace noise scale for the eigenvalues.
-    :param eigvecs_scale: Inverse aggregate Bingham concentration.
+    :param output_measure: Max divergence or zero-concentrated divergence.
+    :param eigvals_scale: Laplace or Gaussian noise scale for the eigenvalues.
+    :param eigvecs_scale: Inverse L1 (pure DP) or L2 (zCDP) norm of Bingham concentrations.
     :param weights: Relative Bingham concentrations, one per requested eigenvector.
         The final weight of a full basis is ignored. All eigenvalues are returned.
 

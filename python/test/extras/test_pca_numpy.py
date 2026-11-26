@@ -64,7 +64,7 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
     "overrides, message",
     [
         ({"input_metric": dp.insert_delete_distance()}, "symmetric_distance"),
-        ({"output_measure": dp.zero_concentrated_divergence()}, "max_divergence"),
+        ({"output_measure": dp.approximate(dp.max_divergence())}, "max_divergence"),
         ({"d_in": 0}, "positive integer"),
         ({"d_out": 0.0}, "must be positive"),
         ({"d_in": 3}, "Contribution bounds must be even"),
@@ -288,13 +288,16 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
     "center, width", [(None, 4), ("origin", 4), (None, 1), ("origin", 1)]
 )
 @pytest.mark.parametrize("d_in", [2, 4])
+@pytest.mark.parametrize("is_zcdp", [False, True])
 def test_pca_fixed_budget_split_at_input_distance(
-    monkeypatch, center, width, d_in
+    monkeypatch, center, width, d_in, is_zcdp
 ):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition
 
     budget = 0.9
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    factor = (d_in / 2) ** (2 if is_zcdp else 1)
     allocations = []
     original_eigen = decomposition.then_private_eigendecomposition
 
@@ -318,7 +321,7 @@ def test_pca_fixed_budget_split_at_input_distance(
     measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        measure,
         d_in,
         budget,
         center=center,
@@ -328,20 +331,25 @@ def test_pca_fixed_budget_split_at_input_distance(
     eigen_budget = budget * 2 / 3 if center is None else budget
     if center is None:
         assert len(means) == 1
-        mean_budget = means[0]["map_at_two"] * d_in / 2
+        mean_budget = means[0]["map_at_two"] * factor
+        assert means[0]["domain"].descriptor.p == (2 if is_zcdp else 1)
         assert mean_budget <= budget / 3
         assert mean_budget == pytest.approx(budget / 3)
     else:
         assert means == []
     values, vectors, components = allocations[-1]
     assert components == (2 if width == 4 else 1)
-    assert values == vectors
-    # For the unit-radius domain, nuclear sensitivity is d_in except
-    # for a single feature, where it is one per replacement.
-    normalized_values = d_in / values if width == 4 else d_in / (2 * values)
-    assert normalized_values == pytest.approx(
+    # Unit-radius SSCP at one replacement has nuclear sensitivity 2
+    # and Frobenius sensitivity sqrt(2); a scalar has sensitivity 1.
+    nuclear = 2.0 if width == 4 else 1.0
+    frobenius = np.sqrt(2.0) if width == 4 else 1.0
+    value_loss = (frobenius / values) ** 2 / 2 if is_zcdp else nuclear / values
+    assert value_loss * factor == pytest.approx(
         eigen_budget / 2 if width == 4 else eigen_budget
     )
+    if width == 4:
+        vector_loss = (nuclear / vectors) ** 2 / 8 if is_zcdp else nuclear / vectors
+        assert vector_loss * factor == pytest.approx(eigen_budget / 2)
     assert measurement.check(d_in, budget)
     assert measurement.map(d_in) <= budget
     assert measurement.map(1) == 0.0
@@ -356,8 +364,9 @@ def test_pca_fixed_budget_split_at_input_distance(
         ("origin", 2, 33, 1.0),
     ],
 )
+@pytest.mark.parametrize("is_zcdp", [False, True])
 def test_pca_many_samples_rounding_stays_within_budget(
-    monkeypatch, center, d_in, width, budget
+    monkeypatch, center, d_in, width, budget, is_zcdp
 ):
     import numpy as np
     from opendp._internal import _make_measurement
@@ -367,6 +376,8 @@ def test_pca_many_samples_rounding_stays_within_budget(
     )
 
     eigen_maps = []
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    factor = (d_in / 2) ** (2 if is_zcdp else 1)
 
     def record_eigen(
         input_domain, input_metric, output_measure, values, vectors, **kwargs
@@ -374,7 +385,9 @@ def test_pca_many_samples_rounding_stays_within_budget(
         actual = make_private_eigendecomposition(
             input_domain, input_metric, output_measure, values, vectors, **kwargs
         )
-        eigen_maps.append(actual.map((2.0, 2.0**0.5)) * d_in / 2)
+        eigen_maps.append(
+            actual.map((2.0, np.nextafter(np.sqrt(2.0), np.inf))) * factor
+        )
         # Keep the real stage's privacy map; skip only the expensive sampler.
         return _make_measurement(
             input_domain,
@@ -399,7 +412,7 @@ def test_pca_many_samples_rounding_stays_within_budget(
     measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        measure,
         d_in,
         budget,
         center=center,
@@ -412,8 +425,9 @@ def test_pca_many_samples_rounding_stays_within_budget(
 
 
 @pytest.mark.parametrize("d_in", [2, 4])
+@pytest.mark.parametrize("is_zcdp", [False, True])
 def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
-    monkeypatch, d_in
+    monkeypatch, d_in, is_zcdp
 ):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition
@@ -432,7 +446,7 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
     measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
         d_in,
         1.0,
         center="origin",
@@ -448,7 +462,7 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
             np.ones((10, 1)),
             domain=dp.sklearn.sklearn_fit_domain(domain),
             privacy_unit=dp.unit_of(contributions=2),
-            privacy_loss=dp.loss_of(epsilon=1),
+            privacy_loss=dp.loss_of(rho=1) if is_zcdp else dp.loss_of(epsilon=1),
         )
         is model
     )
@@ -911,8 +925,9 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
     "width, num_components, expected",
     [(1, None, 1), (3, 1, 1), (3, 2, 2), (3, None, 3)],
 )
+@pytest.mark.parametrize("is_zcdp", [False, True])
 def test_matrix_eigendecomposition_components_and_privacy_map(
-    width, num_components, expected
+    width, num_components, expected, is_zcdp
 ):
     np = pytest.importorskip("numpy")
     from opendp.extras.numpy import _symmetric_matrix_domain
@@ -921,7 +936,10 @@ def test_matrix_eigendecomposition_components_and_privacy_map(
         _symmetric_matrix_domain(num_features=width),
         dp.schatten12_distance(),
     ) >> decomposition.then_private_eigendecomposition(
-        dp.max_divergence(), 2.0, 4.0, weights=[1.0] * expected
+        dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
+        2.0,
+        4.0,
+        weights=[1.0] * expected,
     )
     values, vectors = measurement(np.diag(np.arange(width, dtype=float)))
     assert values.shape == (width,)
@@ -930,11 +948,14 @@ def test_matrix_eigendecomposition_components_and_privacy_map(
     np.testing.assert_allclose(vectors.T @ vectors, np.eye(expected), atol=1e-12)
     # All requested component counts share the same aggregate vector scale,
     # except a one-dimensional matrix, which needs no private vector sample.
-    assert measurement.map((2.0, 2.0)) == pytest.approx(1.0 if width == 1 else 1.5)
+    value_loss = 0.5 if is_zcdp else 1.0
+    vector_loss = (1 / 32 if is_zcdp else 0.5) if width > 1 else 0.0
+    assert measurement.map((2.0, 2.0)) == pytest.approx(value_loss + vector_loss)
 
 
 @pytest.mark.parametrize("size", [None, 10])
-def test_eigendecomposition_composes_with_sscp(size):
+@pytest.mark.parametrize("is_zcdp", [False, True])
+def test_eigendecomposition_composes_with_sscp(size, is_zcdp):
     from opendp.extras.numpy._make_np_sscp import then_np_sscp
 
     domain = dp.numpy.array2_domain(
@@ -944,10 +965,17 @@ def test_eigendecomposition_composes_with_sscp(size):
         (domain, dp.symmetric_distance())
         >> then_np_sscp()
         >> decomposition.then_private_eigendecomposition(
-            dp.max_divergence(), 8.0, 8.0, [1.0] * 3
+            dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence(),
+            8.0,
+            8.0,
+            [1.0] * 3,
         )
     )
-    assert measurement.map(2) == pytest.approx(2.0)
+    expected = (0.625 if size is None else 0.375) if is_zcdp else 2.0
+    assert measurement.map(2) == pytest.approx(expected)
+    assert measurement.map(1) == pytest.approx(
+        0.0 if size is not None else expected / (4 if is_zcdp else 2)
+    )
 
 
 def test_eigendecomposition_bingham_concentration():
@@ -963,7 +991,7 @@ def test_eigendecomposition_bingham_concentration():
     # The tightened pure-DP calibration is concentration = ε / (2B²).
     concentration = epsilon / (2 * row_norm**2)
     eigenvector = make_private_eigenvector(
-        sscp.output_domain, sscp.output_metric, concentration
+        sscp.output_domain, sscp.output_metric, dp.max_divergence(), concentration
     )
     assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
     assert eigenvector.map(sscp.map(1)) == 0.0
