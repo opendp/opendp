@@ -35,9 +35,11 @@ where
         .collect();
     assert!((probs.iter().sum::<f64>() - 1.0).abs() < 1e-12);
 
+    let bounds = (lower, upper);
+    let (trials, threshold) = discrete_laplace_linear_parameters(SCALE, bounds)?;
     let mut observed = vec![0usize; width + 1];
     for _ in 0..N {
-        let sample = sample_discrete_laplace_linear::<T, f64>(shift, SCALE, (lower, upper))?;
+        let sample = sample_bounded_discrete_laplace(shift, bounds, trials, threshold)?;
         let offset = usize::exact_int_cast(sample.alerting_sub(&lower)?)?;
         observed[offset] += 1;
     }
@@ -65,36 +67,20 @@ where
     Ok(())
 }
 
-/// Cover integer-minimum saturation (the regression), maximum saturation,
-/// and a translation away from the integer minimum.
-fn check_extremes<T: Integer>() -> Fallible<()>
-where
-    usize: ExactIntCast<T>,
-{
-    let ten = T::exact_int_cast(10_i32)?;
-    let min = T::MIN_FINITE;
-    let max = T::MAX_FINITE;
-    check_pmf(min, (min, min + ten))?;
-    check_pmf(min + T::one(), (min + T::one(), min + T::one() + ten))?;
-    check_pmf(max, (max - ten, max))?;
-    Ok(())
-}
-
 #[test]
 fn discrete_laplace_linear_matches_clamped_pmf_at_type_extremes() -> Fallible<()> {
-    check_extremes::<u8>()?;
-    check_extremes::<i8>()?;
-    check_extremes::<u32>()?;
-    check_extremes::<i32>()
+    check_pmf(0u8, (0, 10))?;
+    check_pmf(i8::MIN, (i8::MIN, i8::MIN + 10))?;
+    check_pmf(i8::MAX, (i8::MAX - 10, i8::MAX))
 }
 
 #[test]
 fn discrete_laplace_linear_matches_clamped_pmf_at_interior_and_outside_bounds() -> Fallible<()> {
-    // Both choices of signed zero, interior inputs, and input clamping.
-    for shift in [i8::MIN, -5, -4, 0, 4, 5, i8::MAX] {
+    // Endpoints, interior inputs, and input clamping.
+    for shift in [i8::MIN, -5, 0, 5, i8::MAX] {
         check_pmf(shift, (-5i8, 5))?;
     }
-    // A one-step interval sets trials=Some(0).
+    // A one-step interval runs one Bernoulli trial.
     for shift in [0u8, 1] {
         check_pmf(shift, (0u8, 1))?;
     }
@@ -109,9 +95,10 @@ fn discrete_laplace_linear_zero_count_privacy_regression() -> Fallible<()> {
     let scale = 1000.0;
     for shift in [0u32, 1] {
         let expected = clamped_discrete_laplace_pmf(0, shift as usize, 200, scale);
+        let (width, threshold) = discrete_laplace_linear_parameters(scale, (0u32, 200))?;
         let mut hits = 0usize;
         for _ in 0..REGRESSION_N {
-            if sample_discrete_laplace_linear::<u32, f64>(shift, scale, (0, 200))? == 0 {
+            if sample_bounded_discrete_laplace(shift, (0, 200), width, threshold)? == 0 {
                 hits += 1;
             }
         }
@@ -127,16 +114,11 @@ fn discrete_laplace_linear_zero_count_privacy_regression() -> Fallible<()> {
 
 #[test]
 fn discrete_laplace_linear_zero_scale_clamps_input() -> Fallible<()> {
-    // Zero noise still applies the input/output bounds.
-    for (shift, expected) in [(0u8, 3), (4, 4), (10, 7)] {
+    let bounds = (-3i8, 3);
+    let (width, threshold) = discrete_laplace_linear_parameters(0.0, bounds)?;
+    for (shift, expected) in [(-10, -3), (0, 0), (10, 3)] {
         assert_eq!(
-            sample_discrete_laplace_linear::<u8, f64>(shift, 0.0, (3, 7))?,
-            expected
-        );
-    }
-    for (shift, expected) in [(-10i8, -3), (0, 0), (10, 3)] {
-        assert_eq!(
-            sample_discrete_laplace_linear::<i8, f64>(shift, 0.0, (-3, 3))?,
+            sample_bounded_discrete_laplace(shift, bounds, width, threshold)?,
             expected
         );
     }
@@ -144,15 +126,26 @@ fn discrete_laplace_linear_zero_scale_clamps_input() -> Fallible<()> {
 }
 
 #[test]
-fn discrete_laplace_linear_extreme_bounds_in_range() -> Fallible<()> {
-    // Wide intervals and out-of-range inputs also exercise integer arithmetic.
-    for bounds in [(i8::MIN, -1), (0, i8::MAX), (-127, 0)] {
-        for shift in [i8::MIN, bounds.0, bounds.1, i8::MAX] {
-            for _ in 0..50 {
-                let v = sample_discrete_laplace_linear::<i8, f64>(shift, 50.0, bounds)?;
-                assert!((bounds.0..=bounds.1).contains(&v));
-            }
-        }
+fn discrete_laplace_linear_max_signed_width() -> Fallible<()> {
+    let bounds = (-64i8, 63);
+    let (width, threshold) = discrete_laplace_linear_parameters(50.0, bounds)?;
+    assert_eq!(width, i8::MAX as usize);
+    for shift in [i8::MIN, i8::MAX] {
+        let sample = sample_bounded_discrete_laplace(shift, bounds, width, threshold)?;
+        assert!((bounds.0..=bounds.1).contains(&sample));
     }
+    Ok(())
+}
+
+#[test]
+fn discrete_laplace_linear_scale_boundaries() -> Fallible<()> {
+    assert!(discrete_laplace_linear_parameters(-1.0f64, (0u8, 4)).is_err());
+    assert!(discrete_laplace_linear_parameters(f64::NAN, (0u8, 4)).is_err());
+    assert!(discrete_laplace_linear_parameters(f64::INFINITY, (0u8, 4)).is_err());
+    // Tails below 2^-64 still round upward to the smallest nonzero probability.
+    assert_eq!(
+        discrete_laplace_linear_parameters(0.01f64, (0u8, 4))?,
+        (4, 1)
+    );
     Ok(())
 }

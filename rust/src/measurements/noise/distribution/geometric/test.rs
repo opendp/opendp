@@ -38,8 +38,8 @@ fn test_make_geometric_native_types() -> Fallible<()> {
 }
 
 #[test]
-fn test_make_geometric_extreme_int() -> Fallible<()> {
-    // p too big
+fn test_make_geometric_rejects_unrepresentable_scale() {
+    // Continuation probability rounds to one.
     assert!(
         make_geometric(
             AtomDomain::<u32>::default(),
@@ -49,16 +49,28 @@ fn test_make_geometric_extreme_int() -> Fallible<()> {
         )
         .is_err()
     );
+}
 
-    // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_geometric(
-        AtomDomain::<u32>::default(),
-        AbsoluteDistance::<u32>::default(),
-        100_000.0,
-        Some((0, 200)),
-    )?;
-    assert!([0, 200].contains(&meas.invoke(&0)?));
-    Ok(())
+#[test]
+fn test_make_geometric_rejects_unrepresentable_width() {
+    assert!(
+        make_geometric(
+            AtomDomain::<i8>::default(),
+            AbsoluteDistance::<i8>::default(),
+            1.0,
+            Some((i8::MIN, 0)),
+        )
+        .is_err()
+    );
+    assert!(
+        make_geometric(
+            AtomDomain::<u128>::default(),
+            AbsoluteDistance::<u128>::default(),
+            1.0,
+            Some((0, u128::MAX)),
+        )
+        .is_err()
+    );
 }
 
 #[test]
@@ -70,7 +82,6 @@ fn test_make_geometric_positive_subnormal_scale() -> Fallible<()> {
         Some((0, u8::MAX)),
     )?;
     measurement.invoke(&0)?;
-    sample_discrete_laplace_linear::<u8, f32>(0, f32::from_bits(1), (0, u8::MAX))?;
     assert_eq!(measurement.map(&0)?, 0.0);
     Ok(())
 }

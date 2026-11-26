@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../../lib.sty}
 
-\title{\texttt{MakeNoise<DI, MI, MO> for DiscreteLaplace}}
+\title{\texttt{MakeNoise<DI, MI, MO> for ConstantTimeGeometric}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -11,15 +11,9 @@
 
 \contrib
 Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise}
-for \texttt{DiscreteLaplace} in \asOfCommit{mod.rs}{f5bb719}.
+for \texttt{ConstantTimeGeometric}.
 
-This is an intermediary compile-time layer whose purpose is
-to dispatch to either the integer or floating-point variations of the mechanism,
-depending on the type of data in the input domain.
-
-It does this through the use of the \rustdoc{measurements/noise/nature/trait}{Nature} trait,
-which has concrete implementations for each possible input type.
-This layer makes interior layers simpler to work with, and does not have privacy implications.
+This implementation adds bounded geometric noise to each coordinate and clamps the results.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -27,7 +21,7 @@ This layer makes interior layers simpler to work with, and does not have privacy
 \texttt{MakeNoise} is parameterized as follows:
 \begin{itemize}
     \item \texttt{DI} is of type \texttt{VectorDomain<AtomDomain<T>>}
-    \item \texttt{MI} is of type \texttt{L1Distance<T>}
+    \item \texttt{MI} is of type \texttt{L1Distance<QI>}
     \item \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
 \end{itemize}
 
@@ -36,11 +30,11 @@ The following trait bounds are also required:
     \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer}
     \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
     \item Type \texttt{usize} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<T>}
-    \item Type \texttt{RBig} implements trait \texttt{TryFrom<T>}
+    \item Generic \texttt{QI} implements \texttt{Clone} and \texttt{Debug}
+    \item Type \texttt{RBig} implements trait \texttt{TryFrom<QI>}
     \item Type \texttt{ZExpFamily<1>} implements trait \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>}.
         This bound requires that it must be possible to construct a privacy map for the combination of \texttt{ZExpFamily<1>} noise distribution, distance type and privacy measure.
-        Since the \texttt{ConstantTimeGeometric} distribution is equivalent to \texttt{ZExpFamily<1>},
-        maps built for \texttt{ZExpFamily<1>} can be used for \texttt{ConstantTimeGeometric}.
+        The privacy bound for \texttt{ZExpFamily<1>} applies as shown below.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -55,42 +49,37 @@ None
 \end{theorem}
 
 \begin{proof}[Data-independent errors]
-    Due to the check on line \ref{line:check-bounds},
-    the preconditions for \rustdoc{traits/samplers/geometric/fn}{sample\_discrete\_laplace\_linear} are satisfied.
-    Therefore the postcondition guarantees data-independent errors.
-    Since this is the only source of errors in the function, errors from the function are data-independent.
+    The bounds, scale, trial count and threshold are checked at construction and depend only on public parameters.
+    The accepted width fits both \texttt{usize} and \texttt{T}.
+    The sampled magnitude cannot exceed this width, so its conversion to \texttt{T} succeeds.
+    The remaining fallible operations sample independent random bits.
+    Inputs at finite $L_1$ distance have the same length, so these operations cannot distinguish such inputs through errors.
 \end{proof}
 
 \begin{proof}[Privacy guarantee]
-    The privacy guarantee breaks down into three parts:
-    \begin{enumerate}
-        \item A 1-stable clamping pre-processor.
-        \item The noise perturbation mechanism.
-        \item A post-processing clamp.
-    \end{enumerate}
+    Input clamping is 1-stable in $L_1$ distance.
+    If the bounds coincide, the output is independent of the input values.
+    At zero scale the sampler returns the clamped input, as allowed by the privacy map.
+    Otherwise, let $s>0$ be the requested scale and $W=U-L>0$ the interval width.
 
-    Clamping the inputs is necessary because, to make constant-time sampling tractable,
-    samples are only drawn up to the magnitude of the distance between the bounds.
-    In the extreme case, consider when a adjacent inputs are located at \texttt{L + U} and \texttt{L + U - 1} without input clamping:
-    then outputting \texttt{U - 1} is a distinguishing event.
+    The continuation probability $q$ is obtained by directed rounding of the reciprocal and exponential, followed by upward grid rounding.
+    Thus $e^{-1/s}\leq q<1$ on successful construction.
+    Sample a fair sign and a Bernoulli trial with success probability $q$, repeating only if the sign is negative and the trial fails.
+    Then draw the remaining $W-1$ trials and use the number of consecutive successes as the censored magnitude.
+    The acceptance probability is $(1+q)/2$.
+    Dividing the proposal masses by this probability gives $(1-q)q^{|z|}/(1+q)$ for $|z|<W$ and $q^W/(1+q)$ at each of $\pm W$.
+    Thus the accepted noise is discrete Laplace with effective scale $s'=-1/\ln q$, censored at $W$.
 
-    This motivates the need for a clamping transformation.
-    \begin{align}
-        &\max_{x \sim x'} |\texttt{clamp}(x, L, U) - \texttt{clamp}(x', L, U)|_1 \\
-        &\leq \max_{x \sim x'} |x - x'|_1 \\
-        &= \texttt{d\_in}
-    \end{align}
-    The clamping transformation can only make datasets more similar,
-    so the clamp is a 1-stable transformation.
-
-    Similarly the perturbed value also needs to be clamped:
-    consider adjacent inputs at \texttt{L} and \texttt{L + 1},
-    then outputting \texttt{L - (U - L)} is a distinguishing event,
-    due to the limited range of the noise distribution.
-
-    Notice that the output distribution is equivalent to sampling from the discrete laplace distribution with infinite support,
-    and then clamping as post-processing.
-    Therefore the privacy guarantee from \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>} applies.
+    Let $x$ be the clamped input and $m$ the sampled magnitude.
+    The output is $x+\min(m,U-x)$ or $x-\min(m,x-L)$ according to the sampled sign.
+    This is equivalent to adding the signed magnitude and clamping the output.
+    Both distances to the bounds are nonnegative and at most $W$, which fits the integer type, and the final result lies in $[L,U]$.
+    Thus none of this arithmetic can overflow.
+    Censoring does not change this final distribution, since any magnitude at least $W$ already reaches an endpoint.
+    Consequently the mechanism is equivalent to 1-stable input clamping, independent discrete Laplace noise, and output clamping.
+    Since $s'\geq s$, the privacy bound at the requested scale is conservative:
+    $\din/s'\leq\din/s$.
+    The privacy guarantee from \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>} therefore applies.
 \end{proof}
 
 \end{document}
