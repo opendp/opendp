@@ -1387,6 +1387,7 @@ class PrivacyGuarantee(object):
         renyiDP_delta: float = 0.0,
         zCDP: Optional[float] = None,
         zCDP_delta: float = 0.0,
+        gaussianDP: Optional[float] = None,
         _ptr: Any = None,
     ):
         if _ptr is not None:
@@ -1397,6 +1398,7 @@ class PrivacyGuarantee(object):
                 or renyiDP_delta != 0.0
                 or zCDP is not None
                 or zCDP_delta != 0.0
+                or gaussianDP is not None
             ):
                 raise TypeError("_ptr cannot be combined with guarantee constructors")
             self.guarantee = _ptr
@@ -1418,6 +1420,7 @@ class PrivacyGuarantee(object):
             _privacy_guarantee_with_profile,
             _privacy_guarantee_with_renyiDP,
             _privacy_guarantee_with_zCDP,
+            _privacy_guarantee_with_gaussianDP,
         )
 
         guarantee = _new_privacy_guarantee()
@@ -1431,6 +1434,8 @@ class PrivacyGuarantee(object):
             )
         if zCDP is not None:
             guarantee = _privacy_guarantee_with_zCDP(guarantee, zCDP, zCDP_delta)
+        if gaussianDP is not None:
+            guarantee = _privacy_guarantee_with_gaussianDP(guarantee, gaussianDP)
         self.guarantee = guarantee.guarantee
 
     def delta(self, epsilon):
