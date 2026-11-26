@@ -155,6 +155,7 @@ impl NoisePrivacyMap<L1Distance<RBig>, MultiDP> for ZExpFamily<1> {
                 return fallible!(FailedMap, "epsilon ({epsilon}) must be finite for MultiDP");
             }
 
+            // Fall back to the pure-DP bound if interval evaluation overflows.
             let rho = match zcdp_discrete_laplace(&epsilon_exact, d_in, &scale) {
                 Ok(rho) => rho,
                 Err(_) => epsilon,
