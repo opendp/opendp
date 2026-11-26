@@ -29,6 +29,14 @@ where
 
 /// Create a privacy map for a mechanism that perturbs each element in a vector with a sample from a random variable `RV`.
 pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
+    /// Construct the output-measure descriptor for this theorem.
+    ///
+    /// Implementations may override this when the privacy map requires a
+    /// non-default measure value, such as a capability-bearing descriptor.
+    fn noise_output_measure(&self, _input_metric: &MI) -> Fallible<MO> {
+        Ok(MO::default())
+    }
+
     /// # Proof Definition
     /// Given a distribution `self`,
     /// returns `Err(e)` if `self` is not a valid distribution.
@@ -110,7 +118,7 @@ where
         (input_domain, input_metric): (VectorDomain<AtomDomain<IBig>>, MI),
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<IBig>>, MI, MO, Vec<IBig>>> {
         let distribution = self.clone();
-        let output_measure = MO::default();
+        let output_measure = self.noise_output_measure(&input_metric)?;
         let privacy_map = self.noise_privacy_map(&input_metric, &output_measure)?;
         Measurement::new(
             input_domain,
@@ -121,5 +129,60 @@ where
             }),
             privacy_map,
         )
+    }
+}
+
+#[cfg(test)]
+mod output_measure_factory_test {
+    use dashu::{integer::IBig, rbig};
+
+    use super::*;
+    use crate::{
+        core::Measure,
+        domains::{AtomDomain, VectorDomain},
+        metrics::L1Distance,
+    };
+
+    #[derive(Default, Clone, Debug, PartialEq)]
+    struct HookMeasure(u8);
+
+    impl Measure for HookMeasure {
+        type Distance = f64;
+    }
+
+    #[derive(Clone)]
+    struct HookDistribution(ZExpFamily<1>);
+
+    impl Sample for HookDistribution {
+        fn sample(&self, shift: &IBig) -> Fallible<IBig> {
+            self.0.sample(shift)
+        }
+    }
+
+    impl NoisePrivacyMap<L1Distance<RBig>, HookMeasure> for HookDistribution {
+        fn noise_output_measure(&self, _input_metric: &L1Distance<RBig>) -> Fallible<HookMeasure> {
+            Ok(HookMeasure(7))
+        }
+
+        fn noise_privacy_map(
+            &self,
+            _input_metric: &L1Distance<RBig>,
+            output_measure: &HookMeasure,
+        ) -> Fallible<PrivacyMap<L1Distance<RBig>, HookMeasure>> {
+            let selected_value = output_measure.0 as f64;
+            Ok(PrivacyMap::new(move |_| selected_value))
+        }
+    }
+
+    #[test]
+    fn test_make_noise_uses_theorem_output_measure_factory() -> Fallible<()> {
+        let measurement = HookDistribution(ZExpFamily::<1> { scale: rbig!(1) }).make_noise((
+            VectorDomain::new(AtomDomain::<IBig>::default()),
+            L1Distance::default(),
+        ))?;
+
+        assert_eq!(measurement.output_measure, HookMeasure(7));
+        assert_eq!(measurement.map(&rbig!(1))?, 7.0);
+        Ok(())
     }
 }
