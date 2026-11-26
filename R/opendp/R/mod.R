@@ -483,6 +483,21 @@ new_privacy_guarantee_internal <- function(ptr) {
   privacy_guarantee
 }
 
+#' Construct a fixed numeric privacy budget.
+#'
+#' @param approx_dp Pair c(epsilon, delta).
+#' @param zCDP Pair c(rho, delta).
+#' @param renyiDP Triple c(order, epsilon, delta).
+#' @return A privacy budget for adaptive composition.
+#' @export
+privacy_budget <- function(approx_dp = NULL, zCDP = NULL, renyiDP = NULL) {
+  choices <- Filter(Negate(is.null), list(approx_dp = approx_dp, zCDP = zCDP, renyiDP = renyiDP))
+  if (length(choices) != 1L) {
+    stop("expected exactly one privacy budget", call. = FALSE)
+  }
+  `_new_privacy_budget`(names(choices)[[1L]], as.double(choices[[1L]]))
+}
+
 #' Construct a conjunctive privacy guarantee.
 #'
 #' Each representation must independently certify the same privacy relation.

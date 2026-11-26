@@ -18,7 +18,7 @@ use crate::{
     traits::ProductOrd,
 };
 
-use super::{PrivacyGuarantee, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
+use super::{PrivacyBudget, PrivacyGuarantee, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -602,4 +602,31 @@ pub extern "C" fn opendp_measures__privacy_guarantee_epsilon(
         .epsilon(delta)
         .map(AnyObject::new)
         .into()
+}
+
+#[bootstrap(
+    name = "_new_privacy_budget",
+    features("contrib"),
+    arguments(kind(rust_type = "String"), parameters(rust_type = "Vec<f64>")),
+    returns(rust_type = "PrivacyBudget")
+)]
+/// Construct a fixed numeric privacy budget.
+/// # Arguments
+/// * `kind` - One of approx_dp, zCDP, or renyiDP.
+/// * `parameters` - Parameters for the chosen budget.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___new_privacy_budget(
+    kind: *const c_char,
+    parameters: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let kind = try_!(util::to_str(kind));
+    let parameters = try_!(try_as_ref!(parameters).downcast_ref::<Vec<f64>>());
+    let budget = match (kind, parameters.as_slice()) {
+        ("approx_dp", &[epsilon, delta]) => PrivacyBudget::ApproxDP(epsilon, delta),
+        ("zCDP", &[rho, delta]) => PrivacyBudget::ZCDP(rho, delta),
+        ("renyiDP", &[order, epsilon, delta]) => PrivacyBudget::RenyiDP(order, epsilon, delta),
+        _ => return Err(err!(FailedMap, "invalid privacy budget kind or parameter count")).into(),
+    };
+    try_!(budget.validate());
+    FfiResult::Ok(AnyObject::new_raw(budget))
 }

@@ -28,6 +28,7 @@ from opendp.mod import (
     Domain,
     Metric,
     Measure,
+    PrivacyBudget,
 )
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
@@ -39,6 +40,7 @@ _ELEMENTARY_TYPES: dict[Any, str] = {
     bool: "bool",
     Measurement: "AnyMeasurementPtr",
     Transformation: "AnyTransformationPtr",
+    PrivacyBudget: "PrivacyBudget",
 }
 try:
     np = import_optional_dependency("numpy")
@@ -597,3 +599,7 @@ def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     :param value: Metric or measure
     """
     return value.distance_type
+
+def get_budget_type(value: Measure) -> Union[RuntimeType, str]:
+    """Type of fixed privacy budget for composition."""
+    return "PrivacyBudget" if str(value.type) == "MultiDP" else value.distance_type

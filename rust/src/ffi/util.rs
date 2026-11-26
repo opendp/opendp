@@ -16,7 +16,7 @@ use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable, Downcast};
 use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
-    Approximate, MaxDivergence, MultiDP, PrivacyGuarantee, PrivacyProfile, RenyiDivergence,
+    Approximate, MaxDivergence, MultiDP, PrivacyBudget, PrivacyGuarantee, PrivacyProfile, RenyiDivergence,
     SmoothedMaxDivergence, ZeroConcentratedDivergence,
 };
 use crate::metrics::ffi::ExtrinsicDistance;
@@ -419,7 +419,8 @@ lazy_static! {
             type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, MultiDP, ExtrinsicDivergence>],
 
             // measure distances
-            type_vec![PrivacyProfile, PrivacyGuarantee],
+            type_vec![PrivacyProfile, PrivacyGuarantee, PrivacyBudget],
+            type_vec![Vec, <PrivacyBudget>],
             vec![t!((PrivacyProfile, f64)), t!((PrivacyGuarantee, f64))]
         ].into_iter().chain(polars_types).flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();

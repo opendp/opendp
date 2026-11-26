@@ -76,6 +76,20 @@ def test_make_composition():
     print("Invocation:", composed.invoke([22, 12]))
 
 
+def test_multidp_composition_preserves_exact_certificate():
+    measurement = dp.m.make_noise(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.l1_distance(T=int),
+        dp.multi_dp(),
+        scale=2.0,
+    )
+    composed = dp.c.make_composition([measurement, measurement])
+    guarantee = composed.map(1)
+    assert isinstance(guarantee, dp.PrivacyGuarantee)
+    assert guarantee.delta(epsilon=1.0) == 0.0
+    assert composed.map(0).epsilon(delta=0.0) == 0.0
+
+
 def test_deprecated_composition():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     m_lap = dp.m.make_laplace(*input_space, 1.0)
@@ -214,3 +228,18 @@ def test_make_fixed_approxDP_to_approxDP():
     adp_meas = dp.c.make_fixed_approxDP_to_approxDP(fadp_meas)
 
     assert adp_meas.map(1.0).epsilon(delta=1e-7) == 0.1
+
+def test_multidp_adaptive_fixed_budget():
+    domain = dp.vector_domain(dp.atom_domain(T=int))
+    metric = dp.l1_distance(T=int)
+    measure = dp.multi_dp()
+    compositor = dp.c.make_adaptive_composition(
+        domain, metric, measure, d_in=1,
+        d_mids=[dp.PrivacyBudget(approx_dp=(0.5, 0.0))],
+    )
+    queryable = compositor([1, 2])
+    too_expensive = dp.m.make_noise(domain, metric, measure, scale=1.0)
+    with pytest.raises(dp.OpenDPException, match="insufficient budget"):
+        queryable(too_expensive)
+    admissible = dp.m.make_noise(domain, metric, measure, scale=2.0)
+    assert len(queryable(admissible)) == 2
