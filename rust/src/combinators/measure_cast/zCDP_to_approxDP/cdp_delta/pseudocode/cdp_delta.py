@@ -1,10 +1,10 @@
 # type: ignore
 def cdp_delta(rho: float, eps: float) -> float:
     """The Rust code may be easier to follow due to more commenting."""
-    if rho.is_sign_negative():
+    if rho < 0.0:
         raise ValueError(f"rho ({rho}) must be non-negative")
 
-    if eps.is_sign_negative():
+    if eps < 0.0:
         raise ValueError(f"epsilon ({eps}) must be non-negative")
 
     if rho.is_zero() or eps.is_infinite():

@@ -29,10 +29,15 @@ mod tests {
 
     #[test]
     fn opaque_profile_clone_outlives_source() -> Fallible<()> {
-        let source = AnyObject::new(PrivacyProfile::new(|epsilon| Ok((-epsilon).exp())));
+        let source = AnyObject::new(PrivacyProfile::new(|epsilons| {
+            Ok(epsilons.iter().map(|&epsilon| (-epsilon).exp()).collect())
+        }));
         let cloned: AnyObject = Fallible::from(opendp_data__clone_opaque_object(&source))?;
         drop(source);
-        assert_eq!(cloned.downcast_ref::<PrivacyProfile>()?.delta(0.)?, 1.);
+        assert_eq!(
+            cloned.downcast_ref::<PrivacyProfile>()?.delta(&[0.0])?,
+            vec![1.0]
+        );
         Ok(())
     }
 

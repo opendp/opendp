@@ -4,11 +4,11 @@ use crate::error::ErrorVariant;
 use crate::{error::Fallible, traits::Float};
 
 pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
-    if rho.is_sign_negative() {
+    if rho < Q::zero() {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
 
-    if delta.is_sign_negative() {
+    if delta < Q::zero() {
         return fallible!(FailedMap, "delta ({}) must be non-negative", delta);
     }
 
@@ -122,11 +122,19 @@ fn test_numeric_errors_propagate() {
 }
 
 #[test]
-fn test_edge_cases() -> Fallible<()> {
-    // negativity checks
-    assert!(cdp_delta(-0., 0.).is_err());
-    assert!(cdp_delta(0., -0.).is_err());
+fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
+    let delta = cdp_delta(0.03125, f64::MAX)?;
+    // A finite epsilon has no certified pure-DP endpoint here. A rounded-up
+    // subnormal is valid; silently returning mathematical zero would not be.
+    assert!(delta > 0.0 && delta < f64::MIN_POSITIVE);
+    Ok(())
+}
 
+#[test]
+fn test_edge_cases() -> Fallible<()> {
+    // Signed zero is mathematically zero and is accepted.
+    assert_eq!(cdp_delta(-0., 0.)?, 0.);
+    assert_eq!(cdp_delta(0., -0.)?, 0.);
     assert_eq!(cdp_delta(0., 0.)?, 0.);
 
     let delta = cdp_delta(0.5, 0.)?;

@@ -58,8 +58,11 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     type ApproxMeasure = SmoothedMaxDivergence;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
-        Ok(PrivacyProfile::new(move |epsilon: f64| {
-            cdp_delta(rho, epsilon)
+        Ok(PrivacyProfile::new(move |epsilon| {
+            epsilon
+                .iter()
+                .map(|&epsilon| cdp_delta(rho, epsilon))
+                .collect()
         }))
     }
 }
@@ -71,7 +74,12 @@ impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
         (rho, delta): Self::Distance,
     ) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         Ok((
-            PrivacyProfile::new(move |epsilon: f64| cdp_delta(rho, epsilon)),
+            PrivacyProfile::new(move |epsilon| {
+                epsilon
+                    .iter()
+                    .map(|&epsilon| cdp_delta(rho, epsilon))
+                    .collect()
+            }),
             delta,
         ))
     }

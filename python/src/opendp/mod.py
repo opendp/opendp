@@ -11,6 +11,7 @@ from __future__ import annotations
 import ctypes
 from copy import deepcopy
 from dataclasses import asdict
+from numbers import Real
 from typing import (
     Any,
     Literal,
@@ -29,6 +30,7 @@ import json
 import warnings
 
 from opendp._lib import (
+    AnyObjectPtr,
     AnyMeasurement,
     AnyTransformation,
     AnyDomain,
@@ -1282,16 +1284,44 @@ class ApproximateDivergence(Measure):
 
 
 class PrivacyProfile(object):
-    """
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    """A privacy profile mapping epsilon to a conservative delta bound.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Construct from exactly one vector-valued ``delta`` or ``log_delta`` callback.
+    Callbacks receive nondecreasing lists (including singleton lists), permit
+    duplicates, and must return one conservative bound per input.
+    accepts a scalar or a nondecreasing vector and preserves that shape.
+
+    The total bound is ``min(1, delta_slack + exp(log_delta_core(epsilon)))``.
+    Ordinary delta outputs convert upward to log space and can loosen plateaus;
+    zeros must be exact. Bounds must be nonincreasing within each batch, but may
+    depend on the whole batch. Inversion certifies a finite passing epsilon
+    when found; it need not find the least passing epsilon.
     """
 
-    def __init__(self, curve):
-        self.curve = curve
+    def __init__(
+        self,
+        *,
+        delta: Optional[Callable[[list[float]], list[float]]] = None,
+        log_delta: Optional[Callable[[list[float]], list[float]]] = None,
+        delta_slack: float = 0.0,
+        _ptr: Any = None,
+    ):
+        if _ptr is not None:
+            if delta is not None or log_delta is not None or delta_slack != 0.0:
+                raise TypeError("_ptr cannot be combined with profile constructors")
+            self.curve = _ptr
+            return
+
+        if (delta is None) == (log_delta is None):
+            raise TypeError("expected exactly one of delta or log_delta")
+
+        from opendp.measures import _new_privacy_profile
+
+        self.curve = _new_privacy_profile(
+            log_delta if log_delta is not None else delta,
+            is_log=log_delta is not None,
+            delta_slack=delta_slack,
+        ).curve
 
     def delta(self, epsilon):
         """
@@ -1301,7 +1331,11 @@ class PrivacyProfile(object):
         """
         from opendp._data import privacy_profile_delta
 
-        return privacy_profile_delta(self.curve, epsilon)
+        scalar = isinstance(epsilon, Real)
+        result = privacy_profile_delta(
+            self.curve, [float(epsilon)] if scalar else epsilon
+        )
+        return result[0] if scalar else result
 
     def epsilon(self, delta):
         """
@@ -1311,7 +1345,31 @@ class PrivacyProfile(object):
         """
         from opendp._data import privacy_profile_epsilon
 
-        return privacy_profile_epsilon(self.curve, delta)
+        scalar = isinstance(delta, Real)
+        result = privacy_profile_epsilon(
+            self.curve, [float(delta)] if scalar else delta
+        )
+        return result[0] if scalar else result
+
+    def log_delta(self, epsilon):
+        """Return an upward-conservative logarithm of the total delta bound."""
+        from opendp._data import privacy_profile_log_delta
+
+        scalar = isinstance(epsilon, Real)
+        result = privacy_profile_log_delta(
+            self.curve, [float(epsilon)] if scalar else epsilon
+        )
+        return result[0] if scalar else result
+
+    def epsilon_from_log_delta(self, log_delta):
+        """Invert a total log-delta budget without narrowing it to ordinary delta."""
+        from opendp._data import privacy_profile_epsilon_from_log_delta
+
+        scalar = isinstance(log_delta, Real)
+        result = privacy_profile_epsilon_from_log_delta(
+            self.curve, [float(log_delta)] if scalar else log_delta
+        )
+        return result[0] if scalar else result
 
 
 class _PartialConstructor(object):
