@@ -1,5 +1,8 @@
 use crate::{error::Fallible, traits::SInterval};
 
+const F64_TRUE_MIN: f64 = f64::from_bits(1);
+pub(crate) const LOG_TRUE_MIN: f64 = -744.4400719213812;
+
 pub(crate) fn check_delta(delta: f64) -> Fallible<()> {
     if delta.is_nan() || delta < 0.0 || delta > 1.0 {
         return fallible!(FailedMap, "delta ({delta}) must be between zero and one");
@@ -73,4 +76,21 @@ pub(in crate::measures::curves) fn logaddexp_upper(left: f64, right: f64) -> Fal
     (SInterval::point(larger)? + (SInterval::point(1.0)? + difference.exp()?)?.ln()?)?
         .min(SInterval::point(0.0)?)
         .upper_f64()
+}
+
+pub(in crate::measures::curves) fn one_minus_delta_from_log_upper_unchecked(
+    log_delta: f64,
+) -> Fallible<SInterval> {
+    if log_delta == f64::NEG_INFINITY {
+        return SInterval::point(1.0);
+    }
+    if log_delta == 0.0 {
+        return SInterval::point(0.0);
+    }
+
+    if log_delta < LOG_TRUE_MIN {
+        return (SInterval::point(1.0)? - SInterval::between(0.0, F64_TRUE_MIN)?)?.clamp01();
+    }
+
+    (SInterval::point(0.0)? - SInterval::point(log_delta)?.exp_m1()?)?.clamp01()
 }

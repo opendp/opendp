@@ -455,9 +455,9 @@ new_privacy_profile_internal <- function(ptr) {
 #' @param ptr a pointer to a privacy guarantee
 new_privacy_guarantee_internal <- function(ptr) {
   force(ptr)
-  privacy_guarantee <- function(attr, epsilon, delta, log_delta, log_delta_at) {
-    if (missing(attr) + missing(epsilon) + missing(delta) + missing(log_delta) + missing(log_delta_at) != 4) {
-      stop("expected exactly one of attr, epsilon, delta, log_delta or log_delta_at", call. = FALSE)
+  privacy_guarantee <- function(attr, epsilon, delta, log_delta, log_delta_at, alpha, beta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(log_delta) + missing(log_delta_at) + missing(alpha) + missing(beta) != 6) {
+      stop("expected exactly one of attr, epsilon, delta, log_delta, log_delta_at, alpha or beta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
@@ -474,6 +474,12 @@ new_privacy_guarantee_internal <- function(ptr) {
       return(privacy_guarantee_log_delta(privacy_guarantee, as.double(log_delta_at)))
     }
 
+    if (!missing(alpha)) {
+      return(`_privacy_guarantee_beta`(privacy_guarantee, alpha))
+    }
+    if (!missing(beta)) {
+      return(`_privacy_guarantee_alpha`(privacy_guarantee, beta))
+    }
     switch(attr,
       ptr = ptr,
       stop("unrecognized attribute", call. = FALSE)
@@ -492,6 +498,9 @@ new_privacy_guarantee_internal <- function(ptr) {
 #'
 #' @param approx_dp Numeric pair c(epsilon, delta); zero delta certifies pure DP.
 #' @param profile A PrivacyProfile object, independently certified.
+#' Alpha and beta report f-DP lower bounds derived from these representations,
+#' accepting scalars or nondecreasing vectors (duplicates permitted).
+#' No tradeoff representation is stored.
 #' @export
 privacy_guarantee <- function(approx_dp = NULL, profile = NULL) {
   if (!is.null(approx_dp) && (!is.numeric(approx_dp) || length(approx_dp) != 2L)) {
