@@ -8,7 +8,11 @@
 #
 # Only regenerating needs uv; CI and contributors install with plain pip
 # ("pip install -r requirements-dev.txt"), which evaluates the markers.
-# #
+#
+# Note that "-e ." is not included below:
+# While that would allow us to pin transitive dependencies from setup.cfg,
+# it would also force us to specify a particular extra here,
+# rather than leaving that to CI matrix.
 
 pre-commit
 ruff
