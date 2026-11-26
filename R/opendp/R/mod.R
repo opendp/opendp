@@ -706,15 +706,33 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
     }
   }
 
-  check_type <- function(v) {
-    f <- try(predicate(v), TRUE)
-    !inherits(f, "try-error")
+  probe <- function(v) {
+    tryCatch({
+      predicate(v)
+      NULL
+    }, error = function(e) {
+      if (inherits(e, "opendp_error") && identical(e$variant, "Interrupted")) {
+        stop(e) # nolint: condition_call_linter.
+      }
+      e
+    })
+  }
+  is_type_error <- function(e) {
+    inherits(e, "opendp_error") && identical(e$variant, "Type")
   }
 
-  if (check_type(0.)) {
+  float_error <- probe(0.)
+  if (is.null(float_error)) {
     return(rt_parse("float"))
   }
-  if (check_type(0L)) {
+  int_error <- probe(0L)
+  if (is.null(int_error)) {
+    return(rt_parse("int"))
+  }
+  if (!is_type_error(float_error)) {
+    return(rt_parse("float"))
+  }
+  if (!is_type_error(int_error)) {
     return(rt_parse("int"))
   }
   stop("unable to infer type `.T`; pass the type `.T` or bounds", call. = FALSE)
