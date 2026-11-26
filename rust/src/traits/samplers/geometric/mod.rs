@@ -1,188 +1,96 @@
-use std::ops::{AddAssign, SubAssign};
-
-use num::{One, Zero};
 use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
-    traits::{ExactIntCast, FiniteBounds, Float, Integer},
+    traits::{ExactIntCast, InfDiv, InfExp, Integer},
 };
 
-use super::{fill_bytes, sample_bernoulli_float, sample_standard_bernoulli};
+use super::{
+    BERNOULLI_U64_DENOMINATOR, bernoulli_u64_threshold, fill_bytes, sample_bernoulli_u64,
+    sample_standard_bernoulli,
+};
 
 #[cfg(test)]
 mod test;
 
-/// Sample from the censored geometric distribution.
-///
 /// # Proof Definition
-/// Sample from the censored geometric distribution with parameter `prob`.
-/// If `trials` is None, there are no timing protections, and the support is:
-/// ```text
-///     [Self::MIN, Self::MAX]
-/// ```
-///
-/// If `trials` is Some, execution runs in constant time, and the support is
-/// ```text
-///     [Self::MIN, Self::MAX] ∩ {shift ± {0, 1, 2, ..., trials}}
-/// ```
-///
-/// Tail probabilities of the uncensored geometric accumulate at the extreme value of the support.
-///
-/// # Arguments
-/// * `shift` - Parameter to shift the output by
-/// * `positive` - If true, positive noise is added, else negative
-/// * `prob` - Parameter for the geometric distribution, the probability of success on any given trial.
-/// * `trials` - If Some, run the algorithm in constant time with exactly this many trials.
-///
-/// # Return
-/// A draw from the censored geometric distribution defined above.
-///
-/// # Example
-/// ```
-/// use opendp::traits::samplers::sample_geometric_linear;
-/// let geom_res = sample_geometric_linear(0, true, 0.1, Some(20));
-/// # geom_res.unwrap();
-/// ```
-pub fn sample_geometric_linear<T, P>(
-    mut shift: T,
-    positive: bool,
-    prob: P,
-    mut trials: Option<usize>,
-) -> Fallible<T>
-where
-    T: Clone + Zero + One + PartialEq + AddAssign + SubAssign + FiniteBounds,
-    P: Float,
-    usize: ExactIntCast<P::Bits>,
-    P::Bits: ExactIntCast<usize>,
-{
-    // ensure that prob is a valid probability
-    if !(P::zero()..=P::one()).contains(&prob) {
-        return fallible!(FailedFunction, "probability is not within [0, 1]");
-    }
-
-    let bound = if positive {
-        T::MAX_FINITE
-    } else {
-        T::MIN_FINITE
-    };
-    let mut success: bool = false;
-
-    loop {
-        // run a trial-- is this our last step?
-        success |= sample_bernoulli_float(prob, trials.is_some())?;
-
-        // make steps on `shift` until there is a successful trial or have reached the boundary
-        if !success && shift != bound {
-            if positive {
-                shift += T::one()
-            } else {
-                shift -= T::one()
-            }
-        }
-
-        // stopping criteria
-        if let Some(trials) = trials.as_mut() {
-            // in the constant-time regime, decrement trials until zero
-            if trials.is_zero() {
-                break;
-            }
-            *trials -= 1;
-        } else if success {
-            // otherwise break on first success
-            break;
-        }
-    }
-    Ok(shift)
-}
-
-/// Sample from the censored two-sided geometric distribution.
-///
-/// # Proof Definition
-/// The lower bound must not be greater than the upper bound.
-///
-/// Return a sample from the censored two-sided geometric distribution with parameter `scale`.
-/// The support is truncated to:
-/// ```text
-///     [Self::MIN, Self::MAX] ∩ {shift ± {1, 2, 3, ..., trials}}
-/// ```
-///
-/// Tail probabilities accumulate at the extrema of the support.
-///
-/// # Arguments
-/// * `shift` - Parameter to shift the output by
-/// * `scale` - Parameter to scale the output by
-/// * `bounds` - Run the algorithm with both inputs and outputs clamped to this value.
-///
-/// # Return
-/// A draw from the two-sided censored geometric distribution defined above.
-///
-/// # Example
-/// ```
-/// use opendp::traits::samplers::sample_discrete_laplace_linear;
-/// let geom = sample_discrete_laplace_linear(0, 0.1, (20, 30));
-/// # geom.unwrap();
-/// ```
-///
-/// Samples are taken from the censored two-sided geometric distribution,
-///     where the tail probabilities are accumulated in the +/- (upper - lower)th bucket from taking (upper - lower - 1) bernoulli trials.
-///     This special bucket may at most appear at the clamping bound of the output distribution-
-///     Should the shift be outside the bounds, this irregular bucket and its zero-neighbor bucket would both be present in the output.
-///     There is no multiplicative bound on the difference in probabilities between the output probabilities for neighboring datasets.
-///     Therefore the input must be clamped. In addition, the noised output must be clamped as well--
-///         if the greatest magnitude noise GMN = (upper - lower), then should (upper + GMN) be released,
-///             the analyst can deduce that the input was greater than or equal to upper
-pub fn sample_discrete_laplace_linear<T, P>(
-    mut shift: T,
-    scale: P,
+/// Validate finite nonnegative scale and ordered bounds.
+/// Return (0, 0) for zero scale or coincident bounds.
+/// Otherwise return the interval width, representable in T and usize,
+/// and a threshold in (0, 2^64) whose grid probability is at least
+/// $\exp(-1/\texttt{scale})$, or return an error.
+pub(crate) fn discrete_laplace_linear_parameters<T>(
+    scale: f64,
     (lower, upper): (T, T),
-) -> Fallible<T>
+) -> Fallible<(usize, u128)>
 where
     T: Integer,
-    P: Float,
-    usize: ExactIntCast<P::Bits> + ExactIntCast<T>,
-    P::Bits: ExactIntCast<usize>,
+    usize: ExactIntCast<T>,
 {
-    if scale.is_zero() {
-        return shift.total_clamp(lower, upper);
+    if !scale.is_finite() || scale < 0.0 {
+        return fallible!(FailedFunction, "scale must be nonnegative and finite");
     }
-    // if the output interval is a point
-    if lower == upper {
-        return Ok(lower);
+    if lower > upper {
+        return fallible!(FailedFunction, "lower bound must not exceed upper bound");
+    }
+    if scale == 0.0 || lower == upper {
+        return Ok((0, 0));
     }
 
-    let trials: Option<usize> = Some(usize::exact_int_cast(
-        upper.alerting_sub(&lower)?.alerting_sub(&T::one())?,
-    )?);
+    let width = usize::exact_int_cast(upper.alerting_sub(&lower)?)?;
 
-    // make prob conservatively smaller, because a smaller probability means greater noise
-    // For a positive subnormal scale, -1/scale can overflow natively.
-    // A finite upper bound on that exponent preserves conservative rounding.
-    let neg_inverse = -scale.recip();
-    let neg_inverse = if neg_inverse == P::neg_infinity() {
-        P::MIN_FINITE
-    } else {
-        neg_inverse
-    };
-    let prob = P::one().neg_inf_sub(&neg_inverse.inf_exp()?)?;
+    // Round the failure probability up to the u64 grid, so geometric noise
+    // is never smaller than specified by scale.
+    let inverse = 1.0f64.neg_inf_div(&scale)?;
+    let tail_threshold = bernoulli_u64_threshold((-inverse).inf_exp()?).max(1);
+    if tail_threshold == BERNOULLI_U64_DENOMINATOR {
+        return fallible!(
+            FailedFunction,
+            "scale is too large for fixed-width geometric sampling"
+        );
+    }
+    Ok((width, tail_threshold))
+}
 
-    // It should be possible to drop the input clamp at a cost of `delta = 2^(-(upper - lower))`.
-    // Thanks for the input @ctcovington (Christian Covington)
-    shift = shift.total_clamp(lower, upper)?;
+/// # Proof Definition
+/// Width and threshold must be returned by `discrete_laplace_linear_parameters`
+/// for the same bounds.
+/// Clamp the input to the bounds. If the threshold is zero, return that value.
+/// Otherwise add discrete Laplace noise with continuation probability
+/// $\texttt{threshold}/2^{64}$ and clamp the result, or return an entropy error.
+pub(crate) fn sample_bounded_discrete_laplace<T: Integer>(
+    shift: T,
+    (lower, upper): (T, T),
+    width: usize,
+    threshold: u128,
+) -> Fallible<T> {
+    let shift = shift.clamp(lower, upper);
+    if threshold == 0 {
+        return Ok(shift);
+    }
 
-    let noised = loop {
-        let direction = sample_standard_bernoulli()?;
-        let sample = sample_geometric_linear(shift, direction, prob, trials)?;
-        // Reject exactly one zero-magnitude proposal. At the type minimum,
-        // negative draws also saturate to `shift`, so reject positive zero
-        // instead to preserve that tail. Switching at other lower bounds is
-        // distribution-equivalent because both signed zeros are distinguishable.
-        if direction != (shift == lower) || sample != shift {
-            break sample;
+    // Reject negative zero before executing the remaining trials.
+    let (positive, mut continuing) = loop {
+        let positive = sample_standard_bernoulli()?;
+        let first = sample_bernoulli_u64(threshold)?;
+        if positive | first {
+            break (positive, first);
         }
     };
 
-    noised.total_clamp(lower, upper)
+    let mut magnitude = usize::from(continuing);
+    for _ in 1..width {
+        continuing &= sample_bernoulli_u64(threshold)?;
+        magnitude += usize::from(continuing);
+    }
+
+    // Both distances to the bounds and the magnitude are at most the validated width.
+    let magnitude = T::exact_int_cast(magnitude)?;
+    Ok(if positive {
+        shift + magnitude.min(upper - shift)
+    } else {
+        shift - magnitude.min(shift - lower)
+    })
 }
 
 #[proven]

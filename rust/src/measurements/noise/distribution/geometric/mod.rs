@@ -10,7 +10,10 @@ use crate::{
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{ExactIntCast, InfExp, InfSub, Integer, samplers::sample_discrete_laplace_linear},
+    traits::{
+        ExactIntCast, Integer,
+        samplers::{discrete_laplace_linear_parameters, sample_bounded_discrete_laplace},
+    },
     transformations::{make_vec, then_index_or_default},
 };
 
@@ -32,7 +35,8 @@ mod test;
     )
 )]
 /// Equivalent to `make_laplace` but restricted to an integer support.
-/// Can specify `bounds` to run the algorithm in near constant-time.
+/// With `bounds`, the accepted proposal uses a fixed number of Bernoulli trials, but runtime is not strictly constant.
+/// For positive scale, the interval width must fit both the input atom type and `usize`.
 ///
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
@@ -41,7 +45,7 @@ mod test;
 /// * `input_domain` - Domain of the data type to be released.
 /// * `input_metric` - Metric of the data type to be released.
 /// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
-/// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
+/// * `bounds` - Public bounds on the input and output that fix the number of trials in the accepted proposal.
 ///
 /// # Generics
 /// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
@@ -113,13 +117,8 @@ where
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO, Vec<T>>> {
-        let ConstantTimeGeometric {
-            scale,
-            bounds: (lower, upper),
-        } = self;
-        if lower > upper {
-            return fallible!(MakeMeasurement, "lower may not be greater than upper");
-        }
+        let ConstantTimeGeometric { scale, bounds } = self;
+        let (width, threshold) = discrete_laplace_linear_parameters(scale, bounds)?;
 
         let distribution = ZExpFamily {
             scale: RBig::from_f64(scale)
@@ -130,30 +129,13 @@ where
         let privacy_map =
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;
 
-        // At zero scale, the limiting success probability is 1.
-        let p = if scale == 0.0 {
-            1.0
-        } else {
-            // A positive subnormal scale can overflow the native reciprocal.
-            // Saturating -1/scale upward keeps exp's argument finite and its
-            // probability bound conservative; it does not assert exp=0.
-            let neg_inverse = (-scale.recip()).max(f64::MIN);
-            1f64.neg_inf_sub(&neg_inverse.inf_exp()?)?
-        };
-        if !(p > 0.0 && p <= 1.0) {
-            return fallible!(
-                MakeMeasurement,
-                "p ({p}) must be in (0, 1]. This is likely because the noise scale is so large that conservative arithmetic causes the probability of termination to go negative"
-            );
-        }
-
         Measurement::new(
             input_domain,
             input_metric,
             output_measure,
             Function::new_fallible(move |arg: &Vec<T>| {
                 arg.iter()
-                    .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, (lower, upper)))
+                    .map(|&v| sample_bounded_discrete_laplace(v, bounds, width, threshold))
                     .collect()
             }),
             PrivacyMap::new_fallible(move |d_in: &QI| {

@@ -1,5 +1,5 @@
 # type: ignore
-# analogous to impl MakeNoise<AtomDomain<T>, AbsoluteDistance<T>, MO> for ConstantTimeGeometric<T> in Rust
+# analogous to impl MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for ConstantTimeGeometric<T> in Rust
 class ConstantTimeGeometric:
     def make_noise(
         self, input_space: tuple[AtomDomain[T], AbsoluteDistance[QI]]
