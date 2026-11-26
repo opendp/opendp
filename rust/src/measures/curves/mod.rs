@@ -30,6 +30,267 @@ pub struct PrivacyProfile {
     delta_slack: f64,
 }
 
+/// A single independently certified (epsilon, delta)-DP bound.
+///
+/// Source parameters are retained exactly, without conversion to log space.
+/// A zero delta certifies pure DP. Construction validates numerical ranges,
+/// not whether the certificate holds for a particular privacy relation.
+#[derive(Clone, Debug, PartialEq)]
+struct ApproxDPRepr {
+    epsilon: f64,
+    delta: f64,
+}
+
+impl ApproxDPRepr {
+    fn new(epsilon: f64, delta: f64) -> Fallible<Self> {
+        check_epsilon(epsilon)?;
+        if !epsilon.is_finite() {
+            return fallible!(FailedMap, "certificate epsilon must be finite");
+        }
+        check_delta(delta)?;
+        Ok(Self { epsilon, delta })
+    }
+
+    // The symmetric approximate-DP tradeoff implies, below the certificate
+    // endpoint, delta + (1-delta) * (1-exp(epsilon-self.epsilon))
+    // / (1+exp(-self.epsilon)). Use expm1 to preserve the endpoint.
+    fn delta_interval(&self, epsilon: f64) -> Fallible<SInterval> {
+        let delta = SInterval::point(self.delta)?;
+        if epsilon >= self.epsilon || self.delta == 1.0 {
+            return Ok(delta);
+        }
+
+        let one = SInterval::point(1.0)?;
+        let difference = (SInterval::point(epsilon)? - SInterval::point(self.epsilon)?)?;
+        // For extreme arguments the trivial upper bound avoids exhausting
+        // the software exponent range.
+        if difference.lower_f64()? < -1024.0 {
+            return Ok(one);
+        }
+        let numerator = -difference.exp_m1()?;
+        let denominator = self.denominator()?;
+        Ok((delta.clone() + (((one.clone() - delta)? * numerator)? / denominator)?)?.min(one))
+    }
+
+    // A lower enclosure of 1+exp(-epsilon) is sufficient for the forward
+    // conversion. Beyond this range use the weaker lower bound one.
+    fn denominator(&self) -> Fallible<SInterval> {
+        let one = SInterval::point(1.0)?;
+        if self.epsilon > 1024.0 {
+            return Ok(one);
+        }
+        one + SInterval::point(-self.epsilon)?.exp()?
+    }
+
+    fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        self.delta_interval(epsilon)?.upper_f64()
+    }
+
+    fn log_delta(&self, epsilon: f64) -> Fallible<f64> {
+        if epsilon >= self.epsilon {
+            return delta_to_log_upper_unchecked(self.delta);
+        }
+        let delta = self.delta_interval(epsilon)?;
+        Ok(delta.ln()?.upper_f64()?.min(0.0))
+    }
+
+    fn epsilon(&self, delta: f64) -> Fallible<f64> {
+        if delta == 1.0 {
+            return Ok(0.0);
+        }
+        if delta < self.delta {
+            return Ok(f64::INFINITY);
+        }
+        if delta == self.delta {
+            return Ok(self.epsilon);
+        }
+        self.epsilon_from_complement(
+            (SInterval::point(1.0)? - SInterval::point(delta)?)?,
+        )
+    }
+
+    fn epsilon_from_log_delta(&self, log_delta: f64) -> Fallible<f64> {
+        if log_delta == 0.0 {
+            return Ok(0.0);
+        }
+        if log_delta < delta_to_log_upper_unchecked(self.delta)? {
+            return Ok(f64::INFINITY);
+        }
+        if log_delta == f64::NEG_INFINITY || log_delta < -1024.0 {
+            return Ok(self.epsilon);
+        }
+        self.epsilon_from_complement(-SInterval::point(log_delta)?.exp_m1()?)
+    }
+
+    fn epsilon_from_complement(&self, complement: SInterval) -> Fallible<f64> {
+        if self.epsilon == 0.0 {
+            return Ok(0.0);
+        }
+        // Invert the symmetric tradeoff: exp(epsilon-epsilon0)
+        // = r - (1-r)*exp(-epsilon0), r=(1-delta)/(1-delta0).
+        let one = SInterval::point(1.0)?;
+        let ratio = (complement / (one.clone() - SInterval::point(self.delta)?)?)?
+            .min(one.clone());
+        let exponent = if self.epsilon > 1024.0 {
+            // Omitting the nonnegative correction gives an upper bound.
+            ratio
+        } else {
+            let inverse = SInterval::point(-self.epsilon)?.exp()?;
+            (ratio.clone() - ((one - ratio)? * inverse.clone())?)?.max(inverse)
+        };
+        Ok((SInterval::point(self.epsilon)? + exponent.ln()?)?
+            .upper_f64()?
+            .max(0.0)
+            .min(self.epsilon))
+    }
+}
+
+/// Numeric privacy facts returned by a [`MultiDP`] privacy map.
+///
+/// Each populated field independently certifies the same privacy relation;
+/// the fields are conjunctive, not alternative materializations. Attaching one
+/// representation preserves the other. Approximate DP is not eagerly converted
+/// into a profile, and profile-specific delta slack remains owned by the profile.
+#[derive(Clone, Default)]
+pub struct PrivacyGuarantee {
+    approx_dp: Option<ApproxDPRepr>,
+    profile: Option<PrivacyProfile>,
+}
+
+impl PrivacyGuarantee {
+    /// Construct a vacuous guarantee, certifying no nontrivial privacy bound.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Attach a single approximate-DP certificate, retaining the profile.
+    /// Validates the parameters, not whether the certificate holds.
+    pub fn with_approx_dp(mut self, epsilon: f64, delta: f64) -> Fallible<Self> {
+        self.approx_dp = Some(ApproxDPRepr::new(epsilon, delta)?);
+        Ok(self)
+    }
+
+    /// Attach a profile representation, retaining the approximate-DP certificate.
+    pub fn with_profile(mut self, profile: PrivacyProfile) -> Self {
+        self.profile = Some(profile);
+        self
+    }
+
+    /// Return the tightest delta bound, propagating representation errors.
+    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
+        Ok(self.delta_batch(&[epsilon])?[0])
+    }
+
+    /// Return the tightest epsilon bound, propagating representation errors.
+    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
+        Ok(self.epsilon_batch(&[delta])?[0])
+    }
+
+    /// Return an upward-conservative log-delta bound.
+    pub fn log_delta(&self, epsilon: f64) -> Fallible<f64> {
+        Ok(self.log_delta_batch(&[epsilon])?[0])
+    }
+
+    /// Invert a log-delta budget without narrowing it to ordinary delta.
+    pub fn epsilon_from_log_delta(&self, log_delta: f64) -> Fallible<f64> {
+        Ok(self.epsilon_from_log_delta_batch(&[log_delta])?[0])
+    }
+
+    /// Evaluate a nondecreasing batch of epsilon queries.
+    pub fn delta_batch(&self, epsilon: &[f64]) -> Fallible<Vec<f64>> {
+        self.evaluate(
+            epsilon,
+            check_epsilon,
+            |_| 1.0,
+            ApproxDPRepr::delta,
+            PrivacyProfile::delta,
+        )
+    }
+
+    /// Evaluate a nondecreasing batch of delta queries.
+    pub fn epsilon_batch(&self, delta: &[f64]) -> Fallible<Vec<f64>> {
+        self.evaluate(
+            delta,
+            check_delta,
+            |d| if d == 1.0 {
+                0.0
+            } else {
+                f64::INFINITY
+            },
+            ApproxDPRepr::epsilon,
+            PrivacyProfile::epsilon,
+        )
+    }
+
+    /// Evaluate a nondecreasing batch of epsilon queries in log-delta space.
+    pub fn log_delta_batch(&self, epsilon: &[f64]) -> Fallible<Vec<f64>> {
+        self.evaluate(
+            epsilon,
+            check_epsilon,
+            |_| 0.0,
+            ApproxDPRepr::log_delta,
+            PrivacyProfile::log_delta,
+        )
+    }
+
+    /// Invert a nondecreasing batch of log-delta budgets.
+    pub fn epsilon_from_log_delta_batch(&self, log_delta: &[f64]) -> Fallible<Vec<f64>> {
+        self.evaluate(
+            log_delta,
+            check_log_delta,
+            |d| if d == 0.0 {
+                0.0
+            } else {
+                f64::INFINITY
+            },
+            ApproxDPRepr::epsilon_from_log_delta,
+            PrivacyProfile::epsilon_from_log_delta,
+        )
+    }
+
+    fn evaluate(
+        &self,
+        queries: &[f64],
+        check: fn(f64) -> Fallible<()>,
+        vacuous: impl Fn(f64) -> f64,
+        certificate: impl Fn(&ApproxDPRepr, f64) -> Fallible<f64>,
+        profile: impl Fn(&PrivacyProfile, &[f64]) -> Fallible<Vec<f64>>,
+    ) -> Fallible<Vec<f64>> {
+        check_inputs(queries, check)?;
+        let mut bounds: Vec<_> = queries.iter().copied().map(vacuous).collect();
+        if let Some(repr) = &self.approx_dp {
+            for (bound, &query) in bounds.iter_mut().zip(queries) {
+                *bound = (*bound).min(certificate(repr, query)?);
+            }
+        }
+        if let Some(repr) = &self.profile {
+            for (bound, other) in bounds.iter_mut().zip(profile(repr, queries)?) {
+                *bound = (*bound).min(other);
+            }
+        }
+        Ok(bounds)
+    }
+
+    pub(crate) fn approx_dp(&self) -> Option<(f64, f64)> {
+        self.approx_dp
+            .as_ref()
+            .map(|repr| (repr.epsilon, repr.delta))
+    }
+
+    pub(crate) fn profile(&self) -> Option<&PrivacyProfile> {
+        self.profile.as_ref()
+    }
+}
+
+impl std::fmt::Debug for PrivacyGuarantee {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrivacyGuarantee")
+            .field("approx_dp", &self.approx_dp)
+            .field("profile", &self.profile.is_some())
+            .finish()
+    }
+}
+
 impl PrivacyProfile {
     /// Construct a profile from a vector-valued, upward-conservative delta callback.
     ///

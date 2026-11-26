@@ -320,7 +320,8 @@ fn r_to_c(arg: &Argument) -> String {
 
     let rust_type = (arg.rust_type.clone())
         .map(|rt| match rt {
-            TypeRecipe::Name(v) => v,
+            TypeRecipe::Name(v) if v.chars().all(|c| c.is_ascii_uppercase()) || v == "OptionT" => v,
+            TypeRecipe::Name(v) => format!("parse_runtime_type({v:?})"),
             TypeRecipe::None => "R_NilValue".to_string(),
             _ => format!("T_{name}"),
         })
