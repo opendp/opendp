@@ -474,6 +474,15 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
             objects[i] = sexp_to_extrinsicobject(VECTOR_ELT(value, i));
         result.ptr = objects;
     }
+    else if (str_equal(c_origin, "PrivacyBudget"))
+    {
+        if (TYPEOF(value) != VECSXP)
+            error("expected a list of privacy budgets");
+        AnyObject **p = (AnyObject **)R_alloc(LENGTH(value), sizeof(AnyObject *));
+        for (int i = 0; i < LENGTH(value); i++)
+            p[i] = sexp_to_privacybudgetptr(VECTOR_ELT(value, i));
+        result.ptr = p;
+    }
     else if (str_equal(c_origin, "AnyMeasurementPtr"))
     {
         // TODO: does this ever get freed?
@@ -788,6 +797,13 @@ AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
         UNPROTECT(2);
         return result;
     }
+    if (str_equal(c_origin, "PrivacyBudget"))
+    {
+        AnyObject *result = sexp_to_privacybudgetptr(data);
+        UNPROTECT(2);
+        return result;
+    }
+
     if (str_equal(c_origin, "PrivacyGuarantee"))
     {
         AnyObject *result = sexp_to_privacyguaranteeptr(data);
@@ -847,6 +863,13 @@ static SEXP anyobjectptr_to_sexp_body(void *data)
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
         UNPROTECT(1);
         return profile;
+    }
+
+    if (str_equal(c_origin, "PrivacyBudget"))
+    {
+        SEXP budget = privacybudgetptr_to_sexp(obj);
+        UNPROTECT(1);
+        return budget;
     }
 
     if (str_equal(c_origin, "PrivacyGuarantee"))

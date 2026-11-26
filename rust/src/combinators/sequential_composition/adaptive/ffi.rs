@@ -1,7 +1,11 @@
 use crate::{
     core::FfiResult,
     error::Fallible,
-    ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
+    ffi::{
+        any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
+        util::{Type, c_bool, to_bool},
+    },
+    measures::{MultiDP, PrivacyBudget},
 };
 
 #[unsafe(no_mangle)]
@@ -11,6 +15,7 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
     output_measure: *const AnyMeasure,
     d_in: *const AnyObject,
     d_mids: *const AnyObject,
+    sequential: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain).clone();
     let input_metric = try_as_ref!(input_metric).clone();
@@ -27,19 +32,24 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
             .collect())
     }
 
-    let QO = output_measure.distance_type.clone();
+    let QO = if output_measure.type_ == Type::of::<MultiDP>() {
+        Type::of::<PrivacyBudget>()
+    } else {
+        output_measure.distance_type.clone()
+    };
     let d_mids = try_!(dispatch!(
         repack_vec,
-        [(QO, [f32, f64, (f32, f32), (f64, f64)])],
+        [(QO, [f32, f64, (f32, f32), (f64, f64), PrivacyBudget])],
         (d_mids)
     ));
 
-    super::make_adaptive_composition::<AnyDomain, AnyMetric, AnyMeasure, AnyObject>(
+    super::make_adaptive_composition_with_sequentiality::<AnyDomain, AnyMetric, AnyMeasure, AnyObject>(
         input_domain,
         input_metric,
         output_measure,
         d_in,
         d_mids,
+        to_bool(sequential),
     )
     .map(|m| m.into_any_Q().into_any_out())
     .into()
@@ -59,5 +69,6 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
         output_measure,
         d_in,
         d_mids,
+        0,
     )
 }

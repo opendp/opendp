@@ -33,7 +33,7 @@ use crate::ffi::any::{
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
-use crate::measures::{PrivacyGuarantee, PrivacyProfile};
+use crate::measures::{PrivacyBudget, PrivacyGuarantee, PrivacyProfile};
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
@@ -366,6 +366,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 #[cfg(feature = "polars")]
                 "Bound" => raw_to_vec_obj::<Bound>(raw),
                 "BitVector" => raw_to_vec_obj::<BitVector>(raw),
+                "PrivacyBudget" => raw_to_vec_obj::<PrivacyBudget>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }

@@ -1,0 +1,76 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{CompositionMeasure for MultiDP}}
+\author{\MichaelShoemateAuthor}
+\date{}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} for \texttt{MultiDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+The compositor enforces the interaction model passed to the accounting operation.
+
+\subsubsection*{Caller-verified}
+None.
+
+\subsection*{Postcondition}
+\begin{theorem}
+\texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of
+privacy guarantees is bounded above by \texttt{compose(d\_mids)} under the
+reported adaptivity and composability. Otherwise it returns an error.
+\end{theorem}
+
+\begin{proof}
+The implementation chooses among runtime facts, rather than promises
+on the output measure. Independently certified approximate-DP bounds compose
+by the basic composition theorem, including concurrent interactive composition:
+$\varepsilon = \sum_i\varepsilon_i$ and $\delta=\min(1,\sum_i\delta_i)$.
+When no native path is available, for any finite $\varepsilon\geq0$ choose
+$a\leq\varepsilon/n$ by directed rounding. Each child satisfies
+$(a,\delta_i(a))$-DP, hence the joint interaction satisfies
+$(\varepsilon,\min(1,\sum_i\delta_i(a)))$-DP. The profile evaluates this
+valid bound at each queried epsilon. The infinite-epsilon endpoint is
+interpreted by the existing profile convention.
+
+Pure RDP and pure zCDP compose concurrently; the pure-zCDP embedding into
+RDP uses $\alpha\rho$. Approximate zCDP is composed only under sequential
+interaction, using the approximate-zCDP composition theorem. Approximate RDP
+uses the common-good-events definition of Zhu and Wang (2022), Definition 15.
+Their Lemma 16 (ICLR 2022, Appendix A) gives sequential composition by adding
+the RDP bounds pointwise and adding the source deltas. Approximate RDP is
+therefore omitted for concurrent compositions of multiple mechanisms.
+Approximate zCDP is not silently reinterpreted as approximate RDP.
+Gaussian-DP composition, when enabled, uses the fixed-parameter f-DP
+concurrent composition theorem of Vadhan and Zhang (2023) and
+$\mu^2=\sum_i\mu_i^2$.
+
+Each accumulator uses directed interval arithmetic, so its returned value is
+an upper bound on the corresponding exact composition. The certificate epsilon
+must remain finite; an unrepresentable finite upper bound raises overflow on
+that path. The fallback profile requires no static representation promise.
+The associated budget type contains finite parameters, not arbitrary
+callbacks. A certificate budget is checked using the derived delta bound at
+the requested epsilon. A zCDP budget requires a compatible native bound.
+A fixed-order RDP budget is checked at that order, with an eligible native
+RDP bound or a pure zCDP bound. Its guarantee is the constant certified
+RDP bound at smaller orders (by monotonicity of Rényi divergence), and
+infinity at larger orders. Each successful budget check implies the
+privacy relation asserted by the corresponding budget guarantee.
+An adaptive compositor checks its next fixed budget before invoking the
+measurement and accounts for all budgets chosen at construction.
+Fully adaptive MultiDP composition is not enabled by this implementation:
+the fixed-parameter composition theorems alone do not justify a fully
+adaptive privacy filter for arbitrary runtime conjunctions.
+Therefore every returned fact certifies the same composed privacy relation.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+\end{document}

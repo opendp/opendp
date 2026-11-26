@@ -34,6 +34,7 @@ R_TO_RUST <- list(
   transformation = "AnyTransformation",
   privacy_profile = "PrivacyProfile",
   privacy_guarantee = "PrivacyGuarantee",
+  privacy_budget = "PrivacyBudget",
   queryable = "AnyQueryable",
   odometer_queryable = "AnyOdometerQueryable",
   `function` = "AnyFunction"
@@ -360,6 +361,9 @@ pass_through <- function(x) x
 
 get_carrier_type <- function(value) rt_parse(value("carrier_type"))
 get_distance_type <- function(value) rt_parse(value("distance_type"))
+get_budget_type <- function(value) {
+  if (identical(value("type"), "MultiDP")) rt_parse("PrivacyBudget") else get_distance_type(value)
+}
 get_type <- function(value) rt_parse(value("type"))
 get_value_type <- function(type) rt_parse(type)$args[[2]]
 

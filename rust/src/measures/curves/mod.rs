@@ -19,6 +19,10 @@ mod renyidp_ffi;
 #[cfg(feature = "ffi")]
 mod zcdp_ffi;
 
+mod budget;
+pub use budget::PrivacyBudget;
+mod composition;
+
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
 use logspace::{

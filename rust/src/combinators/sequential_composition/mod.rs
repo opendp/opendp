@@ -20,8 +20,11 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
-    traits::InfAdd,
+    measures::{
+        Approximate, MaxDivergence, MultiDP, PrivacyBudget, PrivacyGuarantee, RenyiDivergence,
+        ZeroConcentratedDivergence,
+    },
+    traits::{InfAdd, ProductOrd},
 };
 
 #[derive(Debug)]
@@ -36,7 +39,7 @@ pub enum Adaptivity {
     FullyAdaptive,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Composability {
     /// Previous interactive mechanisms are locked when a new query is submitted.
     Sequential,
@@ -49,18 +52,42 @@ pub enum Composability {
 /// is bounded above by `self.compose(d_mids)` under `adaptivity` adaptivity and `out`-composability.
 /// Otherwise returns an error.
 pub trait CompositionMeasure: Measure {
+    type Budget: 'static + Clone + std::fmt::Debug;
+
+    /// Interpret a fixed budget as a privacy fact for composition.
+    fn budget_guarantee(&self, _budget: &Self::Budget) -> Fallible<Self::Distance> {
+        fallible!(MakeMeasurement, "this measure does not support fixed budgets")
+    }
+
+    /// Check that a privacy fact certifies a fixed budget.
+    fn check_budget(&self, _distance: &Self::Distance, _budget: &Self::Budget) -> Fallible<bool> {
+        fallible!(FailedFunction, "this measure does not support fixed budgets")
+    }
+
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
+
+    /// Compose privacy facts under the interaction model enforced by the caller.
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance>;
 }
 
 #[proven(
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
 )]
 impl CompositionMeasure for MaxDivergence {
+    type Budget = Self::Distance;
+
+    fn budget_guarantee(&self, budget: &Self::Budget) -> Fallible<Self::Distance> {
+        Ok(*budget)
+    }
+
+    fn check_budget(&self, distance: &Self::Distance, budget: &Self::Budget) -> Fallible<bool> {
+        budget.total_ge(distance)
+    }
+
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance> {
         d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
@@ -69,10 +96,20 @@ impl CompositionMeasure for MaxDivergence {
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
 )]
 impl CompositionMeasure for ZeroConcentratedDivergence {
+    type Budget = Self::Distance;
+
+    fn budget_guarantee(&self, budget: &Self::Budget) -> Fallible<Self::Distance> {
+        Ok(*budget)
+    }
+
+    fn check_budget(&self, distance: &Self::Distance, budget: &Self::Budget) -> Fallible<bool> {
+        budget.total_ge(distance)
+    }
+
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance> {
         d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
@@ -81,10 +118,20 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateMaxDivergence.tex"
 )]
 impl CompositionMeasure for Approximate<MaxDivergence> {
+    type Budget = Self::Distance;
+
+    fn budget_guarantee(&self, budget: &Self::Budget) -> Fallible<Self::Distance> {
+        Ok(*budget)
+    }
+
+    fn check_budget(&self, distance: &Self::Distance, budget: &Self::Budget) -> Fallible<bool> {
+        budget.total_ge(distance)
+    }
+
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance> {
         d_mids
             .iter()
             .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
@@ -97,10 +144,20 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateZeroConcentratedDivergence.tex"
 )]
 impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
+    type Budget = Self::Distance;
+
+    fn budget_guarantee(&self, budget: &Self::Budget) -> Fallible<Self::Distance> {
+        Ok(*budget)
+    }
+
+    fn check_budget(&self, distance: &Self::Distance, budget: &Self::Budget) -> Fallible<bool> {
+        budget.total_ge(distance)
+    }
+
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Sequential)
     }
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance> {
         d_mids
             .iter()
             .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
@@ -113,16 +170,52 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     proof_path = "combinators/sequential_composition/CompositionMeasure_for_RenyiDivergence.tex"
 )]
 impl CompositionMeasure for RenyiDivergence {
+    // Arbitrary RDP functions are not comparable budgets.
+    type Budget = ();
+
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
     }
 
-    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>, _composability: Composability) -> Fallible<Self::Distance> {
         Ok(Function::new_fallible(move |alpha| {
             d_mids
                 .iter()
                 .map(|f| f.eval(alpha))
                 .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
+    }
+}
+
+#[proven(proof_path = "combinators/sequential_composition/CompositionMeasure_for_MultiDP.tex")]
+impl CompositionMeasure for MultiDP {
+    type Budget = PrivacyBudget;
+
+    fn budget_guarantee(&self, budget: &Self::Budget) -> Fallible<Self::Distance> {
+        budget.to_guarantee()
+    }
+
+    fn check_budget(&self, distance: &Self::Distance, budget: &Self::Budget) -> Fallible<bool> {
+        budget.allows(distance)
+    }
+
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
+        match adaptivity {
+            Adaptivity::NonAdaptive | Adaptivity::Adaptive => Ok(Composability::Concurrent),
+            // A generic conjunction of runtime privacy facts is not a
+            // fully-adaptive filter theorem. Require a fixed accounting budget.
+            Adaptivity::FullyAdaptive => fallible!(
+                MakeMeasurement,
+                "fully adaptive MultiDP composition requires a budget-specific theorem"
+            ),
+        }
+    }
+
+    fn compose(
+        &self,
+        d_mids: Vec<Self::Distance>,
+        composability: Composability,
+    ) -> Fallible<Self::Distance> {
+        PrivacyGuarantee::compose(d_mids, composability)
     }
 }
