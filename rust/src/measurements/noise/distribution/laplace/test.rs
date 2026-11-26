@@ -7,7 +7,7 @@ use crate::{
     core::Measurement,
     domains::{AtomDomain, VectorDomain},
     measurements::NoisePrivacyMap,
-    measures::{MaxDivergence, MultiDP, Purity},
+    measures::{MaxDivergence, MultiDP},
     metrics::{AbsoluteDistance, L1Distance},
     traits::samplers::test::check_kolmogorov_smirnov,
 };
@@ -191,21 +191,15 @@ fn test_discrete_laplace_rational_intervals_enclose_inputs() -> Fallible<()> {
 }
 
 #[test]
-fn test_discrete_laplace_zero_scale_multidp_rejected_at_construction() -> Fallible<()> {
+fn test_discrete_laplace_zero_scale_multidp() -> Fallible<()> {
     let distribution = ZExpFamily::<1> { scale: rbig!(0) };
-    let result: Fallible<Measurement<_, _, MultiDP, Vec<IBig>>> =
-        distribution.clone().make_noise((
+    let measurement: Measurement<_, _, MultiDP, Vec<IBig>> =
+        distribution.make_noise((
             VectorDomain::<AtomDomain<IBig>>::default(),
             L1Distance::default(),
-        ));
-    assert!(result.is_err());
-
-    let result = <ZExpFamily<1> as NoisePrivacyMap<L1Distance<RBig>, MultiDP>>::noise_privacy_map(
-        &distribution,
-        &L1Distance::default(),
-        &MultiDP::default(),
-    );
-    assert!(result.is_err());
+        ))?;
+    assert_eq!(measurement.map(&rbig!(0))?.delta(0.0)?, 0.0);
+    assert_eq!(measurement.map(&rbig!(1))?.delta(0.0)?, 1.0);
     Ok(())
 }
 
@@ -236,14 +230,6 @@ fn test_discrete_laplace_multidp_advertises_each_representation() -> Fallible<()
         VectorDomain::new(AtomDomain::<IBig>::default()),
         L1Distance::default(),
     ))?;
-    let capabilities = measurement.output_measure.capabilities();
-
-    assert_eq!(capabilities.approx_dp(), Some(Purity::Pure));
-    assert_eq!(capabilities.profile(), None);
-    assert_eq!(capabilities.renyi(), Some(Purity::Pure));
-    assert_eq!(capabilities.zcdp(), Some(Purity::Pure));
-    assert!(!capabilities.gaussian());
-
     let guarantee = measurement.map(&rbig!(1))?;
     assert_eq!(guarantee.delta(0.5)?, 0.0);
     assert_eq!(guarantee.epsilon(0.0)?, 0.5);

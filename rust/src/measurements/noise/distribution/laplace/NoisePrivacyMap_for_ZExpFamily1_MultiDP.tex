@@ -31,10 +31,8 @@ independent discrete Laplace sample to each coordinate.
 \begin{proof}
 Lines \ref{line:neg-scale} and \ref{line:neg-sens} reject invalid
 parameters. With zero sensitivity, line \ref{line:zero-sens} returns the
-identity guarantee. With zero scale, MultiDP measurement construction rejects the mechanism
-because positive sensitivity would have no finite guarantee. The defensive
-check on line \ref{line:zero-scale} reports the same failure if the privacy map
-is requested directly.
+identity guarantee. With zero scale and positive sensitivity, line \ref{line:zero-scale}
+returns the empty guarantee, which imposes no privacy constraint.
 
 For positive rational sensitivity $s$ and scale $b$, the discrete Laplace
 point-mass ratio calculation gives the pure-DP bound

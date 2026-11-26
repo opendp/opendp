@@ -65,7 +65,7 @@ fn test_make_geometric_extreme_int() -> Fallible<()> {
 
 #[test]
 fn test_make_geometric_positive_subnormal_scale() -> Fallible<()> {
-    let measurement = make_geometric(
+    let measurement = make_geometric::<_, _, MaxDivergence>(
         AtomDomain::<u8>::default(),
         AbsoluteDistance::<u8>::default(),
         f64::from_bits(1),

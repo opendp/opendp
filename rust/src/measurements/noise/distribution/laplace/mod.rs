@@ -10,7 +10,7 @@ use crate::measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily};
 use crate::{
     core::{Domain, Measurement, PrivacyMap},
     error::Fallible,
-    measures::{MaxDivergence, MultiDP, PrivacyCapabilities, PrivacyGuarantee, Purity},
+    measures::{MaxDivergence, MultiDP, PrivacyGuarantee},
     metrics::L1Distance,
     traits::{InfCast, SInterval},
 };
@@ -118,22 +118,7 @@ impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
 )]
 impl NoisePrivacyMap<L1Distance<RBig>, MultiDP> for ZExpFamily<1> {
     fn noise_output_measure(&self, _input_metric: &L1Distance<RBig>) -> Fallible<MultiDP> {
-        // MultiDP cannot represent the non-finite privacy loss of a
-        // zero-scale, nonzero-sensitivity mechanism. Reject it during
-        // construction rather than changing behavior only when the map is
-        // evaluated. MaxDivergence retains its historical infinity-valued map.
-        if self.scale.is_zero() {
-            return fallible!(
-                MakeMeasurement,
-                "zero scale is unsupported for the MultiDP discrete-Laplace mechanism"
-            );
-        }
-
-        Ok(MultiDP::new(
-            PrivacyCapabilities::new(Some(Purity::Pure), None)
-                .with_renyi(Purity::Pure)
-                .with_zcdp(Purity::Pure),
-        ))
+        Ok(MultiDP::default())
     }
 
     fn noise_privacy_map(
@@ -146,12 +131,6 @@ impl NoisePrivacyMap<L1Distance<RBig>, MultiDP> for ZExpFamily<1> {
         if scale < RBig::ZERO {
             return fallible!(MakeMeasurement, "scale ({scale}) must not be negative");
         }
-        if scale.is_zero() {
-            return fallible!(
-                MakeMeasurement,
-                "zero scale is unsupported for the MultiDP discrete-Laplace mechanism"
-            );
-        }
 
         Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
             if d_in.is_negative() {
@@ -163,6 +142,10 @@ impl NoisePrivacyMap<L1Distance<RBig>, MultiDP> for ZExpFamily<1> {
                     .with_approx_dp(0.0, 0.0)?
                     .with_zCDP(0.0, 0.0)?
                     .with_renyiDP(|orders| Ok(vec![0.0; orders.len()]), 0.0);
+            }
+
+            if scale.is_zero() {
+                return Ok(PrivacyGuarantee::new());
             }
 
             let epsilon_exact = d_in / scale.clone();
@@ -281,7 +264,7 @@ fn rdp_discrete_laplace(alpha: f64, sensitivity: &RBig, scale: &RBig) -> Fallibl
         .clone()
         .mul(alpha_i.clone())?
         .mul(d_i.clone())?
-        .neg()?
+        .neg()
         .sub(log_expm1_a.clone())?;
 
     // Original term:
@@ -401,7 +384,7 @@ fn log_sub_exp(hi: SInterval, lo: SInterval) -> Fallible<SInterval> {
 }
 
 fn interval_sinh(x: SInterval) -> Fallible<SInterval> {
-    SInterval::point(0.5)?.mul(x.clone().exp()?.sub(x.neg()?.exp()?)?)
+    SInterval::point(0.5)?.mul(x.clone().exp()?.sub(x.neg().exp()?)?)
 }
 
 fn check_renyi_order(alpha: f64) -> Fallible<()> {

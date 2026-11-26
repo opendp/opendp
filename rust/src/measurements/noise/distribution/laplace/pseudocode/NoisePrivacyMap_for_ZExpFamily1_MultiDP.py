@@ -4,8 +4,6 @@ class ZExpFamily1:
         scale = self.scale
         if scale < RBig.ZERO:  # |\label{line:neg-scale}|
             raise "scale must be non-negative"
-        if scale == RBig.ZERO:  # |\label{line:zero-scale}|
-            raise "zero scale is unsupported for MultiDP"
 
         def privacy_map(d_in):
             if d_in < RBig.ZERO:  # |\label{line:neg-sens}|
@@ -17,12 +15,16 @@ class ZExpFamily1:
                     .with_zCDP(0.0, 0.0)
                     .with_renyiDP(lambda orders: [0.0 for _ in orders], 0.0)
                 )
+            if scale == RBig.ZERO:  # |\label{line:zero-scale}|
+                return PrivacyGuarantee()
             epsilon_exact = d_in / scale
             epsilon = f64.inf_cast(epsilon_exact)
             if not epsilon.is_finite():
                 raise "privacy parameters are not finite"
 
-            rho = zcdp_discrete_laplace(epsilon_exact, d_in, scale).or_else(lambda: epsilon)
+            rho = zcdp_discrete_laplace(epsilon_exact, d_in, scale).or_else(
+                lambda: epsilon
+            )
             curve = PrivacyGuarantee().with_approx_dp(epsilon, 0.0).with_zCDP(rho, 0.0)
 
             def rdp(orders):
@@ -35,6 +37,7 @@ class ZExpFamily1:
                         .or_else(lambda: epsilon)
                     )
                 return values
+
             return curve.with_renyiDP(rdp, 0.0)
 
         return PrivacyMap.new_fallible(privacy_map)
