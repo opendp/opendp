@@ -6,6 +6,9 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+#[allow(dead_code)]
+pub(crate) mod rdp_to_approxdp;
+
 pub(crate) mod curves;
 pub use curves::*;
 
