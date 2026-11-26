@@ -1,5 +1,6 @@
 use super::*;
 use crate::error::ErrorVariant;
+use std::cell::Cell;
 
 #[test]
 fn test_binary_search() -> Fallible<()> {
@@ -64,7 +65,18 @@ fn test_binary_search_one_sided_bounds() -> Fallible<()> {
 
 #[test]
 fn test_signed_binary_search_reports_direction() -> Fallible<()> {
-    assert_eq!(signed_binary_search(|x: &i32| *x >= 5, (0, 10))?, (5, 1));
+    let calls = Cell::new(0);
+    assert_eq!(
+        signed_binary_search(
+            |x: &i32| {
+                calls.set(calls.get() + 1);
+                *x >= 5
+            },
+            (0, 10)
+        )?,
+        (5, 1)
+    );
+    assert_eq!(calls.get(), 6); // includes exactly one evaluation of each endpoint
     assert_eq!(signed_binary_search(|x: &i32| *x <= 5, (0, 10))?, (5, -1));
     Ok(())
 }
@@ -79,18 +91,27 @@ fn test_exponential_bounds_search_bands() {
 }
 
 #[test]
-fn test_fallible_binary_search_recovers_from_exception_boundary() -> Fallible<()> {
-    let discovered = fallible_binary_search::<i32>(
-        |x| {
-            if *x <= 0 {
-                return fallible!(FailedFunction, "x must be positive");
-            }
-            Ok(*x >= 5)
-        },
-        (),
-    )?;
-
-    assert_eq!(discovered, 5);
+fn test_initial_discovery_continues_from_original_anchor() -> Fallible<()> {
+    let calls = std::cell::RefCell::new(Vec::new());
+    let predicate = |x: &i32| {
+        calls.borrow_mut().push(*x);
+        if *x <= 16 {
+            return fallible!(NumericError, "initial domain unavailable");
+        }
+        Ok(*x >= 300)
+    };
+    assert_eq!(fallible_binary_search(predicate, Above(0))?, 300);
+    let calls = calls.into_inner();
+    let anchor = calls.iter().position(|&x| x == 256).unwrap();
+    let outward = calls.iter().position(|&x| x == 4096).unwrap();
+    // Recover only between the last failed band and the first successful band.
+    assert!(
+        calls[anchor + 1..outward]
+            .iter()
+            .all(|&x| x > 16 && x < 256)
+    );
+    // Resume the original bands, then bisect the successful Boolean bracket.
+    assert!(calls[outward + 1..].iter().all(|&x| x > 256 && x < 4096));
     Ok(())
 }
 
@@ -111,17 +132,6 @@ fn test_binary_search_one_sided_float_ranges() -> Fallible<()> {
 }
 
 #[test]
-fn test_float_midpoint_handles_opposite_sign_extremes() {
-    let midpoint = <f64 as BinarySearchable>::midpoint(&f64::MIN, &f64::MAX);
-    assert!(midpoint.is_finite());
-    assert!(!midpoint.is_nan());
-
-    let midpoint = <f32 as BinarySearchable>::midpoint(&f32::MIN, &f32::MAX);
-    assert!(midpoint.is_finite());
-    assert!(!midpoint.is_nan());
-}
-
-#[test]
 fn test_binary_search_uses_search_error_variant() {
     let err = binary_search(|x: &i32| *x < 0, (0, 10)).unwrap_err();
     assert_eq!(err.variant, ErrorVariant::Search);
@@ -129,4 +139,347 @@ fn test_binary_search_uses_search_error_variant() {
         err.message.as_deref(),
         Some("the decision boundary of the predicate is outside the bounds")
     );
+}
+
+#[test]
+fn test_float_search() -> Fallible<()> {
+    macro_rules! check {
+        ($ty:ty, $bits:expr) => {
+            let tiny = <$ty>::from_bits(1);
+            let max = <$ty>::MAX;
+            for center in [0.0, 1.0, -max, max] {
+                for sign in [-1.0, 1.0] {
+                    let bands = <$ty>::bands(center, sign as i8);
+                    assert_eq!(*bands.last().unwrap(), sign * max);
+                    assert!(bands.iter().all(|x| x.is_finite()));
+                    assert!(bands.windows(2).all(|w| sign * w[0] < sign * w[1]));
+                }
+            }
+            for (lower, upper) in [
+                (-max, max),
+                (-tiny, 0.0),
+                (-0.0, tiny),
+                (1.0, (1.0 as $ty).next_up()),
+                (max.next_down(), max),
+                (-max, (-max).next_up()),
+            ] {
+                for threshold in [
+                    lower,
+                    upper,
+                    0.0,
+                    -tiny,
+                    tiny,
+                    <$ty>::MIN_POSITIVE,
+                    -<$ty>::MIN_POSITIVE,
+                    max / 2.0,
+                    -max / 2.0,
+                ] {
+                    for sign in [-1.0, 1.0] {
+                        if threshold < lower
+                            || threshold > upper
+                            || (sign > 0.0 && threshold == lower)
+                            || (sign < 0.0 && threshold == upper)
+                        {
+                            continue;
+                        }
+                        let calls = Cell::new(0);
+                        let predicate = |x: &$ty| {
+                            calls.set(calls.get() + 1);
+                            sign * *x >= sign * threshold
+                        };
+                        let expected = (threshold, sign as i8);
+                        assert_eq!(signed_binary_search(predicate, (lower, upper))?, expected);
+                        assert!(calls.get() <= $bits + 2);
+                        if (lower, upper) == (-max, max) {
+                            calls.set(0);
+                            assert_eq!(signed_binary_search(predicate, ())?, expected);
+                            let overhead = 1 + 2 * (<$ty>::bands(0.0, 1).len() - 1);
+                            assert!(calls.get() <= $bits + overhead);
+                        }
+                    }
+                }
+            }
+        };
+    }
+    check!(f64, 64);
+    check!(f32, 32);
+    assert_eq!(binary_search(|x: &f64| *x > 0.0, ())?, f64::from_bits(1));
+    assert_eq!(binary_search(|x: &f32| *x < 0.0, ())?, -f32::from_bits(1));
+    Ok(())
+}
+
+#[test]
+fn test_nonfinite_float_bounds_are_rejected() {
+    macro_rules! check {
+        ($ty:ty) => {
+            for invalid in [<$ty>::NAN, <$ty>::INFINITY, <$ty>::NEG_INFINITY] {
+                for bounds in [
+                    (Some(invalid), Some(1.0)),
+                    (Some(0.0), Some(invalid)),
+                    (Some(invalid), None),
+                    (None, Some(invalid)),
+                ] {
+                    let calls = Cell::new(0);
+                    let error = fallible_binary_search(
+                        |_: &$ty| {
+                            calls.set(calls.get() + 1);
+                            Ok(true)
+                        },
+                        bounds,
+                    )
+                    .unwrap_err();
+                    assert_eq!(error.variant, ErrorVariant::Search);
+                    assert_eq!(calls.get(), 0);
+                }
+            }
+        };
+    }
+    check!(f32);
+    check!(f64);
+}
+
+#[test]
+fn test_range_error_bracket_recovery() -> Fallible<()> {
+    for (threshold, sign, increasing, bounds) in [
+        (5.0, 1.0, true, (None, None)),
+        (5.0, -1.0, false, (None, None)),
+        (5.0, 1.0, false, (Some(0.0), None)),
+        (5.0, -1.0, true, (Some(-10.0), Some(0.0))),
+        (5.0, 1.0, true, (Some(0.0), Some(10.0))),
+        (1e-300, 1.0, true, (Some(0.0), None)),
+        (1e300, 1.0, true, (Some(0.0), None)),
+    ] {
+        let calls = Cell::new(0);
+        let predicate = |x: &f64| {
+            calls.set(calls.get() + 1);
+            let x = sign * x;
+            if x > threshold * 1.1 {
+                return fallible!(Overflow, "intermediate overflow");
+            }
+            Ok(if increasing {
+                x >= threshold
+            } else {
+                x <= threshold
+            })
+        };
+        let result = fallible_binary_search(predicate, bounds)?;
+        assert!(predicate(&result)?);
+        assert_eq!(result, sign * threshold);
+        assert!(calls.get() < 200);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_recovery_stops_at_first_boolean_bracket() -> Fallible<()> {
+    let calls = std::cell::RefCell::new(Vec::new());
+    let predicate = |x: &i32| {
+        calls.borrow_mut().push(*x);
+        if *x > 8 {
+            return fallible!(Overflow, "unavailable");
+        }
+        Ok(*x >= 5)
+    };
+    assert_eq!(fallible_binary_search(predicate, (0, 16))?, 5);
+    let calls = calls.into_inner();
+    let bracket = calls.iter().position(|&x| x == 8).unwrap();
+    assert!(calls[bracket + 1..].iter().all(|&x| x > 0 && x < 8));
+    Ok(())
+}
+
+#[test]
+fn test_blocked_directions() -> Fallible<()> {
+    let predicate = |x: &i32| {
+        if *x > 0 {
+            return fallible!(Overflow, "positive side blocked");
+        }
+        Ok(*x <= -5)
+    };
+    let result = fallible_binary_search(predicate, ())?;
+    assert_eq!(result, -5);
+    assert!(predicate(&result)?);
+    for bounds in [(None, None), (Some(0), None)] {
+        let error = fallible_binary_search(
+            |x: &i32| {
+                if *x >= 5 {
+                    return fallible!(Overflow, "passing side unavailable");
+                }
+                Ok(false)
+            },
+            bounds,
+        )
+        .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Overflow);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_unexpected_numerical_errors_propagate() {
+    for variant in ["NumericError", "FailedFunction"] {
+        for failing_at in [16, 8] {
+            let error = fallible_binary_search(
+                |x: &i32| {
+                    if *x == failing_at {
+                        return Err(Error {
+                            variant: variant.parse().expect("known error variant"),
+                            ..err!(FFI, "unexpected error")
+                        });
+                    }
+                    if *x > 10 {
+                        return fallible!(Overflow, "recoverable overflow");
+                    }
+                    Ok(*x >= 5)
+                },
+                (),
+            )
+            .unwrap_err();
+            assert_eq!(error.variant.to_string(), variant);
+            assert_eq!(error.message.as_deref(), Some("unexpected error"));
+        }
+    }
+}
+
+#[test]
+fn test_bisection_overflow_is_not_comparison_information() {
+    let error = fallible_binary_search(
+        |x: &i32| {
+            if *x == 5 {
+                return fallible!(Overflow, "interior point unavailable");
+            }
+            Ok(*x >= 5)
+        },
+        (0, 10),
+    )
+    .unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::Overflow);
+    assert_eq!(error.message.as_deref(), Some("interior point unavailable"));
+}
+
+#[test]
+fn test_initial_invalid_segment_finds_boolean_bracket() -> Fallible<()> {
+    for sign in [-1, 1] {
+        for polarity in [false, true] {
+            let predicate = |x: &i32| {
+                let x = i64::from(*x) * sign;
+                if !(3..=16).contains(&x) {
+                    return fallible!(NumericError, "outside the evaluable interval");
+                }
+                Ok((x >= 5) == polarity)
+            };
+            let result = fallible_binary_search(predicate, ())?;
+            assert_eq!(i64::from(result), sign * if polarity { 5 } else { 4 });
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_initial_recovery_returns_ordered_bounds() -> Fallible<()> {
+    let predicate = |x: &i32| {
+        if !(3..=16).contains(x) {
+            return fallible!(NumericError, "outside the evaluable interval");
+        }
+        Ok(*x >= 5)
+    };
+    let (lower, upper) = fallible_exponential_bounds_search(&predicate)?.unwrap();
+    assert!(lower < upper);
+    assert!(!predicate(&lower)?);
+    assert!(predicate(&upper)?);
+    Ok(())
+}
+
+#[test]
+fn test_one_sided_invalid_initial_endpoint() -> Fallible<()> {
+    for sign in [-1, 1] {
+        for polarity in [false, true] {
+            let bounds = if sign > 0 {
+                (Some(10), None)
+            } else {
+                (None, Some(-10))
+            };
+            let predicate = |x: &i32| {
+                let x = i64::from(*x) * sign;
+                assert!(x >= 10, "crossed the explicit bound");
+                if x == 10 {
+                    return fallible!(NumericError, "initial endpoint unavailable");
+                }
+                Ok((x >= 15) == polarity)
+            };
+            let result = fallible_binary_search(predicate, bounds)?;
+            assert_eq!(i64::from(result), sign * if polarity { 15 } else { 14 });
+        }
+    }
+    assert_eq!(
+        fallible_binary_search(
+            |x: &u32| {
+                if *x == 0 {
+                    return fallible!(NumericError, "positive size required");
+                }
+                Ok(*x >= 5)
+            },
+            Above(0)
+        )?,
+        5
+    );
+    Ok(())
+}
+
+#[test]
+fn test_initial_discovery_failure_preserves_original_error() {
+    for narrow in [false, true] {
+        let error = fallible_binary_search(
+            |x: &i32| {
+                if narrow && *x == 7 {
+                    return Ok(true);
+                }
+                if *x == 0 {
+                    return fallible!(NumericError, "original error");
+                }
+                fallible!(FailedFunction, "later discovery error")
+            },
+            (),
+        )
+        .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::NumericError);
+        assert_eq!(error.message.as_deref(), Some("original error"));
+    }
+}
+
+#[test]
+fn test_initial_recovery_requires_opposing_boolean_observations() {
+    let error = fallible_binary_search(
+        |x: &i32| {
+            if *x <= 0 {
+                return fallible!(NumericError, "positive size required");
+            }
+            Ok(false)
+        },
+        (),
+    )
+    .unwrap_err();
+    assert_eq!(error.variant, ErrorVariant::Search);
+}
+
+#[test]
+fn test_interruption_during_initial_recovery() {
+    for interrupted_at in [0, 1, 8] {
+        let calls = std::cell::RefCell::new(Vec::new());
+        let error = fallible_binary_search(
+            |x: &i32| {
+                calls.borrow_mut().push(*x);
+                if *x == interrupted_at {
+                    return fallible!(Interrupted, "interrupted");
+                }
+                if *x < 10 {
+                    return fallible!(NumericError, "unavailable");
+                }
+                Ok(*x >= 20)
+            },
+            Above(0),
+        )
+        .unwrap_err();
+        assert_eq!(error.variant, ErrorVariant::Interrupted);
+        assert_eq!(calls.into_inner().last(), Some(&interrupted_at));
+    }
 }
