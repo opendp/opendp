@@ -2,10 +2,11 @@
 def make_noisy_top_k(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: LInfDistance[TIA],
-    privacy_measure: MO,
+    output_measure: MO,
     k: usize,
     scale: f64,
     negate: bool,
+    distribution: str | None = None,
 ) -> Measurement:
     if input_domain.element_domain.nan():  # |\label{check-non-nan}|
         raise "input domain elements must be non-nan"
@@ -36,12 +37,12 @@ def make_noisy_top_k(
             return f64.INFINITY
 
         # |\label{fn-privacy-map-call}|
-        return MO.privacy_map(d_in, scale).inf_mul(f64.inf_cast(k))
+        return MO.privacy_map(distribution, d_in, scale, k)
 
     return Measurement.new(
         input_domain=input_domain,
         input_metric=input_metric,
-        output_measure=privacy_measure,
-        function=lambda x: noisy_top_k(x, scale, k, negate, MO.REPLACEMENT),
+        output_measure=output_measure,
+        function=lambda x: noisy_top_k(x, scale, k, negate, distribution == "gumbel"),
         privacy_map=privacy_map,
     )

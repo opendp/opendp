@@ -28,6 +28,7 @@ fn test_quantile_score_candidates_median() -> Fallible<()> {
         ZeroConcentratedDivergence,
         1.0,
         true,
+        None,
     )?;
 
     let m_quantile = (t_qscore >> m_rnm)?;
@@ -240,6 +241,7 @@ mod integration_tests {
             ZeroConcentratedDivergence,
             trans.map(&1)? as f64 * 2.,
             true,
+            None,
         )?;
 
         let quantile_meas = (trans >> exp_mech)?;
@@ -262,6 +264,7 @@ mod integration_tests {
             ZeroConcentratedDivergence,
             trans_sized.map(&2)? as f64 * 2.,
             true,
+            None,
         )?;
 
         let quantile_sized_meas = (trans_sized >> exp_mech)?;
