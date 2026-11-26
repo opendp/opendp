@@ -707,3 +707,68 @@ fn interpolate(lo: f64, hi: f64, t: f64) -> f64 {
         (1.0 - t) * lo + t * hi
     }
 }
+
+/// Search nonnegative finite f64 inputs for passing values at nondecreasing
+/// targets. The callback returns one bound per sorted input. Every returned
+/// finite value has passed a callback evaluation. Infinity denotes that no
+/// finite passing value was found. If the callback evaluates a fixed
+/// nonincreasing function, the search finds the least passing value; if bounds
+/// depend on the batch, minimality is not guaranteed.
+pub(crate) fn fallible_invert_decreasing_batch(
+    callback: impl Fn(&[f64]) -> Fallible<Vec<f64>>,
+    targets: &[f64],
+) -> Fallible<Vec<f64>> {
+    if targets.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut brackets = vec![(0.0, f64::INFINITY); targets.len()];
+    for point in f64::bands(0.0, 1) {
+        let value = callback(&[point])?[0];
+        for (&target, (lower, upper)) in targets.iter().zip(&mut brackets) {
+            if upper.is_finite() {
+                continue;
+            }
+            if value <= target {
+                *upper = point;
+            } else {
+                *lower = point;
+            }
+        }
+        // The first target is the hardest to satisfy.
+        if brackets[0].1.is_finite() {
+            break;
+        }
+    }
+
+    let midpoint = |&(lower, upper): &(f64, f64)| {
+        if !upper.is_finite() {
+            return None;
+        }
+        let mid = <f64 as BinarySearchable>::midpoint(&lower, &upper);
+        (lower < mid && mid < upper).then_some(mid)
+    };
+    loop {
+        let mut points: Vec<_> = brackets.iter().filter_map(midpoint).collect();
+        if points.is_empty() {
+            break;
+        }
+        points.sort_by(f64::total_cmp);
+        points.dedup();
+        let values = callback(&points)?;
+        for (&target, bracket) in targets.iter().zip(&mut brackets) {
+            let Some(mid) = midpoint(bracket) else {
+                continue;
+            };
+            let index = points
+                .binary_search_by(|point| point.total_cmp(&mid))
+                .unwrap();
+            if values[index] <= target {
+                bracket.1 = mid;
+            } else {
+                bracket.0 = mid;
+            }
+        }
+    }
+    Ok(brackets.into_iter().map(|(_, upper)| upper).collect())
+}

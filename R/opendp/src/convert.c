@@ -801,9 +801,13 @@ static void anyobject_cleanup(void *obj)
 AnyObject *sexp_to_anyobjectptr_temp(SEXP data, SEXP type_name)
 {
     AnyObject *obj = sexp_to_anyobjectptr(data, type_name);
-    // A NULL type signals an already-owned external pointer: do not free it.
+    // Opaque wrappers already own their objects.
     if (!isNull(type_name))
-        opendp_register_resource(obj, anyobject_cleanup);
+    {
+        const char *c_origin = sexp_to_charptr(get_origin(type_name));
+        if (!str_equal(c_origin, "PrivacyProfile"))
+            opendp_register_resource(obj, anyobject_cleanup);
+    }
     return obj;
 }
 
