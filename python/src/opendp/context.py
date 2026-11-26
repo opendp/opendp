@@ -928,21 +928,41 @@ class Query(object):
             ),
         )
 
-    def lazy(self):
-        """Continue a stable eager Polars DataFrame query as a LazyFrameQuery."""
+    def lazy(self, *, feature_names=None, target_name=None):
+        """Continue a stable dataframe or aligned sklearn query as Polars."""
         from opendp.domains import _lazyframe_from_domain
         from opendp.extras.polars import LazyFrameQuery, make_lazy
 
         domain, metric = self._stable_space()
 
         if isinstance(domain, LazyFrameDomain):
+            if feature_names is not None or target_name is not None:
+                raise ValueError("The LazyFrame schema already determines column names")
             query = self
         elif isinstance(domain, DataFrameDomain):
+            if feature_names is not None or target_name is not None:
+                raise ValueError("The DataFrame schema already determines column names")
             conversion = make_lazy(domain, metric)
             query = self._append(conversion)
             domain = conversion.output_domain
         else:
-            raise TypeError("lazy() requires an eager Polars DataFrameDomain")
+            from opendp.extras.sklearn._domains import SklearnFitDescriptor
+            from opendp.extras.sklearn._to_polars import make_sklearn_fit_to_lazyframe
+
+            try:
+                domain.cast(SklearnFitDescriptor)
+            except ValueError as exc:
+                raise TypeError(
+                    "lazy() requires an eager DataFrame or aligned SklearnFit domain"
+                ) from exc
+            conversion = make_sklearn_fit_to_lazyframe(
+                domain,
+                metric,
+                feature_names=feature_names,
+                target_name=target_name,
+            )
+            query = self._append(conversion)
+            domain = conversion.output_domain
 
         return LazyFrameQuery(_lazyframe_from_domain(domain), query)
 
