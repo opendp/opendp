@@ -292,7 +292,7 @@ def test_invalid_rowwise_output_domain_and_missing_public_width():
         def rowwise_output_domain(self, input_domain, *, method):
             return dp.atom_domain(T=dp.f64)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="Rowwise output"):
         predict_transform(WrongDomain(), domain(), "transform")
 
     class UnknownWidth(BadDomain):
@@ -323,12 +323,54 @@ def test_logistic_regression_rejects_invalid_inference_contracts():
         model.rowwise_output_domain(features, method="transform")
 
 
-def test_rowwise_inference_requires_aligned_input_domain():
-    ctx = dp.Context.compositor(
-        np.ones((2, 2)), dp.unit_of(contributions=1), dp.loss_of(epsilon=1)
+def test_rowwise_inference_packages_numpy_input_without_budget():
+    fitted = IdentityFitted()
+    fitted.release_ = 7
+    data = np.ones((2, 2))
+    query = dp.Query(
+        (dp.numpy.array2_domain(T=dp.f64, num_columns=2), dp.symmetric_distance()),
+        dp.max_divergence(),
     )
-    with pytest.raises(ValueError):
-        ctx.query().sklearn(IdentityFitted(), method="transform")
+    trans = query.sklearn(fitted, method="transform").resolve(
+        allow_transformations=True
+    )
+    assert trans.map(1) == 1
+    np.testing.assert_array_equal(trans(data).X, data)
+
+
+def test_rowwise_dataframe_output_reuses_names_and_accepts_dataframe():
+    pl = pytest.importorskip("polars")
+
+    class FrameStage(TransformationMixin, BaseEstimator):
+        def __init__(self, return_frame=False):
+            self.return_frame = return_frame
+
+        def transform(self, X):
+            return pl.DataFrame({"value": np.ones(len(X))})
+
+        def predict(self, X):
+            values = np.ones(len(X))
+            return pl.DataFrame({"value": values}) if self.return_frame else values
+
+        def rowwise_output_domain(self, features, *, method):
+            return dp.dataframe_domain(
+                [dp.series_domain("value", dp.atom_domain(T=dp.f64))]
+            )
+
+    for method, return_frame in (
+        ("transform", True),
+        ("predict", True),
+        ("predict", False),
+    ):
+        trans = predict_transform(FrameStage(return_frame), domain(), method)
+        features = trans.output_domain.cast(dp.sklearn.SklearnFitDescriptor).X
+        assert features.columns == ["value"]
+        for n in (2, 0):
+            result = trans(dp.sklearn.SklearnFit(np.ones((n, 2))))
+            assert isinstance(result.X, pl.DataFrame)
+            assert result.X.schema == {"value": pl.Float64}
+            assert result.X.shape == (n, 1)
+            assert result.X["value"].to_list() == [1.0] * n
 
 
 def test_trusted_rowwise_validates_frozen_and_module_identity(monkeypatch):

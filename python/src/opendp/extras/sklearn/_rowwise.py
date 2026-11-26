@@ -14,7 +14,7 @@ from opendp.extras.sklearn._domains import (
 )
 from opendp.extras.sklearn._estimator import TransformationMixin
 from opendp.metrics import symmetric_distance
-from opendp.mod import Domain, assert_features
+from opendp.mod import DataFrameDomain, Domain, assert_features
 
 
 # Only OpenDP implementations reviewed for rowwise inference are trusted.
@@ -74,15 +74,20 @@ def _make_rowwise_transform(
         raise TypeError(f"{type(estimator).__name__} has no sklearn {method!r} method")
 
     desc = input_domain.cast(SklearnFitDescriptor)
-    # Check the same snapshot that will execute inference.
+    # Validate the same snapshot that executes inference, including public metadata.
     fitted = deepcopy(estimator)
     if not _trusted_rowwise(fitted):
         assert_features("honest-but-curious")
     output = fitted.rowwise_output_domain(desc.X, method=method)
     if not isinstance(output, Domain):
         raise TypeError("rowwise_output_domain must return a Domain")
-    array = output.cast(NPArray2Domain)
-    if array.num_columns is None:
+    try:
+        array = output.cast(NPArray2Domain)
+    except ValueError:
+        array = None
+        if not isinstance(output, DataFrameDomain):
+            raise TypeError("Rowwise output must be DataFrameDomain or NPArray2Domain")
+    if array is not None and array.num_columns is None:
         raise ValueError("Rowwise inference requires a public output width")
 
     infer = getattr(fitted, method)
@@ -91,9 +96,28 @@ def _make_rowwise_transform(
         result = infer(data.X)
         if method == "transform":
             return SklearnFit(result, data.y)
-        values = np.asarray(result)
-        values = values[:, None] if values.ndim == 1 else values
-        return SklearnFit(values, data.y)
+        if array is not None:
+            values = np.asarray(result)
+            values = values[:, None] if values.ndim == 1 else values
+            return SklearnFit(values, data.y)
+        else:
+            import polars as pl  # type: ignore[import-not-found]
+
+            if isinstance(result, pl.DataFrame):
+                frame = result
+            else:
+                values = np.asarray(result)
+                values = values[:, None] if values.ndim == 1 else values
+                from opendp.extras.polars._dtypes import _polars_dtype
+
+                schema = {
+                    name: _polars_dtype(
+                        output.get_series_domain(name).element_domain.carrier_type
+                    )
+                    for name in output.columns
+                }
+                frame = pl.DataFrame(values, schema=schema, orient="row")
+        return SklearnFit(frame, data.y)
 
     return _make_transformation(
         input_domain,

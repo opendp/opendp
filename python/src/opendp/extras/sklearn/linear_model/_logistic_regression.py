@@ -59,11 +59,14 @@ class LogisticRegression(
         self.reference_size = reference_size
 
     def make_measurement(self, input_domain, input_metric, output_measure, d_in, d_out):
-        return _make_private_logistic_regression(
-            input_domain,
-            input_metric,
+        from opendp.extras.sklearn._make_sklearn_fit import make_sklearn_fit_numpy
+
+        numeric = make_sklearn_fit_numpy(input_domain, input_metric)
+        measurement = _make_private_logistic_regression(
+            numeric.output_domain,
+            numeric.output_metric,
             output_measure,
-            d_in,
+            numeric.map(d_in),
             d_out,
             max_iter=self.max_iter,
             fit_intercept=self.fit_intercept,
@@ -74,6 +77,7 @@ class LogisticRegression(
             reference_size=self.reference_size,
             classes=self.classes,
         )
+        return numeric >> measurement
 
     def _ingest_release(self, release):
         theta = np.asarray(release)
@@ -97,24 +101,40 @@ class LogisticRegression(
         return self.classes_[(self.predict_proba(X)[:, 1] > 0.5).astype(int)]
 
     def rowwise_output_domain(self, feature_domain, *, method):
-        """Describe the output domain of independent per-row classification."""
+        """Describe independent per-row classification and its output domain."""
         from opendp.extras.numpy import NPArray2Domain, array2_domain
         from opendp.typing import _NUMERIC_TYPES
+        from opendp.extras.numpy._make_dataframe_to_numpy import make_dataframe_to_numpy
+        from opendp.mod import DataFrameDomain
+        from opendp.metrics import symmetric_distance
+        from opendp.domains import atom_domain, dataframe_domain, series_domain
 
         check_is_fitted(self, ["coef_", "intercept_", "classes_"])
-        x = feature_domain.cast(NPArray2Domain)
+        numeric = (
+            make_dataframe_to_numpy(feature_domain, symmetric_distance())
+            if isinstance(feature_domain, DataFrameDomain)
+            else None
+        )
+        x = (numeric.output_domain if numeric else feature_domain).cast(NPArray2Domain)
         if x.num_columns != self.n_features_in_:
             raise ValueError("Prediction feature count differs from fitted model")
         if x.T not in _NUMERIC_TYPES | {"bool"}:
             raise ValueError("Prediction requires numeric or boolean features")
+        names: tuple[str, ...]
         dtype: type[np.generic]
         if method == "predict":
-            num_columns = 1
+            names = ("prediction",)
             dtype = self.classes_.dtype.type
+            atom = atom_domain(T=dtype)
         elif method == "predict_proba":
-            num_columns = 2
+            names = ("proba_0", "proba_1")
+            atom = atom_domain(T="f64", bounds=(0.0, 1.0), nan=False)
             dtype = np.float64
         else:
             raise ValueError(f"Method {method!r} does not support rowwise inference")
 
-        return array2_domain(T=dtype, num_columns=num_columns, size=x.size, nan=False)
+        return (
+            dataframe_domain([series_domain(name, atom) for name in names])
+            if numeric is not None
+            else array2_domain(T=dtype, num_columns=len(names), size=x.size, nan=False)
+        )
