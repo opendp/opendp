@@ -434,7 +434,8 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
     )
     release = measurement(np.ones((10, 1)))
     np.testing.assert_array_equal(release.components, [[1.0]])
-    assert measurement.map(d_in) == pytest.approx(1.0)
+    # With a public fixed size, one symmetric edit cannot connect distinct datasets.
+    assert measurement.map(d_in) == pytest.approx(0.0 if d_in == 1 else 1.0)
     model = decomposition.PCA(center="origin")
     assert (
         model.fit(
@@ -898,3 +899,38 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
     assert trans.map(1) == 1
     with pytest.raises(np.linalg.LinAlgError):
         singular.score_samples(np.zeros((0, 3)))
+
+
+@pytest.mark.parametrize("row_norm", [0.5, 1.0, 4.0])
+def test_eigendecomposition_privacy_budget_with_nuclear_metric(row_norm):
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=3, size=10, nan=False, T=float
+    )
+    measurement = (
+        domain,
+        dp.symmetric_distance(),
+    ) >> decomposition.then_private_np_eigendecomposition(
+        eigvals_epsilon=0.3, eigvecs_epsilons=[0.35, 0.35]
+    )
+    # One replacement has symmetric distance 2, independent of row_norm.
+    assert measurement.map(2) == pytest.approx(1.0)
+    assert measurement.check(2, 1.0)
+
+
+def test_eigendecomposition_bingham_concentration():
+    from opendp.extras.numpy._make_np_sscp import make_np_sscp
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    row_norm = 2.0
+    epsilon = 1.0
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=2, size=5, nan=False, T=float
+    )
+    sscp = make_np_sscp(domain, dp.symmetric_distance())
+    # The tightened pure-DP calibration is concentration = ε / (2B²).
+    concentration = epsilon / (2 * row_norm**2)
+    eigenvector = make_private_eigenvector(
+        sscp.output_domain, sscp.output_metric, concentration
+    )
+    assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
+    assert eigenvector.map(sscp.map(1)) == 0.0

@@ -34,6 +34,17 @@ use std::fmt::{Debug, Formatter};
 /// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
 pub type IntDistance = u32;
 
+/// Joint nuclear (Schatten 1) and Frobenius (Schatten 2) distance on matrices.
+///
+/// Two matrices are `(a, b)`-close if the nuclear norm of their difference
+/// is at most `a` and its Frobenius norm is at most `b`.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Schatten12Distance;
+
+impl Metric for Schatten12Distance {
+    type Distance = (f64, f64);
+}
+
 /// The smallest number of additions or removals to make two datasets equivalent.
 ///
 /// This metric is not sensitive to data ordering.

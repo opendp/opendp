@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, L0PInfDistance,
-    L01InfDistance, L02InfDistance, LInfDistance, SymmetricDistance,
+    L01InfDistance, L02InfDistance, LInfDistance, Schatten12Distance, SymmetricDistance,
 };
 
 #[bootstrap(
@@ -95,6 +95,17 @@ pub extern "C" fn opendp_metrics__metric_distance_type(
     FfiResult::Ok(try_!(into_c_char_p(
         this.distance_type.descriptor.to_string()
     )))
+}
+
+#[bootstrap(
+    name = "schatten12_distance",
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
+/// Construct a joint nuclear and Frobenius matrix distance.
+/// The first coordinate bounds the nuclear norm and the second bounds the Frobenius norm.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics__schatten12_distance() -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(AnyMetric::new(Schatten12Distance)))
 }
 
 #[bootstrap(

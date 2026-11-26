@@ -22,7 +22,7 @@ use crate::measures::{
 use crate::metrics::ffi::ExtrinsicDistance;
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
-    L1Distance, L01InfDistance, L2Distance, L02InfDistance, SymmetricDistance,
+    L1Distance, L01InfDistance, L2Distance, L02InfDistance, Schatten12Distance, SymmetricDistance,
 };
 
 #[cfg(feature = "polars")]
@@ -397,7 +397,7 @@ lazy_static! {
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
             type_vec![L01InfDistance, <SymmetricDistance, InsertDeleteDistance>],
-            type_vec![DiscreteDistance, ExtrinsicDistance],
+            type_vec![DiscreteDistance, ExtrinsicDistance, Schatten12Distance],
             type_vec![L01InfDistance, <
                 AbsoluteDistance<u8>, AbsoluteDistance<u16>, AbsoluteDistance<u32>, AbsoluteDistance<u64>, AbsoluteDistance<u128>,
                 AbsoluteDistance<i8>, AbsoluteDistance<i16>, AbsoluteDistance<i32>, AbsoluteDistance<i64>, AbsoluteDistance<i128>,
