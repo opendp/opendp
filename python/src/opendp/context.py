@@ -861,72 +861,11 @@ class Query(object):
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
-    def sklearn(self, estimator, *, method=None):
-        """Construct a measurement that releases a new fitted estimator clone.
+    def sklearn(self, estimator, *, y=None, method=None):
+        """Fit privately, or apply a certified rowwise sklearn inference method."""
+        from opendp.extras.sklearn._query import sklearn_query
 
-        Use the current chain's output domain/metric and stability, and this query's
-        privacy allowance. Each release returns an independent fitted estimator,
-        leaving the supplied estimator unchanged.
-        """
-        from sklearn.base import clone
-        from opendp._internal import _new_pure_function
-        from opendp.extras.sklearn._estimator import (
-            MeasurementMixin,
-            TransformationMixin,
-        )
-
-        if method is None and not isinstance(estimator, MeasurementMixin):
-            raise TypeError(
-                "sklearn(...) expects an estimator with OpenDP fitting capability"
-            )
-        if method is not None and not isinstance(estimator, TransformationMixin):
-            raise TypeError("Stage must implement TransformationMixin")
-        if isinstance(self._chain, tuple):
-            input_domain, input_metric = self._chain
-        elif isinstance(self._chain, Transformation):
-            input_domain, input_metric = self._chain.output_space
-        elif isinstance(self._chain, PartialChain):
-            raise ValueError(
-                "sklearn(...) requires all arguments in the input query to be specified."
-            )
-        else:
-            raise ValueError(  # pragma: no cover
-                f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
-            )
-
-        if method is not None:
-            from opendp.extras.sklearn._rowwise import _make_rowwise_transform
-
-            trans = _make_rowwise_transform(
-                input_domain, input_metric, estimator, method=method
-            )
-            return self.new_with(
-                chain=trans if isinstance(self._chain, tuple) else self._chain >> trans
-            )
-
-        d_mid = (
-            self._d_in
-            if isinstance(self._chain, tuple)
-            else self._chain.map(self._d_in)
-        )
-        prototype = clone(estimator)
-        measurement = prototype.make_measurement(
-            input_domain, input_metric, self._output_measure, d_mid, self._d_out
-        )
-
-        def ingest(release):
-            fitted = clone(prototype)
-            fitted._ingest_release(release)
-            return fitted
-
-        measurement = measurement >> _new_pure_function(ingest, TO="ExtrinsicObject")
-        return self.new_with(
-            chain=(
-                measurement
-                if isinstance(self._chain, tuple)
-                else self._chain >> measurement
-            ),
-        )
+        return sklearn_query(self, estimator, y=y, method=method)
 
     def lazy(self):
         """Continue a stable eager Polars DataFrame query as a LazyFrameQuery."""
