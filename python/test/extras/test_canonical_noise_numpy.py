@@ -1,4 +1,5 @@
 import opendp.prelude as dp
+
 from opendp.extras.numpy.canonical import (
     BinomialCND,
     _cnd_cdf,
@@ -193,10 +194,15 @@ def test_canonical_context_no_transformation():
         domain=dp.atom_domain(nan=False, T=float),
     )
 
+    measurement = context.query().canonical_noise().resolve()
+    epsilon, delta = measurement.map(1.0)
+    assert epsilon <= 0.5
+    assert delta <= 5e-8
+
     assert isinstance(context.query().canonical_noise().release(), float)
-    assert isinstance(
-        context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
-    )
+    estimate = context.query().canonical_noise(binomial_size=1000).release()
+    assert isinstance(estimate, BinomialCND)
+    assert estimate.d_out == (0.5, 5e-8)
 
 
 def test_canonical_context_with_transformation():
