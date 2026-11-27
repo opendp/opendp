@@ -1381,6 +1381,10 @@ class PrivacyGuarantee(object):
     parameters are retained exactly; zero
     delta certifies pure DP. Certificates are not eagerly converted to profiles.
     Queries return the tightest bound and propagate representation errors.
+
+    Beta and alpha report f-DP lower bounds derived from these representations;
+    no tradeoff representation is stored. Queries accept scalars or
+    nondecreasing vectors, permitting duplicates, and preserve that shape.
     """
 
     def __init__(
@@ -1448,6 +1452,24 @@ class PrivacyGuarantee(object):
         scalar = isinstance(log_delta, Real)
         result = privacy_guarantee_epsilon_from_log_delta(
             self.guarantee, [float(log_delta)] if scalar else log_delta
+        )
+        return result[0] if scalar else result
+
+    def beta(self, alpha):
+        from opendp.measures import _privacy_guarantee_beta
+
+        scalar = isinstance(alpha, Real)
+        result = _privacy_guarantee_beta(
+            self.guarantee, [float(alpha)] if scalar else alpha
+        )
+        return result[0] if scalar else result
+
+    def alpha(self, beta):
+        from opendp.measures import _privacy_guarantee_alpha
+
+        scalar = isinstance(beta, Real)
+        result = _privacy_guarantee_alpha(
+            self.guarantee, [float(beta)] if scalar else beta
         )
         return result[0] if scalar else result
 

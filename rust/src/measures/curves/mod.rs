@@ -4,7 +4,13 @@ use crate::{
     error::Fallible, traits::SInterval, utilities::search::fallible_invert_decreasing_batch,
 };
 
+mod approxdp;
 pub(crate) mod logspace;
+mod maximize;
+mod profile_to_tradeoff;
+
+#[cfg(feature = "ffi")]
+mod reporting_ffi;
 use logspace::{
     check_delta, check_log_delta, delta_to_log_lower_unchecked, delta_to_log_upper_unchecked,
     log_to_delta_upper, logaddexp_upper,
@@ -259,6 +265,30 @@ impl PrivacyGuarantee {
         Ok(bounds)
     }
 
+    /// Return the strongest beta lower bounds for nondecreasing alpha inputs.
+    /// Every attached representation is evaluated; its errors propagate.
+    pub fn beta(&self, alphas: &[f64]) -> Fallible<Vec<f64>> {
+        check_inputs(alphas, check_alpha)?;
+        let mut bounds = vec![0.0_f64; alphas.len()];
+        if let Some(repr) = &self.approx_dp {
+            for (bound, &alpha) in bounds.iter_mut().zip(alphas) {
+                *bound = approxdp::beta_via_approx_dp(repr.epsilon, repr.delta, alpha)?;
+            }
+        }
+        if let Some(profile) = &self.profile {
+            max_assign(
+                &mut bounds,
+                profile_to_tradeoff::beta_via_profile_batch(profile, alphas)?,
+            );
+        }
+        Ok(bounds)
+    }
+
+    /// Return conservative alpha lower bounds by symmetry of neighboring datasets.
+    pub fn alpha(&self, betas: &[f64]) -> Fallible<Vec<f64>> {
+        self.beta(betas)
+    }
+
     pub(crate) fn approx_dp(&self) -> Option<(f64, f64)> {
         self.approx_dp
             .as_ref()
@@ -273,6 +303,12 @@ impl PrivacyGuarantee {
 fn min_assign(bounds: &mut [f64], other: Vec<f64>) {
     for (bound, value) in bounds.iter_mut().zip(other) {
         *bound = bound.min(value);
+    }
+}
+
+fn max_assign(bounds: &mut [f64], other: Vec<f64>) {
+    for (bound, value) in bounds.iter_mut().zip(other) {
+        *bound = bound.max(value);
     }
 }
 
@@ -456,7 +492,7 @@ fn check_inputs(values: &[f64], check: fn(f64) -> Fallible<()>) -> Fallible<()> 
         check(value)?;
     }
     if values.windows(2).any(|pair| pair[0] > pair[1]) {
-        return fallible!(FailedMap, "privacy profile inputs must be nondecreasing");
+        return fallible!(FailedMap, "privacy inputs must be nondecreasing");
     }
     Ok(())
 }
@@ -465,7 +501,7 @@ fn check_length(inputs: &[f64], outputs: &[f64]) -> Fallible<()> {
     if outputs.len() != inputs.len() {
         return fallible!(
             FailedMap,
-            "privacy profile callback output length ({}) must match input length ({})",
+            "privacy callback output length ({}) must match input length ({})",
             outputs.len(),
             inputs.len()
         );
@@ -481,6 +517,17 @@ fn eval_log_profile(profile: &LogDeltaFn, epsilon: &[f64]) -> Fallible<Vec<f64>>
         check_log_delta(value)?;
     }
     Ok(values)
+}
+
+fn check_alpha(alpha: f64) -> Fallible<()> {
+    check_unit_interval(alpha, "alpha")
+}
+
+fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
+    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+        return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
+    }
+    Ok(())
 }
 
 fn check_epsilon(epsilon: f64) -> Fallible<()> {

@@ -7,10 +7,28 @@ use super::*;
 use crate::error::ErrorVariant;
 
 // Scalar mathematical fixtures below exercise the vector API with singleton queries.
-fn batch(
+pub(super) fn batch(
     f: impl Fn(f64) -> Fallible<f64> + Send + Sync,
 ) -> impl Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync {
     move |values| values.iter().map(|&value| f(value)).collect()
+}
+
+#[test]
+fn test_fixed_approx_dp_tradeoff_is_conservative() -> Fallible<()> {
+    for (epsilon, delta) in [(1.0_f64, 0.1_f64), (2.0, 0.01)] {
+        let guarantee = PrivacyGuarantee::new().with_approx_dp(epsilon, delta)?;
+        let alpha = 0.2;
+        let expected = (0.0_f64)
+            .max(1.0 - delta - epsilon.exp() * alpha)
+            .max((-epsilon).exp() * (1.0 - delta - alpha));
+        let beta = guarantee.beta(&[alpha])?[0];
+        assert!(beta <= expected);
+        assert!(beta > 0.0);
+        // Queries use the original certificate, never the rounded beta callback.
+        assert_eq!(guarantee.delta(epsilon)?, delta);
+        assert_eq!(guarantee.epsilon(delta)?, epsilon);
+    }
+    Ok(())
 }
 
 #[test]
@@ -437,6 +455,169 @@ fn test_vector_validation_and_callback_lengths() -> Fallible<()> {
     assert!(profile.log_delta(&[])?.is_empty());
     assert!(profile.epsilon(&[])?.is_empty());
     assert!(profile.epsilon_from_log_delta(&[])?.is_empty());
+    Ok(())
+}
+
+#[test]
+fn test_rounded_derived_bounds_do_not_enter_convex_optimizer() -> Fallible<()> {
+    use dashu::rational::RBig;
+    let guarantee = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    let alphas = [0.5_f64.next_down(), 0.5, 0.5_f64.next_up()];
+    let values = guarantee.beta(&alphas)?;
+    let [a, b, c] = alphas.map(|a| RBig::try_from(a).unwrap());
+    let [fa, fb, fc] = [values[0], values[1], values[2]].map(|v| RBig::try_from(v).unwrap());
+    // These rounded samples are not convex. Delta and epsilon must instead
+    // query the source certificate, without constructing another representation.
+    assert!((&fb - &fa) / (&b - &a) > (&fc - &fb) / (&c - &b));
+    assert_eq!(guarantee.delta(0.0)?, 0.0);
+    assert_eq!(guarantee.epsilon(0.0)?, 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_reporting_vector_validation_and_shapes() -> Fallible<()> {
+    let calls = Arc::new(AtomicUsize::new(0));
+    let counter = calls.clone();
+    let profile = PrivacyProfile::new_log(move |epsilon| {
+        counter.fetch_add(1, Ordering::Relaxed);
+        Ok(vec![f64::NEG_INFINITY; epsilon.len()])
+    });
+    let profile = PrivacyGuarantee::new().with_profile(profile);
+    let certificate = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    assert_eq!(calls.load(Ordering::Relaxed), 0);
+    for guarantee in [&profile, &certificate] {
+        let beta = guarantee.beta(&[0.0, 0.25, 0.25, 1.0])?;
+        assert_eq!(beta.len(), 4);
+        assert_eq!(beta[1], beta[2]);
+        for (actual, expected) in beta.into_iter().zip([1.0, 0.75, 0.75, 0.0]) {
+            assert!((actual - expected).abs() < 1e-14);
+        }
+        let alpha = guarantee.alpha(&[0.25, 0.5, 0.5, 1.0])?;
+        assert_eq!(alpha, guarantee.beta(&[0.25, 0.5, 0.5, 1.0])?);
+        assert_eq!(alpha.len(), 4);
+        assert_eq!(alpha[1], alpha[2]);
+        for (actual, expected) in alpha.into_iter().zip([0.75, 0.5, 0.5, 0.0]) {
+            assert!((actual - expected).abs() < 1e-14);
+        }
+        assert!(guarantee.beta(&[])?.is_empty());
+        assert!(guarantee.alpha(&[])?.is_empty());
+        let before = calls.load(Ordering::Relaxed);
+        for inputs in [
+            vec![0.5, 0.25],
+            vec![f64::NAN],
+            vec![-0.1],
+            vec![1.1],
+            vec![f64::INFINITY],
+        ] {
+            assert!(guarantee.beta(&inputs).is_err());
+            assert!(guarantee.alpha(&inputs).is_err());
+        }
+        assert_eq!(calls.load(Ordering::Relaxed), before);
+    }
+    // Reporting must propagate malformed source-profile results.
+    for length in [0, 2] {
+        let guarantee = PrivacyGuarantee::new()
+            .with_profile(PrivacyProfile::new_log(move |_| Ok(vec![0.0; length])));
+        assert!(guarantee.beta(&[0.5]).is_err());
+        assert!(guarantee.alpha(&[0.5]).is_err());
+    }
+    for value in [f64::NAN, f64::INFINITY, 0.1] {
+        let guarantee =
+            PrivacyGuarantee::new().with_profile(PrivacyProfile::new_log(move |epsilon| {
+                Ok(vec![value; epsilon.len()])
+            }));
+        assert!(guarantee.beta(&[0.5]).is_err());
+        assert!(guarantee.alpha(&[0.5]).is_err());
+    }
+    Ok(())
+}
+
+#[test]
+fn test_pure_dp_profile_tradeoff_oracle() -> Fallible<()> {
+    let epsilon_0 = 2.0_f64.ln();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let counter = calls.clone();
+    let profile = PrivacyProfile::new(move |epsilons| {
+        counter.fetch_add(1, Ordering::Relaxed);
+        Ok(epsilons
+            .iter()
+            .map(|&epsilon| (1.0 - (epsilon - epsilon_0).exp()).max(0.0))
+            .collect())
+    });
+    let guarantee = PrivacyGuarantee::new().with_profile(profile.clone());
+    let alphas = [0.125, 0.25, 0.5, 0.75, 0.875];
+    let values = guarantee.beta(&alphas)?;
+    let batch_calls = calls.swap(0, Ordering::Relaxed);
+    for (&alpha, beta) in alphas.iter().zip(values) {
+        let expected = (1.0_f64 - 2.0 * alpha).max((1.0 - alpha) / 2.0);
+        assert!((beta - expected).abs() < 1e-10);
+        assert!((beta - guarantee.beta(&[alpha])?[0]).abs() < 1e-10);
+    }
+    assert!(batch_calls < calls.load(Ordering::Relaxed));
+    assert!(profile.delta(&[epsilon_0])?[0] <= 1e-12);
+    // Fixed certificates stay in their source representation; no rounded
+    // derived callback is handed to the convex optimizer.
+    let certificate = PrivacyGuarantee::new().with_approx_dp(epsilon_0, 0.0)?;
+    assert_eq!(certificate.delta(epsilon_0)?, 0.0);
+    assert!((certificate.beta(&[0.25])?[0] - 0.5).abs() < 1e-10);
+    Ok(())
+}
+
+#[test]
+fn test_alpha_lower_endpoint_in_source_representations() -> Fallible<()> {
+    use dashu::rational::RBig;
+    let certificate = PrivacyGuarantee::new().with_approx_dp(0.0, 0.0)?;
+    let profile = PrivacyGuarantee::new()
+        .with_profile(PrivacyProfile::new_log(batch(|_| Ok(f64::NEG_INFINITY))));
+    for guarantee in [certificate, profile] {
+        for target in [0.0, 0.125, 0.5, 1.0] {
+            let alpha = guarantee.alpha(&[target])?[0];
+            let reference = RBig::from(1) - RBig::try_from(target)?;
+            assert!(RBig::try_from(alpha)? <= reference);
+            assert!(reference - RBig::try_from(alpha)? < RBig::try_from(1e-14)?);
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_aggregate_reporting_is_conjunctive() -> Fallible<()> {
+    let profile = PrivacyProfile::new_log(batch(|_| Ok(-1.0)));
+    let profile_only = PrivacyGuarantee::new().with_profile(profile.clone());
+    let certificate_only = PrivacyGuarantee::new().with_approx_dp(1.0, 0.1)?;
+    let combined = PrivacyGuarantee::new()
+        .with_profile(profile)
+        .with_approx_dp(1.0, 0.1)?;
+    for source in [profile_only, certificate_only] {
+        assert!(combined.delta(1.0)? <= source.delta(1.0)?);
+        assert!(combined.epsilon(0.5)? <= source.epsilon(0.5)?);
+        assert!(combined.beta(&[0.25])?[0] >= source.beta(&[0.25])?[0]);
+        assert!(combined.alpha(&[0.0])?[0] >= source.alpha(&[0.0])?[0]);
+    }
+    Ok(())
+}
+
+#[test]
+fn test_aggregate_queries_preserve_numerical_failures() -> Fallible<()> {
+    for variant in ["NumericError", "Overflow", "FailedFunction"] {
+        let profile = PrivacyProfile::new(move |_| {
+            Err(crate::error::Error {
+                variant: variant.parse().unwrap(),
+                ..err!(FailedMap, "profile failed")
+            })
+        });
+        let guarantee = PrivacyGuarantee::new()
+            .with_approx_dp(1.0, 0.1)?
+            .with_profile(profile);
+        for result in [
+            guarantee.delta(1.0),
+            guarantee.epsilon(0.5),
+            guarantee.beta(&[0.5]).map(|v| v[0]),
+            guarantee.alpha(&[0.5]).map(|v| v[0]),
+        ] {
+            assert_eq!(result.unwrap_err().variant.to_string(), variant);
+        }
+    }
     Ok(())
 }
 
