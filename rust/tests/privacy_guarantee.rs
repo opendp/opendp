@@ -13,5 +13,12 @@ fn public_builders_are_ungated() -> Fallible<()> {
     assert_eq!(guarantee.delta(1.0)?, 0.1);
     assert_eq!(guarantee.epsilon(0.1)?, 1.0);
     assert!(PrivacyGuarantee::new().with_approx_dp(-1.0, 0.0).is_err());
+    assert!(
+        guarantee
+            .beta(&[0.0, 0.5])?
+            .iter()
+            .all(|beta| (0.0..=1.0).contains(beta))
+    );
+    assert_eq!(guarantee.alpha(&[1.0])?, vec![0.0]);
     Ok(())
 }

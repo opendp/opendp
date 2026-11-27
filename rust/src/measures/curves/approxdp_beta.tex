@@ -1,0 +1,59 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{beta\_via\_approx\_dp}}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Arguments \texttt{epsilon}, \texttt{delta}, and \texttt{alpha} of type \texttt{f64}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+The source parameters satisfy finite nonnegative $\epsilon$, $\delta \in [0,1]$,
+and $\alpha \in [0,1]$. The function must complete successfully.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approxdp_beta.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    For all $\alpha \in [0, 1]$, \texttt{beta\_via\_approx\_dp} returns a value
+    no greater than the exact approximate-DP tradeoff curve
+    $f_{\epsilon,\delta}(\alpha)$.
+\end{theorem}
+
+\begin{definition}
+    \label{def-approxdp-point-beta}
+    For a fixed approximate-DP certificate with parameters $\epsilon$ and $\delta$, define
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha,
+        \exp(-\epsilon) \max(1 - \delta - \alpha, 0)).
+    \end{equation}
+\end{definition}
+
+\begin{proof}
+Directed interval arithmetic encloses $1-\delta$, the second branch, and
+$z=\epsilon+\log(\alpha)$ for positive $\alpha$. If the upper endpoint of
+$z$ is negative, the first branch is enclosed by evaluating
+$1-\delta-\exp(z)$. Otherwise zero is a valid lower bound on the tradeoff,
+and the first branch is omitted. Taking the maximum with the second branch
+and zero, then rounding downward, gives a lower bound on the tradeoff.
+For $\epsilon\ge1024$ and positive representable $\alpha$, the first branch
+is nonpositive and the second is smaller than the least positive
+representable value, so zero is a valid lower bound. The endpoints
+$\alpha=0$ and $\alpha=1$ return a downward-rounded $1-\delta$ and zero,
+respectively.
+\end{proof}
+
+\end{document}
