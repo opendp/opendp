@@ -76,7 +76,7 @@
 //!         >> then_impute_constant(0.0)
 //!         >> then_clamp(bounds)
 //!         >> then_sum()
-//!         >> then_laplace(sigma, None)
+//!         >> then_laplace::<_, _, MaxDivergence>(sigma, None)
 //!     )?;
 //!
 //!     assert!(noisy_sum.check(&1, &epsilon)?);

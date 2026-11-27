@@ -368,6 +368,31 @@ fn bernoulli_log_term(order: Cert, t: Cert, p: Cert, q: Cert) -> Fallible<LogTer
 // Numeric helpers
 // -----------------------------------------------------------------------------
 
+/// Tight RDP bound implied by pure DP (the binary randomized-response extremum).
+/// Factor exp(alpha * epsilon) from the numerator to avoid positive
+/// exponential overflow. Pure DP itself supplies a fallback upper bound.
+#[allow(non_snake_case)]
+pub(crate) fn rdp_from_pureDP(alpha: f64, epsilon: f64) -> Fallible<f64> {
+    if !alpha.is_finite() || alpha <= 1.0 {
+        return fallible!(FailedMap, "Rényi order must be finite and greater than one");
+    }
+    check_epsilon(epsilon)?;
+    if epsilon == 0.0 || epsilon >= 64.0 {
+        return Ok(epsilon);
+    }
+
+    let evaluate = || -> Fallible<f64> {
+        let eps = Cert::point(epsilon)?;
+        let t = (Cert::point(alpha)? - Cert::point(1.0)?)?;
+        let exponent = -((Cert::point(2.0)? * t.clone())? + Cert::point(1.0)?)?;
+        let numerator = (exponent * eps.clone())?.exp()?.ln_1p()?;
+        let denominator = (-eps.clone()).exp()?.ln_1p()?;
+        (eps + ((numerator - denominator)? / t)?)?.upper_f64()
+    };
+    // Failure of the optional numerical refinement cannot invalidate epsilon-DP.
+    Ok(evaluate().unwrap_or(epsilon).clamp(0.0, epsilon))
+}
+
 pub(super) use crate::measures::rdp_to_approxdp::evaluate_renyi;
 
 fn improvement_threshold(a: f64, b: f64) -> f64 {
@@ -404,6 +429,21 @@ mod test {
             assert_eq!(error.variant, expected_variant);
             assert_eq!(error.message.as_deref(), Some("later order failed"));
         }
+    }
+
+    #[test]
+    fn pure_dp_renyi_matches_randomized_response() -> Fallible<()> {
+        for (alpha, epsilon) in [(1.5_f64, 0.5_f64), (2.0, 1.0), (8.0, 0.25)] {
+            let expected =
+                ((alpha * epsilon).exp() + ((1.0 - alpha) * epsilon).exp()) / (epsilon.exp() + 1.0);
+            let expected = expected.ln() / (alpha - 1.0);
+            let bound = rdp_from_pureDP(alpha, epsilon)?;
+            assert!((bound - expected).abs() < 1e-13);
+            assert!(bound <= epsilon);
+        }
+        assert_eq!(rdp_from_pureDP(2.0, 0.0)?, 0.0);
+        assert!(rdp_from_pureDP(f64::MAX, f64::MAX)?.is_finite());
+        Ok(())
     }
 
     #[test]
