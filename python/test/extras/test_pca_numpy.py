@@ -113,7 +113,7 @@ def _capture_sscp_rows(monkeypatch):
     observations = []
     original = make_np_sscp
 
-    def record(input_domain, input_metric):
+    def record(input_domain, input_metric, **kwargs):
         def observe(data):
             observations.append((input_domain, np.array(data, copy=True)))
             return data
@@ -126,7 +126,7 @@ def _capture_sscp_rows(monkeypatch):
             observe,
             lambda distance: distance,
         )
-        return identity >> original(input_domain, input_metric)
+        return identity >> original(input_domain, input_metric, **kwargs)
 
     monkeypatch.setattr(decomposition, "then_np_sscp", to_then(record))
     return observations
@@ -294,6 +294,7 @@ def test_pca_fixed_budget_split_at_input_distance(
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition
 
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
     budget = 0.9
     measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
     factor = (d_in / 2) ** (2 if is_zcdp else 1)
@@ -377,6 +378,7 @@ def test_pca_fixed_budget_split_at_input_distance(
 def test_pca_many_samples_rounding_stays_within_budget(
     monkeypatch, center, d_in, width, budget, is_zcdp
 ):
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
     import numpy as np
     from opendp._internal import _make_measurement
     from opendp.extras._utilities import to_then
@@ -528,6 +530,7 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
 def test_pca_selects_components_before_sampling(
     monkeypatch, selection, spectrum, size, expected
 ):
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
     np = pytest.importorskip("numpy")
     from opendp._internal import _new_pure_function
     from opendp.extras._utilities import to_then
@@ -1035,7 +1038,12 @@ def test_pca_unknown_size_uses_private_count_and_centered_sum(
     origin = np.array([100.0, -200.0])
 
     def count(*args, **kwargs):
-        return count_constructor(*args, **kwargs) >> _new_pure_function(lambda _: 3)
+        measurement = count_constructor(*args, **kwargs)
+        def release(_):
+            assert measurement.map(d_in) == pytest.approx(0.05)
+            return 3
+
+        return measurement >> _new_pure_function(release)
 
     def offsets(input_domain, input_metric, *args, **kwargs):
         measurement = sum_constructor(input_domain, input_metric, *args, **kwargs)
@@ -1060,7 +1068,7 @@ def test_pca_unknown_size_uses_private_count_and_centered_sum(
         assert descriptor.size is None
         assert np.all(descriptor.origin == 0)
         assert descriptor.p == (2 if is_zcdp else 1)
-        assert spent <= 0.25
+        assert spent == pytest.approx(0.95 / 3)
         np.testing.assert_allclose(release.mean, origin + [0.25, 0.0])
     else:
         assert not observed

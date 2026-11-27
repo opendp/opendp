@@ -37,6 +37,7 @@ from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_count import make_private_np_count
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.extras.numpy._make_np_sscp import then_np_sscp
+from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
@@ -102,7 +103,7 @@ def make_private_pca(
         raise ValueError("d_in must be a positive integer")
     d_in = int(d_in)
     _check_sized_contributions(input_domain, input_metric, d_in)
-    if d_out <= 0:
+    if not np.isfinite(d_out) or d_out <= 0:
         raise ValueError("d_out must be positive")
     if center is not None and not (isinstance(center, str) and center == "origin"):
         raise ValueError("center must be None or 'origin'")
@@ -176,15 +177,19 @@ def make_private_pca(
         p=2,
         nan=False,
     )
+    # With a public count, the true clipped scatter has trace at most n R².
+    # A private count is not an upper bound, so do not constrain its spectrum.
+    trace_bound = None if n_samples is None else n_samples * radius**2
     estimate_mean = center is None
     estimate_count = n_samples is None
-    # Divide the allowance among the active private stages in privacy-loss units.
+    use_bingham = _use_bingham(num_components, n_samples, n_features)
+    # Count has dimension-independent sensitivity. Reserve a small share,
+    # then keep the same mean/spectrum allocation for either solver.
+    count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0
+    remaining = _smaller(float(d_out) - count_budget) if estimate_count else float(d_out)
     eigen_stages = 1 + int(n_features > 1)
-    num_stages = int(estimate_count) + int(estimate_mean) + eigen_stages
-    share = float(d_out) if num_stages == 1 else _smaller(float(d_out) / num_stages)
-    count_budget = share if estimate_count else 0.0
-    mean_budget = share if estimate_mean else 0.0
-    eigen_budget = share if eigen_stages == 1 else _smaller(share * eigen_stages)
+    mean_budget = _smaller(remaining / (1 + eigen_stages)) if estimate_mean else 0.0
+    eigen_budget = _smaller(remaining - mean_budget) if estimate_mean else remaining
 
     def eigendecomposition(reference, released_count):
         t_reclip = (
@@ -202,6 +207,29 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
+        if not use_bingham:
+            t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
+            t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=2 if is_zcdp else 1)
+            m_matrix = dp.binary_search_chain(
+                lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
+                d_in=d_in,
+                d_out=eigen_budget,
+                T=float,
+            )
+
+            def release_matrix(values):
+                eigvals, eigvecs = np.linalg.eigh(unsvec(values, n_features))
+                singular_values = np.sqrt(_project_spectrum(eigvals, trace_bound))[::-1]
+                k = _select_num_components(num_components, singular_values, released_count)
+                return PCARelease(
+                    mean=np.array(reference, copy=True),
+                    singular_values=singular_values,
+                    components=eigvecs[:, ::-1][:, :k].T,
+                    n_samples=released_count,
+                )
+
+            return m_matrix >> _new_pure_function(release_matrix)
+
         t_sscp = t_center >> then_np_sscp()
         # The count and reference are already public conditional on earlier
         # releases. Compute SSCP once, then compose on the matrix space.
@@ -374,7 +402,9 @@ class PCA(
 
     If dataset size is not public, fitting privately estimates it.
     An L2 domain bound or ``clip_norm`` is required.
-    Pure epsilon-DP and zero-concentrated DP are supported.
+    Pure epsilon-DP and zero-concentrated DP are supported. Low-rank requests
+    use Bingham sampling; larger or spectrum-dependent requests use a private
+    SSCP matrix followed by eigendecomposition.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to
@@ -595,6 +625,32 @@ class PCA(
         if desc.T not in ("f32", "f64"):
             raise ValueError("Rowwise PCA inference requires floating-point input")
         return dp.numpy.array2_domain(T=float, size=desc.size, num_columns=output_width)
+
+
+def _use_bingham(request, n_samples, n_features):
+    """Choose a solver using only public dimensions and component requests.
+
+    A quarter of the ambient dimension is a provisional crossover, not a
+    utility guarantee. Data-dependent component requests use the matrix solver.
+    """
+    if n_features == 1 or isinstance(request, (float, str)):
+        return False
+    k = request if isinstance(request, int) else n_samples
+    return k is not None and 4 * min(k, n_features) <= n_features
+
+
+def _project_spectrum(eigenvalues, trace_bound):
+    """Project ascending eigenvalues onto the PSD trace ball."""
+    np = import_optional_dependency("numpy")
+    positive = np.maximum(eigenvalues, 0)
+    if trace_bound is None or positive.sum() <= trace_bound:
+        return positive
+    # Euclidean projection onto the simplex, in descending order.
+    threshold = np.max(
+        (np.cumsum(positive[::-1]) - trace_bound)
+        / np.arange(1, len(positive) + 1)
+    )
+    return np.maximum(positive - threshold, 0)
 
 
 def _select_num_components(request, singular_values, n_samples):
