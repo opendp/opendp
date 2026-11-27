@@ -1,3 +1,5 @@
+import math
+
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.mod import Domain, Metric, Transformation
@@ -94,8 +96,10 @@ def make_np_sscp(
     elif (is_joint or is_l2) and input_desc.size is not None:
         # Two symmetric edits replace a row. For ||x||, ||y|| <= B,
         # ||xx^T - yy^T||_* <= 2B² and ||xx^T - yy^T||_F <= sqrt(2) B².
-        with np.errstate(over="ignore"):
-            replacement_bound = np.nextafter(np.sqrt(2.0) * row_norm_sq, np.inf)
+        # Use Python float arithmetic so overflow becomes inf, not a NumPy warning.
+        replacement_bound = math.nextafter(
+            float(row_norm_sq) * math.sqrt(2.0), math.inf
+        )
         if not np.isfinite(replacement_bound):
             raise ValueError("Frobenius replacement sensitivity overflows")
 
