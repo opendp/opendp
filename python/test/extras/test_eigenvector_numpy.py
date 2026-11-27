@@ -14,7 +14,9 @@ def test_private_eigenvector():
         _symmetric_matrix_domain(num_features=4, T=float),
         dp.nuclear_distance(),
     )
-    meas = space >> then_private_eigenvector(concentration=25_000.0)
+    meas = space >> then_private_eigenvector(
+        concentration=25_000.0
+    )
 
     data = np.random.normal(size=(4, 4))
     data += data.T
@@ -48,7 +50,9 @@ def test_private_eigenvector_acceptance_probability(monkeypatch):
         _symmetric_matrix_domain(num_features=2, T=float),
         dp.nuclear_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
+    meas = space >> eigenvector.then_private_eigenvector(
+        concentration=1.0
+    )
 
     # For C = diag(1, 0) and concentration = 1:
     #   A = diag(0, 1), b = sqrt(2), Omega = diag(1, 1 + sqrt(2)).
@@ -73,7 +77,9 @@ def test_private_eigenvector_distribution(monkeypatch):
         _symmetric_matrix_domain(num_features=2, T=float),
         dp.nuclear_distance(),
     )
-    meas = space >> eigenvector.then_private_eigenvector(concentration=1.0)
+    meas = space >> eigenvector.then_private_eigenvector(
+        concentration=1.0
+    )
 
     # With concentration = 1, the Bingham density is proportional to
     # exp(-sin(theta)**2), so 2 * theta follows von Mises(0, 0.5).
@@ -93,7 +99,9 @@ def test_private_eigenvector_isotropic_matrix(width, value, dtype):
     domain = _symmetric_matrix_domain(
         num_features=width, T=dp.f32 if dtype == np.float32 else dp.f64
     )
-    measurement = make_private_eigenvector(domain, dp.nuclear_distance(), 0.25)
+    measurement = make_private_eigenvector(
+        domain, dp.nuclear_distance(), 0.25
+    )
     vector = measurement(np.eye(width, dtype=dtype) * value)
     assert np.isfinite(vector).all()
     assert np.linalg.norm(vector) == pytest.approx(1.0)
@@ -135,8 +143,9 @@ def test_eigenvectors():
     )
     sp_sscp = space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp()
     # Row norm B = 4, one replacement has nuclear sensitivity 2B^2.
-    concentrations = [1.0 / (2 * 4.0**2)] * 3
-    meas = sp_sscp >> then_private_eigenvectors(concentrations)
+    meas = sp_sscp >> then_private_eigenvectors(
+        scale=2 * 4.0**2 / 3, weights=[1.0] * 4
+    )
     assert meas.map(2) == pytest.approx(3.0)
 
     data = np.random.normal(size=(1000, num_columns))
@@ -155,9 +164,13 @@ def test_private_eigenvector_rejects_wrong_metric_and_bad_concentration():
 
     domain = _symmetric_matrix_domain(num_features=2)
     with pytest.raises(ValueError, match="nuclear"):
-        make_private_eigenvector(domain, dp.symmetric_distance(), 1.0)
+        make_private_eigenvector(
+            domain, dp.symmetric_distance(), 1.0
+        )
     with pytest.raises(ValueError, match="finite and non-negative"):
-        make_private_eigenvector(domain, dp.nuclear_distance(), -1.0)
+        make_private_eigenvector(
+            domain, dp.nuclear_distance(), -1.0
+        )
 
 
 def test_projected_sscp_has_identity_nuclear_stability():
@@ -201,13 +214,17 @@ def test_nuclear_eigenvector_rejects_invalid_spaces():
     with pytest.raises(ValueError, match="nuclear"):
         _make_np_sscp_projection(matrix, incorrect_metric, np.eye(2))
     with pytest.raises(ValueError, match="NPSymmetricMatrixDomain"):
-        make_private_eigenvectors(invalid, metric, [])
+        make_private_eigenvectors(invalid, metric, 1.0, [1.0])
     with pytest.raises(ValueError, match="nuclear"):
-        make_private_eigenvectors(matrix, incorrect_metric, [])
-    with pytest.raises(ValueError, match="at most"):
-        make_private_eigenvectors(matrix, metric, [0.0, 0.0])
-    with pytest.raises(ValueError, match="non-negative"):
-        make_private_eigenvectors(matrix, metric, [float("nan")])
+        make_private_eigenvectors(
+            matrix, incorrect_metric, 1.0, [1.0]
+        )
+    with pytest.raises(ValueError, match="weights"):
+        make_private_eigenvectors(matrix, metric, 1.0, [1.0] * 3)
+    with pytest.raises(ValueError, match="positive and finite"):
+        make_private_eigenvectors(
+            matrix, metric, float("nan"), [1.0]
+        )
 
 
 @pytest.mark.parametrize(
@@ -226,15 +243,26 @@ def test_nuclear_projection_rejects_invalid_matrix(projection, message):
         _make_np_sscp_projection(domain, dp.nuclear_distance(), projection)
 
 
-def test_nuclear_eigenvector_composition_map():
-    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
+def test_nuclear_eigenvector_composition_map(monkeypatch):
+    from opendp.extras.sklearn import _make_eigenvector as eigenvector
 
-    measurement = make_private_eigenvectors(
+    concentrations = []
+    original = eigenvector.then_private_eigenvector
+
+    def record(concentration):
+        concentrations.append(concentration)
+        return original(concentration)
+
+    monkeypatch.setattr(eigenvector, "then_private_eigenvector", record)
+    measurement = eigenvector.make_private_eigenvectors(
         _symmetric_matrix_domain(num_features=3),
         dp.nuclear_distance(),
-        [1.0, 2.0],
+        1.0 / 3,
+        [1.0, 2.0, 100.0],
     )
     assert measurement.map(0.0) == 0.0
     assert measurement.map(2.0) == pytest.approx(6.0)
     assert measurement.map(5.0) == pytest.approx(15.0)
     assert measurement(np.eye(3)).shape == (3, 3)
+    normalizer = 3.0
+    np.testing.assert_allclose(concentrations, np.array([1.0, 2.0]) * 3 / normalizer)
