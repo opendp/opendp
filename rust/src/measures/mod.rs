@@ -8,6 +8,7 @@ pub(crate) mod ffi;
 
 pub(crate) mod curves;
 pub(crate) mod rdp_to_approxdp;
+pub(crate) mod zcdp;
 pub use curves::*;
 
 #[cfg(test)]

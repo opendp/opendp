@@ -1,14 +1,14 @@
 \documentclass{article}
-\input{../../../../lib.sty}
+\input{../../lib.sty}
 
 
-\title{\texttt{fn cdp\_delta}}
+\title{\texttt{fn zcdp\_delta}}
 \author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
 
-Proves soundness of \texttt{fn cdp\_delta} in \asOfCommit{mod.rs}{0546d1e9a}.
+Proves soundness of \texttt{fn zcdp\_delta} in \asOfCommit{../zcdp.rs}{ba7d021d}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.2.3}{subsection 2.3} of \cite{CKS20}.
 \section{Bound Derivation}
 
@@ -169,21 +169,25 @@ None
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2]{./pseudocode/cdp_delta.py}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/zcdp_delta.py}
 
 
 \subsection*{Postcondition}
 
 \begin{theorem}
-    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{zcdp\_delta}$ either returns an error,
     or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
 \begin{proof}
-The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
-Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
-Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$,
-where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
-Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
+The log-order search returns a finite $\alpha>1$; its accuracy is not
+required for privacy. By \ref{renyidp-approxdp-delta}, every such order
+gives a valid fixed-order bound with $\tau=\alpha\rho$.
+Interval evaluation encloses the logarithm of that bound, and rounding
+the exponential upward preserves the upper bound on $\delta$.
+The direct inverse uses \ref{zcdp-approxdp-epsilon} at a finite selected
+order. Its derivative search is likewise only a heuristic: interval
+evaluation of the fixed-order expression and upward rounding certify
+the returned $\epsilon$ without requiring an accurately minimized order.
 \end{proof}
 
 

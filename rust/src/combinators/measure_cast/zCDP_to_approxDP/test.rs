@@ -1,4 +1,4 @@
-use cdp_delta::test::cdp_epsilon;
+use crate::measures::rdp_to_approxdp::linear::test::cdp_epsilon;
 
 use crate::{
     combinators::make_approximate, domains::AtomDomain, measurements::make_gaussian,

@@ -12,6 +12,7 @@
 //! arithmetic and transcendental operators.
 
 pub(crate) mod batch;
+pub(crate) mod linear;
 
 use crate::{
     error::{ErrorVariant, Fallible},

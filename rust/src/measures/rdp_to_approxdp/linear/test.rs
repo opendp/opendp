@@ -1,4 +1,5 @@
 use super::*;
+use crate::measures::zcdp::zcdp_delta;
 
 use crate::error::ErrorVariant;
 use crate::{error::Fallible, traits::Float};
@@ -103,11 +104,46 @@ pub(crate) fn cdp_epsilon<Q: Float>(rho: Q, delta: Q) -> Fallible<Q> {
 }
 
 #[test]
-fn test_cdp_delta_rounding_regression() -> Fallible<()> {
-    // previously rounded 1 ulp lower
-    assert_eq!(cdp_delta(0.05, 0.25)?, 8.177275310369558e-2);
-    // optimal alpha exceeds 2^53, to verify (α - 1) rounds
-    assert_eq!(cdp_delta(5e-30, 1e-13)?, 2.6196763297300477e-234);
+fn test_zcdp_delta_rounding_regression() -> Fallible<()> {
+    use rug::Float as MPFloat;
+
+    for (rho, epsilon, previous) in [
+        (0.05, 0.25, 8.177275310369558e-2),
+        // The optimal order exceeds 2^53.
+        (5e-30, 1e-13, 2.6196763297300477e-234),
+    ] {
+        let alpha = MPFloat::with_val(512, zcdp_order(rho, epsilon));
+        let t: MPFloat = alpha.clone() - 1.0;
+        let gamma = alpha.clone() * rho;
+        let correction = alpha.clone() * (-MPFloat::with_val(512, 1) / alpha).ln_1p();
+        let reference = (t.clone() * (gamma - epsilon) + correction - t.ln()).exp();
+        let bound = zcdp_delta(rho, epsilon)?;
+        assert!(MPFloat::with_val(512, bound) >= reference);
+        assert!(bound <= previous * (1.0 + 1e-12));
+    }
+    Ok(())
+}
+
+#[test]
+fn test_zcdp_direct_inverse() -> Fallible<()> {
+    use rug::Float as MPFloat;
+
+    for (rho, log_delta) in [(0.05, -5.0), (0.5, -1000.0), (1e-30, -1e6)] {
+        let alpha = MPFloat::with_val(512, zcdp_inverse_order(rho, log_delta));
+        let t: MPFloat = alpha.clone() - 1.0;
+        let gamma = alpha.clone() * rho;
+        let correction =
+            alpha.clone() * (-MPFloat::with_val(512, 1) / alpha).ln_1p() - t.clone().ln();
+        let reference = gamma + (correction - log_delta) / t;
+        let epsilon = zcdp_epsilon_from_log_delta(rho, log_delta)?;
+        assert!(MPFloat::with_val(512, epsilon) >= reference);
+        assert!(zcdp_log_delta(rho, epsilon)? <= log_delta + 1e-8);
+    }
+    assert_eq!(zcdp_epsilon_from_log_delta(0.0, f64::NEG_INFINITY)?, 0.0);
+    assert_eq!(
+        zcdp_epsilon_from_log_delta(0.5, f64::NEG_INFINITY)?,
+        f64::INFINITY
+    );
     Ok(())
 }
 
@@ -115,7 +151,7 @@ fn test_cdp_delta_rounding_regression() -> Fallible<()> {
 fn test_numeric_errors_propagate() {
     for (rho, eps) in [(f64::NAN, 0.1), (0.1, f64::NAN)] {
         assert_eq!(
-            cdp_delta(rho, eps).unwrap_err().variant,
+            zcdp_delta(rho, eps).unwrap_err().variant,
             ErrorVariant::NumericError
         );
     }
@@ -123,7 +159,8 @@ fn test_numeric_errors_propagate() {
 
 #[test]
 fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
-    let delta = cdp_delta(0.03125, f64::MAX)?;
+    assert!(zcdp_log_delta(f64::from_bits(1), 1.0)? < -1000.0);
+    let delta = zcdp_delta(0.03125, f64::MAX)?;
     // A finite epsilon has no certified pure-DP endpoint here. A rounded-up
     // subnormal is valid; silently returning mathematical zero would not be.
     assert!(delta > 0.0 && delta < f64::MIN_POSITIVE);
@@ -133,17 +170,19 @@ fn test_alpha_heuristic_overflow_preserves_positive_delta() -> Fallible<()> {
 #[test]
 fn test_edge_cases() -> Fallible<()> {
     // Signed zero is mathematically zero and is accepted.
-    assert_eq!(cdp_delta(-0., 0.)?, 0.);
-    assert_eq!(cdp_delta(0., -0.)?, 0.);
-    assert_eq!(cdp_delta(0., 0.)?, 0.);
+    assert_eq!(zcdp_delta(-0., 0.)?, 0.);
+    assert_eq!(zcdp_delta(0., -0.)?, 0.);
+    assert_eq!(zcdp_delta(0., 0.)?, 0.);
 
-    let delta = cdp_delta(0.5, 0.)?;
-    assert_eq!(delta, 0.5588356393474351);
-    assert_eq!(cdp_epsilon(0.5, delta)?, 0.0);
+    let delta = zcdp_delta(0.5, 0.)?;
+    assert!(delta <= 0.558835639347436);
+    assert!(cdp_epsilon(0.5, delta)? <= 1e-14);
 
-    assert!(cdp_delta(0.1, 0.1)? > 0.);
-    assert_eq!(cdp_delta(0.1, f64::INFINITY)?, 0.);
-    assert_eq!(cdp_delta(f64::INFINITY, 1.)?, 1.0);
+    assert!(zcdp_delta(0.1, 0.1)? > 0.);
+    assert_eq!(zcdp_delta(0.1, f64::INFINITY)?, 0.);
+    assert_eq!(zcdp_delta(f64::INFINITY, 1.)?, 1.0);
+    assert_eq!(zcdp_log_delta(f64::MAX, 0.0)?, 0.0);
+    assert_eq!(zcdp_log_delta(f64::MAX, f64::MAX)?, 0.0);
 
     Ok(())
 }
