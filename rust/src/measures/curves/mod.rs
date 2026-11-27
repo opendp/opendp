@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use super::rdp_to_approxdp::linear::{zcdp_epsilon_batch, zcdp_log_delta_batch};
+
 use crate::{
     error::Fallible, traits::SInterval, utilities::search::fallible_invert_decreasing_batch,
 };
@@ -11,6 +13,8 @@ mod profile_to_tradeoff;
 mod renyidp;
 #[cfg(feature = "ffi")]
 mod renyidp_ffi;
+#[cfg(feature = "ffi")]
+mod zcdp_ffi;
 
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
@@ -162,6 +166,7 @@ pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
     renyi: Option<RenyiRepresentation>,
+    zcdp: Option<ZCDPRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -205,6 +210,15 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a rho-zCDP representation with additive source-delta semantics.
+    #[allow(non_snake_case)]
+    pub fn with_zCDP(mut self, rho: f64, source_delta: f64) -> Fallible<Self> {
+        check_rho(rho)?;
+        check_delta(source_delta)?;
+        self.zcdp = Some(ZCDPRepresentation { rho, source_delta });
+        Ok(self)
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         Ok(self.delta_batch(&[epsilon])?[0])
@@ -243,6 +257,13 @@ impl PrivacyGuarantee {
                 renyidp::delta_via_renyiDP_batch(repr.curve.as_ref(), repr.source_delta, epsilon)?,
             );
         }
+        if let Some(repr) = &self.zcdp {
+            let values = zcdp_log_delta_batch(repr.rho, epsilon)?
+                .into_iter()
+                .map(|log_delta| log_to_delta_upper(log_delta, repr.source_delta))
+                .collect::<Fallible<Vec<_>>>()?;
+            min_assign(&mut bounds, values);
+        }
         Ok(bounds)
     }
 
@@ -266,6 +287,12 @@ impl PrivacyGuarantee {
                 &mut bounds,
                 renyidp::epsilon_via_renyiDP_batch(repr.curve.as_ref(), repr.source_delta, delta)?,
             );
+        }
+        if let Some(repr) = &self.zcdp {
+            let values = invert_delta_budgets(delta, repr.source_delta, false, |targets| {
+                zcdp_epsilon_batch(repr.rho, targets)
+            })?;
+            min_assign(&mut bounds, values);
         }
         Ok(bounds)
     }
@@ -291,6 +318,13 @@ impl PrivacyGuarantee {
                     epsilon,
                 )?,
             );
+        }
+        if let Some(repr) = &self.zcdp {
+            let values = zcdp_log_delta_batch(repr.rho, epsilon)?
+                .into_iter()
+                .map(|log_delta| add_log_delta_slack(log_delta, repr.source_delta))
+                .collect::<Fallible<Vec<_>>>()?;
+            min_assign(&mut bounds, values);
         }
         Ok(bounds)
     }
@@ -320,6 +354,12 @@ impl PrivacyGuarantee {
                 )?,
             );
         }
+        if let Some(repr) = &self.zcdp {
+            let values = invert_delta_budgets(log_delta, repr.source_delta, true, |targets| {
+                zcdp_epsilon_batch(repr.rho, targets)
+            })?;
+            min_assign(&mut bounds, values);
+        }
         Ok(bounds)
     }
 
@@ -343,6 +383,12 @@ impl PrivacyGuarantee {
             max_assign(
                 &mut bounds,
                 renyidp::beta_via_renyiDP_batch(repr.curve.clone(), repr.source_delta, alphas)?,
+            );
+        }
+        if let Some(repr) = &self.zcdp {
+            max_assign(
+                &mut bounds,
+                profile_to_tradeoff::beta_via_profile_batch(&repr.as_profile()?, alphas)?,
             );
         }
         Ok(bounds)
@@ -382,6 +428,7 @@ impl std::fmt::Debug for PrivacyGuarantee {
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
             .field("renyi", &self.renyi.is_some())
+            .field("zcdp", &self.zcdp.is_some())
             .finish()
     }
 }
@@ -392,6 +439,20 @@ type RenyiFn = dyn Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync;
 struct RenyiRepresentation {
     curve: Arc<RenyiFn>,
     source_delta: f64,
+}
+
+#[derive(Clone, Copy)]
+struct ZCDPRepresentation {
+    rho: f64,
+    source_delta: f64,
+}
+
+impl ZCDPRepresentation {
+    fn as_profile(&self) -> Fallible<PrivacyProfile> {
+        let rho = self.rho;
+        PrivacyProfile::new_log(move |epsilons| zcdp_log_delta_batch(rho, epsilons))
+            .with_delta_slack(self.source_delta)
+    }
 }
 
 impl PrivacyProfile {
@@ -600,12 +661,22 @@ fn invert_delta_budgets(
     Ok(results)
 }
 
+fn invert_log_curve(
+    targets: &[f64],
+    callback: impl Fn(f64) -> Fallible<f64>,
+) -> Fallible<Vec<f64>> {
+    fallible_invert_decreasing_batch(
+        |epsilons| epsilons.iter().copied().map(&callback).collect(),
+        targets,
+    )
+}
+
 fn check_alpha(alpha: f64) -> Fallible<()> {
     check_unit_interval(alpha, "alpha")
 }
 
 fn check_unit_interval(value: f64, name: &str) -> Fallible<()> {
-    if !value.is_finite() || value.is_sign_negative() || value > 1.0 {
+    if !value.is_finite() || value < 0.0 || value > 1.0 {
         return fallible!(FailedMap, "{name} ({value}) must be between zero and one");
     }
     Ok(())
@@ -617,6 +688,13 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
             FailedMap,
             "epsilon ({epsilon}) must be non-negative and not NaN"
         );
+    }
+    Ok(())
+}
+
+fn check_rho(rho: f64) -> Fallible<()> {
+    if rho.is_nan() || rho < 0.0 {
+        return fallible!(FailedMap, "rho must be non-negative and not NaN");
     }
     Ok(())
 }

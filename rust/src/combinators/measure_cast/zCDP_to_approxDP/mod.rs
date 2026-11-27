@@ -4,15 +4,13 @@ use crate::{
     measures::{Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
 };
 
-use self::cdp_delta::cdp_delta;
+use crate::measures::zcdp::zcdp_delta;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[cfg(test)]
 mod test;
-
-mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
@@ -61,7 +59,7 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
         Ok(PrivacyProfile::new(move |epsilon| {
             epsilon
                 .iter()
-                .map(|&epsilon| cdp_delta(rho, epsilon))
+                .map(|&epsilon| zcdp_delta(rho, epsilon))
                 .collect()
         }))
     }
@@ -77,7 +75,7 @@ impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
             PrivacyProfile::new(move |epsilon| {
                 epsilon
                     .iter()
-                    .map(|&epsilon| cdp_delta(rho, epsilon))
+                    .map(|&epsilon| zcdp_delta(rho, epsilon))
                     .collect()
             }),
             delta,
