@@ -1,25 +1,5 @@
 use super::*;
 
-pub fn assert_ordered_progression<D: InverseCDF>(
-    sampler: &mut PartialSample<D>,
-    min_refinements: usize,
-) -> Fallible<(D::Edge, D::Edge)>
-where
-    D::Edge: PartialOrd,
-{
-    loop {
-        sampler.refine()?;
-        let Some((l, r)) = sampler.lower()?.zip(sampler.upper()?) else {
-            continue;
-        };
-        assert!(l <= r);
-
-        if sampler.refinements >= min_refinements {
-            return Ok((l, r));
-        }
-    }
-}
-
 struct UniformRV;
 
 impl InverseCDF for UniformRV {
