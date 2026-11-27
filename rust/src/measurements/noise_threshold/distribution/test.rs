@@ -17,7 +17,7 @@ fn test_noise_threshold() -> Fallible<()> {
         None,
     )?;
 
-    let m_lap = make_laplace_threshold(
+    let m_lap = make_laplace_threshold::<_, _, Approximate<MaxDivergence>>(
         MapDomain::new(
             AtomDomain::<bool>::default(),
             AtomDomain::<i32>::new_non_nan(),

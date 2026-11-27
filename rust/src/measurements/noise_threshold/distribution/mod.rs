@@ -6,10 +6,12 @@ pub use gaussian::*;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Measurement, Metric, MetricSpace},
+    core::{Measure, Measurement, Metric, MetricSpace},
     error::Fallible,
-    measurements::{MakeNoiseThreshold, NoiseDomain, NoiseMeasure},
-    measures::Approximate,
+    measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoiseThreshold, NoiseDomain},
+    measures::{Approximate, MaxDivergence, MultiDP, ZeroConcentratedDivergence},
+    metrics::{AbsoluteDistance, L01InfDistance, L02InfDistance},
+    traits::Number,
 };
 
 #[cfg(feature = "ffi")]
@@ -57,8 +59,8 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
-/// * `output_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
-/// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
+/// * `output_measure` - Privacy measure used for accounting. Legacy approximate measures preserve their historical distribution; `MultiDP` selects from metric geometry.
+/// * `scale` - Noise scale parameter.
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
@@ -66,19 +68,104 @@ mod test;
 /// * `DI` - Input Domain.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Measure.
-pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric, MO: NoiseMeasure>(
+pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric, MO: NoiseThresholdMeasureFor<DI, MI>>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: Approximate<MO>,
+    output_measure: MO,
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, MI, Approximate<MO>, DI::Carrier>>
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
-    MO::Distribution: MakeNoiseThreshold<DI, MI, Approximate<MO>, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
 {
-    (output_measure.0)
-        .new_distribution(scale, k)
-        .make_noise_threshold((input_domain, input_metric), threshold)
+    let mut measurement = output_measure.clone().make_noise_threshold(
+        (input_domain, input_metric),
+        threshold,
+        scale,
+        k,
+    )?;
+    measurement.output_measure = output_measure;
+    Ok(measurement)
+}
+
+pub trait NoiseThresholdMeasureFor<DI: NoiseDomain, MI: Metric>: Measure + 'static {
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>>
+    where
+        (DI, MI): MetricSpace;
+}
+
+impl<DI: NoiseDomain, MI: Metric> NoiseThresholdMeasureFor<DI, MI> for Approximate<MaxDivergence>
+where
+    (DI, MI): MetricSpace,
+    DiscreteLaplace: MakeNoiseThreshold<DI, MI, Self, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>> {
+        make_laplace_threshold(input_space.0, input_space.1, scale, threshold, k)
+    }
+}
+
+impl<DI: NoiseDomain, MI: Metric> NoiseThresholdMeasureFor<DI, MI>
+    for Approximate<ZeroConcentratedDivergence>
+where
+    (DI, MI): MetricSpace,
+    DiscreteGaussian: MakeNoiseThreshold<DI, MI, Self, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, MI),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+    ) -> Fallible<Measurement<DI, MI, Self, DI::Carrier>> {
+        make_gaussian_threshold(input_space.0, input_space.1, scale, threshold, k)
+    }
+}
+
+impl<DI: NoiseDomain, Q: Number> NoiseThresholdMeasureFor<DI, L01InfDistance<AbsoluteDistance<Q>>>
+    for MultiDP
+where
+    (DI, L01InfDistance<AbsoluteDistance<Q>>): MetricSpace,
+    DiscreteLaplace:
+        MakeNoiseThreshold<DI, L01InfDistance<AbsoluteDistance<Q>>, Self, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, L01InfDistance<AbsoluteDistance<Q>>),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+    ) -> Fallible<Measurement<DI, L01InfDistance<AbsoluteDistance<Q>>, Self, DI::Carrier>> {
+        make_laplace_threshold(input_space.0, input_space.1, scale, threshold, k)
+    }
+}
+
+impl<DI: NoiseDomain, Q: Number> NoiseThresholdMeasureFor<DI, L02InfDistance<AbsoluteDistance<Q>>>
+    for MultiDP
+where
+    (DI, L02InfDistance<AbsoluteDistance<Q>>): MetricSpace,
+    DiscreteGaussian:
+        MakeNoiseThreshold<DI, L02InfDistance<AbsoluteDistance<Q>>, Self, Threshold = DI::Atom>,
+{
+    fn make_noise_threshold(
+        self,
+        input_space: (DI, L02InfDistance<AbsoluteDistance<Q>>),
+        threshold: DI::Atom,
+        scale: f64,
+        k: Option<i32>,
+    ) -> Fallible<Measurement<DI, L02InfDistance<AbsoluteDistance<Q>>, Self, DI::Carrier>> {
+        make_gaussian_threshold(input_space.0, input_space.1, scale, threshold, k)
+    }
 }
