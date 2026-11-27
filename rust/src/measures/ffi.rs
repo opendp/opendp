@@ -14,7 +14,9 @@ use crate::{
         any::AnyMeasure,
         util::{self, into_c_char_p},
     },
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{
+        AccountingPreference, Approximate, MaxDivergence, MultiDP, ZeroConcentratedDivergence,
+    },
     traits::ProductOrd,
 };
 
@@ -117,6 +119,28 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(MaxDivergence)).into()
+}
+
+#[bootstrap(
+    name = "multi_dp",
+    arguments(preference(c_type = "char *", rust_type = b"null", default = b"null"))
+)]
+/// Privacy measure that retains all independently certified representations
+/// returned by a mechanism's privacy map.
+///
+/// # Arguments
+/// * `preference` - Optional accounting preference: "pure_dp", "zcdp", or "auto".
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__multi_dp(
+    preference: *const c_char,
+) -> FfiResult<*mut AnyMeasure> {
+    let preference = match try_!(util::to_option_str(preference)) {
+        None | Some("auto") => AccountingPreference::Auto,
+        Some("pure_dp") => AccountingPreference::PureDp,
+        Some("zcdp") => AccountingPreference::Zcdp,
+        _ => return err!(FailedCast, "unknown accounting preference").into(),
+    };
+    Ok(AnyMeasure::new(MultiDP::new(preference))).into()
 }
 
 #[bootstrap(name = "smoothed_max_divergence")]

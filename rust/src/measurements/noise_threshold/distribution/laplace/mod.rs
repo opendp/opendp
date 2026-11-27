@@ -16,7 +16,7 @@ use crate::{
         DiscreteLaplace, MakeNoiseThreshold, NoiseDomain, NoisePrivacyMap,
         NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
     },
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, MaxDivergence, MultiDP, PrivacyGuarantee},
     metrics::{AbsoluteDistance, L1Distance, L01InfDistance},
     traits::{InfPowI, InfSub, option_min},
 };
@@ -105,6 +105,33 @@ where
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/laplace/NoiseThresholdPrivacyMap_for_ZExpFamily1.tex"
 )]
+impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, MultiDP> for ZExpFamily<1> {
+    fn noise_threshold_privacy_map(
+        &self,
+        input_metric: &L01InfDistance<AbsoluteDistance<RBig>>,
+        _output_measure: &MultiDP,
+        threshold: UBig,
+    ) -> Fallible<PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, MultiDP>> {
+        let pure_map = <Self as NoiseThresholdPrivacyMap<
+            L01InfDistance<AbsoluteDistance<RBig>>,
+            Approximate<MaxDivergence>,
+        >>::noise_threshold_privacy_map(
+            self,
+            input_metric,
+            &Approximate(MaxDivergence),
+            threshold,
+        )?;
+
+        Ok(PrivacyMap::new_fallible(move |distance| {
+            let (epsilon, delta) = pure_map.eval(distance)?;
+            if epsilon.is_infinite() {
+                return Ok(PrivacyGuarantee::new());
+            }
+            PrivacyGuarantee::new().with_approx_dp(epsilon, delta)
+        }))
+    }
+}
+
 impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>
     for ZExpFamily<1>
 {

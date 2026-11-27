@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use crate::core::{MetricSpace, PrivacyMap};
+use crate::core::{Measure, MetricSpace, PrivacyMap};
 use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
-use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, make_noise};
+use crate::measurements::{
+    DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasureFor, make_gaussian, make_laplace,
+};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -155,15 +157,14 @@ pub(crate) fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasur
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
-    // This is ugly, but necessary because the necessary trait bound spans TIA
-    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    MO: NoiseMeasureFor<VectorDomain<AtomDomain<u32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<u64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i8>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i16>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<i64>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f32>>, MO::Metric>
+        + NoiseMeasureFor<VectorDomain<AtomDomain<f64>>, MO::Metric>,
     (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
@@ -258,7 +259,7 @@ where
     t_prior >> m_noise
 }
 
-pub trait NoiseExprMeasure: 'static + NoiseMeasure<Distance = f64> {
+pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
     type Metric: 'static + OuterMetric<Distance = f64>;
     const DISTRIBUTION: NoiseDistribution;
 }
@@ -293,23 +294,27 @@ pub(crate) fn match_noise(expr: &Expr) -> Fallible<Option<(&Expr, Option<f64>)>>
     Ok(Some((data, scale)))
 }
 
-fn map_function<MO: NoiseExprMeasure, T: CheckAtom>(
+fn map_function<
+    MO: NoiseExprMeasure + NoiseMeasureFor<VectorDomain<AtomDomain<T>>, MO::Metric>,
+    T: CheckAtom,
+>(
     input_metric: &MO::Metric,
     scale: f64,
 ) -> Fallible<PrivacyMap<MO::Metric, MO>>
 where
-    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<T>>, MO::Metric, MO>,
     (VectorDomain<AtomDomain<T>>, MO::Metric): MetricSpace,
 {
-    Ok(make_noise(
-        VectorDomain::new(AtomDomain::<T>::new_non_nan()),
-        input_metric.clone(),
-        MO::default(),
-        scale,
-        None,
-    )?
-    .privacy_map
-    .clone())
+    Ok(MO::default()
+        .make_noise(
+            (
+                VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+                input_metric.clone(),
+            ),
+            scale,
+            None,
+        )?
+        .privacy_map
+        .clone())
 }
 
 // Code comment, not documentation:
@@ -369,14 +374,13 @@ where
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
         NoiseDistribution::Laplace => {
-            make_noise(domain, L1Distance::default(), MaxDivergence, scale, None)?
+            make_laplace::<_, _, MaxDivergence>(domain, L1Distance::default(), scale, None)?
                 .function
                 .clone()
         }
-        NoiseDistribution::Gaussian => make_noise(
+        NoiseDistribution::Gaussian => make_gaussian::<_, _, ZeroConcentratedDivergence>(
             domain,
             L2Distance::default(),
-            ZeroConcentratedDivergence,
             scale,
             None,
         )?

@@ -66,25 +66,38 @@ def test_gaussian_search():
 
 def new_make_noise(measure):
     def make_noise(domain, metric, scale):
-        return dp.m.make_noise(domain, metric, measure, scale)
+        return dp.m.make_noise(domain, metric, output_measure=measure, scale=scale)
 
     return make_noise
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
+    "constructor, returns_guarantee",
+    [
+        (dp.m.make_laplace, False),
+        (new_make_noise(dp.max_divergence()), False),
+    ],
 )
-def test_laplace(constructor):
+def test_laplace(constructor, returns_guarantee):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = constructor(*input_space, 1)
     assert -50 < meas(0.0) < 50
-    assert meas.map(1.0) == 1.0
+    guarantee = meas.map(1.0)
+    if returns_guarantee:
+        assert isinstance(guarantee, dp.PrivacyGuarantee)
+        assert guarantee.epsilon(0.0) == 1.0
+    else:
+        assert guarantee == 1.0
 
 
 @pytest.mark.parametrize(
-    "constructor", [dp.m.make_laplace, new_make_noise(dp.max_divergence())]
+    "constructor, returns_guarantee",
+    [
+        (dp.m.make_laplace, False),
+        (new_make_noise(dp.max_divergence()), False),
+    ],
 )
-def test_vector_laplace(constructor):
+def test_vector_laplace(constructor, returns_guarantee):
     input_space = (
         dp.vector_domain(dp.atom_domain(T=float, nan=False)),
         dp.l1_distance(T=float),
@@ -93,7 +106,21 @@ def test_vector_laplace(constructor):
     release = meas([0.0, 0.0, 0.0])
     assert -50 < min(release)
     assert max(release) < 50
-    assert meas.map(1.0) == 1.0
+    guarantee = meas.map(1.0)
+    if returns_guarantee:
+        assert isinstance(guarantee, dp.PrivacyGuarantee)
+        assert guarantee.epsilon(0.0) == 1.0
+    else:
+        assert guarantee == 1.0
+
+
+def test_generic_noise_gaussian_returns_multidp_guarantee():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.m.make_noise(
+        *input_space, output_measure=dp.zero_concentrated_divergence(), scale=1.0
+    )
+    assert meas.output_measure == dp.zero_concentrated_divergence()
+    assert meas.map(1.0) == 0.5
 
 
 def test_gaussian_smoothed_max_divergence():
@@ -384,3 +411,61 @@ def test_canonical_noise():
     assert m_cnd.map(1.0) == (1.0, 1e-6)
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
+
+
+def test_generic_noise_multidp_distribution_selection():
+    domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    laplace = dp.m.make_noise(domain, dp.l1_distance(T=float), dp.multi_dp(), scale=1.0)
+    gaussian = dp.m.make_noise(
+        domain, dp.l2_distance(T=float), dp.multi_dp(), scale=1.0
+    )
+    assert laplace.map(1.0).epsilon(0.0) == 1.0
+    assert gaussian.map(1.0).epsilon(0.0) == float("inf")
+
+    scalar = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noise(*scalar, dp.multi_dp(), scale=1.0)
+    for preference, pure in [("pure_dp", True), ("zcdp", False)]:
+        meas = dp.m.make_noise(*scalar, dp.multi_dp(preference), scale=1.0)
+        assert (meas.map(1.0).epsilon(0.0) < float("inf")) == pure
+
+
+def test_multidp_noise_threshold_distribution_selection():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
+    for metric, distribution in [
+        (dp.l01inf_distance(dp.absolute_distance(T=int)), "laplace"),
+        (dp.l02inf_distance(dp.absolute_distance(T=int)), "gaussian"),
+    ]:
+        meas = dp.m.make_noise_threshold(
+            domain,
+            metric,
+            dp.multi_dp(),
+            scale=2.0,
+            threshold=28,
+        )
+        guarantee = meas.map((1, 10, 10))
+        assert isinstance(guarantee, dp.PrivacyGuarantee)
+        legacy_measure = (
+            dp.max_divergence()
+            if distribution == "laplace"
+            else dp.zero_concentrated_divergence()
+        )
+        legacy = dp.m.make_noise_threshold(
+            domain, metric, dp.approximate(legacy_measure), scale=2.0, threshold=28
+        )
+        parameter, delta = legacy.map((1, 10, 10))
+        assert guarantee.delta(float("inf")) == delta
+        if distribution == "laplace":
+            assert guarantee.epsilon(delta) == parameter
+        else:
+            expected = dp.PrivacyGuarantee(zCDP=parameter, zCDP_delta=delta)
+            assert guarantee.delta(1.0) == expected.delta(1.0)
+        # Geometry takes precedence over the advisory accounting preference.
+        preferred = dp.m.make_noise_threshold(
+            domain,
+            metric,
+            dp.multi_dp("zcdp" if distribution == "laplace" else "pure_dp"),
+            scale=2.0,
+            threshold=28,
+        )
+        assert preferred.map((1, 10, 10)).delta(float("inf")) == delta
