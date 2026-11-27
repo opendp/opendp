@@ -63,19 +63,18 @@ position.
 Distribution: Exponential vs. Gumbel
 ------------------------------------
 
-Based on the choice of privacy measure passed into ``report_noisy_max``,
-the OpenDP Library chooses the corresponding distribution to maximize
-utility:
+The OpenDP Library chooses the selection algorithm from the output measure's
+accounting preference:
 
-+-------------------+------------------------------------+--------------+
-| Privacy           | ``privacy_measure``                | distribution |
-| Definition        |                                    |              |
-+===================+====================================+==============+
-| pure-DP           | ``dp.max_divergence()``            | exponential  |
-+-------------------+------------------------------------+--------------+
-| zCDP              | ``d                                | gumbel       |
-|                   | p.zero_concentrated_divergence()`` |              |
-+-------------------+------------------------------------+--------------+
+.. list-table::
+    :header-rows: 1
+
+    * - ``output_measure``
+      - distribution
+    * - ``dp.max_divergence()`` or ``dp.multi_dp("pure_dp")``
+      - exponential
+    * - ``dp.zero_concentrated_divergence()`` or ``dp.multi_dp("zcdp")``
+      - gumbel
 
 In the case of pure-DP, many noise distributions have been considered.
 Report noisy max was initially introduced to the differential privacy

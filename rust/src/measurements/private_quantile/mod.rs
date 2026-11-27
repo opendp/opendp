@@ -20,7 +20,7 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure")),
+    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure"),),
     generics(MI(suppress), MO(suppress), T(suppress)),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]

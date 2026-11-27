@@ -2,7 +2,7 @@
 def make_noisy_top_k(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: LInfDistance[TIA],
-    privacy_measure: MO,
+    output_measure: MO,
     k: usize,
     scale: f64,
     negate: bool,
@@ -20,6 +20,7 @@ def make_noisy_top_k(
         raise "scale must be finite and non-negative"
 
     monotonic = input_metric.monotonic
+    replacement = output_measure.replacement()
 
     def privacy_map(d_in: TIA):  # |\label{fn-privacy-map}|
         # convert to range distance
@@ -29,19 +30,13 @@ def make_noisy_top_k(
         if d_in.is_sign_negative():  # |\label{din-non-neg}|
             raise "sensitivity must be non-negative"
 
-        if d_in.is_zero():  # |\label{din-non-zero}|
-            return 0.0
-
-        if scale.is_zero():  # |\label{scale-zero}|
-            return f64.INFINITY
-
         # |\label{fn-privacy-map-call}|
-        return MO.privacy_map(d_in, scale).inf_mul(f64.inf_cast(k))
+        return output_measure.privacy_map(d_in, scale, k)
 
     return Measurement.new(
         input_domain=input_domain,
         input_metric=input_metric,
-        output_measure=privacy_measure,
-        function=lambda x: noisy_top_k(x, scale, k, negate, MO.REPLACEMENT),
+        output_measure=output_measure,
+        function=lambda x: noisy_top_k(x, scale, k, negate, replacement),
         privacy_map=privacy_map,
     )

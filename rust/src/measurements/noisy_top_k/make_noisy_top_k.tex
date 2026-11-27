@@ -43,15 +43,12 @@ None
 \end{proof}
 
 \begin{proof}[Proof of privacy guarantee.]
-    When \din\ is zero, by line~\ref{din-non-zero}, the privacy loss is zero, satisfying the postcondition.
-    Otherwise when scale is zero, by line~\ref{scale-zero}, the privacy loss is infinite, also satisfying the postcondition.
-
     By the checks on lines~\ref{check-non-nan} and \ref{check-non-negative-scale},
     the preconditions for \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} are satisfied.
-    Additionally by the checks on lines~\ref{din-non-neg}, \ref{din-non-zero} and \ref{scale-zero},
-    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{privacy\_map} are satisfied.
+    The check on line~\ref{din-non-neg} establishes nonnegative range sensitivity.
+    The output measure selects the same algorithm for sampling and for its privacy bound.
 
-    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} and adaptive composition,
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}, which includes adaptive composition over the peeling rounds,
     the \dout on line~\ref{fn-privacy-map-call} satisfies the postcondition.
 \end{proof}
 

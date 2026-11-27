@@ -9,7 +9,7 @@ use crate::{
         util::{c_bool, to_bool},
     },
     measurements::{make_noisy_max, noisy_top_k::TopKMeasure},
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{MaxDivergence, MultiDP, ZeroConcentratedDivergence},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
@@ -55,10 +55,21 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
     dispatch!(
         monomorphize,
         [
-            (MO, [MaxDivergence, ZeroConcentratedDivergence]),
+            (MO, [MaxDivergence, ZeroConcentratedDivergence, MultiDP]),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
         (input_domain, input_metric, output_measure, scale, negate)
     )
     .into()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measurements__make_report_noisy_max(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    output_measure: *const AnyMeasure,
+    scale: f64,
+    negate: c_bool,
+) -> FfiResult<*mut AnyMeasurement> {
+    opendp_measurements__make_noisy_max(input_domain, input_metric, output_measure, scale, negate)
 }

@@ -1,11 +1,12 @@
 use crate::{
+    core::Measure,
     error::Fallible,
     measures::{MaxDivergence, ZeroConcentratedDivergence},
 };
 
 use super::*;
 
-fn check_rnm_outcome<M: TopKMeasure>(
+fn check_rnm_outcome<M: TopKMeasure + Measure<Distance = f64>>(
     measure: M,
     scale: f64,
     negate: bool,
