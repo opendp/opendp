@@ -180,12 +180,18 @@ def make_private_linear_regression(
         t_features = t_features >> t_append
 
     num_entries = dimension * (dimension + 1) // 2
+    units = None
+    if public_size is not None and gaussian and fit_intercept:
+        # Experimental weighting relative to the ordinary replacement bound.
+        cross_norm = math.nextafter(feature_norm * y_bound, math.inf)
+        units = (None, math.nextafter(1.5 * cross_norm, math.inf))
     t_joint, gram_unit, cross_unit = make_np_joint_moments(
         t_features,
         target=lambda data: data.y,
         target_bound=y_bound,
         size=public_size,
         p=2 if gaussian else 1,
+        units=units,
     )
 
     def make_measurement(scale):

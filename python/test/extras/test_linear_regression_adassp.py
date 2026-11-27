@@ -230,6 +230,7 @@ def test_regression_clipped_statistics(monkeypatch):
     monkeypatch.setattr(private_lr, "make_np_joint_moments", capture)
     _measure(domain=_domain(n=2, y_size=2))
     joint, gram_unit, cross_unit = captured
+    assert joint.map(2) == pytest.approx(13 / 9)
     data = dp.sklearn.SklearnFit(
         np.array([[3.0, 4.0], [0.0, -5.0]]), np.array([10.0, -9.0])
     )
