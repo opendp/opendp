@@ -1,0 +1,75 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{impl TopKMeasure for MultiDP}}
+\author{\MichaelShoemateAuthor}
+\begin{document}
+\maketitle
+
+This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} for \texttt{MultiDP}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}: types are consistent with the PureDP and zCDP top-$k$ accounting implementations.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}: \texttt{d\_in} is non-null and non-negative, and \texttt{scale} is non-null and non-negative.
+\end{itemize}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The implementation is consistent with the associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
+    For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$, \texttt{privacy\_map} returns a \texttt{PrivacyGuarantee} containing a valid bound for the selected top-$k$ mechanism.
+\end{theorem}
+
+\begin{proof}
+    The accounting preference selects the mechanism in both sampling and privacy accounting.
+    An automatic preference is rejected because the score metric does not distinguish the algorithms.
+    At zero sensitivity the mechanism is identical on adjacent inputs; at positive sensitivity and zero scale a vacuous bound is valid.
+    Otherwise, for permute-and-flip, the implementation uses the established PureDP bound
+    $\epsilon = k d_\mathrm{in}/\mathrm{scale}$ and embeds it as a pure-DP certificate.
+    For the exponential mechanism (equivalent to Gumbel noisy selection), it uses the established zCDP bound
+    $\rho = k(d_\mathrm{in}/\mathrm{scale})^2/8$.
+    It also satisfies the same pure-DP bound as permute-and-flip:
+    in each peeling round the exponential mechanism's privacy loss has range at most
+    $d_\mathrm{in}/\mathrm{scale}$, since the log ratio of normalizers is
+    independent of the selected index and the range metric bounds the score differences.
+    The interval containing the privacy loss must contain zero, since both
+    output distributions sum to one. Thus its absolute privacy loss is bounded by
+    $d_\mathrm{in}/\mathrm{scale}$.
+    For the RDP certificate, write $\nu=d_\mathrm{in}/\mathrm{scale}$ and let
+    $\alpha>1$. A likelihood ratio with log-range at most $\nu$ has mean one under
+    the denominator distribution. By convexity of $r\mapsto r^\alpha$, its
+    $\alpha$-moment is upper-bounded by that of a two-point distribution on the
+    endpoints of an interval of likelihood ratios with ratio $e^\nu$ and mean one.
+    If $q$ is its mass on the upper endpoint, this moment equals
+    \[
+        \frac{1+qB}{(1+qA)^\alpha},\qquad
+        A=e^\nu-1,\quad B=e^{\alpha\nu}-1.
+    \]
+    For $\nu>0$ the derivative of its logarithm has the sign of
+    $B-\alpha A-(\alpha-1)ABq$. Maximizing over $q$ gives the upper bound
+    \[
+        D_\alpha \le \frac{\log(B/(\alpha A))}{\alpha-1}
+                    -\log\frac{\alpha(B-A)}{(\alpha-1)B}.
+    \]
+    Factoring the exponentials out of $A$, $B$, and $B-A$ yields the log-space
+    expression in the implementation. Interval arithmetic encloses this bound;
+    if its evaluation fails, the pure-DP bound $\nu$ is valid at every order.
+    At $\nu=0$ the RDP bound is zero.
+
+    The bounds compose over the $k$ peeling rounds. All three certificates are
+    attached for the exponential mechanism when the pure-DP bound is finite,
+    and the pure-DP certificate for permute-and-flip when finite.
+    Directed arithmetic rounds the final multiplication upward.
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

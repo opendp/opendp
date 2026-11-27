@@ -430,6 +430,49 @@ def test_generic_noise_multidp_distribution_selection():
         assert (meas.map(1.0).epsilon(0.0) < float("inf")) == pure
 
 
+def test_multidp_selection_preference_and_quantile_forwarding():
+    scores = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+    metric = dp.linf_distance(T=float)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noisy_max(scores, metric, dp.multi_dp(), scale=1.0)
+    with pytest.raises(dp.OpenDPException):
+        dp.m.make_noisy_top_k(scores, metric, dp.multi_dp(), 1, scale=1.0)
+
+    for preference in ["pure_dp", "zcdp"]:
+        assert isinstance(
+            dp.m.make_noisy_max(scores, metric, dp.multi_dp(preference), scale=1.0).map(
+                1.0
+            ),
+            dp.PrivacyGuarantee,
+        )
+
+    quantile = dp.m.make_private_quantile(
+        scores,
+        dp.symmetric_distance(),
+        dp.multi_dp("zcdp"),
+        [0.0, 1.0],
+        0.5,
+        1.0,
+    )
+    assert isinstance(quantile.map(1), dp.PrivacyGuarantee)
+
+    report_max = dp.m.make_report_noisy_max(
+        scores,
+        metric,
+        dp.multi_dp("pure_dp"),
+        scale=1.0,
+    )
+    report_top_k = dp.m.make_report_noisy_top_k(
+        scores,
+        metric,
+        dp.multi_dp("zcdp"),
+        1,
+        scale=1.0,
+    )
+    assert isinstance(report_max.map(1.0), dp.PrivacyGuarantee)
+    assert isinstance(report_top_k.map(1.0), dp.PrivacyGuarantee)
+
+
 def test_multidp_noise_threshold_distribution_selection():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
     for metric, distribution in [

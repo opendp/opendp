@@ -1,5 +1,8 @@
 use crate::traits::samplers::{Shuffle, test::check_chi_square};
-use crate::{error::Fallible, measures::ZeroConcentratedDivergence};
+use crate::{
+    error::Fallible,
+    measures::{AccountingPreference, MultiDP, ZeroConcentratedDivergence},
+};
 use dashu::rbig;
 use std::array::from_fn;
 
@@ -43,6 +46,57 @@ fn test_noisy_top_k_gumbel() -> Fallible<()> {
     // (1/1)^2 / 8
     assert_eq!(de.map(&1.0)?, 0.125);
 
+    Ok(())
+}
+
+#[test]
+fn test_multidp_noisy_top_k_exponential_accounting() -> Fallible<()> {
+    let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
+    let input_metric = LInfDistance::new(true);
+    let de = make_noisy_top_k(
+        input_domain,
+        input_metric,
+        MultiDP::new(AccountingPreference::PureDp),
+        3,
+        0.3,
+        false,
+    )?;
+    let expected = top_k_epsilon(1.0, 0.3, 3)?;
+    assert_eq!(de.map(&1.0)?.epsilon(0.0)?, expected);
+    Ok(())
+}
+
+#[test]
+fn test_bounded_range_rdp() -> Fallible<()> {
+    // At order two, the optimal moment is cosh(nu / 2)^2.
+    for nu in [0.125_f64, 1.0, 8.0] {
+        let expected = 2.0 * (nu / 2.0).cosh().ln();
+        let bound = bounded_range_rdp(2.0, nu)?;
+        assert!((bound - expected).abs() < 1e-13);
+        assert!(bound < nu.min(nu * nu / 4.0));
+    }
+    assert_eq!(bounded_range_rdp(2.0, 0.0)?, 0.0);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_noisy_top_k_gumbel_accounting() -> Fallible<()> {
+    let input_domain = VectorDomain::new(AtomDomain::new_non_nan());
+    let input_metric = LInfDistance::new(true);
+    let de = make_noisy_top_k(
+        input_domain,
+        input_metric,
+        MultiDP::new(AccountingPreference::Zcdp),
+        3,
+        0.3,
+        false,
+    )?;
+    let expected = PrivacyGuarantee::new().with_zCDP(top_k_rho(1.0, 0.3, 3)?, 0.0)?;
+    let actual = de.map(&1.0)?;
+    for epsilon in [0.0, 1.0, 5.0] {
+        assert!(actual.delta(epsilon)? <= expected.delta(epsilon)?);
+    }
+    assert_eq!(actual.epsilon(0.0)?, top_k_epsilon(1.0, 0.3, 3)?);
     Ok(())
 }
 

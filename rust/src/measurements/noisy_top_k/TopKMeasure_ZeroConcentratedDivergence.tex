@@ -11,7 +11,7 @@
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item Associated Const \texttt{REPLACEMENT = true}
+    \item Method \texttt{replacement} returns true
     \item Method \texttt{privacy\_map}
         \textit{Types consistent with pseudocode.}
 \end{itemize}
@@ -20,7 +20,7 @@
 \begin{itemize}
     \item Method \texttt{privacy\_map}
         \begin{itemize}
-            \item \texttt{d\_in} is non-null and positive.
+            \item \texttt{d\_in} is non-null and non-negative.
             \item \texttt{scale} is non-null and positive.
         \end{itemize}
 \end{itemize}
@@ -36,14 +36,16 @@
         \item Method \texttt{privacy\_map}:
         For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
         return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
-        where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
+        where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=k, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{self.replacement()})$.
     \end{enumerate}
 \end{theorem}
 
 \begin{proof}[Proof of postcondition: \texttt{privacy\_map}]
 
-    \cite{Dong2019OptimalDP} Proposition~2 shows that the exponential mechanism satisfies Bounded Range.
-    \cite{cesar2020bounding} Lemma 3.2 shows that Bounded Range satisfies .
+    At zero sensitivity the output distributions agree; at positive sensitivity and zero scale an infinite bound is valid.
+    Otherwise \cite{Dong2019OptimalDP} Proposition~2 shows that the exponential mechanism satisfies Bounded Range.
+    \cite{cesar2020bounding} Lemma 3.2 bounds its zCDP parameter by the square of the range parameter divided by eight.
+    Adaptive composition multiplies this bound by $k$, with upward rounding.
 \end{proof}
 
 \bibliographystyle{plain}

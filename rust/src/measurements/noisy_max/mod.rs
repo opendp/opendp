@@ -38,7 +38,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`
 /// * `input_metric` - Metric on the input domain. Must be `LInfDistance`
-/// * `output_measure` - One of `MaxDivergence`, `ZeroConcentratedDivergence`
+/// * `output_measure` - Privacy measure used for accounting. One of `MaxDivergence`, `ZeroConcentratedDivergence`, or `MultiDP`.
 /// * `scale` - Scale for the noise distribution
 /// * `negate` - Set to true to return min
 ///
@@ -63,4 +63,38 @@ where
                 .cloned()
                 .ok_or_else(|| err!(FailedFunction, "candidates set is empty"))
         })
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        negate(default = false),
+    ),
+    generics(MO(suppress), TIA(suppress))
+)]
+/// Report the index selected by a private noisy-max mechanism.
+///
+/// This is an alias for [`make_noisy_max`] that makes the report-level API
+/// explicit while preserving the same accounting and distribution semantics.
+///
+/// # Arguments
+/// * `input_domain` - Domain of the input vector.
+/// * `input_metric` - Metric on the input domain.
+/// * `output_measure` - Privacy measure used for accounting.
+/// * `scale` - Scale for the selection distribution.
+/// * `negate` - Set to true to report the minimum index.
+pub fn make_report_noisy_max<MO: TopKMeasure, TIA>(
+    input_domain: VectorDomain<AtomDomain<TIA>>,
+    input_metric: LInfDistance<TIA>,
+    output_measure: MO,
+    scale: f64,
+    negate: bool,
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, usize>>
+where
+    TIA: Number + CastInternalRational,
+    FBig: TryFrom<TIA> + TryFrom<f64>,
+    f64: InfCast<TIA>,
+{
+    make_noisy_max(input_domain, input_metric, output_measure, scale, negate)
 }
