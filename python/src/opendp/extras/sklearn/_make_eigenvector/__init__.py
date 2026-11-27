@@ -1,7 +1,7 @@
 from typing import Sequence
 from dataclasses import asdict
 
-from opendp.extras.numpy import _sscp_domain
+from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
@@ -27,13 +27,14 @@ def _optimal_b(A_eigvals, d: int) -> float:
 
 
 def make_private_eigenvector(
-    input_domain: Domain, input_metric: Metric, unit_epsilon: float
+    input_domain: Domain, input_metric: Metric, concentration: float
 ) -> Measurement:
     """Construct a Measurement that releases a private eigenvector from a covariance matrix.
 
-    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
-    :param input_metric: instance of `symmetric_distance()`
-    :param unit_epsilon: ε-expenditure per changed record in the input data
+    :param input_domain: instance of `_symmetric_matrix_domain(num_features=_)`
+    :param input_metric: nuclear distance on symmetric matrices
+    :param concentration: coefficient of u.T @ C @ u in the Bingham density.
+        The privacy map is concentration times the bound on spectral diameter.
     """
     np = import_optional_dependency("numpy")
     import opendp.prelude as dp
@@ -41,24 +42,24 @@ def make_private_eigenvector(
     dp.assert_features("contrib", "idealized-numerics")
 
     np_csprng = get_np_csprng()
+    if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
+        raise ValueError("input_domain must be NPSymmetricMatrixDomain")
+
+    if input_metric != dp.nuclear_distance():
+        raise ValueError("expected nuclear distance input metric")
+
+    if not np.isfinite(concentration) or concentration < 0:
+        raise ValueError("concentration must be finite and non-negative")
+
     input_desc = input_domain.descriptor
-
-    if input_desc.p != 2:
-        raise ValueError("input_domain must have bounded L2-norm")  # pragma: no cover
-
-    if input_metric != dp.symmetric_distance():
-        raise ValueError("expected symmetric distance input metric")  # pragma: no cover
-
     d = input_desc.num_features
 
     def function(C):
         # Algorithm 2 Top Eigenvector Sampler
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=15
-        # scale norm down to at most 1
-        C = C / input_desc.norm**2
-
-        # (1)
-        A = unit_epsilon / 4 * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
+        # (1) Shifting the score by its largest eigenvalue does not
+        # change the target Bingham distribution.
+        A = concentration * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
 
         # (2)
         A_eigvals = np.linalg.eigvalsh(A)
@@ -104,8 +105,10 @@ def make_private_eigenvector(
         input_metric,
         dp.max_divergence(),
         function,
-        lambda d_in: d_in / 2 * unit_epsilon,
-        TO=f"Vec<{input_desc.T}>",
+        # The log-normalizer lies between the minimum and maximum score
+        # difference. Hence absolute privacy loss is at most the score range.
+        lambda d_in: concentration * d_in,
+        TO="Vec<f64>",
     )
 
 
@@ -113,35 +116,52 @@ def make_private_eigenvector(
 then_private_eigenvector = to_then(make_private_eigenvector)
 
 
-def make_np_sscp_projection(
+def _make_np_sscp_projection(
     input_domain: Domain, input_metric: Metric, P
 ) -> Transformation:
     """Construct a Transformation that projects an SSCP matrix.
 
-    In order for the output_domain to follow,
-    the singular values of `P` must be bounded above by 1,
-    so as not to increase the row norms in the implied X matrix,
-    as the row norms are simply passed through.
+    Internal helper: the caller must supply a contraction (operator norm <= 1).
+    In eigendecomposition, P consists of an orthonormal basis of the remaining
+    subspace (or the identity). The nuclear norm contracts under this projection.
+    This precondition is not checked with an SVD in the inner loop; it follows
+    from construction under the idealized-numerics assumption.
 
-    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
-    :param input_metric: instance of `symmetric_distance()`
-    :param P: a projection whose singular values are no greater than 1
+    :param input_domain: instance of `_symmetric_matrix_domain(num_features=_)`
+    :param input_metric: nuclear distance on symmetric matrices
+    :param P: a linear map with singular values no greater than 1
     """
     import opendp.prelude as dp
 
+    np = import_optional_dependency("numpy")
     dp.assert_features("contrib", "idealized-numerics")
+
+    if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
+        raise ValueError("input_domain must be NPSymmetricMatrixDomain")
+    if input_metric != dp.nuclear_distance():
+        raise ValueError("expected nuclear distance input metric")
+
     input_desc = input_domain.descriptor
+    # Retain a private copy so that later caller mutation cannot change the map.
+    P = np.array(P, copy=True)
+    if P.ndim != 2 or not np.isfinite(P).all():
+        raise ValueError("P must be a finite 2d matrix")
+    if P.dtype not in {np.dtype("float32"), np.dtype("float64")}:
+        raise ValueError("P must have a real float32 or float64 dtype")
 
     if input_desc.num_features != P.shape[1]:
         raise ValueError(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )  # pragma: no cover
 
-    kwargs = asdict(input_desc) | {"num_features": P.shape[0]}
+    # Preserve the dtype produced by matrix multiplication (which can widen
+    # float32 SSCP matrices when an orthonormal basis has float64 entries).
+    output_T = dp.f64 if input_desc.T == dp.f64 or P.dtype == np.float64 else dp.f32
+    kwargs = asdict(input_desc) | {"num_features": P.shape[0], "T": output_T}
     return _make_transformation(
         input_domain,
         input_metric,
-        _sscp_domain(**kwargs),
+        _symmetric_matrix_domain(**kwargs),
         input_metric,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
         # Algorithm 1 step 2.c
@@ -151,11 +171,11 @@ def make_np_sscp_projection(
 
 
 # generate then variant of the constructor
-then_np_sscp_projection = to_then(make_np_sscp_projection)
+_then_np_sscp_projection = to_then(_make_np_sscp_projection)
 
 
 def make_private_eigenvectors(
-    input_domain: Domain, input_metric: Metric, unit_epsilons: Sequence[float]
+    input_domain: Domain, input_metric: Metric, concentrations: Sequence[float]
 ) -> Measurement:
     np = import_optional_dependency("numpy")
     import opendp.prelude as dp
@@ -164,27 +184,33 @@ def make_private_eigenvectors(
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    input_desc = input_domain.descriptor
-    if input_desc.p != 2:
-        raise ValueError(
-            "input_domain must have bounded L2 row norm"
-        )  # pragma: no cover
+    if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
+        raise ValueError("input_domain must be NPSymmetricMatrixDomain")
+    if input_metric != dp.nuclear_distance():
+        raise ValueError("expected nuclear distance input metric")
 
-    if len(unit_epsilons) > input_desc.num_features - 1:
+    input_desc = input_domain.descriptor
+    if len(concentrations) > input_desc.num_features - 1:
         raise ValueError(
-            f"must specify at most {input_desc.num_features - 1} unit_epsilons"
-        )  # pragma: no cover
+            f"must specify at most {input_desc.num_features - 1} concentrations"
+        )
+    if any(not np.isfinite(c) or c < 0 for c in concentrations):
+        raise ValueError("concentrations must be finite and non-negative")
 
     privacy_measure = dp.max_divergence()
     m_compose = dp.c.make_adaptive_composition(
-        input_domain, input_metric, privacy_measure, 2, unit_epsilons
+        input_domain,
+        input_metric,
+        privacy_measure,
+        1.0,
+        list(concentrations),
     )
 
     def function(C):
         # Algorithm 1: http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=5
 
         # 1.i Initialize C_1 = C inside compositor.
-        #     C_i will be computed by `_make_np_sscp_projection`
+        #     C_i will be computed by `__make_np_sscp_projection`
         qbl = m_compose(C)
         del C  # only the compositor has the data now
 
@@ -194,13 +220,13 @@ def make_private_eigenvectors(
 
         # computation of eigenvalues (1.iii) happens in a separate constructor
 
-        # 2. only runs until epsilons are exhausted, not until num_features
-        for epsilon_i in unit_epsilons:
+        # 2. only runs until concentrations are exhausted, not until num_features
+        for concentration_i in concentrations:
             # 2.a.i: sample \hat{u}
             m_eigvec = (
                 (input_domain, input_metric)
-                >> then_np_sscp_projection(P)  # 2.c happens inside this transformation
-                >> then_private_eigenvector(epsilon_i)
+                >> _then_np_sscp_projection(P)  # P has orthonormal rows; see 2.b
+                >> then_private_eigenvector(concentration_i)
                 >> dp.as_array()
             )
             u = qbl(m_eigvec)
@@ -208,7 +234,7 @@ def make_private_eigenvectors(
             # 2.a.ii: extend the set of eigenvectors
             theta = np.vstack((theta, P.T @ u))
 
-            # 2.b: update the projection, P maintains singular values with magnitude <= 1
+            # 2.b: null_space returns an orthonormal basis, so P is a contraction.
             P = linalg.null_space(theta).T
 
         # the eigvec of a 1x1 matrix is always I, so it doesn't need to be released
@@ -223,7 +249,9 @@ def make_private_eigenvectors(
         input_metric,
         m_compose.output_measure,
         function,
-        lambda d_in: d_in / 2 * m_compose.map(2),
+        # For each conditional query the bound is homogeneous in the score
+        # range, so extend the unit-distance composition to arbitrary distances.
+        lambda d_in: d_in * m_compose.map(1.0),
     )
 
 

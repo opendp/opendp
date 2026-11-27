@@ -2,7 +2,9 @@ from __future__ import annotations
 from typing import Sequence
 
 from opendp.context import register
-from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
+from opendp.extras.sklearn._make_eigenvector import (
+    then_private_eigenvectors,
+)
 from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
@@ -51,18 +53,24 @@ def make_private_np_eigendecomposition(
     num_components = num_components or input_desc.num_columns
 
     t_sscp = make_np_sscp(input_domain, input_metric)
+    sensitivity = t_sscp.map(2)
 
     t_eigvals = t_sscp.output_space >> then_eigenvalues()
     m_eigvals = (
         dp.binary_search_chain(  # type: ignore[misc]
             lambda s: t_eigvals >> dp.m.then_laplace(s),
-            d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
+            d_in=sensitivity,
             d_out=eigvals_epsilon,
         )
         >> dp.as_array()
     )
+    score_range = sensitivity
+    concentrations = [
+        0.0 if score_range == 0 else epsilon / score_range
+        for epsilon in eigvecs_epsilons
+    ]
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
-        eigvecs_epsilons,
+        concentrations,
     )
     return t_sscp >> dp.c.make_composition([m_eigvals, m_eigvecs])
 
