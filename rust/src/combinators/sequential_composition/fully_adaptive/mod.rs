@@ -102,10 +102,8 @@ where
     MI::Distance: ProductOrd + Debug,
     (DI, MI): MetricSpace,
 {
-    let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::FullyAdaptive)?,
-        Composability::Sequential
-    );
+    let composability = output_measure.composability(Adaptivity::FullyAdaptive)?;
+    let require_sequentiality = composability == Composability::Sequential;
 
     let mut privacy_maps: Vec<PrivacyMap<MI, MO>> = vec![];
 
@@ -174,7 +172,7 @@ where
                         .map(|m| m.eval(d_in_q))
                         .collect::<Fallible<_>>()?;
 
-                    let d_out = output_measure.compose(d_mids)?;
+                    let d_out = output_measure.compose(d_mids, composability)?;
                     Answer::External(OdometerAnswer::PrivacyLoss(d_out))
                 }
                 Query::Internal(query) => {

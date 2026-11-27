@@ -2,7 +2,10 @@ use crate::core::*;
 use crate::domains::AtomDomain;
 use crate::interactive::Queryable;
 use crate::measurements::make_laplace;
-use crate::measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence};
+use crate::measures::{
+    Approximate, MaxDivergence, MultiDP, PrivacyGuarantee, RenyiDivergence,
+    ZeroConcentratedDivergence,
+};
 use crate::metrics::{AbsoluteDistance, DiscreteDistance};
 
 use super::*;
@@ -65,6 +68,53 @@ fn test_rdp_composition() -> Fallible<()> {
     // then we are composing two queries, so the total loss is 6. * 2. = 12.
     let rdp_curve = composition.map(&2.)?;
     assert_eq!(rdp_curve.eval(&3.0)?, 12.0);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_composition_uses_runtime_facts() -> Fallible<()> {
+    let make_measurement = |guarantee: PrivacyGuarantee| {
+        Measurement::new(
+            AtomDomain::<i32>::default(),
+            AbsoluteDistance::<i32>::default(),
+            MultiDP::default(),
+            Function::new(|_: &i32| 0_i32),
+            PrivacyMap::new(move |_| guarantee.clone()),
+        )
+    };
+    let certificate = PrivacyGuarantee::new().with_approx_dp(0.5, 0.1)?;
+    let profile =
+        PrivacyGuarantee::new().with_profile(crate::measures::PrivacyProfile::new(|epsilons| {
+            Ok(vec![0.2; epsilons.len()])
+        }));
+    let composition = make_composition(vec![
+        make_measurement(certificate)?,
+        make_measurement(profile)?,
+    ])?;
+    let guarantee = composition.map(&1)?;
+    assert!(guarantee.delta(1.0)? >= 0.3);
+    assert!(guarantee.delta(1.0)? < 0.30000000000001);
+    Ok(())
+}
+
+#[test]
+fn test_multidp_sequentiality_changes_accounting_and_interaction() -> Fallible<()> {
+    let child = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MultiDP::default(),
+        Function::new_fallible(|_: &bool| Queryable::new_external(|_: &()| Ok(false))),
+        PrivacyMap::new_fallible(|_| PrivacyGuarantee::new().with_zCDP(0.1, 0.01)),
+    )?;
+    let concurrent = make_composition(vec![child.clone(), child.clone()])?;
+    let sequential = make_composition_with_sequentiality(vec![child.clone(), child], true)?;
+    assert!(concurrent.map(&1)?.profile().is_some());
+    assert!(sequential.map(&1)?.profile().is_none());
+    let mut concurrent_children = concurrent.invoke(&false)?;
+    assert!(!concurrent_children[0].eval(&())?);
+    let mut sequential_children = sequential.invoke(&false)?;
+    assert!(sequential_children[0].eval(&()).is_err());
+    assert!(!sequential_children[1].eval(&())?);
     Ok(())
 }
 

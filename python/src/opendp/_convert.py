@@ -20,6 +20,7 @@ from opendp.mod import (
     Transformation,
     Measurement,
     PrivacyProfile,
+    PrivacyBudget,
     PrivacyGuarantee,
     Queryable,
     OdometerQueryable,
@@ -175,6 +176,8 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if c_type == AnyObjectPtr:
         if isinstance(value, PrivacyProfile):
             return value.curve
+        if isinstance(value, PrivacyBudget):
+            return value.budget
         if isinstance(value, PrivacyGuarantee):
             return value.guarantee
         if isinstance(value, ctypes.POINTER(AnyObject)):
@@ -222,6 +225,7 @@ def c_to_py(value: Any) -> Any:
         if obj_type in {
             "PrivacyProfile",
             "PrivacyGuarantee",
+            "PrivacyBudget",
             "AnyOdometerQueryable",
             "AnyQueryable",
         }:
@@ -235,6 +239,9 @@ def c_to_py(value: Any) -> Any:
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(_ptr=cast(AnyObjectPtr, value))
+
+        if obj_type == PrivacyBudget.__name__:
+            return PrivacyBudget(_ptr=cast(AnyObjectPtr, value))
 
         if obj_type == PrivacyGuarantee.__name__:
             return PrivacyGuarantee(_ptr=cast(AnyObjectPtr, value))
@@ -568,6 +575,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         "Expr",
         "Bound",
         "BitVector",
+        "PrivacyBudget",
     }:
         c_repr = [
             py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val
