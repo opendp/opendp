@@ -146,3 +146,130 @@ def test_nuclear_sscp_scalar_substitution():
     assert trans.map(1) == 0.0
     assert trans.map(2) == 4.0
     assert trans.map(4) == 8.0
+
+
+def test_np_sscp_frobenius_substitution_sensitivity():
+    norm = 2.0
+    fixed = dp.numpy.array2_domain(
+        num_columns=2, size=3, T=float, norm=norm, p=2, nan=False
+    )
+    metric = dp.symmetric_distance()
+    trans = make_np_sscp(fixed, metric, output_metric=dp.l2_distance(T=float))
+    assert trans.output_metric == dp.l2_distance(T=float)
+    assert trans.map(1) == 0
+    assert trans.map(2) >= np.sqrt(2) * norm**2
+    assert trans.map(2) < 2 * norm**2
+
+    x = np.array([norm, 0.0])
+    y = np.array([0.0, norm])
+    delta = np.outer(x, x) - np.outer(y, y)
+    assert np.linalg.norm(delta, ord="fro") <= trans.map(2)
+
+    unsized = dp.numpy.array2_domain(num_columns=2, T=float, norm=norm, p=2, nan=False)
+    generic = make_np_sscp(unsized, metric, output_metric=dp.l2_distance(T=float))
+    assert generic.map(2) == 2 * norm**2
+
+
+def test_np_sscp_explicit_l1_and_independent_output_metrics():
+    B = 2.0
+    metric = dp.symmetric_distance()
+    domain_l1 = dp.numpy.array2_domain(
+        num_columns=3, size=2, T=float, norm=B, p=1, nan=False
+    )
+    domain_l2 = dp.numpy.array2_domain(
+        num_columns=3, size=2, T=float, norm=B, p=2, nan=False
+    )
+
+    l1_from_l1 = make_np_sscp(domain_l1, metric, output_metric=dp.l1_distance(T=float))
+    assert l1_from_l1.output_metric == dp.l1_distance(T=float)
+    assert l1_from_l1.map(2) == 2 * B**2
+
+    # The matrix metric is independent of the row-clipping norm.
+    l1_from_l2 = make_np_sscp(domain_l2, metric, output_metric=dp.l1_distance(T=float))
+    assert l1_from_l2.map(2) == 2 * 3 * B**2
+
+    l2_from_l1 = make_np_sscp(domain_l1, metric, output_metric=dp.l2_distance(T=float))
+    assert l2_from_l1.map(1) == 0
+    assert l2_from_l1.map(2) >= np.sqrt(2) * B**2
+
+    nuclear = make_np_sscp(domain_l1, metric, output_metric=dp.nuclear_distance())
+    assert nuclear.output_metric == dp.nuclear_distance()
+    assert nuclear.map(2) == pytest.approx(2 * B**2)
+
+    X = np.array([[B, 0, 0], [0, B, 0]], dtype=float)
+    assert np.array_equal(l1_from_l1(X), X.T @ X)
+    assert l1_from_l1.output_domain.member(l1_from_l1(X))
+
+
+def test_np_sscp_rejects_unrecognized_output_metric():
+    domain = dp.numpy.array2_domain(num_columns=2, T=float, norm=1.0, p=2, nan=False)
+    with pytest.raises(ValueError, match="output_metric"):
+        make_np_sscp(
+            domain, dp.symmetric_distance(), output_metric=dp.absolute_distance(T=float)
+        )
+
+
+@pytest.mark.parametrize("p", [1, 2])
+def test_np_sscp_scalar_substitution_exact_for_all_output_metrics(p):
+    radius = 2.0
+    domain = dp.numpy.array2_domain(
+        num_columns=1, size=2, T=float, norm=radius, p=p, nan=False
+    )
+    metric = dp.symmetric_distance()
+    x = np.array([[radius], [0.0]])
+    y = np.zeros((2, 1))
+    for output_metric in (
+        dp.l1_distance(T=float),
+        dp.l2_distance(T=float),
+        dp.nuclear_distance(),
+    ):
+        trans = make_np_sscp(domain, metric, output_metric=output_metric)
+        assert trans.map(1) == 0
+        assert trans.map(2) == radius**2
+        assert trans.map(4) == 2 * radius**2
+        assert trans(x)[0, 0] - trans(y)[0, 0] == radius**2
+
+
+@pytest.mark.parametrize(
+    ("norm", "num_columns", "size", "metric_kind", "error"),
+    [
+        (1e154, 2, None, "l1", "SSCP sensitivity overflows"),
+        (1.2e154, 2, 2, "l2", "Frobenius replacement sensitivity overflows"),
+    ],
+)
+def test_np_sscp_rejects_unrepresentable_sensitivity(
+    norm, num_columns, size, metric_kind, error
+):
+    domain = dp.numpy.array2_domain(
+        num_columns=num_columns, size=size, T=float, norm=norm, p=2, nan=False
+    )
+    output_metrics = {
+        "l1": dp.l1_distance(T=float),
+        "l2": dp.l2_distance(T=float),
+    }
+    with pytest.raises(ValueError, match=error):
+        make_np_sscp(
+            domain,
+            dp.symmetric_distance(),
+            output_metric=output_metrics[metric_kind],
+        )
+
+
+@pytest.mark.parametrize("norm", [2.0, 1e154, 1.2e154])
+def test_np_sscp_frobenius_overflow_with_strict_numpy_errors(norm):
+    domain = dp.numpy.array2_domain(
+        num_columns=2, size=2, T=float, norm=norm, p=2, nan=False
+    )
+    with np.errstate(over="raise"):
+        if norm == 1.2e154:
+            with pytest.raises(ValueError, match="Frobenius replacement sensitivity"):
+                make_np_sscp(domain, dp.symmetric_distance(), dp.l2_distance(T=float))
+        else:
+            trans = make_np_sscp(
+                domain, dp.symmetric_distance(), dp.l2_distance(T=float)
+            )
+            expected = np.nextafter(np.sqrt(2.0) * (norm * norm), np.inf)
+            assert np.isfinite(trans.map(2))
+            assert trans.map(2) == expected
+            assert trans.map(1) == 0
+        assert np.geterr()["over"] == "raise"
