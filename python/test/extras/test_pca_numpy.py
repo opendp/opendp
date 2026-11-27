@@ -64,7 +64,6 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
     "overrides, message",
     [
         ({"input_metric": dp.insert_delete_distance()}, "symmetric_distance"),
-        ({"output_measure": dp.zero_concentrated_divergence()}, "max_divergence"),
         ({"d_in": 0}, "d_in=1 or d_in=2"),
         ({"d_out": 0.0}, "must be positive"),
         ({"d_in": 3}, "d_in=1 or d_in=2"),

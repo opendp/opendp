@@ -34,6 +34,8 @@ from opendp._lib import import_optional_dependency
 from opendp.context import register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
+from opendp.extras.numpy._make_np_sscp import make_np_sscp
+from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
@@ -76,9 +78,9 @@ def make_private_pca(
 
     :param input_domain: Input array domain with public size and feature count.
     :param input_metric: Symmetric distance on input rows.
-    :param output_measure: Max divergence (pure epsilon-DP).
+    :param output_measure: Max divergence (pure epsilon-DP) or zero-concentrated divergence.
     :param d_in: Input distance to protect, either 1 or 2; use 2 for row replacement.
-    :param d_out: Positive epsilon privacy allowance at ``d_in``.
+    :param d_out: Positive privacy allowance in the output measure at ``d_in``.
     :param clip_norm: Public positive finite L2 clipping radius, or None to use the domain's L2 bound.
     :param center: None for a privately estimated mean, or 'origin' for the public domain origin.
     :param num_components: Number of components, fraction of released variance in (0, 1), 'mle', or None for all available components.
@@ -91,11 +93,12 @@ def make_private_pca(
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("PCA currently supports symmetric_distance() only")
-    if output_measure != dp.max_divergence():
-        raise ValueError("PCA currently supports max_divergence() only")
+    gaussian = output_measure == dp.zero_concentrated_divergence()
+    if not gaussian and output_measure != dp.max_divergence():
+        raise ValueError("PCA supports max_divergence() or zero_concentrated_divergence()")
     if d_in not in (1, 2):
         raise ValueError("PCA currently supports d_in=1 or d_in=2")
-    if d_out <= 0:
+    if not np.isfinite(d_out) or d_out <= 0:
         raise ValueError("d_out must be positive")
     if center is not None and not (isinstance(center, str) and center == "origin"):
         raise ValueError("center must be None or 'origin'")
@@ -166,8 +169,6 @@ def make_private_pca(
     eigen_budget = _smaller(float(d_out) / 3 * 2) if estimate_mean else float(d_out)
 
     def eigendecomposition(reference):
-        # Low-level mechanisms are calibrated at two symmetric edits.
-        budget_at_two = 2 * eigen_budget / float(d_in)
         t_reclip = (
             make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference)
             if estimate_mean
@@ -183,6 +184,31 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
+        if gaussian:
+            t_sscp = t_center >> make_np_sscp(
+                *t_center.output_space, output_metric=dp.l2_distance(T=float)
+            )
+            t_vector = t_sscp >> make_np_svec(*t_sscp.output_space)
+            measurement = dp.binary_search_chain(
+                lambda scale: t_vector >> dp.m.then_gaussian(scale),
+                d_in=2,
+                d_out=eigen_budget,
+                T=float,
+            ) >> _new_pure_function(
+                lambda values: np.linalg.eigh(unsvec(values, n_features))
+            )
+            return measurement >> _new_pure_function(
+                lambda out: PCARelease(
+                    mean=np.array(reference, copy=True),
+                    singular_values=np.sqrt(np.maximum(out[0], 0))[::-1],
+                    components=out[1][:, ::-1].T,
+                    n_samples=n_samples,
+                    n_components=num_components,
+                )
+            )
+
+        # Low-level Bingham mechanisms are calibrated at two symmetric edits.
+        budget_at_two = 2 * eigen_budget / float(d_in)
         while True:
             eigvals_epsilon = budget_at_two / 2 if num_samples else budget_at_two
             eigvecs_epsilons = (
@@ -214,35 +240,35 @@ def make_private_pca(
     if not estimate_mean:
         measurement = eigendecomposition(origin)
     else:
-        # Bound ||x-c||_1 <= sqrt(d) R without changing the L2-clipped rows.
-        # Round both sqrt and multiplication upwards for conservative sensitivity.
-        l1_radius = np.nextafter(
+        # Gaussian uses the original L2 bound. For Laplace, convert the
+        # radius to L1 without changing the clipped rows.
+        mean_radius = radius if gaussian else np.nextafter(
             np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
         )
-        l1_domain = dp.numpy.array2_domain(
+        mean_domain = dp.numpy.array2_domain(
             **(
                 asdict(ball_domain.descriptor)
                 | {
-                    "norm": l1_radius,
-                    "p": 1,
+                    "norm": mean_radius,
+                    "p": 2 if gaussian else 1,
                     "origin": origin,
                     "T": float,
                 }
             )
         )
-        t_l1 = _make_transformation(
+        t_mean = _make_transformation(
             ball_domain,
             input_metric,
-            l1_domain,
+            mean_domain,
             input_metric,
             lambda data: np.asarray(data, dtype=float),
             lambda distance: distance,
         )
         m_mean = dp.binary_search_chain(
-            lambda scale: t_l1 >> make_private_np_mean(l1_domain, input_metric, scale),
+            lambda scale: t_mean >> make_private_np_mean(mean_domain, input_metric, scale),
             # Fixed-size sums have zero sensitivity at one symmetric edit.
             d_in=2,
-            d_out=2 * mean_budget / float(d_in),
+            d_out=mean_budget if gaussian else 2 * mean_budget / float(d_in),
             T=float,
         )
         projection = make_np_clamp(
@@ -296,7 +322,8 @@ class PCA(
 
     Fitting requires an input domain with known size.
     An L2 domain bound or ``clip_norm`` is required.
-    Only pure epsilon-DP is supported.
+    Pure epsilon-DP uses sequential Bingham sampling. Zero-concentrated DP
+    uses a Gaussian release of the SSCP matrix followed by eigendecomposition.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to
@@ -430,7 +457,7 @@ class PCA(
                 )
                 + 1
             )
-        n_components = int(n_components)
+        n_components = min(int(n_components), n_samples, n_features)
 
         self.mean_ = mean
         self.components_ = components[:n_components, :]
