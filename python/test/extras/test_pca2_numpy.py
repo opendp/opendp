@@ -283,6 +283,150 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
     assert centered_domain.member(rows)
 
 
+@pytest.mark.parametrize(
+    "center, width", [(None, 4), ("origin", 4), (None, 1), ("origin", 1)]
+)
+@pytest.mark.parametrize("d_in", [2, 4])
+def test_pca_fixed_budget_split_at_input_distance(
+    monkeypatch, center, width, d_in
+):
+    np = pytest.importorskip("numpy")
+    from opendp.extras.sklearn import decomposition2 as decomposition
+
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
+    budget = 0.9
+    measure = dp.max_divergence()
+    factor = d_in / 2
+    value_scales, vector_scales = [], []
+    original_values = decomposition.then_private_eigenvalues
+    original_vectors = decomposition.then_private_eigenvectors
+
+    def record_values(scale):
+        value_scales.append(scale)
+        return original_values(scale)
+
+    def record_vectors(scale, weights):
+        vector_scales.append((scale, len(weights)))
+        return original_vectors(scale, weights)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvalues", record_values)
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", record_vectors)
+    means = _observe_private_mean(monkeypatch, replacement=np.zeros(width))
+    data = _legacy_data() if width == 4 else np.linspace(0.2, 0.8, 10)[:, None]
+    domain = dp.numpy.array2_domain(
+        T=float,
+        size=len(data),
+        num_columns=width,
+        norm=1,
+        p=2,
+        nan=False,
+    )
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        measure,
+        d_in,
+        budget,
+        center=center,
+        num_components=2 if width == 4 else None,
+    )
+    measurement(data)
+    eigen_stages = 2 if width == 4 else 1
+    share = budget / (eigen_stages + int(center is None))
+    eigen_budget = share * eigen_stages
+    if center is None:
+        assert len(means) == 1
+        mean_budget = means[0]["map_at_two"] * factor
+        assert means[0]["domain"].descriptor.p == 1
+        assert mean_budget <= share
+        assert mean_budget == pytest.approx(share)
+    else:
+        assert means == []
+    values = value_scales[-1]
+    if width == 4:
+        vectors, components = vector_scales[-1]
+        assert components == 2
+    else:
+        assert not vector_scales
+    # Unit-radius SSCP at one replacement has nuclear sensitivity 2
+    # and Frobenius sensitivity sqrt(2); a scalar has sensitivity 1.
+    nuclear = 2.0 if width == 4 else 1.0
+    value_loss = nuclear / values
+    assert value_loss * factor == pytest.approx(
+        eigen_budget / 2 if width == 4 else eigen_budget
+    )
+    if width == 4:
+        vector_loss = nuclear / vectors
+        assert vector_loss * factor == pytest.approx(eigen_budget / 2)
+    assert measurement.check(d_in, budget)
+    assert measurement.map(d_in) <= budget
+    assert measurement.map(1) == 0.0
+
+
+@pytest.mark.parametrize(
+    "center, d_in, width, budget",
+    [
+        (None, 4, 17, 1e-6),
+        ("origin", 4, 8, 0.1),
+        (None, 2, 129, 3.7),
+        ("origin", 2, 33, 1.0),
+    ],
+)
+def test_pca_many_samples_rounding_stays_within_budget(
+    monkeypatch, center, d_in, width, budget
+):
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
+    import numpy as np
+    from opendp._internal import _make_measurement
+    from opendp.extras._utilities import to_then
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
+
+    eigen_maps = []
+    measure = dp.max_divergence()
+
+    def record_vectors(input_domain, input_metric, scale, weights):
+        actual = make_private_eigenvectors(
+            input_domain, input_metric, scale, weights
+        )
+        eigen_maps.append(
+            actual.map(float(d_in))
+        )
+        # Keep the real privacy map but skip the expensive sampler.
+        return _make_measurement(
+            input_domain,
+            input_metric,
+            actual.output_measure,
+            lambda data: np.eye(width)[:, : len(weights)],
+            actual.map,
+        )
+
+    monkeypatch.setattr(
+        decomposition, "then_private_eigenvectors", to_then(record_vectors)
+    )
+    _observe_private_mean(monkeypatch, replacement=np.zeros(width))
+    domain = dp.numpy.array2_domain(
+        T=float,
+        size=width,
+        num_columns=width,
+        norm=1,
+        p=2,
+        nan=False,
+    )
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        measure,
+        d_in,
+        budget,
+        center=center,
+    )
+    measurement(np.zeros((width, width)))  # Also construct the lazy private-mean stage.
+    eigen_budget = budget * 2 / 3 if center is None else budget
+    assert eigen_maps and eigen_maps[-1] <= eigen_budget / 2
+    assert measurement.check(d_in, budget)
+    assert measurement.map(d_in) <= budget
+
+
 @pytest.mark.parametrize("d_in", [2, 4])
 @pytest.mark.parametrize("is_zcdp", [False, True])
 def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
@@ -290,11 +434,15 @@ def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
 ):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition2 as decomposition
+    from opendp.extras.sklearn import _make_eigenvector as eigenvector
 
     def unexpected(*args, **kwargs):
-        pytest.fail("one-feature origin PCA needs no private mean")
+        pytest.fail(
+            "one-feature origin PCA needs neither a private mean nor a vector sample"
+        )
 
     monkeypatch.setattr(decomposition, "make_private_np_sum", unexpected)
+    monkeypatch.setattr(eigenvector, "then_private_eigenvector", unexpected)
     domain = dp.numpy.array2_domain(
         T=float, size=10, num_columns=1, norm=1, p=2, nan=False
     )
@@ -362,6 +510,71 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
     np.testing.assert_array_equal(data, before)
     model._ingest_release(release)
     assert model.n_components_ == 2
+
+
+@pytest.mark.parametrize(
+    "selection, spectrum, size, expected",
+    [
+        ("mle", [0.0], 2, 1),
+        ("mle", [1.0], 2, 1),
+        (0.8, [0.0, 0.0], 10, 1),
+        (0.8, [9.0, 1.0, 0.0], 10, 1),
+        (0.99, [3.0, 2.0, 1.0], 2, 2),
+        (None, [3.0, 2.0, 1.0], 2, 2),
+        (1, [0.0, 0.0], 10, 1),
+    ],
+)
+def test_pca_selects_components_before_sampling(
+    monkeypatch, selection, spectrum, size, expected
+):
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
+    np = pytest.importorskip("numpy")
+    from opendp._internal import _new_pure_function
+    from opendp.extras._utilities import to_then
+    from opendp.extras.sklearn._make_eigenvalues import make_private_eigenvalues
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvectors
+
+    width = len(spectrum)
+    weights_seen = []
+
+    def values(input_domain, input_metric, scale):
+        return make_private_eigenvalues(
+            input_domain, input_metric, scale
+        ) >> _new_pure_function(lambda _: np.array(spectrum[::-1]))
+
+    def vectors(input_domain, input_metric, scale, weights):
+        measurement = make_private_eigenvectors(
+            input_domain, input_metric, scale, weights
+        )
+
+        def observe(result):
+            weights_seen.append(list(weights))
+            return result
+
+        return measurement >> _new_pure_function(observe)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvalues", to_then(values))
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", to_then(vectors))
+    domain = dp.numpy.array2_domain(
+        T=float, size=size, num_columns=width, norm=1, p=2, nan=False
+    )
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        2,
+        1.0,
+        center="origin",
+        num_components=selection,
+    )
+    assert measurement.check(2, 1.0)
+    release = measurement(np.zeros((size, width)))
+    assert release.components.shape == (expected, width)
+    assert weights_seen == ([[1.0] * expected] if width > 1 else [])
+    model = decomposition.PCA(n_components=selection, whiten=True)
+    model._ingest_release(release)
+    assert model.n_components_ == expected
+    assert np.isfinite(model.transform(np.ones((1, width)))).all()
 
 
 @pytest.mark.parametrize(
@@ -677,6 +890,75 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
     assert trans.map(1) == 1
     with pytest.raises(np.linalg.LinAlgError):
         singular.score_samples(np.zeros((0, 3)))
+
+
+@pytest.mark.parametrize(
+    "width, expected",
+    [(1, 1), (3, 1), (3, 2), (3, 3)],
+)
+def test_matrix_eigendecomposition_components_and_privacy_map(width, expected):
+    np = pytest.importorskip("numpy")
+    from opendp.extras.numpy import _symmetric_matrix_domain
+
+    space = _symmetric_matrix_domain(num_features=width), dp.nuclear_distance()
+    measurement = dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(2.0),
+            space
+            >> decomposition.then_private_eigenvectors(4.0, [1.0] * expected),
+        ]
+    )
+    values, vectors = measurement(np.diag(np.arange(width, dtype=float)))
+    assert values.shape == (width,)
+    assert np.all(values[:-1] <= values[1:])
+    assert vectors.shape == (width, expected)
+    np.testing.assert_allclose(vectors.T @ vectors, np.eye(expected), atol=1e-12)
+    # All requested component counts share the same aggregate vector scale,
+    # except a one-dimensional matrix, which needs no private vector sample.
+    value_loss = 1.0
+    vector_loss = 0.5 if width > 1 else 0.0
+    assert measurement.map(2.0) == pytest.approx(value_loss + vector_loss)
+
+
+@pytest.mark.parametrize("size", [None, 10])
+def test_eigendecomposition_composes_with_sscp(size):
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
+
+    domain = dp.numpy.array2_domain(
+        norm=2.0, p=2, num_columns=3, size=size, nan=False, T=float
+    )
+    sscp = (domain, dp.symmetric_distance()) >> then_np_sscp()
+    space = sscp.output_space
+    measurement = sscp >> dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(8.0),
+            space >> decomposition.then_private_eigenvectors(8.0, [1.0] * 3),
+        ]
+    )
+    expected = 2.0
+    assert measurement.map(2) == pytest.approx(expected)
+    assert measurement.map(1) == pytest.approx(
+        0.0 if size is not None else expected / 2
+    )
+
+
+def test_eigendecomposition_bingham_concentration():
+    from opendp.extras.numpy._make_np_sscp import make_np_sscp
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    row_norm = 2.0
+    epsilon = 1.0
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=2, size=5, nan=False, T=float
+    )
+    sscp = make_np_sscp(domain, dp.symmetric_distance())
+    # The tightened pure-DP calibration is concentration = ε / (2B²).
+    concentration = epsilon / (2 * row_norm**2)
+    eigenvector = make_private_eigenvector(
+        sscp.output_domain, sscp.output_metric, concentration
+    )
+    assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
+    assert eigenvector.map(sscp.map(1)) == 0.0
 
 
 @pytest.mark.parametrize("is_zcdp", [False, True])

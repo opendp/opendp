@@ -42,9 +42,8 @@ from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
-from opendp.extras.sklearn._make_eigendecomposition import (
-    then_private_np_eigendecomposition,
-)
+from opendp.extras.sklearn._make_eigenvalues import then_private_eigenvalues
+from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.mod import Domain, Measure, Measurement, Metric
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -212,7 +211,13 @@ def make_private_pca(
     trace_bound = None if n_samples is None else n_samples * radius**2
     estimate_mean = center is None
     estimate_count = n_samples is None
-    # Count has dimension-independent sensitivity. Reserve a small share.
+    use_bingham = (
+        not is_zcdp
+        and n_samples is not None
+        and _use_bingham(num_components, n_samples, n_features)
+    )
+    # Count has dimension-independent sensitivity. Reserve a small share,
+    # then keep the same mean/spectrum allocation for either solver.
     count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0
     remaining = (
         _smaller(float(d_out) - count_budget) if estimate_count else float(d_out)
@@ -239,66 +244,85 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
-        # The legacy Bingham constructors support publicly sized data and
-        # per-replacement pure-DP budgets. Other requests use SSCP.
-        if (
-            not is_zcdp
-            and n_samples is not None
-            and _use_bingham(num_components, n_samples, n_features)
-        ):
-            k = min(
-                num_components if isinstance(num_components, int) else n_samples,
-                n_features,
-            )
-            m_bingham = dp.binary_search_chain(
-                lambda scale: (
-                    t_center
-                    >> then_private_np_eigendecomposition(
-                        1.0 / scale,
-                        [1.0 / (scale * k)] * k,
-                        num_components=k,
-                    )
-                ),
+        if not use_bingham:
+            t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
+            t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=2 if is_zcdp else 1)
+            m_matrix = dp.binary_search_chain(
+                lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
                 d_in=d_in,
                 d_out=eigen_budget,
                 T=float,
             )
 
-            def release_bingham(result):
-                values, vectors = result
-                singular_values = np.sqrt(
-                    _project_spectrum(np.sort(values), trace_bound)
-                )[::-1]
+            def release_matrix(values):
+                eigvals, eigvecs = np.linalg.eigh(unsvec(values, n_features))
+                singular_values = np.sqrt(_project_spectrum(eigvals, trace_bound))[::-1]
+                k = _select_num_components(num_components, singular_values, released_count)
                 return PCARelease(
                     mean=np.array(reference, copy=True),
                     singular_values=singular_values,
-                    components=vectors[:, :k].T,
+                    components=eigvecs[:, ::-1][:, :k].T,
                     n_samples=released_count,
                 )
 
-            return m_bingham >> _new_pure_function(release_bingham)
+            return m_matrix >> _new_pure_function(release_matrix)
 
-        t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
-        t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=2 if is_zcdp else 1)
-        m_matrix = dp.binary_search_chain(
-            lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
-            d_in=d_in,
-            d_out=eigen_budget,
+        t_sscp = t_center >> then_np_sscp()
+        # The count and reference are already public conditional on earlier
+        # releases. Compute SSCP once, then compose on the matrix space.
+        stage_budget = (
+            _smaller(eigen_budget / eigen_stages)
+            if eigen_stages > 1
+            else eigen_budget
+        )
+        sensitivity = t_sscp.map(d_in)
+        space = t_sscp.output_space
+        m_values = dp.binary_search_chain(
+            lambda scale: space >> then_private_eigenvalues(scale),
+            d_in=sensitivity,
+            d_out=stage_budget,
             T=float,
         )
+        compositor = dp.c.make_adaptive_composition(
+            *space,
+            output_measure,
+            d_in=sensitivity,
+            d_mids=[stage_budget] * eigen_stages,
+        )
 
-        def release_matrix(values):
-            eigvals, eigvecs = np.linalg.eigh(unsvec(values, n_features))
-            singular_values = np.sqrt(_project_spectrum(eigvals, trace_bound))[::-1]
+        def function(C):
+            qbl = compositor(C)
+            singular_values = np.sqrt(_project_spectrum(qbl(m_values), trace_bound))[::-1]
             k = _select_num_components(num_components, singular_values, released_count)
+            if n_features == 1:
+                vectors = np.ones((1, 1))
+            else:
+                # Uniform relative concentration is the default policy.
+                # Selection (and any future weighting policy) uses only releases.
+                weights = [1.0] * k
+                m_vectors = dp.binary_search_chain(
+                    lambda scale: space
+                    >> then_private_eigenvectors(scale, weights),
+                    d_in=sensitivity,
+                    d_out=stage_budget,
+                    T=float,
+                )
+                vectors = qbl(m_vectors)
             return PCARelease(
                 mean=np.array(reference, copy=True),
                 singular_values=singular_values,
-                components=eigvecs[:, ::-1][:, :k].T,
+                components=vectors.T,
                 n_samples=released_count,
             )
 
-        return m_matrix >> _new_pure_function(release_matrix)
+        return t_sscp >> _make_measurement(
+            *space,
+            output_measure,
+            function,
+            lambda distance: (
+                0.0 if distance == 0.0 else compositor.map(distance)
+            ),
+        )
 
     if estimate_count:
         m_count = dp.binary_search_chain(
@@ -715,7 +739,11 @@ class PCA(
 
 
 def _use_bingham(request, n_samples, n_features):
-    """Public rank policy; legacy Bingham supports fixed-size data only."""
+    """Choose a solver using only public dimensions and component requests.
+
+    A quarter of the ambient dimension is a provisional crossover, not a
+    utility guarantee. Data-dependent component requests use the matrix solver.
+    """
     if n_features == 1 or isinstance(request, (float, str)):
         return False
     k = request if isinstance(request, int) else n_samples
