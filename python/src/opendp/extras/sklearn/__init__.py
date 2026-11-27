@@ -37,6 +37,10 @@ def __getattr__(name):
     from opendp._lib import import_optional_dependency
 
     import_optional_dependency("sklearn")
+    if name == "ColumnTransformer":
+        member = import_module(f"{__name__}.compose").ColumnTransformer
+        globals()[name] = member
+        return member
     module = import_module(f"{__name__}.{name}")
     return module
 
@@ -49,4 +53,6 @@ __all__ = [
     "sklearn_fit_domain",
     "decomposition",
     "linear_model",
+    "compose",
+    "ColumnTransformer",
 ]

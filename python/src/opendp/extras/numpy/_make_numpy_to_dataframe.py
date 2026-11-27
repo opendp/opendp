@@ -7,6 +7,14 @@ from opendp.extras.numpy._make_dataframe_to_numpy import _NUMPY_DTYPES
 from opendp.extras.numpy._row_distance import _row_distance
 
 
+def _array_element_domain(descriptor):
+    """Unbounded atom domain for one matrix coordinate."""
+    return atom_domain(
+        T=descriptor.T,
+        **({"nan": descriptor.nan} if str(descriptor.T) in {"f32", "f64"} else {}),
+    )
+
+
 def make_numpy_to_dataframe(input_domain, input_metric, *, names=None):
     """Convert a numeric or Unicode NumPy matrix using public feature names and types.
 
@@ -42,10 +50,7 @@ def make_numpy_to_dataframe(input_domain, input_metric, *, names=None):
     if T != "String" and T not in _NUMPY_DTYPES:
         raise TypeError(f"Unsupported NumPy dtype: {T}")
     dtype = None if T == "String" else np.dtype(_NUMPY_DTYPES[T])
-    element = atom_domain(
-        T=descriptor.T,
-        **({"nan": descriptor.nan} if T in {"f32", "f64"} else {}),
-    )
+    element = _array_element_domain(descriptor)
     output_domain = dataframe_domain([series_domain(name, element) for name in names])
 
     def convert(array):

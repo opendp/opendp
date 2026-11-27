@@ -1,21 +1,31 @@
-"""Sklearn query integration: certified inference or accounted private fitting."""
-
-from sklearn.base import clone
+"""Sklearn query integration: rowwise inference or accounted private fitting."""
 
 from opendp._internal import _new_pure_function
 
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
-from opendp.extras.sklearn._estimator import MeasurementMixin, _finish_fit
+from opendp.extras.sklearn._estimator import (
+    MeasurementMixin,
+    TransformationMixin,
+    _finish_fit,
+)
+from opendp.extras.sklearn._composition import (
+    unwrap_frozen_estimator,
+    needs_private_fit,
+    snapshot,
+)
 from opendp.extras.sklearn._make_sklearn_fit import make_sklearn_fit
 from opendp.extras.sklearn._rowwise import _make_rowwise_transform
 from opendp.mod import LazyFrameDomain
 
 
 def sklearn_query(query, estimator, *, y=None, method=None):
-    """Fit privately or apply a certified sklearn inference method."""
-    if method is None and not isinstance(estimator, MeasurementMixin):
+    """Fit privately or apply a rowwise sklearn inference method."""
+    unwrapped = unwrap_frozen_estimator(estimator)
+    if method is None and not isinstance(
+        unwrapped, (MeasurementMixin, TransformationMixin)
+    ):
         raise TypeError(
-            "sklearn(...) expects an estimator with OpenDP fitting capability"
+            "sklearn requires an OpenDP fitting or transformation capability"
         )
 
     domain, metric = query._stable_space()
@@ -38,14 +48,22 @@ def sklearn_query(query, estimator, *, y=None, method=None):
             _make_rowwise_transform(domain, metric, estimator, method=method)
         )
 
+    if not needs_private_fit(estimator):
+        if not isinstance(unwrapped, TransformationMixin):
+            raise TypeError("Stable inference requires TransformationMixin")
+        return query._append(
+            _make_rowwise_transform(domain, metric, estimator, method="transform")
+        )
+
     distance = query._stable_distance()
-    prototype = clone(estimator)
+    # FrozenEstimator.clone retains identity; a query owns a separate snapshot.
+    prototype = snapshot(estimator)
     measurement = prototype.make_measurement(
         domain, metric, query._output_measure, distance, query._d_out
     )
 
     def ingest(release):
-        fitted = clone(prototype)
+        fitted = snapshot(prototype)
         _finish_fit(fitted, release, domain)
         return fitted
 
