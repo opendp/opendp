@@ -1,4 +1,4 @@
-from opendp.extras.numpy import _sscp_domain, arrayd_domain
+from opendp.extras.numpy import _symmetric_matrix_domain, arrayd_domain
 import opendp.prelude as dp
 import pytest
 import re
@@ -95,27 +95,29 @@ def test_array2_domain_cardinalities():
     assert domain.member(np.array([[1, 1, 1], [1, 1, 1]], dtype=np.int32))
 
 
-def test_sscp_domain():
-    with pytest.raises(ValueError):
-        _sscp_domain(T=bool)
+def test_symmetric_matrix_domain():
+    with pytest.raises(ValueError, match="float"):
+        _symmetric_matrix_domain(num_features=2, T=bool)
+    with pytest.raises(ValueError, match="positive integer"):
+        _symmetric_matrix_domain(num_features=0)
 
-    domain = _sscp_domain(num_features=2, T=float)
+    domain = _symmetric_matrix_domain(num_features=2, T=float)
 
     with pytest.warns(match="must be a numpy ndarray"):
         domain.member(False)
     with pytest.warns(match="must have data of type"):
         domain.member(np.array([[1, 2, 3]]))
-    with pytest.warns(match="must be a square array"):
+    with pytest.warns(match="must have shape"):
         domain.member(np.array([[1.0, 2.0, 3.0]]))
-    with pytest.warns(match="must have 2 features"):
+    with pytest.warns(match="must have shape"):
         domain.member(np.random.normal(size=(3, 3)))
     with pytest.warns(match="must have finite values"):
         domain.member(np.array([[float("NaN"), 2.0], [2.0, 1.0]]))
     with pytest.warns(match="must be symmetric"):
         domain.member(np.array([[1.0, 2.0], [1.0, 2.0]]))
-    with pytest.warns(match="must be positive semi-definite"):
-        domain.member(np.array([[1.0, 2.0], [2.0, 1.0]]))
 
+    # Negative eigenvalues are admissible; no latent SSCP provenance is claimed.
+    assert domain.member(np.array([[1.0, 2.0], [2.0, 1.0]]))
     assert domain.member(np.array([[2.0, 1.0], [1.0, 2.0]]))
 
 
