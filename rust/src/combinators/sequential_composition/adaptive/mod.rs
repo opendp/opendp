@@ -17,15 +17,46 @@ mod ffi;
 
 use super::CompositionMeasure;
 
+/// Construct an adaptive compositor with fixed privacy budgets.
+pub fn make_adaptive_composition<
+    DI: Domain + 'static,
+    MI: Metric + 'static,
+    MO: CompositionMeasure + 'static,
+    TO: 'static,
+>(
+    input_domain: DI,
+    input_metric: MI,
+    output_measure: MO,
+    d_in: MI::Distance,
+    d_mids: Vec<MO::Budget>,
+) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
+where
+    DI::Carrier: 'static + Clone,
+    MI::Distance: 'static + ProductOrd + Clone,
+    MO::Distance: 'static + Clone + Debug,
+    (DI, MI): MetricSpace,
+{
+    make_adaptive_composition_with_sequentiality(
+        input_domain,
+        input_metric,
+        output_measure,
+        d_in,
+        d_mids,
+        false,
+    )
+}
+
 #[bootstrap(
+    name = "make_adaptive_composition",
     features("contrib"),
     arguments(
         d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
         d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        sequential(default = false)
     ),
     generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
-    derived_types(QO = "$get_distance_type(output_measure)")
+    derived_types(QO = "$get_budget_type(output_measure)")
 )]
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
@@ -60,13 +91,14 @@ use super::CompositionMeasure;
 /// * `output_measure` - how privacy is measured
 /// * `d_in` - maximum distance between adjacent input datasets
 /// * `d_mids` - maximum privacy expenditure of each query
+/// * `sequential` - Lock previous interactive children, enabling sequential-only accounting paths.
 ///
 /// # Generics
 /// * `DI` - Input Domain.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
 /// * `TO` - Output Type.
-pub fn make_adaptive_composition<
+pub fn make_adaptive_composition_with_sequentiality<
     DI: Domain + 'static,
     MI: Metric + 'static,
     MO: CompositionMeasure + 'static,
@@ -76,18 +108,19 @@ pub fn make_adaptive_composition<
     input_metric: MI,
     output_measure: MO,
     d_in: MI::Distance,
-    mut d_mids: Vec<MO::Distance>,
+    mut d_mids: Vec<MO::Budget>,
+    sequential: bool,
 ) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
 where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + ProductOrd + Clone,
-    MO::Distance: 'static + ProductOrd + Clone + Debug,
+    MO::Distance: 'static + Clone + Debug,
     (DI, MI): MetricSpace,
 {
     // Reject negative allocations before they can cancel positive privacy loss.
-    let zero = output_measure.compose(vec![])?;
+    let zero = output_measure.compose(vec![], Composability::Sequential)?;
     for d_mid in &d_mids {
-        if !d_mid.total_ge(&zero)? {
+        if !output_measure.check_budget(&zero, d_mid)? {
             return fallible!(MakeMeasurement, "d_mids must be nonnegative: {:?}", d_mid);
         }
     }
@@ -95,12 +128,18 @@ where
     // we'll iteratively pop from the end
     d_mids.reverse();
 
-    let d_out = output_measure.compose(d_mids.clone())?;
-
-    let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::Adaptive)?,
+    let composability = output_measure.composability(Adaptivity::Adaptive)?;
+    let composability = if sequential {
         Composability::Sequential
-    );
+    } else {
+        composability
+    };
+    let guarantees = d_mids
+        .iter()
+        .map(|budget| output_measure.budget_guarantee(budget))
+        .collect::<Fallible<Vec<_>>>()?;
+    let d_out = output_measure.compose(guarantees, composability)?;
+    let require_sequentiality = composability == Composability::Sequential;
 
     // an upper bound on the privacy unit in the privacy map
     let d_in_constructor = d_in.clone();
@@ -143,11 +182,12 @@ where
                         (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
                     // check that the query doesn't consume too much privacy
-                    if !meas.check(&d_in, d_mid)? {
+                    let guarantee = meas.map(&d_in)?;
+                    if !output_measure.check_budget(&guarantee, d_mid)? {
                         return fallible!(
                             FailedFunction,
                             "insufficient budget for query: {:?} > {:?}",
-                            meas.map(&d_in)?,
+                            guarantee,
                             d_mid
                         );
                     }

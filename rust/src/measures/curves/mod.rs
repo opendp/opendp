@@ -20,6 +20,11 @@ mod renyidp_ffi;
 #[cfg(feature = "ffi")]
 mod zcdp_ffi;
 
+mod budget;
+pub use budget::PrivacyBudget;
+#[cfg(feature = "contrib")]
+mod composition;
+
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
 use logspace::{
@@ -232,6 +237,35 @@ impl PrivacyGuarantee {
         check_mu(mu)?;
         self.gaussian = Some(GaussianDPRepresentation { mu });
         Ok(self)
+    }
+
+    /// Best available exact zCDP bound. Pure DP implies
+    /// rho = epsilon * tanh(epsilon / 2), and mu-GDP implies rho = mu^2 / 2.
+    fn exact_zcdp_rho(&self) -> Fallible<Option<f64>> {
+        let mut rho = self.zcdp.filter(|r| r.source_delta == 0.0).map(|r| r.rho);
+        if let Some(repr) = self.approx_dp.as_ref().filter(|r| r.delta == 0.0) {
+            let epsilon = repr.epsilon;
+            // For large epsilon, the trivial bound is already tight to f64 precision.
+            let bound = if epsilon == 0.0 || epsilon >= 64.0 {
+                epsilon
+            } else {
+                let eps = SInterval::point(epsilon)?;
+                let negative = -eps.clone();
+                let numerator = -negative.clone().exp_m1()?;
+                let denominator = (SInterval::point(1.0)? + negative.exp()?)?;
+                ((eps * numerator)? / denominator)?
+                    .upper_f64()?
+                    .min(epsilon)
+            };
+            rho = Some(rho.map_or(bound, |r| r.min(bound)));
+        }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = self.gaussian {
+            let mu = SInterval::point(repr.mu)?;
+            let bound = ((mu.clone() * mu)? / SInterval::point(2.0)?)?.upper_f64()?;
+            rho = Some(rho.map_or(bound, |r| r.min(bound)));
+        }
+        Ok(rho)
     }
 
     /// Return the tightest delta bound, propagating representation errors.

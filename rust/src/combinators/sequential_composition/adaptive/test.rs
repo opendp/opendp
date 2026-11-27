@@ -142,6 +142,43 @@ fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
 }
 
 #[test]
+fn test_multidp_fixed_budgets_check_before_release() -> Fallible<()> {
+    use crate::measures::{MultiDP, PrivacyBudget, PrivacyGuarantee};
+
+    let compositor = make_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        MultiDP::default(),
+        1,
+        vec![
+            PrivacyBudget::ApproxDP(0.5, 0.0),
+            PrivacyBudget::ZCDP(0.1, 0.0),
+        ],
+    )?;
+    let child = |epsilon: f64, rho: f64| {
+        Measurement::new(
+            AtomDomain::<bool>::default(),
+            DiscreteDistance,
+            MultiDP::default(),
+            Function::new(|_: &bool| false),
+            PrivacyMap::new_fallible(move |_| {
+                PrivacyGuarantee::new()
+                    .with_approx_dp(epsilon, 0.0)?
+                    .with_zCDP(rho, 0.0)
+            }),
+        )
+    };
+    let mut queryable = compositor.invoke(&false)?;
+    assert!(queryable.eval(&child(1.0, 0.2)?).is_err());
+    assert!(!queryable.eval(&child(0.5, 0.2)?)?);
+    assert!(queryable.eval(&child(0.0, 0.2)?).is_err());
+    assert!(!queryable.eval(&child(1.0, 0.1)?)?);
+    assert!(queryable.eval(&child(0.0, 0.0)?).is_err());
+    assert!(compositor.map(&1)?.delta(1.0)? < 1.0);
+    Ok(())
+}
+
+#[test]
 fn test_adaptive_failed_postprocessing_consumes_budget() -> Fallible<()> {
     let rr = make_randomized_response_bool(0.75, false)?;
     let budget = rr.map(&1)?;

@@ -4,16 +4,19 @@ use crate::{
     core::{FfiResult, Measurement},
     ffi::{
         any::{AnyMeasurement, AnyObject, Downcast},
-        util::AnyMeasurementPtr,
+        util::{AnyMeasurementPtr, c_bool, to_bool},
     },
 };
 
-use super::make_composition;
+use super::make_composition_with_sequentiality;
 
 #[bootstrap(
     name = "make_composition",
     features("contrib"),
-    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>"))
+    arguments(
+        measurements(rust_type = "Vec<AnyMeasurementPtr>"),
+        sequential(default = false)
+    )
 )]
 /// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -29,9 +32,11 @@ use super::make_composition;
 ///
 /// # Arguments
 /// * `measurements` - A vector of Measurements to compose.
+/// * `sequential` - Lock previous interactive children, allowing sequential-only accounting paths.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_composition(
     measurements: *const AnyObject,
+    sequential: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
 
@@ -41,7 +46,7 @@ pub extern "C" fn opendp_combinators__make_composition(
             .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
             .collect()
     );
-    make_composition(measurements)
+    make_composition_with_sequentiality(measurements, to_bool(sequential))
         .map(Measurement::into_any_out)
         .into()
 }
@@ -65,6 +70,7 @@ mod tests {
         let measurements = vec![measurement0, measurement1];
         let basic_composition = Result::from(opendp_combinators__make_composition(
             AnyObject::new_raw(measurements),
+            0,
         ))?;
         let arg = AnyObject::new_raw(vec![999]);
         let res = core::opendp_core__measurement_invoke(&basic_composition, arg);

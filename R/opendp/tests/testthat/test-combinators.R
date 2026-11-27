@@ -25,6 +25,18 @@ test_that("make_composition", {
   expect_equal(meas(arg = 1L), list(1L, list(1L, 1L)))
 })
 
+test_that("MultiDP composition retains exact certificates", {
+  measurement <- make_noise(
+    vector_domain(atom_domain(.T = "i32")), l1_distance(.T = "i32"),
+    multi_dp(), scale = 2.
+  )
+  composed <- make_composition(c(measurement, measurement))
+  guarantee <- composed(d_in = 1L)
+  expect_s3_class(guarantee, "privacy_guarantee")
+  expect_equal(guarantee(epsilon = 1.), 0.)
+  expect_equal(composed(d_in = 0L)(delta = 0.), 0.)
+})
+
 test_that("make_chain_mt", {
   domain <- vector_domain(atom_domain(bounds = list(0L, 2L)))
   metric <- symmetric_distance()
@@ -172,4 +184,17 @@ test_that("test_odometer_supporting_elements", {
   expect_equal(toString(sc_odo("input_domain")), toString(vector_domain(atom_domain(.T = "i32"))))
   expect_equal(toString(sc_odo("input_metric")), toString(symmetric_distance()))
   expect_equal(toString(sc_odo("output_measure")), toString(max_divergence()))
+})
+
+test_that("MultiDP adaptive composition accepts fixed budgets", {
+  domain <- vector_domain(atom_domain(.T = "i32"))
+  metric <- l1_distance(.T = "i32")
+  measure <- multi_dp()
+  compositor <- make_adaptive_composition(
+    domain, metric, measure, d_in = 1L,
+    d_mids = list(privacy_budget(approx_dp = c(0.5, 0.)))
+  )
+  queryable <- compositor(arg = c(1L, 2L))
+  expect_error(queryable(query = make_noise(domain, metric, measure, scale = 1.)), "insufficient budget")
+  expect_length(queryable(query = make_noise(domain, metric, measure, scale = 2.)), 2L)
 })

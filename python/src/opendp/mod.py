@@ -69,6 +69,7 @@ __all__ = [
     "Measure",
     "ExtrinsicDivergence",
     "ApproximateDivergence",
+    "PrivacyBudget",
     "PrivacyGuarantee",
     "PrivacyProfile",
     "_PartialConstructor",
@@ -1371,6 +1372,44 @@ class PrivacyProfile(object):
             self.curve, [float(log_delta)] if scalar else log_delta
         )
         return result[0] if scalar else result
+
+
+class PrivacyBudget:
+    """A fixed privacy bound used by adaptive composition.
+
+    Specify exactly one of ``approx_dp=(epsilon, delta)``,
+    ``zCDP=(rho, delta)`` or ``renyiDP=(order, epsilon, delta)``.
+    A zero delta specifies the non-approximate variant.
+    """
+
+    def __init__(
+        self,
+        *,
+        approx_dp: Optional[tuple[float, float]] = None,
+        zCDP: Optional[tuple[float, float]] = None,
+        renyiDP: Optional[tuple[float, float, float]] = None,
+        _ptr: Any = None,
+    ):
+        choices = [
+            (kind, values)
+            for kind, values in [
+                ("approx_dp", approx_dp),
+                ("zCDP", zCDP),
+                ("renyiDP", renyiDP),
+            ]
+            if values is not None
+        ]
+        if _ptr is not None:
+            if choices:
+                raise TypeError("_ptr cannot be combined with a budget")
+            self.budget = _ptr
+            return
+        if len(choices) != 1:
+            raise TypeError("expected exactly one privacy budget")
+        from opendp.measures import _new_privacy_budget
+
+        kind, parameters = choices[0]
+        self.budget = _new_privacy_budget(kind, list(parameters)).budget
 
 
 class PrivacyGuarantee(object):

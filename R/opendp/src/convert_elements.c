@@ -482,6 +482,24 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
     return privacy_profile;
 }
 
+// Fixed numeric budgets need no R closure or methods.
+AnyObject *sexp_to_privacybudgetptr(SEXP value)
+{
+    Check_AnyObject_Ptr(value);
+    return (AnyObject *)R_ExternalPtrAddr(value);
+}
+
+SEXP privacybudgetptr_to_sexp(AnyObject *input)
+{
+    SEXP ptr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, odp_AnyObject_finalizer, TRUE);
+    opendp_forget_resource(input);
+    SEXP class = PROTECT(Rf_mkString("privacy_budget"));
+    Rf_setAttrib(ptr, R_ClassSymbol, class);
+    UNPROTECT(2);
+    return ptr;
+}
+
 // AnyObject: PrivacyGuarantee
 AnyObject *sexp_to_privacyguaranteeptr(SEXP value)
 {

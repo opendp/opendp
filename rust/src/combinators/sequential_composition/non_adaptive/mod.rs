@@ -45,19 +45,28 @@ where
     TO: 'static,
     (DI, MI): MetricSpace,
 {
+    make_composition_with_sequentiality(measurements, false)
+}
+
+/// Compose measurements, optionally locking previous interactive children.
+/// Sequentiality required by the measure is always enforced.
+pub fn make_composition_with_sequentiality<DI, MI, MO, TO>(
+    measurements: Vec<Measurement<DI, MI, MO, TO>>,
+    sequential: bool,
+) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
+where
+    DI: 'static + Domain,
+    MI: 'static + Metric,
+    MO: 'static + CompositionMeasure,
+    TO: 'static,
+    (DI, MI): MetricSpace,
+{
     if measurements.is_empty() {
         return fallible!(MakeMeasurement, "Must have at least one measurement");
     }
     let input_domain = measurements[0].input_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
     let output_measure = measurements[0].output_measure.clone();
-
-    if !measurements.iter().all(|v| input_domain == v.input_domain) {
-        return fallible!(DomainMismatch, "All input domains must be the same");
-    }
-    if !measurements.iter().all(|v| input_metric == v.input_metric) {
-        return fallible!(MetricMismatch, "All input metrics must be the same");
-    }
     if !measurements
         .iter()
         .all(|v| output_measure == v.output_measure)
@@ -65,6 +74,12 @@ where
         return fallible!(MetricMismatch, "All output measures must be the same");
     }
 
+    if !measurements.iter().all(|v| input_domain == v.input_domain) {
+        return fallible!(DomainMismatch, "All input domains must be the same");
+    }
+    if !measurements.iter().all(|v| input_metric == v.input_metric) {
+        return fallible!(MetricMismatch, "All input metrics must be the same");
+    }
     let functions = measurements
         .iter()
         .map(|m| m.function.clone())
@@ -75,10 +90,13 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::NonAdaptive)?,
+    let composability = output_measure.composability(Adaptivity::NonAdaptive)?;
+    let composability = if sequential {
         Composability::Sequential
-    );
+    } else {
+        composability
+    };
+    let require_sequentiality = composability == Composability::Sequential;
 
     Measurement::new(
         input_domain,
@@ -116,6 +134,7 @@ where
                 maps.iter()
                     .map(|map| map.eval(d_in))
                     .collect::<Fallible<_>>()?,
+                composability,
             )
         }),
     )
