@@ -988,3 +988,14 @@ def test_privacy_guarantee_zcdp_representation():
 
     approximate = PrivacyGuarantee(zCDP=0.0, zCDP_delta=0.2)
     assert approximate.delta(epsilon=float("inf")) == 0.2
+
+
+def test_privacy_guarantee_gdp_representation():
+    from opendp.mod import PrivacyGuarantee
+
+    guarantee = PrivacyGuarantee(gaussianDP=1.0)
+    assert guarantee.beta(alpha=0.0) == 1.0
+    assert guarantee.beta(alpha=1.0) == 0.0
+    assert 0.0 <= guarantee.beta(alpha=0.5) <= 1.0
+    assert 0.0 <= guarantee.alpha(beta=0.5) <= 1.0
+    assert 0.0 <= guarantee.delta(epsilon=0.5) <= 1.0

@@ -7,6 +7,10 @@ use crate::{
 };
 
 mod approxdp;
+#[cfg(feature = "idealized-numerics")]
+mod gaussiandp;
+#[cfg(all(feature = "ffi", feature = "idealized-numerics"))]
+mod gaussiandp_ffi;
 pub(crate) mod logspace;
 mod maximize;
 mod profile_to_tradeoff;
@@ -166,6 +170,8 @@ pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
     renyi: Option<RenyiRepresentation>,
+    #[cfg(feature = "idealized-numerics")]
+    gaussian: Option<GaussianDPRepresentation>,
     zcdp: Option<ZCDPRepresentation>,
 }
 
@@ -219,6 +225,15 @@ impl PrivacyGuarantee {
         Ok(self)
     }
 
+    /// Attach a Gaussian-DP representation with parameter `mu`.
+    #[cfg(feature = "idealized-numerics")]
+    #[allow(non_snake_case)]
+    pub fn with_gaussianDP(mut self, mu: f64) -> Fallible<Self> {
+        check_mu(mu)?;
+        self.gaussian = Some(GaussianDPRepresentation { mu });
+        Ok(self)
+    }
+
     /// Return the tightest delta bound, propagating representation errors.
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         Ok(self.delta_batch(&[epsilon])?[0])
@@ -264,6 +279,14 @@ impl PrivacyGuarantee {
                 .collect::<Fallible<Vec<_>>>()?;
             min_assign(&mut bounds, values);
         }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = &self.gaussian {
+            let values = gaussiandp::log_delta_via_gaussianDP_batch(repr.mu, epsilon)?
+                .into_iter()
+                .map(|log_delta| log_to_delta_upper(log_delta, 0.0))
+                .collect::<Fallible<Vec<_>>>()?;
+            min_assign(&mut bounds, values);
+        }
         Ok(bounds)
     }
 
@@ -291,6 +314,17 @@ impl PrivacyGuarantee {
         if let Some(repr) = &self.zcdp {
             let values = invert_delta_budgets(delta, repr.source_delta, false, |targets| {
                 zcdp_epsilon_batch(repr.rho, targets)
+            })?;
+            min_assign(&mut bounds, values);
+        }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = &self.gaussian {
+            let values = invert_delta_budgets(delta, 0.0, false, |targets| {
+                let evaluate = gaussiandp::log_delta_evaluator(repr.mu)?;
+                fallible_invert_decreasing_batch(
+                    |epsilons| epsilons.iter().copied().map(&evaluate).collect(),
+                    targets,
+                )
             })?;
             min_assign(&mut bounds, values);
         }
@@ -324,6 +358,11 @@ impl PrivacyGuarantee {
                 .into_iter()
                 .map(|log_delta| add_log_delta_slack(log_delta, repr.source_delta))
                 .collect::<Fallible<Vec<_>>>()?;
+            min_assign(&mut bounds, values);
+        }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = &self.gaussian {
+            let values = gaussiandp::log_delta_via_gaussianDP_batch(repr.mu, epsilon)?;
             min_assign(&mut bounds, values);
         }
         Ok(bounds)
@@ -360,6 +399,17 @@ impl PrivacyGuarantee {
             })?;
             min_assign(&mut bounds, values);
         }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = &self.gaussian {
+            let values = invert_delta_budgets(log_delta, 0.0, true, |targets| {
+                let evaluate = gaussiandp::log_delta_evaluator(repr.mu)?;
+                fallible_invert_decreasing_batch(
+                    |epsilons| epsilons.iter().copied().map(&evaluate).collect(),
+                    targets,
+                )
+            })?;
+            min_assign(&mut bounds, values);
+        }
         Ok(bounds)
     }
 
@@ -389,6 +439,13 @@ impl PrivacyGuarantee {
             max_assign(
                 &mut bounds,
                 profile_to_tradeoff::beta_via_profile_batch(&repr.as_profile()?, alphas)?,
+            );
+        }
+        #[cfg(feature = "idealized-numerics")]
+        if let Some(repr) = &self.gaussian {
+            max_assign(
+                &mut bounds,
+                gaussiandp::beta_via_gaussianDP_batch(repr.mu, alphas)?,
             );
         }
         Ok(bounds)
@@ -424,7 +481,10 @@ fn max_assign(bounds: &mut [f64], other: Vec<f64>) {
 
 impl std::fmt::Debug for PrivacyGuarantee {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PrivacyGuarantee")
+        let mut debug = f.debug_struct("PrivacyGuarantee");
+        #[cfg(feature = "idealized-numerics")]
+        debug.field("gaussian", &self.gaussian.is_some());
+        debug
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
             .field("renyi", &self.renyi.is_some())
@@ -445,6 +505,12 @@ struct RenyiRepresentation {
 struct ZCDPRepresentation {
     rho: f64,
     source_delta: f64,
+}
+
+#[cfg(feature = "idealized-numerics")]
+#[derive(Clone, Copy)]
+struct GaussianDPRepresentation {
+    mu: f64,
 }
 
 impl ZCDPRepresentation {
@@ -661,16 +727,6 @@ fn invert_delta_budgets(
     Ok(results)
 }
 
-fn invert_log_curve(
-    targets: &[f64],
-    callback: impl Fn(f64) -> Fallible<f64>,
-) -> Fallible<Vec<f64>> {
-    fallible_invert_decreasing_batch(
-        |epsilons| epsilons.iter().copied().map(&callback).collect(),
-        targets,
-    )
-}
-
 fn check_alpha(alpha: f64) -> Fallible<()> {
     check_unit_interval(alpha, "alpha")
 }
@@ -695,6 +751,14 @@ fn check_epsilon(epsilon: f64) -> Fallible<()> {
 fn check_rho(rho: f64) -> Fallible<()> {
     if rho.is_nan() || rho < 0.0 {
         return fallible!(FailedMap, "rho must be non-negative and not NaN");
+    }
+    Ok(())
+}
+
+#[cfg(feature = "idealized-numerics")]
+fn check_mu(mu: f64) -> Fallible<()> {
+    if !mu.is_finite() || mu.is_sign_negative() {
+        return fallible!(FailedMap, "mu must be finite and non-negative");
     }
     Ok(())
 }
