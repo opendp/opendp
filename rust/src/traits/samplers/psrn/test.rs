@@ -3,19 +3,19 @@ use super::*;
 pub fn assert_ordered_progression<D: InverseCDF>(
     sampler: &mut PartialSample<D>,
     min_refinements: usize,
-) -> (D::Edge, D::Edge)
+) -> Fallible<(D::Edge, D::Edge)>
 where
     D::Edge: PartialOrd,
 {
     loop {
-        sampler.refine().unwrap();
-        let Some((l, r)) = sampler.lower().zip(sampler.upper()) else {
+        sampler.refine()?;
+        let Some((l, r)) = sampler.lower()?.zip(sampler.upper()?) else {
             continue;
         };
         assert!(l <= r);
 
         if sampler.refinements >= min_refinements {
-            return (l, r);
+            return Ok((l, r));
         }
     }
 }
@@ -25,8 +25,13 @@ struct UniformRV;
 impl InverseCDF for UniformRV {
     type Edge = RBig;
 
-    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, _refinements: usize) -> Option<Self::Edge> {
-        Some(uniform)
+    fn inverse_cdf(
+        &self,
+        uniform: RBig,
+        _refinements: usize,
+        _direction: Direction,
+    ) -> Fallible<Option<Self::Edge>> {
+        Ok(Some(uniform))
     }
 }
 
@@ -50,5 +55,29 @@ fn test_greater_than() -> Fallible<()> {
         assert!(l.value::<f64>()? < r.value::<f64>()?);
     }
 
+    Ok(())
+}
+
+#[test]
+fn test_greater_than_equal() -> Fallible<()> {
+    struct PointMass;
+
+    impl InverseCDF for PointMass {
+        type Edge = RBig;
+
+        fn inverse_cdf(
+            &self,
+            _uniform: RBig,
+            refinements: usize,
+            _direction: Direction,
+        ) -> Fallible<Option<Self::Edge>> {
+            // Equality is already certified, so no refinement is necessary.
+            assert_eq!(refinements, 0);
+            Ok(Some(RBig::ZERO))
+        }
+    }
+
+    let (mut l, mut r) = (PartialSample::new(PointMass), PartialSample::new(PointMass));
+    assert!(!l.greater_than(&mut r)?);
     Ok(())
 }
