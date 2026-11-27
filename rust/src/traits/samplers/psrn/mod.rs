@@ -1,34 +1,39 @@
 use std::fmt::Debug;
 
 use dashu::{
-    float::round::{
-        Round,
-        mode::{Down, Up},
-    },
     integer::{IBig, UBig},
     rational::RBig,
 };
 
 use super::sample_from_uniform_bytes;
-use crate::{error::Fallible, traits::RoundCast};
+use crate::{
+    error::Fallible,
+    traits::{Direction, RoundCast},
+};
 
 #[cfg(all(feature = "contrib", test))]
 mod test;
-
-mod canonical;
-pub use canonical::CanonicalRV;
 
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
     type Edge: PartialOrd + Debug;
 
     /// # Proof Definition
-    /// Given a random variable `self` (of type `Self`),
-    /// return `Ok(out)` where `out` is the inverse cumulative distribution function evaluated at `uniform`
-    /// with error in direction `R`, or `None`.
+    /// Given a random variable `self` (of type `Self`) and `uniform` in [0, 1],
+    /// return `Err(e)`, `Ok(None)` if a bound is unavailable, or `Ok(Some(out))`,
+    /// where `out` bounds the inverse cumulative distribution function evaluated at `uniform`
+    /// in the requested direction.
     ///
-    /// The error between `out` and the exactly-computed CDF decreases monotonically as `refinements` increases.
-    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, refinements: usize) -> Option<Self::Edge>;
+    /// As `refinements` tends to infinity and uniform inputs converge to an
+    /// interior continuity point of the inverse CDF, bounds in both directions
+    /// must eventually be available and converge to the exact quantile there.
+    /// Successive enclosures need not be nested.
+    fn inverse_cdf(
+        &self,
+        uniform: RBig,
+        refinements: usize,
+        direction: Direction,
+    ) -> Fallible<Option<Self::Edge>>;
 }
 
 /// A partially sampled random number.
@@ -61,14 +66,15 @@ impl<D: InverseCDF> PartialSample<D> {
 
 impl<D: InverseCDF> PartialSample<D> {
     // Retrieve either a lower or upper bound on the sample.
-    fn edge<R: ODPRound>(&self) -> Option<D::Edge> {
-        let uniform_edge = RBig::from_parts(
-            IBig::from(self.randomness.clone() + R::UBIG),
-            UBig::ONE << self.refinements,
-        );
+    fn edge(&self, direction: Direction) -> Fallible<Option<D::Edge>> {
+        let numerator = match direction {
+            Direction::Down => self.randomness.clone(),
+            Direction::Up => &self.randomness + UBig::ONE,
+        };
+        let uniform_edge = RBig::from_parts(IBig::from(numerator), UBig::ONE << self.refinements);
 
         self.distribution
-            .inverse_cdf::<R>(uniform_edge, self.refinements)
+            .inverse_cdf(uniform_edge, self.refinements, direction)
     }
 
     /// Randomly discard the lower or upper half of the remaining interval 64 times.
@@ -80,17 +86,18 @@ impl<D: InverseCDF> PartialSample<D> {
     }
 
     /// Retrieve a lower bound on the sample.
-    fn lower(&self) -> Option<D::Edge> {
-        self.edge::<Down>()
+    fn lower(&self) -> Fallible<Option<D::Edge>> {
+        self.edge(Direction::Down)
     }
 
     /// Retrieve an upper bound on the sample.
-    fn upper(&self) -> Option<D::Edge> {
-        self.edge::<Up>()
+    fn upper(&self) -> Fallible<Option<D::Edge>> {
+        self.edge(Direction::Up)
     }
 
     /// Checks if `self` is greater than `other`,
-    /// by refining the estimates for `self` and `other` until their intervals are disjoint.
+    /// by refining the estimates for `self` and `other` until their intervals establish the ordering.
+    /// Terminates when the enclosures eventually certify the comparison.
     ///
     /// # Proof Definition
     /// Returns `true` if `self` is greater than `other`, and `false` otherwise.
@@ -99,12 +106,12 @@ impl<D: InverseCDF> PartialSample<D> {
         other: &mut PartialSample<D>,
     ) -> Fallible<bool> {
         Ok(loop {
-            match self.lower().zip(other.upper()) {
+            match self.lower()?.zip(other.upper()?) {
                 Some((l, r)) if l > r => break true,
                 _ => (),
             }
-            match self.upper().zip(other.lower()) {
-                Some((l, r)) if l < r => break false,
+            match self.upper()?.zip(other.lower()?) {
+                Some((l, r)) if l <= r => break false,
                 _ => (),
             }
 
@@ -116,7 +123,8 @@ impl<D: InverseCDF> PartialSample<D> {
         })
     }
 
-    /// Refine `psrn` until both bounds of interval round to same TO
+    /// Refine `psrn` until both bounds of interval round to same TO.
+    /// Requires eventual agreement of the rounded bounds almost surely.
     ///
     /// # Proof Definition
     /// Returns a sample from the distribution with CDF as defined by `self`,
@@ -124,7 +132,7 @@ impl<D: InverseCDF> PartialSample<D> {
     /// or an error if there is a lack of system entropy.
     pub fn value<TO: RoundCast<D::Edge> + PartialEq>(&mut self) -> Fallible<TO> {
         Ok(loop {
-            let Some((l, r)) = self.lower().zip(self.upper()) else {
+            let Some((l, r)) = self.lower()?.zip(self.upper()?) else {
                 self.refine()?;
                 continue;
             };
@@ -135,29 +143,4 @@ impl<D: InverseCDF> PartialSample<D> {
             self.refine()?;
         })
     }
-}
-
-/// Rounding directions used in PSRNs.
-///
-/// Implemented for Down and Up, respectively for lower and upper bounds.
-pub trait ODPRound: Round {
-    /// * Down::UBIG = Zero
-    /// * Up::UBIG = One
-    const UBIG: UBig;
-
-    /// Type of the complement.
-    ///
-    /// * Down::C = Up
-    /// * Up::C = Down
-    type C: ODPRound<C = Self>;
-}
-
-impl ODPRound for Down {
-    const UBIG: UBig = UBig::ZERO;
-    type C = Up;
-}
-
-impl ODPRound for Up {
-    const UBIG: UBig = UBig::ONE;
-    type C = Down;
 }

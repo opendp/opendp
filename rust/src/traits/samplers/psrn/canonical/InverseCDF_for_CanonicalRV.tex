@@ -21,7 +21,7 @@ The implementation computes the inverse CDF of the canonical noise random variab
     \item Argument \texttt{self} of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}.
     \item Argument \texttt{uniform} of type \texttt{RBig}.
     \item Argument \texttt{refinements} of type \texttt{usize}.
-    \item Generic \texttt{R} implements \rustdoc{traits/samplers/psrn/trait}{ODPRound} which denotes the rounding mode, either up or down.
+    \item Argument \texttt{direction} of type \rustdoc{traits/enum}{Direction}, either up or down.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -36,9 +36,9 @@ Argument \texttt{uniform} is in $[0, 1]$.
 \begin{theorem}
 Given a random variable \texttt{self} (of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}),
 the algorithm returns \texttt{Some(out)} where \texttt{out} is the inverse cumulative distribution function of \texttt{CanonicalRV} (which includes a rescale and shift) evaluated at \texttt{uniform}
-with error in direction \texttt{R}, or \texttt{None}.
+with error in the requested direction, or \texttt{None}.
 
-The error between \texttt{out} and the exactly-computed CDF decreases monotonically as \texttt{refinements} increases.
+At interior continuity points the bounds converge to the exact quantile as the uniform inputs converge and refinements increase.
 \end{theorem}
 
 \begin{proof}
@@ -56,7 +56,7 @@ The function then returns the outcome, scaled by \texttt{self.scale} and shifted
 
 Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic,
 so making use of refinements is not necessary,
-as the error in computing the inverse CDF is already zero, satisfying the monotonicity property of the error.
+as the error in computing the inverse CDF is already zero. Continuity at interior continuity points implies the required convergence.
 
 \end{proof}
 
