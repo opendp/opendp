@@ -8,6 +8,9 @@ mod approxdp;
 pub(crate) mod logspace;
 mod maximize;
 mod profile_to_tradeoff;
+mod renyidp;
+#[cfg(feature = "ffi")]
+mod renyidp_ffi;
 
 #[cfg(feature = "ffi")]
 mod reporting_ffi;
@@ -158,6 +161,7 @@ impl ApproxDPRepr {
 pub struct PrivacyGuarantee {
     approx_dp: Option<ApproxDPRepr>,
     profile: Option<PrivacyProfile>,
+    renyi: Option<RenyiRepresentation>,
 }
 
 impl PrivacyGuarantee {
@@ -177,6 +181,28 @@ impl PrivacyGuarantee {
     pub fn with_profile(mut self, profile: PrivacyProfile) -> Self {
         self.profile = Some(profile);
         self
+    }
+
+    /// Attach an RDP representation, retaining all other representations.
+    ///
+    /// The callback must return conservative, nonnegative epsilon bounds for
+    /// nondecreasing finite orders greater than one, permitting duplicates.
+    /// Output lengths must match; converters may request batches of orders.
+    /// With positive `source_delta`, all orders must bound the same pair of
+    /// conditioned distributions in the common-good-events definition of
+    /// approximate RDP; the excluded mass is bounded by `source_delta`.
+    #[allow(non_snake_case)]
+    pub fn with_renyiDP(
+        mut self,
+        curve: impl Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync + 'static,
+        source_delta: f64,
+    ) -> Fallible<Self> {
+        check_delta(source_delta)?;
+        self.renyi = Some(RenyiRepresentation {
+            curve: Arc::new(curve),
+            source_delta,
+        });
+        Ok(self)
     }
 
     /// Return the tightest delta bound, propagating representation errors.
@@ -211,6 +237,12 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             min_assign(&mut bounds, profile.delta(epsilon)?);
         }
+        if let Some(repr) = &self.renyi {
+            min_assign(
+                &mut bounds,
+                renyidp::delta_via_renyiDP_batch(repr.curve.as_ref(), repr.source_delta, epsilon)?,
+            );
+        }
         Ok(bounds)
     }
 
@@ -229,6 +261,12 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             min_assign(&mut bounds, profile.epsilon(delta)?);
         }
+        if let Some(repr) = &self.renyi {
+            min_assign(
+                &mut bounds,
+                renyidp::epsilon_via_renyiDP_batch(repr.curve.as_ref(), repr.source_delta, delta)?,
+            );
+        }
         Ok(bounds)
     }
 
@@ -243,6 +281,16 @@ impl PrivacyGuarantee {
         }
         if let Some(profile) = &self.profile {
             min_assign(&mut bounds, profile.log_delta(epsilon)?);
+        }
+        if let Some(repr) = &self.renyi {
+            min_assign(
+                &mut bounds,
+                renyidp::log_delta_via_renyiDP_batch(
+                    repr.curve.as_ref(),
+                    repr.source_delta,
+                    epsilon,
+                )?,
+            );
         }
         Ok(bounds)
     }
@@ -262,6 +310,16 @@ impl PrivacyGuarantee {
         if let Some(profile) = &self.profile {
             min_assign(&mut bounds, profile.epsilon_from_log_delta(log_delta)?);
         }
+        if let Some(repr) = &self.renyi {
+            min_assign(
+                &mut bounds,
+                renyidp::epsilon_from_log_delta_via_renyiDP_batch(
+                    repr.curve.as_ref(),
+                    repr.source_delta,
+                    log_delta,
+                )?,
+            );
+        }
         Ok(bounds)
     }
 
@@ -279,6 +337,12 @@ impl PrivacyGuarantee {
             max_assign(
                 &mut bounds,
                 profile_to_tradeoff::beta_via_profile_batch(profile, alphas)?,
+            );
+        }
+        if let Some(repr) = &self.renyi {
+            max_assign(
+                &mut bounds,
+                renyidp::beta_via_renyiDP_batch(repr.curve.clone(), repr.source_delta, alphas)?,
             );
         }
         Ok(bounds)
@@ -317,8 +381,17 @@ impl std::fmt::Debug for PrivacyGuarantee {
         f.debug_struct("PrivacyGuarantee")
             .field("approx_dp", &self.approx_dp)
             .field("profile", &self.profile.is_some())
+            .field("renyi", &self.renyi.is_some())
             .finish()
     }
+}
+
+type RenyiFn = dyn Fn(&[f64]) -> Fallible<Vec<f64>> + Send + Sync;
+
+#[derive(Clone)]
+struct RenyiRepresentation {
+    curve: Arc<RenyiFn>,
+    source_delta: f64,
 }
 
 impl PrivacyProfile {
@@ -393,84 +466,22 @@ impl PrivacyProfile {
     pub fn log_delta(&self, epsilon: &[f64]) -> Fallible<Vec<f64>> {
         eval_log_profile(self.log_delta.as_ref(), epsilon)?
             .into_iter()
-            .map(|core| {
-                if self.delta_slack == 0.0 {
-                    return Ok(core);
-                }
-                logaddexp_upper(core, delta_to_log_upper_unchecked(self.delta_slack)?)
-            })
+            .map(|core| add_log_delta_slack(core, self.delta_slack))
             .collect()
     }
 
     /// Invert nondecreasing delta budgets, subtracting profile-specific slack.
     pub fn epsilon(&self, delta: &[f64]) -> Fallible<Vec<f64>> {
-        check_inputs(delta, check_delta)?;
-        let mut results = vec![f64::INFINITY; delta.len()];
-        let mut targets = Vec::new();
-        let mut indices = Vec::new();
-        for (index, &delta) in delta.iter().enumerate() {
-            if delta == 1.0 {
-                results[index] = 0.0;
-                continue;
-            }
-            if delta < self.delta_slack {
-                continue;
-            }
-            targets.push(if delta == self.delta_slack {
-                // Preserve exact source-space equality, even for subnormal slack.
-                f64::NEG_INFINITY
-            } else if self.delta_slack == 0.0 {
-                delta_to_log_lower_unchecked(delta)?
-            } else {
-                (SInterval::point(delta)? - SInterval::point(self.delta_slack)?)?
-                    .ln()?
-                    .lower_f64()?
-            });
-            indices.push(index);
-        }
-        for (index, value) in indices.into_iter().zip(self.invert_core(&targets)?) {
-            results[index] = value;
-        }
-        Ok(results)
+        invert_delta_budgets(delta, self.delta_slack, false, |targets| {
+            self.invert_core(targets)
+        })
     }
 
     /// Invert nondecreasing total log-delta budgets without narrowing to delta.
-    /// Slack subtraction and logarithms round down before generic inversion.
     pub fn epsilon_from_log_delta(&self, log_delta: &[f64]) -> Fallible<Vec<f64>> {
-        check_inputs(log_delta, check_log_delta)?;
-        let mut results = vec![f64::INFINITY; log_delta.len()];
-        let mut targets = Vec::new();
-        let mut indices = Vec::new();
-        for (index, &log_delta) in log_delta.iter().enumerate() {
-            if log_delta == 0.0 {
-                results[index] = 0.0;
-                continue;
-            }
-            let target = if self.delta_slack == 0.0 {
-                log_delta
-            } else {
-                if log_delta < delta_to_log_lower_unchecked(self.delta_slack)? {
-                    continue;
-                }
-                let remaining =
-                    (SInterval::point(log_delta)?.exp()? - SInterval::point(self.delta_slack)?)?;
-                if !remaining.is_nonnegative() {
-                    // No nonnegative remaining budget was certified.
-                    continue;
-                }
-                if remaining.contains_zero() {
-                    f64::NEG_INFINITY
-                } else {
-                    remaining.ln()?.lower_f64()?
-                }
-            };
-            targets.push(target);
-            indices.push(index);
-        }
-        for (index, value) in indices.into_iter().zip(self.invert_core(&targets)?) {
-            results[index] = value;
-        }
-        Ok(results)
+        invert_delta_budgets(log_delta, self.delta_slack, true, |targets| {
+            self.invert_core(targets)
+        })
     }
 
     fn invert_core(&self, targets: &[f64]) -> Fallible<Vec<f64>> {
@@ -517,6 +528,76 @@ fn eval_log_profile(profile: &LogDeltaFn, epsilon: &[f64]) -> Fallible<Vec<f64>>
         check_log_delta(value)?;
     }
     Ok(values)
+}
+
+fn add_log_delta_slack(core: f64, slack: f64) -> Fallible<f64> {
+    if slack == 0.0 {
+        return Ok(core);
+    }
+    logaddexp_upper(core, delta_to_log_upper_unchecked(slack)?)
+}
+
+// Invert total delta budgets using a core log-delta inverse. This is
+// numerical slack handling, independent of the source representation.
+fn invert_delta_budgets(
+    budgets: &[f64],
+    slack: f64,
+    logarithmic: bool,
+    invert: impl FnOnce(&[f64]) -> Fallible<Vec<f64>>,
+) -> Fallible<Vec<f64>> {
+    check_inputs(
+        budgets,
+        if logarithmic {
+            check_log_delta
+        } else {
+            check_delta
+        },
+    )?;
+    let mut results = vec![f64::INFINITY; budgets.len()];
+    let mut targets = Vec::new();
+    let mut indices = Vec::new();
+    for (index, &budget) in budgets.iter().enumerate() {
+        if budget == if logarithmic { 0.0 } else { 1.0 } {
+            results[index] = 0.0;
+            continue;
+        }
+        let target = if logarithmic {
+            if slack == 0.0 {
+                budget
+            } else {
+                if budget < delta_to_log_lower_unchecked(slack)? {
+                    continue;
+                }
+                let remaining = (SInterval::point(budget)?.exp()? - SInterval::point(slack)?)?;
+                if !remaining.is_nonnegative() {
+                    continue;
+                }
+                if remaining.contains_zero() {
+                    f64::NEG_INFINITY
+                } else {
+                    remaining.ln()?.lower_f64()?
+                }
+            }
+        } else if budget < slack {
+            continue;
+        } else if budget == slack {
+            f64::NEG_INFINITY
+        } else if slack == 0.0 {
+            delta_to_log_lower_unchecked(budget)?
+        } else {
+            (SInterval::point(budget)? - SInterval::point(slack)?)?
+                .ln()?
+                .lower_f64()?
+        };
+        targets.push(target);
+        indices.push(index);
+    }
+    if !targets.is_empty() {
+        for (index, value) in indices.into_iter().zip(invert(&targets)?) {
+            results[index] = value;
+        }
+    }
+    Ok(results)
 }
 
 fn check_alpha(alpha: f64) -> Fallible<()> {
