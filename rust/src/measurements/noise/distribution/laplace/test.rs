@@ -4,7 +4,10 @@ use dashu::{ibig, integer::IBig, rbig};
 
 use super::*;
 use crate::{
+    core::Measurement,
     domains::{AtomDomain, VectorDomain},
+    measurements::NoisePrivacyMap,
+    measures::{MaxDivergence, MultiDP},
     metrics::{AbsoluteDistance, L1Distance},
     traits::samplers::test::check_kolmogorov_smirnov,
 };
@@ -15,11 +18,11 @@ fn test_make_laplace_native_types() -> Fallible<()> {
     macro_rules! test_make_laplace_type {
         ($($ty:ty),+) => {$(
             // scalar
-            let meas = make_laplace(AtomDomain::<$ty>::new_non_nan(), AbsoluteDistance::<$ty>::default(), 1., None)?;
+            let meas = make_laplace::<_, _, MaxDivergence>(AtomDomain::<$ty>::new_non_nan(), AbsoluteDistance::<$ty>::default(), 1., None)?;
             meas.invoke(&<$ty>::zero())?; // checking to see if invoke works
             assert_eq!(meas.map(&<$ty>::one())?, 1.0);
             // vector
-            let meas = make_laplace(VectorDomain::new(AtomDomain::<$ty>::new_non_nan()), L1Distance::<$ty>::default(), 1., None)?;
+            let meas = make_laplace::<_, _, MaxDivergence>(VectorDomain::new(AtomDomain::<$ty>::new_non_nan()), L1Distance::<$ty>::default(), 1., None)?;
             meas.invoke(&vec![<$ty>::zero()])?; // checking to see if invoke works
             assert_eq!(meas.map(&<$ty>::one())?, 1.0);
         )+}
@@ -34,7 +37,7 @@ fn test_make_laplace_native_types() -> Fallible<()> {
 #[test]
 fn test_make_laplace_bigint() -> Fallible<()> {
     // scalar ibig
-    let meas = make_laplace(
+    let meas = make_laplace::<_, _, MaxDivergence>(
         AtomDomain::<IBig>::default(),
         AbsoluteDistance::<RBig>::default(),
         1.,
@@ -43,7 +46,7 @@ fn test_make_laplace_bigint() -> Fallible<()> {
     meas.invoke(&IBig::ZERO)?; // checking to see if invoke works
     assert_eq!(meas.map(&RBig::ONE)?, 1.0);
     // vector ibig
-    let meas = make_laplace(
+    let meas = make_laplace::<_, _, MaxDivergence>(
         VectorDomain::new(AtomDomain::<IBig>::default()),
         L1Distance::<RBig>::default(),
         1.,
@@ -58,7 +61,7 @@ fn test_make_laplace_bigint() -> Fallible<()> {
 fn test_make_laplace_kolmogorov_smirnov() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::<f64>::new_non_nan());
     let input_metric = L1Distance::<f64>::default();
-    let meas = make_laplace(input_domain, input_metric, 1.0, None)?;
+    let meas = make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, 1.0, None)?;
     let samples = <[f64; 5000]>::try_from(meas.invoke(&vec![0.0; 5000])?).unwrap();
 
     pub fn laplace_cdf(x: f64) -> f64 {
@@ -98,7 +101,7 @@ fn test_make_laplace_map() -> Fallible<()> {
         Ok(())
     }
 
-    let m_float = make_laplace(
+    let m_float = make_laplace::<_, _, MaxDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         1f64,
@@ -106,7 +109,7 @@ fn test_make_laplace_map() -> Fallible<()> {
     )?;
     test_map(m_float.privacy_map.0.as_ref())?;
 
-    let m_int = make_laplace(
+    let m_int = make_laplace::<_, _, MaxDivergence>(
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<f64>::default(),
         1f64,
@@ -119,7 +122,7 @@ fn test_make_laplace_map() -> Fallible<()> {
 #[test]
 fn test_make_laplace_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_laplace(
+    let meas = make_laplace::<_, _, MaxDivergence>(
         AtomDomain::<u32>::default(),
         AbsoluteDistance::<f64>::default(),
         f64::MAX,
@@ -143,7 +146,7 @@ fn test_make_noise_zexpfamily1_large_scale() -> Fallible<()> {
         scale: rbig!(23948285282902934157),
     };
 
-    let meas = distribution.make_noise(space)?;
+    let meas: Measurement<_, _, MaxDivergence, IBig> = distribution.make_noise(space)?;
     // random large number:
     assert!(i8::try_from(meas.invoke(&ibig!(0))?).is_err());
     assert_eq!(meas.map(&rbig!(23948285282902934157))?, 1.0);
@@ -156,9 +159,95 @@ fn test_make_noise_zexpfamily1_zero_scale() -> Fallible<()> {
     let metric = L1Distance::default();
     let distribution = ZExpFamily { scale: rbig!(0) };
 
-    let meas = distribution.make_noise((domain, metric))?;
+    let meas: Measurement<_, _, MaxDivergence, Vec<IBig>> =
+        distribution.make_noise((domain, metric))?;
     assert_eq!(meas.invoke(&vec![ibig!(0)])?, vec![ibig!(0)]);
     assert_eq!(meas.map(&rbig!(0))?, 0.);
     assert_eq!(meas.map(&rbig!(1))?, f64::INFINITY);
+    Ok(())
+}
+
+#[test]
+fn test_discrete_laplace_zero_scale_multidp() -> Fallible<()> {
+    let distribution = ZExpFamily::<1> { scale: rbig!(0) };
+    let measurement: Measurement<_, _, MultiDP, Vec<IBig>> = distribution.make_noise((
+        VectorDomain::<AtomDomain<IBig>>::default(),
+        L1Distance::default(),
+    ))?;
+    assert_eq!(measurement.map(&rbig!(0))?.delta(0.0)?, 0.0);
+    assert_eq!(measurement.map(&rbig!(1))?.delta(0.0)?, 1.0);
+    Ok(())
+}
+
+#[test]
+fn test_discrete_laplace_rdp_fallback_handles_nonfinite_intermediates() -> Fallible<()> {
+    let scale = rbig!(1) / rbig!(10).pow(1000);
+    let sensitivity = scale.clone();
+    let distribution = ZExpFamily::<1> { scale };
+    let privacy_map =
+        <ZExpFamily<1> as NoisePrivacyMap<L1Distance<RBig>, MultiDP>>::noise_privacy_map(
+            &distribution,
+            &L1Distance::default(),
+            &MultiDP::default(),
+        )?;
+
+    let guarantee = privacy_map.eval(&sensitivity)?;
+    assert!(guarantee.epsilon(0.0)?.is_finite());
+    Ok(())
+}
+
+#[test]
+fn test_discrete_laplace_multidp_advertises_each_representation() -> Fallible<()> {
+    let distribution = DiscreteLaplace {
+        scale: 2.0,
+        k: None,
+    };
+    let measurement: Measurement<_, _, MultiDP, Vec<IBig>> = distribution.make_noise((
+        VectorDomain::new(AtomDomain::<IBig>::default()),
+        L1Distance::default(),
+    ))?;
+    let guarantee = measurement.map(&rbig!(1))?;
+    assert_eq!(guarantee.delta(0.5)?, 0.0);
+    assert_eq!(guarantee.epsilon(0.0)?, 0.5);
+    assert!(guarantee.beta(&[-0.1]).is_err());
+    assert!(guarantee.beta(&[f64::NAN]).is_err());
+    let epsilon = rbig!(1) / rbig!(2);
+    let sensitivity = rbig!(1);
+    let scale = rbig!(2);
+    assert!(zcdp_discrete_laplace(&epsilon, &sensitivity, &scale)? >= 0.0);
+    // A one-step shift has only two privacy-loss values, +/- 1/2.
+    let a = rug::Float::with_val(256, 0.5);
+    let reference = ((a.clone() * 2.0_f64).exp() + (-a.clone()).exp()) / (a.exp() + 1.0_f64);
+    let reference = reference.ln();
+    let actual = rdp_discrete_laplace(&sensitivity, &scale)?(2.0)?;
+    assert!(rug::Float::with_val(256, actual) >= reference);
+    assert!(actual - reference.to_f64() < 1e-12);
+    let zero = measurement.map(&rbig!(0))?;
+    assert_eq!(zero.delta(0.0)?, 0.0);
+    assert_eq!(zero.epsilon(0.0)?, 0.0);
+    assert_eq!(zero.beta(&[0.5])?, vec![0.5]);
+    Ok(())
+}
+
+#[test]
+fn test_discrete_laplace_rdp_falls_back_to_pure_dp() -> Fallible<()> {
+    let distribution = ZExpFamily::<1> {
+        scale: rbig!(1) / rbig!(1000),
+    };
+    let privacy_map =
+        <ZExpFamily<1> as NoisePrivacyMap<L1Distance<RBig>, MultiDP>>::noise_privacy_map(
+            &distribution,
+            &L1Distance::default(),
+            &MultiDP::default(),
+        )?;
+    let sensitivity = rbig!(1) / rbig!(10);
+    let _guarantee = privacy_map.eval(&sensitivity)?;
+
+    // a = 1 / scale = 1000 makes the tight expression fail conservatively,
+    // while epsilon = 100 keeps the exact pure-DP RDP fallback representable.
+    let sensitivity = rbig!(1) / rbig!(10);
+    let scale = rbig!(1) / rbig!(1000);
+    assert!(rdp_discrete_laplace(&sensitivity, &scale).is_err());
+    assert!(rdp_from_pureDP(2.0, 100.0)?.is_finite());
     Ok(())
 }

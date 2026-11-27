@@ -212,7 +212,7 @@ fn test_noise_b_ary_tree() -> Fallible<()> {
         10,
         2,
     )?;
-    let meas = (trans >> then_laplace(1., None))?;
+    let meas = (trans >> then_laplace::<_, _, crate::measures::MaxDivergence>(1., None))?;
     println!("noised {:?}", meas.invoke(&vec![1; 10])?);
 
     Ok(())
@@ -228,7 +228,7 @@ fn test_identity() -> Fallible<()> {
         10,
         b,
     )?;
-    let meas = (trans.clone() >> then_laplace(0., None))?;
+    let meas = (trans.clone() >> then_laplace::<_, _, crate::measures::MaxDivergence>(0., None))?;
     let post = make_consistent_b_ary_tree::<i32, f64>(b)?;
 
     let noisy_tree = meas.invoke(&vec![1; 10])?;

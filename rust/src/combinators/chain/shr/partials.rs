@@ -291,7 +291,7 @@ mod tests_shr {
             SymmetricDistance,
         ) >> then_clamp((0, 1))
             >> then_sum()
-            >> then_laplace(1., None))
+            >> then_laplace::<_, _, crate::measures::MaxDivergence>(1., None))
         .map(|_| ())
     }
 }

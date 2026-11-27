@@ -14,7 +14,7 @@ mod gaussiandp_ffi;
 pub(crate) mod logspace;
 mod maximize;
 mod profile_to_tradeoff;
-mod renyidp;
+pub(crate) mod renyidp;
 #[cfg(feature = "ffi")]
 mod renyidp_ffi;
 #[cfg(feature = "ffi")]
