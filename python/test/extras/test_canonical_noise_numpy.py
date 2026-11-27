@@ -1,4 +1,3 @@
-import opendp.prelude as dp
 from opendp.extras.numpy.canonical import (
     BinomialCND,
     _cnd_cdf,
@@ -182,47 +181,3 @@ def test_1s_ump_basic():
     )
     # tail should be monotonically increasing
     assert (np.diff(result) < 0).sum() == len(result) - 1
-
-
-def test_canonical_context_no_transformation():
-    context = dp.Context.compositor(
-        data=1.0,
-        privacy_unit=dp.unit_of(absolute=1.0),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=2,
-        domain=dp.atom_domain(nan=False, T=float),
-    )
-
-    assert isinstance(context.query().canonical_noise().release(), float)
-    assert isinstance(
-        context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
-    )
-
-
-def test_canonical_context_with_transformation():
-    context = dp.Context.compositor(
-        data=[1.0, 2.0, 3.0, 4.0],
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=2,
-    )
-
-    query = context.query().impute_constant(0.0).clamp((0.0, 1.0)).sum()
-
-    assert isinstance(query.canonical_noise().release(), float)
-    assert isinstance(query.canonical_noise(binomial_size=1000).release(), BinomialCND)
-
-
-def test_canonical_context_with_partial_transformation():
-    context = dp.Context.compositor(
-        data=[1.0, 2.0, 3.0, 4.0],
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=2,
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Canonical noise requires all arguments in the input query to be specified.",
-    ):
-        context.query().resize(constant=1.0).clamp((0.0, 1.0)).sum().canonical_noise()

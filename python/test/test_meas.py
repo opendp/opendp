@@ -404,13 +404,43 @@ def test_gaussian_threshold_float(constructor):
     assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
 
 
+def test_canonical_noise_preserves_callback_error():
+    marker = ValueError("canonical callback failed")
+
+    def log_delta(epsilons):
+        raise marker
+
+    specification = dp.PrivacyGuarantee(profile=dp.PrivacyProfile(log_delta=log_delta))
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    with pytest.raises(ValueError) as error:
+        dp.m.make_canonical_noise(*space, 1.0, specification)
+    assert error.value is marker
+
+
 def test_canonical_noise():
     space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=(1.0, 1e-6))
+    privacy = dp.PrivacyGuarantee(approx_dp=(1.0, 1e-6))
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1.0, d_out=privacy)
 
-    assert m_cnd.map(1.0) == (1.0, 1e-6)
+    assert m_cnd.map(1.0).delta(1.0) == 1e-6
+    assert m_cnd.map(1.0).epsilon(1e-6) <= 1.0
+    assert m_cnd.map(0.0).delta(0.0) == 0.0
     # just check that it runs
     assert isinstance(m_cnd(0.0), float)
+
+
+def test_canonical_noise_after_transformation():
+    space = (
+        dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+        dp.symmetric_distance(),
+    )
+    transformation = space >> dp.t.then_clamp((0.0, 1.0)) >> dp.t.then_sum()
+    specification = dp.PrivacyGuarantee(approx_dp=(0.5, 1e-7))
+    measurement = transformation >> dp.m.then_canonical_noise(
+        d_in=transformation.map(1), d_out=specification
+    )
+    assert measurement.map(1).delta(0.5) == 1e-7
+    assert isinstance(measurement([0.0, 1.0]), float)
 
 
 def test_generic_noise_multidp_distribution_selection():
