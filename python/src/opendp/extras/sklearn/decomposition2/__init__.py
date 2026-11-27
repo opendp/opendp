@@ -42,6 +42,9 @@ from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
+from opendp.extras.sklearn._make_eigendecomposition import (
+    then_private_np_eigendecomposition,
+)
 from opendp.mod import Domain, Measure, Measurement, Metric
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -236,6 +239,45 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
+        # The legacy Bingham constructors support publicly sized data and
+        # per-replacement pure-DP budgets. Other requests use SSCP.
+        if (
+            not is_zcdp
+            and n_samples is not None
+            and _use_bingham(num_components, n_samples, n_features)
+        ):
+            k = min(
+                num_components if isinstance(num_components, int) else n_samples,
+                n_features,
+            )
+            m_bingham = dp.binary_search_chain(
+                lambda scale: (
+                    t_center
+                    >> then_private_np_eigendecomposition(
+                        1.0 / scale,
+                        [1.0 / (scale * k)] * k,
+                        num_components=k,
+                    )
+                ),
+                d_in=d_in,
+                d_out=eigen_budget,
+                T=float,
+            )
+
+            def release_bingham(result):
+                values, vectors = result
+                singular_values = np.sqrt(
+                    _project_spectrum(np.sort(values), trace_bound)
+                )[::-1]
+                return PCARelease(
+                    mean=np.array(reference, copy=True),
+                    singular_values=singular_values,
+                    components=vectors[:, :k].T,
+                    n_samples=released_count,
+                )
+
+            return m_bingham >> _new_pure_function(release_bingham)
+
         t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
         t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=2 if is_zcdp else 1)
         m_matrix = dp.binary_search_chain(
@@ -442,8 +484,9 @@ class PCA(
 
     If dataset size is not public, fitting privately estimates it.
     An L2 domain bound or ``clip_norm`` is required.
-    Pure epsilon-DP and zero-concentrated DP are supported via private SSCP
-    moments followed by eigendecomposition.
+    Pure epsilon-DP and zero-concentrated DP are supported. Low-rank pure-DP
+    requests use Bingham sampling; other requests use private SSCP moments
+    followed by eigendecomposition.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to
@@ -495,6 +538,11 @@ class PCA(
     The Gaussian SSCP approach follows Dwork et al.,
     `Analyze Gauss: Optimal Bounds for Privacy-Preserving Principal Component Analysis
     <https://doi.org/10.1145/2591796.2591883>`_, STOC, 2014.
+
+    The Bingham approach follows Amin et al.,
+    `Differentially Private Covariance Estimation
+    <https://proceedings.neurips.cc/paper_files/paper/2019/hash/4158f6d19559955bae372bb00f6204e4-Abstract.html>`_,
+    NeurIPS, 2019.
     """
 
     # These operate solely on the released fitted attributes.
@@ -664,6 +712,14 @@ class PCA(
         if desc.T not in ("f32", "f64"):
             raise ValueError("Rowwise PCA inference requires floating-point input")
         return dp.numpy.array2_domain(T=float, size=desc.size, num_columns=output_width)
+
+
+def _use_bingham(request, n_samples, n_features):
+    """Public rank policy; legacy Bingham supports fixed-size data only."""
+    if n_features == 1 or isinstance(request, (float, str)):
+        return False
+    k = request if isinstance(request, int) else n_samples
+    return k is not None and 4 * min(k, n_features) <= n_features
 
 
 def _project_spectrum(eigenvalues, trace_bound):

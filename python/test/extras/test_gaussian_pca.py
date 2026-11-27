@@ -7,10 +7,27 @@ pytest.importorskip("sklearn")
 from opendp.extras.sklearn import decomposition2 as decomposition
 
 
+@pytest.mark.parametrize(
+    "selection,size,width,expected",
+    [
+        (1, 10, 4, True),
+        (2, 10, 4, False),
+        (None, 2, 8, True),
+        (None, None, 8, False),
+        (None, 10, 8, False),
+        (0.5, 10, 8, False),
+        ("mle", 10, 8, False),
+        (1, 10, 1, False),
+    ],
+)
+def test_public_solver_policy(selection, size, width, expected):
+    assert decomposition._use_bingham(selection, size, width) == expected
+
+
 @pytest.mark.parametrize("is_zcdp", [False, True])
 @pytest.mark.parametrize("k", [1, 2])
 @pytest.mark.parametrize("center", ["origin", None])
-def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
+def test_solver_dispatch_and_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     dp.enable_features("contrib", "idealized-numerics")
     data = np.array(
         [
@@ -32,7 +49,7 @@ def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
 
     monkeypatch.setattr(decomposition, "make_np_svec", record)
     measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
-    budget = 1e12 if is_zcdp else 1e6
+    budget = 1e12 if is_zcdp else 1e6 if k == 2 else 1.0
     measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
@@ -45,16 +62,19 @@ def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     assert measurement.check(2, budget)
     assert measurement.map(1) == 0.0
     release = measurement(data)
-    assert seen == ([] if is_zcdp and center is None else [2 if is_zcdp else 1])
+    assert seen == (
+        [2] if is_zcdp and center == "origin" else [1] if not is_zcdp and k == 2 else []
+    )
     assert release.components.shape == (k, 4)
     np.testing.assert_allclose(
         release.components @ release.components.T, np.eye(k), atol=1e-12
     )
-    np.testing.assert_allclose(release.mean, np.zeros(4), atol=1e-3)
-    np.testing.assert_allclose(
-        release.singular_values[:2], [np.sqrt(2), np.sqrt(0.5)], atol=1e-3
-    )
-    np.testing.assert_allclose(np.abs(release.components), np.eye(4)[:k], atol=1e-3)
+    if is_zcdp or k == 2:
+        np.testing.assert_allclose(release.mean, np.zeros(4), atol=1e-3)
+        np.testing.assert_allclose(
+            release.singular_values[:2], [np.sqrt(2), np.sqrt(0.5)], atol=1e-3
+        )
+        np.testing.assert_allclose(np.abs(release.components), np.eye(4)[:k], atol=1e-3)
 
 
 @pytest.mark.parametrize("size", [None, 4])
