@@ -13,6 +13,12 @@ from opendp.extras.sklearn._domains import (
     sklearn_fit_domain,
 )
 from opendp.extras.sklearn._estimator import TransformationMixin
+from opendp.extras.sklearn._composition import (
+    unwrap_frozen_estimator,
+    _CompositeMixin,
+    fit_child,
+    needs_private_fit,
+)
 from opendp.metrics import symmetric_distance
 from opendp.mod import DataFrameDomain, Domain, assert_features
 
@@ -64,20 +70,24 @@ def _trusted_rowwise(estimator):
 def _make_rowwise_transform(
     input_domain, input_metric, estimator, *, method="transform"
 ):
-    """Compile row-independent inference with data-independent failure."""
+    """Compile a fitted rowwise method with data-independent errors."""
     if input_metric != symmetric_distance():
         raise ValueError("Rowwise inference requires symmetric_distance()")
 
-    if not isinstance(estimator, TransformationMixin):
+    fitted = deepcopy(estimator)
+    unwrapped = unwrap_frozen_estimator(fitted)
+    if not isinstance(unwrapped, TransformationMixin):
         raise TypeError("Stage must implement TransformationMixin")
-    if not callable(getattr(estimator, method, None)):
+    if not callable(getattr(unwrapped, method, None)):
         raise TypeError(f"{type(estimator).__name__} has no sklearn {method!r} method")
 
     desc = input_domain.cast(SklearnFitDescriptor)
     # Validate the same snapshot that executes inference, including public metadata.
-    fitted = deepcopy(estimator)
     if not _trusted_rowwise(fitted):
         assert_features("honest-but-curious")
+    if isinstance(fitted, _CompositeMixin) and not needs_private_fit(fitted):
+        fit_child(fitted, input_domain)
+    fitted = unwrapped
     output = fitted.rowwise_output_domain(desc.X, method=method)
     if not isinstance(output, Domain):
         raise TypeError("rowwise_output_domain must return a Domain")

@@ -123,7 +123,9 @@ nitpick_ignore = [
     # Internal sklearn mixins do not have public documentation targets.
     ("py:class", "opendp.extras.sklearn._estimator.MeasurementMixin"),
     ("py:class", "opendp.extras.sklearn._estimator.TransformationMixin"),
+    ("py:class", "opendp.extras.sklearn._composition._CompositeMixin"),
     ("py:class", "sklearn.base.BaseEstimator"),
+    ("py:class", "sklearn.compose.ColumnTransformer"),
     # Standard library reference fails to resolve
     ("py:class", "abc.ABC"),
     # I think the problem is that Sphinx is making parameter list documentation,
