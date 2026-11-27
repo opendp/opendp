@@ -211,11 +211,7 @@ def make_private_pca(
     trace_bound = None if n_samples is None else n_samples * radius**2
     estimate_mean = center is None
     estimate_count = n_samples is None
-    use_bingham = (
-        not is_zcdp
-        and n_samples is not None
-        and _use_bingham(num_components, n_samples, n_features)
-    )
+    use_bingham = not is_zcdp and _use_bingham(num_components, n_samples, n_features)
     # Count has dimension-independent sensitivity. Reserve a small share,
     # then keep the same mean/spectrum allocation for either solver.
     count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0

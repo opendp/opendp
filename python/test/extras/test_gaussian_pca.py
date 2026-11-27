@@ -156,3 +156,36 @@ def test_joint_pca_anchors_spectrum_to_released_mean_and_count(size):
     assert np.linalg.norm(release.mean) <= 1.0 + 1e-12
     bound = release.n_samples * max(0.0, 1.0 - release.mean @ release.mean)
     assert np.sum(release.singular_values**2) <= bound + 1e-10
+
+
+@pytest.mark.parametrize("d_in", [1, 3])
+def test_unsized_low_rank_uses_bingham(monkeypatch, d_in):
+    dp.enable_features("contrib", "idealized-numerics")
+    domain = dp.numpy.array2_domain(T=float, num_columns=4, norm=1.0, p=2, nan=False)
+    from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
+
+    seen = []
+
+    def observe(scale, weights):
+        seen.append(len(weights))
+        return then_private_eigenvectors(scale, weights)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", observe)
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        d_in,
+        1.0,
+        center="origin",
+        num_components=1,
+    )
+    assert measurement.check(d_in, 1.0)
+    assert measurement.map(0) == 0.0
+    release = measurement(np.eye(4))
+    assert seen and seen[-1] == 1
+    assert release.components.shape == (1, 4)
+    assert release.n_samples >= 2
+    np.testing.assert_allclose(
+        release.components @ release.components.T, np.eye(1), atol=1e-12
+    )
