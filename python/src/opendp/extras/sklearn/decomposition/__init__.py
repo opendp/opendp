@@ -35,6 +35,7 @@ from opendp._lib import import_optional_dependency
 from opendp.context import _check_sized_contributions, register
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_count import make_private_np_count
+from opendp.extras.numpy._make_np_moments import make_private_np_moments
 from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.extras.numpy._make_np_sscp import then_np_sscp
 from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
@@ -187,6 +188,8 @@ def make_private_pca(
     # then keep the same mean/spectrum allocation for either solver.
     count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0
     remaining = _smaller(float(d_out) - count_budget) if estimate_count else float(d_out)
+    # Experimental joint Gaussian moments for centered matrix PCA.
+    joint_moments = estimate_mean and not use_bingham and is_zcdp
     eigen_stages = 1 + int(n_features > 1)
     mean_budget = _smaller(remaining / (1 + eigen_stages)) if estimate_mean else 0.0
     eigen_budget = _smaller(remaining - mean_budget) if estimate_mean else remaining
@@ -296,6 +299,58 @@ def make_private_pca(
             d_out=count_budget,
             T=float,
         ) >> _new_pure_function(lambda count: max(minimum_count, count))
+
+    if joint_moments:
+        t_offsets = _make_transformation(
+            ball_domain, input_metric, centered_domain, input_metric,
+            lambda data: np.asarray(data, dtype=float) - origin,
+            lambda distance: distance,
+        )
+        m_moments = t_offsets >> make_private_np_moments(
+            centered_domain, input_metric, output_measure, d_in, remaining
+        )
+        projection = make_np_clamp(
+            dp.numpy.array2_domain(T=float, size=1, num_columns=n_features),
+            input_metric, radius, p=2, origin=origin,
+        )
+
+        def release_moments(moments, count):
+            sums, gram = moments
+            reference = projection((origin + sums / count)[None, :])[0]
+            offset = reference - origin
+            # Center around the released (possibly projected) mean.
+            gram = gram - np.outer(sums, offset) - np.outer(offset, sums)
+            gram += count * np.outer(offset, offset)
+            eigvals, eigvecs = np.linalg.eigh(gram)
+            singular_values = np.sqrt(_project_spectrum(eigvals, trace_bound))[::-1]
+            k = _select_num_components(num_components, singular_values, count)
+            return PCARelease(
+                mean=reference,
+                singular_values=singular_values,
+                components=eigvecs[:, ::-1][:, :k].T,
+                n_samples=count,
+            )
+
+        if not estimate_count:
+            measurement = m_moments >> _new_pure_function(
+                lambda moments: release_moments(moments, n_samples)
+            )
+        else:
+            compositor = dp.c.make_adaptive_composition(
+                ball_domain, input_metric, output_measure,
+                d_in=d_in, d_mids=[count_budget, remaining],
+            )
+
+            def function(data):
+                qbl = compositor(data)
+                count = qbl(m_count)
+                return release_moments(qbl(m_moments), count)
+
+            measurement = _make_measurement(
+                ball_domain, input_metric, output_measure, function,
+                lambda distance: 0.0 if distance == 0 else compositor.map(distance),
+            )
+        return t_clip >> measurement if t_clip is not None else measurement
 
     if estimate_mean:
         # The Gaussian mean can use the original L2 ball. Laplace needs

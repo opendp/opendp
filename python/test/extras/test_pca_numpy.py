@@ -1030,6 +1030,7 @@ def test_pca_unknown_size_uses_private_count_and_centered_sum(
     np = pytest.importorskip("numpy")
     from opendp._internal import _new_pure_function
 
+    monkeypatch.setattr(decomposition, "_use_bingham", lambda *args: True)
     # Fix the released count below the actual count and replace the noisy
     # offset sum with a public value. Keep the actual mechanisms and maps.
     count_constructor = decomposition.make_private_np_count

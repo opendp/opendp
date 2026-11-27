@@ -66,13 +66,45 @@ def test_solver_dispatch_and_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     assert measurement.check(2, budget)
     assert measurement.map(1) == 0.
     release = measurement(data)
-    assert seen == ([2 if is_zcdp else 1] if k == 2 else [])
+    assert seen == ([2 if is_zcdp else 1] if k == 2 and not (is_zcdp and center is None) else [])
     assert release.components.shape == (k, 4)
     np.testing.assert_allclose(release.components @ release.components.T, np.eye(k), atol=1e-12)
     if k == 2:
         np.testing.assert_allclose(release.mean, np.zeros(4), atol=1e-3)
         np.testing.assert_allclose(release.singular_values[:2], [np.sqrt(2), np.sqrt(.5)], atol=1e-3)
         np.testing.assert_allclose(np.abs(release.components), np.eye(4)[:2], atol=1e-3)
+
+def test_weighted_moment_sensitivity():
+    from opendp.extras.numpy._make_np_moments import _moment_sensitivity_sq
+
+    for ratio in (1., np.sqrt(2.), 3.):
+        # Attain the bound with unit rows at the maximizing angle.
+        t = 1 / (2 * ratio**2)
+        x = np.array([1., 0.])
+        y = np.array([-t, np.sqrt(1 - t*t)])
+        diff = np.linalg.norm(np.outer(x, x) - np.outer(y, y), "fro")**2
+        diff += np.linalg.norm(x-y)**2 / ratio**2
+        assert diff == pytest.approx(_moment_sensitivity_sq(ratio, True))
+
+
+@pytest.mark.parametrize("size", [None, 4])
+def test_joint_moments_centered_pca(size):
+    dp.enable_features("contrib", "idealized-numerics")
+    data = np.array([[.6, .4], [.6, -.4], [.6, .4], [.6, -.4]])
+    domain = dp.numpy.array2_domain(
+        T=float, size=size, num_columns=2, norm=1., p=2, nan=False
+    )
+    distance = 1 if size is None else 2
+    m = decomposition.make_private_pca(
+        domain, dp.symmetric_distance(), dp.zero_concentrated_divergence(),
+        distance, 1e12, num_components=2,
+    )
+    assert m.check(distance, 1e12)
+    release = m(data)
+    assert release.n_samples == 4
+    np.testing.assert_allclose(release.mean, [.6, 0.], atol=1e-4)
+    np.testing.assert_allclose(release.singular_values[0], .8, atol=1e-4)
+    np.testing.assert_allclose(np.abs(release.components[0]), [0., 1.], atol=1e-4)
 
 def test_trace_bounded_spectrum():
     # Known count bounds total clipped scatter, not individual directions.
