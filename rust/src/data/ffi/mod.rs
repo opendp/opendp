@@ -1346,6 +1346,25 @@ pub extern "C" fn opendp_data__fill_bytes(ptr: *mut u8, len: usize) -> bool {
     fill_bytes(buffer).is_ok()
 }
 
+#[bootstrap(
+    name = "sample_wishart_difference",
+    arguments(upper(rust_type = "Vec<f64>")),
+    returns(rust_type = "FfiResult<Vec<f64>>")
+)]
+/// Internal function. Add a correctly rounded Wishart difference to a
+/// packed upper triangle. Runtime is data dependent.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__sample_wishart_difference(
+    upper: *const AnyObject,
+    dimension: usize,
+    scale: f64,
+) -> FfiResult<*mut AnyObject> {
+    let upper = try_!(try_as_ref!(upper).downcast_ref::<Vec<f64>>());
+    crate::traits::samplers::sample_wishart_difference(upper, dimension, scale)
+        .map(AnyObject::new)
+        .into()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::error::ExplainUnwrap;

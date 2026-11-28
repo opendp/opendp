@@ -18,7 +18,7 @@ OpenDP :class:`~opendp.context.Context` query.
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from numbers import Integral
 from typing import TYPE_CHECKING
 
@@ -35,11 +35,10 @@ from opendp._internal import _make_measurement, _make_transformation, _new_pure_
 from opendp._lib import import_optional_dependency
 from opendp.context import _check_sized_contributions, register
 from opendp.extras._utilities import to_then
-from opendp.extras.numpy._make_np_count import make_private_np_count
 from opendp.extras.numpy._make_np_moments import _joint_sensitivity
-from opendp.extras.numpy._make_np_sum import make_private_np_sum
 from opendp.extras.numpy._make_np_sscp import then_np_sscp
 from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
+from opendp.extras.numpy._make_np_wishart import make_private_np_wishart_moments
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
@@ -269,12 +268,40 @@ def make_private_pca(
     )
     estimate_mean = center is None
 
-    def release_matrix(matrix, reference, count, bound):
-        eigvals, eigvecs = np.linalg.eigh(matrix)
-        if is_zcdp:
-            # Project to the released trace (within the anchored energy cap).
-            bound = min(bound, max(0.0, float(eigvals.sum())))
-        singular_values = np.sqrt(_project_spectrum(eigvals, bound))[::-1]
+    t_offsets = _make_transformation(
+        ball_domain,
+        input_metric,
+        centered_domain,
+        input_metric,
+        lambda data: np.asarray(data, dtype=float) - origin,
+        lambda distance: distance,
+    )
+    if is_zcdp:
+        m_moments = make_private_np_moments(
+            centered_domain, input_metric, d_in, d_out, estimate_mean=estimate_mean
+        )
+    else:
+        m_moments, _ = make_private_np_wishart_moments(
+            centered_domain, input_metric, d_in, d_out, estimate_mean=estimate_mean
+        )
+
+    def release_moments(moments):
+        sums, gram, count = moments
+        count = max(minimum_count, count)
+        energy = min(count * radius**2, max(0.0, float(np.trace(gram))))
+        reference = origin
+        if estimate_mean:
+            offset = sums / count
+            norm = np.linalg.norm(offset)
+            limit = math.sqrt(energy / count)
+            if norm > limit:
+                offset = offset * (limit / norm)
+            reference = origin + offset
+            # Reconstruct the centered Gram from consistent released moments.
+            gram = gram - count * np.outer(offset, offset)
+            energy = max(0.0, energy - count * float(offset @ offset))
+        eigvals, eigvecs = np.linalg.eigh(gram)
+        singular_values = np.sqrt(_project_spectrum(eigvals, energy))[::-1]
         k = _select_num_components(num_components, singular_values, count)
         return PCARelease(
             mean=np.array(reference, copy=True),
@@ -283,183 +310,8 @@ def make_private_pca(
             n_samples=count,
         )
 
-    if is_zcdp:
-        t_offsets = _make_transformation(
-            ball_domain,
-            input_metric,
-            centered_domain,
-            input_metric,
-            lambda data: np.asarray(data, dtype=float) - origin,
-            lambda distance: distance,
-        )
-        m_moments = t_offsets >> make_private_np_moments(
-            centered_domain, input_metric, d_in, d_out, estimate_mean=estimate_mean
-        )
-        if estimate_mean:
-            projection = make_np_clamp(
-                dp.numpy.array2_domain(T=float, size=1, num_columns=n_features),
-                input_metric,
-                radius,
-                p=2,
-                origin=origin,
-            )
-
-        def release_moments(moments):
-            sums, gram, count = moments
-            count = max(minimum_count, count)
-            reference = origin
-            bound = count * radius**2
-            if estimate_mean:
-                reference = projection((origin + sums / count)[None, :])[0]
-                offset = reference - origin
-                # Center around the released (possibly projected) mean.
-                gram = gram - np.outer(sums, offset) - np.outer(offset, sums)
-                gram += count * np.outer(offset, offset)
-                # This cap is conditional on the private mean and count.
-                bound = count * max(0.0, radius**2 - float(offset @ offset))
-            return release_matrix(gram, reference, count, bound)
-
-        measurement = m_moments >> _new_pure_function(release_moments)
-        return t_clip >> measurement if t_clip is not None else measurement
-
-    # With a public count, the true clipped scatter has trace at most n R².
-    # A private count is not an upper bound, so do not constrain its spectrum.
-    trace_bound = None if n_samples is None else n_samples * radius**2
-    estimate_count = n_samples is None
-    # Count sensitivity is dimension-independent. Reserve 5% as a compromise:
-    # covariance-only optimal splits can harm direction or mean accuracy.
-    count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0
-    remaining = (
-        _smaller(float(d_out) - count_budget) if estimate_count else float(d_out)
-    )
-    # Split the pure-DP budget by stages; retain more for the spectrum in d > 1.
-    eigen_stages = 1 + int(n_features > 1)
-    mean_budget = _smaller(remaining / (1 + eigen_stages)) if estimate_mean else 0.0
-    eigen_budget = _smaller(remaining - mean_budget) if estimate_mean else remaining
-
-    def eigendecomposition(reference, released_count):
-        t_reclip = (
-            make_np_clamp(ball_domain, input_metric, radius, p=2, origin=reference)
-            if estimate_mean
-            else None
-        )
-        t_center = _make_transformation(
-            t_reclip.output_domain if t_reclip is not None else ball_domain,
-            input_metric,
-            centered_domain,
-            input_metric,
-            lambda data: np.asarray(data, dtype=float) - reference,
-            lambda distance: distance,
-        )
-        if t_reclip is not None:
-            t_center = t_reclip >> t_center
-        t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
-        t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=1)
-        m_matrix = dp.binary_search_chain(
-            lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
-            d_in=d_in,
-            d_out=eigen_budget,
-            T=float,
-        )
-
-        return m_matrix >> _new_pure_function(
-            lambda values: release_matrix(
-                unsvec(values, n_features), reference, released_count, trace_bound
-            )
-        )
-
-    if estimate_count:
-        m_count = dp.binary_search_chain(
-            lambda scale: make_private_np_count(
-                ball_domain, input_metric, output_measure, scale
-            ),
-            d_in=d_in,
-            d_out=count_budget,
-            T=float,
-        ) >> _new_pure_function(lambda count: max(minimum_count, count))
-
-    if estimate_mean:
-        # Laplace needs ||x-c||_1 <= sqrt(d) R, rounded upwards.
-        mean_radius = np.nextafter(
-            np.nextafter(np.sqrt(n_features), np.inf) * radius, np.inf
-        )
-        mean_domain = dp.numpy.array2_domain(
-            **(
-                asdict(ball_domain.descriptor)
-                | {
-                    "norm": mean_radius,
-                    "p": 1,
-                    "origin": None,
-                    "T": float,
-                }
-            )
-        )
-        t_mean = _make_transformation(
-            ball_domain,
-            input_metric,
-            mean_domain,
-            input_metric,
-            lambda data: np.asarray(data, dtype=float) - origin,
-            lambda distance: distance,
-        )
-        # Release a sum of offsets. This avoids dependence on the public
-        # origin in the insertion/deletion sensitivity bound.
-        m_sum = dp.binary_search_chain(
-            lambda scale: (
-                t_mean
-                >> make_private_np_sum(mean_domain, input_metric, output_measure, scale)
-            ),
-            d_in=d_in,
-            d_out=mean_budget,
-            T=float,
-        )
-        projection = make_np_clamp(
-            dp.numpy.array2_domain(T=float, size=1, num_columns=n_features),
-            input_metric,
-            radius,
-            p=2,
-            origin=origin,
-        )
-
-    if not estimate_count and not estimate_mean:
-        measurement = eigendecomposition(origin, n_samples)
-    else:
-        compositor = dp.c.make_adaptive_composition(
-            ball_domain,
-            input_metric,
-            output_measure,
-            d_in=d_in,
-            d_mids=(
-                ([count_budget] if estimate_count else [])
-                + ([mean_budget] if estimate_mean else [])
-                + [eigen_budget]
-            ),
-        )
-
-        def function(data):
-            qbl = compositor(data)
-            released_count = qbl(m_count) if estimate_count else n_samples
-            reference = origin
-            if estimate_mean:
-                reference = projection(
-                    (origin + np.asarray(qbl(m_sum)) / released_count)[None, :]
-                )[0]
-            return qbl(eigendecomposition(reference, released_count))
-
-        measurement = _make_measurement(
-            ball_domain,
-            input_metric,
-            output_measure,
-            function,
-            lambda distance: (
-                0.0
-                if distance < (1 if estimate_count else 2)
-                else compositor.map(distance)
-            ),
-        )
-
+    measurement = t_offsets >> m_moments >> _new_pure_function(release_moments)
     return t_clip >> measurement if t_clip is not None else measurement
-
 
 then_private_pca = to_then(make_private_pca)
 register(make_private_pca, name="private_pca2")
@@ -480,8 +332,8 @@ class PCA(
 
     If dataset size is not public, fitting privately estimates it.
     An L2 domain bound or ``clip_norm`` is required.
-    Pure epsilon-DP and zero-concentrated DP are supported via private SSCP
-    moments followed by eigendecomposition.
+    Pure epsilon-DP uses Wishart-difference SSCP moments; zero-concentrated DP
+    uses Gaussian SSCP moments. Both use the same spectral reconstruction.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to
@@ -738,11 +590,3 @@ def _select_num_components(request, singular_values, n_samples):
             else np.searchsorted(np.cumsum(variance / total), request, side="right") + 1
         )
     return min(int(k), max_components)
-
-
-def _smaller(v):
-    """Return the next non-negative float closer to zero."""
-    np = import_optional_dependency("numpy")
-    if v < 0:
-        raise ValueError("expected non-negative value")  # pragma: no cover
-    return v if v == 0 else np.nextafter(v, -1)

@@ -45,7 +45,7 @@ def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     assert measurement.check(2, budget)
     assert measurement.map(1) == 0.0
     release = measurement(data)
-    assert seen == ([2] if is_zcdp else [1])
+    assert seen == ([2] if is_zcdp else [])
     assert release.components.shape == (k, 4)
     np.testing.assert_allclose(
         release.components @ release.components.T, np.eye(k), atol=1e-12
@@ -71,11 +71,11 @@ def test_trace_aware_moments(size, dimension, estimate_mean):
     )
     x = np.eye(dimension)[0:1] * radius
     if size is None:
-        empty = t(np.empty((0, dimension)))
+        empty = np.asarray(t(np.empty((0, dimension))))
         for row in (x, np.zeros_like(x)):
-            assert np.linalg.norm(t(row) - empty) == pytest.approx(t.map(1))
+            assert np.linalg.norm(np.asarray(t(row)) - empty) == pytest.approx(t.map(1))
             # Negative energy or deficit is clamped before deriving the count.
-            _, gram, count = decode(-t(row))
+            _, gram, count = decode(-np.asarray(t(row)))
             assert count == 0
             assert np.trace(gram) == pytest.approx(0.0)
     else:
@@ -86,7 +86,7 @@ def test_trace_aware_moments(size, dimension, estimate_mean):
             if estimate_mean:
                 y = np.sqrt(15) / 4 * y - x / 4
             neighbors.append(y)
-        changes = [np.linalg.norm(t(x) - t(y)) for y in neighbors]
+        changes = [np.linalg.norm(np.asarray(t(x)) - np.asarray(t(y))) for y in neighbors]
         assert max(changes) <= t.map(2) * (1 + 1e-12)
         if dimension > 1 or not estimate_mean:
             assert max(changes) == pytest.approx(t.map(2))
@@ -104,17 +104,19 @@ def test_trace_aware_moments(size, dimension, estimate_mean):
 
 
 @pytest.mark.parametrize("size", [None, 4])
-def test_joint_moments_centered_pca(size):
+@pytest.mark.parametrize("is_zcdp", [False, True])
+def test_joint_moments_centered_pca(size, is_zcdp):
     dp.enable_features("contrib", "idealized-numerics")
     data = np.array([[0.6, 0.4], [0.6, -0.4], [0.6, 0.4], [0.6, -0.4]])
     domain = dp.numpy.array2_domain(
         T=float, size=size, num_columns=2, norm=1.0, p=2, nan=False
     )
     distance = 1 if size is None else 2
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
     m = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
+        measure,
         distance,
         1e12,
         num_components=2,
@@ -161,7 +163,8 @@ def test_matrix_pca_respects_public_trace_bound(is_zcdp):
 
 
 @pytest.mark.parametrize("size", [None, 4])
-def test_joint_pca_anchors_spectrum_to_released_mean_and_count(size):
+@pytest.mark.parametrize("is_zcdp", [False, True])
+def test_joint_pca_anchors_spectrum_to_released_mean_and_count(size, is_zcdp):
     dp.enable_features("contrib", "idealized-numerics")
 
     data = np.tile([0.5, 0.0], (4, 1))
@@ -169,10 +172,11 @@ def test_joint_pca_anchors_spectrum_to_released_mean_and_count(size):
         T=float, size=size, num_columns=2, norm=1.0, p=2, nan=False
     )
     distance = 1 if size is None else 2
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
     m = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
+        measure,
         distance,
         0.1,
         num_components=2,

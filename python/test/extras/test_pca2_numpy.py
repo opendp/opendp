@@ -41,7 +41,7 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
         norm=1.0, p=2, origin=origin, num_columns=2, size=2, nan=False, T=T
     )
     data = origin + np.array([[0.5, 0.0], [0.5, 0.5]], dtype=dtype)
-    observations = _capture_sscp_rows(monkeypatch)
+    observations = _observe_moments(monkeypatch)
     measurement = make_private_pca(
         domain,
         dp.symmetric_distance(),
@@ -54,7 +54,7 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype, monkeypatch):
     assert domain.member(data)
     assert measurement.check(2, 1.0)
     measurement(data)
-    centered_domain, centered_rows = observations[0]
+    centered_domain, centered_rows, _ = observations[0]
     assert np.all(centered_domain.descriptor.origin == 0)
     assert np.array_equal(centered_rows, data - origin)
     assert centered_domain.member(centered_rows)
@@ -102,74 +102,33 @@ def test_pca_rejects_invalid_privacy_and_public_domain(overrides, message):
         decomposition.make_private_pca(domain, **make_args)
 
 
-def _capture_sscp_rows(monkeypatch):
-    """Observe the actual centered rows without replacing eigendecomposition."""
-    np = pytest.importorskip("numpy")
-    from opendp._internal import _make_transformation
-    from opendp.extras.sklearn import decomposition2 as decomposition
-    from opendp.extras._utilities import to_then
-    from opendp.extras.numpy._make_np_sscp import make_np_sscp
-
-    observations = []
-    original = make_np_sscp
-
-    def record(input_domain, input_metric, **kwargs):
-        def observe(data):
-            observations.append((input_domain, np.array(data, copy=True)))
-            return data
-
-        identity = _make_transformation(
-            input_domain,
-            input_metric,
-            input_domain,
-            input_metric,
-            observe,
-            lambda distance: distance,
-        )
-        return identity >> original(input_domain, input_metric, **kwargs)
-
-    monkeypatch.setattr(decomposition, "then_np_sscp", to_then(record))
-    return observations
-
-
-def _observe_private_mean(monkeypatch, *, replacement):
-    """Observe a DP offset sum, then replace it to produce a public mean offset."""
+def _observe_moments(monkeypatch, *, replacement=None, is_zcdp=False):
+    """Observe bounded offsets entering the joint release and optionally fix its output."""
     np = pytest.importorskip("numpy")
     from opendp._internal import _make_transformation, _new_pure_function
-    from opendp.extras.sklearn import decomposition2 as decomposition
 
-    original = decomposition.make_private_np_sum
-    observations = []
+    name = "make_private_np_moments" if is_zcdp else "make_private_np_wishart_moments"
+    original = getattr(decomposition, name)
+    observed = []
 
-    def record(input_domain, input_metric, *args, **kwargs):
-        measurement = original(input_domain, input_metric, *args, **kwargs)
+    def record(domain, metric, distance, budget, *, estimate_mean):
+        result = original(domain, metric, distance, budget, estimate_mean=estimate_mean)
+        measurement, q = (result, None) if is_zcdp else result
 
-        def observe_rows(data):
-            observations.append(
-                {
-                    "domain": input_domain,
-                    "rows": np.array(data, copy=True),
-                    "map_at_two": measurement.map(2),
-                }
-            )
+        def observe(data):
+            observed.append((domain, np.array(data, copy=True), measurement.map(distance)))
             return data
 
-        def observe_sum(total):
-            observations[-1]["sum"] = np.array(total, copy=True)
-            return np.array(replacement, dtype=float) * input_domain.descriptor.size
-
         identity = _make_transformation(
-            input_domain,
-            input_metric,
-            input_domain,
-            input_metric,
-            observe_rows,
-            lambda distance: distance,
+            domain, metric, domain, metric, observe, lambda distance: distance
         )
-        return identity >> measurement >> _new_pure_function(observe_sum)
+        measurement = identity >> measurement
+        if replacement is not None:
+            measurement = measurement >> _new_pure_function(lambda _: replacement)
+        return measurement if is_zcdp else (measurement, q)
 
-    monkeypatch.setattr(decomposition, "make_private_np_sum", record)
-    return observations
+    monkeypatch.setattr(decomposition, name, record)
+    return observed
 
 
 @pytest.mark.parametrize("center", [None, "origin"])
@@ -182,7 +141,7 @@ def _observe_private_mean(monkeypatch, *, replacement):
         (0.4, 0.8, 0.4),  # original bound is tighter
     ],
 )
-def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
+def test_pca_effective_ball_for_joint_moments(
     monkeypatch,
     center,
     bound,
@@ -208,8 +167,9 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
         origin=origin if bound is not None else None,
     )
     assert domain.member(data)
-    means = _observe_private_mean(monkeypatch, replacement=np.zeros_like(origin))
-    sscp = _capture_sscp_rows(monkeypatch)
+    observed = _observe_moments(
+        monkeypatch, replacement=(np.zeros(2), np.eye(2), len(data))
+    )
     measurement = make_private_pca(
         domain,
         dp.symmetric_distance(),
@@ -219,82 +179,49 @@ def test_pca_effective_ball_and_same_rows_for_mean_and_eigens(
         clip_norm=clip_norm,
         center=center,
     )
-    assert means == []  # Construction must not evaluate private rows.
+    assert observed == []  # Construction must not evaluate private rows.
     release = measurement(data)
     expected = offsets / np.maximum(
         np.linalg.norm(offsets, axis=1, keepdims=True) / radius, 1
     )
-    assert len(sscp) == 1
-    centered_domain, centered_rows = sscp[0]
+    assert len(observed) == 1
+    centered_domain, centered_rows, spent = observed[0]
     assert centered_domain.descriptor.norm == radius
     assert centered_domain.descriptor.p == 2
     assert centered_domain.member(centered_rows)
     np.testing.assert_allclose(centered_rows, expected, atol=1e-12)
     np.testing.assert_allclose(release.mean, origin, atol=1e-12)
-    if center is None:
-        assert len(means) == 1
-        np.testing.assert_allclose(means[0]["rows"], expected, atol=1e-12)
-        mean_desc = means[0]["domain"].descriptor
-        assert mean_desc.p == 1
-        assert mean_desc.norm > np.sqrt(2) * radius  # Upward-rounded sensitivity bound.
-        np.testing.assert_array_equal(mean_desc.origin, np.zeros_like(origin))
-    else:
-        assert means == []
+    assert spent <= 1.0
     assert measurement.map(2) <= 1.0
     np.testing.assert_array_equal(data, before)
 
 
-def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch):
+@pytest.mark.parametrize("is_zcdp", [False, True])
+def test_pca_projects_mean_into_released_energy_ball(monkeypatch, is_zcdp):
     np = pytest.importorskip("numpy")
-    from opendp.extras.sklearn.decomposition2 import make_private_pca
-
     origin = np.array([2.0, -1.0])
-    public_point = origin + [3.0, 4.0]  # Deliberately outside the unit ball.
-    projected = origin + [0.6, 0.8]
-    offsets = np.tile([[-0.6, -0.79], [-0.8, -0.5], [0.7, 0.4], [0.2, 0.9]], (10, 1))
-    data = origin + offsets
     domain = dp.numpy.array2_domain(
-        T=float,
-        size=len(data),
-        num_columns=2,
-        nan=False,
-        norm=1,
-        p=2,
-        origin=origin,
+        T=float, size=4, num_columns=2, nan=False, norm=1, p=2, origin=origin
     )
-    means = _observe_private_mean(monkeypatch, replacement=public_point - origin)
-    sscp = _capture_sscp_rows(monkeypatch)
-    release = make_private_pca(
-        domain,
-        dp.symmetric_distance(),
-        dp.max_divergence(),
-        2,
-        1.0,
-    )(data)
-    assert len(means) == 1 and "sum" in means[0]  # An actual DP sum was evaluated.
-    np.testing.assert_allclose(release.mean, projected, atol=1e-12)
-    assert np.linalg.norm(release.mean - origin) <= 1 + 1e-12
-    expected = data - projected
-    assert np.max(np.linalg.norm(expected, axis=1)) > 1.9
-    expected /= np.maximum(np.linalg.norm(expected, axis=1, keepdims=True), 1)
-    centered_domain, rows = sscp[0]
-    assert centered_domain.descriptor.norm == 1
-    np.testing.assert_allclose(rows, expected, atol=1e-12)
-    assert centered_domain.member(rows)
+    _observe_moments(
+        monkeypatch,
+        replacement=(np.array([12.0, 16.0]), np.diag([0.5, 0.5]), 4),
+        is_zcdp=is_zcdp,
+    )
+    measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
+    release = decomposition.make_private_pca(
+        domain, dp.symmetric_distance(), measure, 2, 1.0
+    )(np.tile(origin, (4, 1)))
+    np.testing.assert_allclose(release.mean, origin + [0.3, 0.4])
+    np.testing.assert_allclose(release.singular_values, 0.0, atol=1e-7)
 
 
 @pytest.mark.parametrize("d_in", [2, 4])
 @pytest.mark.parametrize("is_zcdp", [False, True])
-def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
-    monkeypatch, d_in, is_zcdp
-):
+def test_pca_one_feature_origin(d_in, is_zcdp):
     np = pytest.importorskip("numpy")
     from opendp.extras.sklearn import decomposition2 as decomposition
 
-    def unexpected(*args, **kwargs):
-        pytest.fail("one-feature origin PCA needs no private mean")
-
-    monkeypatch.setattr(decomposition, "make_private_np_sum", unexpected)
     domain = dp.numpy.array2_domain(
         T=float, size=10, num_columns=1, norm=1, p=2, nan=False
     )
@@ -337,8 +264,9 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
         dp.numpy.array2_domain(T=float, size=len(data), num_columns=4, nan=False),
     )
     point = np.array([0.2, -0.1, 0.1, 0.0])
-    means = _observe_private_mean(monkeypatch, replacement=point)
-    sscp = _capture_sscp_rows(monkeypatch)
+    observed = _observe_moments(
+        monkeypatch, replacement=(point * len(data), np.eye(4), len(data))
+    )
     model = PCA(n_components=2, clip_norm=1, center=center)
     initial = model.__dict__.copy()
     measurement = model.make_measurement(
@@ -354,11 +282,11 @@ def test_pca_make_snapshots_center_clip_and_selection_without_mutating_state(
     release = measurement(dp.sklearn.SklearnFit(data))
     assert model.__dict__ == changed
     assert release.components.shape == (2, 4)
-    assert len(means) == (1 if center is None else 0)
+    assert len(observed) == 1
     np.testing.assert_allclose(release.mean, point if center is None else np.zeros(4))
-    assert sscp[0][0].descriptor.norm == 1
-    assert np.max(np.linalg.norm(sscp[0][1], axis=1)) > 0.5
-    assert np.max(np.linalg.norm(sscp[0][1], axis=1)) <= 1 + 1e-12
+    assert observed[0][0].descriptor.norm == 1
+    assert np.max(np.linalg.norm(observed[0][1], axis=1)) > 0.5
+    assert np.max(np.linalg.norm(observed[0][1], axis=1)) <= 1 + 1e-12
     np.testing.assert_array_equal(data, before)
     model._ingest_release(release)
     assert model.n_components_ == 2
@@ -440,7 +368,6 @@ def test_pca_standalone_infers_unknown_size_domain():
 
 def test_pca_standalone_recovers_centered_principal_component(forbid_sklearn_fitting):
     np = pytest.importorskip("numpy")
-    from sklearn.decomposition import PCA as SklearnPCA
 
     direction = np.array([1.0, 1.0, 1.0, 1.0]) / 2
     offset = np.array([1.0, -1.0, 1.0, -1.0]) / 2
@@ -453,7 +380,6 @@ def test_pca_standalone_recovers_centered_principal_component(forbid_sklearn_fit
         ),
         (512, 1),
     )
-    expected = SklearnPCA(n_components=1).fit(X)
     domain = dp.sklearn.sklearn_fit_domain(
         dp.numpy.array2_domain(T=float, size=1024, num_columns=4, nan=False)
     )
@@ -463,10 +389,10 @@ def test_pca_standalone_recovers_centered_principal_component(forbid_sklearn_fit
         privacy_unit=dp.unit_of(contributions=2),
         privacy_loss=dp.loss_of(epsilon=8.0),
     )
-    alignment = (model.components_[0] @ expected.components_[0]) ** 2
+    alignment = (model.components_[0] @ direction) ** 2
     assert alignment > 0.90
     assert model.singular_values_[0] == pytest.approx(
-        expected.singular_values_[0], rel=0.15
+        0.45 * np.sqrt(len(X)), rel=0.15
     )
 
 
@@ -708,44 +634,12 @@ def test_pca_unknown_size_uses_private_count_and_centered_sum(
     monkeypatch, is_zcdp, center, d_in
 ):
     np = pytest.importorskip("numpy")
-    from opendp._internal import _new_pure_function
-
-    # Fix the released count below the actual count and replace the noisy
-    # offset sum with a public value. Keep the actual mechanisms and maps.
-    count_constructor = decomposition.make_private_np_count
-    sum_constructor = decomposition.make_private_np_sum
-    observed = []
     origin = np.array([100.0, -200.0])
-
-    def count(*args, **kwargs):
-        measurement = count_constructor(*args, **kwargs)
-
-        def release(_):
-            assert measurement.map(d_in) == pytest.approx(0.05)
-            return 3
-
-        return measurement >> _new_pure_function(release)
-
-    def offsets(input_domain, input_metric, *args, **kwargs):
-        measurement = sum_constructor(input_domain, input_metric, *args, **kwargs)
-        observed.append((input_domain.descriptor, measurement.map(d_in)))
-        return measurement >> _new_pure_function(lambda _: [0.75, 0.0])
-
-    monkeypatch.setattr(decomposition, "make_private_np_count", count)
-    monkeypatch.setattr(decomposition, "make_private_np_sum", offsets)
-    if is_zcdp:
-        original_moments = decomposition.make_private_np_moments
-
-        def moments(domain, metric, distance, budget, *, estimate_mean):
-            measurement = original_moments(
-                domain, metric, distance, budget, estimate_mean=estimate_mean
-            )
-            observed.append((domain.descriptor, measurement.map(distance)))
-            return measurement >> _new_pure_function(
-                lambda _: (np.array([0.75, 0.0]), np.diag([-1.0, 2.0]), 3)
-            )
-
-        monkeypatch.setattr(decomposition, "make_private_np_moments", moments)
+    observed = _observe_moments(
+        monkeypatch,
+        replacement=(np.array([0.75, 0.0]), np.diag([-1.0, 2.0]), 3),
+        is_zcdp=is_zcdp,
+    )
     domain = dp.numpy.array2_domain(
         T=float, num_columns=2, norm=1.0, p=2, origin=origin, nan=False
     )
@@ -757,19 +651,17 @@ def test_pca_unknown_size_uses_private_count_and_centered_sum(
     assert measurement.map(0) == 0.0
     release = measurement(np.tile(origin, (5, 1)))
     assert release.n_samples == 3
-    if center is None:
-        descriptor, spent = observed[-1]
-        assert descriptor.size is None
-        assert np.all(descriptor.origin == 0)
-        assert descriptor.p == (2 if is_zcdp else 1)
-        assert spent == pytest.approx(1.0 if is_zcdp else 0.95 / 3)
-        np.testing.assert_allclose(release.mean, origin + [0.25, 0.0])
-    else:
-        assert bool(observed) == is_zcdp
-        np.testing.assert_array_equal(release.mean, origin)
-    if is_zcdp:
-        centered_energy = 1.0 - (0.75**2 / 3 if center is None else 0.0)
-        assert np.sum(release.singular_values**2) == pytest.approx(centered_energy)
+    descriptor, rows, spent = observed[-1]
+    assert descriptor.descriptor.size is None
+    assert np.all(descriptor.descriptor.origin == 0)
+    assert descriptor.descriptor.p == 2
+    assert spent == pytest.approx(1.0)
+    np.testing.assert_array_equal(rows, np.zeros((5, 2)))
+    np.testing.assert_allclose(
+        release.mean, origin + ([0.25, 0.0] if center is None else [0.0, 0.0])
+    )
+    centered_energy = 1.0 - (0.75**2 / 3 if center is None else 0.0)
+    assert np.sum(release.singular_values**2) == pytest.approx(centered_energy)
     model = decomposition.PCA()
     model._ingest_release(release)
     assert model.n_samples_ == 3
@@ -787,24 +679,11 @@ def test_pca_unknown_size_empty_input_and_count_floor(
     monkeypatch, num_components, expected_count, expected_width, is_zcdp
 ):
     np = pytest.importorskip("numpy")
-    from opendp._internal import _new_pure_function
-
-    if is_zcdp:
-        original = decomposition.make_private_np_moments
-
-        def moments(*args, **kwargs):
-            return original(*args, **kwargs) >> _new_pure_function(
-                lambda _: (np.zeros(4), np.zeros((4, 4)), 0)
-            )
-
-        monkeypatch.setattr(decomposition, "make_private_np_moments", moments)
-    else:
-        original = decomposition.make_private_np_count
-
-        def count(*args, **kwargs):
-            return original(*args, **kwargs) >> _new_pure_function(lambda _: -10)
-
-        monkeypatch.setattr(decomposition, "make_private_np_count", count)
+    _observe_moments(
+        monkeypatch,
+        replacement=(np.zeros(4), np.zeros((4, 4)), 0),
+        is_zcdp=is_zcdp,
+    )
     domain = dp.numpy.array2_domain(T=float, num_columns=4, norm=1.0, p=2, nan=False)
     measurement = decomposition.make_private_pca(
         domain,
