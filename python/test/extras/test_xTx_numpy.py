@@ -20,8 +20,7 @@ def test_np_sscp_sym():
 
 @pytest.mark.parametrize("T, dtype", [(dp.f32, np.float32), (dp.f64, np.float64)])
 @pytest.mark.parametrize("origin_kind", ["positive", "negative", "subnormal"])
-@pytest.mark.parametrize("constructor", ["sscp", "eigendecomposition"])
-def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
+def test_nonzero_origin_rejected(T, dtype, origin_kind):
     origin = np.zeros(2, dtype=dtype)
     if origin_kind == "positive":
         origin[0] = 10.0
@@ -33,20 +32,8 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
         norm=1.0, p=2, origin=origin, num_columns=2, size=2, nan=False, T=T
     )
 
-    if constructor == "eigendecomposition":
-        pytest.importorskip("sklearn")
-        from opendp.extras.sklearn._make_eigendecomposition import (
-            then_private_np_eigendecomposition,
-        )
     with pytest.raises(ValueError, match="origin must be zero"):
-        if constructor == "sscp":
-            make_np_sscp(domain, dp.symmetric_distance(), dp.nuclear_distance())
-        else:
-            (domain, dp.symmetric_distance()) >> (
-                then_private_np_eigendecomposition(
-                    eigvals_epsilon=1.0, eigvecs_epsilons=[1.0]
-                )
-            )
+        make_np_sscp(domain, dp.symmetric_distance(), dp.nuclear_distance())
 
 
 @pytest.mark.parametrize("T, dtype", [(dp.f32, np.float32), (dp.f64, np.float64)])

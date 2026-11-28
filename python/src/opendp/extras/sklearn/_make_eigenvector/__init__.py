@@ -1,5 +1,3 @@
-from typing import Sequence
-
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
@@ -26,14 +24,17 @@ def _optimal_b(A_eigvals, d: int) -> float:
 
 
 def make_private_eigenvector(
-    input_domain: Domain, input_metric: Metric, concentration: float
+    input_domain: Domain,
+    input_metric: Metric,
+    concentration: float,
 ) -> Measurement:
     """Construct a Measurement that releases a private eigenvector from a covariance matrix.
 
     :param input_domain: instance of `_symmetric_matrix_domain(num_features=_)`
     :param input_metric: nuclear distance on symmetric matrices
     :param concentration: coefficient of u.T @ C @ u in the Bingham density.
-        The privacy map is concentration times the bound on spectral diameter.
+        If eta is the concentration times the spectral diameter bound,
+        the pure-DP privacy map is eta.
     """
     np = import_optional_dependency("numpy")
     import opendp.prelude as dp
@@ -104,8 +105,8 @@ def make_private_eigenvector(
         input_metric,
         dp.max_divergence(),
         function,
-        # The log-normalizer lies between the minimum and maximum score
-        # difference. Hence absolute privacy loss is at most the score range.
+        # The log-normalizer is constant in the output, so the privacy
+        # loss has range width at most the range of the quadratic score.
         lambda d_in: concentration * d_in,
         TO="Vec<f64>",
     )
@@ -175,7 +176,7 @@ def make_private_eigenvectors(
     input_metric: Metric,
     d_in: float,
     d_out: float,
-    weights: Sequence[float],
+    num_components: int,
 ) -> Measurement:
     """Release leading eigenvectors (columns) of a symmetric matrix.
 
@@ -183,9 +184,9 @@ def make_private_eigenvectors(
     :param input_metric: nuclear distance
     :param d_in: maximum nuclear distance between adjacent matrices
     :param d_out: total epsilon allowance at d_in
-    :param weights: relative privacy allocations, one per requested component.
-        The last vector of a full basis follows by postprocessing, so its weight
-        is ignored.
+    :param num_components: number of leading eigenvectors to release.
+        The budget is split evenly among sampled vectors; the last vector of
+        a full basis follows by postprocessing.
     """
     import opendp.prelude as dp
     from opendp.context import _normalize_compositor
@@ -203,41 +204,32 @@ def make_private_eigenvectors(
         raise ValueError("d_in and d_out must be finite and nonnegative")
 
     dimension = input_domain.descriptor.num_features
-    weights = np.asarray(weights, dtype=float)
     if (
-        weights.ndim != 1
-        or not 1 <= len(weights) <= dimension
-        or not np.isfinite(weights).all()
-        or np.any(weights < 0)
+        not isinstance(num_components, (int, np.integer))
+        or not 1 <= num_components <= dimension
     ):
         raise ValueError(
-            "weights must be finite, nonnegative, and match the component count"
+            "num_components must be an integer between 1 and the matrix dimension"
         )
-    num_components = len(weights)
-    weights = weights[: dimension - 1]
+    num_samples = min(int(num_components), dimension - 1)
     measure = dp.max_divergence()
-    if len(weights) and d_out > 0 and d_in > 0:
-        if not np.any(weights > 0):
-            raise ValueError("sampled weights must have a positive norm")
-        # Reuse Context's weighted allocation, including conservative rounding.
+    concentration = 0.0
+    if num_samples and d_out > 0 and d_in > 0:
         m_compose, d_mids, _ = _normalize_compositor(
             input_domain,
             (input_metric, d_in),
             (measure, d_out),
-            split_by_weights=(weights / weights.max()).tolist(),
+            split_evenly_over=num_samples,
         )
-        concentrations = []
-        for budget in d_mids:
-            concentration = budget / d_in
-            if not np.isfinite(concentration):
-                raise ValueError("concentration must be finite")
-            if concentration * d_in > budget:
-                concentration = float(np.nextafter(concentration, 0.0))
-            concentrations.append(concentration)
+        budget = d_mids[0]
+        concentration = budget / d_in
+        if not np.isfinite(concentration):
+            raise ValueError("concentration must be finite")
+        if concentration * d_in > budget:
+            concentration = float(np.nextafter(concentration, 0.0))
     else:
-        concentrations = [0.0] * len(weights)
         m_compose = dp.c.make_adaptive_composition(
-            input_domain, input_metric, measure, d_in, concentrations
+            input_domain, input_metric, measure, d_in, [0.0] * num_samples
         )
 
     def function(C):
@@ -254,13 +246,13 @@ def make_private_eigenvectors(
 
         # computation of eigenvalues (1.iii) happens in a separate constructor
 
-        # 2. only runs until concentrations are exhausted, not until num_features
-        for concentration_i in concentrations:
+        # 2. sample only the requested non-deterministic vectors
+        for _ in range(num_samples):
             # 2.a.i: sample \hat{u}
             m_eigvec = (
                 (input_domain, input_metric)
                 >> _then_np_sscp_projection(P)  # P has orthonormal rows; see 2.b
-                >> then_private_eigenvector(concentration_i)
+                >> then_private_eigenvector(concentration)
                 >> dp.as_array()
             )
             u = qbl(m_eigvec)

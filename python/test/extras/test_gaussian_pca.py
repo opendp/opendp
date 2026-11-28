@@ -7,10 +7,28 @@ pytest.importorskip("sklearn")
 from opendp.extras.sklearn import decomposition2 as decomposition
 
 
+@pytest.mark.parametrize(
+    "selection,size,width,expected",
+    [
+        (1, 10, 4, True),
+        (2, 10, 4, False),
+        (None, 2, 8, True),
+        (None, None, 8, False),
+        (1, None, 4, True),
+        (None, 10, 8, False),
+        (0.5, 10, 8, False),
+        ("mle", 10, 8, False),
+        (1, 10, 1, False),
+    ],
+)
+def test_public_solver_policy(selection, size, width, expected):
+    assert decomposition._use_bingham(selection, size, width) == expected
+
+
 @pytest.mark.parametrize("is_zcdp", [False, True])
 @pytest.mark.parametrize("k", [1, 2])
 @pytest.mark.parametrize("center", ["origin", None])
-def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
+def test_solver_dispatch_and_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     dp.enable_features("contrib", "idealized-numerics")
     data = np.array(
         [
@@ -32,7 +50,7 @@ def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
 
     monkeypatch.setattr(decomposition, "make_np_svec", record)
     measure = dp.zero_concentrated_divergence() if is_zcdp else dp.max_divergence()
-    budget = 1e12 if is_zcdp else 1e6
+    budget = 1e12 if is_zcdp else 1e6 if k == 2 else 1.0
     measurement = decomposition.make_private_pca(
         domain,
         dp.symmetric_distance(),
@@ -45,16 +63,17 @@ def test_sscp_coherent_spectrum(monkeypatch, is_zcdp, k, center):
     assert measurement.check(2, budget)
     assert measurement.map(1) == 0.0
     release = measurement(data)
-    assert seen == ([2] if is_zcdp else [1])
+    assert seen == ([2] if is_zcdp else [1] if k == 2 else [])
     assert release.components.shape == (k, 4)
     np.testing.assert_allclose(
         release.components @ release.components.T, np.eye(k), atol=1e-12
     )
-    np.testing.assert_allclose(release.mean, np.zeros(4), atol=1e-3)
-    np.testing.assert_allclose(
-        release.singular_values[:2], [np.sqrt(2), np.sqrt(0.5)], atol=1e-3
-    )
-    np.testing.assert_allclose(np.abs(release.components), np.eye(4)[:k], atol=1e-3)
+    if is_zcdp or k == 2:
+        np.testing.assert_allclose(release.mean, np.zeros(4), atol=1e-3)
+        np.testing.assert_allclose(
+            release.singular_values[:2], [np.sqrt(2), np.sqrt(0.5)], atol=1e-3
+        )
+        np.testing.assert_allclose(np.abs(release.components), np.eye(4)[:k], atol=1e-3)
 
 
 @pytest.mark.parametrize("size", [None, 1])
@@ -182,3 +201,36 @@ def test_joint_pca_anchors_spectrum_to_released_mean_and_count(size):
     assert np.linalg.norm(release.mean) <= 1.0 + 1e-12
     bound = release.n_samples * max(0.0, 1.0 - release.mean @ release.mean)
     assert np.sum(release.singular_values**2) <= bound + 1e-10
+
+
+@pytest.mark.parametrize("d_in", [1, 3])
+def test_unsized_low_rank_uses_bingham(monkeypatch, d_in):
+    dp.enable_features("contrib", "idealized-numerics")
+    domain = dp.numpy.array2_domain(T=float, num_columns=4, norm=1.0, p=2, nan=False)
+    from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
+
+    seen = []
+
+    def observe(distance, budget, count):
+        seen.append(count)
+        return then_private_eigenvectors(distance, budget, count)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", observe)
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        d_in,
+        1.0,
+        center="origin",
+        num_components=1,
+    )
+    assert measurement.check(d_in, 1.0)
+    assert measurement.map(0) == 0.0
+    release = measurement(np.eye(4))
+    assert seen and seen[-1] == 1
+    assert release.components.shape == (1, 4)
+    assert release.n_samples >= 2
+    np.testing.assert_allclose(
+        release.components @ release.components.T, np.eye(1), atol=1e-12
+    )

@@ -283,6 +283,70 @@ def test_pca_projects_actual_private_mean_then_reclips_near_boundary(monkeypatch
     assert centered_domain.member(rows)
 
 
+@pytest.mark.parametrize("center", [None, "origin"])
+@pytest.mark.parametrize("d_in", [2, 4])
+def test_pca_fixed_budget_split_at_input_distance(monkeypatch, center, d_in):
+    np = pytest.importorskip("numpy")
+    from opendp.extras.sklearn import decomposition2 as decomposition
+
+    width = 4
+    budget = 0.9
+    measure = dp.max_divergence()
+    factor = d_in / 2
+    value_scales, vector_budgets = [], []
+    original_values = decomposition.then_private_eigenvalues
+    original_vectors = decomposition.then_private_eigenvectors
+
+    def record_values(scale):
+        value_scales.append(scale)
+        return original_values(scale)
+
+    def record_vectors(distance, budget, count):
+        vector_budgets.append((distance, budget, count))
+        return original_vectors(distance, budget, count)
+
+    monkeypatch.setattr(decomposition, "then_private_eigenvalues", record_values)
+    monkeypatch.setattr(decomposition, "then_private_eigenvectors", record_vectors)
+    means = _observe_private_mean(monkeypatch, replacement=np.zeros(width))
+    data = _legacy_data()
+    domain = dp.numpy.array2_domain(
+        T=float,
+        size=len(data),
+        num_columns=width,
+        norm=1,
+        p=2,
+        nan=False,
+    )
+    measurement = decomposition.make_private_pca(
+        domain,
+        dp.symmetric_distance(),
+        measure,
+        d_in,
+        budget,
+        center=center,
+        num_components=1,
+    )
+    measurement(data)
+    share = budget / (2 + int(center is None))
+    if center is None:
+        assert len(means) == 1
+        mean_budget = means[0]["map_at_two"] * factor
+        assert means[0]["domain"].descriptor.p == 1
+        assert mean_budget <= share
+        assert mean_budget == pytest.approx(share)
+    else:
+        assert means == []
+    distance, vector_budget, components = vector_budgets[-1]
+    assert components == 1
+    # Unit-radius SSCP at one replacement has nuclear sensitivity 2.
+    assert d_in / value_scales[-1] == pytest.approx(share)
+    assert distance == d_in
+    assert vector_budget == pytest.approx(share)
+    assert measurement.check(d_in, budget)
+    assert measurement.map(d_in) <= budget
+    assert measurement.map(1) == 0.0
+
+
 @pytest.mark.parametrize("d_in", [2, 4])
 @pytest.mark.parametrize("is_zcdp", [False, True])
 def test_pca_one_feature_origin_uses_no_private_mean_or_vector_samples(
@@ -699,6 +763,73 @@ def test_pca_selected_sklearn_features_and_model_only_score_failure():
     assert trans.map(1) == 1
     with pytest.raises(np.linalg.LinAlgError):
         singular.score_samples(np.zeros((0, 3)))
+
+
+@pytest.mark.parametrize(
+    "width, expected",
+    [(1, 1), (3, 1), (3, 2), (3, 3)],
+)
+def test_matrix_eigendecomposition_components_and_privacy_map(width, expected):
+    np = pytest.importorskip("numpy")
+    from opendp.extras.numpy import _symmetric_matrix_domain
+
+    space = _symmetric_matrix_domain(num_features=width), dp.nuclear_distance()
+    measurement = dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(2.0),
+            space >> decomposition.then_private_eigenvectors(2.0, 0.5, expected),
+        ]
+    )
+    values, vectors = measurement(np.diag(np.arange(width, dtype=float)))
+    assert values.shape == (width,)
+    assert np.all(values[:-1] <= values[1:])
+    assert vectors.shape == (width, expected)
+    np.testing.assert_allclose(vectors.T @ vectors, np.eye(expected), atol=1e-12)
+    # All requested component counts share the same vector budget,
+    # except a one-dimensional matrix, which needs no private vector sample.
+    value_loss = 1.0
+    vector_loss = 0.5 if width > 1 else 0.0
+    assert measurement.map(2.0) == pytest.approx(value_loss + vector_loss)
+
+
+@pytest.mark.parametrize("size", [None, 10])
+def test_eigendecomposition_composes_with_sscp(size):
+    from opendp.extras.numpy._make_np_sscp import then_np_sscp
+
+    domain = dp.numpy.array2_domain(
+        norm=2.0, p=2, num_columns=3, size=size, nan=False, T=float
+    )
+    sscp = (domain, dp.symmetric_distance()) >> then_np_sscp(dp.nuclear_distance())
+    space = sscp.output_space
+    measurement = sscp >> dp.c.make_composition(
+        [
+            space >> decomposition.then_private_eigenvalues(8.0),
+            space >> decomposition.then_private_eigenvectors(sscp.map(2), 1.0, 3),
+        ]
+    )
+    expected = 2.0
+    assert measurement.map(2) == pytest.approx(expected)
+    # The calibrated vector compositor reports its full budget at smaller distances.
+    assert measurement.map(1) == pytest.approx(1.0 if size is not None else 1.5)
+
+
+def test_eigendecomposition_bingham_concentration():
+    from opendp.extras.numpy._make_np_sscp import make_np_sscp
+    from opendp.extras.sklearn._make_eigenvector import make_private_eigenvector
+
+    row_norm = 2.0
+    epsilon = 1.0
+    domain = dp.numpy.array2_domain(
+        norm=row_norm, p=2, num_columns=2, size=5, nan=False, T=float
+    )
+    sscp = make_np_sscp(domain, dp.symmetric_distance(), dp.nuclear_distance())
+    # The tightened pure-DP calibration is concentration = ε / (2B²).
+    concentration = epsilon / (2 * row_norm**2)
+    eigenvector = make_private_eigenvector(
+        sscp.output_domain, sscp.output_metric, concentration
+    )
+    assert eigenvector.map(sscp.map(2)) == pytest.approx(epsilon)
+    assert eigenvector.map(sscp.map(1)) == 0.0
 
 
 @pytest.mark.parametrize("is_zcdp", [False, True])

@@ -43,6 +43,8 @@ from opendp.extras.numpy._make_np_svec import make_np_svec, unsvec
 from opendp.extras.numpy import make_np_clamp
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.extras.sklearn._estimator import MeasurementMixin, TransformationMixin
+from opendp.extras.sklearn._make_eigenvalues import then_private_eigenvalues
+from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.mod import Domain, Measure, Measurement, Metric
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -326,6 +328,7 @@ def make_private_pca(
     # A private count is not an upper bound, so do not constrain its spectrum.
     trace_bound = None if n_samples is None else n_samples * radius**2
     estimate_count = n_samples is None
+    use_bingham = _use_bingham(num_components, n_samples, n_features)
     # Count sensitivity is dimension-independent. Reserve 5% as a compromise:
     # covariance-only optimal splits can harm direction or mean accuracy.
     count_budget = _smaller(float(d_out) / 20) if estimate_count else 0.0
@@ -353,19 +356,63 @@ def make_private_pca(
         )
         if t_reclip is not None:
             t_center = t_reclip >> t_center
-        t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
-        t_vector = t_sscp >> make_np_svec(*t_sscp.output_space, p=1)
-        m_matrix = dp.binary_search_chain(
-            lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
-            d_in=d_in,
-            d_out=eigen_budget,
+        if not use_bingham:
+            t_sscp = t_center >> then_np_sscp(output_metric=dp.l2_distance(T=float))
+            t_vector = t_sscp >> make_np_svec(
+                *t_sscp.output_space, p=1
+            )
+            m_matrix = dp.binary_search_chain(
+                lambda scale: t_vector >> dp.m.then_noise(output_measure, scale),
+                d_in=d_in,
+                d_out=eigen_budget,
+                T=float,
+            )
+
+            return m_matrix >> _new_pure_function(
+                lambda values: release_matrix(
+                    unsvec(values, n_features), reference, released_count, trace_bound
+                )
+            )
+
+        t_sscp = t_center >> then_np_sscp(dp.nuclear_distance())
+        # The count and reference are already public conditional on earlier
+        # releases. Compute SSCP once, then compose on the matrix space.
+        stage_budget = _smaller(eigen_budget / 2)
+        sensitivity = t_sscp.map(d_in)
+        space = t_sscp.output_space
+        m_values = dp.binary_search_chain(
+            lambda scale: space >> then_private_eigenvalues(scale),
+            d_in=sensitivity,
+            d_out=stage_budget,
             T=float,
         )
+        compositor = dp.c.make_adaptive_composition(
+            *space,
+            output_measure,
+            d_in=sensitivity,
+            d_mids=[stage_budget] * 2,
+        )
 
-        return m_matrix >> _new_pure_function(
-            lambda values: release_matrix(
-                unsvec(values, n_features), reference, released_count, trace_bound
+        def function(C):
+            qbl = compositor(C)
+            singular_values = np.sqrt(_project_spectrum(qbl(m_values), trace_bound))[
+                ::-1
+            ]
+            k = _select_num_components(num_components, singular_values, released_count)
+            m_vectors = space >> then_private_eigenvectors(sensitivity, stage_budget, k)
+            vectors = qbl(m_vectors)
+            return PCARelease(
+                mean=np.array(reference, copy=True),
+                singular_values=singular_values,
+                components=vectors.T,
+                n_samples=released_count,
             )
+
+        return t_sscp >> _make_measurement(
+            *space,
+            output_measure,
+            function,
+            lambda distance: 0.0 if distance == 0.0 else compositor.map(distance),
         )
 
     if estimate_count:
@@ -480,8 +527,9 @@ class PCA(
 
     If dataset size is not public, fitting privately estimates it.
     An L2 domain bound or ``clip_norm`` is required.
-    Pure epsilon-DP and zero-concentrated DP are supported via private SSCP
-    moments followed by eigendecomposition.
+    Pure epsilon-DP and zero-concentrated DP are supported. Low-rank pure-DP
+    requests use Bingham sampling; other requests use private SSCP moments
+    followed by eigendecomposition.
     Use ``privacy_unit=dp.unit_of(contributions=2)`` to protect one row replacement.
 
     :param n_components: Number of components to retain, from 1 to
@@ -533,6 +581,11 @@ class PCA(
     The Gaussian SSCP approach follows Dwork et al.,
     `Analyze Gauss: Optimal Bounds for Privacy-Preserving Principal Component Analysis
     <https://doi.org/10.1145/2591796.2591883>`_, STOC, 2014.
+
+    The Bingham approach follows Amin et al.,
+    `Differentially Private Covariance Estimation
+    <https://proceedings.neurips.cc/paper_files/paper/2019/hash/4158f6d19559955bae372bb00f6204e4-Abstract.html>`_,
+    NeurIPS, 2019.
     """
 
     # These operate solely on the released fitted attributes.
@@ -702,6 +755,18 @@ class PCA(
         if desc.T not in ("f32", "f64"):
             raise ValueError("Rowwise PCA inference requires floating-point input")
         return dp.numpy.array2_domain(T=float, size=desc.size, num_columns=output_width)
+
+
+def _use_bingham(request, n_samples, n_features):
+    """Choose a solver using only public dimensions and component requests.
+
+    A quarter of the ambient dimension is a provisional crossover, not a
+    utility guarantee. Data-dependent component requests use the matrix solver.
+    """
+    if n_features == 1 or isinstance(request, (float, str)):
+        return False
+    k = request if isinstance(request, int) else n_samples
+    return k is not None and 4 * min(k, n_features) <= n_features
 
 
 def _project_spectrum(eigenvalues, trace_bound):

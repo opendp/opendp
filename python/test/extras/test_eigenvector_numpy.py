@@ -137,7 +137,7 @@ def test_eigenvectors():
         space >> then_np_clamp(norm=4.0, p=2) >> then_np_sscp(dp.nuclear_distance())
     )
     # Row norm B = 4, one replacement has nuclear sensitivity 2B^2.
-    meas = sp_sscp >> then_private_eigenvectors(sp_sscp.map(2), 3.0, [1.0] * 4)
+    meas = sp_sscp >> then_private_eigenvectors(sp_sscp.map(2), 3.0, 4)
     assert meas.map(2) == pytest.approx(3.0)
 
     data = np.random.normal(size=(1000, num_columns))
@@ -202,13 +202,13 @@ def test_nuclear_eigenvector_rejects_invalid_spaces():
     with pytest.raises(ValueError, match="nuclear"):
         _make_np_sscp_projection(matrix, incorrect_metric, np.eye(2))
     with pytest.raises(ValueError, match="NPSymmetricMatrixDomain"):
-        make_private_eigenvectors(invalid, metric, 1.0, 1.0, [1.0])
+        make_private_eigenvectors(invalid, metric, 1.0, 1.0, 1)
     with pytest.raises(ValueError, match="nuclear"):
-        make_private_eigenvectors(matrix, incorrect_metric, 1.0, 1.0, [1.0])
-    with pytest.raises(ValueError, match="weights"):
-        make_private_eigenvectors(matrix, metric, 1.0, 1.0, [1.0] * 3)
+        make_private_eigenvectors(matrix, incorrect_metric, 1.0, 1.0, 1)
+    with pytest.raises(ValueError, match="num_components"):
+        make_private_eigenvectors(matrix, metric, 1.0, 1.0, 3)
     with pytest.raises(ValueError, match="finite and nonnegative"):
-        make_private_eigenvectors(matrix, metric, float("nan"), 1.0, [1.0])
+        make_private_eigenvectors(matrix, metric, float("nan"), 1.0, 1)
 
 
 @pytest.mark.parametrize(
@@ -240,13 +240,12 @@ def test_nuclear_eigenvector_composition_map(monkeypatch, distance, budget, coun
         return original(concentration)
 
     monkeypatch.setattr(eigenvector, "then_private_eigenvector", record)
-    weights = [1.0, 2.0, 100.0][:count]
     measurement = eigenvector.make_private_eigenvectors(
         _symmetric_matrix_domain(num_features=3),
         dp.nuclear_distance(),
         distance,
         budget,
-        weights,
+        count,
     )
     assert measurement.check(distance, budget)
     assert measurement.map(distance) == pytest.approx(budget)
@@ -255,7 +254,7 @@ def test_nuclear_eigenvector_composition_map(monkeypatch, distance, budget, coun
     vectors = measurement(np.eye(3))
     assert vectors.shape == (3, count)
     np.testing.assert_allclose(vectors.T @ vectors, np.eye(count), atol=1e-12)
-    sampled = np.array(weights[:2])
+    num_samples = min(count, 2)
     np.testing.assert_allclose(
-        concentrations, sampled / sampled.sum() * budget / distance
+        concentrations, [budget / distance / num_samples] * num_samples
     )
