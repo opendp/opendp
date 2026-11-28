@@ -12,11 +12,16 @@ pub use cks20::*;
 mod geometric;
 pub use geometric::*;
 
+mod karney;
+
 mod psrn;
 pub use psrn::*;
 
 mod uniform;
 pub use uniform::*;
+
+mod wishart;
+pub(crate) use wishart::sample_wishart_difference;
 
 use rand::RngCore;
 use rand::prelude::SliceRandom;

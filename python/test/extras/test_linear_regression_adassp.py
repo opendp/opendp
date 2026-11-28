@@ -5,7 +5,9 @@ import pytest
 
 import opendp.prelude as dp
 from opendp.extras.sklearn.linear_model2._make_private_linear_regression import (
+    _gaussian_floor,
     _solve,
+    _wishart_floor,
 )
 
 
@@ -34,63 +36,28 @@ def _measure(*, rho=True, model=None, domain=None, d_in=2, budget=2.0):
     )
 
 
-@pytest.mark.parametrize("gaussian", [True, False])
-def test_svec_reconstruction_and_flooring(gaussian):
-    # svec([[3, 1], [1, 3]]) = [3, sqrt(2), 3].
-    solve_kwargs = dict(
-        dimension=2,
-        gram_scale=1e-9,
-        failure_probability=0.05,
-        gaussian=gaussian,
-    )
-    theta = _solve(
-        (np.array([3.0, np.sqrt(2.0), 3.0]), np.array([5.0, 10.0])),
-        **solve_kwargs,
-    )
+def test_spectral_flooring():
+    theta = _solve(np.array([[3.0, 1.0], [1.0, 3.0]]), np.array([5.0, 10.0]), 1e-9)
     np.testing.assert_allclose(theta, [0.625, 3.125], rtol=1e-6)
-
-    # Flooring preserves the strong eigenvalue and stabilizes the weak one.
-    solve_kwargs["gram_scale"] = 1.0
-    theta = _solve(
-        (np.array([100.0, 0.0, 0.1]), np.array([100.0, 0.1])),
-        **solve_kwargs,
-    )
-    np.testing.assert_allclose(theta[0], 1.0)
-    assert 0.0 < theta[1] < 1.0
-
-    theta = _solve((np.zeros(3), np.array([2.0, 3.0])), **solve_kwargs)
-    assert theta.shape == (2,)
-    assert np.isfinite(theta).all()
-
-
-@pytest.mark.parametrize("gaussian", [True, False])
-def test_public_count_postprocessing(gaussian):
-    release = (np.array([100.0, 0.0, 500.0]), np.array([40.0, 50.0]))
-    kwargs = dict(
-        dimension=2,
-        gram_scale=1e-9,
-        failure_probability=0.05,
-        gaussian=gaussian,
-    )
-    np.testing.assert_allclose(_solve(release, public_count=100, **kwargs), [0.4, 0.5])
-    np.testing.assert_allclose(_solve(release, **kwargs), [0.4, 0.1])
+    theta = _solve(np.diag([100.0, 0.1]), np.array([100.0, 0.1]), 1.0)
+    np.testing.assert_allclose(theta, [1.0, 0.1])
+    np.testing.assert_allclose(_solve(np.zeros((2, 2)), np.array([2.0, 3.0]), 2.0), [1.0, 1.5])
 
 
 @pytest.mark.parametrize("gaussian", [True, False])
 def test_spectral_floor_responds_to_confidence(gaussian):
-    # Higher confidence must give stronger flooring, for both noise laws.
-    def solve(alpha):
-        return _solve(
-            (np.zeros(6), np.ones(3)),
-            dimension=3,
-            gram_scale=1.0,
-            failure_probability=alpha,
-            gaussian=gaussian,
+    def floor(delta):
+        return (
+            _gaussian_floor(3, 1.0, delta)
+            if gaussian
+            else _wishart_floor(3, 1.0, delta, False)
         )
 
-    conservative, permissive = solve(0.01), solve(0.2)
-    assert np.isfinite(conservative).all()
-    assert np.all((0 < conservative) & (conservative < permissive))
+    assert 0 < floor(0.2) < floor(0.01)
+    if not gaussian:
+        assert _wishart_floor(3, 1.0, 0.05, True) == pytest.approx(
+            floor(0.05) * 2 / np.sqrt(3)
+        )
 
 
 @pytest.mark.parametrize("rho", [True, False])
@@ -240,6 +207,42 @@ def test_regression_clipped_statistics(monkeypatch):
         [1.44, 1.92 * np.sqrt(2), 1.2 * np.sqrt(2), 6.56, -0.4 * np.sqrt(2), 2.0],
         atol=1e-12,
     )
+
+
+@pytest.mark.parametrize("fit_intercept", [False, True])
+def test_wishart_regression_normalized_statistics(monkeypatch, fit_intercept):
+    from opendp._internal import _make_transformation, _new_pure_function
+    from opendp.extras.sklearn.linear_model2 import (
+        _make_private_linear_regression as private_lr,
+    )
+
+    original = private_lr.make_private_np_wishart
+    seen = []
+
+    def record(domain, metric, scale):
+        m = original(domain, metric, scale)
+
+        def observe(matrix):
+            seen.append(matrix.copy())
+            return matrix
+
+        t = _make_transformation(domain, metric, domain, metric, observe, lambda d: d)
+        return t >> m >> _new_pure_function(lambda _: seen[-1].copy())
+
+    monkeypatch.setattr(private_lr, "make_private_np_wishart", record)
+    X = np.tile([[-1.0, -1.0], [-1.0, 1.0], [1.0, -1.0], [1.0, 1.0]], (2, 1))
+    offset = 0.5 if fit_intercept else 0.0
+    y = X @ np.array([1.25, -0.75]) + offset
+    m = _measure(
+        rho=False, model=_model(fit_intercept=fit_intercept),
+        domain=_domain(n=len(X)), budget=1e6,
+    )
+    theta = m(dp.sklearn.SklearnFit(X, y))
+    Z = np.column_stack([X / 2, *([np.full(len(X), 0.5)] if fit_intercept else []), y / 4])
+    np.testing.assert_allclose(seen[0], Z.T @ Z)
+    expected = [1.25, -0.75] + ([offset] if fit_intercept else [])
+    np.testing.assert_allclose(theta, expected, atol=1e-10)
+    assert m.check(2, 1e6)
 
 
 def test_prediction_contract_and_refitting():

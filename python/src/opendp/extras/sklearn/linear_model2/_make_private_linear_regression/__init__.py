@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from numbers import Integral, Real
 
 from opendp._internal import _make_transformation, _new_pure_function
@@ -10,64 +11,99 @@ from opendp._lib import import_optional_dependency
 from opendp.context import _check_sized_contributions
 from opendp.extras.numpy import (
     NPArray2Domain,
+    _symmetric_matrix_domain,
     array2_domain,
     make_np_clamp,
 )
 from opendp.extras.numpy._make_np_moments import make_np_joint_moments
 from opendp.extras.numpy._make_np_svec import unsvec
+from opendp.extras.numpy._make_np_wishart import _round_up, make_private_np_wishart
 from opendp.extras.sklearn._domains import SklearnFitDescriptor
 from opendp.mod import AtomDomain, VectorDomain
 from opendp.typing import _NUMERIC_TYPES
 
 
-def _solve(
-    release, *, dimension, gram_scale, failure_probability, gaussian, public_count=None
-):
+def _solve(gram, cross, gram_tail):
     """Stabilize the already-private Gram matrix and solve."""
     np = import_optional_dependency("numpy")
-    noisy_upper, noisy_cross = release
-    gram = unsvec(noisy_upper, dimension)
-    if public_count is not None:
-        # The final feature is constant 1, so this entry is exactly n.
-        # Replacing its noisy value is postprocessing using public data.
-        gram[-1, -1] = public_count
-
-    t = math.log(dimension) - math.log(failure_probability)
-    if gaussian:
-        # With svec Gaussian noise, the symmetric matrix has diagonal
-        # variance sigma^2 and off-diagonal variance sigma^2/2.
-        # Take the better of Gaussian comparison/concentration and
-        # the exact Gaussian matrix-mgf Chernoff bound (useful at small d).
-        gram_tail = gram_scale * min(
-            math.sqrt(2.0 * dimension)
-            + math.sqrt(-2.0 * math.log(failure_probability)),
-            math.sqrt((dimension + 1) * t),
-        )
-    else:
-        # svec Laplace noise has diagonal scale b and off-diagonal
-        # scale b/sqrt(2). The exact matrix log-mgf is bounded by
-        # -log(1-u^2) -(d-1) log(1-u^2/2). Evaluating a public
-        # Chernoff parameter u avoids iterative optimization, with little
-        # loss relative to optimizing the bound numerically.
-        u = min(
-            math.nextafter(1.0, 0.0),
-            math.sqrt(2.0 * t / (dimension + 2.0 * t)),
-        )
-        mgf_tail = (
-            t - math.log1p(-u * u) - (dimension - 1) * math.log1p(-u * u / 2.0)
-        ) / u
-        entries = dimension * (dimension + 1) // 2
-        gram_tail = gram_scale * min(
-            mgf_tail,
-            dimension * (math.log(entries) - math.log(failure_probability)),
-        )
-
-    # Eigenvalue flooring preserves strong directions rather than adding
-    # the same ridge penalty to every coordinate. Everything here is
-    # postprocessing of the two private releases.
     eigvals, eigvecs = np.linalg.eigh(gram)
-    theta = eigvecs @ ((eigvecs.T @ noisy_cross) / np.maximum(eigvals, gram_tail))
+    theta = eigvecs @ ((eigvecs.T @ cross) / np.maximum(eigvals, gram_tail))
     return np.nan_to_num(theta, copy=False)
+
+
+def _gaussian_floor(dimension, scale, failure_probability):
+    # With svec noise, diagonal variance is sigma² and off-diagonal
+    # variance is sigma²/2. Take the better of two public tail bounds.
+    t = math.log(dimension) - math.log(failure_probability)
+    return scale * min(
+        math.sqrt(2.0 * dimension)
+        + math.sqrt(-2.0 * math.log(failure_probability)),
+        math.sqrt((dimension + 1) * t),
+    )
+
+
+def _wishart_floor(dimension, scale, failure_probability, restore_count):
+    # The augmented matrix includes one response coordinate. Its Gram
+    # principal submatrix has dimension p and p+2 degrees of freedom.
+    m = dimension + 2
+    t = math.sqrt(2 * (math.log(4) - math.log(failure_probability)))
+    upper = (math.sqrt(m) + math.sqrt(dimension) + t) ** 2
+    lower = max(0.0, math.sqrt(m) - math.sqrt(dimension) - t) ** 2
+    # Four Gaussian singular-value tails, followed by the PSD difference bound.
+    # Zeroing the public intercept diagonal increases operator norm by at
+    # most 2/sqrt(3), by nuclear/operator norm duality.
+    correction = 2 / math.sqrt(3) if restore_count else 1.0
+    return scale * (upper - lower) * correction
+
+
+def _make_wishart_regression(
+    t_features, *, dimension, public_size, clip_norm, y_bound, fit_intercept,
+    d_in, d_out, failure_probability,
+):
+    """Release the normalized feature/response augmented Gram once."""
+    import opendp.prelude as dp
+
+    np = import_optional_dependency("numpy")
+    alpha, gamma = 0.75, 0.5
+    K = Fraction(25, 16) + Fraction(1, 4) * fit_intercept
+
+    def statistics(data):
+        X = t_features(data) / clip_norm
+        y = np.clip(
+            np.nan_to_num(np.asarray(data.y, dtype=float), nan=0.0),
+            -y_bound,
+            y_bound,
+        ) / y_bound
+        parts = [X]
+        if fit_intercept:
+            parts.append(np.full(len(X), gamma))
+        parts.append(alpha * y)
+        Z = np.column_stack(parts)
+        return Z.T @ Z
+
+    t_gram = _make_transformation(
+        *t_features.input_space,
+        _symmetric_matrix_domain(num_features=dimension + 1),
+        dp.nuclear_distance(),
+        statistics,
+        lambda edits: _round_up(K * (2 * (edits // 2) if public_size is not None else edits)),
+    )
+    scale = _round_up(Fraction(t_gram.map(d_in)) / (2 * Fraction(float(d_out))))
+    measurement = t_gram >> make_private_np_wishart(*t_gram.output_space, scale)
+    restore_count = fit_intercept and public_size is not None
+    floor = _wishart_floor(dimension, scale, failure_probability, restore_count)
+
+    def solve(matrix):
+        gram = matrix[:dimension, :dimension].copy()
+        if restore_count:
+            gram[-1, -1] = gamma**2 * public_size
+        theta = _solve(gram, matrix[:dimension, dimension] / alpha, floor)
+        theta[: dimension - int(fit_intercept)] *= y_bound / clip_norm
+        if fit_intercept:
+            theta[-1] *= y_bound * gamma
+        return theta
+
+    return measurement >> _new_pure_function(solve)
 
 
 def make_private_linear_regression(
@@ -86,7 +122,7 @@ def make_private_linear_regression(
 
     Inspired by AdaSSP-Revised, but regularizes the already-private Gram
     matrix rather than spending privacy budget on a minimum eigenvalue.
-    Supports native Gaussian/zCDP and Laplace/pure-DP releases.
+    Supports Gaussian/zCDP and augmented Wishart/pure-DP releases.
     """
     import opendp.prelude as dp
 
@@ -162,6 +198,18 @@ def make_private_linear_regression(
     )
     t_clamp = make_np_clamp(desc.X, input_metric, clip_norm, p=2)
     t_features = t_x >> t_clamp
+    if not gaussian:
+        return _make_wishart_regression(
+            t_features,
+            dimension=dimension,
+            public_size=public_size,
+            clip_norm=clip_norm,
+            y_bound=y_bound,
+            fit_intercept=fit_intercept,
+            d_in=d_in,
+            d_out=d_out,
+            failure_probability=failure_probability,
+        )
     if fit_intercept:
         t_append = _make_transformation(
             t_clamp.output_domain,
@@ -186,7 +234,7 @@ def make_private_linear_regression(
         target=lambda data: data.y,
         target_bound=y_bound,
         size=public_size,
-        p=2 if gaussian else 1,
+        p=2,
     )
 
     def make_measurement(scale):
@@ -200,16 +248,12 @@ def make_private_linear_regression(
     measurement = make_measurement(multiplier)
     if not measurement.check(d_in, d_out):
         raise ValueError("Privacy calibration exceeds the requested allowance")
-    return measurement >> _new_pure_function(
-        lambda release: _solve(
-            (
-                np.asarray(release[:num_entries]) * gram_unit,
-                np.asarray(release[num_entries:]) * cross_unit,
-            ),
-            dimension=dimension,
-            gram_scale=gram_scale,
-            failure_probability=failure_probability,
-            gaussian=gaussian,
-            public_count=public_size if fit_intercept else None,
-        )
-    )
+    floor = _gaussian_floor(dimension, gram_scale, failure_probability)
+
+    def solve(release):
+        gram = unsvec(np.asarray(release[:num_entries]) * gram_unit, dimension)
+        if fit_intercept and public_size is not None:
+            gram[-1, -1] = public_size
+        return _solve(gram, np.asarray(release[num_entries:]) * cross_unit, floor)
+
+    return measurement >> _new_pure_function(solve)
