@@ -35,12 +35,15 @@ def test_nonzero_origin_rejected(T, dtype, origin_kind, constructor):
 
     if constructor == "eigendecomposition":
         pytest.importorskip("sklearn")
+        from opendp.extras.sklearn._make_eigendecomposition import (
+            then_private_np_eigendecomposition,
+        )
     with pytest.raises(ValueError, match="origin must be zero"):
         if constructor == "sscp":
             make_np_sscp(domain, dp.symmetric_distance(), dp.nuclear_distance())
         else:
             (domain, dp.symmetric_distance()) >> (
-                dp.sklearn.decomposition.then_private_np_eigendecomposition(
+                then_private_np_eigendecomposition(
                     eigvals_epsilon=1.0, eigvecs_epsilons=[1.0]
                 )
             )

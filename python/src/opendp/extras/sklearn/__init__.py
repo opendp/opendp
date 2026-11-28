@@ -21,7 +21,7 @@ from opendp.extras.sklearn._domains import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from opendp.extras.sklearn import decomposition, decomposition2, linear_model
+    from opendp.extras.sklearn import decomposition2, linear_model
 
 
 def __getattr__(name):
@@ -40,7 +40,6 @@ __all__ = [
     "SklearnFit",
     "SklearnFitDescriptor",
     "sklearn_fit_domain",
-    "decomposition",
     "decomposition2",
     "linear_model",
 ]
