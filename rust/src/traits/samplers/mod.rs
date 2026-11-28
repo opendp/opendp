@@ -6,11 +6,16 @@ pub(crate) mod test;
 mod bernoulli;
 pub use bernoulli::*;
 
+mod bingham;
+pub(crate) use bingham::sample_bingham;
+
 mod cks20;
 pub use cks20::*;
 
 mod geometric;
 pub use geometric::*;
+
+mod karney;
 
 mod psrn;
 pub use psrn::*;

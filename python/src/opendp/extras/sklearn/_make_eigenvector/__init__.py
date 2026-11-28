@@ -1,6 +1,6 @@
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.extras._utilities import to_then
-from opendp._lib import get_np_csprng, import_optional_dependency
+from opendp._lib import import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
 from opendp._internal import _make_measurement, _make_transformation
 
@@ -41,7 +41,6 @@ def make_private_eigenvector(
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    np_csprng = get_np_csprng()
     if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
         raise ValueError("input_domain must be NPSymmetricMatrixDomain")
 
@@ -51,54 +50,8 @@ def make_private_eigenvector(
     if not np.isfinite(concentration) or concentration < 0:
         raise ValueError("concentration must be finite and non-negative")
 
-    input_desc = input_domain.descriptor
-    d = input_desc.num_features
-
     def function(C):
-        # Algorithm 2 Top Eigenvector Sampler
-        # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=15
-        # (1) Shifting the score by its largest eigenvalue does not
-        # change the target Bingham distribution.
-        A = concentration * (np.linalg.eigvalsh(C).max() * np.eye(d) - C)
-
-        # (2)
-        A_eigvals = np.linalg.eigvalsh(A)
-
-        # This algorithm first finds parameters for an angular central gaussian distribution (ACG),
-        #   which acts as an envelope distribution for rejection sampling.
-        # The rejection rate will be minimized when b is chosen optimally.
-        # b is chosen optimally when the ACG is least entropic, but is still an envelope.
-        # Criteria for being an envelope are given in 3.4 of https://eprints.whiterose.ac.uk/123206/7/simbingham8.pdf
-
-        b = _optimal_b(A_eigvals, d)
-        Omega = np.eye(d) + 2 * A / b
-
-        # (3)
-        M = np.exp(-(d - b) / 2) * (d / b) ** (d / 2)
-
-        # prepare sampling
-        Omega_inv = np.linalg.inv(Omega)
-
-        while True:
-            # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
-            #  - Mult normal does not have an invertible cdf
-            #  - Could try:
-            #    1. a "conservative" Cholesky decomposition of Omega_inv
-            #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
-            #       sample with sufficient precision where all components round to same float
-
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr]
-            # u is a sample from the angular central gaussian distribution,
-            #    an envelope for the bingham distribution
-            u = z / np.linalg.norm(z)
-            # Amin et al., Algorithm 2 step 4(b), incorrectly divides by
-            # (u.T @ Omega @ u) ** (d / 2). The ACG proposal density
-            # contains its inverse, so rejection sampling must multiply
-            # by this factor instead (Kent et al., Eq. 3.3).
-            if np_csprng.random() < (
-                np.exp(-u.T @ A @ u) * (u.T @ Omega @ u) ** (d / 2) / M
-            ):
-                return u
+        return _sample_bingham(C, concentration)
 
     return _make_measurement(
         input_domain,
@@ -110,6 +63,27 @@ def make_private_eigenvector(
         lambda d_in: concentration * d_in,
         TO="Vec<f64>",
     )
+
+
+def _sample_bingham(C, concentration):
+    """Numerical proposal construction; Rust certifies the actual distribution."""
+    from opendp._data import sample_bingham
+
+    np = import_optional_dependency("numpy")
+    C = np.asarray(C, dtype=float)
+    d = C.shape[0]
+    factor, b, l = [], 1.0, 0.0
+    try:
+        with np.errstate(over="raise", invalid="raise", divide="raise"):
+            eigenvalues, Q = np.linalg.eigh(C - C[0, 0] * np.eye(d))
+            l = float(eigenvalues[-1])
+            a = concentration * (l - eigenvalues)
+            b = _optimal_b(a, d)
+            factor = (Q / np.sqrt(b + 2 * a)).ravel().tolist()
+    except (FloatingPointError, OverflowError, ValueError, np.linalg.LinAlgError):
+        # Hints are optional. The native sampler has an exact fallback.
+        pass
+    return sample_bingham(C.ravel().tolist(), d, concentration, factor, b, l)
 
 
 # generate then variant of the constructor

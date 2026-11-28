@@ -1346,6 +1346,29 @@ pub extern "C" fn opendp_data__fill_bytes(ptr: *mut u8, len: usize) -> bool {
     fill_bytes(buffer).is_ok()
 }
 
+#[bootstrap(
+    name = "sample_bingham",
+    arguments(matrix(rust_type = "Vec<f64>"), factor(rust_type = "Vec<f64>")),
+    returns(rust_type = "FfiResult<Vec<f64>>")
+)]
+/// Internal function. Sample a correctly rounded Bingham vector using
+/// an optionally certified numerical proposal. Runtime is data dependent.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_data__sample_bingham(
+    matrix: *const AnyObject,
+    dimension: usize,
+    concentration: f64,
+    factor: *const AnyObject,
+    b: f64,
+    l: f64,
+) -> FfiResult<*mut AnyObject> {
+    let matrix = try_!(try_as_ref!(matrix).downcast_ref::<Vec<f64>>());
+    let factor = try_!(try_as_ref!(factor).downcast_ref::<Vec<f64>>());
+    crate::traits::samplers::sample_bingham(matrix, dimension, concentration, factor, b, l)
+        .map(AnyObject::new)
+        .into()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::error::ExplainUnwrap;
