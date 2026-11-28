@@ -1,3 +1,5 @@
+import math
+
 from opendp.extras._utilities import to_then
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.mod import Domain, Metric, Transformation
@@ -18,7 +20,7 @@ def make_np_sscp(
 
     :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
-    :param output_metric: nuclear distance.
+    :param output_metric: nuclear norm, entrywise L1, or Frobenius/L2 distance.
     """
     import opendp.prelude as dp
 
@@ -38,8 +40,13 @@ def make_np_sscp(
 
     input_desc = input_domain.descriptor
     nuclear_metric = dp.nuclear_distance()
+    is_l1 = is_l2 = False
     if output_metric != nuclear_metric:
-        raise ValueError("output_metric must be nuclear distance")
+        # Nuclear output needs no native Lp metrics, which debug builds may omit.
+        is_l1 = output_metric == dp.l1_distance(T=input_desc.T)
+        is_l2 = output_metric == dp.l2_distance(T=input_desc.T)
+        if not (is_l1 or is_l2):
+            raise ValueError("output_metric must be L1, L2, or nuclear norm")
 
     if input_desc.nan:
         raise ValueError(
@@ -65,14 +72,37 @@ def make_np_sscp(
             "update its domain first."
         )
 
-    # The nuclear norm of xx^T is ||x||_2^2, bounded by the squared
-    # declared L1 or L2 row norm. Fixed-size neighbors differ by replacements.
-    def stability(d_in):
-        if input_desc.size is None:
-            return d_in * row_norm_sq
-        if input_desc.num_columns == 1:
-            return (d_in // 2) * row_norm_sq
-        return 2 * (d_in // 2) * row_norm_sq
+    # ||xx^T||_1 = ||x||_1^2 and ||xx^T||_F = ||x||_2^2.
+    # Nuclear norm of a rank-one PSD matrix is also ||x||_2^2.
+    # L2-bounded rows have ||x||_1^2 <= d * ||x||_2^2.
+    row_bound = (
+        row_norm_sq * input_desc.num_columns
+        if is_l1 and input_desc.p == 2
+        else row_norm_sq
+    )
+    if not np.isfinite(row_bound):
+        raise ValueError("SSCP sensitivity overflows")
+    if input_desc.size is not None and input_desc.num_columns == 1:
+
+        def stability(d_in):
+            return d_in // 2 * row_norm_sq
+    elif is_l2 and input_desc.size is not None:
+        # Two symmetric edits replace a row. For ||x||, ||y|| <= B,
+        # ||xx^T - yy^T||_* <= 2B² and ||xx^T - yy^T||_F <= sqrt(2) B².
+        # Use Python float arithmetic so overflow becomes inf, not a NumPy warning.
+        replacement_bound = math.nextafter(
+            float(row_norm_sq) * math.sqrt(2.0), math.inf
+        )
+        if not np.isfinite(replacement_bound):
+            raise ValueError("Frobenius replacement sensitivity overflows")
+
+        def stability(d_in):
+            return (d_in // 2) * replacement_bound
+    else:
+
+        def stability(d_in):
+            edits = d_in if input_desc.size is None else 2 * (d_in // 2)
+            return edits * row_bound
 
     return _make_transformation(
         input_domain,

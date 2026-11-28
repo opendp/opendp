@@ -343,7 +343,7 @@ def test_framework_constructors_snapshot_parameters_without_fitting():
             X,
             y,
             domain=domain,
-            privacy_unit=dp.unit_of(contributions=1),
+            privacy_unit=dp.unit_of(contributions=2),
             privacy_loss=dp.loss_of(epsilon=1),
         )
         is model
@@ -377,3 +377,21 @@ def test_conditional_private_fitting_shortcuts_follow_sklearn_roles():
     with pytest.raises(NotImplementedError, match="Private fit_predict"):
         cluster.fit_predict(np.ones((2, 2)))
     assert not hasattr(cluster, "release_")
+
+
+@pytest.mark.parametrize("sized_field", ["X", "y"])
+def test_aligned_sized_contributions_rejected_before_fitting(sized_field):
+    X, y = np.zeros((2, 2)), [0, 1]
+    domain = dp.sklearn.sklearn_fit_domain(
+        dp.numpy.array2_domain(
+            T=float, num_columns=2, size=2 if sized_field == "X" else None
+        ),
+        dp.vector_domain(dp.atom_domain(T=int), size=2 if sized_field == "y" else None),
+    )
+    unit, loss = dp.unit_of(contributions=1), dp.loss_of(epsilon=1.0)
+    with pytest.raises(ValueError, match="Contribution bounds must be even"):
+        _ConstantEstimator().fit(
+            X, y, domain=domain, privacy_unit=unit, privacy_loss=loss
+        )
+    with pytest.raises(ValueError, match="Contribution bounds must be even"):
+        dp.Context.compositor(dp.sklearn.SklearnFit(X, y), unit, loss, domain=domain)
