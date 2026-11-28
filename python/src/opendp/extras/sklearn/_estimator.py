@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, TypeVar
 
-from opendp.context import _cast_measure, domain_of
+from opendp.context import _cast_measure, _check_sized_contributions, domain_of
 from sklearn.utils.metaestimators import available_if
 
 from opendp.extras.sklearn._domains import SklearnFit
@@ -62,6 +62,7 @@ class MeasurementMixin(ABC):
 
         input_metric, d_in = privacy_unit
         output_measure, d_out = privacy_loss
+        _check_sized_contributions(domain, input_metric, d_in)
 
         measurement = self.make_measurement(
             domain, input_metric, output_measure, d_in, d_out

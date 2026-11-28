@@ -865,6 +865,7 @@ class Query(object):
             if isinstance(self._chain, tuple)
             else self._chain.map(self._d_in)
         )
+        _check_sized_contributions(input_domain, input_metric, d_mid)
         prototype = clone(estimator)
         measurement = prototype.make_measurement(
             input_domain, input_metric, self._output_measure, d_mid, self._d_out
@@ -1164,8 +1165,14 @@ def _check_sized_contributions(domain: Domain, input_metric: Metric, d_in) -> No
         sized = domain.get_margin([]).invariant == "lengths"
     elif isinstance(domain, ExtrinsicDomain):
         from opendp.extras.numpy import NPArray2Domain
+        from opendp.extras.sklearn._domains import SklearnFitDescriptor
 
         descriptor = domain.descriptor
+        if isinstance(descriptor, SklearnFitDescriptor):
+            _check_sized_contributions(descriptor.X, input_metric, d_in)
+            if descriptor.y is not None:
+                _check_sized_contributions(descriptor.y, input_metric, d_in)
+            return
         sized = isinstance(descriptor, NPArray2Domain) and descriptor.size is not None
     else:
         sized = False
