@@ -21,6 +21,7 @@ from opendp.extras.sklearn._domains import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from opendp.extras.sklearn import decomposition
     from opendp.extras.sklearn import linear_model
 
 
@@ -40,5 +41,6 @@ __all__ = [
     "SklearnFit",
     "SklearnFitDescriptor",
     "sklearn_fit_domain",
+    "decomposition",
     "linear_model",
 ]
