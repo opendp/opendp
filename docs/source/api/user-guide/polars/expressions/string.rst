@@ -101,8 +101,7 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
             ... except dp.OpenDPException as err:
             ...     print(err)
             ...
-            <BLANKLINE>
-              MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
+            MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
 
 
 Parsed data can then be manipulated with :ref:`Temporal Expressions <temporal>`.

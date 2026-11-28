@@ -1403,18 +1403,24 @@ class OpenDPException(Exception):
           SomeVariant("my message")
         >>> dp.disable_features('rust-stack-trace')
         >>> print(e)
-        <BLANKLINE>
-          SomeVariant("my message")
+        SomeVariant("my message")
+
+        The string never starts with a newline. Python's traceback prints
+        ``{type}: {str(exc)}``, so a leading newline would leave a trailing space
+        after ``OpenDPException:``.
+
+        >>> import traceback
+        >>> traceback.format_exception_only(e)
+        ['opendp.mod.OpenDPException: SomeVariant("my message")\\n']
         '''
-        response = ""
-        if self.raw_traceback and "rust-stack-trace" in GLOBAL_FEATURES:
-            response += self._continued_stack_trace()
-        response += "\n  " + self.variant
-
+        error = self.variant
         if self.message:
-            response += f'("{self.message}")'
+            error += f'("{self.message}")'
 
-        return response
+        if self.raw_traceback and "rust-stack-trace" in GLOBAL_FEATURES:
+            return self._continued_stack_trace() + "\n  " + error
+
+        return error
 
 
 GLOBAL_FEATURES: set[str] = set()
