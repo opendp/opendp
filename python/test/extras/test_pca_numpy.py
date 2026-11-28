@@ -56,7 +56,7 @@ def test_pca_centers_nonzero_origin_before_sscp(T, dtype):
     )
     data = origin + np.array([[0.5, 0.0], [0.5, 0.5]], dtype=dtype)
     centered = _make_center(domain, dp.symmetric_distance())
-    sscp = centered >> then_np_sscp()
+    sscp = centered >> then_np_sscp(dp.nuclear_distance())
 
     assert domain.member(data)
     assert np.all(centered.output_domain.descriptor.origin == 0)

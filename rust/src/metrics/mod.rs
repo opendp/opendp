@@ -34,6 +34,14 @@ use std::fmt::{Debug, Formatter};
 /// It is used as the associated [`Metric`]::Distance type for e.g. [`SymmetricDistance`], [`InsertDeleteDistance`], etc.
 pub type IntDistance = u32;
 
+/// Nuclear (Schatten 1) distance on matrices: the sum of singular values of their difference.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct NuclearDistance;
+
+impl Metric for NuclearDistance {
+    type Distance = f64;
+}
+
 /// The smallest number of additions or removals to make two datasets equivalent.
 ///
 /// This metric is not sensitive to data ordering.

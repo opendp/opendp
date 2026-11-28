@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, L0PInfDistance,
-    L01InfDistance, L02InfDistance, LInfDistance, SymmetricDistance,
+    L01InfDistance, L02InfDistance, LInfDistance, NuclearDistance, SymmetricDistance,
 };
 
 #[bootstrap(
@@ -95,6 +95,13 @@ pub extern "C" fn opendp_metrics__metric_distance_type(
     FfiResult::Ok(try_!(into_c_char_p(
         this.distance_type.descriptor.to_string()
     )))
+}
+
+#[bootstrap(name = "nuclear_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
+/// Construct a nuclear (Schatten 1) matrix distance.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics__nuclear_distance() -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(AnyMetric::new(NuclearDistance)))
 }
 
 #[bootstrap(

@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Sequence
+from math import fsum
 
 from opendp.context import register
-from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
+from opendp.extras.sklearn._make_eigenvector import (
+    then_private_eigenvectors,
+)
 from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
@@ -50,19 +53,24 @@ def make_private_np_eigendecomposition(
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_desc.num_columns
 
-    t_sscp = make_np_sscp(input_domain, input_metric)
+    t_sscp = make_np_sscp(input_domain, input_metric, dp.nuclear_distance())
+    sensitivity = t_sscp.map(2)
 
     t_eigvals = t_sscp.output_space >> then_eigenvalues()
     m_eigvals = (
         dp.binary_search_chain(  # type: ignore[misc]
             lambda s: t_eigvals >> dp.m.then_laplace(s),
-            d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
+            d_in=sensitivity,
             d_out=eigvals_epsilon,
         )
         >> dp.as_array()
     )
+    # The last vector of a full basis needs no private release.
+    weights = list(eigvecs_epsilons)
+    if len(weights) == input_desc.num_columns - 1:
+        weights.append(0.0)
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
-        eigvecs_epsilons,
+        sensitivity, fsum(eigvecs_epsilons), weights
     )
     return t_sscp >> dp.c.make_composition([m_eigvals, m_eigvecs])
 

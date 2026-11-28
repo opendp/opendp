@@ -9,29 +9,21 @@ from opendp._internal import _make_transformation
 def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformation:
     """Construct a Transformation that computes the eigenvalues of a covariance matrix.
 
-    :param input_domain: instance of `_sscp_domain(size=_, num_columns=_)`
-    :param input_metric: instance of `symmetric_distance()`
+    :param input_domain: instance of `_symmetric_matrix_domain(num_features=_)`
+    :param input_metric: nuclear distance on symmetric matrices
     """
     np = import_optional_dependency("numpy")
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "idealized-numerics")
 
-    if not str(input_domain).startswith("NPSSCPDomain"):
-        raise ValueError("input_domain must be NPSSCPDomain")  # pragma: no cover
+    if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
+        raise ValueError("input_domain must be NPSymmetricMatrixDomain")
 
-    if input_metric != dp.symmetric_distance():
-        raise ValueError("input metric must be symmetric distance")  # pragma: no cover
+    if input_metric != dp.nuclear_distance():
+        raise ValueError("input metric must be nuclear distance")
 
     input_desc = input_domain.descriptor
-
-    if input_desc.size is None:
-        # implementation assumes dataset size is known
-        # to loosen this limitation, when size is unknown, do:
-        # norm += np.linalg.norm(input_domain.origin, p=2)
-        # this is because the addition of one row shifted by the origin
-        #     will not be offset by the removal of another row shifted by the origin
-        raise ValueError("expected sized data")  # pragma: no cover
 
     return _make_transformation(
         input_domain,
@@ -39,9 +31,10 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
         dp.vector_domain(dp.atom_domain(T=input_desc.T, nan=False)),
         dp.l1_distance(T=input_desc.T),
         np.linalg.eigvalsh,
-        # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=12
-        # ‖Λ(XTX) − Λ(X'TX)‖_1 = tr(XTX) − tr(X'TX) = tr(xxT) = \sum x_i^2 = ‖x‖_2^2 ≤ norm^2
-        lambda d_in: d_in * input_desc.norm**2,
+        # Li and Mathias (1999), Theorem 1.1, Eq. (1.2), with k=n:
+        # ||eigvalsh(A) - eigvalsh(B)||_1 <= ||A - B||_*.
+        # https://doi.org/10.1007/s002110050397
+        lambda d_in: d_in,
     )
 
 
