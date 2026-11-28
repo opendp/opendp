@@ -222,8 +222,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of(list[list[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
-    opendp.mod.OpenDPException:
-      FFI("Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)")
+    opendp.mod.OpenDPException: FFI("Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)")
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
