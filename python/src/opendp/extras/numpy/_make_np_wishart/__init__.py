@@ -1,10 +1,10 @@
-"""Internal nuclear-distance matrix noise."""
+"""Internal correctly rounded nuclear-distance matrix noise."""
 
 import math
 from fractions import Fraction
 
 from opendp._internal import _make_measurement
-from opendp._lib import get_np_csprng, import_optional_dependency
+from opendp._lib import import_optional_dependency
 
 
 def _round_up(value):
@@ -27,13 +27,15 @@ def make_private_np_wishart(input_domain, input_metric, scale):
     density ratio is bounded by exp(distance/(2q)); integrating over factors
     proves the output bound. Rounding the sum is deterministic postprocessing.
 
-    The input is a finite symmetric f64 matrix. This implementation uses
-    idealized floating-point arithmetic and requires idealized-numerics.
+    The input is a finite symmetric f64 matrix. Runtime is data dependent.
+    This internal measurement certifies output rounding, not the upstream
+    computation of the matrix or a timing-side-channel guarantee.
     """
     import opendp.prelude as dp
+    from opendp._data import sample_wishart_difference
 
     np = import_optional_dependency("numpy")
-    dp.assert_features("contrib", "idealized-numerics")
+    dp.assert_features("contrib")
     if not str(input_domain).startswith("NPSymmetricMatrixDomain"):
         raise ValueError("Expected a symmetric matrix domain")
     if input_metric != dp.nuclear_distance():
@@ -45,6 +47,7 @@ def make_private_np_wishart(input_domain, input_metric, scale):
     if not math.isfinite(2 * scale) or scale <= 0:
         raise ValueError("Wishart scale must be positive with finite double")
     d = desc.num_features
+    upper = np.triu_indices(d)
     denominator = 2 * Fraction(scale)
 
     if d == 1:
@@ -59,13 +62,13 @@ def make_private_np_wishart(input_domain, input_metric, scale):
             return np.array([[scalar(float(matrix[0, 0]))]])
 
     else:
-        rng = get_np_csprng()
 
         def release(matrix):
-            # Orthogonal change of variables gives AA^T - BB^T = UV^T + VU^T.
-            u, v = rng.standard_normal((2, d, d + 1))
-            cross = u @ v.T
-            return matrix + scale * (cross + cross.T)
+            values = sample_wishart_difference(matrix[upper].tolist(), d, scale)
+            result = np.empty((d, d))
+            result[upper] = values
+            result[(upper[1], upper[0])] = values
+            return result
 
     return _make_measurement(
         input_domain,

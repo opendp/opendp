@@ -18,6 +18,9 @@ mod test;
 mod canonical;
 pub use canonical::CanonicalRV;
 
+mod uniform;
+pub(super) use uniform::{PartialUniform01, Uniform01RV};
+
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
     type Edge: PartialOrd + Debug;
@@ -72,20 +75,24 @@ impl<D: InverseCDF> PartialSample<D> {
     }
 
     /// Randomly discard the lower or upper half of the remaining interval 64 times.
-    fn refine(&mut self) -> Fallible<()> {
+    pub(super) fn refine(&mut self) -> Fallible<()> {
         self.randomness <<= 64;
         self.randomness += UBig::from(sample_from_uniform_bytes::<u64, 8>()?);
         self.refinements += 64;
         Ok(())
     }
 
+    pub(super) fn refinements(&self) -> usize {
+        self.refinements
+    }
+
     /// Retrieve a lower bound on the sample.
-    fn lower(&self) -> Option<D::Edge> {
+    pub(super) fn lower(&self) -> Option<D::Edge> {
         self.edge::<Down>()
     }
 
     /// Retrieve an upper bound on the sample.
-    fn upper(&self) -> Option<D::Edge> {
+    pub(super) fn upper(&self) -> Option<D::Edge> {
         self.edge::<Up>()
     }
 

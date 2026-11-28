@@ -8,7 +8,7 @@ np = pytest.importorskip("numpy")
 from opendp.extras.numpy import _symmetric_matrix_domain
 from opendp.extras.numpy._make_np_wishart import make_private_np_wishart
 
-dp.enable_features("contrib", "idealized-numerics")
+dp.enable_features("contrib")
 
 
 @pytest.mark.parametrize("d", [1, 3])
